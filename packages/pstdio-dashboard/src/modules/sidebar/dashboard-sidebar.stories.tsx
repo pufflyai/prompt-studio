@@ -152,6 +152,15 @@ export const WorkspacesView: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
 };
 
+export const WorkspacesViewHover: Story = {
+  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+  play: async ({ canvasElement }) => {
+    canvasElement
+      .querySelector('[data-tree-list-focus-id="dashboard-workbench://dashboard-view/workspaces"]')
+      ?.setAttribute("data-hover", "");
+  },
+};
+
 // Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
 export const SessionMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,

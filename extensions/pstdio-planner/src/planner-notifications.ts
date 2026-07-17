@@ -1,4 +1,4 @@
-import type { CreateNotificationInput, ExtensionWorkspace, ResourceAnchor } from "@pstdio/sdk/extensions";
+import type { CreateNotificationInput, ResourceAnchor } from "@pstdio/sdk/extensions";
 import type { StoredTicket } from "./data/types";
 
 type PlannerNotificationInput = Omit<CreateNotificationInput, "projectId">;
@@ -28,8 +28,6 @@ export const ticketNotificationDedupeKey = (ticket: StoredTicket | string, reaso
   return `pstdio-planner:ticket:${shorthand}:${reason}`;
 };
 
-export const reviewReadyDedupeKey = (workspaceId: string) => `pstdio-planner:workspace:${workspaceId}:review-ready`;
-
 export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
   ({
     type: "ticket",
@@ -40,20 +38,6 @@ export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
     role: "primary",
     metadata: { shorthand: ticket.shorthand },
   }) satisfies ResourceAnchor;
-
-export const workspaceResource = (ctx: PlannerContext, workspace: ExtensionWorkspace, ticket: StoredTicket) => ({
-  type: "workspace",
-  id: workspace.id,
-  projectId: ctx.projectId,
-  extensionId: ctx.extensionId,
-  label: workspace.workspace_shorthand ?? workspace.name ?? workspace.id,
-  metadata: {
-    ticket: ticket.shorthand,
-    ticketId: ticket.id,
-    workspaceId: workspace.id,
-    ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-  },
-});
 
 export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTicket) => {
   const target = ticketAnchor(ctx, ticket);
@@ -78,48 +62,6 @@ export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTi
   });
 };
 
-export const notifyReviewReady = async (
-  ctx: NotifyActionContext,
-  workspace: ExtensionWorkspace,
-  ticket: StoredTicket,
-  reviewSessionId: string,
-) => {
-  const target = workspaceResource(ctx, workspace, ticket);
-  await notifyAction(ctx, {
-    title: `Review ready: ${ticket.shorthand}`,
-    body: `${target.label} is ready for review.`,
-    kind: "needs_review",
-    priority: "high",
-    target,
-    related: [ticketAnchor(ctx, ticket)],
-    dedupeKey: reviewReadyDedupeKey(workspace.id),
-    actions: [
-      { id: "open-workspace", label: "Open workspace", kind: "open-resource", resource: target, primary: true },
-      { id: "open-ticket", label: "Open ticket", kind: "open-resource", resource: ticketAnchor(ctx, ticket) },
-    ],
-    metadata: {
-      ticketId: ticket.id,
-      ticketShorthand: ticket.shorthand,
-      workspaceId: workspace.id,
-      reviewSessionId,
-    },
-  });
-};
-
-export const notifyReadyToMerge = (ctx: NotifyActionContext, ticket: StoredTicket) => {
-  const target = ticketAnchor(ctx, ticket);
-  return notifyAction(ctx, {
-    title: `Ready to merge: ${ticket.shorthand}`,
-    body: `${ticket.title} has been reviewed and is ready to merge.`,
-    kind: "ready_to_merge",
-    priority: "high",
-    target,
-    dedupeKey: ticketNotificationDedupeKey(ticket, "ready-to-merge"),
-    actions: [{ id: "open-ticket", label: "Open ticket", kind: "open-resource", resource: target, primary: true }],
-    metadata: { ticketId: ticket.id, ticketShorthand: ticket.shorthand },
-  });
-};
-
 export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, sessionId?: string) => {
   const target = ticketAnchor(ctx, ticket);
   const related = sessionId
@@ -140,14 +82,8 @@ export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, se
   });
 };
 
-export const resolveReviewReadyNotification = (ctx: NotifyResolveContext, workspaceId: string) =>
-  notifyResolve(ctx, { dedupeKey: reviewReadyDedupeKey(workspaceId), status: "done" });
-
 export const resolveProposalRefinedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "proposal-refined"), status: "done" });
-
-export const resolveReadyToMergeNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
-  notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "ready-to-merge"), status: "done" });
 
 export const resolveBlockedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "blocked"), status: "done" });

@@ -5,7 +5,7 @@ describe("isMutatingCliCommand", () => {
   test("returns true for known mutating command paths", () => {
     expect(isMutatingCliCommand(["projects", "create"])).toBe(true);
     expect(isMutatingCliCommand(["tickets", "update"])).toBe(true);
-    expect(isMutatingCliCommand(["workspace", "set-status"])).toBe(true);
+    expect(isMutatingCliCommand(["workspace", "merge"])).toBe(true);
     expect(isMutatingCliCommand(["tickets", "worktrees", "remove-all"])).toBe(true);
     expect(isMutatingCliCommand(["agents", "install-skills"])).toBe(true);
   });

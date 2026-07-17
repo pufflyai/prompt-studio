@@ -36,13 +36,11 @@ export const MUTATING_CLI_COMMANDS = new Set([
   "tickets pull",
   "tickets save",
   "tickets update",
-  "tickets update-when-attempt-status",
   "tickets worktrees remove-all",
   "tickets write",
   "workspace create",
   "workspace delete",
   "workspace merge",
-  "workspace set-status",
 ]);
 
 export const isMutatingCliCommand = (tokens: string[]) => MUTATING_CLI_COMMANDS.has(normalizeCommandPath(tokens));

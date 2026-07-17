@@ -10,7 +10,6 @@ import {
   createPlannerTicket,
   getPlannerTicketStatuses,
   listPlannerTickets,
-  setPlannerWorkspaceStatus,
 } from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -100,15 +99,6 @@ const createAttemptViaApi = async (
     mode: "worktree",
     startSession: false,
   });
-};
-
-const updateWorkspaceAttemptStatusViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  workspaceId: string,
-  status: string,
-) => {
-  return setPlannerWorkspaceStatus(request, apiBase, projectId, { workspaceId, status });
 };
 
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
@@ -573,7 +563,7 @@ test.describe("Ticket list additional coverage", () => {
     expect(updatedTicket?.tagIds).toHaveLength(1);
   });
 
-  test("shows attempt status, diffs, and hover affordance on workspace badge", async ({ page, request }) => {
+  test("shows diffs and hover affordance on workspace badge", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
     const repoRoot = createGitRepo();
@@ -583,7 +573,6 @@ test.describe("Ticket list additional coverage", () => {
     const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     writeFileSync(join(attempt.workspace.worktree_path, "feature.ts"), 'export const badge = "ready";\n');
-    await updateWorkspaceAttemptStatusViaApi(request, projectId, attempt.workspace.id, "review-ready");
 
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
@@ -591,9 +580,7 @@ test.describe("Ticket list additional coverage", () => {
     await expect(page.getByText("Workspace badge regression")).toBeVisible({ timeout: 15_000 });
 
     const workspaceBadge = page.getByTestId("workspace-badge").first();
-    const attemptStatusIndicator = page.getByLabel("Attempt status review-ready").first();
     await expect(workspaceBadge).toBeVisible();
-    await expect(attemptStatusIndicator).toBeVisible();
     await expect.poll(() => workspaceBadge.textContent()).toMatch(/\+\d+/);
     await expect.poll(() => workspaceBadge.textContent()).toMatch(/-\d+/);
 

@@ -222,14 +222,3 @@ export const createPlannerAttempt = (
       ...(input.repoId !== undefined ? { repo: { repoId: input.repoId } } : {}),
     },
   );
-
-export const setPlannerWorkspaceStatus = (
-  request: APIRequestContext,
-  apiBase: string,
-  projectId: string,
-  input: { workspaceId: string; status: string },
-) =>
-  executePlannerCommand(request, apiBase, projectId, "workspaceStatus.set", {
-    workspaceId: input.workspaceId,
-    status: input.status,
-  });

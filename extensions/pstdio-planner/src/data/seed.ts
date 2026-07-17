@@ -162,7 +162,32 @@ export const DEFAULT_TAGS: TagSeed[] = [
       option("default-complexity-complex", "Complex", "red", 2),
     ],
   }),
+  () => HUMAN_REQUESTED_TAG(),
 ];
+
+// Durable automation interrupt: loops skip tagged tickets and never clear the tag.
+export const HUMAN_REQUESTED_TAG: TagSeed = () => ({
+  id: "default-human-requested",
+  name: "human_requested",
+  type: "single_select",
+  sortOrder: 3,
+  options: [option("default-human-requested-true", "True", "purple", 0, "shield-user")],
+});
+
+const HUMAN_REQUESTED_MARKER = "__pstdio-planner:human-requested-tag-seeded";
+
+// Backfills the human_requested tag into projects seeded before it existed. The
+// marker keeps a user deletion permanent instead of resurrecting the tag.
+const ensureHumanRequestedTag = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
+  if (await storage.get(HUMAN_REQUESTED_MARKER)) return existing;
+
+  const tag = HUMAN_REQUESTED_TAG();
+  const backfilled = existing.some((candidate) => candidate.id === tag.id)
+    ? existing
+    : [...existing, await putTag(storage, tag)];
+  await storage.set(HUMAN_REQUESTED_MARKER, true);
+  return backfilled;
+};
 
 const defaultTagIds = new Set(DEFAULT_TAGS.map((seed) => seed().id));
 const isOnlyDefaultTags = (tags: StoredTag[]) => tags.every((tag) => defaultTagIds.has(tag.id));
@@ -176,11 +201,12 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
-      return existing;
+      return ensureHumanRequestedTag(storage, existing);
     }
 
     await Promise.all(DEFAULT_TAGS.map((seed) => putTag(storage, seed())));
     await storage.set(TAG_SEED_MARKER, true);
+    await storage.set(HUMAN_REQUESTED_MARKER, true);
     return sortedBySortOrder(await tagsCollection(storage).list());
   })();
   tagSeedPromises.set(storage, promise);

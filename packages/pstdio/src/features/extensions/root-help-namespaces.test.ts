@@ -18,11 +18,11 @@ const commands: ExtensionCommandRecord[] = [
     cliAliases: ["statuses list"],
   },
   {
-    id: "pstdio-planner.workspaceStatus.set",
-    extensionId: "pstdio.pstdio-planner",
-    title: "Set workspace status",
-    cliPath: "pstdio-planner workspaceStatus set",
-    cliAliases: ["workspaces set-status"],
+    id: "acme-tools.workspaceNote.set",
+    extensionId: "acme.acme-tools",
+    title: "Set workspace note",
+    cliPath: "acme-tools workspaceNote set",
+    cliAliases: ["workspaces set-note"],
   },
 ];
 
@@ -42,16 +42,22 @@ describe("extensionNamespaceSummaries", () => {
 
   test("derives runnable canonical and alias namespaces with their providers", () => {
     expect(extensionNamespaceSummaries(commands)).toEqual([
+      { namespace: "acme-tools", description: "acme-tools" },
       { namespace: "pstdio-planner", description: "pstdio-planner" },
       { namespace: "statuses", description: "pstdio-planner" },
       { namespace: "tickets", description: "pstdio-planner" },
-      { namespace: "workspaces", description: "pstdio-planner" },
+      { namespace: "workspaces", description: "acme-tools" },
     ]);
   });
 
   test("excludes namespaces that collide with static built-ins", () => {
     const summaries = extensionNamespaceSummaries(commands, { exclude: new Set(["workspaces"]) });
-    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio-planner", "statuses", "tickets"]);
+    expect(summaries.map((summary) => summary.namespace)).toEqual([
+      "acme-tools",
+      "pstdio-planner",
+      "statuses",
+      "tickets",
+    ]);
   });
 
   test("deduplicates canonical cliPath namespaces across commands", () => {
@@ -72,7 +78,12 @@ describe("loadExtensionNamespaces", () => {
       },
     });
 
-    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio-planner", "statuses", "tickets"]);
+    expect(summaries.map((summary) => summary.namespace)).toEqual([
+      "acme-tools",
+      "pstdio-planner",
+      "statuses",
+      "tickets",
+    ]);
   });
 
   test("stays offline-safe: returns [] when the API is unreachable", async () => {

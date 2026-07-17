@@ -52,7 +52,6 @@ type QueueExistingInput = {
 type ListFilters = {
   status?: SessionStatus;
   agent?: string;
-  workspaceId?: string;
   includeArchived?: boolean;
 };
 

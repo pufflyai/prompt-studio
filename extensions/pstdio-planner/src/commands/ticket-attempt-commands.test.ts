@@ -3,11 +3,9 @@ import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/co
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
-import { setWorkspaceStatusValue } from "../workspace-statuses/workspace-status";
 import { makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
-import { updateWhenAttemptStatusCommand } from "./update-when-attempt-status";
 
 const createSessionResource = () => ({
   type: "session" as const,
@@ -72,49 +70,12 @@ describe("implementTicketCommand", () => {
   });
 });
 
-describe("updateWhenAttemptStatusCommand", () => {
-  const workspacesContext = (storage: ReturnType<typeof createMemoryStorage>, id: string) =>
-    makeCommandContext({
-      storage,
-      params: { id, allAttemptsStatus: "merged", setStatus: "Done" },
-      overrides: {
-        workspaces: {
-          list: async () => [
-            { id: "w1", workspace_shorthand: `${id}_A1` },
-            { id: "w2", workspace_shorthand: `${id}_A2` },
-          ],
-        },
-      } as never,
-    });
-
-  test("updates the ticket when every workspace matches", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    const ticket = await seedTicket(storage);
-    await setWorkspaceStatusValue({ storage, workspaceId: "w1", status: "merged" });
-    await setWorkspaceStatusValue({ storage, workspaceId: "w2", status: "merged" });
-
-    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
-
-    expect(result).toEqual({ updated: true, status: "Done" });
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("done");
-  });
-
-  test("leaves the ticket unchanged when a workspace does not match", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    const ticket = await seedTicket(storage);
-    await setWorkspaceStatusValue({ storage, workspaceId: "w1", status: "merged" });
-    await setWorkspaceStatusValue({ storage, workspaceId: "w2", status: "open" });
-
-    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
-
-    expect(result).toEqual({ updated: false });
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("backlog");
-  });
-});
-
 describe("ticket workspace listing", () => {
+  const sessionsByWorkspace: Record<string, Array<{ id: string; title: string; status: string }>> = {
+    w1: [{ id: "s1", title: "Implement", status: "in_progress" }],
+    w2: [{ id: "s2", title: "Implement", status: "completed" }],
+  };
+
   const listContext = (storage: ReturnType<typeof createMemoryStorage>, id: string) =>
     makeCommandContext({
       storage,
@@ -127,15 +88,21 @@ describe("ticket workspace listing", () => {
             { id: "w3", workspace_shorthand: "T-2_A1", branch: "b3", worktree_path: "/wt/3" },
           ],
         },
+        sessions: {
+          listByWorkspace: async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
+        },
       } as never,
     });
 
-  test("workspaces returns only the ticket's workspaces", async () => {
+  test("workspaces returns the ticket's workspaces with live activity", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
     const rows = await ticketWorkspacesCommand.run(listContext(storage, ticket.shorthand));
-    expect(rows.map((row) => row.workspace)).toEqual(["T-1_A1", "T-1_A2"]);
+    expect(rows).toEqual([
+      { id: "w1", workspace: "T-1_A1", branch: "b1", path: "/wt/1", active: true },
+      { id: "w2", workspace: "T-1_A2", branch: "b2", path: "", active: false },
+    ]);
   });
 
   test("worktrees list returns only the ticket's workspaces with a worktree path", async () => {

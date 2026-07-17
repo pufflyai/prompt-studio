@@ -18,4 +18,4 @@ Scaffold the review report by running `pst reports write --kind review --name re
 
 ### Final Action
 
-If **no critical or minor issues** are found, mark the workspace attempt status as `reviewed` by running `pst workspaces set-status --status reviewed`. Otherwise mark it as `changes-requested` by running `pst workspaces set-status --status changes-requested`.
+If **no critical or minor issues** are found, finish the review normally — the review passes when this session completes with the ticket still in review. Otherwise move the ticket back to implementation by running `pst tickets update --id {{ticket}} --status "In Progress"` so the findings get addressed.

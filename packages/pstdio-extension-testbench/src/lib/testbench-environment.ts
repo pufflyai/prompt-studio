@@ -130,6 +130,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
   sessions: {
     get: async () => null,
     list: async () => [],
+    listByWorkspace: async () => [],
     create: async (input) => ({
       type: "session",
       id: crypto.randomUUID(),

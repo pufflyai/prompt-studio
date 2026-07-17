@@ -39,6 +39,66 @@ const sessionAttachmentFile = (name: string) => ({
   updated_at: "2026-06-17T00:00:00.000Z",
 });
 
+describe("createCommandEnvironment sessions listByWorkspace", () => {
+  test("lists sessions linked to a workspace through the workspace-session join", async () => {
+    const listByWorkspace = mock(async () => [
+      {
+        id: "session-1",
+        project_id: "project-1",
+        title: "Implement ticket: PS-1",
+        status: "completed",
+        created_at: "2026-06-17T00:00:00.000Z",
+        updated_at: "2026-06-17T01:00:00.000Z",
+        anchors_json: [{ type: "ticket", id: "ticket-1" }],
+      },
+      {
+        id: "session-2",
+        project_id: "project-1",
+        title: "Code review: PS-1",
+        status: "in_progress",
+        created_at: "2026-06-17T02:00:00.000Z",
+        updated_at: "2026-06-17T02:30:00.000Z",
+        anchors_json: null,
+      },
+    ]);
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    const sessions = await env.sessions.listByWorkspace("workspace-1");
+
+    expect(listByWorkspace).toHaveBeenCalledWith("workspace-1");
+    expect(sessions).toEqual([
+      {
+        id: "session-1",
+        title: "Implement ticket: PS-1",
+        status: "completed",
+        created_at: "2026-06-17T00:00:00.000Z",
+        updated_at: "2026-06-17T01:00:00.000Z",
+        anchors_json: [{ type: "ticket", id: "ticket-1" }],
+      },
+      {
+        id: "session-2",
+        title: "Code review: PS-1",
+        status: "in_progress",
+        created_at: "2026-06-17T02:00:00.000Z",
+        updated_at: "2026-06-17T02:30:00.000Z",
+        anchors_json: [],
+      },
+    ]);
+  });
+});
+
 describe("createCommandEnvironment sessions attachments", () => {
   test("forwards attachment refs from extension-created sessions", async () => {
     const dispatchEntries: unknown[] = [];

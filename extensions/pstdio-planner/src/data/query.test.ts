@@ -76,7 +76,7 @@ describe("runTicketsQuery", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
     const configs = result.boardColumnConfigs ?? {};
 
-    expect(configs["backlog"]?.canCreate).toBe(true);
+    expect(configs.backlog?.canCreate).toBe(true);
     expect(
       Object.entries(configs)
         .filter(([statusId]) => statusId !== "backlog")
@@ -105,6 +105,7 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
+      "default-human-requested",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       created: "2026-01-01T00:00:00.000Z",

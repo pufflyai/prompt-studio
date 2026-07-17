@@ -1,6 +1,6 @@
-import { workspaceAutomationCommands } from "../workspace-automations";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
+import { automationPolicyCommand } from "./automation-policy";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 import { getTicketCommand } from "./get-ticket";
@@ -15,6 +15,7 @@ import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { selectTicketDocumentCommand } from "./select-ticket-document";
@@ -61,10 +62,11 @@ import {
   ticketWorktreesRemoveAllCommand,
 } from "./ticket-workspaces";
 import { updateTicketCommand } from "./update-ticket";
-import { updateWhenAttemptStatusCommand } from "./update-when-attempt-status";
+import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = {
+  "automation-policy": automationPolicyCommand,
   "run-attempt": runAttemptCommand,
   "create-workspace": createWorkspaceCommand,
   "refine-ticket": refineTicketCommand,
@@ -104,10 +106,11 @@ export const plannerCommands = {
   "pull-ticket": pullTicketCommand,
   "list-ticket-files": listTicketFilesCommand,
   "implement-ticket": implementTicketCommand,
-  "update-when-attempt-status": updateWhenAttemptStatusCommand,
   "ticket-workspaces": ticketWorkspacesCommand,
   "ticket-worktrees-list": ticketWorktreesListCommand,
   "ticket-worktrees-remove-all": ticketWorktreesRemoveAllCommand,
+  "workspace-activity": workspaceActivityCommand,
+  runReview: runReviewCommand,
 
   "ticketStatus.read": readTicketStatusesCommand,
   "ticketStatus.create": createTicketStatusCommand,
@@ -125,6 +128,4 @@ export const plannerCommands = {
   "ticketTag.updateOption": updateTagOptionCommand,
   "ticketTag.deleteOption": deleteTagOptionCommand,
   "ticketTag.applyDraft": applyTicketTagDraftCommand,
-
-  ...workspaceAutomationCommands,
 };

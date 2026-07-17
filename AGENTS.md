@@ -20,6 +20,27 @@ Never compromise the project structure. Code readability and structure matters m
 - Deep relative imports across packages
 - Importing from `clients/*`
 
+## Design Source of Truth
+
+- Pencil `.pen` designs are the **source of truth for the `@pstdio/ui` component library's visuals** — colors, typography, spacing, radii, component states, and layout. The code follows the design; implement UI to match it.
+- The canonical design system lives at [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only through the Pencil MCP tools — never by hand.
+- When the design and the code disagree, treat the design as correct and update the code to match. If the design itself is wrong, fix the design first (in Pencil), then the code.
+- Storybook stays the source of truth for component **APIs and props**; Pencil is the source of truth for how components should **look**.
+
+## Styling Rules
+
+Build UI out of the design system, never out of one-off styles:
+
+- Compose screens from exported `@pstdio/ui` components. Reach for a raw Chakra primitive only when no `@pstdio/ui` equivalent exists.
+- Style through Chakra recipes and theme tokens (`packages/ui/src/theme`) — recipe `variant`/`size` props, semantic color tokens, `textStyles`, and `layerStyles`.
+- A visual the current recipes and tokens cannot express means the recipe or token is missing: add the variant or token in `packages/ui/src/theme` (matching the `.pen` design) so every call site gets it.
+
+❌ Not allowed:
+
+- Custom CSS files, `styled` wrappers, or inline `style={{ ... }}` objects for design-system visuals
+- Hardcoded colors, font sizes, spacing, or radii instead of tokens
+- Per-call-site style overrides that re-implement what a recipe variant should own
+
 ## Required Workflow: TDD
 
 Follow this loop **every time**:

@@ -1,32 +1,25 @@
 # Extension Automation Cookbook
 
-## Validate Before Review Ready
+## Validate Before Handing Work to Review
 
-Use middleware on the planner command that marks a workspace review-ready:
+Use middleware on the planner command that starts a review:
 
 ```ts
-ctx.commands.middleware(
-  "pstdio-planner.workspaceStatus.set",
-  async (commandCtx, next) => {
-    if (commandCtx.params.status !== "review-ready") {
-      return next();
-    }
+ctx.commands.middleware("pstdio-planner.runReview", async (commandCtx, next) => {
+  const result = await commandCtx.shell.run({
+    command: ["bun", "run", "validate"],
+    cwd: commandCtx.workspace.worktree_path,
+  });
 
-    const result = await commandCtx.shell.run({
-      command: ["bun", "run", "validate"],
-      cwd: commandCtx.workspace.worktree_path,
-    });
+  if (result.exitCode !== 0) {
+    return {
+      status: "rejected",
+      message: result.stderr || result.stdout || "Validation failed",
+    };
+  }
 
-    if (result.exitCode !== 0) {
-      return {
-        status: "rejected",
-        message: result.stderr || result.stdout || "Validation failed",
-      };
-    }
-
-    return next();
-  },
-);
+  return next();
+});
 ```
 
 ## React to Worktree Creation
@@ -39,32 +32,29 @@ ctx.events.on("worktree.created", async (event) => {
 });
 ```
 
-## React to Planner Workspace Status Changes
+## React to Session Lifecycle
 
-Use planner command lifecycle events or planner-owned automation. Core
-`attemptStatus.changed` events no longer exist.
+Stored workspace statuses no longer exist; workspace state is derived from live
+sessions (`pstdio-planner.workspace-activity`). React to session lifecycle
+events instead, the way the repo-local `pstdio-planner-loops` extension moves
+tickets to `In Progress` when a session starts:
 
 ```ts
-import {
-  commandEvent,
-  commandRef,
-  defineExtension,
-} from "@pstdio/sdk/extensions";
-
-const setWorkspaceStatus = commandRef("pstdio-planner.workspaceStatus.set");
+import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   hooks: {
-    afterWorkspaceStatusSet: {
-      event: commandEvent(setWorkspaceStatus, "completed"),
-      async handler(ctx, event) {
-        if (event.params.status !== "review-ready") return;
-        await ctx.storage.set(
-          `review-ready:${event.params.workspaceId}`,
-          new Date().toISOString(),
-        );
+    sessionStarted: {
+      event: sessionEvents.started,
+      async handler(ctx, payload) {
+        await ctx.storage.set(`started:${payload.sessionId}`, new Date().toISOString());
       },
     },
   },
 });
 ```
+
+For recurring planner automation, define an ordinary extension command and bind
+it through `schedules`; keep event-driven behavior in `hooks`. Use extension
+settings for project policy and extension storage only for durable reconciliation
+state.

@@ -90,8 +90,47 @@ describe("seedDefaultTags", () => {
     await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
 
     const stored = await tagsCollection(storage).list();
-    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity"]);
+    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "human_requested"]);
     expect(stored.find((tag) => tag.id === "default-type")?.type).toBe("single_select");
+  });
+
+  test("seeds human_requested as a single-select interrupt tag after Complexity", async () => {
+    const storage = createMemoryStorage();
+
+    await seedDefaultTags(storage);
+
+    const humanRequested = (await tagsCollection(storage).list()).find((tag) => tag.id === "default-human-requested");
+    expect(humanRequested).toMatchObject({ name: "human_requested", type: "single_select", sortOrder: 3 });
+    expect(humanRequested?.options).toEqual([
+      expect.objectContaining({ id: "default-human-requested-true", name: "True", icon: "shield-user" }),
+    ]);
+  });
+
+  test("backfills human_requested into projects with customized tags", async () => {
+    const storage = createMemoryStorage();
+    await tagsCollection(storage).put("custom-tag", {
+      id: "custom-tag",
+      name: "Custom",
+      type: "single_select",
+      sortOrder: 0,
+      options: [],
+    });
+
+    const seeded = await seedDefaultTags(storage);
+
+    expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
+    expect(seeded.map((tag) => tag.id)).toContain("custom-tag");
+    expect(seeded.map((tag) => tag.id)).not.toContain("default-priority");
+  });
+
+  test("does not recreate a deleted human_requested tag", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultTags(storage);
+
+    await tagsCollection(storage).delete("default-human-requested");
+    const seeded = await seedDefaultTags(storage);
+
+    expect(seeded.map((tag) => tag.id)).not.toContain("default-human-requested");
   });
 
   test("completes a partial default seed before the seeded marker is written", async () => {
@@ -102,7 +141,12 @@ describe("seedDefaultTags", () => {
     const seeded = await seedDefaultTags(storage);
 
     expect(first.id).toBe("default-priority");
-    expect(seeded.map((tag) => tag.id)).toEqual(["default-priority", "default-type", "default-complexity"]);
+    expect(seeded.map((tag) => tag.id)).toEqual([
+      "default-priority",
+      "default-type",
+      "default-complexity",
+      "default-human-requested",
+    ]);
   });
 
   test("uses circle icons for the default complexity options", () => {
