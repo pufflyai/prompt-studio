@@ -5,4 +5,4 @@
 "pstdio-planner": minor
 ---
 
-Add panel-owned docked menus with persistent dropdown toggles and migrate planner properties into the ticket editor.
+Add resizable panel-owned menus that drag closed, collapse responsively into header dropdowns, and host planner properties in the ticket editor

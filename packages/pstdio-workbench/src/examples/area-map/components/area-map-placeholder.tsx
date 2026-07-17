@@ -1,8 +1,8 @@
 import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchArea } from "../../../core";
+import type { AreaMapArea } from "../mock-data/areas";
 
 interface AreaMapPlaceholderProps {
-  area: WorkbenchArea;
+  area: AreaMapArea;
   role: string;
   uri: string;
   name: string;
@@ -60,8 +60,7 @@ export const AreaMapPlaceholder = (props: AreaMapPlaceholderProps) => {
     return <AreaMapPlaceholderStrip name={name} role={role} />;
   }
 
-  const isHeaderArea =
-    area === "nav" || area === "main-header" || area === "left-header" || area === "secondary-header";
+  const isHeaderArea = area === "nav";
 
   if (isHeaderArea) {
     return <AreaMapPlaceholderStrip name={name} role={role} />;

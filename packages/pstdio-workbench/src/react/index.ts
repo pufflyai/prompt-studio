@@ -15,7 +15,11 @@ export type {
   CommandParamFieldRenderer,
 } from "./command-palette/command-params-dialog";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
-export { WorkbenchHeaderActions } from "./header/header-actions";
+export {
+  WorkbenchAuxiliaryHeaderActions,
+  WorkbenchHeaderActions,
+  WorkbenchResourceActions,
+} from "./header/header-actions";
 export { useWorkbenchClaim, WorkbenchClaimContext } from "./keep-alive/use-workbench-claim";
 export { WorkbenchKeepAliveLayer } from "./keep-alive/workbench-keep-alive-layer";
 export type { WorkbenchHotkeyRegistration } from "./keybindings/workbench-keybinding-dispatcher";

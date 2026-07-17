@@ -19,7 +19,12 @@ describe("createExtensionsModule resource views", () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
@@ -75,6 +80,7 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
       expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
+        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
       ]);
     } finally {
       disposable.dispose();
@@ -88,7 +94,12 @@ describe("createExtensionsModule resource views", () => {
     const executeCommand = mock(async () => response);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(
@@ -122,23 +133,30 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
         "pstdio-core-tickets.ticketFiles",
       ]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas.side.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toContain(
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
-      ]);
+      );
+      expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
 
       await workbench.resources.openResource(ticketB, { replaceActive: true });
 
       expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.id).toBe("PS-11");
-      expect(workbench.layout.getLayout().areas.side.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas.side.widgets[0]?.resource?.id).toBe("PS-11");
+      const properties = workbench.layout
+        .getLayout()
+        .areas.main.widgets.find(
+          (widget) =>
+            widget.contributionId === "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
+        );
+      expect(properties?.resource?.id).toBe("PS-11");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
+});
 
+describe("createExtensionsModule resource companions", () => {
   test("publishes ticket file selection commands from the files tree", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
@@ -181,7 +199,12 @@ describe("createExtensionsModule resource views", () => {
     const workbench = createWorkbenchCore();
     const events: string[] = [];
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(
@@ -219,7 +242,12 @@ describe("createExtensionsModule resource views", () => {
     const loadAppearance = mock(async () => emptyAppearance);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
@@ -242,14 +270,13 @@ describe("createExtensionsModule resource views", () => {
 
       expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
       expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas.side.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas.main.widgets).toHaveLength(2);
+      expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("project");
       expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
       expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
     } finally {
       disposable.dispose();
@@ -263,7 +290,12 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
@@ -306,7 +338,12 @@ describeResourceRouteContract({
   name: "tickets",
   setup: async () => {
     const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(

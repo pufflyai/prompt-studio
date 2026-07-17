@@ -279,11 +279,13 @@ export const createWorkspacesModule = () =>
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
+        frame: ctx.layout.getDefaultFrame(),
         activate: setupProjectSidebarChrome,
       });
       ctx.modes.registerMode({
         id: "workspace",
         label: "Workspace",
+        frame: ctx.layout.getDefaultFrame(),
         activate: setupWorkspaceSidebarChrome,
       });
 

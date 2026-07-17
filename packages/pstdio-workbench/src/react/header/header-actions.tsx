@@ -12,7 +12,13 @@ import { hasCommandParameters } from "../command-palette/command-palette-params"
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { resolveWorkbenchHeaderActionGroups, resolveWorkbenchHeaderOverflowLabel } from "./header-action-items";
+import {
+  resolveWorkbenchAuxiliaryHeaderActionItems,
+  resolveWorkbenchHeaderActionGroups,
+  resolveWorkbenchHeaderOverflowLabel,
+  resolveWorkbenchResourceActionItems,
+  type WorkbenchHeaderOverflowItem,
+} from "./header-action-items";
 
 interface WorkbenchHeaderActionsProps {
   workbench: WorkbenchCore;
@@ -53,8 +59,7 @@ const WorkbenchInlineHeaderAction = (props: {
   );
 };
 
-export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
-  const { menuPath, workbench } = props;
+const useWorkbenchHeaderActionState = (workbench: WorkbenchCore, menuPath: MenuPath) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -62,11 +67,9 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
     getAnchorResource(state.frame, state.layout, "primary"),
   );
   const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
-  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
 
   // Actions whose command declares parameters collect that input through the shared
-  // command params dialog (opened via the command palette store) before running;
-  // parameterless actions execute immediately.
+  // command params dialog before running; parameterless actions execute immediately.
   const onSelect = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     const args = item.args;
@@ -78,6 +81,57 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
     void workbench.commands.executeCommand(item.commandId, args, context).catch(() => undefined);
   };
 
+  return { items, onSelect };
+};
+
+interface WorkbenchHeaderActionMenuProps {
+  items: WorkbenchHeaderOverflowItem[];
+  label: string;
+  triggerIcon: string;
+  onSelect: (item: WorkbenchMenuItem) => void;
+}
+
+const WorkbenchHeaderActionMenu = (props: WorkbenchHeaderActionMenuProps) => {
+  const { items, label, triggerIcon, onSelect } = props;
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger asChild>
+        <IconButton size="xs" variant="ghost" aria-label={label}>
+          <WorkbenchIcon name={triggerIcon} size={16} />
+        </IconButton>
+      </Menu.Trigger>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="220px" bg="bg">
+            {items.map((item) => (
+              <Fragment key={item.id}>
+                {item.separatorBefore ? <Menu.Separator /> : null}
+                <Menu.Item value={item.id} asChild>
+                  <ListRow
+                    asChild
+                    variant="full-width"
+                    id={item.id}
+                    label={item.label}
+                    icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
+                    disabled={item.disabled}
+                    onActivate={() => onSelect(item)}
+                  />
+                </Menu.Item>
+              </Fragment>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+};
+
+export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
+  const { menuPath, workbench } = props;
+  const { items, onSelect } = useWorkbenchHeaderActionState(workbench, menuPath);
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
+
   if (items.length === 0) return null;
 
   return (
@@ -86,36 +140,54 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
         <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} />
       ))}
       {overflowItems.length > 0 ? (
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <IconButton size="xs" variant="ghost" aria-label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}>
-              <WorkbenchIcon name="MoreHorizontal" size={16} />
-            </IconButton>
-          </Menu.Trigger>
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content minW="220px" bg="bg">
-                {overflowItems.map((item) => (
-                  <Fragment key={item.id}>
-                    {item.separatorBefore ? <Menu.Separator /> : null}
-                    <Menu.Item value={item.id} asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        id={item.id}
-                        label={item.label}
-                        icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
-                        disabled={item.disabled}
-                        onActivate={() => onSelect(item)}
-                      />
-                    </Menu.Item>
-                  </Fragment>
-                ))}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
+        <WorkbenchHeaderActionMenu
+          items={overflowItems}
+          label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}
+          triggerIcon="MoreHorizontal"
+          onSelect={onSelect}
+        />
       ) : null}
     </HStack>
+  );
+};
+
+export const WorkbenchAuxiliaryHeaderActions = (props: WorkbenchHeaderActionsProps) => {
+  const { menuPath, workbench } = props;
+  const { items, onSelect } = useWorkbenchHeaderActionState(workbench, menuPath);
+  const auxiliaryItems = resolveWorkbenchAuxiliaryHeaderActionItems(items);
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(auxiliaryItems);
+
+  if (auxiliaryItems.length === 0) return null;
+
+  return (
+    <HStack flexShrink={0} gap="2xs" minW="0">
+      {inlineItems.map((item) => (
+        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} />
+      ))}
+      {overflowItems.length > 0 ? (
+        <WorkbenchHeaderActionMenu
+          items={overflowItems}
+          label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}
+          triggerIcon="MoreHorizontal"
+          onSelect={onSelect}
+        />
+      ) : null}
+    </HStack>
+  );
+};
+
+export const WorkbenchResourceActions = (props: WorkbenchHeaderActionsProps) => {
+  const { menuPath, workbench } = props;
+  const { items, onSelect } = useWorkbenchHeaderActionState(workbench, menuPath);
+  const menuItems = resolveWorkbenchResourceActionItems(items);
+  if (menuItems.length === 0) return null;
+
+  return (
+    <WorkbenchHeaderActionMenu
+      items={menuItems}
+      label={resolveWorkbenchHeaderOverflowLabel(menuItems, "Resource actions")}
+      triggerIcon="ChevronDown"
+      onSelect={onSelect}
+    />
   );
 };

@@ -4,4 +4,4 @@
 "@pstdio/ui": minor
 ---
 
-Render the workbench main region from frame split trees and preserve omitted area size defaults
+Render frame split trees from one reactive snapshot, attach panel header regions, and preserve omitted area size defaults

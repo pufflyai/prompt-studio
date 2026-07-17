@@ -68,8 +68,18 @@ const ticketResource = {
 describe("registerExtensionResourceView title refresh", () => {
   test("updates the editor title without rebinding the editor resource", async () => {
     const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "tickets.ticket", label: "Ticket", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
+    workbench.modes.registerMode({
+      id: "tickets.ticket",
+      label: "Ticket",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.layout.registerWidget({
       id: "tickets.editor",

@@ -48,9 +48,10 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     const renderer = workbench.renderers.getControlsRenderer("inspector");
     expect(renderer).toBeDefined();
 
-    // The view places the renderer into a right-panel widget keyed by the view id.
+    // The view places the renderer into the main panel's right menu region.
     expect(workbench.layout.getWidget("inspector-panel")).toMatchObject({
-      area: "side",
+      area: "main",
+      menu: { host: "*", side: "right", icon: "panel-right" },
       rendererId: "inspector",
       resourceKinds: ["image"],
     });

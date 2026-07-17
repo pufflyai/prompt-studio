@@ -16,6 +16,11 @@ const DETAIL_ID = "docs.detail";
 const DETAIL_RENDERER_ID = "docs.detail.renderer";
 const INSPECTOR_ID = "docs.inspector";
 const INSPECTOR_RENDERER_ID = "docs.inspector.renderer";
+const INSPECTOR_CONTEXT_ID = "docs.inspector.context";
+const INSPECTOR_PROPERTIES_ID = "docs.inspector.properties";
+const ACTIVITY_ID = "docs.activity";
+const ACTIVITY_CONTEXT_ID = "docs.activity.context";
+const ACTIVITY_PROPERTIES_ID = "docs.activity.properties";
 
 const items = [
   { id: "brief", label: "Design brief", owner: "Product" },
@@ -150,11 +155,50 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       area: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
+    ctx.layout.registerWidget({
+      id: INSPECTOR_CONTEXT_ID,
+      title: "Context",
+      area: "side",
+      menu: { host: INSPECTOR_ID, side: "left", icon: "ListTree" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: INSPECTOR_PROPERTIES_ID,
+      title: "Properties",
+      area: "side",
+      menu: { host: INSPECTOR_ID, side: "right", icon: "SlidersHorizontal" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: ACTIVITY_ID,
+      title: "Activity",
+      area: "secondary",
+      rendererId: INSPECTOR_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: ACTIVITY_CONTEXT_ID,
+      title: "Context",
+      area: "secondary",
+      menu: { host: ACTIVITY_ID, side: "left", icon: "ListTree" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: ACTIVITY_PROPERTIES_ID,
+      title: "Properties",
+      area: "secondary",
+      menu: { host: ACTIVITY_ID, side: "right", icon: "SlidersHorizontal" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
 
     ctx.layout.openWidget(PICKER_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_ID, { pinned: true });
     ctx.layout.openWidget(PROPERTIES_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.openWidget(INSPECTOR_CONTEXT_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.openWidget(INSPECTOR_PROPERTIES_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.openWidget(ACTIVITY_ID, { pinned: true });
+    ctx.layout.openWidget(ACTIVITY_CONTEXT_ID, { pinned: true });
+    ctx.layout.openWidget(ACTIVITY_PROPERTIES_ID, { pinned: true });
     ctx.layout.setAreaPresentation("side", "docked");
     void ctx.resources.openResource(itemResource(items[0]));
   },

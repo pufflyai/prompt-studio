@@ -161,6 +161,7 @@ export const workspaceFiles: [WorkspaceFile, ...WorkspaceFile[]] = [
       "  ctx.modes.registerMode({",
       "    id: 'settings',",
       "    label: 'Settings',",
+      "    frame: ctx.layout.getDefaultFrame(),",
       "    activate: setupSettingsMode,",
       "  });",
       "};",

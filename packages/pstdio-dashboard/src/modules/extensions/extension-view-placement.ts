@@ -1,5 +1,5 @@
 import { type Frame, resolveWorkbenchModeArea } from "@pstdio/workbench/core";
-import { resolveWorkbenchViewArea } from "@pstdio/workbench/extensions";
+import { resolveWorkbenchViewArea, resolveWorkbenchViewWidgetPlacement } from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -22,3 +22,6 @@ export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id"
 
 export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
   resolveWorkbenchViewArea(target);
+
+export const extensionViewPlacement = (view: DashboardExtensionView, views: DashboardExtensionView[]) =>
+  resolveWorkbenchViewWidgetPlacement(view, views);

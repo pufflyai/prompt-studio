@@ -71,7 +71,12 @@ describe("createExtensionsModule", () => {
     }));
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
 
@@ -97,7 +102,12 @@ describe("createExtensionsModule", () => {
     const executeCommand = mock(async () => response);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
 
@@ -158,7 +168,12 @@ describe("createExtensionsModule", () => {
     const executeCommand = mock(async () => response);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
 
@@ -228,7 +243,12 @@ describe("createExtensionsModule command results and refresh", () => {
     const executeCommand = mock(async () => sessionResponse);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.layout.setAreaVisible("side", false);
@@ -276,7 +296,12 @@ describe("createExtensionsModule command results and refresh", () => {
     });
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 
@@ -323,7 +348,12 @@ describe("createExtensionsModule command results and refresh", () => {
     const loadMetadata = mock(async () => nextMetadata);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 

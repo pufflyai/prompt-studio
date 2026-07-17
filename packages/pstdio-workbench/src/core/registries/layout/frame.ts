@@ -1,4 +1,4 @@
-import type { FrameNode, FrameSlot, SideBinding, SlotsOf } from "./frame-types";
+import type { FrameNode, FrameRegion, FrameSlot, SideBinding, SlotsOf } from "./frame-types";
 
 const indexSlots = (root: FrameNode) => {
   const slots: Record<string, FrameSlot> = {};
@@ -16,13 +16,32 @@ const indexSlots = (root: FrameNode) => {
   return slots;
 };
 
+const indexRegions = (slots: Record<string, FrameSlot>) => {
+  const regions: Record<string, FrameRegion> = {};
+
+  for (const slot of Object.values(slots)) {
+    const header = slot.regions?.header;
+    const leftMenu = slot.regions?.leftMenu;
+    const rightMenu = slot.regions?.rightMenu;
+    if (header) regions[header] = { kind: "region", id: header, host: slot.id, role: "header" };
+    if (leftMenu) regions[leftMenu] = { kind: "region", id: leftMenu, host: slot.id, role: "menu", side: "left" };
+    if (rightMenu) regions[rightMenu] = { kind: "region", id: rightMenu, host: slot.id, role: "menu", side: "right" };
+  }
+
+  return regions;
+};
+
 export const defineFrame = <const TRoot extends FrameNode, const TPrimary extends string>(input: {
   id: string;
   root: TRoot;
   primary: TPrimary & SlotsOf<TRoot>;
   secondary?: SideBinding<Exclude<SlotsOf<TRoot>, TPrimary>>;
   attached?: SideBinding<Exclude<SlotsOf<TRoot>, TPrimary>>;
-}) => ({
-  ...input,
-  slots: indexSlots(input.root) as Readonly<Record<SlotsOf<TRoot>, FrameSlot & { id: SlotsOf<TRoot> }>>,
-});
+}) => {
+  const slots = indexSlots(input.root);
+  return {
+    ...input,
+    slots: slots as Readonly<Record<SlotsOf<TRoot>, FrameSlot & { id: SlotsOf<TRoot> }>>,
+    regions: indexRegions(slots),
+  };
+};

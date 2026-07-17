@@ -210,6 +210,7 @@ describe("workbench modules", () => {
       activate(ctx) {
         ctx.modes.registerMode({
           id: "project",
+          frame: ctx.layout.getDefaultFrame(),
           activate(modeCtx) {
             modeCtx.commands.registerCommand(
               { id: "project.refresh", label: "Refresh project" },

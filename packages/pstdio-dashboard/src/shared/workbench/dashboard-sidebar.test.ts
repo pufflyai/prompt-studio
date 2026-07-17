@@ -6,7 +6,11 @@ import { registerDashboardSidebar } from "./dashboard-sidebar";
 describe("registerDashboardSidebar", () => {
   test("keeps the sidebar collapsed when a mode opens its widget", () => {
     const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.registerModule({
       id: "test.dashboard-sidebar",
       activate: (ctx) => registerDashboardSidebar(ctx),

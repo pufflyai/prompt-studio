@@ -20,14 +20,8 @@ const alternateBody: FrameNode = {
   id: "alternate-body",
   direction: "row",
   children: [
-    classicFrame.slots["main-header"],
     classicFrame.slots.main,
-    {
-      kind: "split",
-      id: "alternate-secondary",
-      direction: "column",
-      children: [classicFrame.slots["secondary-header"], classicFrame.slots.secondary],
-    },
+    classicFrame.slots.secondary,
     {
       kind: "slot",
       id: "inspector",
@@ -52,7 +46,29 @@ export const alternateFrame = defineFrame({
   attached: { slot: "side", persistence: "detached", candidates: "scoped" },
 });
 
-const focusOmissions = new Set(["left", "left-header", "secondary", "secondary-header"]);
+export const shellRailFrame = defineFrame({
+  id: "shell-rail",
+  root: {
+    kind: "split",
+    id: "shell-rail-workbench",
+    direction: "row",
+    children: [
+      classicFrame.root,
+      {
+        kind: "slot",
+        id: "tool-rail",
+        owner: "project",
+        role: "chrome",
+        size: { defaultPx: 56, minPx: 56, maxPx: 56 },
+      },
+    ],
+  },
+  primary: "main",
+  secondary: { slot: "secondary", persistence: "derived", candidates: "scoped" },
+  attached: { slot: "side", persistence: "detached", candidates: "scoped" },
+});
+
+const focusOmissions = new Set(["left", "secondary"]);
 
 const omitFocusSlots = (node: FrameNode): FrameNode | undefined => {
   if (node.kind === "slot") return focusOmissions.has(node.id) ? undefined : node;
@@ -102,12 +118,10 @@ const createFrameExampleModule = (frame: Frame): WorkbenchModuleContribution => 
 
     const panels = [
       { area: "main", title: "Primary editor", description: `Rendered by the ${frame.id} frame.` },
-      { area: "main-header", title: "Frame header", description: "Header chrome remains content-derived." },
       { area: "secondary", title: "Secondary panel", description: "Resize or collapse this frame-owned pane." },
-      { area: "secondary-header", title: "Secondary header", description: "The header follows its panel." },
-      { area: "main-left", title: "Primary tools", description: "A resource companion of the primary slot." },
       { area: "side", title: "Details", description: "A resource companion in the unified side panel." },
       { area: "inspector", title: "Unknown inspector", description: "Rendered with default slot chrome." },
+      { area: "tool-rail", title: "Tool rail", description: "A novel shell slot rendered by the frame tree." },
     ].filter((panel) => frame.slots[panel.area]);
 
     for (const panel of panels) {

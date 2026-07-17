@@ -5,6 +5,7 @@ export interface FrameOpenerDetails {
   id: string;
   label: string;
   icon: string;
+  commandId?: string;
 }
 
 interface FrameOpenerPanelState {
@@ -12,6 +13,7 @@ interface FrameOpenerPanelState {
   collapsed: boolean;
   collapsible: boolean;
   placements: WorkbenchWidgetPlacement[];
+  openCommandId?: string;
 }
 
 interface FrameOpenerInput {
@@ -36,17 +38,22 @@ export const resolveMainBottomPanelOpener = (placements: WorkbenchWidgetPlacemen
   return genericMainBottomPanelOpener;
 };
 
-const classicOpenerOrder = ["main-left", "secondary", "side"] as const;
+const classicOpenerOrder = ["secondary", "side"] as const;
 
-const getOpenerDetails = (id: (typeof classicOpenerOrder)[number], placements: WorkbenchWidgetPlacement[]) => {
-  if (id === "main-left") return { id, label: "Show main-left panel", icon: "PanelLeft" };
+const getOpenerDetails = (
+  id: (typeof classicOpenerOrder)[number],
+  placements: WorkbenchWidgetPlacement[],
+  commandId?: string,
+) => {
   if (id === "side") return { id, label: "Show side panel", icon: "PanelRight" };
+  if (commandId) return { id, label: "Show terminal panel", icon: "SquareTerminal" };
   return { id, ...resolveMainBottomPanelOpener(placements) };
 };
 
 export const resolveFrameOpeners = (input: FrameOpenerInput): FrameOpenerDetails[] =>
   classicOpenerOrder.flatMap((id) => {
     const panel = input.panels[id];
-    if (!panel?.available || !panel.collapsed || !panel.collapsible) return [];
-    return [getOpenerDetails(id, panel.placements)];
+    if (!panel?.collapsible) return [];
+    if (!panel.openCommandId && (!panel.available || !panel.collapsed)) return [];
+    return [{ ...getOpenerDetails(id, panel.placements, panel.openCommandId), commandId: panel.openCommandId }];
   });

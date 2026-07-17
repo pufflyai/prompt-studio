@@ -79,7 +79,6 @@ const ContributionButton = (props: { label: string; onClick(): void }) => {
 
 const clearResourcePanels = (workbench: WorkbenchCore) => {
   workbench.layout.clearArea("main");
-  workbench.layout.clearArea("main-left");
   for (const placement of workbench.layout.getLayout().areas.side.widgets) {
     if (placement.companionOfPrimary) workbench.layout.removeWidgetPlacement(placement.widgetId);
   }
@@ -226,7 +225,8 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
           workbench.layout.registerWidget({
             id: widgetId,
             title,
-            area: "main-left",
+            area: "main",
+            menu: { host: "*", side: "left", icon: "PanelLeft" },
             rendererId: renderer.id,
             resourceKinds: [resource.kind],
           });

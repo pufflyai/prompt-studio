@@ -124,8 +124,18 @@ describe("workbench built-ins", () => {
   test("switches modes through a built-in command", async () => {
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "pstdio.extension-lab.lab", label: "Lab", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
+    workbench.modes.registerMode({
+      id: "pstdio.extension-lab.lab",
+      label: "Lab",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.modes.setActiveMode("project");
 
     await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "pstdio.extension-lab.lab" });
@@ -145,7 +155,12 @@ describe("workbench built-ins", () => {
   test("switch mode command rejects unknown mode ids without mutating active state", async () => {
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.modes.setActiveMode("project");
 
     await expect(

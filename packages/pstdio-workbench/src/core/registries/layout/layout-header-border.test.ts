@@ -13,22 +13,22 @@ describe("createLayoutModel header border", () => {
     registerTestWidget(layout, {
       id: "project.context",
       title: "Project context",
-      area: "main-header",
+      area: "main",
     });
     registerTestWidget(layout, {
       id: "project.toolbar",
       title: "Project toolbar",
-      area: "main-header",
+      area: "main",
       headerBorderBottom: false,
     });
 
     const context = layout.openWidget("project.context");
     layout.openWidget("project.toolbar");
 
-    expect(layout.getAreaHeaderBorderBottom("main-header")).toBe(false);
+    expect(layout.getAreaHeaderBorderBottom("main")).toBe(false);
 
     layout.activateWidget(context.widgetId);
 
-    expect(layout.getAreaHeaderBorderBottom("main-header")).toBe(true);
+    expect(layout.getAreaHeaderBorderBottom("main")).toBe(true);
   });
 });

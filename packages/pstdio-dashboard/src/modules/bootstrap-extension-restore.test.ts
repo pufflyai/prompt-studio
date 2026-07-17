@@ -31,7 +31,12 @@ describe("createBootstrapModule extension restores", () => {
       },
     });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     const dashboardViewKind = workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());
@@ -81,7 +86,12 @@ describe("createBootstrapModule extension restores", () => {
       },
     });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     const dashboardViewKind = workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());

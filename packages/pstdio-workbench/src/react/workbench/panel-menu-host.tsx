@@ -2,7 +2,9 @@ import { Box, Flex } from "@chakra-ui/react";
 import { PanelMenu, type SplitPane, SplitView } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { PanelMenuDetails, SlotId, WorkbenchCore } from "../../core";
+import { PANEL_MENU_CONTENT_MIN_SIZE_PX } from "../area/responsive-panel-menus";
 import { usePanelMenus } from "../area/use-panel-menus";
+import { useElementWidth, useResponsivePanelMenus } from "../area/use-responsive-panel-menus";
 import { WorkbenchWidgetHost } from "../area/widget-host";
 import { WorkbenchIcon } from "../shared/icon";
 
@@ -33,7 +35,9 @@ interface PanelMenuHostProps {
 
 export const PanelMenuHost = (props: PanelMenuHostProps) => {
   const { workbench, area, children } = props;
-  const menus = usePanelMenus(workbench, area);
+  const panelMenus = usePanelMenus(workbench, area);
+  const { setElement, width } = useElementWidth();
+  const menus = useResponsivePanelMenus(panelMenus, width);
   const panes: SplitPane[] = [
     ...(menus.docked.left
       ? [
@@ -55,7 +59,7 @@ export const PanelMenuHost = (props: PanelMenuHostProps) => {
           {children}
         </Box>
       ),
-      minSizePx: 160,
+      minSizePx: PANEL_MENU_CONTENT_MIN_SIZE_PX,
     },
     ...(menus.docked.right
       ? [
@@ -73,7 +77,7 @@ export const PanelMenuHost = (props: PanelMenuHostProps) => {
   ];
 
   return (
-    <Flex h="full" minH="0" minW="0" w="full" overflow="hidden">
+    <Flex ref={setElement} h="full" minH="0" minW="0" w="full" overflow="hidden">
       <SplitView
         direction="row"
         panes={panes}

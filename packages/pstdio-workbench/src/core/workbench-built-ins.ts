@@ -1,16 +1,16 @@
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
-import type { WorkbenchArea } from "./registries/layout/layout-model";
+import type { SlotId } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
 const LEFT_PANEL_ID = "left";
 
-const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchArea, open: boolean) => {
+const setPanelOpen = (workbench: WorkbenchCore, panelId: SlotId, open: boolean) => {
   workbench.panels.setOpen(panelId, open);
   workbench.layout.setAreaVisible(panelId, open);
 };
 
-const togglePanel = (workbench: WorkbenchCore, panelId: WorkbenchArea) => {
+const togglePanel = (workbench: WorkbenchCore, panelId: SlotId) => {
   setPanelOpen(workbench, panelId, !workbench.panels.isOpen(panelId));
 };
 

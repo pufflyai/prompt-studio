@@ -32,7 +32,6 @@ import {
   type RegisteredWidgetContribution,
   type SlotId,
   type WidgetContribution,
-  type WorkbenchArea,
   type WorkbenchAreaSize,
   type WorkbenchLayout,
   type WorkbenchLayoutNode,
@@ -52,7 +51,6 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
-  WorkbenchArea,
   WorkbenchAreaSize,
   WorkbenchAreaState,
   WorkbenchLayout,
@@ -60,7 +58,7 @@ export type {
   WorkbenchLayoutStoreState,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
-export { createDefaultWorkbenchLayout, workbenchAreas } from "./layout-types";
+export { createDefaultWorkbenchLayout } from "./layout-types";
 
 export interface LayoutScope {
   mode: string;
@@ -165,7 +163,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   const getLayout = () => store.getState().layout;
   const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
-  const getPlaceholder = (areaId: WorkbenchArea) => getPlaceholders()[areaId];
+  const getPlaceholder = (areaId: SlotId) => getPlaceholders()[areaId];
   const requireArea = (areaId: SlotId) => {
     const area = getLayout().areas[areaId];
     if (!area) throw new Error(`Workbench area not found: ${areaId}`);

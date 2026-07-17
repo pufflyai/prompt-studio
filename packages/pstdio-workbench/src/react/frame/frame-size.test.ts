@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { FrameSlot } from "../../core";
-import { resolveSlotSize } from "./frame-size";
+import { isFixedSlotSize, resolveSlotSize } from "./frame-size";
 
 const slot = {
   kind: "slot",
@@ -21,5 +21,10 @@ describe("resolveSlotSize", () => {
 
   test("keeps optional fields absent when neither source declares them", () => {
     expect(resolveSlotSize({ ...slot, size: undefined }, undefined)).toEqual({});
+  });
+
+  test("distinguishes fixed shell sizes from resizable panel sizes", () => {
+    expect(isFixedSlotSize({ defaultPx: 40, minPx: 40, maxPx: 40 })).toBe(true);
+    expect(isFixedSlotSize({ defaultPx: 240, minPx: 128, maxPx: 420 })).toBe(false);
   });
 });

@@ -232,6 +232,7 @@ const createFoundationModesModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.modes.registerMode({
       id: "project",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         modeCtx.context.set("foundation.project", true);
         modeCtx.layout.openWidget("foundation.main", { title: "Project Foundation", closable: true });
@@ -239,6 +240,7 @@ const createFoundationModesModule = (): WorkbenchModuleContribution => ({
     });
     ctx.modes.registerMode({
       id: "review",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         modeCtx.context.set("foundation.review", true);
         modeCtx.layout.openWidget("foundation.panel", { title: "Review Panel", closable: true });

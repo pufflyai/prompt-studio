@@ -2,24 +2,7 @@ import type { ContributionSource, RegisteredContributionMetadata } from "../../s
 import type { ResourceRef } from "../resources/resource-registry";
 import { applyFrameToLayout } from "./apply-frame";
 import { classicFrame } from "./classic-frame";
-import type { Frame, FrameSlotSize, SlotPresentation, SlotsOf } from "./frame-types";
-
-export const workbenchAreas = [
-  "nav",
-  "activity",
-  "left-header",
-  "left",
-  "main-header",
-  "main-left",
-  "main",
-  "secondary-header",
-  "secondary",
-  "status",
-  "side",
-  "overlay",
-] as const;
-
-export type WorkbenchArea = SlotsOf<typeof classicFrame>;
+import type { Frame, FrameSlotSize, SlotPresentation } from "./frame-types";
 
 export type SlotId = string;
 
@@ -42,7 +25,6 @@ export interface WidgetContribution {
   id: string;
   title: string;
   area: SlotId;
-  fallbackArea?: SlotId;
   singleton?: boolean;
   reuse?: WidgetReusePolicy;
   mountStrategy?: WidgetMountStrategy;

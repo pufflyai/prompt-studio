@@ -8,7 +8,7 @@
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import type {
   ResourceRef,
-  WorkbenchArea,
+  SlotId,
   WorkbenchModuleContribution,
 } from "pstdio-workbench/core";
 import { Workbench } from "pstdio-workbench/react";
@@ -94,14 +94,13 @@ ctx.layout.registerWidget({
 });
 ```
 
-Available areas are `nav`, `activity`, `left-header`, `left`, `main-header`, `main-left`, `main`, `secondary-header`, `secondary`, `side`, `status`, and `overlay`. The unified `side` area supports docked and floating presentations; visibility is stored independently in the layout node.
+An area's `SlotId` is any string declared by the active frame. The classic frame declares `nav`, `activity`, `left-header`, `left`, `main-header`, `main-left`, `main`, `secondary-header`, `secondary`, `side`, `status`, and `overlay`. A custom frame can add new shell slots; unknown slot ids use the default workbench chrome. The unified classic `side` slot supports docked and floating presentations, with visibility stored independently in its layout node.
 
 Widget options:
 
 | Option               | Purpose                                                                   |
 | -------------------- | ------------------------------------------------------------------------- |
 | `area`               | Primary workbench area for the widget                                         |
-| `fallbackArea`       | Alternate area for callers that do not provide one                        |
 | `singleton`          | Reuse one existing placement instead of adding more placements            |
 | `closable`           | Whether placements expose a close affordance in area tabs                 |
 | `areaSize`           | Active widget size hints for resizable areas                              |
@@ -535,9 +534,10 @@ workbench.modes.registerMode({
 workbench.modes.setActiveMode("review");
 ```
 
-A mode's optional `frame` declares which workbench slots exist while that mode is active. The registry installs the
-frame before `activate()` runs; modes without one use the layout model's default frame. Areas for slots omitted by the
-incoming frame move to `layout.orphans` and return intact when a later frame declares those slots again.
+A mode's required `frame` declares the entire workbench shell and which slots exist while that mode is active. The
+registry installs it before `activate()` runs. Pass `workbench.layout.getDefaultFrame()` when a mode uses its host's
+default shell. Areas for slots omitted by the incoming frame move to `layout.orphans` and return intact when a later
+frame declares those slots again.
 
 ## Controllers
 

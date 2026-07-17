@@ -150,12 +150,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
 
   const openWidget = (id: string, openInput: OpenWidgetInput = {}) => {
     const widget = requireWidget(id);
-    const current = getLayout();
-    const requestedAreaId = openInput.area ?? widget.area ?? "main";
-    const areaId =
-      current.areas[requestedAreaId] || !widget.fallbackArea || !current.areas[widget.fallbackArea]
-        ? requestedAreaId
-        : widget.fallbackArea;
+    const areaId = openInput.area ?? widget.area;
     const area = ensureArea(areaId);
     const layout = getLayout();
     const replacementIndex =

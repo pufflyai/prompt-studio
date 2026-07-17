@@ -59,7 +59,7 @@ Surface commands in the command palette, area headers, tree context menus, or cu
 
 #### Examples
 
-- [`hello-world`](src/examples/hello-world/module.tsx) — main-header trailing menu item.
+- [`hello-world`](src/examples/hello-world/module.tsx) — main panel header trailing menu item.
 - [`foundation`](src/examples/foundation/module.tsx) — menu items wired into header paths.
 
 ---
@@ -326,27 +326,23 @@ Workbench areas are named layout targets used by widget contributions. They desc
 
 Use `layout.registerPlaceholder()` for an area empty state that should render only after all widgets in that area close. Placeholders are not widget placements, so they do not affect tab lists.
 
-Most panels are paired with a `<panel>-header` area that the workbench renders directly above the panel. Widgets placed in a header area use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
+Headers and panel menus are regions owned by their panel; they are not areas and never appear in persisted area layout. `main`, `secondary`, and `side` each own a header plus left and right menu regions. Attached menus resize and drag closed with their panel, then appear as header dropdown buttons while closed or when the panel is too narrow.
 
-| Area                 | Workbench location                                      | Typical use                                                                    |
-| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `nav`                | Top of the workbench                                     | Breadcrumbs, active context, compact global controls                           |
-| `activity`           | Narrow rail on the far left                             | Top-level mode or workspace switching                                          |
-| `left-header`        | Header above `left`                                     | Project brand, primary navigation header actions                               |
-| `left`               | Primary left side panel                                 | Navigation trees, registries, project outlines, resource lists                 |
-| `main-header`        | Header above `main` and `main-left`                     | Active editor context, compact main controls, panel reopen actions             |
-| `main-left`          | Resizable panel to the left of `main`                   | Per-mode navigation trees (settings, document outlines)                        |
-| `main`               | Central content region                                  | Editors, detail pages, dashboards, primary resource views                      |
-| `secondary-header`   | Header above `secondary`                                | Tab strips, log filters                                                        |
-| `secondary`          | Resizable panel below `main` and `main-left`            | Diagnostics, activity, logs, terminals, background task output                 |
-| `side`               | Full-height docked or floating panel                    | Sessions, inspectors, properties, contextual details                           |
-| `status`             | Bottom status strip                                     | Compact state, counters, sync status, environment indicators                   |
-| `overlay`            | Layer above the workbench                               | Modal flows, blocking prompts, transient overlays                              |
+| Area        | Workbench location                   | Typical use                                                    |
+| ----------- | ------------------------------------ | -------------------------------------------------------------- |
+| `nav`       | Top workbench chrome                 | Breadcrumbs, global controls, and closed-panel buttons          |
+| `activity`  | Narrow rail on the far left          | Top-level mode or workspace switching                           |
+| `left`      | Primary left side panel              | Navigation trees, registries, project outlines, resource lists |
+| `main`      | Central panel                        | Editors, detail pages, dashboards, primary resource views      |
+| `secondary` | Resizable panel below `main`         | Diagnostics, activity, logs, terminals, background task output |
+| `side`      | Full-height docked or floating panel | Sessions, inspectors, properties, contextual details           |
+| `status`    | Full-width bottom status strip       | Compact state, counters, sync status, environment indicators   |
+| `overlay`   | Layer above the workbench            | Modal flows, blocking prompts, transient overlays               |
 
 The command palette, toast notifications, and resize handles are workbench chrome, not workbench areas. Use the `AreaMap` Storybook story to see the current area placement rendered through the real `Workbench`.
 
 ## Header Actions
 
-Each area header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)`. The top header reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths to expose compact header controls while keeping breadcrumbs and the `top` area as workbench-owned chrome.
+Each panel header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)`. The top header reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths while keeping breadcrumbs and Nav Chrome host-owned.
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.

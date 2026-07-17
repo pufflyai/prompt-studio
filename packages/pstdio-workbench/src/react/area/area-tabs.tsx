@@ -1,4 +1,4 @@
-import { Tabs } from "@chakra-ui/react";
+import { HStack, Tabs } from "@chakra-ui/react";
 import { buildTabVisibilityMenuActions, filterVisibleTabs, ScrollArea, useTabVisibilityStore } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ import { AreaTabsAddMenu } from "./area-tabs-add-menu";
 import { AreaTabsContextMenu } from "./area-tabs-context-menu";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
 import { useAreaLeadingItems } from "./use-area-leading-items";
-import { usePanelMenus } from "./use-panel-menus";
+import { type PanelMenusResult, usePanelMenus } from "./use-panel-menus";
 
 interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
@@ -19,6 +19,10 @@ interface WorkbenchAreaTabsProps {
   visibilityStorageKey?: string;
   forceVisible?: boolean;
   showAddMenu?: boolean;
+}
+
+interface WorkbenchAreaTabsContentProps extends WorkbenchAreaTabsProps {
+  panelMenus: PanelMenusResult;
 }
 
 export const shouldShowAreaTabs = (
@@ -31,11 +35,10 @@ export const shouldShowAreaTabs = (
   placements.length > 1 ||
   placements.some(isPlacementCloseable);
 
-export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
-  const { workbench, area, visibilityStorageKey, forceVisible = false, showAddMenu = false } = props;
+const WorkbenchAreaTabsContent = (props: WorkbenchAreaTabsContentProps) => {
+  const { workbench, area, visibilityStorageKey, panelMenus, forceVisible = false, showAddMenu = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const leading = useAreaLeadingItems(workbench, area);
-  const panelMenus = usePanelMenus(workbench, area);
   const placements = panelMenus.tabs;
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the area id so persistence has a sensible default.
@@ -111,77 +114,84 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
 
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState?.activeWidgetId);
   return (
-    <Tabs.Root
-      value={activeWidgetId}
-      onValueChange={(details) => workbench.layout.activateWidget(details.value)}
-      variant="subtle"
-      colorPalette="gray"
-      justify="start"
-      size="sm"
-      alignSelf="stretch"
-      flexDirection="row"
-      alignItems="center"
-      flex="1 1 auto"
-      maxW="full"
-      minW="0"
-      h="full"
-      position="relative"
-      zIndex="1"
-      onContextMenu={hasVisibilityMenu ? (event) => openContextMenu(event) : undefined}
-    >
-      {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
-          height so the active tab still meets the header's bottom edge. */}
-      <ScrollArea
-        viewportRef={setViewport}
+    <HStack alignSelf="stretch" flex="1 1 auto" maxW="full" minW="0" h="full" gap="0" position="relative" zIndex="1">
+      <Tabs.Root
+        value={activeWidgetId}
+        onValueChange={(details) => workbench.layout.activateWidget(details.value)}
+        variant="subtle"
+        colorPalette="gray"
+        justify="start"
+        size="sm"
         flex="1 1 auto"
-        size="xs"
         h="full"
-        w="max-content"
         maxW="full"
         minW="0"
-        showVerticalScrollbar={false}
-        showHorizontalScrollbar
-        contentProps={{ h: "full" }}
+        position="relative"
+        onContextMenu={hasVisibilityMenu ? (event) => openContextMenu(event) : undefined}
       >
-        {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
-            makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
-        <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
-          {visiblePlacements.map((placement) => (
-            <AreaTabTrigger
-              key={placement.widgetId}
+        {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
+            height so the active tab still meets the header's bottom edge. */}
+        <ScrollArea
+          viewportRef={setViewport}
+          flex="1 1 auto"
+          size="xs"
+          h="full"
+          w="max-content"
+          maxW="full"
+          minW="0"
+          showVerticalScrollbar={false}
+          showHorizontalScrollbar
+          contentProps={{ h: "full" }}
+        >
+          {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
+              makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
+          <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
+            {visiblePlacements.map((placement) => (
+              <AreaTabTrigger
+                key={placement.widgetId}
+                workbench={workbench}
+                placement={placement}
+                activeWidgetId={activeWidgetId}
+                onContextMenu={hasContextMenu ? (event) => openContextMenu(event, placement) : undefined}
+              />
+            ))}
+            <AreaTabsAddMenu
               workbench={workbench}
-              placement={placement}
-              activeWidgetId={activeWidgetId}
-              onContextMenu={hasContextMenu ? (event) => openContextMenu(event, placement) : undefined}
+              area={area}
+              items={leading.items}
+              openablePanels={leading.openablePanels}
+              primary={leading.primary}
+              showWhenEmpty={showAddMenu}
             />
-          ))}
-          <AreaTabsAddMenu
+          </Tabs.List>
+        </ScrollArea>
+        {hasContextMenu ? (
+          <AreaTabsContextMenu
             workbench={workbench}
             area={area}
-            items={leading.items}
-            openablePanels={leading.openablePanels}
-            primary={leading.primary}
-            showWhenEmpty={showAddMenu}
+            open={menuOpen}
+            onOpenChange={(open) => {
+              setMenuOpen(open);
+              if (!open) setContextPlacement(undefined);
+            }}
+            anchor={anchor}
+            placement={contextPlacement}
+            placements={placements}
+            visiblePlacements={visiblePlacements}
+            visibilityActions={menuActions}
           />
-        </Tabs.List>
-      </ScrollArea>
+        ) : null}
+      </Tabs.Root>
       <AreaTabMenuToggles workbench={workbench} menus={panelMenus.toggles} dockable={panelMenus.dockable} />
-      {hasContextMenu ? (
-        <AreaTabsContextMenu
-          workbench={workbench}
-          area={area}
-          open={menuOpen}
-          onOpenChange={(open) => {
-            setMenuOpen(open);
-            if (!open) setContextPlacement(undefined);
-          }}
-          anchor={anchor}
-          placement={contextPlacement}
-          placements={placements}
-          visiblePlacements={visiblePlacements}
-          visibilityActions={menuActions}
-        />
-      ) : null}
-    </Tabs.Root>
+    </HStack>
   );
 };
+
+export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
+  const panelMenus = usePanelMenus(props.workbench, props.area);
+  return <WorkbenchAreaTabsContent {...props} panelMenus={panelMenus} />;
+};
+
+export const WorkbenchAreaTabsWithMenus = (props: WorkbenchAreaTabsContentProps) => (
+  <WorkbenchAreaTabsContent {...props} />
+);

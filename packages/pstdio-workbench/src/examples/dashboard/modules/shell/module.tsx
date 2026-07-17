@@ -13,8 +13,6 @@ import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { StatusWidget } from "./components/status-widget";
 import { registerProjectNavigation } from "./project-nav";
 
-const LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
-
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
   { kind: "dashboard-view", label: "Dashboard view", icon: "square-kanban" },
@@ -40,15 +38,8 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <DashboardMainHeader input={input} />,
   });
 
-  ctx.layout.registerWidget({
-    id: LEFT_HEADER_WIDGET_ID,
-    title: "Project brand",
-    area: "left-header",
-    singleton: true,
-    rendererId: LEFT_HEADER_WIDGET_ID,
-  });
   ctx.renderers.registerRenderer({
-    id: LEFT_HEADER_WIDGET_ID,
+    id: "left-header",
     render: (input) => <DashboardLeftHeader workbench={input.workbench} />,
   });
 
@@ -85,7 +76,6 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   });
 
   ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
-  ctx.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
 };
 
@@ -103,6 +93,7 @@ export const createShellModule = (): WorkbenchModuleContribution => ({
     ctx.modes.registerMode({
       id: "project",
       label: "Project",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         registerProjectNavigation(modeCtx);
         return undefined;

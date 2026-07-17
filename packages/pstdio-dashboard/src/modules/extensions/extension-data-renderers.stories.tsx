@@ -75,7 +75,12 @@ const stubExecuteCommand = async (
 };
 
 const workbench = createWorkbenchCore();
-workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+workbench.modes.registerMode({
+  id: "project",
+  label: "Project",
+  frame: workbench.layout.getDefaultFrame(),
+  activate: () => undefined,
+});
 workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
 
 workbench.registerModule({

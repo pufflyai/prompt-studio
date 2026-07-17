@@ -1,4 +1,4 @@
-import { Box, IconButton } from "@chakra-ui/react";
+import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { Header, Tooltip } from "@pstdio/ui";
 import {
   getAnchorResource,
@@ -7,25 +7,69 @@ import {
   workbenchTopHeaderTrailingMenuPath,
 } from "../../core";
 import { WorkbenchArea } from "../area/area";
-import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchHeaderActions } from "../header/header-actions";
+import { type FrameOpenerDetails, resolveFrameOpeners } from "../frame/frame-openers";
+import { isFrameSlotVisible, resolveFrameSlotCollapsible, useFrameStoreSnapshot } from "../frame/use-frame-slot-state";
+import {
+  WorkbenchAuxiliaryHeaderActions,
+  WorkbenchHeaderActions,
+  WorkbenchResourceActions,
+} from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WORKBENCH_TERMINAL_OPEN_COMMAND_ID } from "../terminal/terminal-module";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
+import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "./workbench-panel-state";
 
 interface WorkbenchHeaderProps {
   workbench: WorkbenchCore;
-  hasTop: boolean;
-  showLeftPanelOpener: boolean;
-  onOpenLeftPanel: () => void;
 }
 
+const FramePanelOpeners = (props: { workbench: WorkbenchCore; openers: FrameOpenerDetails[] }) => {
+  const { workbench, openers } = props;
+  if (openers.length === 0) return null;
+
+  return (
+    <HStack flexShrink={0} gap="2xs" minW="0">
+      {openers.map((opener) => (
+        <Tooltip key={opener.id} content={opener.label}>
+          <IconButton
+            variant="ghost"
+            size="xs"
+            aria-label={opener.label}
+            flexShrink={0}
+            onClick={() => {
+              if (opener.commandId) {
+                void workbench.commands.executeCommand(opener.commandId).catch(() => undefined);
+                return;
+              }
+              setWorkbenchPanelOpen(workbench, opener.id, true);
+            }}
+          >
+            <WorkbenchIcon name={opener.icon} size={16} />
+          </IconButton>
+        </Tooltip>
+      ))}
+    </HStack>
+  );
+};
+
 export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
-  const { workbench, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
+  const { workbench } = props;
+  const snapshot = useFrameStoreSnapshot(workbench);
+  const frame = useWorkbenchStore(workbench.layout.store, (state) => state.frame);
+  const hasTop = (snapshot.layout.areas.nav?.widgets.length ?? 0) > 0 || Boolean(snapshot.placeholders.nav);
+  const leftSlot = frame.slots.left;
+  const leftPanelOpen = snapshot.openByAreaId.left ?? true;
+  const showLeftPanelOpener = Boolean(
+    leftSlot &&
+      isFrameSlotVisible(frame, snapshot, leftSlot) &&
+      !leftPanelOpen &&
+      resolvePanelCollapsible(workbench, "left"),
+  );
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -41,8 +85,33 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
     listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath, menuContext).length > 0;
   const hasBreadcrumb = breadcrumbItems.length > 0;
   const hasCenter = hasTop || hasBreadcrumb;
+  const openerPanels = Object.fromEntries(
+    ["secondary", "side"].flatMap((id) => {
+      const slot = frame.slots[id];
+      if (!slot) return [];
+      const collapsible = resolveFrameSlotCollapsible(workbench, frame, id);
+      const available = isFrameSlotVisible(frame, snapshot, slot);
+      return [
+        [
+          id,
+          {
+            available,
+            collapsed: !(snapshot.openByAreaId[id] ?? true) && collapsible,
+            collapsible,
+            placements: snapshot.layout.areas[id]?.widgets ?? [],
+            openCommandId:
+              id === "secondary" && !available && commands[WORKBENCH_TERMINAL_OPEN_COMMAND_ID]
+                ? WORKBENCH_TERMINAL_OPEN_COMMAND_ID
+                : undefined,
+          },
+        ],
+      ];
+    }),
+  );
+  const openers = resolveFrameOpeners({ panels: openerPanels });
 
-  if (!showLeftPanelOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions) return null;
+  if (!showLeftPanelOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions && openers.length === 0)
+    return null;
 
   return (
     <Header
@@ -53,6 +122,7 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
       gap="xs"
       overflow="hidden"
       overflowY="hidden"
+      w="full"
     >
       {showLeftPanelOpener ? (
         <Tooltip content="Show left side panel">
@@ -61,88 +131,32 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
             size="xs"
             aria-label="Show left side panel"
             flexShrink={0}
-            onClick={onOpenLeftPanel}
+            onClick={() => setWorkbenchPanelOpen(workbench, "left", true)}
           >
             <WorkbenchIcon name="PanelLeft" size={16} />
           </IconButton>
         </Tooltip>
       ) : null}
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-      {hasCenter ? (
-        <Box flex="1" h="full" minW="0" overflow="hidden">
-          {hasTop ? <WorkbenchArea workbench={workbench} area="nav" title="Top" /> : null}
-          {!hasTop && hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
-        </Box>
-      ) : null}
-      <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+      <Box flex="1" h="full" minW="0" overflow="hidden">
+        {hasTop ? <WorkbenchArea workbench={workbench} area="nav" title="Top" /> : null}
+        {!hasTop && (hasBreadcrumb || hasTrailingActions) ? (
+          <HStack h="full" minW="0" gap="2xs">
+            {hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
+            <WorkbenchResourceActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+          </HStack>
+        ) : null}
+      </Box>
+      <WorkbenchAuxiliaryHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+      <FramePanelOpeners workbench={workbench} openers={openers} />
       <WorkbenchHeaderBorder workbench={workbench} area="nav" />
     </Header>
-  );
-};
-
-interface WorkbenchLeftSidePanelProps {
-  workbench: WorkbenchCore;
-  hasHeader: boolean;
-}
-
-export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
-  const { workbench, hasHeader } = props;
-  const leftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left?.widgets ?? []);
-  const hasContentTabs = shouldShowAreaTabs(leftWidgets);
-  const showHeaderBar = hasHeader || hasContentTabs;
-
-  return (
-    <WorkbenchFocusRegion
-      workbench={workbench}
-      area="sideBar"
-      as="aside"
-      bg={workbenchBackgrounds.sideBar}
-      display="flex"
-      flexDirection="column"
-      h="full"
-      minH="0"
-      minW="0"
-      overflow="hidden"
-      w="full"
-    >
-      {showHeaderBar ? (
-        <Header
-          variant="main"
-          bg={workbenchBackgrounds.sideBar}
-          position="relative"
-          flexShrink={0}
-          gap="xs"
-          overflowX="hidden"
-          // Full-bleed: left-header content (e.g. the project switcher) owns its own padding and
-          // fills the header height, so the container adds none of its own horizontally.
-          px="0"
-          // Size to content so a multi-row left-header (e.g. a stacked action cluster) is not
-          // clipped to the single-row height; single-row headers stay at the variant height.
-          h="auto"
-          minH="2.5rem"
-          alignItems="stretch"
-        >
-          <WorkbenchAreaTabs workbench={workbench} area="left" />
-          {hasHeader ? (
-            <Box flex="1" minW="0" overflowX="hidden">
-              <WorkbenchArea workbench={workbench} area="left-header" title="Left header" />
-            </Box>
-          ) : null}
-          <WorkbenchHeaderBorder workbench={workbench} area="left-header" />
-        </Header>
-      ) : null}
-      <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchArea workbench={workbench} area="left" title="Left" />
-      </Box>
-    </WorkbenchFocusRegion>
   );
 };
 
 interface WorkbenchAreaPanelProps {
   workbench: WorkbenchCore;
 }
-
-export const WORKBENCH_STATUS_BAR_HEIGHT = "1.75rem";
 
 export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
   const { workbench } = props;
@@ -159,7 +173,7 @@ export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
       h="full"
       minH="0"
       overflow="hidden"
-      w="3.5rem"
+      w="full"
     >
       <WorkbenchArea workbench={workbench} area="activity" title="Activity bar" />
     </WorkbenchFocusRegion>
@@ -178,10 +192,11 @@ export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
       borderTopWidth="1px"
       borderColor="border.subtle"
       flexShrink={0}
-      h={WORKBENCH_STATUS_BAR_HEIGHT}
+      h="full"
       minH="0"
       minW="0"
       overflow="hidden"
+      w="full"
     >
       <WorkbenchArea workbench={workbench} area="status" title="Status" />
     </WorkbenchFocusRegion>

@@ -7,7 +7,7 @@ import { activateModeChromeContributions } from "@/shared/workbench/contribution
 import {
   dashboardExtensionViewKind,
   extensionModeLayoutArea,
-  extensionViewArea as extensionViewAreaForPlacement,
+  extensionViewPlacement,
   extensionViewWidgetId,
   extensionViewWidgetIdFor,
 } from "./extension-view-placement";
@@ -130,11 +130,13 @@ const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadat
   for (const view of metadata.views) {
     if (!view.webview) continue;
     const isModal = view.surface === "modal";
+    const placement = extensionViewPlacement(view, metadata.views);
     disposables.push(
       ctx.layout.registerWidget({
         id: extensionViewWidgetId(view.id),
         title: resolveLocalizableString(view.title, view.extensionId),
-        area: isModal ? "overlay" : extensionViewAreaForPlacement(view.target),
+        area: isModal ? "overlay" : placement.area,
+        menu: placement.menu,
         rendererId: dashboardWidgetIds.extensionView,
         ...(isModal ? { closable: true, config: modalOverlayConfig } : {}),
       }),
@@ -162,6 +164,7 @@ const registerExtensionModes = (
         ctx.modes.registerMode({
           id: mode.modeId,
           label: resolveLocalizableString(mode.label, mode.extensionId),
+          frame: ctx.layout.getDefaultFrame(),
           activate(modeCtx) {
             activateExtensionModeLayout({ ctx: modeCtx, metadata, mode, projectId });
             return activateModeChromeContributions(modeCtx, mode.modeId);

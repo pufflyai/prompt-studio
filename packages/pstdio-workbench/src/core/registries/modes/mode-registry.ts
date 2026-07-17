@@ -10,7 +10,7 @@ export type WorkbenchModeActivationResult = Disposable | readonly Disposable[] |
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
-  frame?: Frame;
+  frame: Frame;
   activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
 }
 
@@ -77,7 +77,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeModeContext = contextScope;
 
     context.layout.setPersistenceScope({ mode: id });
-    context.layout.setFrame(mode.frame ?? context.layout.getDefaultFrame());
+    context.layout.setFrame(mode.frame);
     store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
     try {
       activeDisposables = toDisposables(mode.activate(context));

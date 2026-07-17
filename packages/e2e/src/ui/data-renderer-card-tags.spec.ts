@@ -72,11 +72,11 @@ const selectProjectAndDisplayTicketProperties = async (
   );
 };
 
-const closeFloatingSidePanel = async (page: import("@playwright/test").Page) => {
-  const sidePanel = page.getByTestId("workbench-side-panel-floating");
+const closeSidePanel = async (page: import("@playwright/test").Page) => {
+  const sidePanel = page.getByTestId("workbench-side-panel-docked");
   if (!(await sidePanel.isVisible().catch(() => false))) return;
   await sidePanel.getByRole("button", { name: "Close side panel" }).click();
-  await expect(sidePanel).toHaveCount(0);
+  await expect(sidePanel).toBeHidden();
 };
 
 test("ticket card tag badges update selected values without opening the card", async ({ page, request }) => {
@@ -236,7 +236,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
 
   const row = page.getByRole("option").filter({ hasText: "List tag dropdown regression" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await closeFloatingSidePanel(page);
+  await closeSidePanel(page);
   await expect(row.getByRole("button", { name: "Bug", exact: true })).toBeVisible();
   await expect(row.getByRole("button", { name: "High", exact: true })).toBeVisible();
 

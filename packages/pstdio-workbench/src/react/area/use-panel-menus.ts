@@ -1,5 +1,7 @@
+import type { WorkbenchWidgetPlacement } from "../../core";
 import {
-  getAnchorResource,
+  getActivePlacement,
+  type PanelMenuDetails,
   partitionPanelMenus,
   type SlotId,
   slotSupportsPanelMenus,
@@ -8,25 +10,33 @@ import {
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { filterSidePanelPlacements } from "./side-panel-placements";
 
-export const usePanelMenus = (workbench: WorkbenchCore, areaId: SlotId) => {
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
+export interface PanelMenusResult {
+  tabs: WorkbenchWidgetPlacement[];
+  activePanel?: WorkbenchWidgetPlacement;
+  menus: PanelMenuDetails[];
+  docked: { left?: PanelMenuDetails; right?: PanelMenuDetails };
+  toggles: PanelMenuDetails[];
+  dockable: boolean;
+}
+
+export const usePanelMenus = (workbench: WorkbenchCore, areaId: SlotId): PanelMenusResult => {
+  const frame = useWorkbenchStore(workbench.layout.store, (state) => state.frame);
+  const area = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[areaId]);
+  const primaryArea = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[state.frame.primary]);
+  const widgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const openByAreaId = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId);
-  const area = layoutState.layout.areas[areaId];
   const placements =
     areaId === "side"
-      ? filterSidePanelPlacements(
-          area?.widgets ?? [],
-          Boolean(getAnchorResource(workbench.layout.getFrame(), layoutState.layout, "primary")),
-        )
+      ? filterSidePanelPlacements(area?.widgets ?? [], Boolean(getActivePlacement(primaryArea)?.resource))
       : (area?.widgets ?? []);
   const result = partitionPanelMenus({
     areaId,
     placements,
-    widgets: layoutState.widgets,
+    widgets,
     activeWidgetId: area?.activeWidgetId,
     isOpen: (key) => openByAreaId[key] ?? true,
   });
-  const dockable = slotSupportsPanelMenus(workbench.layout.getFrame(), areaId);
+  const dockable = slotSupportsPanelMenus(frame, areaId);
 
   return dockable
     ? { ...result, dockable }

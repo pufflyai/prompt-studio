@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-add declarative workbench frames and frame-scoped anchor queries
+Model panel headers and menus as owned regions within declarative workbench frames and keep anchor queries frame-scoped

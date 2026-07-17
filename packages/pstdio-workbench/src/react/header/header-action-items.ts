@@ -11,6 +11,9 @@ const isKernelAction = (item: WorkbenchMenuItem) => item.group === "kernel";
 
 const isOverflowAction = (item: WorkbenchMenuItem) => item.group === "overflow" || isKernelAction(item);
 
+const isResourceAction = (item: WorkbenchMenuItem) =>
+  item.group === "primary" || item.group === "overflow" || item.group === "kernel";
+
 const withLeadingSeparator = (items: WorkbenchMenuItem[], enabled: boolean) => {
   if (!enabled || items.length === 0) return items;
 
@@ -33,5 +36,13 @@ export const resolveWorkbenchHeaderActionGroups = (items: WorkbenchMenuItem[]) =
     overflowItems: resolveOverflowItems(items.filter(isOverflowAction)),
   }) satisfies WorkbenchHeaderActionGroups;
 
-export const resolveWorkbenchHeaderOverflowLabel = (items: WorkbenchMenuItem[]) =>
-  items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
+export const resolveWorkbenchResourceActionItems = (items: WorkbenchMenuItem[]) => {
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items.filter(isResourceAction));
+  return [...inlineItems, ...withLeadingSeparator(overflowItems, inlineItems.length > 0)];
+};
+
+export const resolveWorkbenchAuxiliaryHeaderActionItems = (items: WorkbenchMenuItem[]) =>
+  items.filter((item) => !isResourceAction(item));
+
+export const resolveWorkbenchHeaderOverflowLabel = (items: WorkbenchMenuItem[], fallback = "More header actions") =>
+  items.find((item) => item.overflowLabel)?.overflowLabel ?? fallback;

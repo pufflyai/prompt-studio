@@ -10,8 +10,6 @@ describe("createLayoutModel persistence", () => {
 
     const layout = createLayoutModel({ persistence });
 
-    expect(getTestArea(layout.getLayout(), "left-header").widgets).toEqual([]);
-    expect(getTestArea(layout.getLayout(), "secondary-header").widgets).toEqual([]);
     expect(getTestArea(layout.getLayout(), "side").widgets).toEqual([]);
     expect(layout.getLayout().nodes).toEqual({});
   });

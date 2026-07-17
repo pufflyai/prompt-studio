@@ -70,7 +70,8 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     ctx.layout.registerWidget({
       id: "mail.navigation",
       title: mailMode.label,
-      area: "main-left",
+      area: "main",
+      menu: { host: mailWidgetIds.reader, side: "left", icon: "Mail" },
       rendererId: "mail.navigation",
     }),
     ctx.resources.registerOpener({
@@ -105,6 +106,7 @@ export const registerMailMode = (ctx: WorkbenchModuleContributionContext) => {
   ctx.modes.registerMode({
     id: mailMode.id,
     label: mailMode.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupMailMode,
   });
 };

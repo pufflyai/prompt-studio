@@ -11,7 +11,7 @@ import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
 import { createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
-import { alternateFrame, createFrameExampleWorkbench, createModeFramesWorkbench } from "./frame/module";
+import { alternateFrame, createFrameExampleWorkbench, createModeFramesWorkbench, shellRailFrame } from "./frame/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
@@ -73,6 +73,7 @@ fileRendererWorkbench.registerModule(createFileRendererStoryModule());
 
 const classicFrameWorkbench = createFrameExampleWorkbench(classicFrame);
 const alternateFrameWorkbench = createFrameExampleWorkbench(alternateFrame);
+const shellRailFrameWorkbench = createFrameExampleWorkbench(shellRailFrame);
 const modeFramesWorkbench = createModeFramesWorkbench();
 
 const foundationWorkbench = createFoundationWorkbench();
@@ -216,6 +217,10 @@ export const AlternateFrame: Story = {
 
 export const ModeFrames: Story = {
   render: () => <WorkbenchStory workbench={modeFramesWorkbench} />,
+};
+
+export const NovelShellSlot: Story = {
+  render: () => <WorkbenchStory workbench={shellRailFrameWorkbench} />,
 };
 
 export const FoundationConcepts: Story = {

@@ -88,6 +88,7 @@ export const registerProjectMode = (ctx: WorkbenchModuleContributionContext) => 
   ctx.modes.registerMode({
     id: workbenchModes.project.id,
     label: workbenchModes.project.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupProjectMode,
   });
 };

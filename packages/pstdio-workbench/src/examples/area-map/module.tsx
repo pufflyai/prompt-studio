@@ -1,9 +1,11 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
-import { type WorkbenchModuleContribution, workbenchAreas } from "../../core";
+import type { WorkbenchModuleContribution } from "../../core";
 import type { WorkbenchOverlayWidgetConfig } from "../../react";
 import { AreaMapPlaceholder } from "./components/area-map-placeholder";
 import {
+  type AreaMapArea,
   areaLabels,
+  areaMapAreas,
   areaMapRendererId,
   areaResourceKind,
   areaWidgetId,
@@ -15,12 +17,12 @@ const overlayConfig: WorkbenchOverlayWidgetConfig = {
   closeOnInteractOutside: false,
 };
 
-const isWorkbenchArea = (value: unknown): value is (typeof workbenchAreas)[number] =>
-  typeof value === "string" && (workbenchAreas as readonly string[]).includes(value);
+const isAreaMapArea = (value: unknown): value is AreaMapArea =>
+  typeof value === "string" && (areaMapAreas as readonly string[]).includes(value);
 
 const resolvePlacementArea = (value: unknown, fallback: string) => {
-  if (isWorkbenchArea(value)) return value;
-  if (isWorkbenchArea(fallback)) return fallback;
+  if (isAreaMapArea(value)) return value;
+  if (isAreaMapArea(fallback)) return fallback;
   return "main";
 };
 
@@ -80,7 +82,7 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
       },
     });
 
-    for (const area of workbenchAreas) {
+    for (const area of areaMapAreas) {
       ctx.layout.registerWidget({
         id: areaWidgetId(area),
         title: areaLabels[area],

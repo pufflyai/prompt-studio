@@ -16,6 +16,7 @@ const frame = (root: FrameNode, primary = "main"): Frame => ({
   root,
   primary,
   slots: {},
+  regions: {},
 });
 
 const split = (...children: FrameNode[]): FrameNode => ({
@@ -70,5 +71,12 @@ describe("validateFrame", () => {
 
     expect(hasError(validateFrame(frame(split(missing))), "companion")).toBe(true);
     expect(hasError(validateFrame(frame(split(self))), "companion")).toBe(true);
+  });
+
+  test("rejects duplicate panel region ids", () => {
+    const main = { ...slot("main"), regions: { header: "panel-header" } };
+    const side = { ...slot("side"), regions: { leftMenu: "panel-header" } };
+
+    expect(hasError(validateFrame(frame(split(main, side))), "duplicate region")).toBe(true);
   });
 });

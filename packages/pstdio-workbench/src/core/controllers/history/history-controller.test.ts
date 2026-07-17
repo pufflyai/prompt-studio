@@ -227,6 +227,7 @@ describe("createHistoryController mode-aware navigation", () => {
 
     workbench.modes.registerMode({
       id: "project",
+      frame: workbench.layout.getDefaultFrame(),
       activate: (ctx) => {
         const widget = ctx.layout.registerWidget({
           id: "project-viewer",
@@ -251,6 +252,7 @@ describe("createHistoryController mode-aware navigation", () => {
     });
     workbench.modes.registerMode({
       id: "workspace",
+      frame: workbench.layout.getDefaultFrame(),
       activate: (ctx) => {
         const widget = ctx.layout.registerWidget({
           id: "workspace-viewer",
@@ -300,8 +302,18 @@ describe("createHistoryController mode-aware navigation", () => {
   test("records and replays mode-only navigation entries", () => {
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "settings", label: "Settings", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
+    workbench.modes.registerMode({
+      id: "settings",
+      label: "Settings",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
 
     workbench.modes.setActiveMode("project");
     workbench.modes.setActiveMode("settings");

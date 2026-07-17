@@ -16,6 +16,7 @@ const createContext = (layout: LayoutModel) =>
 
 const trackingMode = (id: string, log: string[]): WorkbenchModeContribution => ({
   id,
+  frame: classicFrame,
   activate: () => {
     log.push(`activate:${id}`);
     return createDisposable(() => {
@@ -60,7 +61,7 @@ describe("createWorkbenchModeRegistry", () => {
     expect(layout.getFrame()).toBe(classicFrame);
   });
 
-  test("uses the default frame for a mode without a frame", () => {
+  test("uses the declared default frame when returning from an alternate mode", () => {
     const customDefault = defineFrame({
       id: "custom-default",
       root: classicFrame.slots.main,
@@ -80,7 +81,7 @@ describe("createWorkbenchModeRegistry", () => {
     const layout = createLayoutModel({ frame: customDefault });
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
     registry.registerMode({ id: "alternate", frame: alternate, activate: () => undefined });
-    registry.registerMode({ id: "default", activate: () => undefined });
+    registry.registerMode({ id: "default", frame: customDefault, activate: () => undefined });
 
     registry.setActiveMode("alternate");
     registry.setActiveMode("default");
@@ -107,7 +108,7 @@ describe("createWorkbenchModeRegistry", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
-    registry.registerMode({ id: "a", activate: () => undefined });
+    registry.registerMode({ id: "a", frame: layout.getDefaultFrame(), activate: () => undefined });
 
     registry.onDidChangeActive(() => log.push("change"));
 
@@ -125,7 +126,7 @@ describe("createWorkbenchModeRegistry", () => {
       resolveContext: () => ({ context, layout }) as unknown as WorkbenchModeActivationContext,
     });
 
-    registry.registerMode({ id: "project", activate: () => undefined });
+    registry.registerMode({ id: "project", frame: layout.getDefaultFrame(), activate: () => undefined });
     registry.setActiveMode("project");
 
     expect(context.matches("activeWorkbenchMode == project && workbenchMode.project")).toBe(true);
@@ -159,6 +160,7 @@ describe("createWorkbenchModeRegistry", () => {
 
     registry.registerMode({
       id: "multi",
+      frame: layout.getDefaultFrame(),
       activate: () => [make("first"), make("second"), make("third")],
     });
 
@@ -183,6 +185,7 @@ describe("createWorkbenchModeRegistry", () => {
 
     registry.registerMode({
       id: "sessions",
+      frame: layout.getDefaultFrame(),
       activate: (ctx) => {
         ctx.layout.openWidget("sessions.tree");
         ctx.layout.openWidget("sessions.chat");
@@ -191,6 +194,7 @@ describe("createWorkbenchModeRegistry", () => {
     });
     registry.registerMode({
       id: "zen",
+      frame: layout.getDefaultFrame(),
       activate: () => undefined,
     });
 

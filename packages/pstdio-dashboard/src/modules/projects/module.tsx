@@ -30,14 +30,14 @@ type DashboardProjectSelectionContext = {
   context: Pick<WorkbenchModuleContributionContext["context"], "delete" | "set">;
 };
 
-const projectSelectionContentAreas = ["left", "main-left", "main", "side", "secondary", "overlay"] as const;
+const projectSelectionContentAreas = ["left", "main", "side", "secondary", "overlay"] as const;
 
 const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.projectPicker,
   dashboardWidgetIds.createProject,
 ]);
 
-const persistentDashboardChromeWidgetIds = new Set<string>([dashboardWidgetIds.header, dashboardWidgetIds.leftHeader]);
+const persistentDashboardChromeWidgetIds = new Set<string>([dashboardWidgetIds.header]);
 
 const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
   const overlayWidgets = ctx.layout.getLayout().areas.overlay.widgets;
@@ -228,6 +228,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) =
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
+    frame: ctx.layout.getDefaultFrame(),
     activate(modeCtx) {
       seedLayoutOnce(modeCtx.layout, () => {
         for (const area of projectSelectionContentAreas) modeCtx.layout.clearArea(area);

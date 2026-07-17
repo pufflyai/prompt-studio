@@ -53,7 +53,7 @@ const getSkillViaApi = async (
 };
 
 const closeSidePanel = async (page: import("@playwright/test").Page) => {
-  const panel = page.getByTestId("workbench-side-panel-floating");
+  const panel = page.getByTestId("workbench-side-panel-docked");
   if (!(await panel.isVisible().catch(() => false))) return;
   await panel.getByRole("button", { name: "Close side panel" }).click();
 };

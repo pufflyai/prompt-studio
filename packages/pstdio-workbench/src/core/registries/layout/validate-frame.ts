@@ -5,6 +5,7 @@ const validPresentations = new Set<SlotPresentation>(["docked", "floating", "hid
 export const validateFrame = (frame: Frame) => {
   const errors: string[] = [];
   const slotIds = new Set<string>();
+  const regionIds = new Set<string>();
   const slots: FrameSlot[] = [];
 
   const visit = (node: FrameNode) => {
@@ -17,6 +18,10 @@ export const validateFrame = (frame: Frame) => {
     if (slotIds.has(node.id)) errors.push(`duplicate slot: ${node.id}`);
     slotIds.add(node.id);
     slots.push(node);
+    for (const regionId of Object.values(node.regions ?? {})) {
+      if (regionIds.has(regionId)) errors.push(`duplicate region: ${regionId}`);
+      regionIds.add(regionId);
+    }
   };
 
   visit(frame.root);

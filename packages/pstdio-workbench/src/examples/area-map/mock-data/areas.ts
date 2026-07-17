@@ -1,4 +1,7 @@
-import { type Frame, getSurface, type ResourceRef, type WorkbenchArea } from "../../../core";
+import { classicFrame, type Frame, getSurface, type ResourceRef } from "../../../core";
+
+export type AreaMapArea = keyof typeof classicFrame.slots;
+export const areaMapAreas = Object.keys(classicFrame.slots) as AreaMapArea[];
 
 export const areaResourceKind = "workbench-area";
 export const areaMapRendererId = "area-map.placeholder";
@@ -6,17 +9,13 @@ export const areaMapRendererId = "area-map.placeholder";
 export const areaLabels = {
   nav: "Nav (top chrome)",
   activity: "Activity bar",
-  "left-header": "Left side header",
   left: "Left side panel",
-  "main-header": "Main header area",
-  "main-left": "Main left panel",
   main: "Main editor area",
   side: "Side panel",
-  "secondary-header": "Secondary header",
   secondary: "Secondary panel",
   status: "Status bar",
   overlay: "Overlay layer",
-} as const satisfies Record<WorkbenchArea, string>;
+} as const satisfies Record<AreaMapArea, string>;
 
 interface AreaResourceInput {
   id?: string;
@@ -24,7 +23,7 @@ interface AreaResourceInput {
   label?: string;
 }
 
-export const createAreaResource = (area: WorkbenchArea, input: AreaResourceInput = {}): ResourceRef => ({
+export const createAreaResource = (area: AreaMapArea, input: AreaResourceInput = {}): ResourceRef => ({
   kind: areaResourceKind,
   id: input.id ?? area,
   uri: input.uri ?? `pstdio://area-map/${area}`,
@@ -33,15 +32,12 @@ export const createAreaResource = (area: WorkbenchArea, input: AreaResourceInput
   metadata: { area },
 });
 
-export const areaWidgetId = (area: WorkbenchArea) => `area-map.${area}`;
+export const areaWidgetId = (area: AreaMapArea) => `area-map.${area}`;
 
 // Describes a surface by its role in the resource-projected model, so the map reads as
 // anchors / projections / chrome / transient rather than a flat list of areas. The
 // per-panel header strips are shown as the header region of their content area.
-export const describeSurface = (frame: Frame, area: WorkbenchArea): string => {
-  if (area !== "nav" && area.endsWith("-header")) {
-    return `header region of ${area.slice(0, -"-header".length)}`;
-  }
+export const describeSurface = (frame: Frame, area: AreaMapArea): string => {
   if (area === frame.primary) return "anchor · primary";
   if (frame.secondary?.slot === area) {
     return `anchor · secondary (${frame.secondary.persistence}/${frame.secondary.candidates})`;

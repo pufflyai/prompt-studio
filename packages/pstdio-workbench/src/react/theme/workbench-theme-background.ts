@@ -1,4 +1,6 @@
-import type { SlotId, WorkbenchArea } from "../../core";
+import type { classicFrame, SlotId } from "../../core";
+
+type ClassicSlotId = keyof typeof classicFrame.slots;
 
 const chakraBackgrounds = {
   activityBar: "var(--chakra-colors-bg-muted)",
@@ -20,24 +22,33 @@ export const workbenchBackgrounds = {
   widget: vscodeColor("editorWidget.background", vscodeColor("panel.background", chakraBackgrounds.panel)),
 } as const;
 
-const workbenchAreaBackgrounds = {
+const classicSlotBackgrounds = {
   nav: workbenchBackgrounds.main,
   activity: workbenchBackgrounds.activityBar,
-  "left-header": workbenchBackgrounds.sideBar,
   left: workbenchBackgrounds.sideBar,
-  "main-header": workbenchBackgrounds.main,
-  "main-left": workbenchBackgrounds.panel,
   main: workbenchBackgrounds.main,
-  "secondary-header": workbenchBackgrounds.panel,
   secondary: workbenchBackgrounds.panel,
   status: workbenchBackgrounds.statusBar,
   side: workbenchBackgrounds.widget,
   overlay: workbenchBackgrounds.widget,
-} as const satisfies Record<WorkbenchArea, string>;
+} as const satisfies Record<ClassicSlotId, string>;
+
+const classicRegionBackgrounds: Record<string, string> = {
+  "left-header": workbenchBackgrounds.sideBar,
+  "main-header": workbenchBackgrounds.main,
+  "main-left-menu": workbenchBackgrounds.main,
+  "main-right-menu": workbenchBackgrounds.main,
+  "secondary-header": workbenchBackgrounds.panel,
+  "secondary-left-menu": workbenchBackgrounds.panel,
+  "secondary-right-menu": workbenchBackgrounds.panel,
+  "side-header": workbenchBackgrounds.widget,
+  "side-left-menu": workbenchBackgrounds.widget,
+  "side-right-menu": workbenchBackgrounds.widget,
+};
 
 export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-colors-color-palette-focus-ring)");
 
 export const workbenchCommandPaletteBackground = workbenchBackgrounds.widget;
 
 export const getWorkbenchAreaBackground = (area: SlotId) =>
-  workbenchAreaBackgrounds[area as WorkbenchArea] ?? workbenchBackgrounds.panel;
+  classicSlotBackgrounds[area as ClassicSlotId] ?? classicRegionBackgrounds[area] ?? workbenchBackgrounds.panel;

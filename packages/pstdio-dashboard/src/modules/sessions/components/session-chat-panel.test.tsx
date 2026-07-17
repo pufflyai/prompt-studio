@@ -21,7 +21,12 @@ const sessionView = {
 
 const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCore>) => {
   workbench.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
-  workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: "workspace",
+    label: "Workspace",
+    frame: workbench.layout.getDefaultFrame(),
+    activate: () => undefined,
+  });
   workbench.layout.registerWidget({
     id: dashboardWidgetIds.workspace,
     title: "Workspace",

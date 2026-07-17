@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
-import { resolveWorkbenchHeaderActionGroups } from "./header-action-items";
+import {
+  resolveWorkbenchAuxiliaryHeaderActionItems,
+  resolveWorkbenchHeaderActionGroups,
+  resolveWorkbenchResourceActionItems,
+} from "./header-action-items";
 
 const item = (input: Pick<WorkbenchMenuItem, "id" | "label"> & Partial<WorkbenchMenuItem>) =>
   ({
@@ -43,5 +47,24 @@ describe("resolveWorkbenchHeaderActionGroups", () => {
 
     expect(groups.inlineItems.map((action) => action.label)).toEqual(["Run review"]);
     expect(groups.overflowItems.map((action) => action.separatorBefore)).toEqual([undefined, undefined]);
+  });
+});
+
+describe("resolveWorkbenchResourceActionItems", () => {
+  test("moves only primary, overflow, and kernel actions into one ordered menu", () => {
+    const items = [
+      item({ id: "run", label: "Run attempt", group: "primary" }),
+      item({ id: "open-vscode", label: "Open in VS Code", group: "overflow" }),
+      item({ id: "rename", label: "Rename ticket", group: "kernel" }),
+      item({ id: "open-session", label: "Open session", group: "session-launcher" }),
+    ];
+    const actions = resolveWorkbenchResourceActionItems(items);
+
+    expect(actions.map(({ label, separatorBefore }) => ({ label, separatorBefore }))).toEqual([
+      { label: "Run attempt", separatorBefore: undefined },
+      { label: "Open in VS Code", separatorBefore: true },
+      { label: "Rename ticket", separatorBefore: true },
+    ]);
+    expect(resolveWorkbenchAuxiliaryHeaderActionItems(items).map((action) => action.label)).toEqual(["Open session"]);
   });
 });

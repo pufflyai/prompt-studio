@@ -76,7 +76,8 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     ctx.layout.registerWidget({
       id: "notes.navigation",
       title: notesMode.label,
-      area: "main-left",
+      area: "main",
+      menu: { host: notesWidgetIds.editor, side: "left", icon: "NotebookTabs" },
       rendererId: "notes.navigation",
     }),
     ctx.resources.registerOpener({
@@ -111,6 +112,7 @@ export const registerNotesMode = (ctx: WorkbenchModuleContributionContext) => {
   ctx.modes.registerMode({
     id: notesMode.id,
     label: notesMode.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupNotesMode,
   });
 };

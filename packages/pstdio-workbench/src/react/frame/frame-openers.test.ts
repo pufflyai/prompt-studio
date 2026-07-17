@@ -37,11 +37,9 @@ describe("resolveFrameOpeners", () => {
             collapsible: true,
             placements: [placement(WORKBENCH_TERMINAL_WIDGET_ID)],
           },
-          "main-left": { available: true, collapsed: true, collapsible: true, placements: [] },
         },
       }),
     ).toEqual([
-      { id: "main-left", label: "Show main-left panel", icon: "PanelLeft" },
       { id: "secondary", label: "Show terminal panel", icon: "SquareTerminal" },
       { id: "side", label: "Show side panel", icon: "PanelRight" },
     ]);
@@ -51,18 +49,18 @@ describe("resolveFrameOpeners", () => {
     expect(
       resolveFrameOpeners({
         panels: {
-          "main-left": { available: true, collapsed: false, collapsible: true, placements: [] },
+          side: { available: true, collapsed: false, collapsible: true, placements: [] },
           secondary: { available: true, collapsed: true, collapsible: false, placements: [] },
         },
       }),
     ).toEqual([]);
   });
 
-  test("does not reveal an unavailable companion panel", () => {
+  test("does not reveal an unavailable side panel", () => {
     expect(
       resolveFrameOpeners({
         panels: {
-          "main-left": {
+          side: {
             available: false,
             collapsed: true,
             collapsible: true,
@@ -71,5 +69,28 @@ describe("resolveFrameOpeners", () => {
         },
       }),
     ).toEqual([]);
+  });
+
+  test("offers a command-backed bottom panel before it has placements", () => {
+    expect(
+      resolveFrameOpeners({
+        panels: {
+          secondary: {
+            available: false,
+            collapsed: false,
+            collapsible: true,
+            placements: [],
+            openCommandId: "workbench.terminal.open",
+          },
+        },
+      }),
+    ).toEqual([
+      {
+        id: "secondary",
+        label: "Show terminal panel",
+        icon: "SquareTerminal",
+        commandId: "workbench.terminal.open",
+      },
+    ]);
   });
 });

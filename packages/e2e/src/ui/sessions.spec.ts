@@ -68,8 +68,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const getFloatingSidePanel = (page: import("@playwright/test").Page) =>
-  page.getByTestId("workbench-side-panel-floating");
+const getSidePanel = (page: import("@playwright/test").Page) => page.getByTestId("workbench-side-panel-docked");
 
 test.describe("Sessions page", () => {
   let projectId: string;
@@ -113,15 +112,15 @@ test.describe("Sessions page", () => {
     await expect(page.getByText("Archived session")).not.toBeVisible();
   });
 
-  test("hides the floating side panel on sessions routes", async ({ page }) => {
+  test("hides the side panel on sessions routes", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(getFloatingSidePanel(page)).toBeVisible();
+    await expect(getSidePanel(page)).toBeVisible();
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    await expect(getFloatingSidePanel(page)).toHaveCount(0);
+    await expect(getSidePanel(page)).toHaveCount(0);
   });
 
   test("navigates to session on click", async ({ page, request }) => {

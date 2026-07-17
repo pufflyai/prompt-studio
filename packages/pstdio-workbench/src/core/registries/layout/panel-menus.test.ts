@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { classicFrame } from "./classic-frame";
+import { defineFrame } from "./frame";
 import { createLayoutModel } from "./layout-model";
 import { registerTestWidget } from "./layout-model-test-utils";
 import { panelMenuOpenKey, partitionPanelMenus, slotSupportsPanelMenus } from "./panel-menus";
@@ -9,6 +10,12 @@ describe("slotSupportsPanelMenus", () => {
     const panelSlots = Object.values(classicFrame.slots).filter((slot) => slot.role === "panels");
     expect(panelSlots.every((slot) => slotSupportsPanelMenus(classicFrame, slot.id))).toBe(true);
     expect(slotSupportsPanelMenus(classicFrame, "left")).toBe(false);
+    const plainPanelFrame = defineFrame({
+      id: "plain",
+      root: { kind: "slot", id: "main", owner: "resource", role: "panels" },
+      primary: "main",
+    });
+    expect(slotSupportsPanelMenus(plainPanelFrame, "main")).toBe(false);
   });
 });
 
@@ -82,6 +89,33 @@ describe("partitionPanelMenus", () => {
 
     expect(result.activePanel?.contributionId).toBe("editor");
     expect(result.docked.right?.placement.contributionId).toBe("editor.properties");
+  });
+
+  test("keeps a panel-region menu attached when the active tab changes", () => {
+    const layout = createLayoutModel();
+    registerTestWidget(layout, { id: "editor", title: "Editor", area: "main" });
+    registerTestWidget(layout, { id: "preview", title: "Preview", area: "main" });
+    registerTestWidget(layout, {
+      id: "outline",
+      title: "Outline",
+      area: "main",
+      menu: { host: "*", side: "left", icon: "panel-left" },
+    });
+    layout.openWidget("editor");
+    layout.openWidget("preview");
+    layout.openWidget("outline");
+    layout.activateWidget("preview");
+
+    const result = partitionPanelMenus({
+      areaId: "main",
+      placements: layout.getLayout().areas.main?.widgets ?? [],
+      widgets: layout.store.getState().widgets,
+      activeWidgetId: layout.getLayout().areas.main?.activeWidgetId,
+      isOpen: () => true,
+    });
+
+    expect(result.activePanel?.contributionId).toBe("preview");
+    expect(result.docked.left?.placement.contributionId).toBe("outline");
   });
 });
 

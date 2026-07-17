@@ -353,6 +353,7 @@ const registerModes = (input: RegisterWorkbenchExtensionContributionsInput) =>
     input.workbench.modes.registerMode({
       id: mode.modeId,
       label: text(mode.label, mode.modeId),
+      frame: input.workbench.layout.getDefaultFrame(),
       activate: (ctx) => {
         activateModeLayout(input, ctx, mode);
         return undefined;

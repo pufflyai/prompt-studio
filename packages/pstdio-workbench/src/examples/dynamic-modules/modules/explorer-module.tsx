@@ -19,7 +19,7 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: explorerWidgetId,
       title: "File preview",
-      area: "main-left",
+      area: "main",
       singleton: true,
       rendererId: explorerWidgetId,
       areaSize: { defaultPx: 300, minPx: 220, maxPx: 460 },

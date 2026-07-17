@@ -192,10 +192,8 @@ test.describe("Session chat and workspace behavior", () => {
 
     await page.goto(`/projects/${projectId}/tickets`);
 
-    const floatingSidePanel = page.getByTestId("workbench-side-panel-floating");
-    await selectFirstSession(page, floatingSidePanel);
-    await floatingSidePanel.getByRole("button", { name: "Dock side panel" }).click();
     const dockedSidePanel = page.getByTestId("workbench-side-panel-docked");
+    await selectFirstSession(page, dockedSidePanel);
     await expect(dockedSidePanel).toBeVisible();
     await expect(dockedSidePanel.getByText(prompt).first()).toBeVisible();
     await expect(dockedSidePanel.getByText("Review changes")).toBeVisible();
@@ -229,8 +227,10 @@ test.describe("Session chat and workspace behavior", () => {
 
     await page.goto(`/projects/${projectId}/tickets`);
 
+    const dockedSidePanel = page.getByTestId("workbench-side-panel-docked");
+    await selectFirstSession(page, dockedSidePanel);
+    await dockedSidePanel.getByRole("button", { name: "Float side panel" }).click();
     const floatingSidePanel = page.getByTestId("workbench-side-panel-floating");
-    await selectFirstSession(page, floatingSidePanel);
     await expect(floatingSidePanel).toBeVisible();
     await expect(floatingSidePanel.getByText(prompt).first()).toBeVisible();
     await expect(floatingSidePanel.getByText("Review changes")).toBeVisible();

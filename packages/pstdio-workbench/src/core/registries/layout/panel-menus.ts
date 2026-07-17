@@ -18,7 +18,10 @@ export interface PartitionPanelMenusInput {
 
 export const panelMenuOpenKey = (areaId: SlotId, widgetId: string) => `menu:${areaId}:${widgetId}`;
 
-export const slotSupportsPanelMenus = (frame: Frame, areaId: SlotId) => frame.slots[areaId]?.role === "panels";
+export const slotSupportsPanelMenus = (frame: Frame, areaId: SlotId) => {
+  const regions = frame.slots[areaId]?.regions;
+  return Boolean(regions?.leftMenu && regions.rightMenu);
+};
 
 export const listPanelTabPlacements = (
   placements: WorkbenchWidgetPlacement[],
@@ -32,7 +35,7 @@ export const partitionPanelMenus = (input: PartitionPanelMenusInput) => {
   const menus = placements.flatMap((placement): PanelMenuDetails[] => {
     const widget = widgets[placement.contributionId];
     const binding = widget?.menu;
-    if (!widget || !binding || binding.host !== activePanel?.contributionId) return [];
+    if (!widget || !binding || (binding.host !== "*" && binding.host !== activePanel?.contributionId)) return [];
     return [{ key: panelMenuOpenKey(areaId, placement.widgetId), binding, placement, widget }];
   });
   const dockedMenus = menus.filter((menu) => isOpen(menu.key));

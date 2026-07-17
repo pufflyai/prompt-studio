@@ -180,6 +180,7 @@ export const createSessionsModule = () =>
       ctx.modes.registerMode({
         id: "sessions",
         label: "Sessions",
+        frame: ctx.layout.getDefaultFrame(),
         activate(modeCtx) {
           seedLayoutOnce(modeCtx.layout, () => {
             closeSessionsSidePlacements(modeCtx);

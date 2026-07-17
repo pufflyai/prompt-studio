@@ -7,7 +7,7 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="14. Side panels" parameters={{ layout: "padded" }} />
 
-# 14. Keep Side Panels In Sync
+# 14. Panel-Owned Menus And Side Panels
 
 Side panels should follow the selected main resource, not whichever panel was
 clicked most recently. Use `getPrimaryResource()` or
@@ -16,9 +16,15 @@ main work area.
 
 <Canvas of={OnboardingStories.SidePanels} sourceState="shown" />
 
+At narrower widths, attached menus move into their owning panel header without
+changing the panel's open state. The closed side-panel button remains in Nav
+Chrome, and the status bar continues across the complete frame.
+
+<Canvas of={OnboardingStories.ResponsivePanelMenus} sourceState="hidden" />
+
 This story opens a resource picker in `left`, closeable context and properties
-menus inside `main`, resource detail tabs in `main`, and a distinct full-height
-inspector in `side` with its own properties menu. Pick resources from the left
+menus inside `main`, resource detail tabs in `main`, a secondary panel with both
+menus, and a distinct full-height inspector in `side` with both menus. Pick resources from the left
 panel or from the buttons in the detail view: the main resource changes, the context and inspector panels
 re-render against that primary resource, and distinct resources open as multiple
 main tabs instead of replacing each other.
@@ -27,11 +33,12 @@ The key pieces are:
 
 - Register the opened resource kind as the primary surface.
 - Put resource selection in `left`, bind local menus to their owning panel with
-  `menu.host`, and keep the independent inspector in `side`.
+  `menu.host`, and keep the independent inspector in `side`. Headers and menus
+  are panel regions rather than standalone layout areas.
 - Use `singleton: false` for the main detail widget and omit `replaceActive`
   when normal resource selection should open another tab.
 - In React projection renderers, read the primary anchor from layout state with
-  `getAnchorResource(state.layout, "primary")`.
+  `getAnchorResource(state.frame, state.layout, "primary")`.
 
 That keeps side panels stable even if focus moves into a panel, because the
 primary resource is scoped to the main anchor rather than the global active

@@ -83,7 +83,6 @@ describe("createExtensionsModule mode layout", () => {
       workbench.modes.setActiveMode("pstdio-core-tickets.ticket");
 
       expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

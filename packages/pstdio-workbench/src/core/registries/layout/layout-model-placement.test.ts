@@ -5,6 +5,28 @@ import { createLayoutModel } from "./layout-model";
 import { getTestArea, registerTestWidget } from "./layout-model-test-utils";
 import { getActiveWidgetId } from "./layout-operations";
 
+describe("frame slot placement", () => {
+  test("opens a widget into a non-classic slot declared by the active frame", () => {
+    const shellFrame = defineFrame({
+      id: "shell",
+      root: {
+        kind: "split",
+        id: "shell-root",
+        direction: "row",
+        children: [classicFrame.slots.main, { kind: "slot", id: "tool-rail", owner: "project", role: "chrome" }],
+      },
+      primary: "main",
+    });
+    const layout = createLayoutModel({ frame: shellFrame });
+    registerTestWidget(layout, { id: "tools.rail", title: "Tools", area: "tool-rail" });
+
+    const placement = layout.openWidget("tools.rail");
+
+    expect(getTestArea(layout.getLayout(), "tool-rail").widgets).toEqual([placement]);
+    expect(layout.getLayout().activeSlotId).toBe("tool-rail");
+  });
+});
+
 describe("createLayoutModel widget placement", () => {
   test("quarantines a widget opened into a slot outside the active frame", () => {
     const focusFrame = defineFrame({

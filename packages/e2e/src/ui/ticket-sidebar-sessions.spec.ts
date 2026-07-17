@@ -93,15 +93,15 @@ test.describe("Ticket sidebar sessions", () => {
     expect(session.id).toBeTruthy();
 
     // The session must appear in the ticket-mode left sidebar (scoped so we don't false-match the
-    // floating session panel or any "recent sessions" list elsewhere on the page).
+    // session side panel or any "recent sessions" list elsewhere on the page).
     const sessionRow = sidebar.getByText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sessionRow).toBeVisible();
 
-    // Clicking it opens the session in the floating panel and keeps the ticket in view (the ticket
+    // Clicking it opens the session in the docked panel and keeps the ticket in view (the ticket
     // stays in its own sidebar — we did not navigate away to sessions mode).
     await sessionRow.click();
-    const floatingPanel = page.getByTestId("workbench-side-panel-floating");
-    const selectedSession = floatingPanel.getByRole("button", { name: "Select session" });
+    const sidePanel = page.getByTestId("workbench-side-panel-docked");
+    const selectedSession = sidePanel.getByRole("button", { name: "Select session" });
     await expect(selectedSession).toContainText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sidebar.getByRole("option", { name: `${ticket.shorthand} Sidebar session proof` })).toBeVisible();
   });

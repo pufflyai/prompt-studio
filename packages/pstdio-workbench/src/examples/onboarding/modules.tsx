@@ -287,11 +287,13 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
     ctx.modes.registerMode({
       id: "docs",
       label: "Docs",
+      frame: ctx.layout.getDefaultFrame(),
       activate: createResourcesModule({ openFirst: true }).activate,
     });
     ctx.modes.registerMode({
       id: "review",
       label: "Review",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         registerEmptyMain(modeCtx);
         modeCtx.layout.registerWidget({

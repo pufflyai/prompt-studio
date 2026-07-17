@@ -1,8 +1,8 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { getActivePlacement } from "@pstdio/workbench/core";
+import { getActivePlacement, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench/core";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
-import { useWorkbenchStore, WorkbenchBreadcrumbView } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchBreadcrumbView, WorkbenchResourceActions } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { renderMainHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 
@@ -50,7 +50,10 @@ export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }
   return (
     <HStack h="full" w="full" minW="0" gap="sm">
       <NavigationHistoryControls input={input} />
-      <WorkbenchBreadcrumbView workbench={input.workbench} />
+      <HStack h="full" minW="0" gap="2xs">
+        <WorkbenchBreadcrumbView workbench={input.workbench} />
+        <WorkbenchResourceActions workbench={input.workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+      </HStack>
       <Box flex="1" minW="0" />
       {renderMainHeaderContribution(input, activePlacement)}
     </HStack>

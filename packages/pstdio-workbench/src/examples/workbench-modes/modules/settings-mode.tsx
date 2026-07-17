@@ -51,6 +51,7 @@ export const registerSettingsMode = (ctx: WorkbenchModuleContributionContext) =>
   ctx.modes.registerMode({
     id: workbenchModes.settings.id,
     label: workbenchModes.settings.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupSettingsMode,
   });
 };

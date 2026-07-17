@@ -147,7 +147,8 @@ export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchL
   workbench.layout.registerWidget({
     id: syntheticTreeWidgetId,
     title: text(renderer.title, renderer.id),
-    area: "main-left",
+    area: "main",
+    menu: { host: "*", side: "left", icon: "PanelLeft" },
     rendererId: renderer.id,
     resourceKinds: [resource.kind],
   });

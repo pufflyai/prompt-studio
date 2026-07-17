@@ -46,7 +46,6 @@ describe("createLayoutModel", () => {
       id: "sessions.chat",
       title: "Session",
       area: "side",
-      fallbackArea: "main",
       resourceKinds: ["session"],
       rendererId: "sessions.chat",
       config: { density: "compact" },

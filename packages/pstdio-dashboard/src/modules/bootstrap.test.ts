@@ -13,7 +13,12 @@ describe("createBootstrapModule", () => {
   test("opens the start view when a selected project has no saved location", async () => {
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
       const widgetId = `test.${resource.id}`;
@@ -65,7 +70,12 @@ describe("createBootstrapModule", () => {
       },
     });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.layout.registerWidget({
       id: dashboardWidgetIds.workspaces,
@@ -122,7 +132,12 @@ describe("createBootstrapModule", () => {
       },
     });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     const dashboardViewKind = workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());

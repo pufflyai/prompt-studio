@@ -49,7 +49,8 @@ export const createTwoPlacementKeepAliveModule = (): WorkbenchModuleContribution
     ctx.layout.registerWidget({
       id: placementIds[0],
       title: "Left placement",
-      area: "main-left",
+      area: "main",
+      menu: { host: primaryWidgetId, side: "left", icon: "PanelLeft" },
       rendererId: placementRendererId,
     });
     ctx.layout.registerWidget({

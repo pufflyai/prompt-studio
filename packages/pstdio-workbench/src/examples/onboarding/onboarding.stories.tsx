@@ -62,13 +62,17 @@ const sourceParameters = (code: string) => ({
 
 // Onboarding renders the workbench in a bordered, fixed-height frame. The theme
 // provider is fed from `workbench.themes` so it wraps the frame too.
-const WorkbenchFrame = (props: WorkbenchStoryProps) => {
-  const { workbench } = props;
+interface WorkbenchFrameProps extends WorkbenchStoryProps {
+  maxW?: string;
+}
+
+const WorkbenchFrame = (props: WorkbenchFrameProps) => {
+  const { workbench, maxW } = props;
   const themePreferences = useWorkbenchThemePreferences(workbench);
 
   return (
     <WorkbenchThemeProvider themePreferences={themePreferences}>
-      <Box h="520px" minH="360px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
+      <Box h="520px" minH="360px" maxW={maxW} borderWidth="1px" borderColor="border.subtle" overflow="hidden">
         <Workbench workbench={workbench} />
       </Box>
     </WorkbenchThemeProvider>
@@ -90,6 +94,9 @@ const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
+const narrowSidePanelsWorkbench = createWorkbench(createSidePanelsModule());
+narrowSidePanelsWorkbench.panels.setOpen("side", false);
+narrowSidePanelsWorkbench.panels.setOpen("secondary", false);
 const settingsWorkbench = createWorkbench(createSettingsModule());
 const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
 const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule());
@@ -187,6 +194,12 @@ export const SidePanels: Story = {
   name: "14. Side panels",
   parameters: sourceParameters(sidePanelsSource),
   render: () => <WorkbenchFrame workbench={sidePanelsWorkbench} />,
+};
+
+export const ResponsivePanelMenus: Story = {
+  name: "14a. Responsive panel menus",
+  parameters: sourceParameters(sidePanelsSource),
+  render: () => <WorkbenchFrame workbench={narrowSidePanelsWorkbench} maxW="760px" />,
 };
 
 export const Settings: Story = {

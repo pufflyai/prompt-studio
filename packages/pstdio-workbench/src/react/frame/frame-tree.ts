@@ -1,12 +1,5 @@
 import type { Frame, FrameNode, FrameSlot } from "../../core";
 
-type HeaderFrameSlot = FrameSlot & { id: `${string}-header` };
-
-export const isHeaderSlot = (node: FrameNode): node is HeaderFrameSlot =>
-  node.kind === "slot" && node.id.endsWith("-header");
-
-export const resolveHeaderTargetId = (slot: FrameSlot) => slot.id.slice(0, -"-header".length);
-
 export const listFrameSlots = (node: FrameNode): FrameSlot[] => {
   if (node.kind === "slot") return [node];
   return node.children.flatMap(listFrameSlots);
@@ -16,14 +9,12 @@ export const containsFrameSlot = (node: FrameNode, slotId: string): boolean =>
   node.kind === "slot" ? node.id === slotId : node.children.some((child) => containsFrameSlot(child, slotId));
 
 export const resolveResizableSlot = (node: FrameNode) => {
-  const contentSlots = listFrameSlots(node).filter((slot) => !isHeaderSlot(slot));
-  return contentSlots.length === 1 ? contentSlots[0] : undefined;
+  const slots = listFrameSlots(node);
+  return slots.length === 1 ? slots[0] : undefined;
 };
 
 export const resolveMainFrameNode = (frame: Frame) => {
-  const optionalSlotIds = [`${frame.primary}-header`, frame.secondary?.slot].filter((slotId): slotId is string =>
-    Boolean(slotId && frame.slots[slotId]),
-  );
+  const optionalSlotIds = [frame.secondary?.slot].filter((slotId): slotId is string => Boolean(slotId));
   const requiredSlotIds = [frame.primary, ...optionalSlotIds];
 
   const descend = (node: FrameNode): FrameNode => {

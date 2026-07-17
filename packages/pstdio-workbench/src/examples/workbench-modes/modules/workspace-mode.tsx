@@ -26,17 +26,8 @@ const buildWorkspaceTreeSections = () => [
   },
 ];
 
-const MAIN_HEADER_WIDGET_ID = "workbench-modes.workspace.mainHeader";
-
 const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
-    ctx.layout.registerWidget({
-      id: MAIN_HEADER_WIDGET_ID,
-      title: "Workspace mode header",
-      area: "main-header",
-      singleton: true,
-      rendererId: MAIN_HEADER_WIDGET_ID,
-    }),
     ctx.layout.registerWidget({
       id: workspaceWidgetIds.editor,
       title: "Editor",
@@ -54,7 +45,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       areaSize: { defaultPx: 320, minPx: 240 },
     }),
     ctx.renderers.registerRenderer({
-      id: MAIN_HEADER_WIDGET_ID,
+      id: "main-header",
       render: () => <WorkspaceMainHeader />,
     }),
     ctx.renderers.registerRenderer({
@@ -74,7 +65,8 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: "workbench-modes.workspace.files",
       title: "Files",
-      area: "main-left",
+      area: "main",
+      menu: { host: workspaceWidgetIds.editor, side: "left", icon: "Files" },
       rendererId: "workbench-modes.workspace.files",
     }),
     ctx.resources.registerOpener({
@@ -90,7 +82,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
   ];
 
   ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
-  ctx.layout.openWidget(MAIN_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget("workbench-modes.workspace.files");
   ctx.layout.openWidget(workspaceWidgetIds.diff, { pinned: true });
   // The terminal panel is the host-owned surface registered by
@@ -105,6 +96,7 @@ export const registerWorkspaceMode = (ctx: WorkbenchModuleContributionContext) =
   ctx.modes.registerMode({
     id: workbenchModes.workspace.id,
     label: workbenchModes.workspace.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupWorkspaceMode,
   });
 };

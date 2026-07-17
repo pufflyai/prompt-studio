@@ -3,7 +3,6 @@ import { getActivePlacement } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "../workbench/workbench-panel-state";
 import { resolveSlotSize } from "./frame-size";
-import { isHeaderSlot } from "./frame-tree";
 
 export const useFrameStoreSnapshot = (workbench: WorkbenchCore) => {
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
@@ -12,7 +11,7 @@ export const useFrameStoreSnapshot = (workbench: WorkbenchCore) => {
   return { layout, placeholders, openByAreaId };
 };
 
-type FrameStoreSnapshot = ReturnType<typeof useFrameStoreSnapshot>;
+export type FrameStoreSnapshot = ReturnType<typeof useFrameStoreSnapshot>;
 
 const hasAreaContent = (snapshot: FrameStoreSnapshot, slotId: string) =>
   (snapshot.layout.areas[slotId]?.widgets.length ?? 0) > 0 || Boolean(snapshot.placeholders[slotId]);
@@ -21,13 +20,9 @@ const hasCompanionResource = (snapshot: FrameStoreSnapshot, slot: FrameSlot) =>
   !slot.companionOf || Boolean(getActivePlacement(snapshot.layout.areas[slot.companionOf])?.resource);
 
 export const isFrameSlotVisible = (frame: Frame, snapshot: FrameStoreSnapshot, slot: FrameSlot) => {
-  if (isHeaderSlot(slot)) return false;
   if (slot.id === "nav") return true;
   if (slot.id === frame.primary) return true;
-  return (
-    (hasAreaContent(snapshot, slot.id) || hasAreaContent(snapshot, `${slot.id}-header`)) &&
-    hasCompanionResource(snapshot, slot)
-  );
+  return hasAreaContent(snapshot, slot.id) && hasCompanionResource(snapshot, slot);
 };
 
 export const isFrameNodeVisible = (frame: Frame, snapshot: FrameStoreSnapshot, node: FrameNode): boolean =>
@@ -37,24 +32,18 @@ export const isFrameNodeVisible = (frame: Frame, snapshot: FrameStoreSnapshot, n
 
 export const resolveFrameSlotCollapsible = (
   workbench: WorkbenchCore,
-  frame: Frame,
+  _frame: Frame,
   slotId: string,
-  headerSlotId = `${slotId}-header`,
-) => {
-  const areas = frame.slots[headerSlotId] ? [headerSlotId, slotId] : [slotId];
-  return resolvePanelCollapsible(workbench, ...areas);
-};
+  _headerSlotId?: string,
+) => resolvePanelCollapsible(workbench, slotId);
 
-export const useFrameSlotState = (workbench: WorkbenchCore, slot: FrameSlot, headerSlot?: FrameSlot) => {
-  const snapshot = useFrameStoreSnapshot(workbench);
-  const headerSlotId = headerSlot?.id ?? `${slot.id}-header`;
+export const resolveFrameSlotState = (workbench: WorkbenchCore, slot: FrameSlot, snapshot: FrameStoreSnapshot) => {
   const frame = workbench.layout.getFrame();
-  const collapsible = resolveFrameSlotCollapsible(workbench, frame, slot.id, headerSlotId);
+  const collapsible = resolveFrameSlotCollapsible(workbench, frame, slot.id);
   const open = snapshot.openByAreaId[slot.id] ?? true;
 
   return {
     has: isFrameSlotVisible(frame, snapshot, slot),
-    hasHeader: hasAreaContent(snapshot, headerSlotId),
     placements: snapshot.layout.areas[slot.id]?.widgets ?? [],
     collapsible,
     collapsed: !open && collapsible,
@@ -65,3 +54,6 @@ export const useFrameSlotState = (workbench: WorkbenchCore, slot: FrameSlot, hea
     },
   };
 };
+
+export const useFrameSlotState = (workbench: WorkbenchCore, slot: FrameSlot) =>
+  resolveFrameSlotState(workbench, slot, useFrameStoreSnapshot(workbench));

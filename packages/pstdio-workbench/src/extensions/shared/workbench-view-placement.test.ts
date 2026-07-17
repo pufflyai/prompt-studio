@@ -23,8 +23,23 @@ describe("resolveWorkbenchViewWidgetPlacement", () => {
     } satisfies ViewRecord;
 
     expect(resolveWorkbenchViewWidgetPlacement(menu, [host, menu])).toEqual({
-      area: "side",
+      area: "main",
       menu: { host: "lab.editor", side: "right", icon: "sliders-horizontal" },
+    });
+  });
+
+  test("treats main side targets as panel menu regions", () => {
+    const view = {
+      id: "lab.outline",
+      extensionId: "pstdio.lab",
+      slotId: "outline",
+      title: "Outline",
+      target: "workbench.main.left",
+    } satisfies ViewRecord;
+
+    expect(resolveWorkbenchViewWidgetPlacement(view, [view])).toEqual({
+      area: "main",
+      menu: { host: "*", side: "left", icon: "panel-left" },
     });
   });
 

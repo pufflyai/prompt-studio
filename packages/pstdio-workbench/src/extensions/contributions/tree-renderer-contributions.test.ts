@@ -113,7 +113,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       icon: "Files",
     });
     expect(workbench.layout.getWidget("lab.ticketFiles")).toMatchObject({
-      area: "main-left",
+      area: "main",
+      menu: { host: "*", side: "left", icon: "panel-left" },
       rendererId: "lab.files",
       resourceKinds: ["ticket"],
     });

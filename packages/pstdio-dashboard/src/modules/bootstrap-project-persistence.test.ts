@@ -61,8 +61,18 @@ describe("createBootstrapModule project persistence", () => {
     };
     const workbench = createWorkbenchCore({ lastResourcePersistence });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
+    workbench.modes.registerMode({
+      id: "project-selection",
+      label: "Projects",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     registerDashboardViewOpeners(workbench);
     selectDashboardProject(workbench, { id: "project-a", name: "Project A" });
     const bootstrap = workbench.registerModule(createBootstrapModule());
@@ -112,7 +122,12 @@ describe("createBootstrapModule project persistence", () => {
     };
     const workbench = createWorkbenchCore({ lastResourcePersistence });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     registerDashboardViewOpeners(workbench);
     workbench.resources.registerOpener({
       id: "test.blocked-workspaces",
@@ -163,7 +178,12 @@ describe("createBootstrapModule project persistence", () => {
     };
     const workbench = createWorkbenchCore({ lastResourcePersistence });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     registerDashboardViewOpeners(workbench);
     workbench.resources.registerOpener({
       id: "test.blocked-workspaces",
@@ -201,7 +221,9 @@ describe("createBootstrapModule project persistence", () => {
       bootstrap.dispose();
     }
   });
+});
 
+describe("createBootstrapModule project restoration", () => {
   test("selecting a project through the opener restores that project's landing view", async () => {
     const storage = createStorage();
     const projectSelectionPersistence = createDashboardProjectSelectionPersistence({ namespace: "test", storage });

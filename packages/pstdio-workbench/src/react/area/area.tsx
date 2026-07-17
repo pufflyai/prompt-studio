@@ -17,7 +17,7 @@ interface WorkbenchAreaProps {
 
 // Header bars and the status bar lay their content out in a row, so they
 // scroll on the X axis; every other area scrolls vertically.
-const horizontalScrollAreas = new Set<SlotId>(["nav", "left-header", "main-header", "secondary-header", "status"]);
+const horizontalScrollAreas = new Set<SlotId>(["nav", "status"]);
 
 // A flex column at least as tall as the viewport lets a widget fill the area
 // (e.g. a tree with a pinned footer) while still growing and scrolling.

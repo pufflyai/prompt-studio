@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Deduplicate mode layout targets and validate them against the active frame
+Map main side targets to panel menu regions and validate mode targets against the active frame

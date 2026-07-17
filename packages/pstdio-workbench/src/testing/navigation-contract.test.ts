@@ -17,7 +17,12 @@ const MODE = "contract-mode";
 const setup = (): RouteContractHarness => {
   const workbench = createWorkbenchCore();
 
-  workbench.modes.registerMode({ id: MODE, label: "Contract", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: MODE,
+    label: "Contract",
+    frame: workbench.layout.getDefaultFrame(),
+    activate: () => undefined,
+  });
   workbench.resources.registerKind({ kind: ROOT_KIND, label: "Root" });
   workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
   workbench.layout.registerWidget({

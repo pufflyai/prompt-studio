@@ -278,6 +278,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
     ctx.modes.registerMode({
       id: "docs",
       label: "Docs",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         modeCtx.renderers.registerTreeRenderer({
           id: "docs.tree",
@@ -298,6 +299,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
     ctx.modes.registerMode({
       id: "review",
       label: "Review",
+      frame: ctx.layout.getDefaultFrame(),
       activate(modeCtx) {
         modeCtx.layout.registerWidget({
           id: "docs.review",

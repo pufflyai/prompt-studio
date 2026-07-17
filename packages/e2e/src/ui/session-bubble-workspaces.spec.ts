@@ -43,7 +43,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-test.describe("Floating side-panel workspace selection", () => {
+test.describe("Side-panel workspace selection", () => {
   let projectId: string;
   const repoDirs: string[] = [];
 
@@ -71,7 +71,7 @@ test.describe("Floating side-panel workspace selection", () => {
     await page.goto(`/projects/${projectId}/tickets`);
     await page.getByRole("button", { name: "Open session" }).click();
 
-    const sidePanel = page.getByTestId("workbench-side-panel-floating");
+    const sidePanel = page.getByTestId("workbench-side-panel-docked");
     await expect(sidePanel).toBeVisible();
 
     await sidePanel.getByRole("button", { name: "Select workspace" }).click();

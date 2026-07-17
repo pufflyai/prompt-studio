@@ -18,6 +18,20 @@ export interface FrameSlotSize {
   maxPx?: number;
 }
 
+export interface FrameSlotRegions {
+  header?: string;
+  leftMenu?: string;
+  rightMenu?: string;
+}
+
+export interface FrameRegion {
+  kind: "region";
+  id: string;
+  host: string;
+  role: "header" | "menu";
+  side?: "left" | "right";
+}
+
 export interface FrameSlot {
   kind: "slot";
   id: string;
@@ -29,6 +43,7 @@ export interface FrameSlot {
   targetable?: boolean;
   presentations?: readonly SlotPresentation[];
   size?: FrameSlotSize;
+  regions?: FrameSlotRegions;
 }
 
 export interface FrameSplit {
@@ -63,4 +78,5 @@ export interface Frame<TSlot extends string = string> {
   secondary?: SideBinding<TSlot>;
   attached?: SideBinding<TSlot>;
   slots: Readonly<Record<TSlot, FrameSlot & { id: TSlot }>>;
+  regions: Readonly<Record<string, FrameRegion>>;
 }

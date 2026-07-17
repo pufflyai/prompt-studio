@@ -7,7 +7,9 @@ import { getAnchorResource } from "../core";
 // side-area activation can pollute — measures the exact signal history records, so the
 // contract asserts the user-visible navigation state.
 export const primaryPlacements = (workbench: WorkbenchCore) =>
-  workbench.layout.getLayout().areas[workbench.layout.getFrame().primary]?.widgets ?? [];
+  (workbench.layout.getLayout().areas[workbench.layout.getFrame().primary]?.widgets ?? []).filter(
+    (placement) => !workbench.layout.getWidget(placement.contributionId)?.menu,
+  );
 
 export const unpinnedPrimaryPlacements = (workbench: WorkbenchCore) =>
   primaryPlacements(workbench).filter((placement) => !placement.pinned);

@@ -20,7 +20,12 @@ const ticketResource = {
 
 const mountTicketWorkbench = (metadata: DashboardExtensionMetadata) => {
   const workbench = createWorkbenchCore();
-  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: "project",
+    label: "Project",
+    frame: workbench.layout.getDefaultFrame(),
+    activate: () => undefined,
+  });
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const disposable = workbench.registerModule(

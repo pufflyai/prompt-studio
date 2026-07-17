@@ -11,7 +11,12 @@ describe("createExtensionsModule linked resource views", () => {
     const loadAppearance = mock(async () => emptyAppearance);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
@@ -26,7 +31,9 @@ describe("createExtensionsModule linked resource views", () => {
         label: "PS-11 Linked ticket",
       });
 
-      const mainRightResource = workbench.layout.getLayout().areas.side.widgets[0]?.resource;
+      const mainRightResource = workbench.layout
+        .getLayout()
+        .areas.main.widgets.find((widget) => widget.contributionId.endsWith("ticketProperties"))?.resource;
       expect(mainRightResource).toMatchObject({
         id: "PS-11",
         metadata: { projectId: "project-1" },
@@ -42,7 +49,12 @@ describe("createExtensionsModule linked resource views", () => {
     const loadAppearance = mock(async () => emptyAppearance);
     const workbench = createWorkbenchCore();
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "active-project", name: "Active project" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
@@ -58,7 +70,9 @@ describe("createExtensionsModule linked resource views", () => {
         metadata: { projectId: "linked-project" },
       });
 
-      const mainRightResource = workbench.layout.getLayout().areas.side.widgets[0]?.resource;
+      const mainRightResource = workbench.layout
+        .getLayout()
+        .areas.main.widgets.find((widget) => widget.contributionId.endsWith("ticketProperties"))?.resource;
       expect(mainRightResource).toMatchObject({
         id: "PS-12",
         metadata: { projectId: "linked-project" },

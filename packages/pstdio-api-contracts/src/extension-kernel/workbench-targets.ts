@@ -41,7 +41,7 @@ export type WorkbenchAttachmentTarget =
 
 export type WorkbenchContributionKind = "menu" | "treeItem" | "view" | "settings";
 
-export type WorkbenchTargetGranularity = "surface" | "area" | "areaTree";
+export type WorkbenchTargetGranularity = "surface" | "area" | "areaTree" | "region" | "regionTree";
 
 export interface WorkbenchTargetDefinition {
   id: WorkbenchAttachmentTarget;
@@ -72,14 +72,14 @@ export const workbenchTargets = [
   {
     id: "workbench.main.left.tree",
     allowedKinds: ["treeItem"],
-    granularity: "areaTree",
-    rationale: "Tree entries for the active tree renderer mounted in the main-left area.",
+    granularity: "regionTree",
+    rationale: "Tree entries for the active tree renderer mounted in the main panel's left menu region.",
   },
   {
     id: "workbench.main.right.tree",
     allowedKinds: ["treeItem"],
-    granularity: "areaTree",
-    rationale: "Tree entries for the active tree renderer mounted in the unified side area.",
+    granularity: "regionTree",
+    rationale: "Tree entries for the active tree renderer mounted in the main panel's right menu region.",
   },
   {
     id: "workbench.main",
@@ -90,14 +90,14 @@ export const workbenchTargets = [
   {
     id: "workbench.main.left",
     allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the main-left area.",
+    granularity: "region",
+    rationale: "Direct extension view placement in the main panel's left menu region.",
   },
   {
     id: "workbench.main.right",
     allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the unified side area.",
+    granularity: "region",
+    rationale: "Direct extension view placement in the main panel's right menu region.",
   },
   {
     id: "workbench.secondary",

@@ -48,7 +48,7 @@ const openSessionSidePanel = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Session Attachment Test Project/ })).toBeVisible();
   await page.getByRole("button", { name: "Open session" }).click();
-  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-docked")).toBeVisible();
 };
 
 const fetchConversationMessages = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {

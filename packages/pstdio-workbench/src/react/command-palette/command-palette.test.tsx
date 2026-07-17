@@ -148,8 +148,18 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
 describe("createWorkbenchModePaletteEntries", () => {
   test("builds selectable mode entries from registered workbench modes", () => {
     const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
+    workbench.modes.registerMode({
+      id: "workspace",
+      label: "Workspace",
+      frame: workbench.layout.getDefaultFrame(),
+      activate: () => undefined,
+    });
     workbench.modes.setActiveMode("project");
 
     let closed = false;

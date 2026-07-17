@@ -4,7 +4,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the dashboard header widgets", () => {
+  test("pins nav content and registers the left header region renderer", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createHeadersModule());
@@ -16,12 +16,7 @@ describe("createHeadersModule", () => {
         pinned: true,
       }),
     );
-    expect(layout.areas["left-header"].widgets).toContainEqual(
-      expect.objectContaining({
-        contributionId: dashboardWidgetIds.leftHeader,
-        pinned: true,
-      }),
-    );
+    expect(workbench.renderers.getRenderer("left-header")).toBeDefined();
   });
 
   test("restores dashboard headers when the mode scope changes", () => {
@@ -31,8 +26,6 @@ describe("createHeadersModule", () => {
     workbench.layout.setPersistenceScope({ mode: "workspace" });
 
     expect(workbench.layout.getLayout().areas.nav.widgets[0]?.contributionId).toBe(dashboardWidgetIds.header);
-    expect(workbench.layout.getLayout().areas["left-header"].widgets[0]?.contributionId).toBe(
-      dashboardWidgetIds.leftHeader,
-    );
+    expect(workbench.renderers.getRenderer("left-header")).toBeDefined();
   });
 });

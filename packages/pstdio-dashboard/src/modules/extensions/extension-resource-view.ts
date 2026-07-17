@@ -37,7 +37,7 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<ExtensionModeRecord["layout"]
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
 
 const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef, area: string) =>
-  area === "left" || area === "main-left" ? (resource.label ?? view.title) : view.title;
+  area === "left" ? (resource.label ?? view.title) : view.title;
 
 const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
   metadata.modes.find((mode) => mode.resourceKind === kind);

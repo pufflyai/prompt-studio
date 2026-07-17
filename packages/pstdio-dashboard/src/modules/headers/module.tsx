@@ -21,23 +21,13 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <DashboardMainHeader input={input} />,
   });
 
-  ctx.layout.registerWidget({
-    id: dashboardWidgetIds.leftHeader,
-    title: "Project brand",
-    area: "left-header",
-    singleton: true,
-    rendererId: dashboardWidgetIds.leftHeader,
-    headerBorderBottom: false,
-  });
-
   ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.leftHeader,
+    id: "left-header",
     render: renderLeftHeaderContribution,
   });
 
   const openHeaders = () => {
     ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
-    ctx.layout.openWidget(dashboardWidgetIds.leftHeader, { pinned: true });
   };
 
   openHeaders();

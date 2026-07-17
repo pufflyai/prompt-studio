@@ -29,7 +29,7 @@ describe("frame queries", () => {
   test("query classic frame roles and anchor bindings", () => {
     expect(getSurface(classicFrame, "main")).toMatchObject({ role: "panels" });
     expect(listAnchorAreas(classicFrame)).toEqual(["main", "secondary", "side"]);
-    expect(listProjectionAreas(classicFrame)).toContain("main-left");
+    expect(listProjectionAreas(classicFrame)).toContain("left");
     expect(listProjectionAreas(classicFrame)).toContain("status");
     expect(listProjectionsReading(classicFrame, "attached")).toEqual(expect.arrayContaining(["nav", "status"]));
     expect(resolveAnchorArea(classicFrame, "primary")).toBe("main");

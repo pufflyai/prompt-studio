@@ -87,7 +87,7 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
       open: (resource) => openBySurface(ctx, widgetIds.terminal, resource),
     });
 
-    // Primary anchor (main), its projections, and the two side anchors
+    // Primary anchor (main), its menu regions, and the two side anchors
     // (secondary = terminals, side = sessions and companion panels).
     ctx.layout.registerWidget({
       id: widgetIds.workspace,
@@ -98,7 +98,8 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: widgetIds.concept,
       title: "Surface map",
-      area: "main-left",
+      area: "main",
+      menu: { host: widgetIds.workspace, side: "left", icon: "PanelLeft" },
       rendererId: widgetIds.concept,
     });
     ctx.layout.registerWidget({

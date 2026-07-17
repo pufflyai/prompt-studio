@@ -3,42 +3,51 @@ import { workbenchModeLayoutTargets } from "pstdio-api-contracts/extension-kerne
 import { classicFrame } from "./classic-frame";
 import { defineFrame } from "./frame";
 import type { SlotsOf } from "./frame-types";
-import { type WorkbenchArea, workbenchAreas } from "./layout-types";
-import { resolveWorkbenchModeArea, workbenchModeTargetSlots } from "./mode-layout-targets";
+import { resolveWorkbenchModeArea, workbenchModeTargets } from "./mode-layout-targets";
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
-type _SlotsMatchTheTuple = Expect<Equal<SlotsOf<typeof classicFrame>, (typeof workbenchAreas)[number]>>;
-type _WorkbenchAreaIsUnchanged = Expect<Equal<WorkbenchArea, (typeof workbenchAreas)[number]>>;
-const typeTripwire: [_SlotsMatchTheTuple, _WorkbenchAreaIsUnchanged] = [true, true];
-
 const expectedSlots = {
   nav: { role: "projection", reads: ["primary", "attached"] },
   activity: { role: "chrome" },
-  "left-header": { role: "projection", reads: ["primary"] },
-  left: { role: "projection", reads: ["primary"], navigator: true },
-  "main-header": { role: "projection", reads: ["primary"] },
-  "main-left": { role: "projection", reads: ["primary"] },
-  main: { role: "panels" },
-  "secondary-header": { role: "projection", reads: ["primary"] },
-  secondary: { role: "panels" },
+  left: { role: "projection", reads: ["primary"], navigator: true, regions: { header: "left-header" } },
+  main: {
+    role: "panels",
+    regions: { header: "main-header", leftMenu: "main-left-menu", rightMenu: "main-right-menu" },
+  },
+  secondary: {
+    role: "panels",
+    regions: {
+      header: "secondary-header",
+      leftMenu: "secondary-left-menu",
+      rightMenu: "secondary-right-menu",
+    },
+  },
   status: { role: "projection", reads: ["primary", "attached"] },
   overlay: { role: "transient" },
-  side: { role: "panels" },
+  side: {
+    role: "panels",
+    regions: { header: "side-header", leftMenu: "side-left-menu", rightMenu: "side-right-menu" },
+  },
 } as const;
 
+type ClassicSlotId = keyof typeof expectedSlots;
+type _FrameIndexMatchesDeclaredSlots = Expect<Equal<SlotsOf<typeof classicFrame>, ClassicSlotId>>;
+const typeTripwire: _FrameIndexMatchesDeclaredSlots = true;
+const classicSlotIds = Object.keys(expectedSlots) as ClassicSlotId[];
+
 describe("classicFrame", () => {
-  test("keeps frame slots and WorkbenchArea narrowed to the tuple", () => {
-    expect(typeTripwire).toEqual([true, true]);
+  test("derives the classic slot vocabulary from the frame", () => {
+    expect(typeTripwire).toBe(true);
   });
 
-  test("preserves the complete workbench area vocabulary", () => {
-    expect(Object.keys(classicFrame.slots).sort()).toEqual([...workbenchAreas].sort());
+  test("keeps panel-owned regions out of the workbench area vocabulary", () => {
+    expect(Object.keys(classicFrame.slots).sort()).toEqual([...classicSlotIds].sort());
   });
 
   test("preserves every surface role and projection binding", () => {
-    for (const area of workbenchAreas) {
+    for (const area of classicSlotIds) {
       expect(classicFrame.slots[area]).toMatchObject(expectedSlots[area]);
     }
   });
@@ -50,29 +59,38 @@ describe("classicFrame", () => {
   });
 
   test("records target, companion, and size metadata for later frame consumers", () => {
-    expect(workbenchAreas.filter((area) => classicFrame.slots[area].targetable)).toEqual([
+    expect(classicSlotIds.filter((area) => classicFrame.slots[area].targetable)).toEqual([
       "left",
-      "main-left",
       "main",
       "secondary",
       "side",
     ]);
-    expect(classicFrame.slots["main-left"]).toMatchObject({
-      companionOf: "main",
-      size: { defaultPx: 240, minPx: 180, maxPx: 420 },
-    });
     expect(classicFrame.slots.side).toMatchObject({
       owner: "project",
       presentations: ["docked", "floating"],
       size: { defaultPx: 448, minPx: 320 },
     });
     expect(classicFrame.slots.secondary.size).toEqual({ defaultPx: 240, minPx: 128, maxPx: 420 });
+    expect(classicFrame.slots.activity.size).toEqual({ defaultPx: 56, minPx: 56, maxPx: 56 });
+    expect(classicFrame.slots.nav.size).toEqual({ defaultPx: 40, minPx: 40, maxPx: 40 });
+    expect(classicFrame.slots.status.size).toEqual({ defaultPx: 28, minPx: 28, maxPx: 28 });
+  });
+
+  test("places the status bar after the panel row so it spans the full frame width", () => {
+    expect(classicFrame.root).toMatchObject({
+      kind: "split",
+      id: "workbench",
+      direction: "column",
+      children: [{ id: "shell", direction: "row" }, { id: "status" }],
+    });
   });
 
   test("keeps every mode target mapped to a targetable classic frame slot", () => {
-    expect(Object.keys(workbenchModeTargetSlots)).toEqual([...workbenchModeLayoutTargets]);
-    for (const slotId of Object.values(workbenchModeTargetSlots)) {
-      expect(classicFrame.slots[slotId].targetable).toBe(true);
+    expect(Object.keys(workbenchModeTargets)).toEqual([...workbenchModeLayoutTargets]);
+    for (const target of Object.values(workbenchModeTargets)) {
+      const slot = classicFrame.slots[target.slot as keyof typeof classicFrame.slots];
+      expect(slot.targetable).toBe(true);
+      if (target.region) expect(classicFrame.regions[target.region]?.host).toBe(target.slot);
     }
   });
 

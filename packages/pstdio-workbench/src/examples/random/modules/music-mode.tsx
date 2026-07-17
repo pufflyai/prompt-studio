@@ -76,6 +76,7 @@ export const registerMusicMode = (ctx: WorkbenchModuleContributionContext) => {
   ctx.modes.registerMode({
     id: musicMode.id,
     label: musicMode.label,
+    frame: ctx.layout.getDefaultFrame(),
     activate: setupMusicMode,
   });
 };

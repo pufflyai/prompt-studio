@@ -10,6 +10,7 @@ describe("resolveSlotChrome", () => {
     expect(resolveSlotChrome("main")).toEqual({
       headerVariant: "main",
       focus: { area: "main", scope: "content" },
+      growHeaderWhenEmpty: true,
     });
     expect(resolveSlotChrome("secondary")).toEqual({
       as: "section",
@@ -18,10 +19,19 @@ describe("resolveSlotChrome", () => {
     });
   });
 
-  test("uses the shared panel height for the classic main header", () => {
-    expect(resolveSlotChrome("main-header")).toEqual({
+  test("maps classic shell slots to their frame renderers", () => {
+    expect(resolveSlotChrome("activity")).toMatchObject({ as: "nav", renderer: "activity" });
+    expect(resolveSlotChrome("nav")).toMatchObject({ renderer: "nav" });
+    expect(resolveSlotChrome("side")).toMatchObject({ as: "aside", renderer: "side" });
+    expect(resolveSlotChrome("status")).toMatchObject({ as: "footer", renderer: "status" });
+  });
+
+  test("keeps the classic left header full bleed", () => {
+    expect(resolveSlotChrome("left")).toEqual({
+      as: "aside",
       headerVariant: "main",
-      growHeaderWhenEmpty: true,
+      headerLayout: "full-bleed",
+      focus: { area: "sideBar", scope: "region" },
     });
   });
 });

@@ -24,7 +24,12 @@ const setup = (): RouteContractHarness => {
   workbench.registerModule({
     id: "route-test.module",
     activate(ctx) {
-      ctx.modes.registerMode({ id: MODE, label: "Route test", activate: () => undefined });
+      ctx.modes.registerMode({
+        id: MODE,
+        label: "Route test",
+        frame: ctx.layout.getDefaultFrame(),
+        activate: () => undefined,
+      });
       ctx.layout.registerWidget({
         id: "route-test-root",
         title: "Root",
