@@ -14,6 +14,8 @@ export interface ResourceRef {
   id?: string;
   label?: string;
   icon?: string;
+  // Parent resource URI. The producer owns this relationship; the registry does not derive it.
+  parent?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -100,6 +102,7 @@ export interface ResourceProvider {
   id: string;
   kind: string;
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
+  get?(uri: string, context: ResourceListContext): ResourceRef | undefined;
 }
 
 export interface ResourceRegistryStoreState {
@@ -120,6 +123,8 @@ export interface ResourceRegistry {
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
+  getResource(uri: string): ResourceRef | undefined;
+  listChildren(uri: string): readonly ResourceRef[];
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
 }
@@ -138,6 +143,15 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     name: "workbench.resources",
     initialState: { kinds: {}, openers: {}, providers: {} },
   });
+  const listContext = (): ResourceListContext => ({ primary: input.getPrimary?.() });
+  const listEntries = (query: string) => {
+    const context = listContext();
+    const entries: ResourceBrowseEntry[] = [];
+    for (const provider of Object.values(store.getState().providers)) {
+      entries.push(...provider.list(query, context));
+    }
+    return entries;
+  };
 
   return {
     store,
@@ -215,12 +229,26 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     },
 
     listResources(query) {
-      const context: ResourceListContext = { primary: input.getPrimary?.() };
-      const entries: ResourceBrowseEntry[] = [];
+      return listEntries(query);
+    },
+
+    getResource(uri) {
+      const context = listContext();
+      let match: ResourceRef | undefined;
+
+      // Providers own URI identity. Preserve registration order so duplicate claims resolve consistently.
       for (const provider of Object.values(store.getState().providers)) {
-        entries.push(...provider.list(query, context));
+        const found = provider.get
+          ? provider.get(uri, context)
+          : provider.list("", context).find((entry) => entry.resource.uri === uri)?.resource;
+        if (found) match = found;
       }
-      return entries;
+
+      return match;
+    },
+
+    listChildren(uri) {
+      return listEntries("").flatMap((entry) => (entry.resource.parent === uri ? [entry.resource] : []));
     },
 
     async openResource(resource, input = {}) {

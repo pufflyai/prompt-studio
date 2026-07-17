@@ -24,6 +24,99 @@ describe("createResourceRegistry scoped candidates", () => {
   });
 });
 
+describe("createResourceRegistry hierarchy", () => {
+  test("resolves a resource by scanning provider entries with an empty query", () => {
+    const resources = createResourceRegistry();
+    const queries: string[] = [];
+
+    resources.registerProvider({
+      id: "workspaces",
+      kind: "workspace",
+      list: (query) => {
+        queries.push(query);
+        return [{ resource: { kind: "workspace", uri: "pstdio://workspace/a" } }];
+      },
+    });
+
+    expect(resources.getResource("pstdio://workspace/a")).toEqual({
+      kind: "workspace",
+      uri: "pstdio://workspace/a",
+    });
+    expect(queries).toEqual([""]);
+  });
+
+  test("uses a provider get function as the authoritative fast path", () => {
+    const resources = createResourceRegistry();
+    let listCalls = 0;
+
+    resources.registerProvider({
+      id: "workspaces",
+      kind: "workspace",
+      get: (uri) => (uri === "pstdio://workspace/a" ? { kind: "workspace", uri } : undefined),
+      list: () => {
+        listCalls += 1;
+        return [];
+      },
+    });
+
+    expect(resources.getResource("pstdio://workspace/a")?.uri).toBe("pstdio://workspace/a");
+    expect(resources.getResource("pstdio://workspace/missing")).toBeUndefined();
+    expect(listCalls).toBe(0);
+  });
+
+  test("returns undefined for an unknown resource uri", () => {
+    const resources = createResourceRegistry();
+    resources.registerProvider({ id: "workspaces", kind: "workspace", list: () => [] });
+
+    expect(resources.getResource("pstdio://workspace/missing")).toBeUndefined();
+  });
+
+  test("lists resources whose parent matches the requested uri", () => {
+    const resources = createResourceRegistry();
+    resources.registerProvider({
+      id: "workspaces",
+      kind: "workspace",
+      list: () => [
+        { resource: { kind: "workspace", uri: "pstdio://workspace/a", parent: "pstdio://project/one" } },
+        { resource: { kind: "workspace", uri: "pstdio://workspace/b", parent: "pstdio://project/two" } },
+      ],
+    });
+
+    expect(resources.listChildren("pstdio://project/one").map((resource) => resource.uri)).toEqual([
+      "pstdio://workspace/a",
+    ]);
+  });
+
+  test("returns no children for a leaf resource", () => {
+    const resources = createResourceRegistry();
+    resources.registerProvider({
+      id: "workspaces",
+      kind: "workspace",
+      list: () => [{ resource: { kind: "workspace", uri: "pstdio://workspace/a" } }],
+    });
+
+    expect(resources.listChildren("pstdio://workspace/a")).toEqual([]);
+  });
+
+  test("uses the last provider when multiple providers claim the same uri", () => {
+    const resources = createResourceRegistry();
+    const uri = "pstdio://workspace/shared";
+
+    resources.registerProvider({
+      id: "first",
+      kind: "workspace",
+      list: () => [{ resource: { kind: "workspace", uri, parent: "pstdio://project/one" } }],
+    });
+    resources.registerProvider({
+      id: "second",
+      kind: "workspace",
+      list: () => [{ resource: { kind: "workspace", uri, parent: "pstdio://project/two" } }],
+    });
+
+    expect(resources.getResource(uri)?.parent).toBe("pstdio://project/two");
+  });
+});
+
 describe("createResourceRegistry surface routing", () => {
   test("reports the anchor a resource routes to via its kind", () => {
     const resources = createResourceRegistry();

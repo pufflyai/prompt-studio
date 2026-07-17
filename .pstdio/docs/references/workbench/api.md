@@ -285,6 +285,7 @@ type ResourceRef = {
   id?: string;
   label?: string;
   icon?: string;
+  parent?: string; // Parent resource URI, supplied by the producer.
   metadata?: Record<string, unknown>;
 };
 ```
@@ -311,6 +312,8 @@ ctx.resources.registerProvider({
   list: (_query, context) => sessionsForWorkspace(context.primary?.uri).map((resource) => ({ resource })),
 });
 ```
+
+Use `resources.getResource(uri)` to resolve an exact URI and `resources.listChildren(uri)` to list refs whose `parent` matches it. A provider may implement `get(uri, context)` as an authoritative fast path; providers without one are scanned through `list("", context)`. If multiple providers claim the same URI, the last registered provider wins. Producers own parent relationships—the registry does not derive or validate them.
 
 This scoping is what drives the detached-disconnect behaviour: when the primary changes, a `floating` session that the new primary's provider no longer lists falls out of scope and is disconnected.
 
