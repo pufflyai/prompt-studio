@@ -194,7 +194,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, workbenchAreaTabLeadingMenuPath("main"))
         .length > 0,
   });
-  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+  const resource = useWorkbenchStore(workbench.layout.store, (state) =>
+    getAnchorResource(state.frame, state.layout, "primary"),
+  );
   const hasMainHeaderActions =
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath, {
       resource,

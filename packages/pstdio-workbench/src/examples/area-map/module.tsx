@@ -41,7 +41,7 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
         const placeholder = (
           <AreaMapPlaceholder
             area={area}
-            role={describeSurface(area)}
+            role={describeSurface(workbench.layout.getFrame(), area)}
             name={placement.resource?.label ?? placement.title ?? placement.contributionId}
             uri={placement.resource?.uri ?? "pstdio://area-map/unknown"}
           />

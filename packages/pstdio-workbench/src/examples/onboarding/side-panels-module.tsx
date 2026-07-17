@@ -39,7 +39,7 @@ const items: SidePanelItem[] = [
     status: "Review",
     owner: "Platform",
     summary: "Check which extension APIs should read primary resource state instead of global active state.",
-    files: ["api.md", "surface-map.ts", "workbench-core.test.ts"],
+    files: ["api.md", "frame-queries.ts", "workbench-core.test.ts"],
     activity: ["Resource tree selection moved", "Inspector updated status", "Breadcrumbs were replaced"],
   },
   {
@@ -65,7 +65,7 @@ const itemResource = (item: SidePanelItem): ResourceRef => ({
 const findItem = (resource: ResourceRef | undefined) => items.find((item) => item.id === resource?.id) ?? items[0];
 
 const usePrimaryResource = (workbench: WorkbenchCore) =>
-  useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+  useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.frame, state.layout, "primary"));
 
 const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;

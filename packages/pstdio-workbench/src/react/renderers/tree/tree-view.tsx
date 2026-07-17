@@ -42,15 +42,16 @@ const FOOTER_SECTION_ID = "__footer__";
 const regionSection = (id: string, nodes: TreeNode[]): TreeViewSection => ({ id, nodes });
 
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
+type WorkbenchFrame = ReturnType<WorkbenchCore["layout"]["getFrame"]>;
 
 const resolveActivePlacement = (
   widgets: WorkbenchLayoutState["areas"]["overlay"]["widgets"],
   activeWidgetId: string | undefined,
 ) => widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
 
-const resolveTreeActiveResource = (layout: WorkbenchLayoutState) =>
+const resolveTreeActiveResource = (frame: WorkbenchFrame, layout: WorkbenchLayoutState) =>
   resolveActivePlacement(layout.areas.overlay.widgets, layout.areas.overlay.activeWidgetId)?.resource ??
-  getAnchorResource(layout, "primary");
+  getAnchorResource(frame, layout, "primary");
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const { workbench, treeViewId, activeNodeId, resource, viewId, renderParamField, onOpenResourceError } = props;
@@ -58,7 +59,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
   const treeState =
     useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
-  const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
+  const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
+    resolveTreeActiveResource(state.frame, state.layout),
+  );
   const [header, setHeader] = useState<TreeNode[]>([]);
   const [body, setBody] = useState<TreeViewSection[]>([]);
   const [footer, setFooter] = useState<TreeNode[]>([]);

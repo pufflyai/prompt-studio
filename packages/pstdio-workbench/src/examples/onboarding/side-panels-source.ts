@@ -32,7 +32,7 @@ const itemResource = (item: (typeof items)[number]): ResourceRef => ({
 
 const usePrimaryResource = (workbench: WorkbenchCore) =>
   useWorkbenchStore(workbench.layout.store, (state) =>
-    getAnchorResource(state.layout, "primary"),
+    getAnchorResource(state.frame, state.layout, "primary"),
   );
 
 const ResourcePicker = (props: { workbench: WorkbenchCore }) => {

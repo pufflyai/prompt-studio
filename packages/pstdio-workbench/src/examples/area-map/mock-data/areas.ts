@@ -1,4 +1,4 @@
-import { getSurface, type ResourceRef, type WorkbenchArea } from "../../../core";
+import { type Frame, getSurface, type ResourceRef, type WorkbenchArea } from "../../../core";
 
 export const areaResourceKind = "workbench-area";
 export const areaMapRendererId = "area-map.placeholder";
@@ -40,18 +40,20 @@ export const areaWidgetId = (area: WorkbenchArea) => `area-map.${area}`;
 // Describes a surface by its role in the resource-projected model, so the map reads as
 // anchors / projections / chrome / transient rather than a flat list of areas. The
 // per-panel header strips are shown as the header region of their content area.
-export const describeSurface = (area: WorkbenchArea): string => {
+export const describeSurface = (frame: Frame<WorkbenchArea>, area: WorkbenchArea): string => {
   if (area !== "nav" && area.endsWith("-header")) {
     return `header region of ${area.slice(0, -"-header".length)}`;
   }
-  const surface = getSurface(area);
-  if (surface.role === "anchor") {
-    return surface.anchor === "primary"
-      ? "anchor · primary"
-      : `anchor · ${surface.anchor} (${surface.persistence}/${surface.candidates})`;
+  if (area === frame.primary) return "anchor · primary";
+  if (frame.secondary?.slot === area) {
+    return `anchor · secondary (${frame.secondary.persistence}/${frame.secondary.candidates})`;
   }
+  if (frame.attached?.slot === area) {
+    return `anchor · attached (${frame.attached.persistence}/${frame.attached.candidates})`;
+  }
+  const surface = getSurface(frame, area);
   if (surface.role === "projection") {
-    return `projection → ${surface.reads.join(" + ")}${surface.navigator ? " · navigator" : ""}`;
+    return `projection → ${surface.reads?.join(" + ")}${surface.navigator ? " · navigator" : ""}`;
   }
   return surface.role;
 };

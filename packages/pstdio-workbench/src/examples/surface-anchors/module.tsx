@@ -34,7 +34,7 @@ const openBySurface = (
   resource: ResourceRef,
 ) => {
   const surface = ctx.resources.getSurface(resource);
-  const area = surface ? resolveAnchorArea(surface) : undefined;
+  const area = surface ? resolveAnchorArea(ctx.layout.getFrame(), surface) : undefined;
   return ctx.layout.openWidget(widgetId, { resource, area });
 };
 

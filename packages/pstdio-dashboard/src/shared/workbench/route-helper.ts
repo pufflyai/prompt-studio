@@ -33,8 +33,6 @@ export interface RegisterResourceRouteInput {
 // replaceActive forwarded (so history replay replaces in place), and runs side-effect hooks
 // that cannot replace navigable identity.
 export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, input: RegisterResourceRouteInput) => {
-  const area = resolveAnchorArea(input.surface ?? "primary");
-
   return ctx.resources.registerOpener({
     id: input.id,
     priority: input.priority ?? 1000,
@@ -47,6 +45,7 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
 
       ctx.modes.setActiveMode(input.mode);
       input.beforeOpen?.({ resource });
+      const area = resolveAnchorArea(ctx.layout.getFrame(), input.surface ?? "primary");
 
       const placement = ctx.layout.openWidget(input.widgetId, {
         resource,

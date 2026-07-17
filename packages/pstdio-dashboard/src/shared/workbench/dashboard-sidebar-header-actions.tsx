@@ -108,7 +108,10 @@ const navigateHeaderNode = (input: WorkbenchWidgetRenderInput, event: TreeListNa
 };
 
 const usePrimaryResourceSubscription = (input: WorkbenchWidgetRenderInput) => {
-  useWorkbenchStore(input.workbench.layout.store, (state) => getAnchorResource(state.layout, "primary")?.uri);
+  useWorkbenchStore(
+    input.workbench.layout.store,
+    (state) => getAnchorResource(state.frame, state.layout, "primary")?.uri,
+  );
 };
 
 const useHeaderNodes = (input: WorkbenchWidgetRenderInput) => {

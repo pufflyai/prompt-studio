@@ -1,7 +1,6 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { resolveAnchorArea } from "../../registries/layout/surface-map";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
@@ -56,7 +55,7 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
 // entry. Navigation ingress (resource opens) is still recorded globally via
 // onDidOpenResource below — that is a distinct, intentional history source.
 const activePlacementFromLayout = (layout: LayoutModel) =>
-  getActivePlacement(layout.getLayout().areas[resolveAnchorArea("primary")]);
+  getActivePlacement(layout.getLayout().areas[layout.getFrame().primary]);
 
 const createEntryBase = (counter: number) => {
   const recordedAt = Date.now();

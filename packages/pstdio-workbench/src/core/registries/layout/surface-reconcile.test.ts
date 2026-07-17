@@ -1,11 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "../resources/resource-registry";
+import { defineFrame } from "./frame";
 import { createLayoutModel } from "./layout-model";
 import { registerTestWidget } from "./layout-model-test-utils";
 import { getAnchorResource, reconcileAnchors } from "./surface-reconcile";
 
 const ticket: ResourceRef = { kind: "ticket", uri: "pstdio://ticket/t1" };
 const inWorkspace: ResourceRef = { kind: "session", uri: "pstdio://session/s1" };
+
+const alternateFrame = defineFrame({
+  id: "alternate-anchors",
+  root: {
+    kind: "split",
+    id: "alternate-root",
+    direction: "row",
+    children: [
+      { kind: "slot", id: "main", owner: "resource", role: "panels" },
+      { kind: "slot", id: "floating", owner: "project", role: "panels" },
+    ],
+  },
+  primary: "main",
+  secondary: { slot: "floating", persistence: "derived", candidates: "scoped" },
+});
 
 // A scope predicate standing in for scoped candidate providers: a detached resource
 // belongs to the new primary only when the test says so.
@@ -21,6 +37,7 @@ describe("reconcileAnchors", () => {
     layout.openWidget("terminals", { resource: { kind: "terminal", uri: "pstdio://terminal/x" } });
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(),
@@ -35,6 +52,7 @@ describe("reconcileAnchors", () => {
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(inWorkspace.uri),
@@ -49,6 +67,7 @@ describe("reconcileAnchors", () => {
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(),
@@ -66,6 +85,7 @@ describe("reconcileAnchors", () => {
     layout.openWidget("panel");
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(),
@@ -80,6 +100,7 @@ describe("reconcileAnchors", () => {
     layout.openWidget("board", { resource: ticket });
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(ticket.uri),
@@ -92,12 +113,28 @@ describe("reconcileAnchors", () => {
     const layout = createLayoutModel();
 
     const actions = reconcileAnchors({
+      frame: layout.getFrame(),
       layout: layout.getLayout(),
       primary: ticket,
       isInScope: scopeContaining(),
     });
 
     expect(actions).toEqual([]);
+  });
+
+  test("reconciles against a non-classic anchor topology", () => {
+    const layout = createLayoutModel();
+    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    layout.openWidget("session", { resource: inWorkspace });
+
+    const actions = reconcileAnchors({
+      frame: alternateFrame,
+      layout: layout.getLayout(),
+      primary: ticket,
+      isInScope: scopeContaining(inWorkspace.uri),
+    });
+
+    expect(actions).toEqual([{ area: "floating", action: "clear" }]);
   });
 });
 
@@ -111,12 +148,12 @@ describe("getAnchorResource", () => {
     // Activating a side anchor moves the global active widget, but primary must not follow.
     layout.openWidget("session", { resource: inWorkspace });
 
-    expect(getAnchorResource(layout.getLayout(), "primary")).toEqual(ticket);
-    expect(getAnchorResource(layout.getLayout(), "attached")).toEqual(inWorkspace);
+    expect(getAnchorResource(layout.getFrame(), layout.getLayout(), "primary")).toEqual(ticket);
+    expect(getAnchorResource(layout.getFrame(), layout.getLayout(), "attached")).toEqual(inWorkspace);
   });
 
   test("is undefined when the anchor has no active placement", () => {
     const layout = createLayoutModel();
-    expect(getAnchorResource(layout.getLayout(), "primary")).toBeUndefined();
+    expect(getAnchorResource(layout.getFrame(), layout.getLayout(), "primary")).toBeUndefined();
   });
 });

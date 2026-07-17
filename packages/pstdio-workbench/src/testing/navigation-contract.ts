@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { ResourceRef, WorkbenchCore } from "../core";
-import { getAnchorResource, resolveAnchorArea } from "../core";
+import { getAnchorResource } from "../core";
 
-// The primary/main surface hosts the "primary" anchor (see surface-map). Reading placements
+// The classic frame's main slot hosts the "primary" anchor. Reading placements
 // and the active resource through the anchor — not the global activeResourceUri, which any
 // side-area activation can pollute — measures the exact signal history records, so the
 // contract asserts the user-visible navigation state.
 export const primaryPlacements = (workbench: WorkbenchCore) =>
-  workbench.layout.getLayout().areas[resolveAnchorArea("primary")].widgets;
+  workbench.layout.getLayout().areas[workbench.layout.getFrame().primary].widgets;
 
 export const unpinnedPrimaryPlacements = (workbench: WorkbenchCore) =>
   primaryPlacements(workbench).filter((placement) => !placement.pinned);
 
 export const activePrimaryResource = (workbench: WorkbenchCore) =>
-  getAnchorResource(workbench.layout.getLayout(), "primary");
+  getAnchorResource(workbench.layout.getFrame(), workbench.layout.getLayout(), "primary");
 
 export interface RouteContractHarness {
   workbench: WorkbenchCore;

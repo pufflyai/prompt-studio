@@ -36,7 +36,6 @@ import { type CommandRegistry, createCommandRegistry } from "./registries/comman
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
 import { getActivePlacement } from "./registries/layout/layout-operations";
-import { resolveAnchorArea } from "./registries/layout/surface-map";
 import { getAnchorResource } from "./registries/layout/surface-reconcile";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -412,7 +411,9 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       ...controlsRendererRegistry,
     },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
-    resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
+    resources: createResourceRegistry({
+      getPrimary: () => getAnchorResource(core.layout.getFrame(), core.layout.getLayout(), "primary"),
+    }),
     settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     terminal: createWorkbenchTerminalController(),
@@ -441,13 +442,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
 
     getPrimaryResource() {
-      return getAnchorResource(core.layout.getLayout(), "primary");
+      return getAnchorResource(core.layout.getFrame(), core.layout.getLayout(), "primary");
     },
 
     onDidChangePrimaryResource(listener) {
       return createDisposable(
         core.layout.store.subscribeSelector(
-          (state) => getActivePlacement(state.layout.areas[resolveAnchorArea("primary")])?.resourceUri,
+          (state) => getActivePlacement(state.layout.areas[state.frame.primary])?.resourceUri,
           () => listener(core.getPrimaryResource()),
         ),
       );

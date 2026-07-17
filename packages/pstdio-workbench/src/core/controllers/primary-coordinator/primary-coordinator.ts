@@ -1,6 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
-import { resolveAnchorArea } from "../../registries/layout/surface-map";
 import { getAnchorResource, reconcileAnchors } from "../../registries/layout/surface-reconcile";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -35,11 +34,12 @@ export interface CreatePrimaryCoordinatorInput {
 // resource cannot re-fire — the reconciliation is feedback-loop safe by construction.
 export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoordinatorInput): Disposable => {
   const unsubscribe = layout.store.subscribeSelector(
-    (state) => getActivePlacement(state.layout.areas[resolveAnchorArea("primary")])?.resourceUri,
+    (state) => getActivePlacement(state.layout.areas[state.frame.primary])?.resourceUri,
     () => {
+      const frame = layout.getFrame();
       const current = layout.getLayout();
-      const primary = getAnchorResource(current, "primary");
-      for (const action of reconcileAnchors({ layout: current, primary, isInScope })) {
+      const primary = getAnchorResource(frame, current, "primary");
+      for (const action of reconcileAnchors({ frame, layout: current, primary, isInScope })) {
         if (action.action === "clear") layout.clearArea(action.area);
       }
     },

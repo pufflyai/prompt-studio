@@ -92,6 +92,31 @@ export type {
   RegisteredKeybinding,
 } from "./registries/keybindings/keybinding-registry";
 export { createKeybindingRegistry, getKeybindingSteps } from "./registries/keybindings/keybinding-registry";
+export { classicFrame } from "./registries/layout/classic-frame";
+export { defineFrame } from "./registries/layout/frame";
+export {
+  getSurface,
+  listAnchorAreas,
+  listProjectionAreas,
+  listProjectionsReading,
+  resolveAnchorArea,
+} from "./registries/layout/frame-queries";
+export type {
+  AnchorCandidates,
+  AnchorId,
+  AnchorPersistence,
+  AnchorReadId,
+  Frame,
+  FrameNode,
+  FrameSlot,
+  FrameSlotSize,
+  FrameSplit,
+  SideBinding,
+  SlotOwner,
+  SlotPresentation,
+  SlotRole,
+  SlotsOf,
+} from "./registries/layout/frame-types";
 export type {
   CreateLayoutModelInput,
   LayoutModel,
@@ -111,17 +136,9 @@ export type {
   WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
 export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from "./registries/layout/layout-model";
-export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
-export {
-  getSurface,
-  listAnchorAreas,
-  listProjectionAreas,
-  listProjectionsReading,
-  resolveAnchorArea,
-  surfaceMap,
-} from "./registries/layout/surface-map";
 export type { AnchorReconcileAction, ReconcileAnchorsInput } from "./registries/layout/surface-reconcile";
 export { getAnchorResource, reconcileAnchors } from "./registries/layout/surface-reconcile";
+export { validateFrame } from "./registries/layout/validate-frame";
 export type { MenuItem, MenuPath, MenuRegistry, RegisteredMenuItem } from "./registries/menus/menu-registry";
 export { createMenuRegistry } from "./registries/menus/menu-registry";
 export {

@@ -258,7 +258,7 @@ Use the standard resource icon names for common workbench concepts:
 | Data renderer | `square-kanban`           |
 | Settings      | `settings`                |
 
-Call `resources.openResource(resource, { replaceActive: true })` to route through the highest-priority opener whose `canOpen()` returns true. A kind's `surface` (`primary` | `secondary` | `attached`) declares which anchor it belongs to; `resources.getSurface(resource)` reads it, and `resolveAnchorArea(surface)` maps it to an area so openers do not hardcode one.
+Call `resources.openResource(resource, { replaceActive: true })` to route through the highest-priority opener whose `canOpen()` returns true. A kind's `surface` (`primary` | `secondary` | `attached`) declares which anchor it belongs to; `resources.getSurface(resource)` reads it, and `resolveAnchorArea(ctx.layout.getFrame(), surface)` maps it through the active layout frame so openers do not hardcode an area.
 
 Providers list the candidates a surface can open, scoped to the active primary. `list(query, context)` receives `context.primary`, so a session/terminal provider can return only the children of the active workspace:
 

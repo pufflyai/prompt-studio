@@ -9,6 +9,8 @@ import {
   type InternalWorkbenchStore,
   type WorkbenchStore,
 } from "../../shared/store/workbench-store";
+import { classicFrame } from "./classic-frame";
+import type { Frame } from "./frame-types";
 import {
   activateInLayout,
   buildUpdatedPlacement,
@@ -62,11 +64,13 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
+  frame?: Frame<WorkbenchArea>;
   persistence?: LayoutPersistenceAdapter;
 }
 
 export interface LayoutModel {
   store: WorkbenchStore<WorkbenchLayoutStoreState>;
+  getFrame(): Frame<WorkbenchArea>;
   registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
@@ -218,7 +222,7 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
 
         const { [widget.id]: _removed, ...nextWidgets } = current.widgets;
         const nextLayout = removePlacementsForContribution(current.layout, widget.id);
-        store.setState({ widgets: nextWidgets, layout: nextLayout }, false, "unregisterWidget");
+        store.setState({ ...current, widgets: nextWidgets, layout: nextLayout }, false, "unregisterWidget");
         persistLayout();
       });
     },
@@ -359,9 +363,10 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
   const store = createWorkbenchStore<WorkbenchLayoutStoreState>({
     name: "workbench.layout",
-    initialState: { layout: initialLayout, widgets: {}, placeholders: {} },
+    initialState: { frame: input.frame ?? classicFrame, layout: initialLayout, widgets: {}, placeholders: {} },
   });
 
+  const getFrame = () => store.getState().frame;
   const getLayout = () => store.getState().layout;
   const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
@@ -410,6 +415,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
   return {
     store,
+
+    getFrame,
 
     registerPlaceholder: contributionRegistrations.registerPlaceholder,
 

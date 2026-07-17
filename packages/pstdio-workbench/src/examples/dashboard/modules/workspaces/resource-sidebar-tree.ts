@@ -110,7 +110,8 @@ export const registerResourceSidebarTree = (ctx: WorkbenchModuleContributionCont
     // ignores the tree's own placement resource. The module's onDidChangePrimaryResource
     // subscription calls refresh() after the detail widget lands in main, which is the
     // mechanism that re-derives this body for the new primary (and sets the selection).
-    getBody: () => createResourceSidebarSections(getAnchorResource(ctx.layout.getLayout(), "primary")),
+    getBody: () =>
+      createResourceSidebarSections(getAnchorResource(ctx.layout.getFrame(), ctx.layout.getLayout(), "primary")),
     getChildren: () => [],
   });
   ctx.layout.registerWidget(

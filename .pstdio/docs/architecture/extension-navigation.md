@@ -9,7 +9,7 @@ This page describes how extension boards, resource views, and mode-layout views 
 - The **primary** surface is the `main` area (it hosts the `"primary"` anchor). History records the primary area's active placement only; activating a side surface (a left tree, a side panel, a floating session) never pushes a Back/Forward entry.
 - A history entry is a **resource** entry when its placement carries a `resource` (replayed via `resources.openResource`) or a **widget** entry when it does not (replayed via `layout.openWidget`). Mode switches are recorded as **mode** entries.
 - Replay restores the entry's mode first, then reopens the resource with `replaceActive: true`, so the primary area is replaced in place — Back/Forward never grows tabs.
-- The active primary resource is read through the anchor (`getAnchorResource(layout, "primary")`), the same signal history records. Never read the global `activeResourceUri` for navigation decisions — side-area activations pollute it.
+- The active primary resource is read through the frame-owned anchor (`getAnchorResource(layoutModel.getFrame(), layoutModel.getLayout(), "primary")`), the same signal history records. Never read the global `activeResourceUri` for navigation decisions — side-area activations pollute it.
 
 ## Route helpers
 

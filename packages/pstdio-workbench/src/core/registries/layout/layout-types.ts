@@ -1,5 +1,7 @@
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
+import type { classicFrame } from "./classic-frame";
+import type { Frame, FrameSlotSize, SlotsOf } from "./frame-types";
 
 export const workbenchAreas = [
   "nav",
@@ -18,13 +20,9 @@ export const workbenchAreas = [
   "floating",
 ] as const;
 
-export type WorkbenchArea = (typeof workbenchAreas)[number];
+export type WorkbenchArea = SlotsOf<typeof classicFrame>;
 
-export interface WorkbenchAreaSize {
-  defaultPx?: number;
-  minPx?: number;
-  maxPx?: number;
-}
+export type WorkbenchAreaSize = FrameSlotSize;
 
 export type WidgetReusePolicy = "resource" | "none";
 
@@ -100,6 +98,7 @@ export interface WorkbenchLayout {
 }
 
 export interface WorkbenchLayoutStoreState {
+  frame: Frame<WorkbenchArea>;
   layout: WorkbenchLayout;
   widgets: Record<string, RegisteredWidgetContribution>;
   placeholders: Partial<Record<WorkbenchArea, RegisteredPlaceholderContribution>>;

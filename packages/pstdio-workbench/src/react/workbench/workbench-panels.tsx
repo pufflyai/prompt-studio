@@ -29,7 +29,9 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+  const resource = useWorkbenchStore(workbench.layout.store, (state) =>
+    getAnchorResource(state.frame, state.layout, "primary"),
+  );
   const breadcrumbItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const menuState = { itemsByPath, commands, contextValues };
   const menuContext = { resource };
