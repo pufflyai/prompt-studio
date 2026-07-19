@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { apiWebSocket } from "pstdio-api/app";
 import packageData from "../../../../../package.json";
 
 import { createServeApp } from "./serve-app";
@@ -160,7 +161,49 @@ describe("serveApp", () => {
 
     expect(captured.hostname).toBe("0.0.0.0");
   });
+});
 
+describe("serveApp WebSocket transport", () => {
+  it("configures WebSocket upgrades and forwards the Bun server to Hono", async () => {
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+    let capturedWebSocket: unknown;
+    let forwardedServer: object | undefined;
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: (_request, server) => {
+            forwardedServer = server;
+            return new Response("ok");
+          },
+        },
+        close: async () => {},
+      }),
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        capturedFetch = options.fetch;
+        capturedWebSocket = options.websocket;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      log: () => {},
+    });
+
+    await serveApp({ port: 19840, host: "localhost" });
+    const server = {} as Bun.Server<undefined>;
+    await capturedFetch?.call(server, new Request("http://localhost:19840/v1/terminal"), server);
+
+    expect(capturedWebSocket).toBe(apiWebSocket);
+    expect(forwardedServer).toBe(server);
+  });
+});
+
+describe("serveApp dashboard config", () => {
   it("does not inject an absolute apiBaseUrl into the dashboard config", async () => {
     let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
     let injectedApiBaseUrl: string | undefined;

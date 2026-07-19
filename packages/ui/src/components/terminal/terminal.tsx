@@ -3,7 +3,7 @@ import type { ITheme } from "@xterm/xterm";
 import { Terminal as Xterm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import "./terminal.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { bindSessionToSink, type TerminalSink } from "./bind-session";
 import { resolveTerminalTheme, type TerminalThemeName } from "./terminal-theme";
 import type { TerminalBridge, TerminalSessionAdapter, TerminalSessionRequest } from "./types";
@@ -22,19 +22,37 @@ export const createInitialTerminalSessionRequest = (
   rows: request?.rows ?? DEFAULT_ROWS,
 });
 
-const createSink = (xterm: Xterm): TerminalSink => ({
-  write(data) {
-    xterm.write(data);
-  },
-  onInput(handler) {
-    const disposable = xterm.onData(handler);
-    return () => disposable.dispose();
-  },
-  onResize(handler) {
-    const disposable = xterm.onResize(handler);
-    return () => disposable.dispose();
-  },
-});
+export const createTerminalSink = (xterm: Pick<Xterm, "write" | "onData" | "onResize">) => {
+  const inputHandlers = new Set<(data: string) => void>();
+  const pendingInput: string[] = [];
+  const inputDisposable = xterm.onData((data) => {
+    if (inputHandlers.size === 0) {
+      pendingInput.push(data);
+      return;
+    }
+    for (const handler of inputHandlers) handler(data);
+  });
+
+  return {
+    write(data: string | Uint8Array) {
+      xterm.write(data);
+    },
+    onInput(handler: (data: string) => void) {
+      inputHandlers.add(handler);
+      while (pendingInput.length > 0) handler(pendingInput.shift() as string);
+      return () => inputHandlers.delete(handler);
+    },
+    onResize(handler: (size: { cols: number; rows: number }) => void) {
+      const disposable = xterm.onResize(handler);
+      return () => disposable.dispose();
+    },
+    dispose() {
+      inputDisposable.dispose();
+      inputHandlers.clear();
+      pendingInput.length = 0;
+    },
+  } satisfies TerminalSink & { dispose(): void };
+};
 
 const fitTerminal = (fit: FitAddon | null) => {
   try {
@@ -96,6 +114,8 @@ export interface TerminalProps {
   fontSize?: number;
   /** Whether to kill the session when the component unmounts. Defaults to true. */
   killOnUnmount?: boolean;
+  /** Focus the terminal while it is the active surface. Defaults to true. */
+  autoFocus?: boolean;
   /** Forwarded to the container element. */
   className?: string;
   style?: React.CSSProperties;
@@ -119,6 +139,7 @@ export const Terminal = (props: TerminalProps) => {
     fontFamily = DEFAULT_FONT_FAMILY,
     fontSize = DEFAULT_FONT_SIZE,
     killOnUnmount = true,
+    autoFocus = true,
     className,
     style,
     onSessionOpen,
@@ -128,6 +149,8 @@ export const Terminal = (props: TerminalProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<Xterm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const sinkRef = useRef<ReturnType<typeof createTerminalSink> | null>(null);
+  const [terminalReady, setTerminalReady] = useState(false);
   const initialSessionRequestRef = useRef<TerminalSessionRequest | null>(null);
   const onSessionOpenRef = useRef(onSessionOpen);
   const onSessionExitRef = useRef(onSessionExit);
@@ -148,67 +171,86 @@ export const Terminal = (props: TerminalProps) => {
     const container = containerRef.current;
     if (!container) return;
 
-    const xterm = new Xterm({
-      cols: DEFAULT_COLS,
-      rows: DEFAULT_ROWS,
-      cursorBlink: true,
-      convertEol: true,
-      allowProposedApi: true,
+    let xterm: Xterm | undefined;
+    let sink: ReturnType<typeof createTerminalSink> | undefined;
+    let measureAnimationFrame: number | undefined;
+    let measureTimeout: number | undefined;
+    let observer: ResizeObserver | undefined;
+
+    // Deferring construction skips React Strict Mode's disposable probe mount.
+    // xterm schedules internal viewport work during construction that otherwise
+    // runs after the probe instance has already been disposed.
+    const initializationFrame = window.requestAnimationFrame(() => {
+      xterm = new Xterm({
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
+        cursorBlink: true,
+        convertEol: true,
+        allowProposedApi: true,
+      });
+      const fit = new FitAddon();
+      xterm.loadAddon(fit);
+      xterm.open(container);
+      sink = createTerminalSink(xterm);
+
+      xtermRef.current = xterm;
+      fitRef.current = fit;
+      sinkRef.current = sink;
+
+      const measure = () => fitTerminal(fit);
+      measure();
+      measureAnimationFrame = window.requestAnimationFrame(measure);
+      measureTimeout = window.setTimeout(measure, 50);
+      observer = new ResizeObserver(measure);
+      observer.observe(container);
+      setTerminalReady(true);
     });
-    const fit = new FitAddon();
-    xterm.loadAddon(fit);
-    xterm.open(container);
-
-    xtermRef.current = xterm;
-    fitRef.current = fit;
-
-    const measure = () => fitTerminal(fit);
-
-    measure();
-    const animationFrame = window.requestAnimationFrame(measure);
-    const timeout = window.setTimeout(measure, 50);
-    const observer = new ResizeObserver(measure);
-    observer.observe(container);
 
     return () => {
-      window.cancelAnimationFrame(animationFrame);
-      window.clearTimeout(timeout);
-      observer.disconnect();
-      xterm.dispose();
+      window.cancelAnimationFrame(initializationFrame);
+      if (measureAnimationFrame !== undefined) window.cancelAnimationFrame(measureAnimationFrame);
+      if (measureTimeout !== undefined) window.clearTimeout(measureTimeout);
+      observer?.disconnect();
+      sink?.dispose();
+      xterm?.dispose();
       xtermRef.current = null;
       fitRef.current = null;
+      sinkRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    if (!terminalReady) return;
     const xterm = xtermRef.current;
     if (!xterm) return;
     xterm.options.theme = resolvedTheme;
     xterm.options.fontFamily = fontFamily;
     xterm.options.fontSize = fontSize;
     fitTerminal(fitRef.current);
-  }, [resolvedTheme, fontFamily, fontSize]);
+  }, [terminalReady, resolvedTheme, fontFamily, fontSize]);
 
   const { session } = useTerminalSession({ bridge, request: initialSessionRequestRef.current, killOnUnmount });
 
   useEffect(() => {
+    if (!terminalReady) return;
     const xterm = xtermRef.current;
-    if (!xterm || !session) return;
+    const sink = sinkRef.current;
+    if (!xterm || !sink || !session) return;
     fitTerminal(fitRef.current);
     const animationFrame = window.requestAnimationFrame(() => fitTerminal(fitRef.current));
-    const sink = createSink(xterm);
     const unbind = bindTerminalSessionWithCallbackRefs(xterm, sink, session, {
       onSessionOpen: onSessionOpenRef,
       onSessionExit: onSessionExitRef,
     });
-    // Opening a terminal is an explicit action; hand it the keyboard so the
-    // user can type immediately instead of clicking into it first.
-    xterm.focus();
     return () => {
       window.cancelAnimationFrame(animationFrame);
       unbind();
     };
-  }, [session]);
+  }, [session, terminalReady]);
+
+  useEffect(() => {
+    if (terminalReady && autoFocus) xtermRef.current?.focus();
+  }, [autoFocus, terminalReady]);
 
   // The mount element fills its box absolutely so xterm sizes to the panel
   // rather than growing it: inside a scrollable host, a self-sized terminal

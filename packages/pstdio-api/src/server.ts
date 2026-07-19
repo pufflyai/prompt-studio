@@ -1,4 +1,4 @@
-import { createApp } from "./app";
+import { apiWebSocket, createApp } from "./app";
 import { resolveApiFilesRoot } from "./default-files-root";
 import { apiLogger } from "./lib/logger";
 
@@ -33,6 +33,7 @@ Bun.serve({
   fetch: app.fetch,
   idleTimeout: 20,
   port,
+  websocket: apiWebSocket,
 });
 
 apiLogger.info({ event: "api.server.started", port }, `Server running on http://localhost:${port}`);

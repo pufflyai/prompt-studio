@@ -56,8 +56,9 @@ interface WorkbenchTerminalPanelProps {
 /**
  * Body of the host-owned terminal panel. Chrome (tab, title, close action,
  * resize) comes from the workbench `secondary` area; this component only mounts
- * the terminal bound to the workbench terminal controller. Closing the panel
- * unmounts the terminal, which kills its session (close = kill).
+ * the terminal bound to the workbench terminal controller. Collapsing the panel
+ * keeps the terminal mounted. Closing its tab unmounts the terminal and kills
+ * its session (close = kill).
  */
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;
@@ -76,6 +77,10 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const processTitle = useWorkbenchStore(workbench.terminal.store, (state) =>
     sessionId ? state.sessionsById[sessionId]?.title : undefined,
   );
+  const active = useWorkbenchStore(workbench.layout.store, (state) => {
+    const area = state.layout.areas.secondary;
+    return (area.activeWidgetId ?? area.widgets[0]?.widgetId) === placement.widgetId;
+  });
 
   useEffect(() => {
     if (!sessionId || !processTitle) return;
@@ -94,7 +99,12 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
 
   return (
     <Box h="full" minH="0" minW="0" w="full">
-      <Terminal bridge={bridge} theme={/dark/i.test(themePreference) ? "dark" : "light"} onSessionOpen={setSessionId} />
+      <Terminal
+        bridge={bridge}
+        theme={/dark/i.test(themePreference) ? "dark" : "light"}
+        autoFocus={active}
+        onSessionOpen={setSessionId}
+      />
     </Box>
   );
 };

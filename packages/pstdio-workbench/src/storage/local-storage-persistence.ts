@@ -139,6 +139,10 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
   const storage = resolveStorage(input.storage);
 
   return {
+    layoutPersistence: createLocalStorageLayoutPersistence({
+      namespace: input.namespace,
+      storage,
+    }),
     panelsPersistence: createLocalStoragePanelsPersistence({
       namespace: input.namespace,
       scope: input.scope ?? "global",

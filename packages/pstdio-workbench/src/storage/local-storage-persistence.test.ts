@@ -82,6 +82,7 @@ describe("local storage workbench persistence", () => {
       storage,
     });
     const panels: PersistedWorkbenchPanels = { openByAreaId: { left: false } };
+    const layout = createDefaultWorkbenchLayout();
     const trees: PersistedTreeRendererStates = {
       statesByTreeId: {
         "workspace.tree": {
@@ -93,10 +94,14 @@ describe("local storage workbench persistence", () => {
     };
     const resource = { kind: "workspace", uri: "workspace:one", label: "Workspace One" };
 
+    persistence.layoutPersistence.setLayout(layout, "project:one");
     persistence.panelsPersistence.setPanelStates(panels);
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
 
+    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
+      JSON.stringify(layout),
+    );
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBe(
       JSON.stringify(panels),
     );
@@ -104,6 +109,7 @@ describe("local storage workbench persistence", () => {
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "last-resource", "project:one"))).toBe(
       JSON.stringify(resource),
     );
+    expect(persistence.layoutPersistence.getLayout("project:one")).toEqual(layout);
     expect(persistence.panelsPersistence.getPanelStates()).toEqual(panels);
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);

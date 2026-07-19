@@ -1,4 +1,4 @@
-import { createApp } from "pstdio-api/app";
+import { apiWebSocket, createApp } from "pstdio-api/app";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
@@ -13,7 +13,7 @@ type ServeAppOptions = {
 
 type AppHandle = {
   app: {
-    fetch: (request: Request) => Response | Promise<Response>;
+    fetch: (request: Request, server?: object) => Response | Promise<Response>;
   };
   close: () => Promise<void>;
 };
@@ -151,12 +151,12 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
         idleTimeout: 20,
         hostname: host,
         port,
-        fetch(req) {
+        fetch(req, server) {
           const url = new URL(req.url);
 
           // API routes → Hono
           if (url.pathname.startsWith("/v1") || url.pathname === "/healthz" || url.pathname === "/shutdown") {
-            return app.fetch(req);
+            return app.fetch(req, server);
           }
 
           // Dashboard assets → embedded or filesystem
@@ -174,6 +174,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
           return new Response("Not Found", { status: 404 });
         },
+        websocket: apiWebSocket,
       });
 
       deps.log(`pstdio serve: ${baseUrl}\n`);

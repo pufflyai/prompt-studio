@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { websocket } from "hono/bun";
 import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
 import {
   createActivityEventsDBService,
@@ -57,6 +58,8 @@ import { runStartupTasks } from "./startup";
 import type { AppBindings } from "./types";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
+
+export const apiWebSocket = websocket;
 
 interface AppOptions {
   dbPath?: string;

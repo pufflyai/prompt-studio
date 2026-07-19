@@ -1,6 +1,6 @@
 import type { WorkbenchTerminalSessionExit, WorkbenchTerminalSessionOpener } from "@pstdio/workbench/core";
-import { buildApiUrl } from "@/lib/api";
-import { createTerminalSseParser, type TerminalStreamEvent } from "./terminal-sse";
+import type { TerminalWebSocketClientMessage, TerminalWebSocketServerMessage } from "pstdio-api-contracts";
+import { buildAbsoluteApiUrl } from "@/lib/api";
 
 const encodeBase64 = (data: string | Uint8Array) => {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -9,9 +9,8 @@ const encodeBase64 = (data: string | Uint8Array) => {
   return btoa(binary);
 };
 
-// A subscribable channel that buffers events emitted before a handler attaches
-// (the consumer subscribes in a follow-up step). "queue" replays every buffered
-// value in order (output); "latest" replays only the most recent (title/exit).
+const decodeBase64 = (value: string) => Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+
 const createChannel = <T>(replay: "queue" | "latest") => {
   const handlers = new Set<(value: T) => void>();
   const pending: T[] = [];
@@ -33,24 +32,21 @@ const createChannel = <T>(replay: "queue" | "latest") => {
   };
 };
 
-// Fans a session's SSE stream out to renderer-side handlers, buffering events
-// that arrive before the consumer subscribes.
 const createSessionEventHub = () => {
   const data = createChannel<Uint8Array>("queue");
   const title = createChannel<string>("latest");
   const exit = createChannel<WorkbenchTerminalSessionExit>("latest");
   const errorHandlers = new Set<(error: { message: string }) => void>();
 
-  const dispatch = (event: TerminalStreamEvent) => {
-    if (event.kind === "data") return data.emit(event.chunk);
-    if (event.kind === "title") return title.emit(event.title);
-    if (event.kind === "exit") return exit.emit({ code: event.code, signal: event.signal });
-    for (const handler of errorHandlers) handler({ message: event.message });
-  };
-
   return {
-    dispatch,
-    emitError: (message: string) => dispatch({ kind: "error", message }),
+    dispatch(message: TerminalWebSocketServerMessage) {
+      if (message.type === "data") data.emit(decodeBase64(message.chunk));
+      else if (message.type === "title") title.emit(message.title);
+      else if (message.type === "exit") exit.emit({ code: message.code, signal: message.signal });
+      else if (message.type === "error") {
+        for (const handler of errorHandlers) handler({ message: message.message });
+      }
+    },
     onData: data.subscribe,
     onTitle: title.subscribe,
     onExit: exit.subscribe,
@@ -61,80 +57,54 @@ const createSessionEventHub = () => {
   };
 };
 
-const pumpSessionEvents = async (
-  eventsUrl: string,
-  signal: AbortSignal,
-  dispatch: (event: TerminalStreamEvent) => void,
-) => {
-  const response = await fetch(eventsUrl, { signal });
-  if (!response.ok || !response.body) throw new Error(`Terminal event stream failed (${response.status}).`);
-
-  const parser = createTerminalSseParser();
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    if (signal.aborted) return;
-    const { done, value } = await reader.read();
-    if (done) return;
-    for (const event of parser.push(decoder.decode(value, { stream: true }))) dispatch(event);
-  }
+const terminalWebSocketUrl = () => {
+  const url = new URL(buildAbsoluteApiUrl("/v1/terminal"));
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
 };
 
-/**
- * Workbench terminal session opener backed by the API PTY transport:
- * `POST /v1/terminal/sessions` opens the PTY, the SSE `events` endpoint streams
- * output/exit, and stdin/geometry/kill go to the session's REST endpoints.
- */
-export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = async (request) => {
-  const response = await fetch(buildApiUrl("/v1/terminal/sessions"), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
+/** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
+export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request) =>
+  new Promise((resolve, reject) => {
+    const socket = new WebSocket(terminalWebSocketUrl());
+    const hub = createSessionEventHub();
+    let opened = false;
+
+    const send = (message: TerminalWebSocketClientMessage) => socket.send(JSON.stringify(message));
+
+    socket.addEventListener("open", () => send({ type: "open", request }));
+    socket.addEventListener("message", (event) => {
+      const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
+      if (message.type !== "open") {
+        if (!opened && message.type === "error") reject(new Error(message.message));
+        else hub.dispatch(message);
+        return;
+      }
+
+      opened = true;
+      resolve({
+        id: message.sessionId,
+        write(data) {
+          send({ type: "write", data: encodeBase64(data) });
+        },
+        resize(cols, rows) {
+          send({ type: "resize", cols, rows });
+        },
+        kill(signal) {
+          if (socket.readyState === WebSocket.OPEN) send({ type: "kill", signal });
+          socket.close();
+        },
+        onData: hub.onData,
+        onTitle: hub.onTitle,
+        onExit: hub.onExit,
+        onError: hub.onError,
+      });
+    });
+    socket.addEventListener("error", () => {
+      if (!opened) reject(new Error("Could not open a terminal session."));
+    });
+    socket.addEventListener("close", (event) => {
+      if (!opened) reject(new Error("The terminal connection closed before the session opened."));
+      else if (!event.wasClean) hub.dispatch({ type: "error", message: "Terminal connection lost." });
+    });
   });
-  if (!response.ok) throw new Error(`Could not open a terminal session (${response.status}).`);
-  const { sessionId } = (await response.json()) as { sessionId: string };
-
-  const sessionUrl = (suffix = "") => buildApiUrl(`/v1/terminal/sessions/${sessionId}${suffix}`);
-  const hub = createSessionEventHub();
-  const eventsAbort = new AbortController();
-
-  void pumpSessionEvents(sessionUrl("/events"), eventsAbort.signal, hub.dispatch).catch((error) => {
-    if (eventsAbort.signal.aborted) return;
-    hub.emitError(error instanceof Error ? error.message : String(error));
-  });
-
-  // Stdin arrives one keystroke per call; parallel POSTs can complete out of
-  // order and scramble the bytes the shell sees, so all operations share one
-  // serial queue.
-  let operationQueue: Promise<unknown> = Promise.resolve();
-  const post = (suffix: string, body: unknown) => {
-    operationQueue = operationQueue
-      .then(() =>
-        fetch(sessionUrl(suffix), {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-      )
-      .catch((error) => hub.emitError(error instanceof Error ? error.message : String(error)));
-  };
-
-  return {
-    id: sessionId,
-    write(data) {
-      post("/write", { data: encodeBase64(data) });
-    },
-    resize(cols, rows) {
-      post("/resize", { cols, rows });
-    },
-    async kill() {
-      eventsAbort.abort();
-      await fetch(sessionUrl(), { method: "DELETE" });
-    },
-    onData: hub.onData,
-    onTitle: hub.onTitle,
-    onExit: hub.onExit,
-    onError: hub.onError,
-  };
-};

@@ -14,6 +14,7 @@ import {
   buildUpdatedPlacement,
   closeWidgetInLayout,
   createPlacement,
+  createUniqueWidgetId,
   findPlacement,
   findResourcePlacement,
   getActivePlacement,
@@ -238,7 +239,6 @@ const findReusablePlacement = (
 
 const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireWidget, applyAndActivate } = input;
-  let placementCounter = 0;
 
   const updateSingleton = (
     widget: RegisteredWidgetContribution,
@@ -309,12 +309,7 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     replacementIndex: number,
     openInput: OpenWidgetInput,
   ): WorkbenchWidgetPlacement => {
-    const area = getLayout().areas[areaId];
-    const hasPlacement = area.widgets.some(
-      (placement, index) => index !== replacementIndex && placement.widgetId === widget.id,
-    );
-    if (hasPlacement) placementCounter += 1;
-    const widgetId = hasPlacement ? `${widget.id}:${placementCounter}` : widget.id;
+    const widgetId = createUniqueWidgetId(getLayout(), widget.id);
     const placement = createPlacement(widgetId, widget, openInput);
 
     const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) => {

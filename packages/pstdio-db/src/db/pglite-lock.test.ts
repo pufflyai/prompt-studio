@@ -7,9 +7,10 @@ const lockModule = new URL("./pglite-lock.ts", import.meta.url).href;
 
 const waitForResults = async (resultPaths: string[], attempts = 200) => {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (resultPaths.every((resultPath) => fs.existsSync(resultPath))) {
-      return resultPaths.map((resultPath) => fs.readFileSync(resultPath, "utf8"));
-    }
+    const results = resultPaths.map((resultPath) =>
+      fs.existsSync(resultPath) ? fs.readFileSync(resultPath, "utf8") : "",
+    );
+    if (results.every((result) => result.length > 0)) return results;
     await Bun.sleep(5);
   }
   throw new Error("Timed out waiting for lock contenders");

@@ -5,6 +5,7 @@
 
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { createServer } from "node:net";
 import { resolve } from "node:path";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
@@ -47,26 +48,38 @@ const resolveGitCommonDir = (cwd: string) => {
   return result.stdout.trim();
 };
 
-const composeEnv = (repoRoot: string) => ({
+interface HostPorts {
+  dashboard: number;
+  api: number;
+}
+
+const composeEnv = (repoRoot: string, hostPorts?: HostPorts) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
+  ...(hostPorts
+    ? {
+        HOST_DASHBOARD_PORT: String(hostPorts.dashboard),
+        HOST_API_PORT: String(hostPorts.api),
+        BROWSER_API_BASE_URL: `http://localhost:${hostPorts.api}`,
+      }
+    : {}),
 });
 
-const runCompose = (projectName: string, repoRoot: string, extraArgs: string[]) => {
+const runCompose = (projectName: string, repoRoot: string, extraArgs: string[], hostPorts?: HostPorts) => {
   const result = spawnSync("docker", ["compose", "-f", COMPOSE_FILE, "-p", projectName, ...extraArgs], {
     cwd: repoRoot,
-    env: composeEnv(repoRoot),
+    env: composeEnv(repoRoot, hostPorts),
     stdio: "inherit",
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-const lookupHostPort = (projectName: string, repoRoot: string, containerPort: number) => {
+const lookupHostPort = (projectName: string, repoRoot: string, containerPort: number, hostPorts: HostPorts) => {
   const result = spawnSync(
     "docker",
     ["compose", "-f", COMPOSE_FILE, "-p", projectName, "port", SERVICE, String(containerPort)],
-    { cwd: repoRoot, env: composeEnv(repoRoot), encoding: "utf8" },
+    { cwd: repoRoot, env: composeEnv(repoRoot, hostPorts), encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(`docker compose port failed: ${result.stderr.trim()}`);
@@ -74,6 +87,27 @@ const lookupHostPort = (projectName: string, repoRoot: string, containerPort: nu
   const port = Number.parseInt(result.stdout.trim().split(":").pop() ?? "", 10);
   if (!Number.isInteger(port)) throw new Error(`Could not parse host port from "${result.stdout}"`);
   return port;
+};
+
+const reserveHostPort = () =>
+  new Promise<number>((resolvePort, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("Could not reserve an isolated host port."));
+        return;
+      }
+      server.close((error) => (error ? reject(error) : resolvePort(address.port)));
+    });
+  });
+
+const reserveHostPorts = async (): Promise<HostPorts> => {
+  const [dashboard, api] = await Promise.all([reserveHostPort(), reserveHostPort()]);
+  if (dashboard !== api) return { dashboard, api };
+  return { dashboard, api: await reserveHostPort() };
 };
 
 const waitForSeededProject = async (apiPort: number) => {
@@ -116,10 +150,11 @@ const main = async () => {
     return;
   }
 
-  runCompose(projectName, repoRoot, ["up", "-d", "--build"]);
+  const hostPorts = await reserveHostPorts();
+  runCompose(projectName, repoRoot, ["up", "-d", "--build"], hostPorts);
 
-  const port = lookupHostPort(projectName, repoRoot, CONTAINER_DASHBOARD_PORT);
-  const apiPort = lookupHostPort(projectName, repoRoot, CONTAINER_API_PORT);
+  const port = lookupHostPort(projectName, repoRoot, CONTAINER_DASHBOARD_PORT, hostPorts);
+  const apiPort = lookupHostPort(projectName, repoRoot, CONTAINER_API_PORT, hostPorts);
   const project = await waitForSeededProject(apiPort);
   process.stdout.write(`\nStack:     ${projectName}\n`);
   process.stdout.write(`Dashboard: http://localhost:${port}/\n`);

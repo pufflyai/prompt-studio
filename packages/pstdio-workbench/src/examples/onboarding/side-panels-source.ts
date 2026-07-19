@@ -15,6 +15,8 @@ const DETAIL_ID = "docs.detail";
 const DETAIL_RENDERER_ID = "docs.detail.renderer";
 const INSPECTOR_ID = "docs.inspector";
 const INSPECTOR_RENDERER_ID = "docs.inspector.renderer";
+const ACTIVITY_ID = "docs.activity";
+const ACTIVITY_RENDERER_ID = "docs.activity.renderer";
 
 const items = [
   { id: "brief", label: "Design brief", owner: "Product" },
@@ -77,6 +79,12 @@ const Inspector = (props: { workbench: WorkbenchCore }) => {
   );
 };
 
+const Activity = (props: { workbench: WorkbenchCore }) => {
+  const { workbench } = props;
+  const primary = usePrimaryResource(workbench);
+  return <section>Live activity for {primary?.label ?? "no resource"}</section>;
+};
+
 export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
   id: "docs.side-panels",
   activate(ctx) {
@@ -114,6 +122,10 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       id: INSPECTOR_RENDERER_ID,
       render: ({ workbench }) => <Inspector workbench={workbench} />,
     });
+    ctx.renderers.registerRenderer({
+      id: ACTIVITY_RENDERER_ID,
+      render: ({ workbench }) => <Activity workbench={workbench} />,
+    });
 
     ctx.layout.registerWidget({
       id: PICKER_ID,
@@ -141,10 +153,18 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       area: "main-right",
       rendererId: INSPECTOR_RENDERER_ID,
     });
+    ctx.layout.registerWidget({
+      id: ACTIVITY_ID,
+      title: "Activity",
+      area: "secondary",
+      areaSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
+      rendererId: ACTIVITY_RENDERER_ID,
+    });
 
     ctx.layout.openWidget(PICKER_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_ID, { pinned: true });
+    ctx.layout.openWidget(ACTIVITY_ID, { pinned: true });
     void ctx.resources.openResource(itemResource(items[0]));
   },
 });`;

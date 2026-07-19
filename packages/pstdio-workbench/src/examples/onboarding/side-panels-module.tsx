@@ -2,6 +2,7 @@ import { Badge, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { ListRow, ScrollArea } from "@pstdio/ui";
 import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
+import { ResourceActivityPanel } from "./side-panels-secondary";
 
 const ITEM_KIND = "onboarding.side-panels.item";
 const RESOURCE_PICKER_WIDGET_ID = "onboarding.side-panels.resources";
@@ -12,6 +13,8 @@ const DETAIL_WIDGET_ID = "onboarding.side-panels.detail";
 const DETAIL_RENDERER_ID = "onboarding.side-panels.detail.renderer";
 const INSPECTOR_WIDGET_ID = "onboarding.side-panels.inspector";
 const INSPECTOR_RENDERER_ID = "onboarding.side-panels.inspector.renderer";
+const ACTIVITY_WIDGET_ID = "onboarding.side-panels.activity";
+const ACTIVITY_RENDERER_ID = "onboarding.side-panels.activity.renderer";
 
 interface SidePanelItem {
   id: string;
@@ -265,6 +268,10 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       id: INSPECTOR_RENDERER_ID,
       render: ({ workbench }) => <ResourceInspector workbench={workbench} />,
     });
+    ctx.renderers.registerRenderer({
+      id: ACTIVITY_RENDERER_ID,
+      render: ({ workbench }) => <ResourceActivityPanel workbench={workbench} />,
+    });
 
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
@@ -298,6 +305,14 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       singleton: true,
       rendererId: INSPECTOR_RENDERER_ID,
     });
+    ctx.layout.registerWidget({
+      id: ACTIVITY_WIDGET_ID,
+      title: "Activity",
+      area: "secondary",
+      areaSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
+      singleton: true,
+      rendererId: ACTIVITY_RENDERER_ID,
+    });
 
     // The context (main-left) and inspector (main-right) panels are companions of the
     // primary anchor: the framework hides them automatically when `main` has no resource,
@@ -305,6 +320,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
+    ctx.layout.openWidget(ACTIVITY_WIDGET_ID, { pinned: true });
     void ctx.resources.openResource(itemResource(items[0]));
   },
 });

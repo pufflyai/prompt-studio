@@ -1,6 +1,5 @@
 import { Box, Grid, HStack, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
-import { useState } from "react";
 import {
   getAnchorResource,
   headerTrailingMenuPath,
@@ -19,7 +18,6 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "../terminal/terminal-module";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
-import { useBottomPanelResize } from "./use-bottom-panel-resize";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
 import { WorkbenchMainBottomSection } from "./workbench-main-bottom-section";
 import { WorkbenchMainLeftPanel, WorkbenchRightSidePanel } from "./workbench-panels";
@@ -32,6 +30,8 @@ const CONTENT_MIN_SIZE_PX = 320;
 
 const MAIN_LEFT_PANEL_SIZE = { defaultPx: 240, minPx: 180, maxPx: 420 };
 const RIGHT_PANEL_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
+const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
+const SECONDARY_PANEL_CONTENT_MIN_SIZE_PX = 240;
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
 const resolveAreaSize = (areaSize: WorkbenchAreaSize | undefined, fallback: Required<WorkbenchAreaSize>) => ({
@@ -173,16 +173,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
   const { hasMainHeader, mainLeft, mainRight, mainBottom } = useWorkbenchMainPanels(workbench);
-  const [bodyNode, setBodyNode] = useState<HTMLDivElement | null>(null);
-  const bottomResize = useBottomPanelResize({
-    bodyNode,
-    areaSize: workbench.layout.getAreaSize("secondary"),
-    collapsible: mainBottom.collapsible,
-    onCollapsedChange: mainBottom.onCollapsedChange,
-    onSizeChange: (height) => workbench.layout.setAreaSize("secondary", height),
-  });
   const layoutAreas = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas);
-  const showBottomPanel = mainBottom.has && (!mainBottom.collapsed || !mainBottom.collapsible);
   const showMainLeftOpener = mainLeft.has && mainLeft.collapsed && mainLeft.collapsible;
   const showMainRightOpener = mainRight.has && mainRight.collapsed && mainRight.collapsible;
   const showMainBottomOpener = mainBottom.has && mainBottom.collapsed && mainBottom.collapsible;
@@ -216,14 +207,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     showMainBottomOpener;
   const mainLeftPanelSize = resolveAreaSize(workbench.layout.getAreaSize("main-left"), MAIN_LEFT_PANEL_SIZE);
   const mainRightPanelSize = resolveAreaSize(workbench.layout.getAreaSize("main-right"), RIGHT_PANEL_SIZE);
-  const gridRows = [
-    showMainHeader ? "auto" : undefined,
-    "minmax(0, 1fr)",
-    showBottomPanel ? "8px" : undefined,
-    showBottomPanel ? `minmax(0, ${bottomResize.height}px)` : undefined,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const mainBottomPanelSize = resolveAreaSize(workbench.layout.getAreaSize("secondary"), SECONDARY_PANEL_SIZE);
 
   const mainArea = (
     <WorkbenchFocusRegion
@@ -283,8 +267,8 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     mainAreaWithRightPanel
   );
 
-  return (
-    <Grid ref={setBodyNode} as="main" gridTemplateRows={gridRows} h="full" minH="0" minW="0" w="full">
+  const mainContent = (
+    <Grid gridTemplateRows={`${showMainHeader ? "auto " : ""}minmax(0, 1fr)`} h="full" minH="0" minW="0" w="full">
       {showMainHeader ? (
         <MainHeaderBar
           workbench={workbench}
@@ -300,14 +284,40 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
         />
       ) : null}
       {mainAreaWithSidePanels}
-      {showBottomPanel ? (
+    </Grid>
+  );
+
+  if (!mainBottom.has)
+    return (
+      <Grid as="main" h="full" minH="0" minW="0" w="full">
+        {mainContent}
+      </Grid>
+    );
+
+  return (
+    <ResizableSplitLayout
+      as="main"
+      minH="0"
+      minW="0"
+      resizableSide="bottom"
+      contentPanel={mainContent}
+      resizablePanel={
         <WorkbenchMainBottomSection
           workbench={workbench}
           hasMainBottomHeader={mainBottom.hasHeader}
           hasMainBottomContentTabs={hasMainBottomContentTabs}
-          bottomResize={bottomResize}
         />
-      ) : null}
-    </Grid>
+      }
+      collapsed={mainBottom.collapsed && mainBottom.collapsible}
+      collapsible={mainBottom.collapsible}
+      defaultSizePx={mainBottomPanelSize.defaultPx}
+      minSizePx={mainBottomPanelSize.minPx}
+      maxSizePx={mainBottomPanelSize.maxPx}
+      contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
+      resizeLabel="Resize main-bottom panel"
+      showResizeSeparator
+      onSizeChange={(height) => workbench.layout.setAreaSize("secondary", height)}
+      onCollapsedChange={mainBottom.onCollapsedChange}
+    />
   );
 };

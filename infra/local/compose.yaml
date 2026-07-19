@@ -15,7 +15,7 @@ services:
       PSTDIO_DEFAULT_EXTENSIONS: '["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]'
       PSTDIO_HOME: /root/.pstdio-dev
       PSTDIO_API_URL: http://127.0.0.1:19841
-      VITE_API_BASE_URL: /
+      VITE_API_BASE_URL: ${BROWSER_API_BASE_URL:-/}
     command:
       - bash
       - -lc
@@ -64,8 +64,8 @@ services:
 
         wait -n "$$api_child" "$$dashboard_child"
     ports:
-      - 127.0.0.1::5173
-      - 127.0.0.1::19841
+      - 127.0.0.1:${HOST_DASHBOARD_PORT:-0}:5173
+      - 127.0.0.1:${HOST_API_PORT:-0}:19841
     volumes:
       - type: bind
         source: ${HOST_WORKTREE:?HOST_WORKTREE is required}

@@ -6,6 +6,7 @@ import type {
   WorkbenchLayout,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
+import { resolveUniqueWidgetId } from "./widget-id";
 
 export const findPlacement = (layout: WorkbenchLayout, contributionId: string) => {
   for (const area of Object.values(layout.areas)) {
@@ -31,6 +32,13 @@ export const findPlacementByWidgetId = (layout: WorkbenchLayout, widgetId: strin
     if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
   }
   return undefined;
+};
+
+export const createUniqueWidgetId = (layout: WorkbenchLayout, contributionId: string) => {
+  const widgetIds = new Set(
+    Object.values(layout.areas).flatMap((area) => area.widgets.map((placement) => placement.widgetId)),
+  );
+  return resolveUniqueWidgetId(widgetIds, contributionId);
 };
 
 export const getActivePlacement = (area: WorkbenchAreaState) =>

@@ -4,6 +4,7 @@ import {
   bindTerminalSession,
   bindTerminalSessionWithCallbackRefs,
   createInitialTerminalSessionRequest,
+  createTerminalSink,
 } from "./terminal";
 import type { TerminalSessionAdapter, TerminalSessionError, TerminalSessionExit } from "./types";
 
@@ -17,6 +18,30 @@ describe("createInitialTerminalSessionRequest", () => {
 
   test("preserves explicit initial geometry", () => {
     expect(createInitialTerminalSessionRequest({ cols: 120, rows: 40 })).toEqual({ cols: 120, rows: 40 });
+  });
+});
+
+describe("createTerminalSink", () => {
+  test("replays input entered before the terminal session binds", () => {
+    const inputHandlers = new Set<(data: string) => void>();
+    const terminal = {
+      write() {},
+      onData(handler: (data: string) => void) {
+        inputHandlers.add(handler);
+        return { dispose: () => inputHandlers.delete(handler) };
+      },
+      onResize() {
+        return { dispose() {} };
+      },
+    };
+    const sink = createTerminalSink(terminal);
+    const received: string[] = [];
+
+    for (const handler of inputHandlers) handler("typed while opening");
+    sink.onInput((data) => received.push(data));
+
+    expect(received).toEqual(["typed while opening"]);
+    sink.dispose();
   });
 });
 

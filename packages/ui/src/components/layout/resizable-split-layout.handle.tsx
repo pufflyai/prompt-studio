@@ -1,17 +1,20 @@
 import { Box } from "@chakra-ui/react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
-
-export type ResizableSplitSide = "left" | "right";
+import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
 const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.emphasized" } };
-const RESIZE_HANDLE_WIDTH = "12px";
+const RESIZE_HANDLE_SIZE = "12px";
+const RESIZE_HANDLE_OFFSET = "-6px";
 
 interface ResizeHandleProps {
+  axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
+  collapsed: boolean;
+  collapsible: boolean;
   contentPanelId: string;
   resizablePanelId: string;
   resizeLabel: string;
-  resolvedPanelWidth: number;
+  resolvedPanelSize: number;
   showResizeSeparator: boolean;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -19,50 +22,70 @@ interface ResizeHandleProps {
 
 export const ResizeHandle = (props: ResizeHandleProps) => {
   const {
+    axis,
     bounds,
+    collapsed,
+    collapsible,
     contentPanelId,
     resizablePanelId,
     resizeLabel,
-    resolvedPanelWidth,
+    resolvedPanelSize,
     showResizeSeparator,
     onResizeKeyDown,
     onResizeStart,
   } = props;
-  return (
-    <Box
-      role="separator"
-      aria-label={resizeLabel}
-      aria-orientation="vertical"
-      aria-controls={`${resizablePanelId} ${contentPanelId}`}
-      aria-valuemin={0}
-      aria-valuemax={Math.round(bounds.maxSize)}
-      aria-valuenow={Math.round(resolvedPanelWidth)}
-      tabIndex={0}
-      position="relative"
-      zIndex="1"
-      flex={`0 0 ${RESIZE_HANDLE_WIDTH}`}
-      w={RESIZE_HANDLE_WIDTH}
-      mx="-6px"
-      cursor="col-resize"
-      touchAction="none"
-      outline="none"
-      onPointerDown={onResizeStart}
-      onKeyDown={onResizeKeyDown}
-      _before={{
+  const verticalSeparator = axis.separatorOrientation === "vertical";
+  const separatorStyle = verticalSeparator
+    ? {
         content: '""',
-        position: "absolute",
+        position: "absolute" as const,
         top: 0,
         bottom: 0,
         insetInlineStart: "50%",
         w: "1px",
         bg: showResizeSeparator ? "border.subtle" : "transparent",
         transform: "translateX(-50%)",
-      }}
+      }
+    : {
+        content: '""',
+        position: "absolute" as const,
+        insetInline: 0,
+        top: "50%",
+        h: "1px",
+        bg: showResizeSeparator ? "border.subtle" : "transparent",
+        transform: "translateY(-50%)",
+      };
+  return (
+    <Box
+      role="separator"
+      aria-label={resizeLabel}
+      aria-orientation={axis.separatorOrientation}
+      aria-controls={`${resizablePanelId} ${contentPanelId}`}
+      aria-valuemin={collapsible ? 0 : Math.round(bounds.minSize)}
+      aria-valuemax={Math.round(bounds.maxSize)}
+      aria-valuenow={Math.round(resolvedPanelSize)}
+      aria-hidden={collapsed ? true : undefined}
+      tabIndex={collapsed ? -1 : 0}
+      display={collapsed ? "none" : undefined}
+      position="relative"
+      zIndex="docked"
+      flex={`0 0 ${RESIZE_HANDLE_SIZE}`}
+      h={verticalSeparator ? "full" : RESIZE_HANDLE_SIZE}
+      w={verticalSeparator ? RESIZE_HANDLE_SIZE : "full"}
+      mx={verticalSeparator ? RESIZE_HANDLE_OFFSET : undefined}
+      my={verticalSeparator ? undefined : RESIZE_HANDLE_OFFSET}
+      cursor={axis.cursor}
+      touchAction="none"
+      outline="none"
+      onPointerDown={onResizeStart}
+      onKeyDown={onResizeKeyDown}
+      _before={separatorStyle}
       _hover={showResizeSeparator ? RESIZE_SEPARATOR_HOVER_STYLE : undefined}
       _focusVisible={{
         _before: {
           bg: "colorPalette.focusRing",
-          w: "2px",
+          h: verticalSeparator ? undefined : "2px",
+          w: verticalSeparator ? "2px" : undefined,
         },
       }}
     />

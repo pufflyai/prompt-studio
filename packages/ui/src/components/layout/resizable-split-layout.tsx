@@ -8,7 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { type ResizableSplitSide, ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
+import {
+  getResizableSplitAxis,
+  type ResizableSplitSide,
+  resolveDraggedPanelSize,
+  resolveResizableBounds,
+} from "@/components/layout/resizable-split-layout.geometry";
+import { ResizableSplitPanels } from "@/components/layout/resizable-split-layout.panels";
 
 interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResize"> {
   resizablePanel: ReactNode;
@@ -22,53 +28,35 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsible?: boolean;
   resizeLabel?: string;
   showResizeSeparator?: boolean;
-  onSizeChange?: (width: number) => void;
+  onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-const FALLBACK_ROOT_WIDTH = 1200;
+const FALLBACK_ROOT_SIZE = { width: 1200, height: 720 };
 const KEYBOARD_RESIZE_STEP = 24;
-const MIN_COLLAPSE_THRESHOLD_PX = 72;
-const MAX_COLLAPSE_THRESHOLD_PX = 160;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const resolveRootWidth = (rootWidth: number) => (rootWidth > 0 ? rootWidth : FALLBACK_ROOT_WIDTH);
+type PanelDimension = "width" | "height";
 
-const resolveCollapseThreshold = (minSizePx: number) =>
-  clamp(minSizePx / 2, MIN_COLLAPSE_THRESHOLD_PX, MAX_COLLAPSE_THRESHOLD_PX);
+const getElementSize = (element: HTMLDivElement | null, dimension: PanelDimension) =>
+  element?.getBoundingClientRect()[dimension] ?? 0;
 
-const resolveResizableBoundsPx = (input: {
-  rootWidth: number;
-  minSizePx: number;
-  maxSizePx?: number;
-  contentMinSizePx: number;
-}) => {
-  const rootWidth = resolveRootWidth(input.rootWidth);
-  const maxFromContent = Math.max(0, rootWidth - input.contentMinSizePx);
-  const configuredMax = input.maxSizePx ?? maxFromContent;
-  const maxSize = Math.max(0, Math.min(configuredMax, maxFromContent));
-  const minSize = Math.min(input.minSizePx, maxSize);
-
-  return { minSize, maxSize };
-};
-
-const getElementWidth = (element: HTMLDivElement | null) => element?.getBoundingClientRect().width ?? 0;
-
-const applyPanelWidthToElement = (panel: HTMLDivElement | null, width: number) => {
+const applyPanelSizeToElement = (panel: HTMLDivElement | null, size: number, dimension: PanelDimension) => {
   if (!panel) return;
 
-  panel.style.width = `${width}px`;
-  panel.style.flexBasis = `${width}px`;
+  panel.style[dimension] = `${size}px`;
+  panel.style.flexBasis = `${size}px`;
   panel.style.flexGrow = "0";
   panel.style.flexShrink = "0";
-  panel.style.display = width > 0 ? "flex" : "none";
+  panel.style.display = size > 0 ? "flex" : "none";
 };
 
 const clearPanelInlineStyles = (panel: HTMLDivElement | null) => {
   if (!panel) return;
 
   panel.style.width = "";
+  panel.style.height = "";
   panel.style.flexBasis = "";
   panel.style.flexGrow = "";
   panel.style.flexShrink = "";
@@ -92,19 +80,25 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     onCollapsedChange,
     ...rest
   } = props;
+  const axis = getResizableSplitAxis(resizableSide);
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const resizablePanelRef = useRef<HTMLDivElement>(null);
   const contentPanelRef = useRef<HTMLDivElement>(null);
   const cleanupDragRef = useRef<() => void>(() => undefined);
-  const lastWidthRef = useRef(defaultSizePx);
-  const [panelWidth, setPanelWidth] = useState(defaultSizePx);
-  const [rootWidth, setRootWidth] = useState(0);
+  const lastSizeRef = useRef(defaultSizePx);
+  const [panelSize, setPanelSize] = useState(defaultSizePx);
+  const [rootSize, setRootSize] = useState(0);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
-  const bounds = resolveResizableBoundsPx({ rootWidth, minSizePx, maxSizePx, contentMinSizePx });
-  const collapseThresholdPx = resolveCollapseThreshold(minSizePx);
-  const resolvedPanelWidth = collapsed ? 0 : clamp(panelWidth, bounds.minSize, bounds.maxSize);
+  const bounds = resolveResizableBounds({
+    rootSize,
+    fallbackRootSize: FALLBACK_ROOT_SIZE[axis.dimension],
+    minSize: minSizePx,
+    maxSize: maxSizePx,
+    contentMinSize: contentMinSizePx,
+  });
+  const resolvedPanelSize = collapsed ? 0 : clamp(panelSize, bounds.minSize, bounds.maxSize);
   const contentPanelId = `${id}-content`;
   const resizablePanelId = `${id}-resizable`;
 
@@ -112,31 +106,31 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     const element = rootRef.current;
     if (!element) return;
 
-    const updateRootWidth = () => {
-      setRootWidth(element.getBoundingClientRect().width);
+    const updateRootSize = () => {
+      setRootSize(element.getBoundingClientRect()[axis.dimension]);
     };
 
-    updateRootWidth();
+    updateRootSize();
 
     if (typeof ResizeObserver === "undefined") return;
 
-    const observer = new ResizeObserver(updateRootWidth);
+    const observer = new ResizeObserver(updateRootSize);
     observer.observe(element);
 
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [axis.dimension]);
 
   useEffect(() => {
-    lastWidthRef.current = defaultSizePx;
-    setPanelWidth(defaultSizePx);
+    lastSizeRef.current = defaultSizePx;
+    setPanelSize(defaultSizePx);
   }, [defaultSizePx]);
 
   useEffect(() => () => cleanupDragRef.current(), []);
 
-  const applyPanelWidth = (width: number) => {
-    applyPanelWidthToElement(resizablePanelRef.current, width);
+  const applyPanelSize = (size: number) => {
+    applyPanelSizeToElement(resizablePanelRef.current, size, axis.dimension);
   };
 
   useEffect(() => {
@@ -146,18 +140,24 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     // the same DOM element was the resizable panel; otherwise stale `flex: 0 0 Xpx` pins
     // the content's width.
     clearPanelInlineStyles(contentPanelRef.current);
-    applyPanelWidthToElement(resizablePanelRef.current, resolvedPanelWidth);
-  }, [resolvedPanelWidth]);
+    clearPanelInlineStyles(resizablePanelRef.current);
+    applyPanelSizeToElement(resizablePanelRef.current, resolvedPanelSize, axis.dimension);
+  }, [axis.dimension, resolvedPanelSize]);
 
-  const commitPanelWidth = (width: number) => {
-    const rootWidth = getElementWidth(rootRef.current);
-    const nextBounds = resolveResizableBoundsPx({ rootWidth, minSizePx, maxSizePx, contentMinSizePx });
-    const nextWidth = clamp(width, nextBounds.minSize, nextBounds.maxSize);
+  const commitPanelSize = (size: number) => {
+    const nextBounds = resolveResizableBounds({
+      rootSize: getElementSize(rootRef.current, axis.dimension),
+      fallbackRootSize: FALLBACK_ROOT_SIZE[axis.dimension],
+      minSize: minSizePx,
+      maxSize: maxSizePx,
+      contentMinSize: contentMinSizePx,
+    });
+    const nextSize = clamp(size, nextBounds.minSize, nextBounds.maxSize);
 
-    lastWidthRef.current = nextWidth;
-    setPanelWidth(nextWidth);
-    applyPanelWidth(nextWidth);
-    onSizeChange?.(nextWidth);
+    lastSizeRef.current = nextSize;
+    setPanelSize(nextSize);
+    applyPanelSize(nextSize);
+    onSizeChange?.(nextSize);
   };
 
   const setCollapsed = (nextCollapsed: boolean) => {
@@ -175,14 +175,18 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     cleanupDragRef.current();
 
     const resizeHandle = event.currentTarget;
-    const rootWidth = getElementWidth(rootRef.current);
-    const bounds = resolveResizableBoundsPx({ rootWidth, minSizePx, maxSizePx, contentMinSizePx });
-    const startX = event.clientX;
-    const startWidth = collapsed ? 0 : getElementWidth(resizablePanelRef.current) || lastWidthRef.current;
-    const direction = resizableSide === "left" ? 1 : -1;
+    const bounds = resolveResizableBounds({
+      rootSize: getElementSize(rootRef.current, axis.dimension),
+      fallbackRootSize: FALLBACK_ROOT_SIZE[axis.dimension],
+      minSize: minSizePx,
+      maxSize: maxSizePx,
+      contentMinSize: contentMinSizePx,
+    });
+    const startPointer = event[axis.pointerCoordinate];
+    const startSize = collapsed ? 0 : getElementSize(resizablePanelRef.current, axis.dimension) || lastSizeRef.current;
     const previousCursor = document.body.style.cursor;
     const previousUserSelect = document.body.style.userSelect;
-    let nextWidth = startWidth === 0 ? 0 : clamp(startWidth, bounds.minSize, bounds.maxSize);
+    let nextSize = startSize === 0 ? 0 : clamp(startSize, bounds.minSize, bounds.maxSize);
     let nextCollapsed = collapsed;
     let animationFrame = 0;
 
@@ -191,21 +195,27 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       if (contentPanelRef.current) contentPanelRef.current.style.pointerEvents = value;
     };
 
-    const schedulePanelWidth = () => {
+    const schedulePanelSize = () => {
       if (animationFrame) return;
 
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = 0;
-        applyPanelWidth(nextWidth);
+        applyPanelSize(nextSize);
       });
     };
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
-      const rawWidth = startWidth + (moveEvent.clientX - startX) * direction;
-      nextCollapsed = collapsible && rawWidth <= collapseThresholdPx;
-      nextWidth = nextCollapsed ? 0 : clamp(rawWidth, bounds.minSize, bounds.maxSize);
-      if (!nextCollapsed) lastWidthRef.current = nextWidth;
-      schedulePanelWidth();
+      const result = resolveDraggedPanelSize({
+        side: resizableSide,
+        startSize,
+        pointerDelta: moveEvent[axis.pointerCoordinate] - startPointer,
+        minSize: bounds.minSize,
+        maxSize: bounds.maxSize,
+        collapsible,
+      });
+      nextCollapsed = result.collapsed;
+      nextSize = result.size;
+      schedulePanelSize();
     };
 
     const cleanup = () => {
@@ -223,17 +233,17 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       }
       cleanupDragRef.current = () => undefined;
       if (nextCollapsed) {
-        applyPanelWidth(0);
+        applyPanelSize(0);
         setCollapsed(true);
       } else {
         setCollapsed(false);
-        commitPanelWidth(nextWidth);
+        commitPanelSize(nextSize);
       }
     };
 
     cleanupDragRef.current = cleanup;
     resizeHandle.setPointerCapture(event.pointerId);
-    document.body.style.cursor = "col-resize";
+    document.body.style.cursor = axis.cursor;
     document.body.style.userSelect = "none";
     setDraggingPanelState("none");
     window.addEventListener("pointermove", handlePointerMove);
@@ -243,87 +253,52 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   };
 
   const handleResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    const direction = resizableSide === "left" ? 1 : -1;
-    const width = lastWidthRef.current;
+    const negativeDirectionKey = axis.dimension === "width" ? "ArrowLeft" : "ArrowUp";
+    const positiveDirectionKey = axis.dimension === "width" ? "ArrowRight" : "ArrowDown";
+    const size = lastSizeRef.current;
 
-    if (collapsed && (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "End")) {
+    if (
+      collapsed &&
+      (event.key === negativeDirectionKey || event.key === positiveDirectionKey || event.key === "End")
+    ) {
       event.preventDefault();
       setCollapsed(false);
-      commitPanelWidth(width);
-    } else if (event.key === "ArrowLeft") {
+      commitPanelSize(size);
+    } else if (event.key === negativeDirectionKey) {
       event.preventDefault();
-      commitPanelWidth(width - KEYBOARD_RESIZE_STEP * direction);
-    } else if (event.key === "ArrowRight") {
+      commitPanelSize(size - KEYBOARD_RESIZE_STEP * axis.deltaDirection);
+    } else if (event.key === positiveDirectionKey) {
       event.preventDefault();
-      commitPanelWidth(width + KEYBOARD_RESIZE_STEP * direction);
+      commitPanelSize(size + KEYBOARD_RESIZE_STEP * axis.deltaDirection);
     } else if (event.key === "Home") {
       event.preventDefault();
       if (collapsible) setCollapsed(true);
-      else commitPanelWidth(bounds.minSize);
+      else commitPanelSize(bounds.minSize);
     } else if (event.key === "End") {
       event.preventDefault();
-      commitPanelWidth(bounds.maxSize);
+      commitPanelSize(bounds.maxSize);
     }
   };
 
-  const resizablePanelNode = (
-    <Flex
-      id={resizablePanelId}
-      ref={resizablePanelRef}
-      display={collapsed ? "none" : "flex"}
-      h="full"
-      minW="0"
-      minH="0"
-      overflow="hidden"
-      flex={`0 0 ${resolvedPanelWidth}px`}
-      w={`${resolvedPanelWidth}px`}
-      aria-hidden={collapsed ? true : undefined}
-    >
-      {resizablePanel}
-    </Flex>
-  );
-  const contentPanelNode = (
-    <Flex
-      id={contentPanelId}
-      ref={contentPanelRef}
-      display="flex"
-      h="full"
-      minW="0"
-      minH="0"
-      overflow="hidden"
-      flex="1"
-    >
-      {contentPanel}
-    </Flex>
-  );
-  const resizeTrigger = collapsed ? null : (
-    <ResizeHandle
-      bounds={bounds}
-      contentPanelId={contentPanelId}
-      resizablePanelId={resizablePanelId}
-      resizeLabel={resizeLabel}
-      resolvedPanelWidth={resolvedPanelWidth}
-      showResizeSeparator={showResizeSeparator}
-      onResizeKeyDown={handleResizeKeyDown}
-      onResizeStart={handleResizeStart}
-    />
-  );
-
   return (
-    <Flex ref={rootRef} direction="row" h="full" w="full" overflow="hidden" {...rest}>
-      {resizableSide === "left" ? (
-        <>
-          {resizablePanelNode}
-          {resizeTrigger}
-          {contentPanelNode}
-        </>
-      ) : (
-        <>
-          {contentPanelNode}
-          {resizeTrigger}
-          {resizablePanelNode}
-        </>
-      )}
+    <Flex ref={rootRef} direction={axis.rootDirection} h="full" w="full" overflow="hidden" {...rest}>
+      <ResizableSplitPanels
+        axis={axis}
+        bounds={bounds}
+        collapsed={collapsed}
+        collapsible={collapsible}
+        contentPanel={contentPanel}
+        contentPanelId={contentPanelId}
+        contentPanelRef={contentPanelRef}
+        resizablePanel={resizablePanel}
+        resizablePanelId={resizablePanelId}
+        resizablePanelRef={resizablePanelRef}
+        resizeLabel={resizeLabel}
+        resolvedPanelSize={resolvedPanelSize}
+        showResizeSeparator={showResizeSeparator}
+        onResizeKeyDown={handleResizeKeyDown}
+        onResizeStart={handleResizeStart}
+      />
     </Flex>
   );
 };

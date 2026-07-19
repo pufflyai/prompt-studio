@@ -1,4 +1,4 @@
-import { createApp } from "./app";
+import { apiWebSocket, createApp } from "./app";
 import { resolveApiFilesRoot } from "./default-files-root";
 import { apiLogger } from "./lib/logger";
 
@@ -29,5 +29,8 @@ process.on("unhandledRejection", (err) => {
 });
 
 export default {
-  fetch: app.fetch,
+  fetch(request: Request, server: Bun.Server<unknown>) {
+    return app.fetch(request, server);
+  },
+  websocket: apiWebSocket,
 };

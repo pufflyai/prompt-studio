@@ -1,5 +1,6 @@
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
+import { resolveUniqueWidgetId } from "./widget-id";
 
 export const workbenchAreas = [
   "nav",
@@ -167,10 +168,43 @@ const migrateAreaIds = (areas: WorkbenchLayout["areas"]): WorkbenchLayout["areas
   return migrated;
 };
 
+const findLastWidgetIndex = (widgets: WorkbenchWidgetPlacement[], widgetId: string) => {
+  for (let index = widgets.length - 1; index >= 0; index -= 1) {
+    if (widgets[index]?.widgetId === widgetId) return index;
+  }
+  return -1;
+};
+
+const normalizeWidgetIds = (layout: WorkbenchLayout) => {
+  const widgetIds = new Set<string>();
+  const areas = {} as WorkbenchLayout["areas"];
+  let activeWidgetId = layout.activeWidgetId;
+  let activeResourceUri = layout.activeResourceUri;
+
+  for (const [id, area] of Object.entries(layout.areas) as [WorkbenchArea, WorkbenchAreaState][]) {
+    const originalActiveWidgetId = area.activeWidgetId;
+    const activeIndex = originalActiveWidgetId ? findLastWidgetIndex(area.widgets, originalActiveWidgetId) : -1;
+    const widgets = area.widgets.map((placement) => {
+      const widgetId = resolveUniqueWidgetId(widgetIds, placement.contributionId, placement.widgetId);
+      widgetIds.add(widgetId);
+      return widgetId === placement.widgetId ? placement : { ...placement, widgetId };
+    });
+    const normalizedActiveWidgetId = activeIndex >= 0 ? widgets[activeIndex]?.widgetId : originalActiveWidgetId;
+    areas[id] = { ...area, widgets, activeWidgetId: normalizedActiveWidgetId };
+
+    if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
+      activeWidgetId = normalizedActiveWidgetId;
+      activeResourceUri = widgets[activeIndex]?.resourceUri;
+    }
+  }
+
+  return { ...layout, areas, activeWidgetId, activeResourceUri };
+};
+
 export const mergeWithDefaultAreas = (persisted: WorkbenchLayout): WorkbenchLayout => {
   const defaults = createDefaultWorkbenchLayout();
-  return {
+  return normalizeWidgetIds({
     ...persisted,
     areas: { ...defaults.areas, ...migrateAreaIds(persisted.areas) },
-  };
+  });
 };

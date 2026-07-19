@@ -44,6 +44,21 @@ export interface TerminalSessionHandle {
   events(): AsyncIterable<TerminalEvent>;
 }
 
+// Browser <-> API messages for the bidirectional terminal WebSocket. Binary
+// PTY chunks are base64 encoded so the protocol remains JSON serializable.
+export type TerminalWebSocketClientMessage =
+  | { type: "open"; request: TerminalSessionRequest }
+  | { type: "write"; data: string }
+  | { type: "resize"; cols: number; rows: number }
+  | { type: "kill"; signal?: string };
+
+export type TerminalWebSocketServerMessage =
+  | { type: "open"; sessionId: string }
+  | { type: "data"; chunk: string }
+  | { type: "title"; title: string }
+  | { type: "exit"; code: number | null; signal: string | null }
+  | { type: "error"; message: string };
+
 // Serializable operations a webview sends over the `terminal.session` capability.
 // Raw `TerminalSessionHandle` objects never cross the webview boundary — `open`
 // returns only a session id and every follow-up operation addresses that id.
