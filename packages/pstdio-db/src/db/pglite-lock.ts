@@ -15,6 +15,8 @@ type Claim = {
   path: string;
 };
 
+const CHOOSING_TIMEOUT_MS = 5_000;
+
 const sleep = (milliseconds: number) => {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 };
@@ -54,6 +56,14 @@ const removeClaim = (claimPath: string) => {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
       throw error;
     }
+  }
+};
+
+const removeClaimBestEffort = (claimPath: string) => {
+  try {
+    removeClaim(claimPath);
+  } catch {
+    // The lock error is more actionable than a secondary cleanup failure.
   }
 };
 
@@ -151,9 +161,14 @@ export const acquirePgliteLock = (dbPath: string) => {
   owner.ticket = Math.max(0, ...existingTickets) + 1;
   fs.writeFileSync(choosingPath, JSON.stringify(owner));
   fs.renameSync(choosingPath, waitingPath);
+  const choosingDeadline = Date.now() + CHOOSING_TIMEOUT_MS;
 
   while (true) {
     if (hasChoosingClaim(lockPath)) {
+      if (Date.now() >= choosingDeadline) {
+        removeClaimBestEffort(waitingPath);
+        throw new Error("Timed out waiting for another process choosing the pstdio.db lock");
+      }
       sleep(1);
       continue;
     }
@@ -161,7 +176,7 @@ export const acquirePgliteLock = (dbPath: string) => {
     const claims = listClaims(lockPath);
     const active = claims.filter(({ path: claimPath }) => claimPath.endsWith(".active"));
     if (active.length > 0) {
-      removeClaim(waitingPath);
+      removeClaimBestEffort(waitingPath);
       throw new Error(describeLock(active[0]?.owner ?? {}));
     }
 

@@ -7,6 +7,13 @@ import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./conne
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
 
+const createTempDbPath = () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
+  const dbPath = path.join(tempRoot, "database");
+  fs.mkdirSync(dbPath);
+  return { dbPath, tempRoot };
+};
+
 afterEach(() => {
   if (typeof originalDbPath === "undefined") {
     delete process.env.PSTDIO_DB_PATH;
@@ -41,7 +48,7 @@ describe("createDb", () => {
   });
 
   it("refuses to open a database directory held by a live process", async () => {
-    const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
+    const { dbPath, tempRoot } = createTempDbPath();
     const first = await createDb({ path: dbPath });
 
     try {
@@ -50,23 +57,23 @@ describe("createDb", () => {
       );
     } finally {
       await first.close();
-      fs.rmSync(dbPath, { force: true, recursive: true });
+      fs.rmSync(tempRoot, { force: true, recursive: true });
     }
   });
 
   it("allows a database directory to be reopened after close", async () => {
-    const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
+    const { dbPath, tempRoot } = createTempDbPath();
     const first = await createDb({ path: dbPath });
     await first.close();
 
     const second = await createDb({ path: dbPath });
     await second.close();
 
-    fs.rmSync(dbPath, { force: true, recursive: true });
+    fs.rmSync(tempRoot, { force: true, recursive: true });
   });
 
   it("reclaims a lock owned by a dead process", async () => {
-    const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
+    const { dbPath, tempRoot } = createTempDbPath();
     const lockPath = `${dbPath}.lock`;
     fs.writeFileSync(
       lockPath,
@@ -77,7 +84,7 @@ describe("createDb", () => {
     await client.close();
 
     expect(fs.statSync(lockPath).isDirectory()).toBe(true);
-    fs.rmSync(dbPath, { force: true, recursive: true });
+    fs.rmSync(tempRoot, { force: true, recursive: true });
   });
 
   it("refuses a symlink alias while the canonical database directory is open", async () => {
@@ -99,14 +106,14 @@ describe("createDb", () => {
   });
 
   it("reclaims an incomplete lock left without owner metadata", async () => {
-    const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
+    const { dbPath, tempRoot } = createTempDbPath();
     const lockPath = `${dbPath}.lock`;
     fs.writeFileSync(lockPath, "");
 
     const client = await createDb({ path: dbPath });
     await client.close();
 
-    fs.rmSync(dbPath, { force: true, recursive: true });
+    fs.rmSync(tempRoot, { force: true, recursive: true });
   });
 });
 
