@@ -7,8 +7,8 @@ import { WorkbenchAttachedSessionLayout } from "./workbench-session-layout";
 interface WorkbenchSessionBoundaryProps {
   workbench: WorkbenchCore;
   showAttachedSessionPanel: boolean;
-  workbenchFrame: ReactNode;
-  floatingHeader: ReactNode;
+  contentFrame: ReactNode;
+  sideHeader: ReactNode;
   contentMinSizePx: number;
   onAttachedSlotChange(slot: HTMLDivElement | null): void;
 }
@@ -75,23 +75,17 @@ const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
 };
 
 export const WorkbenchSessionBoundary = (props: WorkbenchSessionBoundaryProps) => {
-  const {
-    workbench,
-    showAttachedSessionPanel,
-    workbenchFrame,
-    floatingHeader,
-    contentMinSizePx,
-    onAttachedSlotChange,
-  } = props;
+  const { workbench, showAttachedSessionPanel, contentFrame, sideHeader, contentMinSizePx, onAttachedSlotChange } =
+    props;
 
   return (
     <WorkbenchKeyboardFrame>
       <WorkbenchAttachedSessionLayout
         workbench={workbench}
         attached={showAttachedSessionPanel}
-        contentPanel={workbenchFrame}
+        contentPanel={contentFrame}
         contentMinSizePx={contentMinSizePx}
-        header={floatingHeader}
+        header={sideHeader}
         onAttachedSlotChange={onAttachedSlotChange}
         onCollapseToBubble={() => workbench.sessionPanel.setMode("bubble")}
       />

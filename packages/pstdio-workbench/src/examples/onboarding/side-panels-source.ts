@@ -130,19 +130,19 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: PICKER_ID,
       title: "Resources",
-      area: "left",
+      region: "sidebar",
       rendererId: PICKER_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: CONTEXT_ID,
       title: "Context",
-      area: "main-left",
+      region: "main-left-menu",
       rendererId: CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: DETAIL_ID,
       title: "Detail",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: [ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
@@ -150,14 +150,14 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: INSPECTOR_ID,
       title: "Inspector",
-      area: "main-right",
+      region: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: ACTIVITY_ID,
       title: "Activity",
-      area: "secondary",
-      areaSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
+      region: "secondary",
+      regionSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
       rendererId: ACTIVITY_RENDERER_ID,
     });
 

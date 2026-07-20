@@ -34,13 +34,13 @@ describe("workbench modules", () => {
     workbench.layout.registerWidget({
       id: "dashboard.tickets",
       title: "Tickets",
-      area: "main",
+      region: "main",
       rendererId: "dashboard.tickets",
     });
     workbench.layout.registerWidget({
       id: "dashboard.workspaces",
       title: "Workspaces",
-      area: "main",
+      region: "main",
       rendererId: "dashboard.workspaces",
     });
     workbench.onDidChangeActiveResource((resource) => changes.push(resource?.uri));
@@ -57,7 +57,7 @@ describe("workbench modules", () => {
     ]);
   });
 
-  it("scopes the primary resource to the main anchor, ignoring side-area activation", () => {
+  it("scopes the primary resource to the main anchor, ignoring side-region activation", () => {
     const workbench = createWorkbenchCore();
     const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
     const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
@@ -65,8 +65,8 @@ describe("workbench modules", () => {
     const primaryChanges: (string | undefined)[] = [];
     const globalChanges: (string | undefined)[] = [];
 
-    workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "board", title: "Board", region: "main", rendererId: "board" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
     workbench.onDidChangePrimaryResource((resource) => primaryChanges.push(resource?.uri));
     workbench.onDidChangeActiveResource((resource) => globalChanges.push(resource?.uri));
 
@@ -93,8 +93,8 @@ describe("workbench modules", () => {
     const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
     const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
 
-    workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "board", title: "Board", region: "main", rendererId: "board" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
 
     workbench.layout.openWidget("board", { resource: board });
     expect(workbench.lastResource.get()).toEqual(board);
@@ -119,15 +119,15 @@ describe("workbench modules", () => {
       list: (_query, context) => (context.primary?.uri === workspaceA.uri ? [{ resource: sessionA }] : []),
     });
 
-    workbench.layout.registerWidget({ id: "workspace", title: "Workspace", area: "main", rendererId: "workspace" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "workspace", title: "Workspace", region: "main", rendererId: "workspace" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
 
     workbench.layout.openWidget("workspace", { resource: workspaceA });
     workbench.layout.openWidget("session", { resource: sessionA });
-    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(1);
+    expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
 
     // Switch the primary to workspace B: session A is no longer a candidate → disconnect.
     workbench.layout.openWidget("workspace", { resource: workspaceB });
-    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(0);
+    expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(0);
   });
 });

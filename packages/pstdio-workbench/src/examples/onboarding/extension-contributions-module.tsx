@@ -193,7 +193,7 @@ export const createExtensionContributionsModule = (): WorkbenchModuleContributio
     ctx.layout.registerWidget({
       id: HOST_WIDGET_ID,
       title: "Extension contributions",
-      area: "main",
+      region: "main",
       rendererId: HOST_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({

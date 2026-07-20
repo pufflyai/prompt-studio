@@ -85,7 +85,7 @@ describe("registerExtensionDataRenderers modal create", () => {
     await Promise.resolve();
 
     expect(calls.find((call) => call.commandId === "tickets.create")).toBeUndefined();
-    const overlay = workbench.layout.getLayout().areas.overlay;
+    const overlay = workbench.layout.getLayout().regions.overlay;
     const placement = overlay.widgets.find(
       (widget) => widget.contributionId === "dashboard-workbench.extension-view.tickets.create-modal",
     );
@@ -102,7 +102,7 @@ describe("registerExtensionDataRenderers modal create", () => {
     });
     await Promise.resolve();
 
-    expect(workbench.layout.getLayout().areas.overlay.widgets).toHaveLength(0);
+    expect(workbench.layout.getLayout().regions.overlay.widgets).toHaveLength(0);
     expect(openedResources).toHaveLength(1);
     expect(openedResources[0]).toMatchObject({
       kind: "ticket",
@@ -136,7 +136,7 @@ describe("registerExtensionDataRenderers modal create", () => {
 
     const placement = workbench.layout
       .getLayout()
-      .areas.overlay.widgets.find(
+      .regions.overlay.widgets.find(
         (widget) => widget.contributionId === "dashboard-workbench.extension-view.tickets.create-modal",
       );
     expect(placement).toBeDefined();

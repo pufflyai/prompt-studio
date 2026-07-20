@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchWidgetPlacement } from "../../core";
-import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
+import { resolveDisplayedActiveWidgetId, toTabKey } from "./region-tabs-visibility";
 
 const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidgetPlacement => ({
   widgetId: overrides.widgetId ?? "w",
@@ -9,7 +9,7 @@ const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidge
 });
 
 describe("toTabKey", () => {
-  test("composes area and contribution into the storage key", () => {
+  test("composes region and contribution into the storage key", () => {
     expect(toTabKey("main", placement({ contributionId: "tickets" }))).toBe("main:tickets");
   });
 });

@@ -44,18 +44,18 @@ describe("createKeepAliveExampleModule", () => {
     workbench.registerModule(createKeepAliveExampleModule());
 
     const layout = workbench.layout.getLayout();
-    expect(layout.areas.main.widgets[0]?.resource).toMatchObject({
+    expect(layout.regions.main.widgets[0]?.resource).toMatchObject({
       kind: "workbench-example",
       uri: "pstdio://examples/keep-alive",
     });
-    expect(layout.areas["main-right"].widgets).toHaveLength(1);
+    expect(layout.regions["main-right-menu"].widgets).toHaveLength(1);
 
     workbench.sessionPanel.setMode("bubble");
     workbench.sessionPanel.setMode("attached");
 
     const attachedLayout = workbench.layout.getLayout();
-    expect(attachedLayout.areas.floating.widgets).toHaveLength(0);
-    expect(attachedLayout.areas["main-right"].widgets).toHaveLength(1);
-    expect(attachedLayout.areas.main.widgets[0]?.resource).toBeDefined();
+    expect(attachedLayout.regions.side.widgets).toHaveLength(0);
+    expect(attachedLayout.regions["main-right-menu"].widgets).toHaveLength(1);
+    expect(attachedLayout.regions.main.widgets[0]?.resource).toBeDefined();
   });
 });

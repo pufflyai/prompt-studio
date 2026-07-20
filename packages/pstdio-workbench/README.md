@@ -10,7 +10,7 @@
 - **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, and renderers.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
 - **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
-- **Area**: a named layout target where widgets can be placed. The workbench owns the chrome around each area.
+- **Region**: a named layout target where widgets can be placed. The workbench owns the chrome around each region.
 - **Resource**: a typed reference to something the workbench can open or navigate to.
 
 ## Contributions
@@ -25,11 +25,11 @@ Contributions are the workbench extension points. A module contributes capabilit
 
 ## 🏁 Layout Contributions
 
-Layout contributions are the glue between an area and a view. They declare where a renderer appears in the shell, what config it receives, and how its placements behave — without owning any UI themselves.
+Layout contributions are the glue between a region and a view. They declare where a renderer appears in the shell, what config it receives, and how its placements behave — without owning any UI themselves.
 
 ### Widgets
 
-Pin a renderer to an area as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare an `area`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
+Pin a renderer to a region as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare a `region`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
 
 - Register with `layout.registerWidget()`
 - Set `singleton: true` for one placement total, such as a tree, sidebar, or status view.
@@ -39,11 +39,11 @@ Pin a renderer to an area as a panel, editor, dashboard, inspector, status item,
 #### Examples
 
 - [`hello-world`](src/examples/hello-world/module.tsx) — minimal widget pinned to `main`.
-- [`foundation`](src/examples/foundation/module.tsx) — widgets in five different areas all backed by one shared renderer.
+- [`foundation`](src/examples/foundation/module.tsx) — widgets in five different regions all backed by one shared renderer.
 
 ### Placeholders
 
-Empty state for areas after every widget in that area closes. Placeholders render through a `rendererId`, can provide area sizing hints, and do not create tabs, placements, or persisted layout entries.
+Empty state for regions after every widget in that region closes. Placeholders render through a `rendererId`, can provide region sizing hints, and do not create tabs, placements, or persisted layout entries.
 
 - Register with `layout.registerPlaceholder()`
 
@@ -53,7 +53,7 @@ Empty state for areas after every widget in that area closes. Placeholders rende
 
 ### Menu items
 
-Surface commands in the command palette, area headers, tree context menus, or custom menu paths. Menu items reference existing commands, can be ordered and grouped, and can be gated by context expressions through command/menu metadata.
+Surface commands in the command palette, region headers, tree context menus, or custom menu paths. Menu items reference existing commands, can be ordered and grouped, and can be gated by context expressions through command/menu metadata.
 
 - Register with `layout.registerMenuItem(path, item)`
 
@@ -73,18 +73,18 @@ View contributions are the UI itself — code that turns a placement, a tree nod
 The React or bridge implementation for a widget or placeholder. Renderers turn a placement, resource, config, and workbench context into UI. A widget contributes only a `rendererId`, so the same renderer can back many widgets and a renderer can be supplied by a different layer than its widget.
 
 - Register with `renderers.registerRenderer()`
-- Set `keepAlive: true` on the registration to share one persistent subtree across every widget that points at the same `rendererId`. The subtree is mounted once into a stable host that is reparented between widget slots via DOM moves; React state, focus, scroll, and in-flight effects survive area transitions. Kept-alive renderers receive no per-widget input from `render()`; read the active claim with `useWorkbenchClaim()` from `pstdio-workbench/react`.
+- Set `keepAlive: true` on the registration to share one persistent subtree across every widget that points at the same `rendererId`. The subtree is mounted once into a stable host that is reparented between widget slots via DOM moves; React state, focus, scroll, and in-flight effects survive region transitions. Kept-alive renderers receive no per-widget input from `render()`; read the active claim with `useWorkbenchClaim()` from `pstdio-workbench/react`.
 
 #### Examples
 
 - [`hello-world`](src/examples/hello-world/module.tsx) — one renderer per widget, plus a placeholder renderer.
-- [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five widgets in different areas via `config`.
+- [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five widgets in different regions via `config`.
 - [`renderer-types`](src/examples/renderer-types/module.tsx) — React and bridge renderers registered side by side.
 - [`keep-alive`](src/examples/keep-alive/module.tsx) — keep-alive renderer shared by an attached panel and a floating bubble widget.
 
 ### Tree Renderers
 
-A tree-shaped renderer for side-panel navigation, outlines, resource lists, and contextual hierarchies. Tree renderers expose body sections (`getBody`), optional footer nodes (`getFooter`), and lazy children (`getChildren`); nodes can carry resources, descriptions, inline actions, context menus, and `contextValue`. Placement is left to widgets — a tree renderer auto-registers a widget renderer with the same id, so `layout.registerWidget({ rendererId: <tree id> })` plus `layout.openWidget(<tree id>)` puts the tree in any tree-hosting area.
+A tree-shaped renderer for side-panel navigation, outlines, resource lists, and contextual hierarchies. Tree renderers expose body sections (`getBody`), optional footer nodes (`getFooter`), and lazy children (`getChildren`); nodes can carry resources, descriptions, inline actions, context menus, and `contextValue`. Placement is left to widgets — a tree renderer auto-registers a widget renderer with the same id, so `layout.registerWidget({ rendererId: <tree id> })` plus `layout.openWidget(<tree id>)` puts the tree in any tree-hosting region.
 
 - Register with `renderers.registerTreeRenderer()`
 
@@ -106,7 +106,7 @@ A Notion/Linear-style data workspace registered as a renderer. Data renderers co
 
 ### Data Table Renderers
 
-A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table renderers keep row ids and resources outside visible values, support declarative column labels, descriptions, icons, statistics and cell renderers, and use the table's local filtering, sorting, column controls, and pagination. They auto-register a widget renderer with the same id and can be placed in any workbench area.
+A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table renderers keep row ids and resources outside visible values, support declarative column labels, descriptions, icons, statistics and cell renderers, and use the table's local filtering, sorting, column controls, and pagination. They auto-register a widget renderer with the same id and can be placed in any workbench region.
 
 - Register with `renderers.registerDataTableRenderer()`
 - Refresh with `renderers.refreshDataTableRenderer()` or provide a contribution subscription
@@ -118,24 +118,24 @@ A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table render
 
 ### Breadcrumb (TODO: make it a renderer as well)
 
-`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` top header renders it automatically; embed it directly when a host renders custom chrome (a main-area header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
+`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` Nav Chrome renders it automatically; embed it directly when a host renders custom chrome (a Main Panel header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
 
 - Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `pstdio-workbench/react`
 - Drive items with `workbench.breadcrumbs.setItems([...])` (typically from a resource opener)
 
 #### Examples
 
-- [`dashboard`](src/examples/dashboard/modules/shell/components/dashboard-main-header.tsx) — custom main-area header that places the view alongside workspace controls.
+- [`dashboard`](src/examples/dashboard/modules/shell/components/dashboard-main-header.tsx) — custom Main Panel header that places the view alongside workspace controls.
 - [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) — three-level trail set from a page opener.
 
 ---
 
-A typical surface combines both layers: a **renderer** supplies the UI, a **widget** places it in an area with optional `config`, and `layout.openWidget()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
+A typical surface combines both layers: a **renderer** supplies the UI, a **widget** places it in a region with optional `config`, and `layout.openWidget()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
 
-- Add a **widget** to claim a spot in an area for a renderer.
+- Add a **widget** to claim a spot in a region for a renderer.
 - Add a **renderer** to supply the React or bridge UI for a widget or placeholder.
 - Add a **tree renderer** for navigable hierarchy and resource discovery, and place it with a widget.
-- Add a **placeholder** for area-level empty state, not for normal content.
+- Add a **placeholder** for region-level empty state, not for normal content.
 
 ## 🗂️ Resource Contributions
 
@@ -196,7 +196,7 @@ Custom dispatch behavior for navigation targets. Navigators let modules extend h
 
 ## Other Contributions
 
-Supporting contributions make view, layout, resource, and navigation contributions useful. They define actions, persistence, scoping, and preferences without directly owning a workbench area.
+Supporting contributions make view, layout, resource, and navigation contributions useful. They define actions, persistence, scoping, and preferences without directly owning a workbench region.
 
 ### Commands
 
@@ -273,7 +273,7 @@ The React workbench owns the shared `@pstdio/ui` theme preference system through
 
 ### Terminal
 
-Terminals are a host-owned workbench surface, not extension-composed chrome. `workbench.terminal` (a core controller) owns the session registry; hosts inject how sessions actually open with `workbench.terminal.setSessionOpener(...)` — a real PTY transport in production, `createScriptedTerminalBridge` from `@pstdio/ui/terminal` in stories and the extension testbench. `createWorkbenchTerminalModule()` registers the terminal panel in the `secondary` area plus the `workbench.terminal.open` command; the panel renders the shared `Terminal` component from `@pstdio/ui/terminal`. Closing the panel kills its session; disposing the controller kills every live session.
+Terminals are a host-owned workbench surface, not extension-composed chrome. `workbench.terminal` (a core controller) owns the session registry; hosts inject how sessions actually open with `workbench.terminal.setSessionOpener(...)` — a real PTY transport in production, `createScriptedTerminalBridge` from `@pstdio/ui/terminal` in stories and the extension testbench. `createWorkbenchTerminalModule()` registers the terminal panel in the `secondary` region plus the `workbench.terminal.open` command; the panel renders the shared `Terminal` component from `@pstdio/ui/terminal`. Closing the panel kills its session; disposing the controller kills every live session.
 
 Extension webviews never receive PTY handles. A webview that declares the `terminal.session` capability talks to the same session registry through serializable operations (`open`/`write`/`resize`/`kill`/`subscribe`), with output and exit events pushed over the bridge's host-event channel — `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` wraps that protocol into a bridge the `Terminal` component accepts.
 
@@ -299,58 +299,56 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or DataView.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
-- **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench areas, command palette, side panels, and session panel from the workbench core only.
-- **Area**: a named layout target. See the Areas Overview table below.
-- **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
-- **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
+- **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench regions, command palette, panels, and session surface from the workbench core only.
+- **Region**: a named layout target. See the Regions Overview table below.
+- **Widget contribution**: a registered view definition in the layout registry. Widgets declare a region, a `rendererId`, and optional renderer-owned `config`.
+- **Widget placement**: an opened instance of a widget contribution in a region. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
 - **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
 - **Data table renderer contribution**: a dense table renderer registered under `renderers`. Provides query rows, optional column descriptors, navigation, and row actions. Extensions place it through a native view; the presentational layer is `<DataTable>` from `@pstdio/ui/data-table`.
-- **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
+- **Placeholder**: an empty-state contribution rendered only when a region has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
 - **Resource opener**: routing logic that maps a resource to a widget placement.
 - **Command**: an executable action registered in the command registry. Errors raised during execution emit `workbench.commands.onDidExecuteError`.
-- **Menu path**: a stable location where commands are surfaced, such as the command palette, an area header, or a tree node context menu.
+- **Menu path**: a stable location where commands are surfaced, such as the command palette, a region header, or a tree node context menu.
 - **Keybinding**: a keyboard shortcut bound to a command, optionally gated by a context expression.
 - **Context key**: boolean or scalar workbench state used by commands, menus, and keybindings to decide when they are active.
 - **Preference schema**: typed settings contributed by workbench modules or runtime extensions.
 - **Mode**: a named bundle of temporary contributions activated through `workbench.modes`. Switching modes disposes the previous mode's activation result.
 - **Tree view section**: a group of nodes inside a tree renderer's `getBody`, with an optional label, optional collapsible flag, and inline actions.
 - **Notification**: a transient workbench message emitted by workbench modules or extensions. Notifications can include command-backed actions and are rendered as workbench toast chrome.
-- **Session panel**: the assistant surface controlled by `workbench.sessionPanel`. It can be `attached`, `bubble`, or `closed`, and is rendered from the `floating` area.
+- **Session panel**: the assistant surface controlled by `workbench.sessionPanel`. It can be `attached`, `bubble`, or `closed`; attached sessions render in the `side` region.
 
-## Areas Overview
+## Regions Overview
 
-Workbench areas are named layout targets used by widget contributions. They describe where a widget belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
+Workbench regions are named layout targets used by widget contributions. They describe where a widget belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
 
-Use `layout.registerPlaceholder()` for an area empty state that should render only after all widgets in that area close. Placeholders are not widget placements, so they do not affect tab lists.
+Use `layout.registerPlaceholder()` for a region empty state that should render only after all widgets in that region close. Placeholders are not widget placements, so they do not affect tab lists.
 
-Most panels are paired with a `<panel>-header` area that the workbench renders directly above the panel. Widgets placed in a header area use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
+Panels with tabs are paired with a `<panel>-header` region that the workbench renders directly above the panel. Widgets placed in a header region use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
 
-| Area                 | Workbench location                                      | Typical use                                                                    |
-| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `top`                | Top of the workbench, right of `activityBar` and `left` | Breadcrumbs, active context, compact global controls, left-panel reopen action |
-| `activityBar`        | Narrow rail on the far left                             | Top-level mode or workspace switching                                          |
-| `left-header`        | Header above `left`                                     | Project brand, primary navigation header actions                               |
-| `left`               | Primary left side panel                                 | Navigation trees, registries, project outlines, resource lists                 |
-| `main-header`        | Header above `main`, `main-left`, `main-right`          | Active editor context, compact main controls, panel reopen actions             |
-| `main-left-header`   | Header above `main-left`                                | Secondary navigation header                                                    |
-| `main-left`          | Resizable panel to the left of `main`                   | Per-mode navigation trees (settings, document outlines)                        |
-| `main`               | Central content region                                  | Editors, detail pages, dashboards, primary resource views                      |
-| `main-right-header`  | Header above `main-right`                               | Inspector controls, contextual filters                                         |
-| `main-right`         | Resizable panel to the right of `main`                  | Inspectors, properties, contextual details                                     |
-| `main-bottom-header` | Header above `main-bottom`                              | Tab strips, log filters                                                        |
-| `main-bottom`        | Resizable panel below `main`, `main-left`, `main-right` | Diagnostics, activity, logs, terminals, background task output                 |
-| `status`             | Bottom status strip                                     | Compact state, counters, sync status, environment indicators                   |
-| `overlay`            | Layer above the workbench                               | Modal flows, blocking prompts, transient overlays                              |
-| `floating-header`    | Header of the session panel                             | Session-panel title, mode toggle                                               |
-| `floating`           | Session panel surface                                   | Assistant or session UI, either attached or floating                           |
+| Region             | Workbench location                           | Typical use                                                   |
+| ------------------ | -------------------------------------------- | ------------------------------------------------------------- |
+| `nav`              | Nav Chrome across the resource-owned column  | Breadcrumbs, history, resource actions, region controls       |
+| `activity`         | Optional rail on the leading edge            | Top-level mode or workspace switching                         |
+| `sidebar-header`   | Header above `sidebar`                       | Project brand and primary navigation actions                  |
+| `sidebar`          | Leading Sidebar                              | Navigation trees, registries, outlines, resource lists        |
+| `main-header`      | Header above the Main Panel                  | Main Panel tabs and controls                                  |
+| `main-left-menu`   | Menu inside the Main Panel's leading edge    | Contextual navigation and document outlines                   |
+| `main`             | Central Main Panel                           | Editors, detail pages, dashboards, primary resource views     |
+| `main-right-menu`  | Menu inside the Main Panel's trailing edge   | Inspectors, properties, and contextual details                |
+| `secondary-header` | Header above the Secondary Panel             | Tabs, add-panel controls, and collapsed-menu controls         |
+| `secondary`        | Secondary Panel below the Main Panel         | Diagnostics, activity, logs, terminals, background task output |
+| `side-header`      | Header above the Side Panel                  | Session tabs and Side Panel controls                          |
+| `side`             | Full-height Side Panel                       | Assistant sessions and independent secondary workflows       |
+| `status`           | Full-width Status Bar at the viewport bottom | Compact state, counters, sync status, environment indicators  |
+| `overlay`          | Layer above the workbench                    | Modal flows, blocking prompts, transient overlays             |
 
-The command palette, toast notifications, and resize handles are workbench chrome, not workbench areas. Use the `AreaMap` Storybook story to see the current area placement rendered through the real `Workbench`.
+The command palette, toast notifications, and resize handles are workbench chrome, not workbench regions. Use the `RegionMap` Storybook story to see the current region placement rendered through the real `Workbench`.
 
 ## Header Actions
 
-Each area header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)`. The top header reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths to expose compact header controls while keeping breadcrumbs and the `top` area as workbench-owned chrome.
+Each region header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(region)` and `headerTrailingMenuPath(region)`. Nav Chrome reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths to expose compact controls while keeping breadcrumbs and the `nav` region as workbench-owned chrome.
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.

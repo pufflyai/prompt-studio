@@ -21,8 +21,8 @@ const findOpenPlacement = (
 ): WorkbenchWidgetPlacement | undefined => {
   const layout = workbench.layout.getLayout();
 
-  for (const area of Object.values(layout.areas)) {
-    const placement = area.widgets.find((candidate) => candidate.contributionId === contributionId);
+  for (const region of Object.values(layout.regions)) {
+    const placement = region.widgets.find((candidate) => candidate.contributionId === contributionId);
     if (placement) return placement;
   }
 };

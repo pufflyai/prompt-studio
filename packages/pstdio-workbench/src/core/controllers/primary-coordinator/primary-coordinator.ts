@@ -1,6 +1,6 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
-import { resolveAnchorArea } from "../../registries/layout/surface-map";
+import { resolveAnchorRegion } from "../../registries/layout/surface-map";
 import { getAnchorResource, reconcileAnchors } from "../../registries/layout/surface-reconcile";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -31,16 +31,16 @@ export interface CreatePrimaryCoordinatorInput {
 // Keeps the secondary resource anchors consistent with the primary (main) resource.
 // On a primary change, derived anchors clear (they re-scope to the new primary) and
 // detached anchors disconnect once they fall outside the new primary's scope. The
-// primary anchor is never mutated, so the selector keyed on the main area's active
+// primary anchor is never mutated, so the selector keyed on the main region's active
 // resource cannot re-fire — the reconciliation is feedback-loop safe by construction.
 export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoordinatorInput): Disposable => {
   const unsubscribe = layout.store.subscribeSelector(
-    (state) => getActivePlacement(state.layout.areas[resolveAnchorArea("primary")])?.resourceUri,
+    (state) => getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resourceUri,
     () => {
       const current = layout.getLayout();
       const primary = getAnchorResource(current, "primary");
       for (const action of reconcileAnchors({ layout: current, primary, isInScope })) {
-        if (action.action === "clear") layout.clearArea(action.area);
+        if (action.action === "clear") layout.clearRegion(action.region);
       }
     },
   );

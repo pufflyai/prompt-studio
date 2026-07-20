@@ -107,9 +107,9 @@ const openSessionCommandResult = async (
   if (!result) return;
 
   refreshSessionTrees(ctx);
-  if (!ctx.commands.getCommand(dashboardCommandIds.openFloatingSession)) return;
+  if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
 
-  await ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
+  await ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
     resource: createDashboardResource("session", result.id, result.title ?? "Session", "MessageCircle", projectId, {
       ...(result.status ? { status: result.status } : {}),
     }),

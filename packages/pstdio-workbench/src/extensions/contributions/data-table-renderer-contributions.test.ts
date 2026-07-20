@@ -52,7 +52,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     );
 
     expect(workbench.layout.getWidget("lab.healthView")).toMatchObject({
-      area: "main",
+      region: "main",
       rendererId: "lab.health",
     });
     const renderer = workbench.renderers.getDataTableRenderer("lab.health");

@@ -4,7 +4,7 @@ import { buildSettingsTreeBody, settingsItemResource, settingsPanelResource } fr
 import { createSettingsModule } from "./module";
 
 const activeOverlayResource = (workbench: WorkbenchCore) => {
-  const overlay = workbench.layout.getLayout().areas.overlay;
+  const overlay = workbench.layout.getLayout().regions.overlay;
   return overlay.widgets.find((widget) => widget.widgetId === overlay.activeWidgetId)?.resource;
 };
 

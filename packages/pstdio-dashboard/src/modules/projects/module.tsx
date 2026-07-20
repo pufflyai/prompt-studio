@@ -15,10 +15,10 @@ import {
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
+import { registerSidebarHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 import { CreateProjectWidget } from "./components/create-project-widget";
-import { ProjectLeftHeader } from "./components/project-left-header";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
+import { ProjectSidebarHeader } from "./components/project-sidebar-header";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
 
 interface CreateProjectsModuleInput {
@@ -29,14 +29,14 @@ type DashboardProjectSelectionContext = {
   context: Pick<WorkbenchModuleContributionContext["context"], "delete" | "set">;
 };
 
-const projectSelectionContentAreas = [
-  "left",
-  "main-left",
+const projectSelectionContentRegions = [
+  "sidebar",
+  "main-left-menu",
   "main",
-  "main-right",
+  "main-right-menu",
   "secondary",
-  "floating-header",
-  "floating",
+  "side-header",
+  "side",
   "overlay",
 ] as const;
 
@@ -45,10 +45,13 @@ const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.createProject,
 ]);
 
-const persistentDashboardChromeWidgetIds = new Set<string>([dashboardWidgetIds.header, dashboardWidgetIds.leftHeader]);
+const persistentDashboardChromeWidgetIds = new Set<string>([
+  dashboardWidgetIds.header,
+  dashboardWidgetIds.sidebarHeader,
+]);
 
 const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
-  const overlayWidgets = ctx.layout.getLayout().areas.overlay.widgets;
+  const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;
 
   for (const placement of overlayWidgets) {
     if (projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
@@ -58,7 +61,7 @@ const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) 
 };
 
 const clearProjectScopedPlacements = (ctx: WorkbenchModuleContributionContext) => {
-  const placements = Object.values(ctx.layout.getLayout().areas).flatMap((area) => area.widgets);
+  const placements = Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets);
 
   for (const placement of placements) {
     if (persistentDashboardChromeWidgetIds.has(placement.contributionId)) continue;
@@ -205,7 +208,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.projectPicker,
     title: "Projects",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.projectPicker,
@@ -220,7 +223,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.createProject,
     title: "Create project",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.createProject,
@@ -237,7 +240,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) =
     id: "project-selection",
     label: "Projects",
     activate(modeCtx) {
-      for (const area of projectSelectionContentAreas) modeCtx.layout.clearArea(area);
+      for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
       modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
       return undefined;
     },
@@ -365,9 +368,9 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         selectedProjectContext,
         input.projectSelectionPersistence,
       );
-      registerLeftHeaderContribution(ctx, {
-        id: "dashboard.projects.left-header",
-        render: (renderInput) => <ProjectLeftHeader input={renderInput} />,
+      registerSidebarHeaderContribution(ctx, {
+        id: "dashboard.projects.sidebar-header",
+        render: (renderInput) => <ProjectSidebarHeader input={renderInput} />,
         canRender: () => true,
       });
 

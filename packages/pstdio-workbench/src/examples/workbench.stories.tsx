@@ -4,7 +4,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
-import { createAreaMapModule } from "./area-map/module";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
@@ -18,6 +17,7 @@ import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
+import { createRegionMapModule } from "./region-map/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
 import { createSurfaceAnchorsModule } from "./surface-anchors/module";
@@ -47,8 +47,8 @@ helloWorldWorkbench.registerModule(createHelloWorldModule());
 const workbenchModesWorkbench = createWorkbenchCore();
 workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
 
-const areaMapWorkbench = createWorkbenchCore();
-areaMapWorkbench.registerModule(createAreaMapModule());
+const regionMapWorkbench = createWorkbenchCore();
+regionMapWorkbench.registerModule(createRegionMapModule());
 
 const surfaceAnchorsWorkbench = createWorkbenchCore();
 surfaceAnchorsWorkbench.registerModule(createSurfaceAnchorsModule());
@@ -60,7 +60,7 @@ rendererTypesWorkbench.registerModule(
   createRendererTypesExampleModule({ createBridgeDocument: createStorybookBridgeDocument }),
 );
 
-const dashboardWorkbench = createDashboardWorkbench();
+const dashboardWorkbench = createDashboardWorkbench({ canonicalGeometry: true });
 
 const dataRendererWorkbench = createWorkbenchCore();
 dataRendererWorkbench.registerModule(createDataRendererStoryModule());
@@ -93,7 +93,7 @@ const hostTerminalNotesWidgetId = "host-terminal-story.notes";
 const hostTerminalNotesRendererId = "host-terminal-story.notes.renderer";
 
 // Host-owned terminal surface driven by a deterministic scripted bridge — the
-// panel chrome comes from the workbench `secondary` area, the session registry
+// panel chrome comes from the workbench `secondary` region, the session registry
 // from `workbench.terminal`.
 const hostTerminalWorkbench = createWorkbenchCore();
 hostTerminalWorkbench.registerModule({
@@ -107,7 +107,7 @@ hostTerminalWorkbench.registerModule({
     const notesWidget = ctx.layout.registerWidget({
       id: hostTerminalNotesWidgetId,
       title: "notes.md",
-      area: "secondary",
+      region: "secondary",
       singleton: false,
       closable: true,
       rendererId: hostTerminalNotesRendererId,
@@ -160,8 +160,8 @@ export const WorkbenchModes: Story = {
   render: () => <WorkbenchStory workbench={workbenchModesWorkbench} />,
 };
 
-export const AreaMap: Story = {
-  render: () => <WorkbenchStory workbench={areaMapWorkbench} />,
+export const RegionMap: Story = {
+  render: () => <WorkbenchStory workbench={regionMapWorkbench} />,
 };
 
 // Demonstrates the resource-projected surface model: primary anchor + projections, the
@@ -229,7 +229,7 @@ export const ExtensionThemes: Story = {
 };
 
 // Type into the terminal to see the scripted echo; the panel resizes with the
-// bottom area splitter.
+// bottom region splitter.
 export const HostTerminal: Story = {
   render: () => <WorkbenchStory workbench={hostTerminalWorkbench} />,
   play: async ({ canvasElement }) => {

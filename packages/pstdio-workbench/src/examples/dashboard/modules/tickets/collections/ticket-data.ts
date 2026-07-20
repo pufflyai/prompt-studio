@@ -98,7 +98,7 @@ export const registerTicketDataRenderer = (ctx: WorkbenchModuleContributionConte
     {
       id: dashboardWidgetIds.tickets,
       title: "Tickets",
-      area: "main",
+      region: "main",
       rendererId: dashboardWidgetIds.tickets,
       resourceKinds: ["dashboard-view"],
       singleton: true,

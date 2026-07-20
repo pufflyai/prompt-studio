@@ -24,7 +24,7 @@ const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersi
   return project?.name ?? (typeof projectName === "string" ? projectName : "Projects");
 };
 
-export const ProjectLeftHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ProjectSidebarHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const selectedProjectId = useWorkbenchStore(
     input.workbench.context.store,

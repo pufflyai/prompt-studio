@@ -1,5 +1,6 @@
 import { createWorkbenchCore } from "../../core";
 import { createBootstrapModule } from "./modules/bootstrap";
+import { createCanonicalGeometryModule } from "./modules/canonical-geometry";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createShellModule } from "./modules/shell/module";
@@ -18,8 +19,13 @@ export const createDashboardExampleModules = () => [
   createBootstrapModule(),
 ];
 
-export const createDashboardWorkbench = () => {
-  const workbench = createWorkbenchCore();
+interface CreateDashboardWorkbenchInput {
+  canonicalGeometry?: boolean;
+}
+
+export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = {}) => {
+  const workbench = createWorkbenchCore({ initialSessionPanelMode: input.canonicalGeometry ? "attached" : undefined });
   for (const module of createDashboardExampleModules()) workbench.registerModule(module);
+  if (input.canonicalGeometry) workbench.registerModule(createCanonicalGeometryModule());
   return workbench;
 };

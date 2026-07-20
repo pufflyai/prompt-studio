@@ -75,21 +75,21 @@ describe("registerExtensionResourceView title refresh", () => {
     workbench.layout.registerWidget({
       id: "tickets.editor",
       title: "Ticket",
-      area: "main",
+      region: "main",
       rendererId: "tickets.content",
       resourceKinds: ["ticket"],
     });
     workbench.layout.registerWidget({
       id: "tickets.files",
       title: "Files",
-      area: "left",
+      region: "sidebar",
       rendererId: "tickets.files",
       resourceKinds: ["ticket"],
     });
     workbench.layout.registerWidget({
       id: "left.scratch",
       title: "Scratch",
-      area: "left",
+      region: "sidebar",
       rendererId: "left.scratch",
       singleton: false,
     });
@@ -101,8 +101,8 @@ describe("registerExtensionResourceView title refresh", () => {
     try {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
 
-      const beforeSave = workbench.layout.getLayout().areas.main.widgets[0];
-      const companionBeforeSave = workbench.layout.getLayout().areas.left.widgets[0];
+      const beforeSave = workbench.layout.getLayout().regions.main.widgets[0];
+      const companionBeforeSave = workbench.layout.getLayout().regions.sidebar.widgets[0];
       expect(beforeSave?.resource?.id).toBe("ticket-1");
       expect(companionBeforeSave?.resource?.id).toBe("ticket-1");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
@@ -114,7 +114,7 @@ describe("registerExtensionResourceView title refresh", () => {
         outcome: { ok: true, status: "success", value: { id: "ticket-1", shorthand: "T-1", title: "Wrong title" } },
       });
 
-      expect(workbench.layout.getLayout().areas.main.widgets[0]?.title).toBe("T-1 Old title");
+      expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("T-1 Old title");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
 
@@ -124,16 +124,16 @@ describe("registerExtensionResourceView title refresh", () => {
         outcome: { ok: true, status: "success", value: { id: "ticket-1", shorthand: "T-1", title: "New title" } },
       });
 
-      const afterSave = workbench.layout.getLayout().areas.main.widgets[0];
+      const afterSave = workbench.layout.getLayout().regions.main.widgets[0];
       expect(afterSave?.title).toBe("T-1 New title");
       expect(afterSave?.widgetId).toBe(beforeSave?.widgetId);
       expect(afterSave?.resource).toBe(beforeSave?.resource);
       expect(afterSave?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.title).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.widgetId).toBe(companionBeforeSave?.widgetId);
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().areas.left.widgets[1]?.widgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.title).toBe("T-1 New title");
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.widgetId).toBe(companionBeforeSave?.widgetId);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource?.label).toBe("T-1 New title");
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[1]?.widgetId).toBe(scratch.widgetId);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {

@@ -9,7 +9,7 @@ const setupWebviewWidget = () => {
   workbench.layout.registerWidget({
     id: "lab.page",
     title: "Lab page",
-    area: "main",
+    region: "main",
     rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
     config: {
       runtimeUrl: "https://host/runtime.html",

@@ -52,7 +52,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let activeModeContext: Disposable | undefined;
 
   const listPlacementIds = (layout: WorkbenchLayout) =>
-    Object.values(layout.areas).flatMap((area) => area.widgets.map((placement) => placement.widgetId));
+    Object.values(layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId));
 
   const captureActivePlacements = (layout: WorkbenchLayout) => {
     for (const widgetId of listPlacementIds(layout)) {

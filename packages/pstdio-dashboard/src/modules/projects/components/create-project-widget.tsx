@@ -22,8 +22,8 @@ import { RepoPickerDialog } from "./repo-picker-dialog";
 const emptyAgentInfo: AgentInfo[] = [];
 
 const isPlacementOpen = (input: WorkbenchWidgetRenderInput) =>
-  Object.values(input.workbench.layout.getLayout().areas).some((area) =>
-    area.widgets.some((placement) => placement.widgetId === input.placement.widgetId),
+  Object.values(input.workbench.layout.getLayout().regions).some((region) =>
+    region.widgets.some((placement) => placement.widgetId === input.placement.widgetId),
   );
 
 const closeCurrentPlacement = (input: WorkbenchWidgetRenderInput) => {

@@ -96,7 +96,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       resolveScopeId: (scope) => (scope === "project" ? DEMO_PROJECT_ID : undefined),
     }).activate(ctx);
 
-    // The surface is a modal overlay; closing it would leave the lesson blank. A main-area
+    // The surface is a modal overlay; closing it would leave the lesson blank. A main-region
     // landing widget keeps a way back in by re-running the built-in open command.
     ctx.renderers.registerRenderer({
       id: LAUNCHER_RENDERER_ID,
@@ -105,7 +105,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: LAUNCHER_WIDGET_ID,
       title: "Settings",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: LAUNCHER_RENDERER_ID,
     });

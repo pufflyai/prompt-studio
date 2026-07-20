@@ -7,7 +7,7 @@ describe("createDashboardWorkbench", () => {
     const workbench = createDashboardWorkbench();
 
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
-      area: "secondary",
+      region: "secondary",
       title: "Terminal",
       closable: true,
       mountStrategy: "keep-mounted",
@@ -15,7 +15,7 @@ describe("createDashboardWorkbench", () => {
       singleton: false,
     });
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
-      area: "secondary",
+      region: "secondary",
       hiddenByDefault: true,
       title: "Terminal",
     });

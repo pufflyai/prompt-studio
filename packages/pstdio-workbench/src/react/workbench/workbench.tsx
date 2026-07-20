@@ -1,7 +1,7 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { WorkbenchCore, WorkbenchRegion } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
@@ -21,16 +21,16 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
-import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
+import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelRegionId } from "./workbench-panel-state";
 import {
   WORKBENCH_STATUS_BAR_HEIGHT,
   WorkbenchActivityBar,
   WorkbenchHeader,
-  WorkbenchLeftSidePanel,
+  WorkbenchSidebar,
   WorkbenchStatusBar,
 } from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
-import { WorkbenchFloatingSessionHeader, WorkbenchFloatingSessionPortal } from "./workbench-session-layout";
+import { WorkbenchSessionRegionHeader, WorkbenchSessionRegionPortal } from "./workbench-session-layout";
 
 interface WorkbenchProps {
   workbench: WorkbenchCore;
@@ -40,19 +40,19 @@ interface WorkbenchProps {
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
 type WorkbenchPlaceholderState = ReturnType<WorkbenchCore["layout"]["store"]["getState"]>["placeholders"];
 
-const LEFT_PANEL_ID = "left";
+const SIDEBAR_PANEL_ID = "sidebar";
 
-const SIDEBAR_DEFAULT_SIZE_PX = 240;
+const SIDEBAR_DEFAULT_SIZE_PX = 250;
 const SIDEBAR_MIN_SIZE_PX = 200;
 const CONTENT_MIN_SIZE_PX = 320;
 
-const resolveLeftPanelSize = (workbench: WorkbenchCore) => {
-  const areaSize = workbench.layout.getAreaSize("left");
+const resolveSidebarSize = (workbench: WorkbenchCore) => {
+  const regionSize = workbench.layout.getRegionSize("sidebar");
 
   return {
-    defaultPx: areaSize?.defaultPx ?? SIDEBAR_DEFAULT_SIZE_PX,
-    minPx: areaSize?.minPx ?? SIDEBAR_MIN_SIZE_PX,
-    maxPx: areaSize?.maxPx,
+    defaultPx: regionSize?.defaultPx ?? SIDEBAR_DEFAULT_SIZE_PX,
+    minPx: regionSize?.minPx ?? SIDEBAR_MIN_SIZE_PX,
+    maxPx: regionSize?.maxPx,
   };
 };
 
@@ -75,19 +75,21 @@ const resolveActiveSessionSlot = (input: {
   return null;
 };
 
-const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState, area: WorkbenchArea) =>
-  layout.areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+const hasRegionContent = (
+  layout: WorkbenchLayoutState,
+  placeholders: WorkbenchPlaceholderState,
+  region: WorkbenchRegion,
+) => layout.regions[region].widgets.length > 0 || Boolean(placeholders[region]);
 
 const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
   return {
-    layout,
-    hasTopWidgets: hasAreaContent(layout, placeholders, "nav"),
-    hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activity"),
-    hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
-    hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
-    hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
-    hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
-    hasFloatingWidgets: hasAreaContent(layout, placeholders, "floating"),
+    hasNavWidgets: hasRegionContent(layout, placeholders, "nav"),
+    hasActivityBarWidgets: hasRegionContent(layout, placeholders, "activity"),
+    hasSidebarHeaderWidgets: hasRegionContent(layout, placeholders, "sidebar-header"),
+    hasSidebarWidgets: hasRegionContent(layout, placeholders, "sidebar"),
+    hasSideHeaderWidgets: hasRegionContent(layout, placeholders, "side-header"),
+    hasSideWidgets: hasRegionContent(layout, placeholders, "side"),
+    hasStatusWidgets: hasRegionContent(layout, placeholders, "status"),
   };
 };
 
@@ -108,29 +110,31 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
-  const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
+  const sidebarOpen = useWorkbenchStore(
+    workbench.panels.store,
+    (state) => state.openByRegionId[SIDEBAR_PANEL_ID] ?? true,
+  );
 
   const {
     hasActivityBarWidgets,
-    hasFloatingHeaderWidgets,
-    hasFloatingWidgets,
-    hasLeftHeaderWidgets,
-    hasLeftWidgets,
+    hasNavWidgets,
+    hasSideHeaderWidgets,
+    hasSideWidgets,
+    hasSidebarHeaderWidgets,
+    hasSidebarWidgets,
     hasStatusWidgets,
-    hasTopWidgets,
   } = deriveLayoutFlags(layoutState, placeholders);
-  const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
-  const showLeftPane = hasLeftWidgets || hasLeftHeaderWidgets;
-  const leftPanelCollapsible = resolvePanelCollapsible(workbench, "left-header", "left");
-  const leftPanelSize = resolveLeftPanelSize(workbench);
-  const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
-  const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
-  const mountSessionPanel = hasFloatingPanel && sessionPanelMode !== "closed";
-  const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
+  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets;
+  const showSidebar = hasSidebarWidgets || hasSidebarHeaderWidgets;
+  const sidebarCollapsible = resolvePanelCollapsible(workbench, "sidebar-header", "sidebar");
+  const sidebarSize = resolveSidebarSize(workbench);
+  const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
+  const showBubbleSessionPanel = hasSidePanel && sessionPanelMode === "bubble";
+  const mountSessionPanel = hasSidePanel && sessionPanelMode !== "closed";
+  const setPanelOpen = (region: WorkbenchPanelRegionId, open: boolean) =>
+    setWorkbenchPanelOpen(workbench, region, open);
 
-  const floatingHeader = (
-    <WorkbenchFloatingSessionHeader workbench={workbench} hasFloatingHeader={hasFloatingHeaderWidgets} />
-  );
+  const sideHeader = <WorkbenchSessionRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
   const activeSessionSlot = resolveActiveSessionSlot({
     showAttachedSessionPanel,
     showBubbleSessionPanel,
@@ -152,9 +156,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
       <WorkbenchHeader
         workbench={workbench}
-        hasTop={hasTopWidgets}
-        showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen && leftPanelCollapsible)}
-        onOpenLeftPanel={() => setPanelOpen(LEFT_PANEL_ID, true)}
+        hasNav={hasNavWidgets}
+        showSidebarOpener={Boolean(showSidebar && !sidebarOpen && sidebarCollapsible)}
+        onOpenSidebar={() => setPanelOpen(SIDEBAR_PANEL_ID, true)}
       />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchBody workbench={workbench} />
@@ -162,82 +166,75 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     </Flex>
   );
 
-  const contentWithSidePanels = showLeftPane ? (
+  const contentWithSidebar = showSidebar ? (
     <ResizableSplitLayout
       flex="1"
       minH="0"
       minW="0"
-      resizablePanel={<WorkbenchLeftSidePanel workbench={workbench} hasHeader={hasLeftHeaderWidgets} />}
+      resizablePanel={<WorkbenchSidebar workbench={workbench} hasHeader={hasSidebarHeaderWidgets} />}
       contentPanel={contentWithHeader}
-      collapsed={!leftPanelOpen && leftPanelCollapsible}
-      collapsible={leftPanelCollapsible}
-      defaultSizePx={leftPanelSize.defaultPx}
-      minSizePx={leftPanelSize.minPx}
-      maxSizePx={leftPanelSize.maxPx}
+      collapsed={!sidebarOpen && sidebarCollapsible}
+      collapsible={sidebarCollapsible}
+      defaultSizePx={sidebarSize.defaultPx}
+      minSizePx={sidebarSize.minPx}
+      maxSizePx={sidebarSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize sidebar"
       showResizeSeparator
-      onSizeChange={(width) => workbench.layout.setAreaSize("left", width)}
+      onSizeChange={(width) => workbench.layout.setRegionSize("sidebar", width)}
       onCollapsedChange={(collapsed) => {
-        if (!collapsed || leftPanelCollapsible) setPanelOpen(LEFT_PANEL_ID, !collapsed);
+        if (!collapsed || sidebarCollapsible) setPanelOpen(SIDEBAR_PANEL_ID, !collapsed);
       }}
     />
   ) : (
     contentWithHeader
   );
 
-  const workbenchFrame = (
-    <Flex
-      direction="column"
-      position="relative"
-      h="full"
-      minH="0"
-      minW="0"
-      w="full"
-      bg={workbenchBackgrounds.main}
-      color="fg"
-    >
+  const contentFrame = (
+    <Flex position="relative" h="full" minH="0" minW="0" w="full" bg={workbenchBackgrounds.main} color="fg">
+      {hasActivityBarWidgets ? <WorkbenchActivityBar workbench={workbench} /> : null}
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
-        {hasActivityBarWidgets ? <WorkbenchActivityBar workbench={workbench} /> : null}
-        <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
-          {contentWithSidePanels}
-        </Flex>
+        {contentWithSidebar}
       </Flex>
-      {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
       <WorkbenchOverlayLayer workbench={workbench} />
-      {hasFloatingPanel ? (
-        <WorkbenchSessionBubbleContainer
-          workbench={workbench}
-          contentSlotRef={setSessionBubbleSlot}
-          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
-          header={floatingHeader}
-        />
-      ) : null}
-      <WorkbenchCommandPalette
-        workbench={workbench}
-        open={paletteOpen}
-        initialQuery={paletteInitialQuery}
-        renderParamField={renderParamField}
-        onClose={() => workbench.commandPalette.close()}
-      />
-      <WorkbenchKeybindingDispatcher workbench={workbench} />
-      <WorkbenchNotificationHost workbench={workbench} />
     </Flex>
   );
 
   return (
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
-      <WorkbenchSessionBoundary
+      <Flex direction="column" h="full" minH="0" minW="0" position="relative" w="full">
+        <Flex flex="1" minH="0" minW="0" overflow="hidden">
+          <WorkbenchSessionBoundary
+            workbench={workbench}
+            showAttachedSessionPanel={showAttachedSessionPanel}
+            contentFrame={contentFrame}
+            sideHeader={sideHeader}
+            contentMinSizePx={CONTENT_MIN_SIZE_PX}
+            onAttachedSlotChange={setSessionAttachedSlot}
+          />
+        </Flex>
+        {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
+        {hasSidePanel ? (
+          <WorkbenchSessionBubbleContainer
+            workbench={workbench}
+            contentSlotRef={setSessionBubbleSlot}
+            bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
+            header={sideHeader}
+          />
+        ) : null}
+        <WorkbenchCommandPalette
+          workbench={workbench}
+          open={paletteOpen}
+          initialQuery={paletteInitialQuery}
+          renderParamField={renderParamField}
+          onClose={() => workbench.commandPalette.close()}
+        />
+        <WorkbenchKeybindingDispatcher workbench={workbench} />
+        <WorkbenchNotificationHost workbench={workbench} />
+      </Flex>
+      <WorkbenchSessionRegionPortal
         workbench={workbench}
-        showAttachedSessionPanel={showAttachedSessionPanel}
-        workbenchFrame={workbenchFrame}
-        floatingHeader={floatingHeader}
-        contentMinSizePx={CONTENT_MIN_SIZE_PX}
-        onAttachedSlotChange={setSessionAttachedSlot}
-      />
-      <WorkbenchFloatingSessionPortal
-        workbench={workbench}
-        hasFloatingPanel={hasFloatingPanel}
+        hasSidePanel={hasSidePanel}
         mounted={mountSessionPanel}
         sessionHost={sessionHostRef.current}
       />

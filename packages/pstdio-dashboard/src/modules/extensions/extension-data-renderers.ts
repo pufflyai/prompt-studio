@@ -249,10 +249,10 @@ export const registerExtensionDataRenderers = (
         requiresProject: false,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
-          // A board fills the main area and owns no side companions, so drop any
+          // A board fills the main region and owns no side companions, so drop any
           // panel a resource editor (e.g. the ticket properties sidepanel) left in
           // main-right — the framework only auto-hides it when main is empty.
-          ctx.layout.clearArea("main-right");
+          ctx.layout.clearRegion("main-right-menu");
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
             ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, resource.uri);
           }

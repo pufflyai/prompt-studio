@@ -44,12 +44,12 @@ const regionSection = (id: string, nodes: TreeNode[]): TreeViewSection => ({ id,
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
 
 const resolveActivePlacement = (
-  widgets: WorkbenchLayoutState["areas"]["overlay"]["widgets"],
+  widgets: WorkbenchLayoutState["regions"]["overlay"]["widgets"],
   activeWidgetId: string | undefined,
 ) => widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
 
 const resolveTreeActiveResource = (layout: WorkbenchLayoutState) =>
-  resolveActivePlacement(layout.areas.overlay.widgets, layout.areas.overlay.activeWidgetId)?.resource ??
+  resolveActivePlacement(layout.regions.overlay.widgets, layout.regions.overlay.activeWidgetId)?.resource ??
   getAnchorResource(layout, "primary");
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {

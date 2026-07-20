@@ -18,10 +18,10 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: diagnosticsWidgetId,
       title: "Diagnostics",
-      area: "secondary",
+      region: "secondary",
       singleton: true,
       rendererId: diagnosticsWidgetId,
-      areaSize: { defaultPx: 180, minPx: 120, maxPx: 320 },
+      regionSize: { defaultPx: 180, minPx: 120, maxPx: 320 },
     });
     ctx.commands.registerCommand(
       { id: diagnosticsCommandId, label: "Run diagnostics", category: "Dynamic modules", icon: "ListChecks" },

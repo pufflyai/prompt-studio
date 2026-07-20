@@ -21,7 +21,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.commands.registerCommand(
       { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main", category: "Docs" },
-      { execute: () => ctx.focus.setActiveArea("main") },
+      { execute: () => ctx.focus.setActiveRegion("main") },
     );
 
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Guide", icon: "FileText" });

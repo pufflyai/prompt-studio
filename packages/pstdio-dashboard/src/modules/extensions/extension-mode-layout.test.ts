@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { extensionViewArea } from "./extension-mode-layout";
+import { extensionViewRegion } from "./extension-mode-layout";
 
 describe("extension-mode-layout exports", () => {
-  test("exposes extension view area placement for resource view callers", () => {
-    expect(extensionViewArea("workbench.main.left")).toBe("main-left");
+  test("exposes extension view region placement for resource view callers", () => {
+    expect(extensionViewRegion("workbench.main.left")).toBe("main-left-menu");
   });
 });

@@ -3,8 +3,6 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
 const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.emphasized" } };
-const RESIZE_HANDLE_SIZE = "12px";
-const RESIZE_HANDLE_OFFSET = "-6px";
 
 interface ResizeHandleProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
@@ -13,6 +11,7 @@ interface ResizeHandleProps {
   collapsible: boolean;
   contentPanelId: string;
   resizablePanelId: string;
+  resizeHandleSizePx: number;
   resizeLabel: string;
   resolvedPanelSize: number;
   showResizeSeparator: boolean;
@@ -28,6 +27,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     collapsible,
     contentPanelId,
     resizablePanelId,
+    resizeHandleSizePx,
     resizeLabel,
     resolvedPanelSize,
     showResizeSeparator,
@@ -35,6 +35,8 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     onResizeStart,
   } = props;
   const verticalSeparator = axis.separatorOrientation === "vertical";
+  const resizeHandleSize = `${resizeHandleSizePx}px`;
+  const resizeHandleOffset = `${resizeHandleSizePx / -2}px`;
   const separatorStyle = verticalSeparator
     ? {
         content: '""',
@@ -69,11 +71,11 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       display={collapsed ? "none" : undefined}
       position="relative"
       zIndex="docked"
-      flex={`0 0 ${RESIZE_HANDLE_SIZE}`}
-      h={verticalSeparator ? "full" : RESIZE_HANDLE_SIZE}
-      w={verticalSeparator ? RESIZE_HANDLE_SIZE : "full"}
-      mx={verticalSeparator ? RESIZE_HANDLE_OFFSET : undefined}
-      my={verticalSeparator ? undefined : RESIZE_HANDLE_OFFSET}
+      flex={`0 0 ${resizeHandleSize}`}
+      h={verticalSeparator ? "full" : resizeHandleSize}
+      w={verticalSeparator ? resizeHandleSize : "full"}
+      mx={verticalSeparator ? resizeHandleOffset : undefined}
+      my={verticalSeparator ? undefined : resizeHandleOffset}
       cursor={axis.cursor}
       touchAction="none"
       outline="none"

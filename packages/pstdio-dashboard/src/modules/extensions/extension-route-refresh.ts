@@ -23,8 +23,8 @@ export const refreshOpenExtensionRoutes = (
   const routeByPath = new Map(metadata.routes.map((route) => [route.path, route]));
   const activeWidgetId = ctx.layout.getLayout().activeWidgetId;
 
-  for (const area of Object.values(ctx.layout.getLayout().areas)) {
-    for (const placement of area.widgets) {
+  for (const region of Object.values(ctx.layout.getLayout().regions)) {
+    for (const placement of region.widgets) {
       const resource = placement.resource;
       const routeProjectId = resource?.metadata?.projectId;
       const routePath = resource?.metadata?.routePath;

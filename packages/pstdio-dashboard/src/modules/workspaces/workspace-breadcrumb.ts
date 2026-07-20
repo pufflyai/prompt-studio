@@ -71,12 +71,16 @@ const ticketBoardResource = (projectId: string) => {
   );
 };
 
-const ticketResource = (projectId: string, item: TicketBreadcrumbItem): ResourceRef => ({
+const ticketResource = (
+  ctx: WorkbenchModuleContributionContext,
+  projectId: string,
+  item: TicketBreadcrumbItem,
+): ResourceRef => ({
   kind: "ticket",
   uri: `dashboard-workbench://ticket/${encodeURIComponent(item.id)}`,
   id: item.id,
   label: item.label,
-  icon: "component",
+  icon: ctx.resources.getKind("ticket")?.icon ?? "component",
   metadata: {
     projectId,
     ticketId: item.id,
@@ -90,7 +94,7 @@ const setTicketWorkspaceBreadcrumb = (
   resource: ResourceRef,
 ) => {
   const ticketsResource = ticketBoardResource(context.projectId);
-  const ticketResources = context.breadcrumb.map((item) => ticketResource(context.projectId, item));
+  const ticketResources = context.breadcrumb.map((item) => ticketResource(ctx, context.projectId, item));
 
   ctx.breadcrumbs.setItems([
     {

@@ -6,8 +6,8 @@ interface ResourcePanelProps {
   anchor: string;
 }
 
-// Renders whatever resource its placement holds. Used for the side anchors (a terminal in
-// the derived `secondary`, a session in the detached `floating`) so you can watch them
+// Renders whatever resource its placement holds. Used for supporting anchors (a terminal in
+// the derived `secondary`, a session in the detached `side`) so you can watch them
 // appear, re-scope, and disconnect as the primary changes.
 export const ResourcePanel = (props: ResourcePanelProps) => {
   const { input, anchor } = props;

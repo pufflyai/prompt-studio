@@ -43,11 +43,11 @@ const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) 
   activateModeChromeContributions(modeCtx, "project");
 
 const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
-  modeCtx.layout.clearArea("floating");
-  modeCtx.layout.clearArea("floating-header");
-  // The workspace detail owns the main-right projection; clearing on mode entry (rather than
+  modeCtx.layout.clearRegion("side");
+  modeCtx.layout.clearRegion("side-header");
+  // The workspace detail owns the Main right menu; clearing on mode entry (rather than
   // per open) keeps it as mode chrome so history replay restores it via setActiveMode.
-  modeCtx.layout.clearArea("main-right");
+  modeCtx.layout.clearRegion("main-right-menu");
   return activateModeChromeContributions(modeCtx, "workspace");
 };
 
@@ -148,12 +148,12 @@ const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContributionConte
 };
 
 const openFirstWorkspaceSession = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  if (!ctx.commands.getCommand(dashboardCommandIds.openFloatingSession)) return;
+  if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
 
   const session = findFirstWorkspaceSessionResource(ctx, resource);
   if (!session) return;
 
-  void ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource: session });
+  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: session });
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -194,7 +194,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.createWorkspace,
@@ -208,7 +208,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.renameWorkspace,
     title: "Rename workspace",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.renameWorkspace,
@@ -223,7 +223,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
     {
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
-      area: "main",
+      region: "main",
       rendererId: dashboardWidgetIds.workspace,
       singleton: true,
       resourceKinds: ["workspace"],

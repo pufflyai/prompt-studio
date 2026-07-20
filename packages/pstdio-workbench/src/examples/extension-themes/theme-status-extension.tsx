@@ -28,7 +28,7 @@ export const createThemeStatusExtension = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: STATUS_WIDGET_ID,
       title: "Theme status",
-      area: "status",
+      region: "status",
       singleton: true,
       rendererId: STATUS_RENDERER_ID,
     });

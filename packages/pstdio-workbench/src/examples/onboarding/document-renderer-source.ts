@@ -22,7 +22,7 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: "docs.notes",
       title: "notes.md",
-      area: "main",
+      region: "main",
       rendererId: "docs.notes",
       singleton: true,
     });

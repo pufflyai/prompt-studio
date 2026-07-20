@@ -1,6 +1,6 @@
 import {
   type ResourceRef,
-  resolveAnchorArea,
+  resolveAnchorRegion,
   standardResourceIcons,
   type WorkbenchModuleContribution,
 } from "../../core";
@@ -27,15 +27,15 @@ const widgetIds = {
 
 // Routes a resource to the anchor its kind declares (surface routing), so a session lands
 // in the attached anchor and a terminal in the secondary anchor without the opener
-// hardcoding an area.
+// hardcoding an region.
 const openBySurface = (
   ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
   widgetId: string,
   resource: ResourceRef,
 ) => {
   const surface = ctx.resources.getSurface(resource);
-  const area = surface ? resolveAnchorArea(surface) : undefined;
-  return ctx.layout.openWidget(widgetId, { resource, area });
+  const region = surface ? resolveAnchorRegion(surface) : undefined;
+  return ctx.layout.openWidget(widgetId, { resource, region });
 };
 
 export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
@@ -87,36 +87,36 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
       open: (resource) => openBySurface(ctx, widgetIds.terminal, resource),
     });
 
-    // Primary anchor (main) + its two info projections (left/right) and the two side
-    // anchors (secondary = terminals, floating = sessions).
+    // Primary anchor (main) + its two menu projections and the two supporting
+    // anchors (secondary = terminals, side = sessions).
     ctx.layout.registerWidget({
       id: widgetIds.workspace,
       title: "Workspace",
-      area: "main",
+      region: "main",
       rendererId: widgetIds.workspace,
     });
     ctx.layout.registerWidget({
       id: widgetIds.concept,
       title: "Surface map",
-      area: "main-left",
+      region: "main-left-menu",
       rendererId: widgetIds.concept,
     });
     ctx.layout.registerWidget({
       id: widgetIds.primaryVsGlobal,
       title: "Primary vs global",
-      area: "main-right",
+      region: "main-right-menu",
       rendererId: widgetIds.primaryVsGlobal,
     });
     ctx.layout.registerWidget({
       id: widgetIds.session,
       title: "Session",
-      area: "floating",
+      region: "side",
       rendererId: widgetIds.session,
     });
     ctx.layout.registerWidget({
       id: widgetIds.terminal,
       title: "Terminal",
-      area: "secondary",
+      region: "secondary",
       rendererId: widgetIds.terminal,
     });
 
@@ -128,7 +128,7 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     });
     ctx.renderers.registerRenderer({
       id: widgetIds.session,
-      render: (input) => <ResourcePanel input={input} anchor="attached (floating)" />,
+      render: (input) => <ResourcePanel input={input} anchor="attached (side)" />,
     });
     ctx.renderers.registerRenderer({
       id: widgetIds.terminal,

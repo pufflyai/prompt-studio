@@ -1,31 +1,31 @@
-import type { WorkbenchArea } from "../../core";
+import type { WorkbenchRegion } from "../../core";
 
-const viewTargetAreas: Record<string, WorkbenchArea> = {
+const viewTargetRegions: Record<string, WorkbenchRegion> = {
   "workbench.main": "main",
-  "workbench.main.left": "main-left",
-  "workbench.main.right": "main-right",
+  "workbench.main.left": "main-left-menu",
+  "workbench.main.right": "main-right-menu",
   "workbench.secondary": "secondary",
 };
 
-const treeTargetAreas: Record<string, WorkbenchArea> = {
-  "workbench.left.tree": "left",
-  "workbench.main.left.tree": "main-left",
-  "workbench.main.right.tree": "main-right",
+const treeTargetRegions: Record<string, WorkbenchRegion> = {
+  "workbench.left.tree": "sidebar",
+  "workbench.main.left.tree": "main-left-menu",
+  "workbench.main.right.tree": "main-right-menu",
 };
 
-const modeTargetAreas: Record<string, WorkbenchArea> = {
-  "workbench.left": "left",
-  "workbench.main.left": "main-left",
+const modeTargetRegions: Record<string, WorkbenchRegion> = {
+  "workbench.left": "sidebar",
+  "workbench.main.left": "main-left-menu",
   "workbench.main": "main",
-  "workbench.main.right": "main-right",
+  "workbench.main.right": "main-right-menu",
   "workbench.secondary": "secondary",
 };
 
-export const resolveWorkbenchViewArea = (target: string | undefined): WorkbenchArea =>
-  target ? (viewTargetAreas[target] ?? "main") : "main";
+export const resolveWorkbenchViewRegion = (target: string | undefined): WorkbenchRegion =>
+  target ? (viewTargetRegions[target] ?? "main") : "main";
 
-export const resolveWorkbenchTreeArea = (target: string | undefined): WorkbenchArea =>
-  target ? (treeTargetAreas[target] ?? "left") : "left";
+export const resolveWorkbenchTreeRegion = (target: string | undefined): WorkbenchRegion =>
+  target ? (treeTargetRegions[target] ?? "sidebar") : "sidebar";
 
-export const resolveWorkbenchModeArea = (target: string | undefined): WorkbenchArea =>
-  target ? (modeTargetAreas[target] ?? "main") : "main";
+export const resolveWorkbenchModeRegion = (target: string | undefined): WorkbenchRegion =>
+  target ? (modeTargetRegions[target] ?? "main") : "main";

@@ -2,7 +2,7 @@ import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import type { ReactNode } from "react";
 
-interface LeftHeaderContribution {
+interface SidebarHeaderContribution {
   id: string;
   order?: number;
   canRender(input: WorkbenchWidgetRenderInput): boolean;
@@ -13,13 +13,13 @@ type HeaderContributionContext = Pick<WorkbenchWidgetRenderInput["workbench"], "
 
 const leftContributionsByWorkbench = new WeakMap<
   WorkbenchWidgetRenderInput["workbench"]["context"]["store"],
-  LeftHeaderContribution[]
+  SidebarHeaderContribution[]
 >();
 
 const getLeftContributions = (ctx: HeaderContributionContext) => {
   const contributions = leftContributionsByWorkbench.get(ctx.context.store);
   if (contributions) return contributions;
-  const nextContributions: LeftHeaderContribution[] = [];
+  const nextContributions: SidebarHeaderContribution[] = [];
   leftContributionsByWorkbench.set(ctx.context.store, nextContributions);
   return nextContributions;
 };
@@ -32,14 +32,14 @@ export const renderMainHeaderContribution = (
   _placement: WorkbenchWidgetPlacement,
 ) => null;
 
-export const registerLeftHeaderContribution = (
+export const registerSidebarHeaderContribution = (
   ctx: HeaderContributionContext,
-  contribution: LeftHeaderContribution,
+  contribution: SidebarHeaderContribution,
 ) => {
   getLeftContributions(ctx).push(contribution);
 };
 
-export const renderLeftHeaderContribution = (input: WorkbenchWidgetRenderInput) =>
+export const renderSidebarHeaderContribution = (input: WorkbenchWidgetRenderInput) =>
   [...getLeftContributions(input.workbench)]
     .sort(byOrder)
     .find((contribution) => contribution.canRender(input))

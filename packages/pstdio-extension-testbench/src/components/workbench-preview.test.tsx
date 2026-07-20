@@ -101,7 +101,7 @@ describe("createPreviewWorkbench", () => {
 
   test("registers the host-owned terminal panel widget", () => {
     const workbench = createTestWorkbench(baseBench);
-    expect(workbench.layout.getWidget("workbench.terminal")).toMatchObject({ area: "secondary" });
+    expect(workbench.layout.getWidget("workbench.terminal")).toMatchObject({ region: "secondary" });
   });
 
   test("only registers explicitly contributed command palette entries", () => {

@@ -18,7 +18,7 @@ const extensionDefinitions: ExtensionDefinition[] = [
     id: "theme-pack",
     name: "Theme Pack",
     description: "Bundles VS Code-compatible color themes that restyle the workbench chrome.",
-    contributes: "Color themes and a gallery in the editor area",
+    contributes: "Color themes and a gallery in the editor region",
     icon: "Palette",
     themes: extensionThemePreferences,
     createModule: createThemePackExtension,
@@ -132,8 +132,8 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
     ctx.layout.registerWidget({
       id: MANAGER_WIDGET_ID,
       title: "Extensions",
-      area: "left",
-      areaSize: { defaultPx: 280, minPx: 240 },
+      region: "sidebar",
+      regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: MANAGER_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({
@@ -143,7 +143,7 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
     ctx.layout.registerPlaceholder({
       id: EMPTY_MAIN_ID,
       title: "No extension views",
-      area: "main",
+      region: "main",
       rendererId: EMPTY_MAIN_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({

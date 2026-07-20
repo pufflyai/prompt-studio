@@ -52,11 +52,11 @@ test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-  const separator = page.getByRole("separator", { name: "Resize main-bottom panel" });
+  const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
   const terminal = page.locator(".xterm").first();
   const terminalContainer = page.locator(".pstdio-terminal").first();
   const terminalScreen = terminal.locator(".xterm-screen");
-  const secondaryPanel = page.getByRole("region", { name: "Main bottom" });
+  const secondaryPanel = page.getByRole("region", { name: "Secondary Panel" });
   await expect(separator).toBeVisible();
   await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
   await expect(terminal).toBeVisible();
@@ -72,7 +72,7 @@ test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async
   expect(widths[3]).toBeGreaterThan(widths[2] * 0.9);
 
   const mainNode = await page.getByRole("region", { name: "Main", exact: true }).elementHandle();
-  const secondaryNode = await page.getByRole("region", { name: "Main bottom" }).elementHandle();
+  const secondaryNode = await page.getByRole("region", { name: "Secondary Panel" }).elementHandle();
   const terminalHostNode = await page.locator(".pstdio-terminal").first().elementHandle();
   const terminalNode = await terminal.elementHandle();
   expect(mainNode).not.toBeNull();

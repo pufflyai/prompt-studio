@@ -133,21 +133,21 @@ export const createTreeNavigationWorkbench = () => {
       ctx.layout.registerWidget({
         id: NAV_TREE_ID,
         title: "Tree navigation",
-        area: "left",
+        region: "sidebar",
         rendererId: NAV_TREE_ID,
-        areaSize: { defaultPx: 240, minPx: 200, maxPx: 320 },
+        regionSize: { defaultPx: 240, minPx: 200, maxPx: 320 },
       });
       ctx.layout.registerWidget({
         id: TICKETS_WIDGET_ID,
         title: "Tickets",
-        area: "main",
+        region: "main",
         rendererId: TICKETS_WIDGET_ID,
       });
       ctx.renderers.registerRenderer({ id: TICKETS_WIDGET_ID, render: (input) => <TicketsWidget input={input} /> });
       ctx.layout.registerWidget({
         id: WORKSPACES_WIDGET_ID,
         title: "Workspaces",
-        area: "main",
+        region: "main",
         rendererId: WORKSPACES_WIDGET_ID,
       });
       ctx.renderers.registerRenderer({
@@ -157,7 +157,7 @@ export const createTreeNavigationWorkbench = () => {
       ctx.layout.registerWidget({
         id: TICKET_WIDGET_ID,
         title: "Ticket",
-        area: "main",
+        region: "main",
         rendererId: TICKET_WIDGET_ID,
       });
       ctx.renderers.registerRenderer({ id: TICKET_WIDGET_ID, render: () => <TicketWidget /> });

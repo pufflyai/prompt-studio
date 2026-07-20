@@ -90,13 +90,13 @@ describe("createExtensionsModule ticket reactivity", () => {
       workbench.layout.registerWidget({
         id: "test.global-header",
         title: "Global header",
-        area: "nav",
+        region: "nav",
         rendererId: "test.global-header",
       });
       workbench.layout.registerWidget({
         id: "test.dashboard-view",
         title: "Dashboard view",
-        area: "main",
+        region: "main",
         rendererId: "test.dashboard-view",
       });
 
@@ -156,7 +156,7 @@ describe("createExtensionsModule ticket reactivity", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
 
-      const leftPlacement = workbench.layout.getLayout().areas.left.widgets[0];
+      const leftPlacement = workbench.layout.getLayout().regions.sidebar.widgets[0];
       expect(leftPlacement).toMatchObject({
         contributionId: "pstdio-core-tickets.ticketFiles",
         title: "PS-10 Ticket",
@@ -169,7 +169,7 @@ describe("createExtensionsModule ticket reactivity", () => {
         outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
       });
 
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.title).toBe("PS-10 Write a haiku");
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.title).toBe("PS-10 Write a haiku");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

@@ -18,7 +18,7 @@ A parser returns one of:
 
 - `{ kind: "resource", resource }` — open a resource (uses your openers from
   story 5).
-- `{ kind: "view", widgetId, area?, resource? }` — reveal a specific widget.
+- `{ kind: "view", widgetId, region?, resource? }` — reveal a specific widget.
 - `{ kind: "command", commandId, args? }` — run a command.
 - `{ kind: "compound", targets }` — apply multiple targets together. If any
   one fails, the layout is rolled back, so a deep link either applies fully

@@ -72,12 +72,12 @@ export const WorkspaceDetail = (props: { input: WorkbenchWidgetRenderInput }) =>
           ))}
         </HStack>
         <Text textStyle="paragraph/XS/regular" color="fg.muted">
-          Switching re-scopes the terminal (secondary) and disconnects a session (floating) that does not belong to the
-          new workspace.
+          Switching re-scopes the terminal (secondary) and disconnects a session (side) that does not belong to the new
+          workspace.
         </Text>
       </Stack>
 
-      <CandidateList input={input} title="Scoped sessions → attached (floating)" kind={SESSION_KIND} />
+      <CandidateList input={input} title="Scoped sessions → attached (side)" kind={SESSION_KIND} />
       <CandidateList input={input} title="Scoped terminals → secondary" kind={TERMINAL_KIND} />
     </Stack>
   );

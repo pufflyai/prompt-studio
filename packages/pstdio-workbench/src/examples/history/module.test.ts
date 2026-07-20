@@ -23,7 +23,7 @@ describe("createHistoryExampleModule", () => {
 
     await workbench.commands.executeCommand(HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID);
 
-    expect(workbench.layout.getLayout().areas.main.widgets).toHaveLength(0);
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
     expect(workbench.commands.isCommandEnabled(HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID)).toBe(false);
   });
 });

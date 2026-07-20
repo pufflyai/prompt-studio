@@ -17,7 +17,7 @@ const scopeContaining =
 describe("reconcileAnchors", () => {
   test("clears a derived anchor (terminals) on primary change", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "terminals", title: "Terminals", area: "secondary" });
+    registerTestWidget(layout, { id: "terminals", title: "Terminals", region: "secondary" });
     layout.openWidget("terminals", { resource: { kind: "terminal", uri: "pstdio://terminal/x" } });
 
     const actions = reconcileAnchors({
@@ -26,12 +26,12 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(),
     });
 
-    expect(actions).toContainEqual({ area: "secondary", action: "clear" });
+    expect(actions).toContainEqual({ region: "secondary", action: "clear" });
   });
 
   test("keeps a detached anchor (session) that is still in scope", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "session", title: "Session", region: "side" });
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
@@ -40,12 +40,12 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(inWorkspace.uri),
     });
 
-    expect(actions).toContainEqual({ area: "floating", action: "keep" });
+    expect(actions).toContainEqual({ region: "side", action: "keep" });
   });
 
   test("disconnects a detached anchor when out of scope (scope wins)", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "session", title: "Session", region: "side" });
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
@@ -54,13 +54,13 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(),
     });
 
-    expect(actions).toContainEqual({ area: "floating", action: "clear" });
+    expect(actions).toContainEqual({ region: "side", action: "clear" });
   });
 
   test("leaves a resourceless side widget untouched (not scoped content)", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "terminals", title: "Terminals", area: "secondary" });
-    registerTestWidget(layout, { id: "panel", title: "Panel", area: "floating" });
+    registerTestWidget(layout, { id: "terminals", title: "Terminals", region: "secondary" });
+    registerTestWidget(layout, { id: "panel", title: "Panel", region: "side" });
     // Opened without a resource — plain parked widgets, not scoped resources.
     layout.openWidget("terminals");
     layout.openWidget("panel");
@@ -76,7 +76,7 @@ describe("reconcileAnchors", () => {
 
   test("never reconciles the primary anchor itself", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "board", title: "Board", area: "main" });
+    registerTestWidget(layout, { id: "board", title: "Board", region: "main" });
     layout.openWidget("board", { resource: ticket });
 
     const actions = reconcileAnchors({
@@ -85,7 +85,7 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(ticket.uri),
     });
 
-    expect(actions.some((action) => action.area === "main")).toBe(false);
+    expect(actions.some((action) => action.region === "main")).toBe(false);
   });
 
   test("ignores anchors with no active placement", () => {
@@ -104,8 +104,8 @@ describe("reconcileAnchors", () => {
 describe("getAnchorResource", () => {
   test("reads the primary resource from the main anchor, not the global signal", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "board", title: "Board", area: "main" });
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "board", title: "Board", region: "main" });
+    registerTestWidget(layout, { id: "session", title: "Session", region: "side" });
 
     layout.openWidget("board", { resource: ticket });
     // Activating a side anchor moves the global active widget, but primary must not follow.

@@ -27,6 +27,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsed?: boolean;
   collapsible?: boolean;
   resizeLabel?: string;
+  resizeHandleSizePx?: number;
   showResizeSeparator?: boolean;
   onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -75,6 +76,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     collapsed: controlledCollapsed,
     collapsible = true,
     resizeLabel = "Resize panel",
+    resizeHandleSizePx = 12,
     showResizeSeparator = true,
     onSizeChange,
     onCollapsedChange,
@@ -293,6 +295,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
         resizablePanel={resizablePanel}
         resizablePanelId={resizablePanelId}
         resizablePanelRef={resizablePanelRef}
+        resizeHandleSizePx={resizeHandleSizePx}
         resizeLabel={resizeLabel}
         resolvedPanelSize={resolvedPanelSize}
         showResizeSeparator={showResizeSeparator}

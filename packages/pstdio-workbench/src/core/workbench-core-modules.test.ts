@@ -24,7 +24,7 @@ describe("workbench modules", () => {
           ctx.layout.registerWidget({
             id: "project.settings",
             title: "Project settings",
-            area: "main",
+            region: "main",
             singleton: true,
             resourceKinds: ["project"],
             rendererId: "project.settings",

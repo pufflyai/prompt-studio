@@ -20,7 +20,7 @@ describe("createBootstrapModule", () => {
       workbench.layout.registerWidget({
         id: widgetId,
         title: resource.label ?? resource.id,
-        area: "main",
+        region: "main",
         rendererId: widgetId,
         singleton: true,
       });
@@ -70,7 +70,7 @@ describe("createBootstrapModule", () => {
     workbench.layout.registerWidget({
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
-      area: "main",
+      region: "main",
       rendererId: "test.workspaces",
       singleton: true,
     });

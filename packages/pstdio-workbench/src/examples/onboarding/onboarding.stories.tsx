@@ -89,6 +89,7 @@ const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
+sidePanelsWorkbench.sessionPanel.setMode("attached");
 const settingsWorkbench = createWorkbench(createSettingsModule());
 const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
 const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule());

@@ -21,7 +21,7 @@ export const healthModule: WorkbenchModuleContribution = {
     ctx.layout.registerWidget({
       id: "docs.health.view",
       title: "Service health",
-      area: "main",
+      region: "main",
       rendererId: "docs.health.table",
     });
     ctx.layout.openWidget("docs.health.view");

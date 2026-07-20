@@ -44,7 +44,7 @@ const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidebarSe
 describe("buildSessionsSidebarSections", () => {
   test("models the list as a single collapsible Sessions group", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
+      nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
 
@@ -68,7 +68,7 @@ describe("buildSessionsSidebarSections", () => {
 
   test("keeps the workspace embedded Sessions group hideable", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
+      nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
 
@@ -77,21 +77,21 @@ describe("buildSessionsSidebarSections", () => {
 
   test("uses command targets for embedded session rows", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
+      nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
     const children = sessionGroupChildren(sections);
 
     expect(children.find((node) => node.id === "dashboard-workbench://session/session-1")?.target).toMatchObject({
       kind: "command",
-      commandId: dashboardCommandIds.openFloatingSession,
+      commandId: dashboardCommandIds.openSessionPanel,
       args: { resource: sessionResource("session-1") },
     });
   });
 
   test("filters embedded session rows to the current workspace", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
+      nodeTarget: "side",
       sessions: [session({ id: "session-1", workspaceId: "workspace-1" }), session({ id: "session-2" })],
       workspace: workspaceResource("workspace-1"),
     });
@@ -104,7 +104,7 @@ describe("buildSessionsSidebarSections", () => {
 
   test("shows an empty placeholder when a workspace has no sessions", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
+      nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
       workspace: workspaceResource("workspace-1"),
     });

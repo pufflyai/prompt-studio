@@ -50,7 +50,7 @@ describe("registerWorkspaceResourceActions", () => {
     );
   });
 
-  test("opens a workspace terminal in the main-bottom panel", async () => {
+  test("opens a workspace terminal in the Secondary Panel", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
@@ -73,12 +73,12 @@ describe("registerWorkspaceResourceActions", () => {
       resource: workspace,
     });
 
-    const secondaryArea = workbench.layout.getLayout().areas.secondary;
-    expect(secondaryArea.activeWidgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
-    const terminals = secondaryArea.widgets.filter(
+    const secondaryRegion = workbench.layout.getLayout().regions.secondary;
+    expect(secondaryRegion.activeWidgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminals = secondaryRegion.widgets.filter(
       (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
     );
-    expect(secondaryArea.widgets.map((placement) => placement.contributionId)).toEqual([
+    expect(secondaryRegion.widgets.map((placement) => placement.contributionId)).toEqual([
       WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
       WORKBENCH_TERMINAL_WIDGET_ID,
     ]);
@@ -114,7 +114,7 @@ describe("registerWorkspaceResourceActions", () => {
       resource: workspace,
     });
 
-    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([]);
+    expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([]);
   });
 
   test("keeps terminal action visible for default and worktree workspace resources", () => {

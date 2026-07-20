@@ -28,10 +28,10 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labSidebar",
       ]);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);
     } finally {
@@ -40,7 +40,7 @@ describe("createExtensionsModule mode layout", () => {
     }
   });
 
-  test("reopens a mode-layout extension view in the primary area on history replay", async () => {
+  test("reopens a mode-layout extension view in the primary region on history replay", async () => {
     const loadMetadata = mock(async () => metadataWithLabMode);
     const loadAppearance = mock(async () => emptyAppearance);
     const workbench = createWorkbenchCore();
@@ -52,16 +52,16 @@ describe("createExtensionsModule mode layout", () => {
       await flushMicrotasks();
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      const mainResource = workbench.layout.getLayout().areas.main.widgets[0]?.resource;
+      const mainResource = workbench.layout.getLayout().regions.main.widgets[0]?.resource;
       expect(mainResource?.kind).toBe("extension-view");
 
-      // Navigate the primary area away, then replay the extension-view entry the way history
+      // Navigate the primary region away, then replay the extension-view entry the way history
       // goBack/goForward does (openResource with replaceActive). Before the view opener existed,
       // this rejected with "No opener registered for resource kind: extension-view".
       workbench.layout.openWidget(dashboardWidgetIds.extensionRoute, { replaceActive: true });
       await workbench.resources.openResource(mainResource!, { replaceActive: true });
 
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);
     } finally {
@@ -82,8 +82,8 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio-core-tickets.ticket");
 
-      expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

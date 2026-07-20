@@ -171,7 +171,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.commands.registerCommand(
       { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main", category: "Onboarding", icon: "Crosshair" },
-      { execute: () => ctx.focus.setActiveArea("main") },
+      { execute: () => ctx.focus.setActiveRegion("main") },
     );
 
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Navigation guide", icon: "FileText" });
@@ -239,14 +239,14 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: NAVIGATION_HOME_WIDGET_ID,
       title: "Navigation",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: NAVIGATION_HOME_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: NAVIGATION_GUIDE_WIDGET_ID,
       title: "Navigation guide",
-      area: "main",
+      region: "main",
       closable: true,
       singleton: true,
       resourceKinds: [GUIDE_KIND],
@@ -255,9 +255,9 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: NAVIGATION_TREE_ID,
       title: "Navigation",
-      area: "left",
+      region: "sidebar",
       singleton: true,
-      areaSize: { defaultPx: 260, minPx: 220 },
+      regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: NAVIGATION_TREE_ID,
     });
 

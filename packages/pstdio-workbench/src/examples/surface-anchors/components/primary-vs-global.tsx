@@ -22,8 +22,8 @@ const SignalRow = (props: SignalRowProps) => {
   );
 };
 
-// Shows the two active-resource signals side by side. Activating a side anchor (clicking
-// into the floating session) moves the GLOBAL signal but leaves PRIMARY on the workspace —
+// Shows the two active-resource signals side by side. Activating a supporting anchor (clicking
+// into the Side Panel session) moves the GLOBAL signal but leaves PRIMARY on the workspace —
 // which is why projections, history and lastResource follow primary, not global.
 export const PrimaryVsGlobalPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { workbench } = props.input;
@@ -43,7 +43,7 @@ export const PrimaryVsGlobalPanel = (props: { input: WorkbenchWidgetRenderInput 
       <SignalRow
         label="global active"
         resourceLabel={workbench.getActiveResource()?.label}
-        hint="last activated widget in ANY area"
+        hint="last activated widget in ANY region"
       />
     </Stack>
   );

@@ -14,10 +14,10 @@ const createDashboardWorkbench = () => {
 };
 
 // After the unification, trees are placed via widgets. The "active" tree is the
-// active widget in the left area whose rendererId matches a registered tree
+// active widget in the Sidebar whose rendererId matches a registered tree
 // renderer.
 const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
-  const leftWidgets = workbench.layout.getLayout().areas.left.widgets;
+  const leftWidgets = workbench.layout.getLayout().regions.sidebar.widgets;
   return leftWidgets
     .map((placement) => workbench.layout.getWidget(placement.contributionId))
     .filter((widget): widget is NonNullable<typeof widget> => Boolean(widget))
@@ -25,10 +25,10 @@ const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
     .map((widget) => widget.id);
 };
 
-const resolveAreaPlacementIds = (
+const resolveRegionPlacementIds = (
   workbench: WorkbenchCore,
-  area: keyof ReturnType<WorkbenchCore["layout"]["getLayout"]>["areas"],
-) => workbench.layout.getLayout().areas[area].widgets.map((placement) => placement.contributionId);
+  region: keyof ReturnType<WorkbenchCore["layout"]["getLayout"]>["regions"],
+) => workbench.layout.getLayout().regions[region].widgets.map((placement) => placement.contributionId);
 
 describe("dashboard workbench navigation", () => {
   test("uses the standard resource icons", () => {
@@ -49,20 +49,20 @@ describe("dashboard workbench navigation", () => {
   test("opens settings as a modal overlay over the dashboard", async () => {
     const workbench = createDashboardWorkbench();
 
-    // The merged navigation tree is the sole left-area tree, so no tabs render.
+    // The merged navigation tree is the sole left-region tree, so no tabs render.
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
     await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
 
     // Settings is a full-window overlay; the dashboard stays in project mode underneath.
-    expect(workbench.layout.getLayout().areas.overlay.activeWidgetId).toBe(WORKBENCH_SETTINGS_WIDGET_ID);
+    expect(workbench.layout.getLayout().regions.overlay.activeWidgetId).toBe(WORKBENCH_SETTINGS_WIDGET_ID);
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
     // Closing the overlay leaves the dashboard exactly as it was.
     workbench.layout.closeWidget(WORKBENCH_SETTINGS_WIDGET_ID);
 
-    expect(resolveAreaPlacementIds(workbench, "overlay")).toEqual([]);
+    expect(resolveRegionPlacementIds(workbench, "overlay")).toEqual([]);
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });
@@ -78,7 +78,7 @@ describe("dashboard workbench navigation", () => {
 
     await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
 
-    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
     await expect(workbench.renderers.getBody(dashboardWidgetIds.ticketSidebar)).resolves.toEqual(
       expect.arrayContaining([
@@ -110,7 +110,7 @@ describe("dashboard workbench navigation", () => {
     expect(ticketRow).toBeDefined();
     ticketRenderer?.onRowClick?.(ticketRow);
 
-    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].resource.uri);
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(
@@ -119,7 +119,7 @@ describe("dashboard workbench navigation", () => {
 
     await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
 
-    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].workspaceResource.uri);
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(

@@ -20,7 +20,7 @@ describe("installWorkbenchControlsRenderer", () => {
       widget: workbench.layout.registerWidget({
         id: "ticket.controls",
         title: "Ticket controls",
-        area: "main-right",
+        region: "main-right-menu",
         rendererId: "ticket.controls",
       }) as never,
       placement: { widgetId: "ticket.controls", contributionId: "ticket.controls", title: "Ticket controls" },

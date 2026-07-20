@@ -20,14 +20,14 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: SINGLETON_WIDGET_ID,
       title: "Default singleton",
-      area: "main",
+      region: "main",
       rendererId: RENDERER_ID,
     });
 
     ctx.layout.registerWidget({
       id: CLOSABLE_SINGLETON_WIDGET_ID,
       title: "Closable singleton",
-      area: "main",
+      region: "main",
       closable: true,
       rendererId: RENDERER_ID,
     });
@@ -35,7 +35,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: NOTE_WIDGET_ID,
       title: "Note",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: [NOTE_KIND],
       rendererId: RENDERER_ID,
@@ -44,7 +44,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: SCRATCH_WIDGET_ID,
       title: "Scratch",
-      area: "main",
+      region: "main",
       singleton: false,
       reuse: "none",
       rendererId: RENDERER_ID,

@@ -42,7 +42,7 @@ export const registerWorkbenchExtensionRoutes = (input: RegisterWorkbenchExtensi
       input.workbench.layout.registerWidget({
         id: route.id,
         title: text(route.label, route.id),
-        area: "main",
+        region: "main",
         rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
         singleton: true,
         config: toBridgeWebviewConfig(route.webview),

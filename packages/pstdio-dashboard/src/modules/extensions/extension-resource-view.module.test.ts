@@ -60,7 +60,7 @@ describe("createExtensionsModule resource views", () => {
       expect(back?.resource?.uri).toBe(ticketsBoard?.uri);
       expect(workbench.layout.getLayout().activeWidgetId).toBe("pstdio-core-tickets.tickets");
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "pstdio-core-tickets.tickets",
       ]);
 
@@ -72,7 +72,7 @@ describe("createExtensionsModule resource views", () => {
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
       );
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
       ]);
     } finally {
@@ -81,7 +81,7 @@ describe("createExtensionsModule resource views", () => {
     }
   });
 
-  test("opens ticket detail in its resource mode with companions in sidebar areas", async () => {
+  test("opens ticket detail in its resource mode with companions in sidebar regions", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const executeCommand = mock(async () => response);
@@ -118,20 +118,20 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.renderers.getTreeRenderer("pstdio-core-tickets.ticketFiles")).toMatchObject({
         title: "Files",
       });
-      expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
         "pstdio-core-tickets.ticketFiles",
       ]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
-      ]);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
+      expect(
+        workbench.layout.getLayout().regions["main-right-menu"].widgets.map((widget) => widget.contributionId),
+      ).toEqual(["dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties"]);
 
       await workbench.resources.openResource(ticketB, { replaceActive: true });
 
-      expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.id).toBe("PS-11");
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource?.id).toBe("PS-11");
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource?.id).toBe("PS-11");
+      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets[0]?.resource?.id).toBe("PS-11");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -240,16 +240,16 @@ describe("createExtensionsModule resource views", () => {
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
-      expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toHaveLength(1);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("project");
-      expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -291,7 +291,9 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
         kind: "ticket",
         id: "PS-10",
         label: "PS-10 Parent",
+        icon: "component",
       });
+      expect(breadcrumbs?.[1]?.icon).toBe("component");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

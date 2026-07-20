@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchWidgetPlacement } from "../../core";
-import { resolveAreaPlacementRenderState } from "./area";
+import { resolveRegionPlacementRenderState } from "./region";
 
 const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidgetPlacement => ({
   widgetId: overrides.widgetId ?? "widget",
@@ -8,9 +8,9 @@ const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidge
   ...overrides,
 });
 
-describe("resolveAreaPlacementRenderState", () => {
+describe("resolveRegionPlacementRenderState", () => {
   test("keeps inactive keep-mounted placements measurable", () => {
-    expect(resolveAreaPlacementRenderState(placement({ widgetId: "terminal" }), "active")).toEqual({
+    expect(resolveRegionPlacementRenderState(placement({ widgetId: "terminal" }), "active")).toEqual({
       active: false,
       display: "flex",
       pointerEvents: "none",
@@ -20,7 +20,7 @@ describe("resolveAreaPlacementRenderState", () => {
   });
 
   test("renders the active placement in flow", () => {
-    expect(resolveAreaPlacementRenderState(placement({ widgetId: "active" }), "active")).toEqual({
+    expect(resolveRegionPlacementRenderState(placement({ widgetId: "active" }), "active")).toEqual({
       active: true,
       display: "flex",
       pointerEvents: "auto",

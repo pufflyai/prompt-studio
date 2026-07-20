@@ -122,7 +122,7 @@ export const registerContentContributionWidgets = (workbench: WorkbenchCore, ben
     workbench.layout.registerWidget({
       id: contentContributionWidgetId(config.kind, config.contribution.id),
       title: text(config.contribution.title, config.contribution.id),
-      area: "main",
+      region: "main",
       rendererId,
       config,
     });

@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchAreas } from "./layout-types";
+import { workbenchRegions } from "./layout-types";
 import {
   getSurface,
-  listAnchorAreas,
-  listProjectionAreas,
+  listAnchorRegions,
+  listProjectionRegions,
   listProjectionsReading,
-  resolveAnchorArea,
+  resolveAnchorRegion,
   surfaceMap,
 } from "./surface-map";
 
 describe("surfaceMap", () => {
-  test("describes every workbench area", () => {
-    for (const area of workbenchAreas) {
-      expect(getSurface(area)).toBeDefined();
+  test("describes every workbench region", () => {
+    for (const region of workbenchRegions) {
+      expect(getSurface(region)).toBeDefined();
     }
   });
 
@@ -34,8 +34,8 @@ describe("surfaceMap", () => {
     });
   });
 
-  test("floating is the attached anchor — detached + scoped (sessions)", () => {
-    expect(getSurface("floating")).toMatchObject({
+  test("Side Panel is the attached anchor — detached + scoped (sessions)", () => {
+    expect(getSurface("side")).toMatchObject({
       role: "anchor",
       anchor: "attached",
       persistence: "detached",
@@ -43,9 +43,9 @@ describe("surfaceMap", () => {
     });
   });
 
-  test("main side panels are projections that read primary", () => {
-    expect(getSurface("main-left")).toMatchObject({ role: "projection", reads: ["primary"] });
-    expect(getSurface("main-right")).toMatchObject({ role: "projection", reads: ["primary"] });
+  test("Main Panel menus are projections that read primary", () => {
+    expect(getSurface("main-left-menu")).toMatchObject({ role: "projection", reads: ["primary"] });
+    expect(getSurface("main-right-menu")).toMatchObject({ role: "projection", reads: ["primary"] });
   });
 
   test("status reads both primary and attached", () => {
@@ -56,33 +56,33 @@ describe("surfaceMap", () => {
     expect(getSurface("nav")).toMatchObject({ role: "projection", reads: ["primary", "attached"] });
   });
 
-  test("left is a navigator projection that selects primary", () => {
-    expect(getSurface("left")).toMatchObject({ role: "projection", reads: ["primary"], navigator: true });
+  test("Sidebar is a navigator projection that selects primary", () => {
+    expect(getSurface("sidebar")).toMatchObject({ role: "projection", reads: ["primary"], navigator: true });
   });
 
   test("overlay is the transient layer", () => {
     expect(getSurface("overlay")).toMatchObject({ role: "transient" });
   });
 
-  test("resolves an anchor id back to its area", () => {
-    expect(resolveAnchorArea("primary")).toBe("main");
-    expect(resolveAnchorArea("secondary")).toBe("secondary");
-    expect(resolveAnchorArea("attached")).toBe("floating");
+  test("resolves an anchor id back to its region", () => {
+    expect(resolveAnchorRegion("primary")).toBe("main");
+    expect(resolveAnchorRegion("secondary")).toBe("secondary");
+    expect(resolveAnchorRegion("attached")).toBe("side");
   });
 
-  test("lists anchor areas and projection areas", () => {
-    expect(listAnchorAreas().sort()).toEqual(["floating", "main", "secondary"]);
-    expect(listProjectionAreas()).toContain("main-left");
-    expect(listProjectionAreas()).toContain("status");
+  test("lists anchor regions and projection regions", () => {
+    expect(listAnchorRegions().sort()).toEqual(["main", "secondary", "side"]);
+    expect(listProjectionRegions()).toContain("main-left-menu");
+    expect(listProjectionRegions()).toContain("status");
   });
 
   test("lists projections that read a given anchor", () => {
     const readsAttached = listProjectionsReading("attached");
     expect(readsAttached).toContain("status");
-    expect(readsAttached).toContain("floating-header");
+    expect(readsAttached).toContain("side-header");
   });
 
-  test("surfaceMap covers exactly the workbench areas", () => {
-    expect(Object.keys(surfaceMap).sort()).toEqual([...workbenchAreas].sort());
+  test("surfaceMap covers exactly the workbench regions", () => {
+    expect(Object.keys(surfaceMap).sort()).toEqual([...workbenchRegions].sort());
   });
 });

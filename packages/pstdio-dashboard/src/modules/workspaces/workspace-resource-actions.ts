@@ -85,7 +85,7 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
   const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
   const existing = ctx.layout
     .getLayout()
-    .areas.secondary.widgets.find(
+    .regions.secondary.widgets.find(
       (placement) =>
         placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
     );
@@ -97,7 +97,7 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
     });
   }
 
-  ctx.layout.setAreaVisible("secondary", true);
+  ctx.layout.setRegionVisible("secondary", true);
   ctx.panels.setOpen("secondary", true);
   if (existing) return existing;
 

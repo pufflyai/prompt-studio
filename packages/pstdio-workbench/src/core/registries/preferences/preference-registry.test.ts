@@ -8,22 +8,24 @@ describe("createPreferenceRegistry", () => {
 
     preferences.registerSchema({
       properties: {
-        "workbench.defaultOpenArea": {
+        "workbench.defaultOpenRegion": {
           type: "string",
-          enum: ["main", "main-right", "secondary"],
+          enum: ["main", "main-right-menu", "secondary"],
           default: "main",
           scope: "user",
-          description: "Default area for newly opened resources.",
+          description: "Default region for newly opened resources.",
         },
       },
     });
 
-    preferences.setValue("workbench.defaultOpenArea", "main-right", { scope: "user" });
-    preferences.setValue("workbench.defaultOpenArea", "secondary", { scope: "workspace", scopeId: "w1" });
+    preferences.setValue("workbench.defaultOpenRegion", "main-right-menu", { scope: "user" });
+    preferences.setValue("workbench.defaultOpenRegion", "secondary", { scope: "workspace", scopeId: "w1" });
 
-    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("main-right");
-    expect(preferences.getValue("workbench.defaultOpenArea", { scope: "workspace", scopeId: "w1" })).toBe("secondary");
-    expect(preferences.getSchema("workbench.defaultOpenArea")).toMatchObject({ default: "main" });
+    expect(preferences.getValue("workbench.defaultOpenRegion")).toBe("main-right-menu");
+    expect(preferences.getValue("workbench.defaultOpenRegion", { scope: "workspace", scopeId: "w1" })).toBe(
+      "secondary",
+    );
+    expect(preferences.getSchema("workbench.defaultOpenRegion")).toMatchObject({ default: "main" });
   });
 
   test("uses injected persistence adapters for preference values", () => {
@@ -39,7 +41,7 @@ describe("createPreferenceRegistry", () => {
 
     preferences.registerSchema({
       properties: {
-        "workbench.defaultOpenArea": {
+        "workbench.defaultOpenRegion": {
           type: "string",
           default: "main",
           scope: "user",
@@ -47,9 +49,9 @@ describe("createPreferenceRegistry", () => {
       },
     });
 
-    preferences.setValue("workbench.defaultOpenArea", "main-right", { scope: "user" });
+    preferences.setValue("workbench.defaultOpenRegion", "main-right-menu", { scope: "user" });
 
-    expect(storedValues.get("workbench.defaultOpenArea:user:")).toBe("main-right");
-    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("main-right");
+    expect(storedValues.get("workbench.defaultOpenRegion:user:")).toBe("main-right-menu");
+    expect(preferences.getValue("workbench.defaultOpenRegion")).toBe("main-right-menu");
   });
 });

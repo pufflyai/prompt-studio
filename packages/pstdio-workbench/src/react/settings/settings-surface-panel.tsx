@@ -70,7 +70,7 @@ const CollectionItemView = (props: {
   return <ScrollableSettingsContent>{panel.renderItem(state.item, input) as ReactNode}</ScrollableSettingsContent>;
 };
 
-// The single main-area renderer for the settings surface. Dispatches the open
+// The single main-region renderer for the settings surface. Dispatches the open
 // resource to a schema form, a custom view, or a collection item editor.
 export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const { input, settings, resolveScopeId } = props;

@@ -1,8 +1,8 @@
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { WorkbenchCore, WorkbenchRegion } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "./workbench-panel-state";
 
-// The collapse/reveal state of one panel around the main editor area, bundled so
+// The collapse/reveal state of one panel around the main editor region, bundled so
 // WorkbenchBody receives one object per panel instead of six flat props.
 export interface WorkbenchPanelView {
   has: boolean;
@@ -15,58 +15,59 @@ export interface WorkbenchPanelView {
 
 export interface WorkbenchMainPanels {
   hasMainHeader: boolean;
-  mainLeft: WorkbenchPanelView;
-  mainRight: WorkbenchPanelView;
-  mainBottom: WorkbenchPanelView;
+  mainLeftMenu: WorkbenchPanelView;
+  mainRightMenu: WorkbenchPanelView;
+  secondaryPanel: WorkbenchPanelView;
 }
 
-type MainPanelAreaId = "main-left" | "main-right" | "secondary";
+type MainPanelRegionId = "main-left-menu" | "main-right-menu" | "secondary";
 
-// Derives the main-area panel state from the layout and panels stores. Owned by
+// Derives the main-region panel state from the layout and panels stores. Owned by
 // WorkbenchBody — WorkbenchContent does not use any of these values itself.
 export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainPanels => {
-  const areas = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas);
+  const regions = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
   const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
-  const openByAreaId = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId);
+  const openByRegionId = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId);
 
-  const hasContent = (area: WorkbenchArea) => areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+  const hasContent = (region: WorkbenchRegion) => regions[region].widgets.length > 0 || Boolean(placeholders[region]);
 
-  // main-left / main-right are companions of the primary (main) anchor — they only make
+  // Main menus are companions of the primary (main) anchor — they only make
   // sense alongside a main resource. When `main` has no active resource (e.g. the last
   // main tab was closed) they are hidden by the framework, so apps never wire that.
-  const mainActive = areas.main.widgets.find((p) => p.widgetId === areas.main.activeWidgetId) ?? areas.main.widgets[0];
+  const mainActive =
+    regions.main.widgets.find((p) => p.widgetId === regions.main.activeWidgetId) ?? regions.main.widgets[0];
   const hasPrimary = Boolean(mainActive?.resource);
 
-  // The side regions (main-left / main-right) are headerless; only `secondary` carries a
-  // header area, so `headerArea` is optional. `companionOfPrimary` panels also require a
+  // The Main Panel menus are headerless; only `secondary` carries a
+  // header region, so `headerRegion` is optional. `companionOfPrimary` panels also require a
   // primary resource to be shown.
   const resolvePanel = (
-    area: MainPanelAreaId,
-    headerArea?: WorkbenchArea,
+    region: MainPanelRegionId,
+    headerRegion?: WorkbenchRegion,
     companionOfPrimary = false,
   ): WorkbenchPanelView => {
-    const collapsible = headerArea
-      ? resolvePanelCollapsible(workbench, headerArea, area)
-      : resolvePanelCollapsible(workbench, area);
-    const open = openByAreaId[area] ?? true;
-    const hasOwnContent = hasContent(area) || (headerArea ? hasContent(headerArea) : false);
+    const collapsible = headerRegion
+      ? resolvePanelCollapsible(workbench, headerRegion, region)
+      : resolvePanelCollapsible(workbench, region);
+    const open = openByRegionId[region] ?? true;
+    const hasOwnContent = hasContent(region) || (headerRegion ? hasContent(headerRegion) : false);
 
     return {
       has: hasOwnContent && (!companionOfPrimary || hasPrimary),
-      hasHeader: headerArea ? hasContent(headerArea) : false,
+      hasHeader: headerRegion ? hasContent(headerRegion) : false,
       collapsible,
       collapsed: !open && collapsible,
-      onOpen: () => setWorkbenchPanelOpen(workbench, area, true),
+      onOpen: () => setWorkbenchPanelOpen(workbench, region, true),
       onCollapsedChange: (collapsed) => {
-        if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, area, !collapsed);
+        if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, region, !collapsed);
       },
     };
   };
 
   return {
     hasMainHeader: hasContent("main-header"),
-    mainLeft: resolvePanel("main-left", undefined, true),
-    mainRight: resolvePanel("main-right", undefined, true),
-    mainBottom: resolvePanel("secondary", "secondary-header"),
+    mainLeftMenu: resolvePanel("main-left-menu", undefined, true),
+    mainRightMenu: resolvePanel("main-right-menu", undefined, true),
+    secondaryPanel: resolvePanel("secondary", "secondary-header"),
   };
 };

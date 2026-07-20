@@ -1,11 +1,11 @@
 import {
   type WorkbenchCoreContributionContext,
   type WorkbenchModuleContribution,
-  workbenchAreaTabLeadingMenuPath,
+  workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 
-// The host-owned terminal panel in the workbench `secondary` (bottom) area.
+// The host-owned terminal panel in the workbench `secondary` (bottom) region.
 // Exported so hosts can open or assert it directly.
 export const WORKBENCH_TERMINAL_WIDGET_ID = "workbench.terminal";
 
@@ -23,7 +23,7 @@ export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launche
 const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
   const existing = ctx.layout
     .getLayout()
-    .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+    .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
   if (existing) return existing;
 
   return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
@@ -39,7 +39,7 @@ const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
   const terminalPlacements = ctx.layout
     .getLayout()
-    .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    .regions.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
   const titleIndexes = terminalPlacements
     .map((placement) => terminalTitlePattern.exec(placement.title ?? "")?.[1])
     .filter((index): index is string => index !== undefined)
@@ -68,7 +68,7 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
   );
 };
 
-// Opens a new terminal placement, revealing the bottom area if it is collapsed.
+// Opens a new terminal placement, revealing the bottom region if it is collapsed.
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
   input: OpenWorkbenchTerminalInput = {},
@@ -80,13 +80,13 @@ export const openWorkbenchTerminal = (
     resource,
     title: input.title ?? getNextTerminalTitle(ctx),
   });
-  ctx.layout.setAreaVisible("secondary", true);
+  ctx.layout.setRegionVisible("secondary", true);
   ctx.panels.setOpen("secondary", true);
   return placement;
 };
 
 /**
- * Host-owned terminal surface: tabbed placements in the `secondary` area whose
+ * Host-owned terminal surface: tabbed placements in the `secondary` region whose
  * chrome, focus, lifecycle, and styling belong to the workbench. Sessions are
  * owned by `workbench.terminal` (the same registry the `terminal.session`
  * webview capability uses); the host injects a session opener via
@@ -100,13 +100,13 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
       ctx.layout.registerWidget({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
-        area: "secondary",
+        region: "secondary",
         singleton: false,
         reuse: "none",
         closable: true,
         mountStrategy: "keep-mounted",
         rendererId: RENDERER_ID,
-        areaSize: { defaultPx: 240, minPx: 120 },
+        regionSize: { defaultPx: 240, minPx: 120 },
       }),
       ctx.renderers.registerRenderer({
         id: RENDERER_ID,
@@ -116,12 +116,12 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
       ctx.layout.registerWidget({
         id: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
         title: "Terminal",
-        area: "secondary",
+        region: "secondary",
         singleton: true,
         closable: false,
         hiddenByDefault: true,
         rendererId: LAUNCHER_RENDERER_ID,
-        areaSize: { defaultPx: 240, minPx: 120 },
+        regionSize: { defaultPx: 240, minPx: 120 },
       }),
       ctx.commands.registerCommand(
         {
@@ -132,7 +132,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         },
         { execute: (_args, context) => openWorkbenchTerminal(ctx, { resource: context?.resource }) },
       ),
-      ctx.layout.registerMenuItem(workbenchAreaTabLeadingMenuPath("secondary"), {
+      ctx.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("secondary"), {
         commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
         label: "New terminal",
         icon: "Plus",

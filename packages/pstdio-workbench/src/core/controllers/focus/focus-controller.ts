@@ -2,21 +2,21 @@ import type { ContextKeyService } from "../../shared/context/context-key-service
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
-export const workbenchFocusAreas = ["activityBar", "sideBar", "main", "panel", "statusBar"] as const;
+export const workbenchFocusRegions = ["activity", "sidebar", "main", "secondary", "side", "status"] as const;
 
-export type WorkbenchFocusArea = (typeof workbenchFocusAreas)[number];
+export type WorkbenchFocusRegionId = (typeof workbenchFocusRegions)[number];
 
-export type WorkbenchFocusChangeListener = (area: WorkbenchFocusArea | undefined) => void;
+export type WorkbenchFocusChangeListener = (region: WorkbenchFocusRegionId | undefined) => void;
 
 export interface WorkbenchFocusState {
-  activeArea: WorkbenchFocusArea | undefined;
+  activeRegion: WorkbenchFocusRegionId | undefined;
 }
 
 export interface WorkbenchFocusController {
   store: WorkbenchStore<WorkbenchFocusState>;
-  setActiveArea(area: WorkbenchFocusArea): void;
+  setActiveRegion(region: WorkbenchFocusRegionId): void;
   clearFocus(): void;
-  getActiveArea(): WorkbenchFocusArea | undefined;
+  getActiveRegion(): WorkbenchFocusRegionId | undefined;
   onDidChange(listener: WorkbenchFocusChangeListener): Disposable;
 }
 
@@ -24,28 +24,29 @@ export interface CreateWorkbenchFocusControllerInput {
   context: ContextKeyService;
 }
 
-const focusContextByArea = {
-  activityBar: "activityBarFocus",
-  sideBar: "sideBarFocus",
+const focusContextByRegion = {
+  activity: "activityFocus",
+  sidebar: "sidebarFocus",
   main: "mainFocus",
-  panel: "panelFocus",
-  statusBar: "statusBarFocus",
-} as const satisfies Record<WorkbenchFocusArea, string>;
+  secondary: "secondaryFocus",
+  side: "sideFocus",
+  status: "statusFocus",
+} as const satisfies Record<WorkbenchFocusRegionId, string>;
 
 export const createWorkbenchFocusController = (
   input: CreateWorkbenchFocusControllerInput,
 ): WorkbenchFocusController => {
   const store = createWorkbenchStore<WorkbenchFocusState>({
     name: "workbench.focus",
-    initialState: { activeArea: undefined },
+    initialState: { activeRegion: undefined },
   });
   const context = input.context.createScope("workbench.focus");
 
-  const applyContext = (area: WorkbenchFocusArea | undefined) => {
-    context.set("workbenchFocus", area !== undefined);
-    context.set("activeWorkbenchFocusArea", area);
-    for (const focusArea of workbenchFocusAreas) {
-      context.set(focusContextByArea[focusArea], focusArea === area);
+  const applyContext = (region: WorkbenchFocusRegionId | undefined) => {
+    context.set("workbenchFocus", region !== undefined);
+    context.set("activeWorkbenchFocusRegion", region);
+    for (const focusRegion of workbenchFocusRegions) {
+      context.set(focusContextByRegion[focusRegion], focusRegion === region);
     }
   };
 
@@ -54,26 +55,26 @@ export const createWorkbenchFocusController = (
   return {
     store,
 
-    setActiveArea(area) {
-      if (store.getState().activeArea === area) return;
-      store.setState({ activeArea: area }, false, "setActiveWorkbenchFocusArea");
-      applyContext(area);
+    setActiveRegion(region) {
+      if (store.getState().activeRegion === region) return;
+      store.setState({ activeRegion: region }, false, "setActiveWorkbenchFocusRegion");
+      applyContext(region);
     },
 
     clearFocus() {
-      if (store.getState().activeArea === undefined) return;
-      store.setState({ activeArea: undefined }, false, "clearWorkbenchFocusArea");
+      if (store.getState().activeRegion === undefined) return;
+      store.setState({ activeRegion: undefined }, false, "clearWorkbenchFocusRegion");
       applyContext(undefined);
     },
 
-    getActiveArea() {
-      return store.getState().activeArea;
+    getActiveRegion() {
+      return store.getState().activeRegion;
     },
 
     onDidChange(listener) {
       const unsubscribe = store.subscribeSelector(
-        (state) => state.activeArea,
-        (area) => listener(area),
+        (state) => state.activeRegion,
+        (region) => listener(region),
       );
       return createDisposable(unsubscribe);
     },

@@ -43,7 +43,7 @@ import type { ExecuteDashboardExtensionCommand } from "./extension-command-handl
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
-import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { dashboardExtensionViewKind, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -217,7 +217,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         {
           id: dashboardWidgetIds.extensionRoute,
           title: "Extension route",
-          area: "main",
+          region: "main",
           singleton: true,
           rendererId: dashboardWidgetIds.extensionRoute,
           priority: 70,
@@ -237,10 +237,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         kind: dashboardExtensionRouteKind,
         list: () => buildDashboardExtensionRouteEntries({ metadata, projectId }),
       });
-      // A mode-layout view docked in the primary area (e.g. an extension overview) is recorded
+      // A mode-layout view docked in the primary region (e.g. an extension overview) is recorded
       // as an `extension-view` history landmark. Back/Forward replay reopens it through this
       // opener, which re-derives the view from the cached manifest and re-places the widget.
-      // Without it, replaying that entry would silently leave the primary area desynced from the
+      // Without it, replaying that entry would silently leave the primary region desynced from the
       // history cursor (there is no opener for the synthetic `extension-view` kind otherwise).
       ctx.resources.registerOpener({
         id: "dashboard.extensions.view-opener",
@@ -255,7 +255,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
           return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
             resource,
-            area: extensionViewArea(view.target),
+            region: extensionViewRegion(view.target),
             title: resource.label,
             replaceActive: openInput.replaceActive,
           });

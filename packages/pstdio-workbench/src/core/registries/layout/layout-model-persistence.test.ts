@@ -10,7 +10,7 @@ import { registerTestWidget } from "./layout-model-test-utils";
 const terminalContribution = {
   id: "workbench.terminal",
   title: "Terminal",
-  area: "secondary" as const,
+  region: "secondary" as const,
   singleton: false,
   reuse: "none" as const,
 };
@@ -31,7 +31,7 @@ const createTerminalLayout = (persistence: LayoutPersistenceAdapter) => {
 };
 
 const widgetIds = (layout: LayoutModel) =>
-  layout.getLayout().areas.secondary.widgets.map((placement) => placement.widgetId);
+  layout.getLayout().regions.secondary.widgets.map((placement) => placement.widgetId);
 
 describe("createLayoutModel persisted widget ids", () => {
   test("allocates a unique id after restoring non-singleton placements", () => {
@@ -44,7 +44,7 @@ describe("createLayoutModel persisted widget ids", () => {
     const thirdPlacement = restoredLayout.openWidget(terminalContribution.id);
 
     expect(widgetIds(restoredLayout)).toEqual(["workbench.terminal", "workbench.terminal:1", "workbench.terminal:2"]);
-    expect(restoredLayout.getLayout().areas.secondary.activeWidgetId).toBe(thirdPlacement.widgetId);
+    expect(restoredLayout.getLayout().regions.secondary.activeWidgetId).toBe(thirdPlacement.widgetId);
 
     const restoredAgain = createTerminalLayout(persistence);
     const fourthPlacement = restoredAgain.openWidget(terminalContribution.id);
@@ -55,7 +55,7 @@ describe("createLayoutModel persisted widget ids", () => {
       "workbench.terminal:2",
       "workbench.terminal:3",
     ]);
-    expect(restoredAgain.getLayout().areas.secondary.activeWidgetId).toBe(fourthPlacement.widgetId);
+    expect(restoredAgain.getLayout().regions.secondary.activeWidgetId).toBe(fourthPlacement.widgetId);
   });
 
   test("repairs duplicate ids from a persisted layout before opening another placement", () => {
@@ -65,16 +65,16 @@ describe("createLayoutModel persisted widget ids", () => {
     firstLayout.openWidget(terminalContribution.id);
 
     const corrupted = structuredClone(savedLayouts.at(-1)!);
-    const duplicatedPlacement = corrupted.areas.secondary.widgets[1]!;
-    corrupted.areas.secondary.widgets.push({ ...duplicatedPlacement, title: "Terminal 3" });
-    corrupted.areas.secondary.activeWidgetId = duplicatedPlacement.widgetId;
+    const duplicatedPlacement = corrupted.regions.secondary.widgets[1]!;
+    corrupted.regions.secondary.widgets.push({ ...duplicatedPlacement, title: "Terminal 3" });
+    corrupted.regions.secondary.activeWidgetId = duplicatedPlacement.widgetId;
     corrupted.activeWidgetId = duplicatedPlacement.widgetId;
     savedLayouts.push(corrupted);
 
     const restoredLayout = createTerminalLayout(persistence);
 
     expect(widgetIds(restoredLayout)).toEqual(["workbench.terminal", "workbench.terminal:1", "workbench.terminal:2"]);
-    expect(restoredLayout.getLayout().areas.secondary.activeWidgetId).toBe("workbench.terminal:2");
+    expect(restoredLayout.getLayout().regions.secondary.activeWidgetId).toBe("workbench.terminal:2");
 
     const fourthPlacement = restoredLayout.openWidget(terminalContribution.id);
     expect(fourthPlacement.widgetId).toBe("workbench.terminal:3");

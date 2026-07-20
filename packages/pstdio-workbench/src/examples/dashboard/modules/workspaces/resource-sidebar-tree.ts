@@ -117,7 +117,7 @@ export const registerResourceSidebarTree = (ctx: WorkbenchModuleContributionCont
     {
       id: dashboardWidgetIds.ticketSidebar,
       title: "Resource sidebar",
-      area: "left",
+      region: "sidebar",
       rendererId: dashboardWidgetIds.ticketSidebar,
       singleton: true,
     },

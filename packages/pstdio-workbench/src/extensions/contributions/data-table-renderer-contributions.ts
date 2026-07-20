@@ -16,7 +16,7 @@ import {
   executeWorkbenchExtensionCommand,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchViewRegion } from "../shared/workbench-targets";
 
 type DataTableViewRecord = WorkbenchExtensionMetadata["views"][number];
 
@@ -114,7 +114,7 @@ const registerView = (context: WorkbenchExtensionCommandContext, view: DataTable
   return context.workbench.layout.registerWidget({
     id: view.id,
     title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+    region: view.surface === "modal" ? "overlay" : resolveWorkbenchViewRegion(view.target),
     rendererId: view.dataTableRendererId,
     singleton: true,
     resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,

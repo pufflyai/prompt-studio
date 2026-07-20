@@ -102,7 +102,7 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: DOC_WIDGET_ID,
       title: "Document",
-      area: "main",
+      region: "main",
       rendererId: DOC_RENDERER_ID,
       singleton: false,
       resourceKinds: [DOC_KIND],
@@ -118,8 +118,8 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: TREE_ID,
       title: "Customizable tree",
-      area: "left",
-      areaSize: { defaultPx: 280, minPx: 240 },
+      region: "sidebar",
+      regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: TREE_ID,
     });
     ctx.layout.openWidget(TREE_ID);

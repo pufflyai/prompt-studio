@@ -1,14 +1,14 @@
 import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchArea } from "../../../core";
+import type { WorkbenchRegion } from "../../../core";
 
-interface AreaMapPlaceholderProps {
-  area: WorkbenchArea;
+interface RegionMapPlaceholderProps {
+  region: WorkbenchRegion;
   role: string;
   uri: string;
   name: string;
 }
 
-const AreaMapPlaceholderContent = (props: { name: string; role: string; uri: string }) => {
+const RegionMapPlaceholderContent = (props: { name: string; role: string; uri: string }) => {
   const { name, role, uri } = props;
 
   return (
@@ -28,7 +28,7 @@ const AreaMapPlaceholderContent = (props: { name: string; role: string; uri: str
 
 // A compact single-line label for the thin strips (headers, status, chrome) where the
 // role matters more than the uri.
-const AreaMapPlaceholderStrip = (props: { name: string; role: string }) => {
+const RegionMapPlaceholderStrip = (props: { name: string; role: string }) => {
   const { name, role } = props;
 
   return (
@@ -43,35 +43,35 @@ const AreaMapPlaceholderStrip = (props: { name: string; role: string }) => {
   );
 };
 
-export const AreaMapPlaceholder = (props: AreaMapPlaceholderProps) => {
-  const { area, name, role, uri } = props;
+export const RegionMapPlaceholder = (props: RegionMapPlaceholderProps) => {
+  const { region, name, role, uri } = props;
 
-  if (area === "overlay") {
+  if (region === "overlay") {
     return (
       <Flex h="full" w="full" p="xs" alignItems="center" justifyContent="center" pointerEvents="none">
         <Stack pointerEvents="auto" w="full">
-          <AreaMapPlaceholderContent name={name} role={role} uri={uri} />
+          <RegionMapPlaceholderContent name={name} role={role} uri={uri} />
         </Stack>
       </Flex>
     );
   }
 
-  if (area === "status") {
-    return <AreaMapPlaceholderStrip name={name} role={role} />;
+  if (region === "status") {
+    return <RegionMapPlaceholderStrip name={name} role={role} />;
   }
 
-  const isHeaderArea =
-    area === "nav" ||
-    area === "main-header" ||
-    area === "left-header" ||
-    area === "secondary-header" ||
-    area === "floating-header";
+  const isHeaderRegion =
+    region === "nav" ||
+    region === "main-header" ||
+    region === "sidebar-header" ||
+    region === "secondary-header" ||
+    region === "side-header";
 
-  if (isHeaderArea) {
-    return <AreaMapPlaceholderStrip name={name} role={role} />;
+  if (isHeaderRegion) {
+    return <RegionMapPlaceholderStrip name={name} role={role} />;
   }
 
-  if (area === "activity") {
+  if (region === "activity") {
     return (
       <Flex h="full" w="full" alignItems="center" justifyContent="center" overflow="hidden" p="xs">
         <Stack alignItems="center" gap="xs" maxH="full" minW="0" overflow="hidden" css={{ writingMode: "vertical-rl" }}>
@@ -88,7 +88,7 @@ export const AreaMapPlaceholder = (props: AreaMapPlaceholderProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" justifyContent="center" gap="2xs" overflow="hidden" p="md">
-      <AreaMapPlaceholderContent name={name} role={role} uri={uri} />
+      <RegionMapPlaceholderContent name={name} role={role} uri={uri} />
     </Stack>
   );
 };

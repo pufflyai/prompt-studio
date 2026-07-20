@@ -102,9 +102,14 @@ describe("createWorkbenchModeRegistry", () => {
 
   test("preserves durable placements when switching modes", () => {
     const layout = createLayoutModel();
-    layout.registerWidget({ id: "workbench.status", title: "Status", area: "status", rendererId: "workbench.status" });
-    layout.registerWidget({ id: "sessions.tree", title: "Sessions", area: "left", rendererId: "sessions.tree" });
-    layout.registerWidget({ id: "sessions.chat", title: "Session", area: "main", rendererId: "sessions.chat" });
+    layout.registerWidget({
+      id: "workbench.status",
+      title: "Status",
+      region: "status",
+      rendererId: "workbench.status",
+    });
+    layout.registerWidget({ id: "sessions.tree", title: "Sessions", region: "sidebar", rendererId: "sessions.tree" });
+    layout.registerWidget({ id: "sessions.chat", title: "Session", region: "main", rendererId: "sessions.chat" });
     layout.openWidget("workbench.status", { pinned: true });
 
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
@@ -124,20 +129,20 @@ describe("createWorkbenchModeRegistry", () => {
 
     registry.setActiveMode("sessions");
 
-    expect(layout.getLayout().areas.left.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
 
     registry.setActiveMode("zen");
 
-    expect(layout.getLayout().areas.status.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.left.widgets).toEqual([]);
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
+    expect(layout.getLayout().regions.status.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
   });
 
   test("re-runs activate from a clean layout when re-entering a mode", () => {
     const layout = createLayoutModel();
-    layout.registerWidget({ id: "sessions.chat", title: "Session", area: "main", rendererId: "sessions.chat" });
+    layout.registerWidget({ id: "sessions.chat", title: "Session", region: "main", rendererId: "sessions.chat" });
 
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
     registry.registerMode({
@@ -154,9 +159,9 @@ describe("createWorkbenchModeRegistry", () => {
     layout.openWidget("sessions.chat");
 
     registry.setActiveMode("zen");
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
 
     registry.setActiveMode("sessions");
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 });

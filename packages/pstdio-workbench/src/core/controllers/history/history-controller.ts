@@ -1,7 +1,7 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { resolveAnchorArea } from "../../registries/layout/surface-map";
+import { resolveAnchorRegion } from "../../registries/layout/surface-map";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
@@ -51,12 +51,12 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
   return left.widgetId === right.widgetId;
 };
 
-// History tracks the PRIMARY (main) area's active placement only, so activating a side
-// surface (a left tree, a bottom panel, a floating session) never pushes a back/forward
+// History tracks the PRIMARY (main) region's active placement only, so activating a supporting
+// surface (the Sidebar, Secondary Panel, or Side Panel) never pushes a back/forward
 // entry. Navigation ingress (resource opens) is still recorded globally via
 // onDidOpenResource below — that is a distinct, intentional history source.
 const activePlacementFromLayout = (layout: LayoutModel) =>
-  getActivePlacement(layout.getLayout().areas[resolveAnchorArea("primary")]);
+  getActivePlacement(layout.getLayout().regions[resolveAnchorRegion("primary")]);
 
 const createEntryBase = (counter: number) => {
   const recordedAt = Date.now();
@@ -143,8 +143,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
 
   const placementsByWidgetId = (layout = input.layout.getLayout()) => {
     const map = new Map<string, WorkbenchWidgetPlacement>();
-    for (const area of Object.values(layout.areas)) {
-      for (const placement of area.widgets) map.set(placement.widgetId, placement);
+    for (const region of Object.values(layout.regions)) {
+      for (const placement of region.widgets) map.set(placement.widgetId, placement);
     }
     return map;
   };
@@ -239,8 +239,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     }
     if (entry.kind === "widget" && entry.widgetId) {
       const layout = input.layout.getLayout();
-      const existing = Object.values(layout.areas).some((area) =>
-        area.widgets.some((placement) => placement.widgetId === entry.widgetId),
+      const existing = Object.values(layout.regions).some((region) =>
+        region.widgets.some((placement) => placement.widgetId === entry.widgetId),
       );
       if (existing) return input.layout.activateWidget(entry.widgetId);
       return input.layout.openWidget(entry.contributionId ?? entry.widgetId);

@@ -25,7 +25,7 @@ const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCor
   workbench.layout.registerWidget({
     id: dashboardWidgetIds.workspace,
     title: "Workspace",
-    area: "main",
+    region: "main",
     rendererId: dashboardWidgetIds.workspace,
     singleton: true,
   });
@@ -53,13 +53,13 @@ describe("openReviewWorkspace", () => {
 
     await openReviewWorkspace({ workbench }, sessionView);
 
-    const mainPlacement = workbench.layout.getLayout().areas.main.widgets.find((placement) => {
+    const mainPlacement = workbench.layout.getLayout().regions.main.widgets.find((placement) => {
       return placement.contributionId === dashboardWidgetIds.workspace;
     });
 
     expect(workbench.commandPalette.isOpen()).toBe(false);
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(mainPlacement?.resource).toMatchObject({
       kind: "workspace",
       id: "workspace-1",
@@ -94,12 +94,12 @@ describe("openSelectedWorkspace", () => {
       "project-1",
     );
 
-    const mainPlacement = workbench.layout.getLayout().areas.main.widgets.find((placement) => {
+    const mainPlacement = workbench.layout.getLayout().regions.main.widgets.find((placement) => {
       return placement.contributionId === dashboardWidgetIds.workspace;
     });
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(mainPlacement?.resource).toMatchObject({
       kind: "workspace",
       id: "workspace-2",

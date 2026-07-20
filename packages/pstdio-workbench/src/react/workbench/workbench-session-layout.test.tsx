@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "../../core";
-import { WorkbenchFloatingSessionPortal } from "./workbench-session-layout";
+import { WorkbenchSessionRegionPortal } from "./workbench-session-layout";
 
 const workbench = createWorkbenchCore();
 
 const renderFloatingSessionPortal = (mounted: boolean) => {
-  return WorkbenchFloatingSessionPortal({
+  return WorkbenchSessionRegionPortal({
     workbench,
-    hasFloatingPanel: true,
+    hasSidePanel: true,
     mounted,
     sessionHost: { nodeType: 1 } as HTMLDivElement,
-  } as Parameters<typeof WorkbenchFloatingSessionPortal>[0] & { mounted: boolean });
+  } as Parameters<typeof WorkbenchSessionRegionPortal>[0] & { mounted: boolean });
 };
 
-describe("WorkbenchFloatingSessionPortal", () => {
+describe("WorkbenchSessionRegionPortal", () => {
   test("keeps the session mounted while the host is waiting for the next visible slot", () => {
     const portal = renderFloatingSessionPortal(true);
 

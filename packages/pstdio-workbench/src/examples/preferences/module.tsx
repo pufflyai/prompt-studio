@@ -14,10 +14,10 @@ import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 const preferencesWidgetId = "preferences.schemas";
 const preferencesRendererId = "preferences.schemas.renderer";
 const densityPreferenceName = "preferences.example.editorDensity";
-const defaultAreaPreferenceName = "preferences.example.defaultOpenArea";
+const defaultRegionPreferenceName = "preferences.example.defaultOpenRegion";
 const userScope = { scope: "user" } satisfies PreferenceScopeRef;
 const workspaceScope = { scope: "workspace", scopeId: "storybook-workspace" } satisfies PreferenceScopeRef;
-const preferenceNames = [densityPreferenceName, defaultAreaPreferenceName] as const;
+const preferenceNames = [densityPreferenceName, defaultRegionPreferenceName] as const;
 
 const preferenceSchema = {
   properties: {
@@ -28,9 +28,9 @@ const preferenceSchema = {
       scope: "user",
       description: "Controls the preferred editor density.",
     },
-    [defaultAreaPreferenceName]: {
+    [defaultRegionPreferenceName]: {
       type: "string",
-      enum: ["main", "secondary", "main-right"],
+      enum: ["main", "secondary", "main-right-menu"],
       default: "main",
       scope: "workspace",
       description: "Controls where new resource views open for this workspace.",
@@ -43,10 +43,10 @@ const densityOptions = [
   { value: "compact", label: "Compact", icon: "Rows3" },
 ] as const;
 
-const defaultAreaOptions = [
+const defaultRegionOptions = [
   { value: "main", label: "Main", icon: "PanelTop" },
   { value: "secondary", label: "Bottom", icon: "PanelBottom" },
-  { value: "main-right", label: "Right", icon: "PanelRight" },
+  { value: "main-right-menu", label: "Right", icon: "PanelRight" },
 ] as const;
 
 const formatPreferenceValue = (value: PreferenceValue | undefined) => String(value ?? "unset");
@@ -98,7 +98,7 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
   const schemas = useWorkbenchStore(input.workbench.preferences.store, (state) => state.schemas);
   const [, setRevision] = useState(0);
   const density = input.workbench.preferences.getValue(densityPreferenceName, userScope);
-  const defaultArea = input.workbench.preferences.getValue(defaultAreaPreferenceName, workspaceScope);
+  const defaultRegion = input.workbench.preferences.getValue(defaultRegionPreferenceName, workspaceScope);
 
   const setPreference = (name: string, value: PreferenceValue, scope: PreferenceScopeRef) => {
     input.workbench.preferences.setValue(name, value, scope);
@@ -144,17 +144,17 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
         <Box borderWidth="1px" borderColor="border.subtle" p="md">
           <Stack gap="sm">
             <HStack justify="space-between" gap="sm" wrap="wrap">
-              <Text textStyle="label/S/semibold">Default open area</Text>
-              <Badge colorPalette="blue">workspace {formatPreferenceValue(defaultArea)}</Badge>
+              <Text textStyle="label/S/semibold">Default open region</Text>
+              <Badge colorPalette="blue">workspace {formatPreferenceValue(defaultRegion)}</Badge>
             </HStack>
             <HStack gap="xs" wrap="wrap">
-              {defaultAreaOptions.map((option) => (
+              {defaultRegionOptions.map((option) => (
                 <PreferenceOptionButton
                   key={option.value}
                   icon={option.icon}
                   label={option.label}
-                  selected={defaultArea === option.value}
-                  onClick={() => setPreference(defaultAreaPreferenceName, option.value, workspaceScope)}
+                  selected={defaultRegion === option.value}
+                  onClick={() => setPreference(defaultRegionPreferenceName, option.value, workspaceScope)}
                 />
               ))}
             </HStack>
@@ -173,7 +173,7 @@ export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribut
     ctx.layout.registerWidget({
       id: preferencesWidgetId,
       title: "Preference schemas",
-      area: "main",
+      region: "main",
       closable: false,
       rendererId: preferencesRendererId,
     });

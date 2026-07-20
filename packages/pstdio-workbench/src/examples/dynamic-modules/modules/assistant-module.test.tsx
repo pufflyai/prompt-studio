@@ -4,14 +4,14 @@ import { assistantWidgetId } from "../data";
 import { createAssistantModule } from "./assistant-module";
 
 describe("createAssistantModule", () => {
-  test("opens the assistant in the attached floating panel when enabled", () => {
+  test("opens the assistant in the attached Side Panel when enabled", () => {
     const workbench = createWorkbenchCore();
     workbench.sessionPanel.setMode("closed");
 
     workbench.registerModule(createAssistantModule());
 
     expect(workbench.sessionPanel.getMode()).toBe("attached");
-    expect(workbench.layout.getLayout().areas.floating.widgets).toMatchObject([
+    expect(workbench.layout.getLayout().regions.side.widgets).toMatchObject([
       {
         contributionId: assistantWidgetId,
       },

@@ -19,6 +19,7 @@ interface ResizableSplitPanelsProps {
   resizablePanel: ReactNode;
   resizablePanelId: string;
   resizablePanelRef: RefObject<HTMLDivElement | null>;
+  resizeHandleSizePx: number;
   resizeLabel: string;
   resolvedPanelSize: number;
   showResizeSeparator: boolean;
@@ -38,6 +39,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     resizablePanel,
     resizablePanelId,
     resizablePanelRef,
+    resizeHandleSizePx,
     resizeLabel,
     resolvedPanelSize,
     showResizeSeparator,
@@ -85,6 +87,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       collapsible={collapsible}
       contentPanelId={contentPanelId}
       resizablePanelId={resizablePanelId}
+      resizeHandleSizePx={resizeHandleSizePx}
       resizeLabel={resizeLabel}
       resolvedPanelSize={resolvedPanelSize}
       showResizeSeparator={showResizeSeparator}

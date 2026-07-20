@@ -3,7 +3,7 @@ import { text } from "pstdio-extensions/workbench";
 import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchViewRegion } from "../shared/workbench-targets";
 
 type ControlsViewRecord = WorkbenchExtensionMetadata["views"][number];
 
@@ -56,7 +56,7 @@ const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, v
   return context.workbench.layout.registerWidget({
     id: view.id,
     title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+    region: view.surface === "modal" ? "overlay" : resolveWorkbenchViewRegion(view.target),
     rendererId: view.controlsRendererId,
     singleton: true,
     resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,

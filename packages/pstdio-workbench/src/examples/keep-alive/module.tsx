@@ -62,8 +62,8 @@ const IntroPanel = (props: IntroPanelProps) => {
       <Text textStyle="title/S/semibold">Keep-alive demo</Text>
       <Text textStyle="paragraph/M/regular">
         The streaming chat below is registered once with a keep-alive renderer. Two widgets (attached panel, bubble)
-        point at the same `rendererId` and reveal the same subtree in different areas. Toggle between them — the stream,
-        scroll position, and draft input all survive because React never re-mounts the subtree.
+        point at the same `rendererId` and reveal the same subtree in different regions. Toggle between them — the
+        stream, scroll position, and draft input all survive because React never re-mounts the subtree.
       </Text>
       <HStack gap="sm">
         <Button size="sm" onClick={onShowAttached}>
@@ -106,7 +106,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: INTRO_WIDGET_ID,
       title: "Keep-alive demo",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: INTRO_RENDERER_ID,
     });
@@ -114,8 +114,8 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: ATTACHED_WIDGET_ID,
       title: "Chat (attached)",
-      area: "main-right",
-      areaSize: { defaultPx: 360, minPx: 280 },
+      region: "main-right-menu",
+      regionSize: { defaultPx: 360, minPx: 280 },
       closable: true,
       singleton: true,
       rendererId: CHAT_RENDERER_ID,
@@ -124,8 +124,8 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: BUBBLE_WIDGET_ID,
       title: "Chat (bubble)",
-      area: "floating",
-      areaSize: { defaultPx: 360, minPx: 280 },
+      region: "side",
+      regionSize: { defaultPx: 360, minPx: 280 },
       closable: true,
       singleton: true,
       rendererId: CHAT_RENDERER_ID,

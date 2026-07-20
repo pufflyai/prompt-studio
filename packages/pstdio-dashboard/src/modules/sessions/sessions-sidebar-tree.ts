@@ -2,7 +2,7 @@ import type { ResourceRef, TreeNode, TreeViewSection } from "@pstdio/workbench/c
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 
-type SessionNodeTarget = "resource" | "floating";
+type SessionNodeTarget = "resource" | "side";
 
 interface BuildSessionsSidebarSectionsInput {
   sessions: DashboardSession[];
@@ -71,7 +71,7 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
     : {
         target: {
           kind: "command",
-          commandId: dashboardCommandIds.openFloatingSession,
+          commandId: dashboardCommandIds.openSessionPanel,
           args: { resource: session.resource },
         } as const,
       }),
@@ -117,7 +117,7 @@ export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSections
         {
           id: "sessions",
           label: "Sessions",
-          ...(nodeTarget === "floating" ? { canHide: true } : {}),
+          ...(nodeTarget === "side" ? { canHide: true } : {}),
           collapsible: true,
           children: buildSessionGroupChildren(sessions, nodeTarget),
         },

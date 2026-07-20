@@ -58,7 +58,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       resolveScopeId: (scope) => (scope === "project" ? activeProjectId() : undefined),
     }).activate(ctx);
 
-    // Settings is a modal overlay; closing it leaves the main area blank. A landing
+    // Settings is a modal overlay; closing it leaves the main region blank. A landing
     // widget gives a way back in by re-running the built-in open command.
     ctx.renderers.registerRenderer({
       id: "app.settings.launcher.renderer",
@@ -68,7 +68,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         </button>
       ),
     });
-    ctx.layout.registerWidget({ id: "app.settings.launcher", title: "Settings", area: "main", rendererId: "app.settings.launcher.renderer" });
+    ctx.layout.registerWidget({ id: "app.settings.launcher", title: "Settings", region: "main", rendererId: "app.settings.launcher.renderer" });
     ctx.layout.openWidget("app.settings.launcher");
 
     return surface;

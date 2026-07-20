@@ -82,7 +82,7 @@ const registerEmptyMain = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerPlaceholder({
     id: MAIN_PLACEHOLDER_ID,
     title: "Empty main",
-    area: "main",
+    region: "main",
     rendererId: MAIN_PLACEHOLDER_RENDERER_ID,
   });
   ctx.renderers.registerRenderer({
@@ -90,7 +90,7 @@ const registerEmptyMain = (ctx: WorkbenchModuleContributionContext) => {
     render: () => (
       <LessonPanel title="Nothing is open">
         <Text textStyle="paragraph/M/regular">
-          This is the first useful contribution: a placeholder for the main workbench area.
+          This is the first useful contribution: a placeholder for the main workbench region.
         </Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           Register it with <InlineCode>layout.registerPlaceholder</InlineCode> and a renderer.
@@ -104,7 +104,7 @@ const registerGuideWidget = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: GUIDE_WIDGET_ID,
     title: "Guide",
-    area: "main",
+    region: "main",
     closable: true,
     singleton: false,
     resourceKinds: [GUIDE_KIND],
@@ -156,8 +156,8 @@ const registerDocsTree = (ctx: WorkbenchModuleContributionContext, options: { re
   ctx.layout.registerWidget({
     id: DOCS_TREE_ID,
     title: "Docs",
-    area: "left",
-    areaSize: { defaultPx: 260, minPx: 220 },
+    region: "sidebar",
+    regionSize: { defaultPx: 260, minPx: 220 },
     rendererId: DOCS_TREE_ID,
   });
   ctx.layout.openWidget(DOCS_TREE_ID);
@@ -215,8 +215,8 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: DOCS_TREE_ID,
       title: "Docs",
-      area: "left",
-      areaSize: { defaultPx: 260, minPx: 220 },
+      region: "sidebar",
+      regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: DOCS_TREE_ID,
     });
     ctx.layout.openWidget(DOCS_TREE_ID);
@@ -276,7 +276,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: MODE_SWITCHER_WIDGET_ID,
       title: "Modes",
-      area: "activity",
+      region: "activity",
       singleton: true,
       rendererId: MODE_SWITCHER_RENDERER_ID,
     });
@@ -297,7 +297,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
         modeCtx.layout.registerWidget({
           id: "onboarding.review.widget",
           title: "Review queue",
-          area: "main",
+          region: "main",
           singleton: true,
           rendererId: "onboarding.review.renderer",
         });

@@ -36,7 +36,7 @@ import { type CommandRegistry, createCommandRegistry } from "./registries/comman
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
 import { getActivePlacement } from "./registries/layout/layout-operations";
-import { resolveAnchorArea } from "./registries/layout/surface-map";
+import { resolveAnchorRegion } from "./registries/layout/surface-map";
 import { getAnchorResource } from "./registries/layout/surface-reconcile";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -123,7 +123,7 @@ export interface WorkbenchCoreContributionContext {
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
   // The resource hosted by the primary (main) anchor specifically — free of the global
-  // active-resource pollution that any side-area activation introduces. Projections
+  // active-resource pollution that any side-region activation introduces. Projections
   // (side panels, headers) follow this signal, not the global active resource.
   getPrimaryResource(): ResourceRef | undefined;
   onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
@@ -388,13 +388,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         openWidget: (widgetId, openInput) => {
           const placement = core.layout.openWidget(widgetId, openInput);
           // Navigation is ingress — revealing the view is part of the intent.
-          // The area might be hidden (panel collapsed, persisted state); make
+          // The region might be hidden (panel collapsed, persisted state); make
           // sure the user can actually see the widget they navigated to.
           const widget = core.layout.getWidget(widgetId);
-          const area = openInput?.area ?? widget?.area;
-          if (area) {
-            core.layout.setAreaVisible(area, true);
-            if (!core.panels.isOpen(area)) core.panels.setOpen(area, true);
+          const region = openInput?.region ?? widget?.region;
+          if (region) {
+            core.layout.setRegionVisible(region, true);
+            if (!core.panels.isOpen(region)) core.panels.setOpen(region, true);
           }
           return placement;
         },
@@ -423,8 +423,8 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       const activeWidgetId = core.layout.getLayout().activeWidgetId;
       if (!activeWidgetId) return undefined;
 
-      for (const area of Object.values(core.layout.getLayout().areas)) {
-        const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
+      for (const region of Object.values(core.layout.getLayout().regions)) {
+        const placement = region.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
         if (placement) return placement.resource;
       }
 
@@ -447,7 +447,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     onDidChangePrimaryResource(listener) {
       return createDisposable(
         core.layout.store.subscribeSelector(
-          (state) => getActivePlacement(state.layout.areas[resolveAnchorArea("primary")])?.resourceUri,
+          (state) => getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resourceUri,
           () => listener(core.getPrimaryResource()),
         ),
       );
@@ -493,21 +493,21 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
   core.history = createHistoryController({ layout: core.layout, modes: core.modes, resources: core.resources });
 
-  // The panels controller is workbench-global, but layout area visibility is
-  // per-scope. After a scope switch, mirror each area's `visible` flag into
+  // The panels controller is workbench-global, but layout region visibility is
+  // per-scope. After a scope switch, mirror each region's `visible` flag into
   // panels so the panel chrome (collapse/expand) reflects the loaded scope —
   // otherwise the previous scope's collapse state sticks around visually.
   core.layout.onDidChangePersistenceScope(() => {
     const layout = core.layout.getLayout();
-    for (const area of Object.values(layout.areas)) {
-      core.panels.setOpen(area.id, area.visible);
+    for (const region of Object.values(layout.regions)) {
+      core.panels.setOpen(region.id, region.visible);
     }
   });
 
   // Persist the last PRIMARY (main) resource so apps can call `lastResource.restore()`
   // on next boot. We track the primary, not the global active resource: "where you were"
-  // is the main subject (workspace/ticket), not a transient side-anchor selection like a
-  // floating session — those are detached and scoped, so they are intentionally not restored.
+  // is the main subject (workspace/ticket), not a transient supporting selection like a
+  // Side Panel session — those are detached and scoped, so they are intentionally not restored.
   core.onDidChangePrimaryResource((resource) => {
     if (resource) core.lastResource.set(resource);
   });

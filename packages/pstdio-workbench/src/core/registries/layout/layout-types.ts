@@ -2,26 +2,26 @@ import type { ContributionSource, RegisteredContributionMetadata } from "../../s
 import type { ResourceRef } from "../resources/resource-registry";
 import { resolveUniqueWidgetId } from "./widget-id";
 
-export const workbenchAreas = [
+export const workbenchRegions = [
   "nav",
   "activity",
-  "left-header",
-  "left",
+  "sidebar-header",
+  "sidebar",
   "main-header",
-  "main-left",
+  "main-left-menu",
   "main",
-  "main-right",
+  "main-right-menu",
   "secondary-header",
   "secondary",
+  "side-header",
+  "side",
   "status",
   "overlay",
-  "floating-header",
-  "floating",
 ] as const;
 
-export type WorkbenchArea = (typeof workbenchAreas)[number];
+export type WorkbenchRegion = (typeof workbenchRegions)[number];
 
-export interface WorkbenchAreaSize {
+export interface WorkbenchRegionSize {
   defaultPx?: number;
   minPx?: number;
   maxPx?: number;
@@ -34,8 +34,8 @@ export type WidgetMountStrategy = "active" | "keep-mounted";
 export interface WidgetContribution {
   id: string;
   title: string;
-  area: WorkbenchArea;
-  fallbackArea?: WorkbenchArea;
+  region: WorkbenchRegion;
+  fallbackRegion?: WorkbenchRegion;
   singleton?: boolean;
   reuse?: WidgetReusePolicy;
   mountStrategy?: WidgetMountStrategy;
@@ -43,8 +43,8 @@ export interface WidgetContribution {
   // Non-closeable widgets opt into the tab visibility menu; closeable widgets
   // ignore this and use the X button for dismissal.
   hiddenByDefault?: boolean;
-  areaSize?: WorkbenchAreaSize;
-  areaCollapsible?: boolean;
+  regionSize?: WorkbenchRegionSize;
+  regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
   resourceKinds?: string[];
   priority?: number;
@@ -61,10 +61,10 @@ export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" |
 export interface PlaceholderContribution {
   id: string;
   title: string;
-  area: WorkbenchArea;
+  region: WorkbenchRegion;
   rendererId: string;
-  areaSize?: WorkbenchAreaSize;
-  areaCollapsible?: boolean;
+  regionSize?: WorkbenchRegionSize;
+  regionCollapsible?: boolean;
   config?: unknown;
   priority?: number;
 }
@@ -86,8 +86,8 @@ export interface WorkbenchWidgetPlacement {
   hiddenByDefault?: boolean;
 }
 
-export interface WorkbenchAreaState {
-  id: WorkbenchArea;
+export interface WorkbenchRegionState {
+  id: WorkbenchRegion;
   visible: boolean;
   size?: number;
   widgets: WorkbenchWidgetPlacement[];
@@ -95,7 +95,7 @@ export interface WorkbenchAreaState {
 }
 
 export interface WorkbenchLayout {
-  areas: Record<WorkbenchArea, WorkbenchAreaState>;
+  regions: Record<WorkbenchRegion, WorkbenchRegionState>;
   activeWidgetId?: string;
   activeResourceUri?: string;
 }
@@ -103,13 +103,13 @@ export interface WorkbenchLayout {
 export interface WorkbenchLayoutStoreState {
   layout: WorkbenchLayout;
   widgets: Record<string, RegisteredWidgetContribution>;
-  placeholders: Partial<Record<WorkbenchArea, RegisteredPlaceholderContribution>>;
+  placeholders: Partial<Record<WorkbenchRegion, RegisteredPlaceholderContribution>>;
 }
 
 export interface OpenWidgetInput {
   resource?: ResourceRef;
   title?: string;
-  area?: WorkbenchArea;
+  region?: WorkbenchRegion;
   ownerId?: string;
   source?: ContributionSource;
   pinned?: boolean;
@@ -119,54 +119,30 @@ export interface OpenWidgetInput {
   replaceActive?: boolean;
 }
 
-const createAreaState = (id: WorkbenchArea): WorkbenchAreaState => ({
+const createRegionState = (id: WorkbenchRegion): WorkbenchRegionState => ({
   id,
   visible: true,
   widgets: [],
 });
 
 export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
-  areas: {
-    nav: createAreaState("nav"),
-    activity: createAreaState("activity"),
-    "left-header": createAreaState("left-header"),
-    left: createAreaState("left"),
-    "main-header": createAreaState("main-header"),
-    "main-left": createAreaState("main-left"),
-    main: createAreaState("main"),
-    "main-right": createAreaState("main-right"),
-    "secondary-header": createAreaState("secondary-header"),
-    secondary: createAreaState("secondary"),
-    status: createAreaState("status"),
-    overlay: createAreaState("overlay"),
-    "floating-header": createAreaState("floating-header"),
-    floating: createAreaState("floating"),
+  regions: {
+    nav: createRegionState("nav"),
+    activity: createRegionState("activity"),
+    "sidebar-header": createRegionState("sidebar-header"),
+    sidebar: createRegionState("sidebar"),
+    "main-header": createRegionState("main-header"),
+    "main-left-menu": createRegionState("main-left-menu"),
+    main: createRegionState("main"),
+    "main-right-menu": createRegionState("main-right-menu"),
+    "secondary-header": createRegionState("secondary-header"),
+    secondary: createRegionState("secondary"),
+    "side-header": createRegionState("side-header"),
+    side: createRegionState("side"),
+    status: createRegionState("status"),
+    overlay: createRegionState("overlay"),
   },
 });
-
-// Persisted layouts from before the area rename carry the old keys. Remap them (key and
-// the area's own `id`) so a stored layout still merges into the current schema instead of
-// silently orphaning those areas.
-const RENAMED_AREA_IDS: Record<string, WorkbenchArea> = {
-  top: "nav",
-  activityBar: "activity",
-  "main-bottom": "secondary",
-  "main-bottom-header": "secondary-header",
-};
-
-// The side regions (main-left / main-right) are headerless, so these header areas no
-// longer exist. They were always empty, so a stored layout loses nothing by dropping them.
-const REMOVED_AREA_IDS = new Set(["main-left-header", "main-right-header"]);
-
-const migrateAreaIds = (areas: WorkbenchLayout["areas"]): WorkbenchLayout["areas"] => {
-  const migrated = {} as WorkbenchLayout["areas"];
-  for (const [id, area] of Object.entries(areas) as [string, WorkbenchAreaState][]) {
-    if (REMOVED_AREA_IDS.has(id)) continue;
-    const nextId = RENAMED_AREA_IDS[id] ?? (id as WorkbenchArea);
-    migrated[nextId] = area.id === nextId ? area : { ...area, id: nextId };
-  }
-  return migrated;
-};
 
 const findLastWidgetIndex = (widgets: WorkbenchWidgetPlacement[], widgetId: string) => {
   for (let index = widgets.length - 1; index >= 0; index -= 1) {
@@ -177,20 +153,20 @@ const findLastWidgetIndex = (widgets: WorkbenchWidgetPlacement[], widgetId: stri
 
 const normalizeWidgetIds = (layout: WorkbenchLayout) => {
   const widgetIds = new Set<string>();
-  const areas = {} as WorkbenchLayout["areas"];
+  const regions = {} as WorkbenchLayout["regions"];
   let activeWidgetId = layout.activeWidgetId;
   let activeResourceUri = layout.activeResourceUri;
 
-  for (const [id, area] of Object.entries(layout.areas) as [WorkbenchArea, WorkbenchAreaState][]) {
-    const originalActiveWidgetId = area.activeWidgetId;
-    const activeIndex = originalActiveWidgetId ? findLastWidgetIndex(area.widgets, originalActiveWidgetId) : -1;
-    const widgets = area.widgets.map((placement) => {
+  for (const [id, region] of Object.entries(layout.regions) as [WorkbenchRegion, WorkbenchRegionState][]) {
+    const originalActiveWidgetId = region.activeWidgetId;
+    const activeIndex = originalActiveWidgetId ? findLastWidgetIndex(region.widgets, originalActiveWidgetId) : -1;
+    const widgets = region.widgets.map((placement) => {
       const widgetId = resolveUniqueWidgetId(widgetIds, placement.contributionId, placement.widgetId);
       widgetIds.add(widgetId);
       return widgetId === placement.widgetId ? placement : { ...placement, widgetId };
     });
     const normalizedActiveWidgetId = activeIndex >= 0 ? widgets[activeIndex]?.widgetId : originalActiveWidgetId;
-    areas[id] = { ...area, widgets, activeWidgetId: normalizedActiveWidgetId };
+    regions[id] = { ...region, widgets, activeWidgetId: normalizedActiveWidgetId };
 
     if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
       activeWidgetId = normalizedActiveWidgetId;
@@ -198,13 +174,13 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
     }
   }
 
-  return { ...layout, areas, activeWidgetId, activeResourceUri };
+  return { ...layout, regions, activeWidgetId, activeResourceUri };
 };
 
-export const mergeWithDefaultAreas = (persisted: WorkbenchLayout): WorkbenchLayout => {
+export const mergeWithDefaultRegions = (persisted: WorkbenchLayout): WorkbenchLayout => {
   const defaults = createDefaultWorkbenchLayout();
   return normalizeWidgetIds({
     ...persisted,
-    areas: { ...defaults.areas, ...migrateAreaIds(persisted.areas) },
+    regions: { ...defaults.regions, ...persisted.regions },
   });
 };

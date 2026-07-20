@@ -4,7 +4,7 @@ import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
 import { workbenchModes, workspaceFiles } from "../mock-data/data";
 
 const findActiveFile = (input: WorkbenchWidgetRenderInput) => {
-  const placement = input.workbench.layout.getLayout().areas.main.widgets[0];
+  const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const fileId = typeof placement?.resource?.metadata?.fileId === "string" ? placement.resource.metadata.fileId : null;
   return workspaceFiles.find((file) => file.id === fileId) ?? workspaceFiles[0];
 };

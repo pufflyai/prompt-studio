@@ -1,48 +1,48 @@
 import type {
   OpenWidgetInput,
   RegisteredWidgetContribution,
-  WorkbenchArea,
-  WorkbenchAreaState,
   WorkbenchLayout,
+  WorkbenchRegion,
+  WorkbenchRegionState,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
 import { resolveUniqueWidgetId } from "./widget-id";
 
 export const findPlacement = (layout: WorkbenchLayout, contributionId: string) => {
-  for (const area of Object.values(layout.areas)) {
-    const index = area.widgets.findIndex((candidate) => candidate.contributionId === contributionId);
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+  for (const region of Object.values(layout.regions)) {
+    const index = region.widgets.findIndex((candidate) => candidate.contributionId === contributionId);
+    if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
   }
   return undefined;
 };
 
 export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: string, resourceUri: string) => {
-  for (const area of Object.values(layout.areas)) {
-    const index = area.widgets.findIndex(
+  for (const region of Object.values(layout.regions)) {
+    const index = region.widgets.findIndex(
       (candidate) => candidate.contributionId === contributionId && candidate.resourceUri === resourceUri,
     );
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+    if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
   }
   return undefined;
 };
 
 export const findPlacementByWidgetId = (layout: WorkbenchLayout, widgetId: string) => {
-  for (const area of Object.values(layout.areas)) {
-    const index = area.widgets.findIndex((candidate) => candidate.widgetId === widgetId);
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+  for (const region of Object.values(layout.regions)) {
+    const index = region.widgets.findIndex((candidate) => candidate.widgetId === widgetId);
+    if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
   }
   return undefined;
 };
 
 export const createUniqueWidgetId = (layout: WorkbenchLayout, contributionId: string) => {
   const widgetIds = new Set(
-    Object.values(layout.areas).flatMap((area) => area.widgets.map((placement) => placement.widgetId)),
+    Object.values(layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId)),
   );
   return resolveUniqueWidgetId(widgetIds, contributionId);
 };
 
-export const getActivePlacement = (area: WorkbenchAreaState) =>
-  area.widgets.find((placement) => placement.widgetId === area.activeWidgetId) ?? area.widgets[0];
+export const getActivePlacement = (region: WorkbenchRegionState) =>
+  region.widgets.find((placement) => placement.widgetId === region.activeWidgetId) ?? region.widgets[0];
 
 export const buildUpdatedPlacement = (
   placement: WorkbenchWidgetPlacement,
@@ -86,31 +86,31 @@ export const createPlacement = (
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
 });
 
-interface ReplaceAreaWidgetsOptions {
+interface ReplaceRegionWidgetsOptions {
   activeWidgetId?: string;
   clearActiveWidget?: boolean;
 }
 
-export const replaceAreaWidgets = (
+export const replaceRegionWidgets = (
   layout: WorkbenchLayout,
-  areaId: WorkbenchArea,
+  regionId: WorkbenchRegion,
   update: (widgets: WorkbenchWidgetPlacement[]) => WorkbenchWidgetPlacement[],
-  options: ReplaceAreaWidgetsOptions = {},
+  options: ReplaceRegionWidgetsOptions = {},
 ): WorkbenchLayout => {
-  const area = layout.areas[areaId];
-  const widgets = update(area.widgets);
+  const region = layout.regions[regionId];
+  const widgets = update(region.widgets);
   const activeWidgetId =
     options.activeWidgetId !== undefined
       ? options.activeWidgetId
       : options.clearActiveWidget
         ? undefined
-        : area.activeWidgetId;
+        : region.activeWidgetId;
 
   return {
     ...layout,
-    areas: {
-      ...layout.areas,
-      [areaId]: { ...area, widgets, activeWidgetId },
+    regions: {
+      ...layout.regions,
+      [regionId]: { ...region, widgets, activeWidgetId },
     },
   };
 };
@@ -118,24 +118,24 @@ export const replaceAreaWidgets = (
 export const removePlacementsForContribution = (layout: WorkbenchLayout, contributionId: string): WorkbenchLayout => {
   let nextLayout = layout;
 
-  for (const area of Object.values(layout.areas)) {
-    const filtered = area.widgets.filter((placement) => placement.contributionId !== contributionId);
-    if (filtered.length === area.widgets.length) continue;
+  for (const region of Object.values(layout.regions)) {
+    const filtered = region.widgets.filter((placement) => placement.contributionId !== contributionId);
+    if (filtered.length === region.widgets.length) continue;
     const activeWidgetId =
-      area.activeWidgetId && !filtered.some((placement) => placement.widgetId === area.activeWidgetId)
+      region.activeWidgetId && !filtered.some((placement) => placement.widgetId === region.activeWidgetId)
         ? undefined
-        : area.activeWidgetId;
+        : region.activeWidgetId;
     nextLayout = {
       ...nextLayout,
-      areas: {
-        ...nextLayout.areas,
-        [area.id]: { ...area, widgets: filtered, activeWidgetId },
+      regions: {
+        ...nextLayout.regions,
+        [region.id]: { ...region, widgets: filtered, activeWidgetId },
       },
     };
   }
 
-  const hasActiveWidget = Object.values(nextLayout.areas).some((area) =>
-    area.widgets.some((placement) => placement.widgetId === nextLayout.activeWidgetId),
+  const hasActiveWidget = Object.values(nextLayout.regions).some((region) =>
+    region.widgets.some((placement) => placement.widgetId === nextLayout.activeWidgetId),
   );
 
   if (
@@ -154,17 +154,17 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   const found = findPlacementByWidgetId(layout, widgetId);
   if (!found) return undefined;
 
-  const area = layout.areas[found.areaId];
-  const widgets = area.widgets.filter((placement) => placement.widgetId !== widgetId);
-  const closingEffectiveActive = area.activeWidgetId === widgetId || (!area.activeWidgetId && found.index === 0);
+  const region = layout.regions[found.regionId];
+  const widgets = region.widgets.filter((placement) => placement.widgetId !== widgetId);
+  const closingEffectiveActive = region.activeWidgetId === widgetId || (!region.activeWidgetId && found.index === 0);
   const nextActivePlacement = widgets[found.index] ?? widgets[found.index - 1];
-  const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : area.activeWidgetId;
-  const nextArea = { ...area, widgets, activeWidgetId };
+  const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : region.activeWidgetId;
+  const nextRegion = { ...region, widgets, activeWidgetId };
   let nextLayout: WorkbenchLayout = {
     ...layout,
-    areas: {
-      ...layout.areas,
-      [area.id]: nextArea,
+    regions: {
+      ...layout.regions,
+      [region.id]: nextRegion,
     },
   };
 
@@ -177,26 +177,26 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   }
 
   return {
-    areaId: found.areaId,
+    regionId: found.regionId,
     closedPlacement: found.placement,
-    activePlacement: getActivePlacement(nextArea),
+    activePlacement: getActivePlacement(nextRegion),
     layout: nextLayout,
   };
 };
 
 export const activateInLayout = (
   layout: WorkbenchLayout,
-  areaId: WorkbenchArea,
+  regionId: WorkbenchRegion,
   placement: WorkbenchWidgetPlacement,
 ): WorkbenchLayout => {
-  const area = layout.areas[areaId];
+  const region = layout.regions[regionId];
   return {
     ...layout,
     activeWidgetId: placement.widgetId,
     activeResourceUri: placement.resourceUri,
-    areas: {
-      ...layout.areas,
-      [areaId]: { ...area, activeWidgetId: placement.widgetId },
+    regions: {
+      ...layout.regions,
+      [regionId]: { ...region, activeWidgetId: placement.widgetId },
     },
   };
 };

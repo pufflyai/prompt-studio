@@ -6,12 +6,12 @@ import {
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,
 } from "../../core";
-import { WorkbenchArea } from "../area/area";
-import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
+import { WorkbenchRegion } from "../region/region";
+import { shouldShowRegionTabs, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -19,13 +19,13 @@ import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchHeaderProps {
   workbench: WorkbenchCore;
-  hasTop: boolean;
-  showLeftPanelOpener: boolean;
-  onOpenLeftPanel: () => void;
+  hasNav: boolean;
+  showSidebarOpener: boolean;
+  onOpenSidebar: () => void;
 }
 
 export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
-  const { workbench, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
+  const { workbench, hasNav, showSidebarOpener, onOpenSidebar } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -38,12 +38,13 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
   const hasTrailingActions =
     listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath, menuContext).length > 0;
   const hasBreadcrumb = breadcrumbItems.length > 0;
-  const hasCenter = hasTop || hasBreadcrumb;
+  const hasCenter = hasNav || hasBreadcrumb;
 
-  if (!showLeftPanelOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions) return null;
+  if (!showSidebarOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions) return null;
 
   return (
     <Header
+      data-workbench-region="nav"
       variant="main"
       bg={workbenchBackgrounds.main}
       position="relative"
@@ -52,15 +53,9 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
       overflow="hidden"
       overflowY="hidden"
     >
-      {showLeftPanelOpener ? (
-        <Tooltip content="Show left side panel">
-          <IconButton
-            variant="ghost"
-            size="xs"
-            aria-label="Show left side panel"
-            flexShrink={0}
-            onClick={onOpenLeftPanel}
-          >
+      {showSidebarOpener ? (
+        <Tooltip content="Show Sidebar">
+          <IconButton variant="ghost" size="xs" aria-label="Show Sidebar" flexShrink={0} onClick={onOpenSidebar}>
             <WorkbenchIcon name="PanelLeft" size={16} />
           </IconButton>
         </Tooltip>
@@ -68,31 +63,31 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
       {hasCenter ? (
         <Box flex="1" h="full" minW="0" overflow="hidden">
-          {hasTop ? <WorkbenchArea workbench={workbench} area="nav" title="Top" showHeader={false} /> : null}
-          {!hasTop && hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
+          {hasNav ? <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" /> : null}
+          {!hasNav && hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
         </Box>
       ) : null}
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
-      <WorkbenchHeaderBorder workbench={workbench} area="nav" />
     </Header>
   );
 };
 
-interface WorkbenchLeftSidePanelProps {
+interface WorkbenchSidebarProps {
   workbench: WorkbenchCore;
   hasHeader: boolean;
 }
 
-export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
+export const WorkbenchSidebar = (props: WorkbenchSidebarProps) => {
   const { workbench, hasHeader } = props;
-  const leftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.widgets);
-  const hasContentTabs = shouldShowAreaTabs(leftWidgets);
+  const sidebarWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidebar.widgets);
+  const hasContentTabs = shouldShowRegionTabs(sidebarWidgets);
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <WorkbenchFocusRegion
       workbench={workbench}
-      area="sideBar"
+      region="sidebar"
+      data-workbench-region="sidebar"
       as="aside"
       bg={workbenchBackgrounds.sideBar}
       display="flex"
@@ -105,50 +100,52 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
     >
       {showHeaderBar ? (
         <Header
+          data-workbench-panel-header="sidebar"
           variant="main"
           bg={workbenchBackgrounds.sideBar}
           position="relative"
           flexShrink={0}
           gap="xs"
           overflowX="hidden"
-          // Full-bleed: left-header content (e.g. the project switcher) owns its own padding and
+          // Full-bleed: sidebar-header content (e.g. the project switcher) owns its own padding and
           // fills the header height, so the container adds none of its own horizontally.
           px="0"
-          // Size to content so a multi-row left-header (e.g. a stacked action cluster) is not
+          // Size to content so a multi-row sidebar-header (e.g. a stacked action cluster) is not
           // clipped to the single-row height; single-row headers stay at the variant height.
           h="auto"
           minH="2.5rem"
           alignItems="stretch"
         >
-          <WorkbenchAreaTabs workbench={workbench} area="left" />
+          <WorkbenchRegionTabs workbench={workbench} region="sidebar" />
           {hasHeader ? (
             <Box flex="1" minW="0" overflowX="hidden">
-              <WorkbenchArea workbench={workbench} area="left-header" title="Left header" showHeader={false} />
+              <WorkbenchRegion workbench={workbench} region="sidebar-header" title="Sidebar header" />
             </Box>
           ) : null}
-          <WorkbenchHeaderBorder workbench={workbench} area="left-header" />
+          <WorkbenchHeaderBorder workbench={workbench} region="sidebar-header" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchArea workbench={workbench} area="left" title="Left" showHeader={false} />
+        <WorkbenchRegion workbench={workbench} region="sidebar" title="Sidebar" />
       </Box>
     </WorkbenchFocusRegion>
   );
 };
 
-interface WorkbenchAreaPanelProps {
+interface WorkbenchRegionPanelProps {
   workbench: WorkbenchCore;
 }
 
-export const WORKBENCH_STATUS_BAR_HEIGHT = "1.75rem";
+export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
 
-export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
+export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
 
   return (
     <WorkbenchFocusRegion
       workbench={workbench}
-      area="activityBar"
+      region="activity"
+      data-workbench-region="activity"
       as="nav"
       bg={workbenchBackgrounds.activityBar}
       borderRightWidth="1px"
@@ -159,18 +156,30 @@ export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
       overflow="hidden"
       w="3.5rem"
     >
-      <WorkbenchArea workbench={workbench} area="activity" title="Activity bar" showHeader={false} />
+      <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
     </WorkbenchFocusRegion>
   );
 };
 
-export const WorkbenchRightSidePanel = (props: WorkbenchAreaPanelProps) => {
+export const WorkbenchMainRightMenu = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
-  const rightWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas["main-right"].widgets);
-  const showHeaderBar = shouldShowAreaTabs(rightWidgets);
+  const menuWidgets = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.regions["main-right-menu"].widgets,
+  );
+  const showHeaderBar = shouldShowRegionTabs(menuWidgets);
 
   return (
-    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+    <Flex
+      data-workbench-region="main-right-menu"
+      as="aside"
+      direction="column"
+      h="full"
+      minH="0"
+      minW="0"
+      overflow="hidden"
+      w="full"
+    >
       {showHeaderBar ? (
         <Header
           variant="main"
@@ -181,24 +190,36 @@ export const WorkbenchRightSidePanel = (props: WorkbenchAreaPanelProps) => {
           overflow="hidden"
           overflowY="hidden"
         >
-          <WorkbenchAreaTabs workbench={workbench} area="main-right" />
-          <WorkbenchHeaderBorder workbench={workbench} area="main-right" />
+          <WorkbenchRegionTabs workbench={workbench} region="main-right-menu" />
+          <WorkbenchHeaderBorder workbench={workbench} region="main-right-menu" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchArea workbench={workbench} area="main-right" title="Main right" showHeader={false} />
+        <WorkbenchRegion workbench={workbench} region="main-right-menu" title="Main right" />
       </Box>
     </Flex>
   );
 };
 
-export const WorkbenchMainLeftPanel = (props: WorkbenchAreaPanelProps) => {
+export const WorkbenchMainLeftMenu = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
-  const mainLeftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas["main-left"].widgets);
-  const showHeaderBar = shouldShowAreaTabs(mainLeftWidgets);
+  const menuWidgets = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.regions["main-left-menu"].widgets,
+  );
+  const showHeaderBar = shouldShowRegionTabs(menuWidgets);
 
   return (
-    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+    <Flex
+      data-workbench-region="main-left-menu"
+      as="aside"
+      direction="column"
+      h="full"
+      minH="0"
+      minW="0"
+      overflow="hidden"
+      w="full"
+    >
       {showHeaderBar ? (
         <Header
           variant="main"
@@ -209,24 +230,25 @@ export const WorkbenchMainLeftPanel = (props: WorkbenchAreaPanelProps) => {
           overflow="hidden"
           overflowY="hidden"
         >
-          <WorkbenchAreaTabs workbench={workbench} area="main-left" />
-          <WorkbenchHeaderBorder workbench={workbench} area="main-left" />
+          <WorkbenchRegionTabs workbench={workbench} region="main-left-menu" />
+          <WorkbenchHeaderBorder workbench={workbench} region="main-left-menu" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchArea workbench={workbench} area="main-left" title="Main left" showHeader={false} />
+        <WorkbenchRegion workbench={workbench} region="main-left-menu" title="Main left" />
       </Box>
     </Flex>
   );
 };
 
-export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
+export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
 
   return (
     <WorkbenchFocusRegion
       workbench={workbench}
-      area="statusBar"
+      region="status"
+      data-workbench-region="status"
       as="footer"
       bg={workbenchBackgrounds.statusBar}
       borderTopWidth="1px"
@@ -237,7 +259,7 @@ export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <WorkbenchArea workbench={workbench} area="status" title="Status" showHeader={false} />
+      <WorkbenchRegion workbench={workbench} region="status" title="Status" />
     </WorkbenchFocusRegion>
   );
 };

@@ -3,37 +3,59 @@ import { createContextKeyService } from "../../shared/context/context-key-servic
 import { createWorkbenchFocusController } from "./focus-controller";
 
 describe("createWorkbenchFocusController", () => {
-  test("derives workbench focus context keys from the active area", () => {
+  test("derives workbench focus context keys from the active region", () => {
     const context = createContextKeyService();
     const focus = createWorkbenchFocusController({ context });
 
-    focus.setActiveArea("sideBar");
+    focus.setActiveRegion("sidebar");
 
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: true,
-      activeWorkbenchFocusArea: "sideBar",
-      sideBarFocus: true,
+      activeWorkbenchFocusRegion: "sidebar",
+      sidebarFocus: true,
       mainFocus: false,
-      panelFocus: false,
+      secondaryFocus: false,
+      sideFocus: false,
     });
 
-    focus.setActiveArea("main");
+    focus.setActiveRegion("main");
 
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: true,
-      activeWorkbenchFocusArea: "main",
-      sideBarFocus: false,
+      activeWorkbenchFocusRegion: "main",
+      sidebarFocus: false,
       mainFocus: true,
-      panelFocus: false,
+      secondaryFocus: false,
+      sideFocus: false,
     });
 
     focus.clearFocus();
 
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: false,
-      sideBarFocus: false,
+      sidebarFocus: false,
       mainFocus: false,
-      panelFocus: false,
+      secondaryFocus: false,
+      sideFocus: false,
+    });
+  });
+
+  test("tracks Secondary and Side Panel focus as distinct logical roles", () => {
+    const context = createContextKeyService();
+    const focus = createWorkbenchFocusController({ context });
+
+    focus.setActiveRegion("secondary");
+    expect(context.snapshot()).toMatchObject({
+      activeWorkbenchFocusRegion: "secondary",
+      secondaryFocus: true,
+      sideFocus: false,
+    });
+
+    focus.setActiveRegion("side");
+    expect(context.snapshot()).toMatchObject({
+      activeWorkbenchFocusRegion: "side",
+      secondaryFocus: false,
+      sideFocus: true,
     });
   });
 });

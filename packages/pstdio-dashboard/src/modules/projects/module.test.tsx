@@ -30,7 +30,7 @@ describe("createProjectsModule", () => {
     workbench.layout.registerWidget({
       id: "scratch",
       title: "Scratch",
-      area: "main",
+      region: "main",
       singleton: false,
       reuse: "none",
       rendererId: "noop",

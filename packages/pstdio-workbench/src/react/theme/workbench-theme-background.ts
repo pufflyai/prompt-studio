@@ -1,4 +1,4 @@
-import type { WorkbenchArea } from "../../core";
+import type { WorkbenchRegion } from "../../core";
 
 const chakraBackgrounds = {
   activityBar: "var(--chakra-colors-bg-muted)",
@@ -20,25 +20,25 @@ export const workbenchBackgrounds = {
   widget: vscodeColor("editorWidget.background", vscodeColor("panel.background", chakraBackgrounds.panel)),
 } as const;
 
-const workbenchAreaBackgrounds = {
+const workbenchRegionBackgrounds = {
   nav: workbenchBackgrounds.main,
   activity: workbenchBackgrounds.activityBar,
-  "left-header": workbenchBackgrounds.sideBar,
-  left: workbenchBackgrounds.sideBar,
+  "sidebar-header": workbenchBackgrounds.sideBar,
+  sidebar: workbenchBackgrounds.sideBar,
   "main-header": workbenchBackgrounds.main,
-  "main-left": workbenchBackgrounds.panel,
+  "main-left-menu": workbenchBackgrounds.panel,
   main: workbenchBackgrounds.main,
-  "main-right": workbenchBackgrounds.panel,
+  "main-right-menu": workbenchBackgrounds.panel,
   "secondary-header": workbenchBackgrounds.panel,
   secondary: workbenchBackgrounds.panel,
   status: workbenchBackgrounds.statusBar,
   overlay: workbenchBackgrounds.widget,
-  "floating-header": workbenchBackgrounds.widget,
-  floating: workbenchBackgrounds.widget,
-} as const satisfies Record<WorkbenchArea, string>;
+  "side-header": workbenchBackgrounds.widget,
+  side: workbenchBackgrounds.widget,
+} as const satisfies Record<WorkbenchRegion, string>;
 
 export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-colors-color-palette-focus-ring)");
 
 export const workbenchCommandPaletteBackground = workbenchBackgrounds.widget;
 
-export const getWorkbenchAreaBackground = (area: WorkbenchArea) => workbenchAreaBackgrounds[area];
+export const getWorkbenchRegionBackground = (region: WorkbenchRegion) => workbenchRegionBackgrounds[region];

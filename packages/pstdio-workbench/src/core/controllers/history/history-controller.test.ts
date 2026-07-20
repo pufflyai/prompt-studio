@@ -10,7 +10,7 @@ const setupWorkbench = () => {
   workbench.layout.registerWidget({
     id: "ticket-viewer",
     title: "Ticket",
-    area: "main",
+    region: "main",
     closable: true,
     singleton: true,
     rendererId: "noop",
@@ -19,7 +19,7 @@ const setupWorkbench = () => {
   workbench.layout.registerWidget({
     id: "scratch",
     title: "Scratch",
-    area: "main",
+    region: "main",
     closable: true,
     singleton: false,
     reuse: "none",
@@ -28,7 +28,7 @@ const setupWorkbench = () => {
   workbench.layout.registerWidget({
     id: "sidebar",
     title: "Sidebar",
-    area: "left",
+    region: "sidebar",
     rendererId: "noop",
   });
 
@@ -82,7 +82,7 @@ describe("createHistoryController", () => {
     workbench.layout.registerWidget({
       id: "ticket-viewer",
       title: "Ticket",
-      area: "main",
+      region: "main",
       closable: true,
       singleton: true,
       rendererId: "noop",
@@ -158,14 +158,14 @@ describe("createHistoryController", () => {
     workbench.layout.registerWidget({
       id: "board-view",
       title: "Board",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: "noop",
     });
     workbench.layout.registerWidget({
       id: "ticket-editor",
       title: "Ticket",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: "noop",
     });
@@ -193,14 +193,14 @@ describe("createHistoryController", () => {
     await workbench.resources.openResource(board);
     await workbench.resources.openResource(ticket, { replaceActive: true });
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
 
     workbench.history.goBack();
     await Promise.resolve();
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       "board-view",
     ]);
     // Replaying must not append entries — the primary stays a single placement and the
@@ -210,7 +210,7 @@ describe("createHistoryController", () => {
     workbench.history.goForward();
     await Promise.resolve();
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
     expect(workbench.history.store.getState().entries.length).toBe(2);
@@ -230,7 +230,7 @@ describe("createHistoryController mode-aware navigation", () => {
         const widget = ctx.layout.registerWidget({
           id: "project-viewer",
           title: "Project",
-          area: "main",
+          region: "main",
           singleton: true,
           rendererId: "noop",
           resourceKinds: ["history.test.project-item"],
@@ -254,7 +254,7 @@ describe("createHistoryController mode-aware navigation", () => {
         const widget = ctx.layout.registerWidget({
           id: "workspace-viewer",
           title: "Workspace",
-          area: "main",
+          region: "main",
           singleton: true,
           rendererId: "noop",
           resourceKinds: ["history.test.workspace-file"],
@@ -342,12 +342,12 @@ describe("createHistoryController widget history", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
   });
 
-  test("does not record activations outside the main area", async () => {
+  test("does not record activations outside the main region", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");
 
-    // Activating a left-area widget must not push a back/forward entry — history is
-    // scoped to the main (primary) area's active placement.
+    // Activating a left-region widget must not push a back/forward entry — history is
+    // scoped to the main (primary) region's active placement.
     workbench.layout.openWidget("sidebar");
 
     const snapshot = workbench.history.store.getState();
@@ -375,7 +375,7 @@ describe("createHistoryController widget history", () => {
     expect(closed[closed.length - 1]?.widgetId).toBe("scratch");
 
     workbench.history.reopenLastClosed();
-    expect(workbench.layout.getLayout().areas.main.widgets.map((p) => p.widgetId)).toContain("scratch");
+    expect(workbench.layout.getLayout().regions.main.widgets.map((p) => p.widgetId)).toContain("scratch");
   });
 
   test("history caps entries to maxEntries", async () => {

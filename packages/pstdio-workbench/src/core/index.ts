@@ -15,12 +15,12 @@ export type {
 export { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 export type {
   CreateWorkbenchFocusControllerInput,
-  WorkbenchFocusArea,
   WorkbenchFocusChangeListener,
   WorkbenchFocusController,
+  WorkbenchFocusRegionId,
   WorkbenchFocusState,
 } from "./controllers/focus/focus-controller";
-export { createWorkbenchFocusController, workbenchFocusAreas } from "./controllers/focus/focus-controller";
+export { createWorkbenchFocusController, workbenchFocusRegions } from "./controllers/focus/focus-controller";
 export type {
   CreateHistoryControllerInput,
   HistoryController,
@@ -103,21 +103,21 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
-  WorkbenchArea,
-  WorkbenchAreaSize,
-  WorkbenchAreaState,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
+  WorkbenchRegion,
+  WorkbenchRegionSize,
+  WorkbenchRegionState,
   WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
-export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from "./registries/layout/layout-model";
+export { createDefaultWorkbenchLayout, createLayoutModel, workbenchRegions } from "./registries/layout/layout-model";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {
   getSurface,
-  listAnchorAreas,
-  listProjectionAreas,
+  listAnchorRegions,
+  listProjectionRegions,
   listProjectionsReading,
-  resolveAnchorArea,
+  resolveAnchorRegion,
   surfaceMap,
 } from "./registries/layout/surface-map";
 export type { AnchorReconcileAction, ReconcileAnchorsInput } from "./registries/layout/surface-reconcile";
@@ -128,8 +128,8 @@ export {
   headerLeadingMenuPath,
   headerTrailingMenuPath,
   resourceContextMenuPath,
-  workbenchAreaTabLeadingMenuPath,
   workbenchCommandPaletteMenuPath,
+  workbenchRegionTabLeadingMenuPath,
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,
 } from "./registries/menus/workbench-menu-paths";

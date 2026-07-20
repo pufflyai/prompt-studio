@@ -26,7 +26,7 @@ describe("createExtensionsModule linked resource views", () => {
         label: "PS-11 Linked ticket",
       });
 
-      const mainRightResource = workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource;
+      const mainRightResource = workbench.layout.getLayout().regions["main-right-menu"].widgets[0]?.resource;
       expect(mainRightResource).toMatchObject({
         id: "PS-11",
         metadata: { projectId: "project-1" },
@@ -58,7 +58,7 @@ describe("createExtensionsModule linked resource views", () => {
         metadata: { projectId: "linked-project" },
       });
 
-      const mainRightResource = workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource;
+      const mainRightResource = workbench.layout.getLayout().regions["main-right-menu"].widgets[0]?.resource;
       expect(mainRightResource).toMatchObject({
         id: "PS-12",
         metadata: { projectId: "linked-project" },

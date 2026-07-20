@@ -53,7 +53,7 @@ const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContributionContext) 
     {
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: dashboardWidgetIds.workspace,
       priority: 80,

@@ -112,7 +112,7 @@ export const openPrimaryResource = (
   workbench.layout.registerWidget({
     id: primaryWidgetId,
     title: "Preview",
-    area: "main",
+    region: "main",
     rendererId: primaryRendererId,
     singleton: false,
   });
@@ -147,7 +147,7 @@ export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchL
   workbench.layout.registerWidget({
     id: syntheticTreeWidgetId,
     title: text(renderer.title, renderer.id),
-    area: "main-left",
+    region: "main-left-menu",
     rendererId: renderer.id,
     resourceKinds: [resource.kind],
   });

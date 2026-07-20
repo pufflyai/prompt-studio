@@ -5,13 +5,13 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import {
   dashboardExtensionViewKind,
-  extensionModeLayoutArea,
-  extensionViewArea as extensionViewAreaForPlacement,
+  extensionModeLayoutRegion,
+  extensionViewRegion as extensionViewRegionForPlacement,
   extensionViewWidgetId,
   extensionViewWidgetIdFor,
 } from "./extension-view-placement";
 
-export { extensionViewArea } from "./extension-view-placement";
+export { extensionViewRegion } from "./extension-view-placement";
 
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
 type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
@@ -64,13 +64,13 @@ const openModeEntry = (input: {
   viewById: Map<string, DashboardExtensionView>;
 }) => {
   const { ctx, entry, projectId, viewById } = input;
-  const area = extensionModeLayoutArea(entry.target);
+  const region = extensionModeLayoutRegion(entry.target);
 
   if (entry.view) {
     const view = viewById.get(entry.view);
     if (!view) throw new Error(`Extension mode view not found: ${entry.view}`);
     return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
-      area,
+      region,
       pinned: entry.pinned,
       resource: createExtensionViewResource({ projectId, title: entry.title, view }),
       title: entry.title
@@ -84,7 +84,7 @@ const openModeEntry = (input: {
   if (!resource) throw new Error(`Extension mode resource not found: ${entry.resource}`);
   if (entry.widget) {
     return ctx.layout.openWidget(entry.widget, {
-      area,
+      region,
       pinned: entry.pinned,
       resource,
       title: entry.title ?? resource.label,
@@ -116,15 +116,15 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
-  for (const target of resetTargets(mode.layout)) ctx.layout.clearArea(extensionModeLayoutArea(target));
+  for (const target of resetTargets(mode.layout)) ctx.layout.clearRegion(extensionModeLayoutRegion(target));
   for (const entry of entries) {
     if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
     openModeEntry({ ctx, entry, projectId, viewById });
   }
 };
 
-// Modal views mount in the overlay area as a closable dialog instead of docking
-// into a workbench area; data-renderer create flows open them over the board.
+// Modal views mount in the overlay region as a closable dialog instead of docking
+// into a workbench region; data-renderer create flows open them over the board.
 const modalOverlayConfig = {
   size: "lg",
   placement: "center",
@@ -146,7 +146,7 @@ const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadat
       ctx.layout.registerWidget({
         id: extensionViewWidgetId(view.id),
         title: resolveLocalizableString(view.title, view.extensionId),
-        area: isModal ? "overlay" : extensionViewAreaForPlacement(view.target),
+        region: isModal ? "overlay" : extensionViewRegionForPlacement(view.target),
         rendererId: dashboardWidgetIds.extensionView,
         ...(isModal ? { closable: true, config: modalOverlayConfig } : {}),
       }),

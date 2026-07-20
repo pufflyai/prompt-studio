@@ -12,8 +12,8 @@ export const dashboardTicketTags = [
     ],
   },
   {
-    name: "area",
-    label: "Area",
+    name: "region",
+    label: "Region",
     options: [
       { value: "workbench", label: "Workbench", color: "blue" },
       { value: "sessions", label: "Sessions", color: "purple" },
@@ -36,7 +36,7 @@ const ticketRows = [
     status: "in-progress",
     assignee: "Aure",
     priority: "high",
-    area: "workbench",
+    region: "workbench",
     updatedAt: "2026-05-17T08:30:00Z",
     workspace: {
       shorthand: "A1",
@@ -53,11 +53,11 @@ const ticketRows = [
   },
   {
     id: "PS-298",
-    title: "Move project shell routes into workbench areas",
+    title: "Move project shell routes into workbench regions",
     status: "backlog",
     assignee: "Sam",
     priority: "medium",
-    area: "workbench",
+    region: "workbench",
     updatedAt: "2026-05-16T16:15:00Z",
     workspace: {
       shorthand: "A2",
@@ -75,7 +75,7 @@ const ticketRows = [
     status: "review",
     assignee: "Nora",
     priority: "medium",
-    area: "sessions",
+    region: "sessions",
     updatedAt: "2026-05-15T11:45:00Z",
     workspace: {
       shorthand: "B1",
@@ -93,7 +93,7 @@ const ticketRows = [
     status: "done",
     assignee: "Mika",
     priority: "low",
-    area: "workbench",
+    region: "workbench",
     updatedAt: "2026-05-14T09:20:00Z",
     workspace: {
       shorthand: "C1",
@@ -113,7 +113,7 @@ export const dashboardTickets = ticketRows.map((ticket) => ({
   statusColor: dashboardStatusColumns.find((column) => column.id === ticket.status)?.color,
   tags: [
     { name: "priority", value: ticket.priority },
-    { name: "area", value: ticket.area },
+    { name: "region", value: ticket.region },
   ],
   resource: createResource("ticket", ticket.id, `${ticket.id} ${ticket.title}`, "component"),
   workspaceResource: createResource(

@@ -78,9 +78,9 @@ const ContributionButton = (props: { label: string; onClick(): void }) => {
 };
 
 const clearResourcePanels = (workbench: WorkbenchCore) => {
-  workbench.layout.clearArea("main");
-  workbench.layout.clearArea("main-left");
-  workbench.layout.clearArea("main-right");
+  workbench.layout.clearRegion("main");
+  workbench.layout.clearRegion("main-left-menu");
+  workbench.layout.clearRegion("main-right-menu");
 };
 
 const viewItems = (props: ContributionExplorerProps) => {
@@ -224,7 +224,7 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
           workbench.layout.registerWidget({
             id: widgetId,
             title,
-            area: "main-left",
+            region: "main-left-menu",
             rendererId: renderer.id,
             resourceKinds: [resource.kind],
           });

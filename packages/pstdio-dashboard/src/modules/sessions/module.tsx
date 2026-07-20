@@ -27,7 +27,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.session,
       title: "Session",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: dashboardWidgetIds.session,
       priority: 40,
@@ -70,8 +70,8 @@ const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource
 };
 
 const getOpenSessionResource = (ctx: WorkbenchModuleContributionContext) =>
-  Object.values(ctx.layout.getLayout().areas)
-    .flatMap((area) => area.widgets)
+  Object.values(ctx.layout.getLayout().regions)
+    .flatMap((region) => region.widgets)
     .find((placement) => placement.resource?.kind === "session")?.resource;
 
 const resolveSessionsNavigationResource = (ctx: WorkbenchModuleContributionContext) =>
@@ -88,7 +88,7 @@ const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
 
   const activeSessionPlacement = ctx.layout
     .getLayout()
-    .areas.main.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.session);
+    .regions.main.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.session);
   const activeKind = activeSessionPlacement?.resource?.kind;
   if (activeKind === "session" || activeKind === "session-draft") return;
 
@@ -142,7 +142,7 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
     getHeaderNodes: () => [newSessionHeaderNode(ctx)],
   });
   // Session and workspace modes share one body contribution; only workspace mode scopes the
-  // list to the open workspace (via the primary resource) and opens rows in the floating panel.
+  // list to the open workspace (via the primary resource) and opens rows in the Side Panel.
   registerSidebarContribution(ctx, {
     id: "dashboard.sessions.list",
     modes: ["sessions", "workspace"],
@@ -152,7 +152,7 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
       return createSessionsSidebarSections({
         projectId: getDashboardSelectedProjectId(ctx),
         workspace: isWorkspaceMode ? ctx.getPrimaryResource() : undefined,
-        nodeTarget: isWorkspaceMode ? "floating" : "resource",
+        nodeTarget: isWorkspaceMode ? "side" : "resource",
       });
     },
   });
@@ -188,8 +188,8 @@ export const createSessionsModule = () =>
         id: "sessions",
         label: "Sessions",
         activate(modeCtx) {
-          modeCtx.layout.clearArea("floating");
-          modeCtx.layout.clearArea("floating-header");
+          modeCtx.layout.clearRegion("side");
+          modeCtx.layout.clearRegion("side-header");
           return undefined;
         },
       });
@@ -201,7 +201,7 @@ export const createSessionsModule = () =>
           createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
             resource,
             group: "Sessions",
-            activate: () => ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource }),
+            activate: () => ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource }),
           })),
       });
 
@@ -229,15 +229,15 @@ export const createSessionsModule = () =>
       });
 
       // Sessions opened from an extension sidebar (e.g. the planner ticket tree) carry a
-      // `sessionSurface: "floating"` hint. Honor it by opening the floating session panel and
+      // `sessionSurface: "side"` hint. Honor it by opening the Side Panel session and
       // keeping the host view (the ticket) in place, instead of switching to sessions mode. Higher
       // priority than the default session route so the hint wins; unhinted sessions fall through.
       ctx.resources.registerOpener({
-        id: "dashboard.sessions.floating-opener",
+        id: "dashboard.sessions.side-opener",
         priority: 1100,
-        canOpen: (resource) => resource.kind === "session" && resource.metadata?.sessionSurface === "floating",
+        canOpen: (resource) => resource.kind === "session" && resource.metadata?.sessionSurface === "side",
         open: (resource) => {
-          void ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource });
+          void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource });
           return undefined;
         },
       });

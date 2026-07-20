@@ -12,7 +12,7 @@ export const dashboardCommandIds = {
   openDiscord: "dashboard.openDiscord",
   openDocs: "dashboard.openDocs",
   openFile: "dashboard.openFile",
-  openFloatingSession: "dashboard.openFloatingSession",
+  openSessionPanel: "dashboard.openSessionPanel",
   openProjects: "dashboard.openProjects",
   openSessions: "dashboard.openSessions",
   openShortcuts: "dashboard.openShortcuts",

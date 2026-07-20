@@ -33,14 +33,14 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: MAIN_HEADER_WIDGET_ID,
       title: "Workspace mode header",
-      area: "main-header",
+      region: "main-header",
       singleton: true,
       rendererId: MAIN_HEADER_WIDGET_ID,
     }),
     ctx.layout.registerWidget({
       id: workspaceWidgetIds.editor,
       title: "Editor",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: workspaceWidgetIds.editor,
       resourceKinds: [workspaceResourceKind],
@@ -48,10 +48,10 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: workspaceWidgetIds.diff,
       title: "Diff",
-      area: "main-right",
+      region: "main-right-menu",
       singleton: true,
       rendererId: workspaceWidgetIds.diff,
-      areaSize: { defaultPx: 320, minPx: 240 },
+      regionSize: { defaultPx: 320, minPx: 240 },
     }),
     ctx.renderers.registerRenderer({
       id: MAIN_HEADER_WIDGET_ID,
@@ -74,7 +74,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: "workbench-modes.workspace.files",
       title: "Files",
-      area: "main-left",
+      region: "main-left-menu",
       rendererId: "workbench-modes.workspace.files",
     }),
     ctx.resources.registerOpener({

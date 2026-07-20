@@ -6,8 +6,8 @@ describe("updateWidgetPlacement", () => {
   test("updates a widget placement without activating it", () => {
     const layout = createLayoutModel();
 
-    registerTestWidget(layout, { id: "tickets.editor", title: "Ticket", area: "main" });
-    registerTestWidget(layout, { id: "left.scratch", title: "Scratch", area: "left" });
+    registerTestWidget(layout, { id: "tickets.editor", title: "Ticket", region: "main" });
+    registerTestWidget(layout, { id: "left.scratch", title: "Scratch", region: "sidebar" });
 
     layout.openWidget("tickets.editor", {
       resource: { kind: "ticket", uri: "pstdio://ticket/1", label: "Old title" },
@@ -20,20 +20,20 @@ describe("updateWidgetPlacement", () => {
 
     expect(updated.title).toBe("New title");
     expect(layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBe("tickets.editor");
-    expect(layout.getLayout().areas.left.activeWidgetId).toBe(scratch.widgetId);
+    expect(layout.getLayout().regions.main.activeWidgetId).toBe("tickets.editor");
+    expect(layout.getLayout().regions.sidebar.activeWidgetId).toBe(scratch.widgetId);
   });
 });
 
 describe("createLayoutModel", () => {
-  test("opens widgets in their contributed area and tracks active resource state", () => {
+  test("opens widgets in their contributed region and tracks active resource state", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "sessions.chat",
       title: "Session",
-      area: "main-right",
-      fallbackArea: "main",
+      region: "main-right-menu",
+      fallbackRegion: "main",
       resourceKinds: ["session"],
       rendererId: "sessions.chat",
       config: { density: "compact" },
@@ -54,7 +54,7 @@ describe("createLayoutModel", () => {
     });
     expect(layout.getLayout().activeWidgetId).toBe("sessions.chat");
     expect(layout.getLayout().activeResourceUri).toBe("pstdio://session/s1");
-    expect(layout.getLayout().areas["main-right"].activeWidgetId).toBe("sessions.chat");
+    expect(layout.getLayout().regions["main-right-menu"].activeWidgetId).toBe("sessions.chat");
   });
 
   test("reuses singleton widget placements instead of adding duplicates", () => {
@@ -63,14 +63,14 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "diagnostics.center",
       title: "Diagnostics",
-      area: "secondary",
+      region: "secondary",
       singleton: true,
     });
 
     layout.openWidget("diagnostics.center");
     layout.openWidget("diagnostics.center");
 
-    expect(layout.getLayout().areas.secondary.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.secondary.widgets).toHaveLength(1);
   });
 
   test("registers widgets as singleton by default", () => {
@@ -79,7 +79,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.overview",
       title: "Project overview",
-      area: "main",
+      region: "main",
     });
 
     expect(layout.getWidget("project.overview")?.singleton).toBe(true);
@@ -87,7 +87,7 @@ describe("createLayoutModel", () => {
     layout.openWidget("project.overview");
     layout.openWidget("project.overview");
 
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 
   test("opens non-singleton widgets as closable placements by default", () => {
@@ -96,12 +96,12 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.singleton-panel",
       title: "Singleton panel",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "project.tab",
       title: "Project tab",
-      area: "main",
+      region: "main",
       singleton: false,
     });
 
@@ -118,7 +118,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.pinned-tab",
       title: "Pinned tab",
-      area: "main",
+      region: "main",
       singleton: false,
       closable: false,
     });
@@ -132,7 +132,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.details",
       title: "Project details",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: ["project"],
     });
@@ -148,7 +148,7 @@ describe("createLayoutModel", () => {
     expect(layout.getWidget("project.details")).toMatchObject({ singleton: false, reuse: "resource" });
     expect(secondPlacement.widgetId).toBe(firstPlacement.widgetId);
     expect(secondPlacement.title).toBe("Project 1 details");
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 
   test("opens separate default placements for different resources", () => {
@@ -157,7 +157,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.details",
       title: "Project details",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: ["project"],
     });
@@ -170,7 +170,7 @@ describe("createLayoutModel", () => {
     });
 
     expect(secondPlacement.widgetId).not.toBe(firstPlacement.widgetId);
-    expect(layout.getLayout().areas.main.widgets.map((placement) => placement.resourceUri)).toEqual([
+    expect(layout.getLayout().regions.main.widgets.map((placement) => placement.resourceUri)).toEqual([
       "pstdio://project/p1",
       "pstdio://project/p2",
     ]);
@@ -182,7 +182,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
       singleton: false,
     });
 
@@ -191,7 +191,7 @@ describe("createLayoutModel", () => {
 
     expect(secondPlacement.widgetId).toBe(firstPlacement.widgetId);
     expect(secondPlacement.title).toBe("Settings reopened");
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 
   test("opens duplicate placements when reuse is disabled", () => {
@@ -200,7 +200,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "scratch",
       title: "Scratch",
-      area: "main",
+      region: "main",
       singleton: false,
       reuse: "none",
     });
@@ -209,7 +209,7 @@ describe("createLayoutModel", () => {
     const secondPlacement = layout.openWidget("scratch");
 
     expect(secondPlacement.widgetId).not.toBe(firstPlacement.widgetId);
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(2);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(2);
   });
 
   test("updates singleton placement resources when opened from a new resource", () => {
@@ -218,7 +218,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.workspace",
       title: "Workspace",
-      area: "main",
+      region: "main",
       singleton: true,
     });
 
@@ -236,59 +236,59 @@ describe("createLayoutModel", () => {
       title: "PS-267",
     });
     expect(layout.getLayout().activeResourceUri).toBe("pstdio://workspace/ps-267");
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 
-  test("resolves area size from the active widget contribution", () => {
+  test("resolves region size from the active widget contribution", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "project.outline",
       title: "Outline",
-      area: "main-right",
-      areaSize: { defaultPx: 280, minPx: 180, maxPx: 360 },
+      region: "main-right-menu",
+      regionSize: { defaultPx: 280, minPx: 180, maxPx: 360 },
     });
     registerTestWidget(layout, {
       id: "project.preview",
       title: "Preview",
-      area: "main-right",
-      areaSize: { defaultPx: 420, minPx: 240, maxPx: 640 },
+      region: "main-right-menu",
+      regionSize: { defaultPx: 420, minPx: 240, maxPx: 640 },
     });
 
     const outline = layout.openWidget("project.outline");
     layout.openWidget("project.preview");
 
-    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 420, minPx: 240, maxPx: 640 });
+    expect(layout.getRegionSize("main-right-menu")).toEqual({ defaultPx: 420, minPx: 240, maxPx: 640 });
 
     layout.activateWidget(outline.widgetId);
 
-    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 280, minPx: 180, maxPx: 360 });
+    expect(layout.getRegionSize("main-right-menu")).toEqual({ defaultPx: 280, minPx: 180, maxPx: 360 });
   });
 
-  test("resolves area collapsibility from the active widget contribution", () => {
+  test("resolves region collapsibility from the active widget contribution", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "project.preview",
       title: "Preview",
-      area: "secondary",
-      areaCollapsible: true,
+      region: "secondary",
+      regionCollapsible: true,
     });
     registerTestWidget(layout, {
       id: "project.console",
       title: "Console",
-      area: "secondary",
-      areaCollapsible: false,
+      region: "secondary",
+      regionCollapsible: false,
     });
 
     const preview = layout.openWidget("project.preview");
     layout.openWidget("project.console");
 
-    expect(layout.getAreaCollapsible("secondary")).toBe(false);
+    expect(layout.getRegionCollapsible("secondary")).toBe(false);
 
     layout.activateWidget(preview.widgetId);
 
-    expect(layout.getAreaCollapsible("secondary")).toBe(true);
+    expect(layout.getRegionCollapsible("secondary")).toBe(true);
   });
 });
 
@@ -299,31 +299,31 @@ describe("createLayoutModel placeholders", () => {
     const disposable = layout.registerPlaceholder({
       id: "main.empty",
       title: "Empty main",
-      area: "main",
+      region: "main",
       rendererId: "main.empty",
-      areaSize: { defaultPx: 360, minPx: 240 },
-      areaCollapsible: false,
+      regionSize: { defaultPx: 360, minPx: 240 },
+      regionCollapsible: false,
     });
 
     expect(layout.getPlaceholder("main")).toMatchObject({
       id: "main.empty",
       title: "Empty main",
-      area: "main",
+      region: "main",
       rendererId: "main.empty",
     });
     expect(layout.store.getState().placeholders.main).toMatchObject({
       id: "main.empty",
-      area: "main",
+      region: "main",
     });
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
-    expect(layout.getAreaSize("main")).toEqual({ defaultPx: 360, minPx: 240 });
-    expect(layout.getAreaCollapsible("main")).toBe(false);
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
+    expect(layout.getRegionSize("main")).toEqual({ defaultPx: 360, minPx: 240 });
+    expect(layout.getRegionCollapsible("main")).toBe(false);
 
     disposable.dispose();
 
     expect(layout.getPlaceholder("main")).toBeUndefined();
-    expect(layout.getAreaSize("main")).toBeUndefined();
-    expect(layout.getAreaCollapsible("main")).toBe(true);
+    expect(layout.getRegionSize("main")).toBeUndefined();
+    expect(layout.getRegionCollapsible("main")).toBe(true);
   });
 
   test("uses active widgets instead of the placeholder while widgets are open", () => {
@@ -332,37 +332,37 @@ describe("createLayoutModel placeholders", () => {
     layout.registerPlaceholder({
       id: "main.empty",
       title: "Empty main",
-      area: "main",
+      region: "main",
       rendererId: "main.empty",
-      areaSize: { defaultPx: 360, minPx: 240 },
-      areaCollapsible: false,
+      regionSize: { defaultPx: 360, minPx: 240 },
+      regionCollapsible: false,
     });
     registerTestWidget(layout, {
       id: "project.preview",
       title: "Preview",
-      area: "main",
-      areaSize: { defaultPx: 480, minPx: 320 },
-      areaCollapsible: true,
+      region: "main",
+      regionSize: { defaultPx: 480, minPx: 320 },
+      regionCollapsible: true,
       closable: true,
     });
 
     const preview = layout.openWidget("project.preview");
 
-    expect(layout.getAreaSize("main")).toEqual({ defaultPx: 480, minPx: 320 });
-    expect(layout.getAreaCollapsible("main")).toBe(true);
+    expect(layout.getRegionSize("main")).toEqual({ defaultPx: 480, minPx: 320 });
+    expect(layout.getRegionCollapsible("main")).toBe(true);
 
     layout.closeWidget(preview.widgetId);
 
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
-    expect(layout.getAreaSize("main")).toEqual({ defaultPx: 360, minPx: 240 });
-    expect(layout.getAreaCollapsible("main")).toBe(false);
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
+    expect(layout.getRegionSize("main")).toEqual({ defaultPx: 360, minPx: 240 });
+    expect(layout.getRegionCollapsible("main")).toBe(false);
   });
 });
 
 describe("createLayoutModel persistence", () => {
-  test("fills in missing areas when loading a layout persisted before new areas existed", () => {
+  test("fills in missing regions when loading a layout persisted before new regions existed", () => {
     const partialLayout = {
-      areas: {
+      regions: {
         main: { id: "main", visible: true, widgets: [] },
       },
     } as unknown as WorkbenchLayout;
@@ -373,11 +373,11 @@ describe("createLayoutModel persistence", () => {
 
     const layout = createLayoutModel({ persistence });
 
-    expect(layout.getLayout().areas["left-header"]).toBeDefined();
-    expect(layout.getLayout().areas["secondary-header"]).toBeDefined();
-    expect(layout.getLayout().areas["floating-header"]).toBeDefined();
-    expect(layout.getLayout().areas["left-header"].widgets).toEqual([]);
-    expect(layout.getLayout().areas["floating-header"].widgets).toEqual([]);
+    expect(layout.getLayout().regions["sidebar-header"]).toBeDefined();
+    expect(layout.getLayout().regions["secondary-header"]).toBeDefined();
+    expect(layout.getLayout().regions["side-header"]).toBeDefined();
+    expect(layout.getLayout().regions["sidebar-header"].widgets).toEqual([]);
+    expect(layout.getLayout().regions["side-header"].widgets).toEqual([]);
   });
 
   test("exposes a store that notifies subscribers when the layout changes", () => {
@@ -385,7 +385,7 @@ describe("createLayoutModel persistence", () => {
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
 
     const activeIds: Array<string | undefined> = [];
@@ -395,7 +395,7 @@ describe("createLayoutModel persistence", () => {
     );
 
     layout.openWidget("project.settings");
-    layout.clearArea("main");
+    layout.clearRegion("main");
 
     expect(activeIds).toEqual(["project.settings", undefined]);
 
@@ -415,7 +415,7 @@ describe("createLayoutModel persistence", () => {
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
 
     layout.openWidget("project.settings", {
@@ -428,7 +428,7 @@ describe("createLayoutModel persistence", () => {
     const rehydrated = createLayoutModel({ persistence });
 
     expect(rehydrated.getLayout().activeWidgetId).toBe("project.settings");
-    expect(rehydrated.getLayout().areas.main.widgets[0]?.resourceUri).toBe("pstdio://project/project-1");
+    expect(rehydrated.getLayout().regions.main.widgets[0]?.resourceUri).toBe("pstdio://project/project-1");
   });
 
   test("can unregister ephemeral widgets without persisting placement removal", () => {
@@ -443,7 +443,7 @@ describe("createLayoutModel persistence", () => {
     registerTestWidget(layout, {
       id: "session-chat-bubble",
       title: "Session chat bubble",
-      area: "floating",
+      region: "side",
       singleton: true,
     });
     layout.openWidget("session-chat-bubble");
@@ -451,10 +451,8 @@ describe("createLayoutModel persistence", () => {
     layout.unregisterWidget("session-chat-bubble", { removePlacements: false, persist: false });
 
     expect(layout.getWidget("session-chat-bubble")).toBeUndefined();
-    expect(layout.getLayout().areas.floating.widgets.map((widget) => widget.widgetId)).toEqual(["session-chat-bubble"]);
-    expect(savedLayouts.at(-1)?.areas.floating.widgets.map((widget) => widget.widgetId)).toEqual([
-      "session-chat-bubble",
-    ]);
+    expect(layout.getLayout().regions.side.widgets.map((widget) => widget.widgetId)).toEqual(["session-chat-bubble"]);
+    expect(savedLayouts.at(-1)?.regions.side.widgets.map((widget) => widget.widgetId)).toEqual(["session-chat-bubble"]);
   });
 
   test("rotates persisted state per scope and flushes synchronously on switch", () => {
@@ -468,19 +466,19 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
 
     layout.setPersistenceScope("project:a");
-    layout.setAreaVisible("left", false);
-    layout.setAreaSize("left", 200);
+    layout.setRegionVisible("sidebar", false);
+    layout.setRegionSize("sidebar", 200);
 
     layout.setPersistenceScope("project:b");
-    layout.setAreaSize("left", 360);
+    layout.setRegionSize("sidebar", 360);
 
     layout.setPersistenceScope("project:a");
-    expect(layout.getLayout().areas.left.visible).toBe(false);
-    expect(layout.getLayout().areas.left.size).toBe(200);
+    expect(layout.getLayout().regions.sidebar.visible).toBe(false);
+    expect(layout.getLayout().regions.sidebar.size).toBe(200);
 
     layout.setPersistenceScope("project:b");
-    expect(layout.getLayout().areas.left.visible).toBe(true);
-    expect(layout.getLayout().areas.left.size).toBe(360);
+    expect(layout.getLayout().regions.sidebar.visible).toBe(true);
+    expect(layout.getLayout().regions.sidebar.size).toBe(360);
   });
 
   test("scope === undefined falls back to global behavior", () => {
@@ -494,11 +492,11 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
 
     expect(layout.getPersistenceScope()).toBeUndefined();
-    layout.setAreaSize("left", 280);
-    expect(saved.get("__global__")?.areas.left.size).toBe(280);
+    layout.setRegionSize("sidebar", 280);
+    expect(saved.get("__global__")?.regions.sidebar.size).toBe(280);
   });
 
-  test("persists area visibility and resize state through the layout model", () => {
+  test("persists region visibility and resize state through the layout model", () => {
     const savedLayouts: WorkbenchLayout[] = [];
     const persistence = {
       getLayout: () => savedLayouts.at(-1),
@@ -508,15 +506,15 @@ describe("createLayoutModel persistence", () => {
     };
     const layout = createLayoutModel({ persistence });
 
-    layout.setAreaVisible("left", false);
-    layout.setAreaSize("left", 312);
-    layout.setAreaSize("secondary", 280);
+    layout.setRegionVisible("sidebar", false);
+    layout.setRegionSize("sidebar", 312);
+    layout.setRegionSize("secondary", 280);
 
     const rehydrated = createLayoutModel({ persistence });
 
-    expect(rehydrated.getLayout().areas.left.visible).toBe(false);
-    expect(rehydrated.getLayout().areas.left.size).toBe(312);
-    expect(rehydrated.getAreaSize("left")?.defaultPx).toBe(312);
-    expect(rehydrated.getLayout().areas.secondary.size).toBe(280);
+    expect(rehydrated.getLayout().regions.sidebar.visible).toBe(false);
+    expect(rehydrated.getLayout().regions.sidebar.size).toBe(312);
+    expect(rehydrated.getRegionSize("sidebar")?.defaultPx).toBe(312);
+    expect(rehydrated.getLayout().regions.secondary.size).toBe(280);
   });
 });

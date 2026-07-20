@@ -43,8 +43,8 @@ const sections: OnboardingSection[] = [
     icon: "BookOpen",
     description: "The vocabulary the workbench shell is built on.",
     pages: [
-      { id: "areas", label: "Areas", body: "Named layout slots widgets pin themselves to." },
-      { id: "widgets", label: "Widgets", body: "Registrations that place a renderer into an area." },
+      { id: "regions", label: "Regions", body: "Named layout slots widgets pin themselves to." },
+      { id: "widgets", label: "Widgets", body: "Registrations that place a renderer into an region." },
     ],
   },
   {
@@ -349,28 +349,28 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: BREADCRUMB_TREE_ID,
       title: "Docs",
-      area: "left",
-      areaSize: { defaultPx: 240, minPx: 200 },
+      region: "sidebar",
+      regionSize: { defaultPx: 240, minPx: 200 },
       rendererId: BREADCRUMB_TREE_ID,
     });
     ctx.layout.registerWidget({
       id: DOCS_HOME_WIDGET_ID,
       title: "Docs",
-      area: "main",
+      region: "main",
       resourceKinds: [DOCS_KIND],
       rendererId: DOCS_HOME_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: SECTION_WIDGET_ID,
       title: "Section",
-      area: "main",
+      region: "main",
       resourceKinds: [SECTION_KIND],
       rendererId: SECTION_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: PAGE_WIDGET_ID,
       title: "Page",
-      area: "main",
+      region: "main",
       resourceKinds: [PAGE_KIND],
       rendererId: PAGE_RENDERER_ID,
     });

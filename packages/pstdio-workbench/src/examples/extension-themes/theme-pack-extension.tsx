@@ -107,14 +107,14 @@ const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
 };
 
 // The primary extension: a "Theme Pack" that contributes a gallery panel into
-// the editor area. Disabling it disposes both the widget and its renderer.
+// the editor region. Disabling it disposes both the widget and its renderer.
 export const createThemePackExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-pack",
   activate(ctx) {
     ctx.layout.registerWidget({
       id: THEME_PACK_WIDGET_ID,
       title: "Theme Pack",
-      area: "main",
+      region: "main",
       rendererId: THEME_PACK_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({

@@ -51,7 +51,7 @@ interface ExtensionWebviewFrameProps {
 
 const isDarkPreference = (preference: string) => /dark/i.test(preference);
 
-// Mirrors the workbench main area background (editor.background). That token lives
+// Mirrors the workbench main region background (editor.background). That token lives
 // in pstdio-workbench and isn't part of its public API, so we reference the same
 // CSS variable directly. A freshly-mounted iframe paints `about:blank` white until
 // the guest runtime applies the theme; an opaque cover in this color hides that

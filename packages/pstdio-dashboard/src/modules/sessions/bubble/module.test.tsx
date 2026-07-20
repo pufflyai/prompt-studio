@@ -10,39 +10,39 @@ import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule", () => {
-  test("mounts empty floating session chrome on activation", () => {
+  test("mounts empty session panel chrome on activation", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
 
     const layout = workbench.layout.getLayout();
 
-    expect(layout.areas.floating.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(layout.regions.side.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.sessionBubble,
     ]);
-    expect(layout.areas["floating-header"].widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(layout.regions["side-header"].widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.sessionBubbleHeader,
     ]);
-    expect(layout.areas.floating.widgets[0]?.resource).toBeUndefined();
-    expect(layout.areas["floating-header"].widgets[0]?.resource).toBeUndefined();
+    expect(layout.regions.side.widgets[0]?.resource).toBeUndefined();
+    expect(layout.regions["side-header"].widgets[0]?.resource).toBeUndefined();
   });
 
-  test("restores empty session chrome when mode chrome reactivates after floating areas are cleared", () => {
+  test("restores empty session chrome when mode chrome reactivates after Side regions are cleared", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
     workbench.sessionPanel.setMode("closed");
-    workbench.layout.clearArea("floating");
-    workbench.layout.clearArea("floating-header");
+    workbench.layout.clearRegion("side");
+    workbench.layout.clearRegion("side-header");
 
     activateModeChromeContributions(workbench, "workspace");
     const layout = workbench.layout.getLayout();
 
     expect(workbench.sessionPanel.getMode()).toBe("closed");
-    expect(layout.areas.floating.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(layout.regions.side.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.sessionBubble,
     ]);
-    expect(layout.areas["floating-header"].widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(layout.regions["side-header"].widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.sessionBubbleHeader,
     ]);
   });
@@ -60,7 +60,7 @@ describe("createSessionBubbleModule", () => {
 
     const placement = workbench.layout
       .getLayout()
-      .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+      .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(placement?.resource?.kind).toBe("session-draft");
     expect(placement?.resource?.metadata?.workspaceId).toBe("workspace-1");
@@ -80,7 +80,7 @@ describe("createSessionBubbleModule", () => {
 
     const headerPlacement = workbench.layout
       .getLayout()
-      .areas["floating-header"].widgets.find(
+      .regions["side-header"].widgets.find(
         (widget) => widget.contributionId === dashboardWidgetIds.sessionBubbleHeader,
       );
 
@@ -125,7 +125,7 @@ describe("createSessionBubbleModule", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
       expect(placement?.resource?.kind).toBe("session-draft");
       expect(placement?.resource?.metadata).toMatchObject({
@@ -183,7 +183,7 @@ describe("createSessionBubbleModule", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
       expect(workbench.modes.getActiveModeId()).toBe("workspace");
       expect(workbench.getPrimaryResource()?.id).toBe("workspace-active");

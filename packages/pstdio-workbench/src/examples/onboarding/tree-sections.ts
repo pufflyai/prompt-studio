@@ -6,20 +6,20 @@ export const onboardingTreeSections = [
     label: "Concepts",
     nodes: [
       {
-        id: "areas",
-        label: "Areas",
+        id: "regions",
+        label: "Regions",
         description: "Named layout targets for contributed UI.",
         icon: "PanelLeft",
         children: [
-          { id: "areas.main", label: "main", description: "Primary work area.", icon: "PanelTop" },
-          { id: "areas.left", label: "left", description: "Tree-hosting sidebar.", icon: "PanelLeft" },
-          { id: "areas.status", label: "status", description: "Persistent bottom strip.", icon: "PanelBottom" },
+          { id: "regions.main", label: "main", description: "Primary work region.", icon: "PanelTop" },
+          { id: "regions.sidebar", label: "sidebar", description: "Tree-hosting sidebar.", icon: "PanelLeft" },
+          { id: "regions.status", label: "status", description: "Persistent bottom strip.", icon: "PanelBottom" },
         ],
       },
       {
         id: "widgets",
         label: "Widgets",
-        description: "Registered views that can be placed into areas.",
+        description: "Registered views that can be placed into regions.",
         icon: "PanelsTopLeft",
         children: [
           { id: "widgets.renderer", label: "rendererId", description: "Connects a widget to React.", icon: "Code" },

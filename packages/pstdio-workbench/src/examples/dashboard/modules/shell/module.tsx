@@ -7,13 +7,13 @@ import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
-import { DashboardLeftHeader } from "./components/dashboard-left-header";
 import { DashboardMainHeader } from "./components/dashboard-main-header";
+import { DashboardSidebarHeader } from "./components/dashboard-sidebar-header";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { StatusWidget } from "./components/status-widget";
 import { registerProjectNavigation } from "./project-nav";
 
-const LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
+const SIDEBAR_HEADER_WIDGET_ID = "dashboard.sidebarHeader";
 
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
@@ -28,7 +28,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.header,
       title: "Dashboard header",
-      area: "nav",
+      region: "nav",
       singleton: true,
       rendererId: dashboardWidgetIds.header,
       priority: 100,
@@ -41,22 +41,22 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   });
 
   ctx.layout.registerWidget({
-    id: LEFT_HEADER_WIDGET_ID,
+    id: SIDEBAR_HEADER_WIDGET_ID,
     title: "Project brand",
-    area: "left-header",
+    region: "sidebar-header",
     singleton: true,
-    rendererId: LEFT_HEADER_WIDGET_ID,
+    rendererId: SIDEBAR_HEADER_WIDGET_ID,
   });
   ctx.renderers.registerRenderer({
-    id: LEFT_HEADER_WIDGET_ID,
-    render: (input) => <DashboardLeftHeader workbench={input.workbench} />,
+    id: SIDEBAR_HEADER_WIDGET_ID,
+    render: (input) => <DashboardSidebarHeader workbench={input.workbench} />,
   });
 
   ctx.layout.registerWidget(
     {
       id: dashboardWidgetIds.status,
       title: "Dashboard status",
-      area: "status",
+      region: "status",
       singleton: true,
       rendererId: dashboardWidgetIds.status,
       priority: 50,
@@ -72,7 +72,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.extensionRoute,
       title: "Extension route",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: dashboardWidgetIds.extensionRoute,
       priority: 70,
@@ -85,7 +85,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   });
 
   ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
-  ctx.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true });
+  ctx.layout.openWidget(SIDEBAR_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
 };
 

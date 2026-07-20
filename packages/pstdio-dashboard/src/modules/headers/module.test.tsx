@@ -10,15 +10,15 @@ describe("createHeadersModule", () => {
     workbench.registerModule(createHeadersModule());
 
     const layout = workbench.layout.getLayout();
-    expect(layout.areas.nav.widgets).toContainEqual(
+    expect(layout.regions.nav.widgets).toContainEqual(
       expect.objectContaining({
         contributionId: dashboardWidgetIds.header,
         pinned: true,
       }),
     );
-    expect(layout.areas["left-header"].widgets).toContainEqual(
+    expect(layout.regions["sidebar-header"].widgets).toContainEqual(
       expect.objectContaining({
-        contributionId: dashboardWidgetIds.leftHeader,
+        contributionId: dashboardWidgetIds.sidebarHeader,
         pinned: true,
       }),
     );

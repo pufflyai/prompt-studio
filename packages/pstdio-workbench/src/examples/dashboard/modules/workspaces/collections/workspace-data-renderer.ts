@@ -117,7 +117,7 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     {
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
-      area: "main",
+      region: "main",
       rendererId: dashboardWidgetIds.workspaces,
       singleton: true,
     },

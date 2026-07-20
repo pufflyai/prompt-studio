@@ -38,8 +38,8 @@ interface SwitcherPanelProps {
 
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
-  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.size);
-  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.visible);
+  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidebar.size);
+  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidebar.visible);
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
@@ -69,10 +69,13 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
         ))}
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => workbench.layout.setAreaSize("left", (leftSize ?? 240) + 40)}>
+        <Button size="sm" onClick={() => workbench.layout.setRegionSize("sidebar", (leftSize ?? 240) + 40)}>
           Sidebar +40
         </Button>
-        <Button size="sm" onClick={() => workbench.layout.setAreaSize("left", Math.max(160, (leftSize ?? 240) - 40))}>
+        <Button
+          size="sm"
+          onClick={() => workbench.layout.setRegionSize("sidebar", Math.max(160, (leftSize ?? 240) - 40))}
+        >
           Sidebar -40
         </Button>
         <Button size="sm" onClick={() => workbench.commands.executeCommand("workbench.toggleSideBar")}>
@@ -116,7 +119,7 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     ctx.layout.registerWidget({
       id: PANEL_WIDGET_ID,
       title: "Scope switcher",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: PANEL_RENDERER_ID,
     });
@@ -124,7 +127,7 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     ctx.layout.registerWidget({
       id: SIDEBAR_WIDGET_ID,
       title: "Sidebar",
-      area: "left",
+      region: "sidebar",
       singleton: true,
       rendererId: SIDEBAR_RENDERER_ID,
     });
@@ -143,7 +146,7 @@ export const createLayoutScopeExampleWorkbench = () => {
     workbench.layout.setPersistenceScope(scope);
     workbench.layout.openWidget(PANEL_WIDGET_ID);
     workbench.layout.openWidget(SIDEBAR_WIDGET_ID, { pinned: true });
-    workbench.layout.setAreaSize("left", leftSize);
+    workbench.layout.setRegionSize("sidebar", leftSize);
   };
 
   seedScope("project:a", 200);

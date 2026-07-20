@@ -28,11 +28,11 @@ describe("createWorkspacesModule", () => {
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.dashboardSidebar,
     ]);
-    expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
-    expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
+    expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBeUndefined();
 
@@ -45,7 +45,7 @@ describe("createWorkspacesModule", () => {
     expect(sidebarNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
-  test("opens the last active linked session in the floating panel when a workspace opens", async () => {
+  test("opens the last active linked session in the Side Panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSidebarModule());
@@ -111,7 +111,7 @@ describe("createWorkspacesModule", () => {
 
     const floatingSession = workbench.layout
       .getLayout()
-      .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+      .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
@@ -172,7 +172,7 @@ describe("createWorkspacesModule", () => {
 
     await workbench.commands.executeCommand(dashboardCommandIds.createWorkspace);
 
-    expect(workbench.layout.getLayout().areas.overlay.activeWidgetId).toBe(dashboardWidgetIds.createWorkspace);
+    expect(workbench.layout.getLayout().regions.overlay.activeWidgetId).toBe(dashboardWidgetIds.createWorkspace);
   });
 
   test("places workspace creation on the Workspaces navigation row", () => {
@@ -208,7 +208,7 @@ describe("createWorkspacesModule", () => {
     workbench.layout.registerWidget({
       id: "test.ticket",
       title: "Ticket",
-      area: "main",
+      region: "main",
       rendererId: "test.ticket",
     });
     workbench.layout.openWidget("test.ticket", { resource: ticket });
@@ -246,6 +246,27 @@ describe("createWorkspacesModule", () => {
   });
 });
 
+describe("createWorkspacesModule sidebar state", () => {
+  test("keeps the sidebar collapsed when workspace navigation changes the active mode", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceShorthand: "PS-307_A1",
+    });
+
+    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.panels.setOpen("sidebar", false);
+    workbench.layout.setRegionVisible("sidebar", false);
+
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+
+    expect(workbench.panels.isOpen("sidebar")).toBe(false);
+    expect(workbench.layout.getLayout().regions.sidebar.visible).toBe(false);
+  });
+});
+
 describe("createWorkspacesModule breadcrumbs", () => {
   test("nests workspace breadcrumbs under the ticket when opened from a ticket", async () => {
     const workbench = createWorkbenchCore();
@@ -266,6 +287,11 @@ describe("createWorkspacesModule breadcrumbs", () => {
       "Tickets",
       "PS-307 Dashboard workbench datalayer",
       "PS-307_A1",
+    ]);
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.icon)).toEqual([
+      "square-kanban",
+      "component",
+      "GitBranch",
     ]);
   });
 

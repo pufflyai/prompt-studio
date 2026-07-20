@@ -79,7 +79,7 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: dataRendererStoryEditorWidgetId,
     title: "Configure attributes",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dataRendererStoryEditorWidgetId,
@@ -131,7 +131,7 @@ export const createDataRendererStoryModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: dataRendererStoryWidgetId,
       title: "Rows",
-      area: "main",
+      region: "main",
       rendererId: dataRendererStoryRendererId,
       singleton: true,
     });

@@ -13,15 +13,20 @@ const mailMode = randomWorkbenchModes.mail;
 interface MailWidgetSetup {
   id: string;
   title: string;
-  area: "nav" | "main" | "main-right" | "status";
+  region: "nav" | "main" | "main-right-menu" | "status";
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
 }
 
 const mailWidgets: MailWidgetSetup[] = [
-  { id: mailWidgetIds.top, title: "Mail header", area: "nav", render: (input) => <MailTopBar input={input} /> },
-  { id: mailWidgetIds.reader, title: "Reading pane", area: "main", render: (input) => <MailReader input={input} /> },
-  { id: mailWidgetIds.participants, title: "Participants", area: "main-right", render: () => <MailParticipants /> },
-  { id: mailWidgetIds.status, title: "Inbox status", area: "status", render: () => <MailStatus /> },
+  { id: mailWidgetIds.top, title: "Mail header", region: "nav", render: (input) => <MailTopBar input={input} /> },
+  { id: mailWidgetIds.reader, title: "Reading pane", region: "main", render: (input) => <MailReader input={input} /> },
+  {
+    id: mailWidgetIds.participants,
+    title: "Participants",
+    region: "main-right-menu",
+    render: () => <MailParticipants />,
+  },
+  { id: mailWidgetIds.status, title: "Inbox status", region: "status", render: () => <MailStatus /> },
 ];
 
 const buildMailTreeSections = () =>
@@ -53,7 +58,7 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       ctx.layout.registerWidget({
         id: widget.id,
         title: widget.title,
-        area: widget.area,
+        region: widget.region,
         singleton: true,
         rendererId: widget.id,
       }),
@@ -70,7 +75,7 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     ctx.layout.registerWidget({
       id: "mail.navigation",
       title: mailMode.label,
-      area: "main-left",
+      region: "main-left-menu",
       rendererId: "mail.navigation",
     }),
     ctx.resources.registerOpener({

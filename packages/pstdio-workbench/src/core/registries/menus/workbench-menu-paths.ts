@@ -1,10 +1,15 @@
 import type { MenuPath } from "./menu-registry";
 
-export const headerLeadingMenuPath = (area: string): MenuPath => ["workbench", "header", area, "leading"];
+export const headerLeadingMenuPath = (region: string): MenuPath => ["workbench", "header", region, "leading"];
 
-export const headerTrailingMenuPath = (area: string): MenuPath => ["workbench", "header", area, "trailing"];
+export const headerTrailingMenuPath = (region: string): MenuPath => ["workbench", "header", region, "trailing"];
 
-export const workbenchAreaTabLeadingMenuPath = (area: string): MenuPath => ["workbench", "areaTabs", area, "leading"];
+export const workbenchRegionTabLeadingMenuPath = (region: string): MenuPath => [
+  "workbench",
+  "regionTabs",
+  region,
+  "leading",
+];
 
 export const workbenchCommandPaletteMenuPath = ["workbench", "commandPalette"] as const satisfies MenuPath;
 

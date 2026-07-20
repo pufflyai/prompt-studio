@@ -9,12 +9,12 @@ describe("createLayoutModel widget placement", () => {
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "sessions.chat",
       title: "Session chat",
-      area: "main",
+      region: "main",
     });
 
     const settings = layout.openWidget("project.settings");
@@ -24,8 +24,8 @@ describe("createLayoutModel widget placement", () => {
 
     expect(activated.widgetId).toBe(settings.widgetId);
     expect(layout.getLayout().activeWidgetId).toBe(settings.widgetId);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBe(settings.widgetId);
-    expect(layout.getLayout().areas.main.widgets.map((placement) => placement.widgetId)).toEqual([
+    expect(layout.getLayout().regions.main.activeWidgetId).toBe(settings.widgetId);
+    expect(layout.getLayout().regions.main.widgets.map((placement) => placement.widgetId)).toEqual([
       "project.settings",
       "sessions.chat",
     ]);
@@ -37,12 +37,12 @@ describe("createLayoutModel widget placement", () => {
     registerTestWidget(layout, {
       id: "project.tickets",
       title: "Tickets",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
 
     layout.openWidget("project.tickets", {
@@ -59,8 +59,8 @@ describe("createLayoutModel widget placement", () => {
       resourceUri: "pstdio://settings/project",
       title: "Settings",
     });
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.main.widgets[0]).toEqual(placement);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets[0]).toEqual(placement);
     expect(layout.getLayout().activeWidgetId).toBe("project.settings");
   });
 
@@ -70,12 +70,12 @@ describe("createLayoutModel widget placement", () => {
     registerTestWidget(layout, {
       id: "project.tickets",
       title: "Tickets",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
 
     const tickets = layout.openWidget("project.tickets", {
@@ -91,26 +91,26 @@ describe("createLayoutModel widget placement", () => {
     });
 
     expect(placement.widgetId).toBe(tickets.widgetId);
-    expect(layout.getLayout().areas.main.widgets).toEqual([placement]);
+    expect(layout.getLayout().regions.main.widgets).toEqual([placement]);
     expect(layout.getLayout().activeWidgetId).toBe(tickets.widgetId);
   });
 
-  test("moves a reusable placement when reopened in a different area without a resource update", () => {
+  test("moves a reusable placement when reopened in a different region without a resource update", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "ticket.files",
       title: "Files",
-      area: "left",
+      region: "sidebar",
     });
 
     const placement = layout.openWidget("ticket.files", { title: "Ticket files" });
-    const moved = layout.openWidget("ticket.files", { area: "main-right", title: "Ticket files" });
+    const moved = layout.openWidget("ticket.files", { region: "main-right-menu", title: "Ticket files" });
 
     expect(moved.widgetId).toBe(placement.widgetId);
-    expect(layout.getLayout().areas.left.widgets).toEqual([]);
-    expect(layout.getLayout().areas["main-right"].widgets).toEqual([moved]);
-    expect(layout.getLayout().areas["main-right"].activeWidgetId).toBe(moved.widgetId);
+    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions["main-right-menu"].widgets).toEqual([moved]);
+    expect(layout.getLayout().regions["main-right-menu"].activeWidgetId).toBe(moved.widgetId);
     expect(layout.getLayout().activeWidgetId).toBe(moved.widgetId);
   });
 
@@ -120,12 +120,12 @@ describe("createLayoutModel widget placement", () => {
     registerTestWidget(layout, {
       id: "project.tickets",
       title: "Tickets",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
       closable: true,
     });
 
@@ -134,8 +134,8 @@ describe("createLayoutModel widget placement", () => {
 
     layout.closeWidget(settings.widgetId);
 
-    expect(layout.getLayout().areas.main.widgets).toEqual([tickets]);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBe(tickets.widgetId);
+    expect(layout.getLayout().regions.main.widgets).toEqual([tickets]);
+    expect(layout.getLayout().regions.main.activeWidgetId).toBe(tickets.widgetId);
     expect(layout.getLayout().activeWidgetId).toBe(tickets.widgetId);
     expect(() => layout.closeWidget(tickets.widgetId)).toThrow("Widget cannot be closed: project.tickets");
   });
@@ -146,41 +146,41 @@ describe("createLayoutModel widget placement", () => {
     const disposable = registerTestWidget(layout, {
       id: "mode.editor",
       title: "Editor",
-      area: "main",
+      region: "main",
     });
 
     layout.openWidget("mode.editor", {
       resource: { kind: "note", uri: "pstdio://note/1", label: "Note 1" },
     });
 
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
     expect(layout.getLayout().activeWidgetId).toBe("mode.editor");
 
     disposable.dispose();
 
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(0);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(0);
+    expect(layout.getLayout().regions.main.activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 
-  test("resets every area and clears active workbench selection", () => {
+  test("resets every region and clears active workbench selection", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "modes.switcher",
       title: "Modes",
-      area: "activity",
+      region: "activity",
     });
     registerTestWidget(layout, {
       id: "sessions.tree",
       title: "Sessions",
-      area: "left",
+      region: "sidebar",
     });
     registerTestWidget(layout, {
       id: "sessions.chat",
       title: "Session",
-      area: "main",
+      region: "main",
     });
 
     layout.openWidget("modes.switcher", { pinned: true });
@@ -189,44 +189,44 @@ describe("createLayoutModel widget placement", () => {
       resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" },
     });
 
-    layout.resetAreas();
+    layout.resetRegions();
 
-    expect(layout.getLayout().areas.activity.widgets).toEqual([]);
-    expect(layout.getLayout().areas.left.widgets).toEqual([]);
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().regions.activity.widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
+    expect(layout.getLayout().regions.main.activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 
-  test("resetAreas preserves area visibility", () => {
+  test("resetRegions preserves region visibility", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "sessions.tree",
       title: "Sessions",
-      area: "left",
+      region: "sidebar",
     });
     layout.openWidget("sessions.tree");
 
-    const before = layout.getLayout().areas.left.visible;
-    layout.resetAreas();
+    const before = layout.getLayout().regions.sidebar.visible;
+    layout.resetRegions();
 
-    expect(layout.getLayout().areas.left.visible).toBe(before);
+    expect(layout.getLayout().regions.sidebar.visible).toBe(before);
   });
 
-  test("clears an area and active workbench selection", () => {
+  test("clears an region and active workbench selection", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, {
       id: "project.tickets",
       title: "Tickets",
-      area: "main",
+      region: "main",
     });
     registerTestWidget(layout, {
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main",
     });
 
     layout.openWidget("project.tickets");
@@ -234,10 +234,10 @@ describe("createLayoutModel widget placement", () => {
       resource: { kind: "project", uri: "pstdio://project/project-1", label: "Project" },
     });
 
-    layout.clearArea("main");
+    layout.clearRegion("main");
 
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
-    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().regions.main.widgets).toEqual([]);
+    expect(layout.getLayout().regions.main.activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });

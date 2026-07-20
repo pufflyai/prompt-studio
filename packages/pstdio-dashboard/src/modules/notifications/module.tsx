@@ -47,7 +47,7 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContributionContext) => 
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.notificationsModal,
     title: "Notifications",
-    area: "overlay",
+    region: "overlay",
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.notificationsModal,

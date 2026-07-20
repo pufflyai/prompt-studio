@@ -10,43 +10,43 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  type WorkbenchArea as WorkbenchAreaId,
   type WorkbenchCore,
+  type WorkbenchRegion as WorkbenchRegionId,
   type WorkbenchWidgetPlacement,
-  workbenchAreaTabLeadingMenuPath,
+  workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
+import { resolveDisplayedActiveWidgetId, toTabKey } from "./region-tabs-visibility";
 
-interface WorkbenchAreaTabsProps {
+interface WorkbenchRegionTabsProps {
   workbench: WorkbenchCore;
-  area: WorkbenchAreaId;
+  region: WorkbenchRegionId;
   visibilityStorageKey?: string;
 }
 
 const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
 
-export const shouldShowAreaTabs = (
+export const shouldShowRegionTabs = (
   placements: WorkbenchWidgetPlacement[],
   options: { hasLeadingActions?: boolean } = {},
 ) => options.hasLeadingActions === true || placements.length > 1 || placements.some(isPlacementCloseable);
 
-export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
-  const { workbench, area, visibilityStorageKey } = props;
+export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
+  const { workbench, region, visibilityStorageKey } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
-  const placements = areaState.widgets;
+  const regionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
+  const placements = regionState.widgets;
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
-  // back to the area id so persistence has a sensible default.
-  const visibilityKey = visibilityStorageKey ?? area;
+  // back to the region id so persistence has a sensible default.
+  const visibilityKey = visibilityStorageKey ?? region;
   const tabStore = useTabVisibilityStore(visibilityKey, (state) => state);
   const tabOverrides = tabStore.tabOverrides;
-  const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(area, placement);
+  const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
   const visiblePlacements = filterVisibleTabs(placements, tabOverrides, getKey);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,9 +77,9 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const hasVisibilityMenu = menuActions.length > 0;
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
-    workbenchAreaTabLeadingMenuPath(area),
+    workbenchRegionTabLeadingMenuPath(region),
   );
-  const showTabs = shouldShowAreaTabs(visiblePlacements, { hasLeadingActions: leadingItems.length > 0 });
+  const showTabs = shouldShowRegionTabs(visiblePlacements, { hasLeadingActions: leadingItems.length > 0 });
 
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;
@@ -106,7 +106,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
 
   if (!showTabs) return null;
 
-  const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState.activeWidgetId);
+  const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {

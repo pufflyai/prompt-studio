@@ -65,7 +65,7 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
       ctx.layout.registerWidget({
         id: renderer.widgetId,
         title: renderer.title,
-        area: "main",
+        region: "main",
         rendererId: renderer.rendererId,
         singleton: true,
       });

@@ -19,16 +19,16 @@ const notesMode = randomWorkbenchModes.notes;
 interface NotesWidgetSetup {
   id: string;
   title: string;
-  area: "nav" | "main" | "main-right" | "status" | "floating";
+  region: "nav" | "main" | "main-right-menu" | "status" | "side";
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
 }
 
 const notesWidgets: NotesWidgetSetup[] = [
-  { id: notesWidgetIds.top, title: "Notes header", area: "nav", render: (input) => <NotesTopBar input={input} /> },
-  { id: notesWidgetIds.editor, title: "Note editor", area: "main", render: (input) => <NotesEditor input={input} /> },
-  { id: notesWidgetIds.related, title: "Linked notes", area: "main-right", render: () => <NotesRelated /> },
-  { id: notesWidgetIds.status, title: "Sync status", area: "status", render: () => <NotesStatus /> },
-  { id: notesWidgetIds.helper, title: "Note helper", area: "floating", render: () => <NotesHelper /> },
+  { id: notesWidgetIds.top, title: "Notes header", region: "nav", render: (input) => <NotesTopBar input={input} /> },
+  { id: notesWidgetIds.editor, title: "Note editor", region: "main", render: (input) => <NotesEditor input={input} /> },
+  { id: notesWidgetIds.related, title: "Linked notes", region: "main-right-menu", render: () => <NotesRelated /> },
+  { id: notesWidgetIds.status, title: "Sync status", region: "status", render: () => <NotesStatus /> },
+  { id: notesWidgetIds.helper, title: "Note helper", region: "side", render: () => <NotesHelper /> },
 ];
 
 const buildNotesTreeSections = () =>
@@ -59,7 +59,7 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       ctx.layout.registerWidget({
         id: widget.id,
         title: widget.title,
-        area: widget.area,
+        region: widget.region,
         singleton: true,
         rendererId: widget.id,
       }),
@@ -76,7 +76,7 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     ctx.layout.registerWidget({
       id: "notes.navigation",
       title: notesMode.label,
-      area: "main-left",
+      region: "main-left-menu",
       rendererId: "notes.navigation",
     }),
     ctx.resources.registerOpener({

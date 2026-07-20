@@ -32,7 +32,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.layout.registerWidget({
       id: projectWidgetIds.overview,
       title: "Project overview",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: projectWidgetIds.overview,
       resourceKinds: [projectResourceKind],
@@ -40,7 +40,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.layout.registerWidget({
       id: projectWidgetIds.feed,
       title: "Activity feed",
-      area: "secondary",
+      region: "secondary",
       singleton: true,
       rendererId: projectWidgetIds.feed,
     }),
@@ -61,7 +61,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.layout.registerWidget({
       id: "workbench-modes.project.navigation",
       title: workbenchModes.project.label,
-      area: "left",
+      region: "sidebar",
       rendererId: "workbench-modes.project.navigation",
     }),
     ctx.resources.registerOpener({

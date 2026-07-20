@@ -20,7 +20,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.sessions,
       title: "Sessions",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: dashboardWidgetIds.sessions,
       priority: 74,
@@ -40,7 +40,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.session,
       title: "Session",
-      area: "floating",
+      region: "side",
       singleton: true,
       rendererId: dashboardWidgetIds.session,
       priority: 40,
@@ -57,7 +57,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-// The sessions slice: the sessions overview board and the floating session chat.
+// The sessions slice: the sessions overview board and the Side Panel session chat.
 export const createSessionsModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.sessions",
   activate(ctx) {

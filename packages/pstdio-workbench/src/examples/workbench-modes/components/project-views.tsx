@@ -10,7 +10,7 @@ const statusColors: Record<string, string> = {
 };
 
 const findActiveItem = (input: WorkbenchWidgetRenderInput) => {
-  const placement = input.workbench.layout.getLayout().areas.main.widgets[0];
+  const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId = typeof placement?.resource?.metadata?.itemId === "string" ? placement.resource.metadata.itemId : null;
   return projectItems.find((item) => item.id === itemId) ?? projectItems[0];
 };

@@ -1,28 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import {
-  getWorkbenchAreaBackground,
+  getWorkbenchRegionBackground,
   workbenchCommandPaletteBackground,
   workbenchFocusBorder,
 } from "./workbench-theme-background";
 
 describe("workbench theme backgrounds", () => {
-  test("maps workbench areas to theme background variables", () => {
-    expect(getWorkbenchAreaBackground("activity")).toBe(
+  test("maps workbench regions to theme background variables", () => {
+    expect(getWorkbenchRegionBackground("activity")).toBe(
       "var(--chakra-colors-vscode-activityBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-muted)))",
     );
-    expect(getWorkbenchAreaBackground("left")).toBe(
+    expect(getWorkbenchRegionBackground("sidebar")).toBe(
       "var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle))",
     );
-    expect(getWorkbenchAreaBackground("main")).toBe(
+    expect(getWorkbenchRegionBackground("main")).toBe(
       "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))",
     );
-    expect(getWorkbenchAreaBackground("secondary")).toBe(
+    expect(getWorkbenchRegionBackground("secondary")).toBe(
       "var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel))",
     );
-    expect(getWorkbenchAreaBackground("floating")).toBe(
+    expect(getWorkbenchRegionBackground("side")).toBe(
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
     );
-    expect(getWorkbenchAreaBackground("status")).toBe(
+    expect(getWorkbenchRegionBackground("status")).toBe(
       "var(--chakra-colors-vscode-statusBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle)))",
     );
     expect(workbenchCommandPaletteBackground).toBe(

@@ -128,17 +128,17 @@ describe("createSessionsModule", () => {
     expect(back?.resource?.uri).toBe(dashboardResources.sessions.uri);
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.session);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardResources.sessions.uri);
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.session,
     ]);
-    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resource?.kind).toBe("dashboard-view");
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.resource?.kind).toBe("dashboard-view");
 
     const forward = workbench.history.goForward();
     await Promise.resolve();
 
     expect(forward?.resource?.uri).toBe(session.uri);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(session.uri);
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.session,
     ]);
   });
@@ -156,7 +156,7 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://session/session-2");
   });
 
-  test("opens the current floating session when navigating sessions", async () => {
+  test("opens the current Side Panel session when navigating sessions", async () => {
     seedContractSessions();
     const workbench = createWorkbenchCore();
     const currentSession = createDashboardResource(
@@ -175,7 +175,7 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
 
-    await workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource: currentSession });
+    await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: currentSession });
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
 
     expect(workbench.layout.getLayout().activeResourceUri).toBe(currentSession.uri);
@@ -198,7 +198,7 @@ describe("createSessionsModule", () => {
     if (sessionEntry) await sessionEntry.activate?.(sessionEntry.resource);
 
     const layout = workbench.layout.getLayout();
-    const bubblePlacement = layout.areas.floating.widgets.find(
+    const bubblePlacement = layout.regions.side.widgets.find(
       (widget) => widget.contributionId === dashboardWidgetIds.sessionBubble,
     );
 
@@ -206,7 +206,7 @@ describe("createSessionsModule", () => {
     expect(bubblePlacement?.resource?.uri).toBe("dashboard-workbench://session/session-1");
     expect(workbench.modes.getActiveModeId()).not.toBe("sessions");
     expect(
-      layout.areas.main.widgets.some((widget) => widget.resource?.uri === "dashboard-workbench://session/session-1"),
+      layout.regions.main.widgets.some((widget) => widget.resource?.uri === "dashboard-workbench://session/session-1"),
     ).toBe(false);
   });
 });

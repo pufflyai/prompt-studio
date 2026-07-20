@@ -44,14 +44,14 @@ export const createRendererTypesExampleModule = (
     ctx.layout.registerWidget({
       id: reactWidgetId,
       title: "React renderer",
-      area: "main",
+      region: "main",
       rendererId: reactRendererId,
       singleton: true,
     });
     ctx.layout.registerWidget({
       id: bridgeWidgetId,
       title: "Bridge renderer",
-      area: "main",
+      region: "main",
       rendererId: bridgeRendererId,
       singleton: true,
       config: {

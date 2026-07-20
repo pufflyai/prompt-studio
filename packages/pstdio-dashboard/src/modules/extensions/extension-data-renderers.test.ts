@@ -43,7 +43,7 @@ describe("registerExtensionDataRenderers", () => {
 
     expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(workbench.layout.getWidget("pstdio-core-tickets.tickets")).toMatchObject({
-      area: "main",
+      region: "main",
       rendererId: "pstdio-core-tickets.tickets",
       singleton: true,
     });
@@ -235,14 +235,14 @@ describe("registerExtensionDataRenderers", () => {
         ?.nodes[0]?.resource;
 
       await workbench.resources.openResource(ticketsResource!);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         ticketsRecord.id,
       ]);
 
       getWriter("installed_extension_sources")?.upsert({ id: "pstdio-planner" });
       await flushMicrotasks();
 
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         ticketsRecord.id,
       ]);
       expect(workbench.getPrimaryResource()?.uri).toBe(ticketsResource?.uri);

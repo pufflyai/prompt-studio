@@ -55,7 +55,7 @@ interface WorkbenchTerminalPanelProps {
 
 /**
  * Body of the host-owned terminal panel. Chrome (tab, title, close action,
- * resize) comes from the workbench `secondary` area; this component only mounts
+ * resize) comes from the workbench `secondary` region; this component only mounts
  * the terminal bound to the workbench terminal controller. Collapsing the panel
  * keeps the terminal mounted. Closing its tab unmounts the terminal and kills
  * its session (close = kill).
@@ -78,8 +78,8 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
     sessionId ? state.sessionsById[sessionId]?.title : undefined,
   );
   const active = useWorkbenchStore(workbench.layout.store, (state) => {
-    const area = state.layout.areas.secondary;
-    return (area.activeWidgetId ?? area.widgets[0]?.widgetId) === placement.widgetId;
+    const region = state.layout.regions.secondary;
+    return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.widgetId;
   });
 
   useEffect(() => {

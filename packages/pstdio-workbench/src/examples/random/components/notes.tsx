@@ -6,7 +6,7 @@ import { randomWorkbenchModes } from "../mock-data/data";
 const notesMode = randomWorkbenchModes.notes;
 
 const findItemFromLayout = (input: WorkbenchWidgetRenderInput) => {
-  const editorPlacement = input.workbench.layout.getLayout().areas.main.widgets[0];
+  const editorPlacement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId =
     typeof editorPlacement?.resource?.metadata?.itemId === "string"
       ? editorPlacement.resource.metadata.itemId

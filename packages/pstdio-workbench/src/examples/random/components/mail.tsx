@@ -6,7 +6,7 @@ import { randomWorkbenchModes } from "../mock-data/data";
 const mailMode = randomWorkbenchModes.mail;
 
 const findActiveThread = (input: WorkbenchWidgetRenderInput) => {
-  const placement = input.workbench.layout.getLayout().areas.main.widgets[0];
+  const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId =
     typeof placement?.resource?.metadata?.itemId === "string" ? placement.resource.metadata.itemId : undefined;
   return (

@@ -19,7 +19,7 @@ export const createPlaceholderModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerPlaceholder({
       id: "docs.empty-main",
       title: "Empty main",
-      area: "main",
+      region: "main",
       rendererId: EMPTY_MAIN_RENDERER_ID,
     });
 
@@ -46,7 +46,7 @@ export const createGuideModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: GUIDE_WIDGET_ID,
       title: "Guide",
-      area: "main",
+      region: "main",
       closable: true,
       rendererId: GUIDE_RENDERER_ID,
     });
@@ -121,20 +121,20 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
           label: "Concepts",
           nodes: [
             {
-              id: "areas",
-              label: "Areas",
+              id: "regions",
+              label: "Regions",
               description: "Named layout targets for contributed UI.",
               icon: "PanelLeft",
               children: [
-                { id: "areas.main", label: "main", icon: "PanelTop" },
-                { id: "areas.left", label: "left", icon: "PanelLeft" },
-                { id: "areas.status", label: "status", icon: "PanelBottom" },
+                { id: "regions.main", label: "main", icon: "PanelTop" },
+                { id: "regions.sidebar", label: "sidebar", icon: "PanelLeft" },
+                { id: "regions.status", label: "status", icon: "PanelBottom" },
               ],
             },
             {
               id: "widgets",
               label: "Widgets",
-              description: "Registered views that can be placed into areas.",
+              description: "Registered views that can be placed into regions.",
               icon: "PanelsTopLeft",
               children: [
                 { id: "widgets.renderer", label: "rendererId", icon: "Code" },
@@ -168,8 +168,8 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.tree",
       title: "Docs",
-      area: "left",
-      areaSize: { defaultPx: 260, minPx: 220 },
+      region: "sidebar",
+      regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: "docs.tree",
     });
     ctx.layout.openWidget("docs.tree");
@@ -204,7 +204,7 @@ export const createResourcesModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: GUIDE_WIDGET_ID,
       title: "Guide",
-      area: "main",
+      region: "main",
       closable: true,
       rendererId: GUIDE_RENDERER_ID,
       resourceKinds: [GUIDE_KIND],
@@ -259,7 +259,7 @@ export const createResourcesModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.tree",
       title: "Docs",
-      area: "left",
+      region: "sidebar",
       rendererId: "docs.tree",
     });
     ctx.layout.openWidget("docs.tree");
@@ -286,7 +286,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
         modeCtx.layout.registerWidget({
           id: "docs.tree",
           title: "Docs",
-          area: "left",
+          region: "sidebar",
           rendererId: "docs.tree",
         });
         modeCtx.layout.openWidget("docs.tree");
@@ -300,7 +300,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
         modeCtx.layout.registerWidget({
           id: "docs.review",
           title: "Review queue",
-          area: "main",
+          region: "main",
           singleton: true,
           rendererId: "docs.review.renderer",
         });

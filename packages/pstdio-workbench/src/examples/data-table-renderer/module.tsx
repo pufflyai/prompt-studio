@@ -76,7 +76,7 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
     ctx.layout.registerWidget({
       id: rendererId,
       title: "Service health",
-      area: "main",
+      region: "main",
       rendererId,
       singleton: true,
     });

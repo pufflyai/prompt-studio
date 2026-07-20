@@ -45,8 +45,8 @@ const NavigationHistoryControls = (props: { input: WorkbenchWidgetRenderInput })
 
 export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
-  const mainArea = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.areas.main);
-  const activePlacement = getActivePlacement(mainArea.widgets, mainArea.activeWidgetId);
+  const mainRegion = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.regions.main);
+  const activePlacement = getActivePlacement(mainRegion.widgets, mainRegion.activeWidgetId);
 
   if (!activePlacement) return null;
 

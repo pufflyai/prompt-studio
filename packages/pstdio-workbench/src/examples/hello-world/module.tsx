@@ -22,14 +22,14 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerPlaceholder({
       id: emptyMainRendererId,
       title: "Empty main",
-      area: "main",
+      region: "main",
       rendererId: emptyMainRendererId,
     });
 
     ctx.layout.registerWidget({
       id: welcomeWidgetId,
       title: "Welcome",
-      area: "main",
+      region: "main",
       closable: true,
       rendererId: welcomeWidgetId,
     });
@@ -41,7 +41,9 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
 
     ctx.renderers.registerRenderer({
       id: welcomeWidgetId,
-      render: () => <ExamplePanel title="Hello world" description="A workbench module rendered into the main area." />,
+      render: () => (
+        <ExamplePanel title="Hello world" description="A workbench module rendered into the main region." />
+      ),
     });
 
     ctx.commands.registerCommand(

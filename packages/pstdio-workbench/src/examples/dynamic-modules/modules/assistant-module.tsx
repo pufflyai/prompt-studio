@@ -16,7 +16,7 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: assistantWidgetId,
       title: "Assistant",
-      area: "floating",
+      region: "side",
       singleton: true,
       closable: true,
       rendererId: assistantWidgetId,

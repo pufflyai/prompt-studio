@@ -39,7 +39,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { resolveWorkbenchModeArea, resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchModeRegion, resolveWorkbenchViewRegion } from "../shared/workbench-targets";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -208,7 +208,7 @@ const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInpu
       input.workbench.layout.registerWidget({
         id: view.id,
         title: text(view.title, view.id),
-        area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+        region: view.surface === "modal" ? "overlay" : resolveWorkbenchViewRegion(view.target),
         rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
         singleton: true,
         resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
@@ -316,18 +316,18 @@ const resetModeLayout = (
   reset: WorkbenchExtensionModeLayout["reset"] | undefined,
 ) => {
   if (reset === true) {
-    ctx.layout.resetAreas();
+    ctx.layout.resetRegions();
     return;
   }
 
   if (!Array.isArray(reset)) return;
-  for (const target of reset) ctx.layout.clearArea(resolveWorkbenchModeArea(target));
+  for (const target of reset) ctx.layout.clearRegion(resolveWorkbenchModeRegion(target));
 };
 
 const openModeView = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
   if (!entry.view) return;
   ctx.layout.openWidget(entry.view, {
-    area: resolveWorkbenchModeArea(entry.target),
+    region: resolveWorkbenchModeRegion(entry.target),
     pinned: entry.pinned,
     title: text(entry.title),
   });

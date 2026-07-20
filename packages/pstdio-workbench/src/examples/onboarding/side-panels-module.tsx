@@ -189,7 +189,7 @@ const ResourceInspector = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const primaryResource = usePrimaryResource(workbench);
   const item = findItem(primaryResource);
-  const mainPlacements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.main.widgets);
+  const mainPlacements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main.widgets);
   const detailTabs = mainPlacements.filter((placement) => placement.contributionId === DETAIL_WIDGET_ID);
 
   return (
@@ -276,23 +276,23 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
       title: "Resources",
-      area: "left",
-      areaSize: { defaultPx: 220, minPx: 180 },
+      region: "sidebar",
+      regionSize: { defaultPx: 220, minPx: 180 },
       singleton: true,
       rendererId: RESOURCE_PICKER_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: CONTEXT_WIDGET_ID,
       title: "Context",
-      area: "main-left",
-      areaSize: { defaultPx: 240, minPx: 200 },
+      region: "main-left-menu",
+      regionSize: { defaultPx: 240, minPx: 200 },
       singleton: true,
       rendererId: CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: DETAIL_WIDGET_ID,
       title: "Resource",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: [ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
@@ -300,23 +300,22 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: INSPECTOR_WIDGET_ID,
       title: "Inspector",
-      area: "main-right",
-      areaSize: { defaultPx: 280, minPx: 220 },
+      region: "side",
+      regionSize: { defaultPx: 420, minPx: 320 },
       singleton: true,
       rendererId: INSPECTOR_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: ACTIVITY_WIDGET_ID,
       title: "Activity",
-      area: "secondary",
-      areaSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
+      region: "secondary",
+      regionSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
       singleton: true,
       rendererId: ACTIVITY_RENDERER_ID,
     });
 
-    // The context (main-left) and inspector (main-right) panels are companions of the
-    // primary anchor: the framework hides them automatically when `main` has no resource,
-    // so the app just opens them once — no primary-sync wiring needed here.
+    // Context demonstrates a Main Panel menu while Inspector demonstrates the independent
+    // Side Panel. Their logical identities do not depend on their rendered edges.
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });

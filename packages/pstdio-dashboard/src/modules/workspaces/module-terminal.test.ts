@@ -10,7 +10,7 @@ import { createDashboardResource, dashboardResources } from "@/shared/app/resour
 import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule terminal integration", () => {
-  test("opening a workspace ensures a workspace terminal in the main-bottom area", async () => {
+  test("opening a workspace ensures a workspace terminal in the Secondary Panel", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
@@ -28,11 +28,11 @@ describe("createWorkspacesModule terminal integration", () => {
     await workbench.resources.openResource(workspace, { replaceActive: true });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    const secondaryArea = workbench.layout.getLayout().areas.secondary;
-    const terminals = secondaryArea.widgets.filter(
+    const secondaryRegion = workbench.layout.getLayout().regions.secondary;
+    const terminals = secondaryRegion.widgets.filter(
       (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
     );
-    expect(secondaryArea.widgets.map((placement) => placement.contributionId)).toEqual([
+    expect(secondaryRegion.widgets.map((placement) => placement.contributionId)).toEqual([
       WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
       WORKBENCH_TERMINAL_WIDGET_ID,
     ]);
@@ -63,8 +63,8 @@ describe("createWorkspacesModule terminal integration", () => {
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    const secondaryArea = workbench.layout.getLayout().areas.secondary;
-    const terminals = secondaryArea.widgets.filter(
+    const secondaryRegion = workbench.layout.getLayout().regions.secondary;
+    const terminals = secondaryRegion.widgets.filter(
       (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
     );
     expect(terminals).toEqual([
@@ -98,7 +98,7 @@ describe("createWorkspacesModule terminal integration", () => {
     expect(
       workbench.layout
         .getLayout()
-        .areas.secondary.widgets.some((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID),
+        .regions.secondary.widgets.some((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID),
     ).toBe(false);
   });
 
@@ -118,11 +118,11 @@ describe("createWorkspacesModule terminal integration", () => {
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
     workbench.layout.closeWidget(WORKBENCH_TERMINAL_WIDGET_ID);
-    workbench.layout.clearArea("secondary");
+    workbench.layout.clearRegion("secondary");
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([
+    expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([
       expect.objectContaining({
         contributionId: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
         hiddenByDefault: true,

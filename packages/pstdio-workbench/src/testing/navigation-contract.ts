@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { ResourceRef, WorkbenchCore } from "../core";
-import { getAnchorResource, resolveAnchorArea } from "../core";
+import { getAnchorResource, resolveAnchorRegion } from "../core";
 
 // The primary/main surface hosts the "primary" anchor (see surface-map). Reading placements
 // and the active resource through the anchor — not the global activeResourceUri, which any
-// side-area activation can pollute — measures the exact signal history records, so the
+// side-region activation can pollute — measures the exact signal history records, so the
 // contract asserts the user-visible navigation state.
 export const primaryPlacements = (workbench: WorkbenchCore) =>
-  workbench.layout.getLayout().areas[resolveAnchorArea("primary")].widgets;
+  workbench.layout.getLayout().regions[resolveAnchorRegion("primary")].widgets;
 
 export const unpinnedPrimaryPlacements = (workbench: WorkbenchCore) =>
   primaryPlacements(workbench).filter((placement) => !placement.pinned);
@@ -39,7 +39,7 @@ const flush = async () => {
 
 // Shared navigation invariants every resource-first root/detail route must satisfy. Drives a
 // real workbench core (provided by `setup`) and asserts the user-visible Back/Forward state:
-// root stays root, detail replays, mode is restored, and the primary area never grows tabs.
+// root stays root, detail replays, mode is restored, and the primary region never grows tabs.
 export const describeResourceRouteContract = (contract: ResourceRouteContract) => {
   describe(`${contract.name} navigation contract`, () => {
     let harness: RouteContractHarness;

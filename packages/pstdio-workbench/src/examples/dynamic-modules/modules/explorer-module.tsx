@@ -19,10 +19,10 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: explorerWidgetId,
       title: "File preview",
-      area: "main-left",
+      region: "main-left-menu",
       singleton: true,
       rendererId: explorerWidgetId,
-      areaSize: { defaultPx: 300, minPx: 220, maxPx: 460 },
+      regionSize: { defaultPx: 300, minPx: 220, maxPx: 460 },
     });
     ctx.resources.registerOpener({
       id: `${explorerModuleId}.opener`,
@@ -51,7 +51,7 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: explorerTreeId,
       title: "Explorer",
-      area: "left",
+      region: "sidebar",
       rendererId: explorerTreeId,
     });
     ctx.layout.openWidget(explorerTreeId);

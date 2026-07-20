@@ -1,27 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, workbenchAreaTabLeadingMenuPath } from "../../core";
+import { createWorkbenchCore, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { listWorkbenchMenuItems } from "../menus/menu-items";
-import { shouldShowAreaTabs } from "./area-tabs";
+import { shouldShowRegionTabs } from "./region-tabs";
 
-describe("WorkbenchAreaTabs leading actions", () => {
-  test("resolves leading actions from the area tab menu path", () => {
+describe("WorkbenchRegionTabs leading actions", () => {
+  test("resolves leading actions from the region tab menu path", () => {
     const workbench = createWorkbenchCore();
     workbench.commands.registerCommand(
       { id: "workbench.terminal.open", label: "Open terminal", icon: "Plus" },
       { execute: () => undefined },
     );
-    workbench.layout.registerMenuItem(workbenchAreaTabLeadingMenuPath("secondary"), {
+    workbench.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("secondary"), {
       commandId: "workbench.terminal.open",
       label: "New terminal",
       icon: "Plus",
     });
 
-    expect(listWorkbenchMenuItems(workbench, workbenchAreaTabLeadingMenuPath("secondary"))).toEqual([
+    expect(listWorkbenchMenuItems(workbench, workbenchRegionTabLeadingMenuPath("secondary"))).toEqual([
       expect.objectContaining({ commandId: "workbench.terminal.open", icon: "Plus", label: "New terminal" }),
     ]);
   });
 
   test("keeps the tab strip visible when only leading actions remain", () => {
-    expect(shouldShowAreaTabs([], { hasLeadingActions: true })).toBe(true);
+    expect(shouldShowRegionTabs([], { hasLeadingActions: true })).toBe(true);
   });
 });

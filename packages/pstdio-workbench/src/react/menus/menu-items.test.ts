@@ -1,24 +1,24 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type MenuPath, workbenchAreaTabLeadingMenuPath } from "../../core";
+import { createWorkbenchCore, type MenuPath, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { listWorkbenchMenuItems, listWorkbenchMenuItemsFromState } from "./menu-items";
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
 
 describe("listWorkbenchMenuItems", () => {
-  test("resolves workbench area tab leading actions", () => {
+  test("resolves workbench region tab leading actions", () => {
     const workbench = createWorkbenchCore();
 
     workbench.commands.registerCommand(
       { id: "workbench.terminal.open", label: "Open terminal", icon: "Plus" },
       { execute: () => undefined },
     );
-    workbench.layout.registerMenuItem(workbenchAreaTabLeadingMenuPath("secondary"), {
+    workbench.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("secondary"), {
       commandId: "workbench.terminal.open",
       label: "New terminal",
       icon: "Plus",
     });
 
-    expect(listWorkbenchMenuItems(workbench, workbenchAreaTabLeadingMenuPath("secondary"))).toEqual([
+    expect(listWorkbenchMenuItems(workbench, workbenchRegionTabLeadingMenuPath("secondary"))).toEqual([
       expect.objectContaining({
         commandId: "workbench.terminal.open",
         icon: "Plus",

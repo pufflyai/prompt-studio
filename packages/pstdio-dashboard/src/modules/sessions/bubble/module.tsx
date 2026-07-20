@@ -79,7 +79,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     {
       id: dashboardWidgetIds.sessionBubbleHeader,
       title: "Session bubble header",
-      area: "floating-header",
+      region: "side-header",
       singleton: true,
       rendererId: dashboardWidgetIds.sessionBubbleHeader,
       priority: 30,
@@ -96,7 +96,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     {
       id: dashboardWidgetIds.sessionBubble,
       title: "Session bubble",
-      area: "floating",
+      region: "side",
       singleton: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       priority: 30,
@@ -139,8 +139,8 @@ const openRememberedSessionBubble = (ctx: WorkbenchModuleContributionContext) =>
 const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
     {
-      id: dashboardCommandIds.openFloatingSession,
-      label: "Open floating session",
+      id: dashboardCommandIds.openSessionPanel,
+      label: "Open session panel",
       category: "Dashboard",
       icon: "MessageCircle",
     },

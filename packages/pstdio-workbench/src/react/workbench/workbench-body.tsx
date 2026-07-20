@@ -1,26 +1,25 @@
 import { Box, Grid, HStack, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import {
-  getAnchorResource,
   headerTrailingMenuPath,
-  type WorkbenchAreaSize,
   type WorkbenchCore,
+  type WorkbenchRegionSize,
   type WorkbenchWidgetPlacement,
-  workbenchAreaTabLeadingMenuPath,
+  workbenchRegionTabLeadingMenuPath,
 } from "../../core";
-import { WorkbenchArea } from "../area/area";
-import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
+import { WorkbenchRegion } from "../region/region";
+import { shouldShowRegionTabs, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "../terminal/terminal-module";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
-import { WorkbenchMainBottomSection } from "./workbench-main-bottom-section";
-import { WorkbenchMainLeftPanel, WorkbenchRightSidePanel } from "./workbench-panels";
+import { WorkbenchMainLeftMenu, WorkbenchMainRightMenu } from "./workbench-panels";
+import { WorkbenchSecondaryPanel } from "./workbench-secondary-panel";
 
 interface WorkbenchBodyProps {
   workbench: WorkbenchCore;
@@ -28,29 +27,30 @@ interface WorkbenchBodyProps {
 
 const CONTENT_MIN_SIZE_PX = 320;
 
-const MAIN_LEFT_PANEL_SIZE = { defaultPx: 240, minPx: 180, maxPx: 420 };
-const RIGHT_PANEL_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
+const MAIN_LEFT_MENU_SIZE = { defaultPx: 240, minPx: 180, maxPx: 420 };
+const MAIN_RIGHT_MENU_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
 const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
 const SECONDARY_PANEL_CONTENT_MIN_SIZE_PX = 240;
+const SECONDARY_PANEL_RESIZE_HANDLE_SIZE_PX = 4;
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
-const resolveAreaSize = (areaSize: WorkbenchAreaSize | undefined, fallback: Required<WorkbenchAreaSize>) => ({
-  defaultPx: areaSize?.defaultPx ?? fallback.defaultPx,
-  minPx: areaSize?.minPx ?? fallback.minPx,
-  maxPx: areaSize ? areaSize.maxPx : fallback.maxPx,
+const resolveRegionSize = (regionSize: WorkbenchRegionSize | undefined, fallback: Required<WorkbenchRegionSize>) => ({
+  defaultPx: regionSize?.defaultPx ?? fallback.defaultPx,
+  minPx: regionSize?.minPx ?? fallback.minPx,
+  maxPx: regionSize ? regionSize.maxPx : fallback.maxPx,
 });
 
 interface MainHeaderBarProps {
   workbench: WorkbenchCore;
   hasMainHeader: boolean;
   hasMainContentTabs: boolean;
-  showMainLeftOpener: boolean;
-  showMainRightOpener: boolean;
-  showMainBottomOpener: boolean;
-  mainBottomPanelOpener: MainPanelOpenerDetails;
-  onOpenMainLeftPanel: () => void;
-  onOpenMainRightPanel: () => void;
-  onOpenMainBottomPanel: () => void;
+  showMainLeftMenuOpener: boolean;
+  showMainRightMenuOpener: boolean;
+  showSecondaryOpener: boolean;
+  secondaryPanelOpener: MainPanelOpenerDetails;
+  onOpenMainLeftMenu: () => void;
+  onOpenMainRightMenu: () => void;
+  onOpenSecondaryPanel: () => void;
 }
 
 interface MainPanelOpenerDetails {
@@ -89,14 +89,14 @@ const MainPanelOpeners = (props: MainPanelOpenersProps) => {
   );
 };
 
-const genericMainBottomPanelOpener: MainPanelOpenerDetails = {
-  label: "Show main-bottom panel",
+const genericSecondaryPanelOpener: MainPanelOpenerDetails = {
+  label: "Show Secondary Panel",
   icon: "PanelBottom",
 };
 
 const terminalPlacementContributionIds = new Set([WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID]);
 
-export const resolveMainBottomPanelOpener = (placements: WorkbenchWidgetPlacement[]): MainPanelOpenerDetails => {
+export const resolveSecondaryPanelOpener = (placements: WorkbenchWidgetPlacement[]): MainPanelOpenerDetails => {
   if (
     placements.length > 0 &&
     placements.every((placement) => terminalPlacementContributionIds.has(placement.contributionId))
@@ -104,7 +104,7 @@ export const resolveMainBottomPanelOpener = (placements: WorkbenchWidgetPlacemen
     return { label: "Show terminal panel", icon: "SquareTerminal" };
   }
 
-  return genericMainBottomPanelOpener;
+  return genericSecondaryPanelOpener;
 };
 
 const MainHeaderBar = (props: MainHeaderBarProps) => {
@@ -112,42 +112,42 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
     workbench,
     hasMainHeader,
     hasMainContentTabs,
-    showMainLeftOpener,
-    showMainRightOpener,
-    showMainBottomOpener,
-    mainBottomPanelOpener,
-    onOpenMainLeftPanel,
-    onOpenMainRightPanel,
-    onOpenMainBottomPanel,
+    showMainLeftMenuOpener,
+    showMainRightMenuOpener,
+    showSecondaryOpener,
+    secondaryPanelOpener,
+    onOpenMainLeftMenu,
+    onOpenMainRightMenu,
+    onOpenSecondaryPanel,
   } = props;
   const mainPanelOpeners: MainPanelOpener[] = [
     {
-      id: "main-left",
-      label: "Show main-left panel",
+      id: "main-left-menu",
+      label: "Show Main left menu",
       icon: "PanelLeft",
-      show: showMainLeftOpener,
-      onOpen: onOpenMainLeftPanel,
+      show: showMainLeftMenuOpener,
+      onOpen: onOpenMainLeftMenu,
     },
     {
-      id: "main-bottom",
-      label: mainBottomPanelOpener.label,
-      icon: mainBottomPanelOpener.icon,
-      show: showMainBottomOpener,
-      onOpen: onOpenMainBottomPanel,
+      id: "secondary",
+      label: secondaryPanelOpener.label,
+      icon: secondaryPanelOpener.icon,
+      show: showSecondaryOpener,
+      onOpen: onOpenSecondaryPanel,
     },
     {
-      id: "main-right",
-      label: "Show main-right panel",
+      id: "main-right-menu",
+      label: "Show Main right menu",
       icon: "PanelRight",
-      show: showMainRightOpener,
-      onOpen: onOpenMainRightPanel,
+      show: showMainRightMenuOpener,
+      onOpen: onOpenMainRightMenu,
     },
   ];
 
   return (
     <Header
+      data-workbench-panel-header="main"
       variant="main"
-      h="2rem"
       bg={workbenchBackgrounds.main}
       position="relative"
       flexShrink={0}
@@ -155,64 +155,53 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       overflow="hidden"
       overflowY="hidden"
     >
-      <WorkbenchAreaTabs workbench={workbench} area="main" />
+      <WorkbenchRegionTabs workbench={workbench} region="main" />
       {/* The tab strip grows into the empty header, so only claim space when a
           main-header view is actually mounted or when there are no tabs to claim it. */}
       <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
-        {hasMainHeader ? (
-          <WorkbenchArea workbench={workbench} area="main-header" title="Main header" showHeader={false} />
-        ) : null}
+        {hasMainHeader ? <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" /> : null}
       </Box>
       <WorkbenchHeaderActions workbench={workbench} menuPath={mainHeaderTrailingMenuPath} />
       <MainPanelOpeners openers={mainPanelOpeners} />
-      <WorkbenchHeaderBorder workbench={workbench} area="main-header" />
+      <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
     </Header>
   );
 };
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
-  const { hasMainHeader, mainLeft, mainRight, mainBottom } = useWorkbenchMainPanels(workbench);
-  const layoutAreas = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas);
-  const showMainLeftOpener = mainLeft.has && mainLeft.collapsed && mainLeft.collapsible;
-  const showMainRightOpener = mainRight.has && mainRight.collapsed && mainRight.collapsible;
-  const showMainBottomOpener = mainBottom.has && mainBottom.collapsed && mainBottom.collapsible;
+  const { hasMainHeader, mainLeftMenu, mainRightMenu, secondaryPanel } = useWorkbenchMainPanels(workbench);
+  const layoutRegions = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
+  const showMainLeftMenuOpener = mainLeftMenu.has && mainLeftMenu.collapsed && mainLeftMenu.collapsible;
+  const showMainRightMenuOpener = mainRightMenu.has && mainRightMenu.collapsed && mainRightMenu.collapsible;
+  const showSecondaryOpener = secondaryPanel.has && secondaryPanel.collapsed && secondaryPanel.collapsible;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets, {
-    hasLeadingActions:
-      listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, workbenchAreaTabLeadingMenuPath("main"))
-        .length > 0,
-  });
-  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
-  const hasMainHeaderActions =
-    listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath, {
-      resource,
-    }).length > 0;
-  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary.widgets, {
+  const hasMainContentTabs = shouldShowRegionTabs(layoutRegions.main.widgets, {
     hasLeadingActions:
       listWorkbenchMenuItemsFromState(
         { itemsByPath, commands, contextValues },
-        workbenchAreaTabLeadingMenuPath("secondary"),
+        workbenchRegionTabLeadingMenuPath("main"),
       ).length > 0,
   });
-  const mainBottomPanelOpener = resolveMainBottomPanelOpener(layoutAreas.secondary.widgets);
-  const showMainHeader =
-    hasMainHeader ||
-    hasMainContentTabs ||
-    hasMainHeaderActions ||
-    showMainLeftOpener ||
-    showMainRightOpener ||
-    showMainBottomOpener;
-  const mainLeftPanelSize = resolveAreaSize(workbench.layout.getAreaSize("main-left"), MAIN_LEFT_PANEL_SIZE);
-  const mainRightPanelSize = resolveAreaSize(workbench.layout.getAreaSize("main-right"), RIGHT_PANEL_SIZE);
-  const mainBottomPanelSize = resolveAreaSize(workbench.layout.getAreaSize("secondary"), SECONDARY_PANEL_SIZE);
+  const hasSecondaryContentTabs = shouldShowRegionTabs(layoutRegions.secondary.widgets, {
+    hasLeadingActions:
+      listWorkbenchMenuItemsFromState(
+        { itemsByPath, commands, contextValues },
+        workbenchRegionTabLeadingMenuPath("secondary"),
+      ).length > 0,
+  });
+  const secondaryPanelOpener = resolveSecondaryPanelOpener(layoutRegions.secondary.widgets);
+  const mainLeftMenuSize = resolveRegionSize(workbench.layout.getRegionSize("main-left-menu"), MAIN_LEFT_MENU_SIZE);
+  const mainRightMenuSize = resolveRegionSize(workbench.layout.getRegionSize("main-right-menu"), MAIN_RIGHT_MENU_SIZE);
+  const secondaryPanelSize = resolveRegionSize(workbench.layout.getRegionSize("secondary"), SECONDARY_PANEL_SIZE);
 
-  const mainArea = (
+  const mainRegion = (
     <WorkbenchFocusRegion
       workbench={workbench}
-      area="main"
+      region="main"
+      data-workbench-region="main"
       bg={workbenchBackgrounds.main}
       flex="1"
       h="full"
@@ -221,73 +210,71 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       w="full"
       overflow="hidden"
     >
-      <WorkbenchArea workbench={workbench} area="main" title="Main" showHeader={false} />
+      <WorkbenchRegion workbench={workbench} region="main" title="Main" />
     </WorkbenchFocusRegion>
   );
-  const mainAreaWithRightPanel = mainRight.has ? (
+  const mainPanelWithRightMenu = mainRightMenu.has ? (
     <ResizableSplitLayout
       minH="0"
       minW="0"
       resizableSide="right"
-      resizablePanel={<WorkbenchRightSidePanel workbench={workbench} />}
-      contentPanel={mainArea}
-      collapsed={mainRight.collapsed && mainRight.collapsible}
-      collapsible={mainRight.collapsible}
-      defaultSizePx={mainRightPanelSize.defaultPx}
-      minSizePx={mainRightPanelSize.minPx}
-      maxSizePx={mainRightPanelSize.maxPx}
+      resizablePanel={<WorkbenchMainRightMenu workbench={workbench} />}
+      contentPanel={mainRegion}
+      collapsed={mainRightMenu.collapsed && mainRightMenu.collapsible}
+      collapsible={mainRightMenu.collapsible}
+      defaultSizePx={mainRightMenuSize.defaultPx}
+      minSizePx={mainRightMenuSize.minPx}
+      maxSizePx={mainRightMenuSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize main-right panel"
+      resizeLabel="Resize Main right menu"
       showResizeSeparator
-      onSizeChange={(width) => workbench.layout.setAreaSize("main-right", width)}
-      onCollapsedChange={mainRight.onCollapsedChange}
+      onSizeChange={(width) => workbench.layout.setRegionSize("main-right-menu", width)}
+      onCollapsedChange={mainRightMenu.onCollapsedChange}
     />
   ) : (
-    mainArea
+    mainRegion
   );
-  const mainAreaWithSidePanels = mainLeft.has ? (
+  const mainPanelWithMenus = mainLeftMenu.has ? (
     <ResizableSplitLayout
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} />}
-      contentPanel={mainAreaWithRightPanel}
-      collapsed={mainLeft.collapsed && mainLeft.collapsible}
-      collapsible={mainLeft.collapsible}
-      defaultSizePx={mainLeftPanelSize.defaultPx}
-      minSizePx={mainLeftPanelSize.minPx}
-      maxSizePx={mainLeftPanelSize.maxPx}
+      resizablePanel={<WorkbenchMainLeftMenu workbench={workbench} />}
+      contentPanel={mainPanelWithRightMenu}
+      collapsed={mainLeftMenu.collapsed && mainLeftMenu.collapsible}
+      collapsible={mainLeftMenu.collapsible}
+      defaultSizePx={mainLeftMenuSize.defaultPx}
+      minSizePx={mainLeftMenuSize.minPx}
+      maxSizePx={mainLeftMenuSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize main-left panel"
+      resizeLabel="Resize Main left menu"
       showResizeSeparator
-      onSizeChange={(width) => workbench.layout.setAreaSize("main-left", width)}
-      onCollapsedChange={mainLeft.onCollapsedChange}
+      onSizeChange={(width) => workbench.layout.setRegionSize("main-left-menu", width)}
+      onCollapsedChange={mainLeftMenu.onCollapsedChange}
     />
   ) : (
-    mainAreaWithRightPanel
+    mainPanelWithRightMenu
   );
 
   const mainContent = (
-    <Grid gridTemplateRows={`${showMainHeader ? "auto " : ""}minmax(0, 1fr)`} h="full" minH="0" minW="0" w="full">
-      {showMainHeader ? (
-        <MainHeaderBar
-          workbench={workbench}
-          hasMainHeader={hasMainHeader}
-          hasMainContentTabs={hasMainContentTabs}
-          showMainLeftOpener={showMainLeftOpener}
-          showMainRightOpener={showMainRightOpener}
-          showMainBottomOpener={showMainBottomOpener}
-          mainBottomPanelOpener={mainBottomPanelOpener}
-          onOpenMainLeftPanel={mainLeft.onOpen}
-          onOpenMainRightPanel={mainRight.onOpen}
-          onOpenMainBottomPanel={mainBottom.onOpen}
-        />
-      ) : null}
-      {mainAreaWithSidePanels}
+    <Grid gridTemplateRows="auto minmax(0, 1fr)" h="full" minH="0" minW="0" w="full">
+      <MainHeaderBar
+        workbench={workbench}
+        hasMainHeader={hasMainHeader}
+        hasMainContentTabs={hasMainContentTabs}
+        showMainLeftMenuOpener={showMainLeftMenuOpener}
+        showMainRightMenuOpener={showMainRightMenuOpener}
+        showSecondaryOpener={showSecondaryOpener}
+        secondaryPanelOpener={secondaryPanelOpener}
+        onOpenMainLeftMenu={mainLeftMenu.onOpen}
+        onOpenMainRightMenu={mainRightMenu.onOpen}
+        onOpenSecondaryPanel={secondaryPanel.onOpen}
+      />
+      {mainPanelWithMenus}
     </Grid>
   );
 
-  if (!mainBottom.has)
+  if (!secondaryPanel.has)
     return (
       <Grid as="main" h="full" minH="0" minW="0" w="full">
         {mainContent}
@@ -302,22 +289,23 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       resizableSide="bottom"
       contentPanel={mainContent}
       resizablePanel={
-        <WorkbenchMainBottomSection
+        <WorkbenchSecondaryPanel
           workbench={workbench}
-          hasMainBottomHeader={mainBottom.hasHeader}
-          hasMainBottomContentTabs={hasMainBottomContentTabs}
+          hasSecondaryHeader={secondaryPanel.hasHeader}
+          hasSecondaryContentTabs={hasSecondaryContentTabs}
         />
       }
-      collapsed={mainBottom.collapsed && mainBottom.collapsible}
-      collapsible={mainBottom.collapsible}
-      defaultSizePx={mainBottomPanelSize.defaultPx}
-      minSizePx={mainBottomPanelSize.minPx}
-      maxSizePx={mainBottomPanelSize.maxPx}
+      collapsed={secondaryPanel.collapsed && secondaryPanel.collapsible}
+      collapsible={secondaryPanel.collapsible}
+      defaultSizePx={secondaryPanelSize.defaultPx}
+      minSizePx={secondaryPanelSize.minPx}
+      maxSizePx={secondaryPanelSize.maxPx}
       contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize main-bottom panel"
+      resizeHandleSizePx={SECONDARY_PANEL_RESIZE_HANDLE_SIZE_PX}
+      resizeLabel="Resize Secondary Panel"
       showResizeSeparator
-      onSizeChange={(height) => workbench.layout.setAreaSize("secondary", height)}
-      onCollapsedChange={mainBottom.onCollapsedChange}
+      onSizeChange={(height) => workbench.layout.setRegionSize("secondary", height)}
+      onCollapsedChange={secondaryPanel.onCollapsedChange}
     />
   );
 };

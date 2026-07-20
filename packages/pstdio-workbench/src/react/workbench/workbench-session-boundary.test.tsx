@@ -17,33 +17,33 @@ const createTarget = (matchesInteractive: boolean) =>
   }) as unknown as EventTarget;
 
 const renderBoundary = (showAttachedSessionPanel: boolean) => {
-  const workbenchFrame = <div data-testid="workbench-frame" />;
+  const contentFrame = <div data-testid="workbench-frame" />;
   const element = WorkbenchSessionBoundary({
     workbench,
     showAttachedSessionPanel,
-    workbenchFrame,
-    floatingHeader: <div />,
+    contentFrame,
+    sideHeader: <div />,
     contentMinSizePx: 320,
     onAttachedSlotChange: () => undefined,
   }) as ReactElement<{ children: ReactElement<AttachedLayoutTestProps> }>;
 
-  return { content: element.props.children, workbenchFrame };
+  return { content: element.props.children, contentFrame };
 };
 
 describe("WorkbenchSessionBoundary", () => {
   test("keeps the workbench frame inside the attached layout when the session panel is hidden", () => {
-    const { content, workbenchFrame } = renderBoundary(false);
+    const { content, contentFrame } = renderBoundary(false);
 
     expect(content.type).toBe(WorkbenchAttachedSessionLayout);
-    expect(content.props.contentPanel).toBe(workbenchFrame);
+    expect(content.props.contentPanel).toBe(contentFrame);
     expect(content.props.attached).toBe(false);
   });
 
   test("uses the same workbench frame parent when the session panel is attached", () => {
-    const { content, workbenchFrame } = renderBoundary(true);
+    const { content, contentFrame } = renderBoundary(true);
 
     expect(content.type).toBe(WorkbenchAttachedSessionLayout);
-    expect(content.props.contentPanel).toBe(workbenchFrame);
+    expect(content.props.contentPanel).toBe(contentFrame);
     expect(content.props.attached).toBe(true);
   });
 

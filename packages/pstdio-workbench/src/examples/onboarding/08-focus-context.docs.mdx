@@ -12,8 +12,8 @@ export const parameters = {
 Add a `when` expression to a command or menu item to hide it unless workbench
 state matches. Two common sources for `when` values:
 
-- **Focus** — the shell automatically publishes `mainFocus`, `sideBarFocus`,
-  etc. as the user moves around. Use these to gate area-specific commands
+- **Focus** — the shell automatically publishes `mainFocus`, `sidebarFocus`,
+  `secondaryFocus`, and `sideFocus` as the user moves around. Use these to gate region-specific commands
   ("Run on file" should only appear when focus is in `main`).
 - **Module-set keys** — `ctx.context.set("docs.selectedGuide", value)` lets
   you publish your own keys and reference them: `when: "docs.selectedGuide"`

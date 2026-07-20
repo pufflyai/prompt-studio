@@ -22,7 +22,7 @@ const composeSidebarFooter = (ctx: WorkbenchModuleContributionContext) => {
   return getSidebarContributionFooterNodes(ctx, mode);
 };
 
-// Opens the single sidebar widget and recomposes it. Project-selection owns the left area
+// Opens the single sidebar widget and recomposes it. Project selection owns the Sidebar
 // itself, so the sidebar stays hidden there.
 export const showDashboardSidebar = (
   ctx: WorkbenchModuleContributionContext,
@@ -35,8 +35,9 @@ export const showDashboardSidebar = (
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, options.selectedNode ?? undefined);
   }
   ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
-  ctx.layout.setAreaVisible("left", true);
-  ctx.panels.setOpen("left", true);
+  // Route and mode changes own sidebar content, not the user's open/collapsed
+  // preference. Keep layout visibility aligned with the persisted panel state.
+  if (ctx.panels.isOpen("sidebar")) ctx.layout.setRegionVisible("sidebar", true);
 };
 
 // Selecting a node is best-effort: routes call this before the sidebar widget is guaranteed to
@@ -52,7 +53,7 @@ const syncSidebarForActiveMode = (ctx: WorkbenchModuleContributionContext) => {
   showDashboardSidebar(ctx);
 };
 
-const DASHBOARD_SIDEBAR_AREA_SIZE = { defaultPx: 240, minPx: 200, maxPx: 360 };
+const DASHBOARD_SIDEBAR_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 
 const registerSidebarWidget = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
@@ -66,10 +67,10 @@ const registerSidebarWidget = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.dashboardSidebar,
       title: "Sidebar",
-      area: "left",
+      region: "sidebar",
       rendererId: dashboardWidgetIds.dashboardSidebar,
       singleton: true,
-      areaSize: DASHBOARD_SIDEBAR_AREA_SIZE,
+      regionSize: DASHBOARD_SIDEBAR_REGION_SIZE,
     },
     { priority: 80 },
   );

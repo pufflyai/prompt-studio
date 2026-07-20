@@ -38,7 +38,7 @@ const WorkbenchDataViewFrame = (props: WorkbenchDataViewFrameProps) => {
     <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position={usesInternalScroll ? "relative" : undefined}>
       {usesInternalScroll ? (
         // Board columns own vertical scrolling; do not let their content height
-        // make the workbench area's outer ScrollArea become the scroll owner.
+        // make the workbench region's outer ScrollArea become the scroll owner.
         <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
           {children}
         </Box>

@@ -111,11 +111,11 @@ interface WorkbenchOverlayLayerProps {
 
 export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { workbench } = props;
-  const overlayArea = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.overlay);
+  const overlayRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.overlay);
   const renderers = useWorkbenchStore(workbench.renderers.store, (state) => state.renderers);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
 
-  const activePlacement = resolveActivePlacement(overlayArea.widgets, overlayArea.activeWidgetId);
+  const activePlacement = resolveActivePlacement(overlayRegion.widgets, overlayRegion.activeWidgetId);
   const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   // instead of silently rendering nothing into the dialog.
   if (widget && renderer?.keepAlive) {
     throw new Error(
-      `Widget ${widget.id} uses keep-alive renderer ${renderer.id} in the overlay area; overlay widgets cannot reuse keep-alive hosts.`,
+      `Widget ${widget.id} uses keep-alive renderer ${renderer.id} in the overlay region; overlay widgets cannot reuse keep-alive hosts.`,
     );
   }
 

@@ -113,13 +113,13 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: PANEL_WIDGET_ID,
       title: "Palette resources",
-      area: "main",
+      region: "main",
       rendererId: PANEL_RENDERER_ID,
     });
     ctx.layout.registerWidget({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
-      area: "main",
+      region: "main",
       rendererId: TICKET_RENDERER_ID,
       singleton: false,
       resourceKinds: [TICKET_KIND],

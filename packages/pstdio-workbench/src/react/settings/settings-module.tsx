@@ -54,7 +54,7 @@ export const createWorkbenchSettingsModule = (
       ctx.layout.registerWidget({
         id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
         title: `${title} navigation`,
-        area: "left",
+        region: "sidebar",
         singleton: true,
         rendererId: NAV_TREE_ID,
       });
@@ -62,7 +62,7 @@ export const createWorkbenchSettingsModule = (
       ctx.layout.registerWidget({
         id: WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
         title,
-        area: "main",
+        region: "main",
         singleton: true,
         rendererId: PANEL_RENDERER_ID,
       });
@@ -76,7 +76,7 @@ export const createWorkbenchSettingsModule = (
       ctx.layout.registerWidget({
         id: WIDGET_ID,
         title,
-        area: "overlay",
+        region: "overlay",
         singleton: true,
         closable: true,
         rendererId: RENDERER_ID,

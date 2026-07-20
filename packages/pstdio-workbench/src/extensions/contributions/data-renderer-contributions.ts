@@ -404,7 +404,7 @@ export const registerWorkbenchExtensionDataRenderers = (
       context.workbench.layout.registerWidget({
         id: record.id,
         title: localize(record.title, record.id),
-        area: "main",
+        region: "main",
         rendererId: record.id,
         singleton: true,
         resourceKinds: record.resourceKind ? [record.resourceKind] : undefined,

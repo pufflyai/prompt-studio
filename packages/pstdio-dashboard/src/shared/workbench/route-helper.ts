@@ -4,7 +4,7 @@ import type {
   WorkbenchModuleContributionContext,
   WorkbenchWidgetPlacement,
 } from "@pstdio/workbench/core";
-import { resolveAnchorArea } from "@pstdio/workbench/core";
+import { resolveAnchorRegion } from "@pstdio/workbench/core";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
 export interface RegisterResourceRouteInput {
@@ -33,7 +33,7 @@ export interface RegisterResourceRouteInput {
 // replaceActive forwarded (so history replay replaces in place), and runs side-effect hooks
 // that cannot replace navigable identity.
 export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, input: RegisterResourceRouteInput) => {
-  const area = resolveAnchorArea(input.surface ?? "primary");
+  const region = resolveAnchorRegion(input.surface ?? "primary");
 
   return ctx.resources.registerOpener({
     id: input.id,
@@ -50,7 +50,7 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
 
       const placement = ctx.layout.openWidget(input.widgetId, {
         resource,
-        area,
+        region,
         title: input.title?.(resource) ?? resource.label,
         replaceActive: openInput.replaceActive,
       });

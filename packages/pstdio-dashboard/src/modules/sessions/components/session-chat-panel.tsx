@@ -120,7 +120,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const pendingIdRef = useRef(0);
   const previousSelectedAgentRef = useRef(selectedAgent);
   const previousViewRef = useRef(view);
-  const openWorkspaceOnSelection = input.widget.area !== "floating";
+  const openWorkspaceOnSelection = input.widget.region !== "side";
 
   useEffect(() => {
     const previous = previousViewRef.current;
@@ -194,7 +194,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
-    // to the area bounds and scrolls its messages internally instead of growing.
+    // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden">
         <ChatPanel

@@ -2,40 +2,38 @@ import { Box, Flex } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type {
   RegisteredPlaceholderContribution,
-  WorkbenchArea as WorkbenchAreaId,
   WorkbenchCore,
+  WorkbenchRegion as WorkbenchRegionId,
   WorkbenchWidgetPlacement,
 } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
+import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { WorkbenchWidgetHost } from "./widget-host";
 
-interface WorkbenchAreaProps {
+interface WorkbenchRegionProps {
   workbench: WorkbenchCore;
-  area: WorkbenchAreaId;
+  region: WorkbenchRegionId;
   title?: string;
-  showHeader?: boolean;
-  hideSingleTabHeader?: boolean;
   pointerEvents?: "auto" | "none";
   transparent?: boolean;
 }
 
 // Header bars and the status bar lay their content out in a row, so they
-// scroll on the X axis; every other area scrolls vertically.
-const horizontalScrollAreas = new Set<WorkbenchAreaId>([
+// scroll on the X axis; every other region scrolls vertically.
+const horizontalScrollRegions = new Set<WorkbenchRegionId>([
   "nav",
-  "left-header",
+  "sidebar-header",
   "main-header",
   "secondary-header",
-  "floating-header",
+  "side-header",
   "status",
 ]);
 
-// A flex column at least as tall as the viewport lets a widget fill the area
+// A flex column at least as tall as the viewport lets a widget fill the region
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
 const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%", position: "relative" } as const;
 
-// Horizontal header areas need a definite content height so full-height
+// Horizontal header regions need a definite content height so full-height
 // controls can stretch through the ScrollArea's content wrapper.
 const horizontalContentProps = {
   display: "flex",
@@ -48,7 +46,7 @@ const horizontalContentProps = {
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
-export const resolveRenderedAreaPlacements = (
+export const resolveRenderedRegionPlacements = (
   widgets: WorkbenchWidgetPlacement[],
   activeWidgetId?: string,
 ): WorkbenchWidgetPlacement[] => {
@@ -59,7 +57,7 @@ export const resolveRenderedAreaPlacements = (
   );
 };
 
-export const resolveAreaPlacementRenderState = (
+export const resolveRegionPlacementRenderState = (
   placement: WorkbenchWidgetPlacement,
   activeWidgetId: string | undefined,
 ) => {
@@ -80,23 +78,23 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
   closable: false,
 });
 
-export const WorkbenchArea = (props: WorkbenchAreaProps) => {
-  const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
-  const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
+export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
+  const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
+  const regionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
-  const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
-  const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
+  const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId);
+  const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(region);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
   const renderedPlacements = activePlacement
-    ? resolveRenderedAreaPlacements(areaState.widgets, activePlacement.widgetId)
+    ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId)
     : [];
 
   if (!placement) return null;
 
-  const scrollsHorizontally = horizontalScrollAreas.has(area);
+  const scrollsHorizontally = horizontalScrollRegions.has(region);
 
-  // Interacting with an area makes its active widget the globally-active one (so clicking
-  // into the floating session sets it global-active) without touching the primary anchor,
+  // Interacting with a region makes its active widget the globally-active one (so clicking
+  // into the Side Panel session sets it global-active) without touching the primary anchor,
   // which only follows `main`. Placeholders are not real widgets, so only activate a real
   // placement that is not already active.
   const activateOnInteract = () => {
@@ -113,14 +111,14 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
       minH="0"
       minW="0"
       w="full"
-      bg={transparent ? "transparent" : getWorkbenchAreaBackground(area)}
+      bg={transparent ? "transparent" : getWorkbenchRegionBackground(region)}
       overflow="hidden"
       pointerEvents={pointerEvents}
-      aria-label={title ?? area}
+      aria-label={title ?? region}
       onPointerDown={activateOnInteract}
       onFocusCapture={activateOnInteract}
     >
-      {/* The area owns scrolling: overflowing widget content scrolls here
+      {/* The region owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}
       <ScrollArea
         flex="1"
@@ -133,7 +131,7 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
         // Horizontal bars hold a single row that should stay vertically
         // centered; the ScrollArea otherwise top-aligns its flowing content.
         viewportProps={scrollsHorizontally ? { justifyContent: "center" } : undefined}
-        // Vertical areas host a flex column so a widget can fill the area
+        // Vertical regions host a flex column so a widget can fill the region
         // (e.g. a tree with a pinned footer) yet still grow and scroll.
         contentProps={scrollsHorizontally ? horizontalContentProps : verticalContentProps}
       >
@@ -141,7 +139,7 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
           <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
         ) : (
           renderedPlacements.map((renderedPlacement) => {
-            const renderState = resolveAreaPlacementRenderState(renderedPlacement, activePlacement?.widgetId);
+            const renderState = resolveRegionPlacementRenderState(renderedPlacement, activePlacement?.widgetId);
 
             return (
               <Box

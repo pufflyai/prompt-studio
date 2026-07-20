@@ -73,7 +73,7 @@ export const createControlsRendererModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerWidget({
       id: CONTROLS_ID,
       title: "Card inspector",
-      area: "main",
+      region: "main",
       rendererId: CONTROLS_ID,
       singleton: true,
     });

@@ -12,7 +12,7 @@ const DETAIL_KIND = "contract-detail";
 const MODE = "contract-mode";
 
 // A correct resource-first route: the opener activates the route mode, opens the DOMAIN
-// resource into the primary area, and forwards replaceActive. Mirrors the registerResourceRoute
+// resource into the primary region, and forwards replaceActive. Mirrors the registerResourceRoute
 // opener shape so the contract guards the pattern production routes adopt.
 const setup = (): RouteContractHarness => {
   const workbench = createWorkbenchCore();
@@ -23,7 +23,7 @@ const setup = (): RouteContractHarness => {
   workbench.layout.registerWidget({
     id: "contract-root-view",
     title: "Root",
-    area: "main",
+    region: "main",
     singleton: true,
     rendererId: "noop",
     resourceKinds: [ROOT_KIND],
@@ -31,7 +31,7 @@ const setup = (): RouteContractHarness => {
   workbench.layout.registerWidget({
     id: "contract-detail-view",
     title: "Detail",
-    area: "main",
+    region: "main",
     singleton: true,
     rendererId: "noop",
     resourceKinds: [DETAIL_KIND],
@@ -83,7 +83,7 @@ test("the single-placement invariant catches a tab-accumulating opener", async (
   workbench.layout.registerWidget({
     id: "footgun-view",
     title: "Detail",
-    area: "main",
+    region: "main",
     singleton: false,
     reuse: "none",
     rendererId: "noop",
@@ -91,7 +91,7 @@ test("the single-placement invariant catches a tab-accumulating opener", async (
   workbench.resources.registerOpener({
     id: "footgun-opener",
     canOpen: (resource) => resource.kind === "footgun-detail",
-    // Ignores replaceActive — the footgun that grows main-area tabs.
+    // Ignores replaceActive — the footgun that grows main-region tabs.
     open: (resource) => workbench.layout.openWidget("footgun-view", { resource, title: resource.label }),
   });
 
@@ -109,7 +109,7 @@ test("the active-URI invariant catches a wrapper-identity opener", async () => {
   workbench.layout.registerWidget({
     id: "wrap-view",
     title: "Detail",
-    area: "main",
+    region: "main",
     singleton: true,
     rendererId: "noop",
   });

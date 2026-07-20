@@ -3,6 +3,7 @@ import { AttachedPanel, BubbleButton, BubblePanel, Header, Tooltip } from "@pstd
 import { MessageCircle, Minimize2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
+import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSessionPanelProps {
@@ -40,29 +41,32 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
   const { workbench, contentSlotRef, header } = props;
 
   return (
-    <AttachedPanel
-      data-testid="workbench-session-attached-panel"
-      width="full"
-      minWidth="0"
-      bg={workbenchBackgrounds.widget}
-      header={
-        <Header variant="main" flexShrink={0} gap="sm">
-          <WorkbenchSessionHeader header={header} />
-          <Tooltip content="Detach panel">
-            <IconButton
-              size="xs"
-              variant="ghost"
-              aria-label="Detach panel"
-              onClick={() => workbench.sessionPanel.setMode("bubble")}
-            >
-              <Minimize2 size={16} />
-            </IconButton>
-          </Tooltip>
-        </Header>
-      }
-    >
-      <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
-    </AttachedPanel>
+    <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
+      <AttachedPanel
+        data-testid="workbench-session-attached-panel"
+        data-workbench-region="side"
+        width="full"
+        minWidth="0"
+        bg={workbenchBackgrounds.widget}
+        header={
+          <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
+            <WorkbenchSessionHeader header={header} />
+            <Tooltip content="Detach panel">
+              <IconButton
+                size="xs"
+                variant="ghost"
+                aria-label="Detach panel"
+                onClick={() => workbench.sessionPanel.setMode("bubble")}
+              >
+                <Minimize2 size={16} />
+              </IconButton>
+            </Tooltip>
+          </Header>
+        }
+      >
+        <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+      </AttachedPanel>
+    </WorkbenchFocusRegion>
   );
 };
 

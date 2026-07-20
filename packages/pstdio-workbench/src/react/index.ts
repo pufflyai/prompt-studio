@@ -4,9 +4,6 @@ export type {
   WorkbenchWidgetRenderInput,
 } from "../core";
 export { createWorkbenchRendererRegistry } from "../core";
-export { WorkbenchArea } from "./area/area";
-export { WorkbenchAreaTabs } from "./area/area-tabs";
-export { WorkbenchWidgetHost } from "./area/widget-host";
 export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
 export type { CommandParamEntry, CommandParamValue } from "./command-palette/command-palette-params";
@@ -27,6 +24,9 @@ export {
 export type { WorkbenchMenuItem } from "./menus/menu-items";
 export { listWorkbenchMenuItems } from "./menus/menu-items";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";
+export { WorkbenchRegion } from "./region/region";
+export { WorkbenchRegionTabs } from "./region/region-tabs";
+export { WorkbenchWidgetHost } from "./region/widget-host";
 export { WorkbenchDataTableView } from "./renderers/data-table/data-table-view";
 export type { PreferenceParamEntry } from "./renderers/settings/preference-schema-to-params";
 export { paramValueToPreference, preferenceSchemaToParams } from "./renderers/settings/preference-schema-to-params";

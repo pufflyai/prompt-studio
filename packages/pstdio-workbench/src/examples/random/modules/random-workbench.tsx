@@ -10,12 +10,12 @@ const registerRandomResources = (ctx: WorkbenchModuleContributionContext) => {
 };
 
 // Registration is module-scoped; each mode re-opens the rail in its activate,
-// since resetAreas() clears all placements on mode switch.
+// since resetRegions() clears all placements on mode switch.
 const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: railWidgetId,
     title: "Mode rail",
-    area: "activity",
+    region: "activity",
     singleton: true,
     rendererId: railWidgetId,
   });

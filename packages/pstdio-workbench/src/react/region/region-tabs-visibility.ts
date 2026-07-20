@@ -1,7 +1,7 @@
 import type { WorkbenchWidgetPlacement } from "../../core";
 
-export const toTabKey = (areaId: string, placement: WorkbenchWidgetPlacement) =>
-  `${areaId}:${placement.contributionId}`;
+export const toTabKey = (regionId: string, placement: WorkbenchWidgetPlacement) =>
+  `${regionId}:${placement.contributionId}`;
 
 export const resolveDisplayedActiveWidgetId = (
   visiblePlacements: WorkbenchWidgetPlacement[],

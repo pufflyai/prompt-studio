@@ -50,10 +50,10 @@ const waitForStorybook = async (baseUrl: string, process: ChildProcessWithoutNul
   throw new Error("Timed out waiting for Storybook");
 };
 
-export const startStorybook = async (probeStoryId: string) => {
+export const startStorybook = async (probeStoryId: string, packageName: "ui" | "pstdio-workbench" = "ui") => {
   const port = await getFreePort();
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
-  const uiRoot = resolve(repoRoot, "packages/ui");
+  const packageRoot = resolve(repoRoot, "packages", packageName);
   const baseUrl = `http://127.0.0.1:${port}`;
   const storybook = spawn(
     "bun",
@@ -62,7 +62,7 @@ export const startStorybook = async (probeStoryId: string) => {
       "storybook",
       "dev",
       "--config-dir",
-      resolve(uiRoot, ".storybook"),
+      resolve(packageRoot, ".storybook"),
       "--host",
       "127.0.0.1",
       "--port",
@@ -70,7 +70,7 @@ export const startStorybook = async (probeStoryId: string) => {
       "--ci",
     ],
     {
-      cwd: uiRoot,
+      cwd: packageRoot,
       env: {
         ...process.env,
         STORYBOOK_DISABLE_TELEMETRY: "1",

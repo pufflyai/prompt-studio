@@ -1,7 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, NavigationTarget, TreeNode, WorkbenchModuleContributionContext } from "../../core";
-import { resolveWorkbenchTreeArea } from "../shared/workbench-targets";
+import { resolveWorkbenchTreeRegion } from "../shared/workbench-targets";
 import { routeResource } from "./route-contributions";
 
 type TreeItem = NonNullable<WorkbenchExtensionMetadata["treeItems"]>[number];
@@ -64,7 +64,7 @@ export const registerWorkbenchExtensionTreeItems = (input: RegisterWorkbenchExte
       input.workbench.layout.registerWidget({
         id: rendererId,
         title: "Extensions",
-        area: resolveWorkbenchTreeArea(target),
+        region: resolveWorkbenchTreeRegion(target),
         rendererId,
         singleton: true,
       }),

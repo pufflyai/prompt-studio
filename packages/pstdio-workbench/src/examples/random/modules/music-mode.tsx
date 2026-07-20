@@ -1,8 +1,8 @@
 import type {
   Disposable,
-  WorkbenchAreaSize,
   WorkbenchModeActivationContext,
   WorkbenchModuleContributionContext,
+  WorkbenchRegionSize,
 } from "../../../core";
 import type { WorkbenchWidgetRenderInput } from "../../../react";
 import { MusicControls, MusicPlayer, MusicQueue, MusicStatus, MusicTopBar } from "../components/music";
@@ -13,9 +13,9 @@ const musicMode = randomWorkbenchModes.music;
 interface MusicWidgetSetup {
   id: string;
   title: string;
-  area: "nav" | "main" | "main-right" | "secondary" | "status";
-  areaSize?: WorkbenchAreaSize;
-  areaCollapsible?: boolean;
+  region: "nav" | "main" | "main-right-menu" | "secondary" | "status";
+  regionSize?: WorkbenchRegionSize;
+  regionCollapsible?: boolean;
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
 }
 
@@ -23,20 +23,25 @@ const musicWidgets: MusicWidgetSetup[] = [
   {
     id: musicWidgetIds.top,
     title: "Now playing header",
-    area: "nav",
+    region: "nav",
     render: (input) => <MusicTopBar input={input} />,
   },
-  { id: musicWidgetIds.player, title: "Now playing", area: "main", render: (input) => <MusicPlayer input={input} /> },
-  { id: musicWidgetIds.queue, title: "Queue", area: "main-right", render: (input) => <MusicQueue input={input} /> },
+  { id: musicWidgetIds.player, title: "Now playing", region: "main", render: (input) => <MusicPlayer input={input} /> },
+  {
+    id: musicWidgetIds.queue,
+    title: "Queue",
+    region: "main-right-menu",
+    render: (input) => <MusicQueue input={input} />,
+  },
   {
     id: musicWidgetIds.controls,
     title: "Playback controls",
-    area: "secondary",
-    areaSize: { defaultPx: 72, minPx: 72, maxPx: 72 },
-    areaCollapsible: false,
+    region: "secondary",
+    regionSize: { defaultPx: 72, minPx: 72, maxPx: 72 },
+    regionCollapsible: false,
     render: () => <MusicControls />,
   },
-  { id: musicWidgetIds.status, title: "Music status", area: "status", render: () => <MusicStatus /> },
+  { id: musicWidgetIds.status, title: "Music status", region: "status", render: () => <MusicStatus /> },
 ];
 
 const setupMusicMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
@@ -48,9 +53,9 @@ const setupMusicMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       ctx.layout.registerWidget({
         id: widget.id,
         title: widget.title,
-        area: widget.area,
-        areaSize: widget.areaSize,
-        areaCollapsible: widget.areaCollapsible,
+        region: widget.region,
+        regionSize: widget.regionSize,
+        regionCollapsible: widget.regionCollapsible,
         singleton: true,
         rendererId: widget.id,
       }),

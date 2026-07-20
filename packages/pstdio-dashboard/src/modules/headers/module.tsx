@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { renderLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
+import { renderSidebarHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 import { DashboardMainHeader } from "./components/dashboard-headers";
 
 const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
@@ -8,7 +8,7 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.header,
       title: "Dashboard header",
-      area: "nav",
+      region: "nav",
       singleton: true,
       rendererId: dashboardWidgetIds.header,
       priority: 100,
@@ -22,21 +22,21 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
   });
 
   ctx.layout.registerWidget({
-    id: dashboardWidgetIds.leftHeader,
+    id: dashboardWidgetIds.sidebarHeader,
     title: "Project brand",
-    area: "left-header",
+    region: "sidebar-header",
     singleton: true,
-    rendererId: dashboardWidgetIds.leftHeader,
+    rendererId: dashboardWidgetIds.sidebarHeader,
     headerBorderBottom: false,
   });
 
   ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.leftHeader,
-    render: renderLeftHeaderContribution,
+    id: dashboardWidgetIds.sidebarHeader,
+    render: renderSidebarHeaderContribution,
   });
 
   ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
-  ctx.layout.openWidget(dashboardWidgetIds.leftHeader, { pinned: true });
+  ctx.layout.openWidget(dashboardWidgetIds.sidebarHeader, { pinned: true });
 };
 
 export const createHeadersModule = () =>

@@ -12,7 +12,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.focus-context.main",
       title: "Focus and context",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: "docs.focus-context.renderer",
     });
@@ -20,7 +20,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.focus-context.panel",
       title: "Context",
-      area: "secondary",
+      region: "secondary",
       rendererId: "docs.focus-context.renderer",
     });
 
@@ -28,10 +28,10 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       id: "docs.focus-context.renderer",
       render: ({ workbench }) => (
         <section>
-          <button onClick={() => workbench.focus.setActiveArea("main")}>
+          <button onClick={() => workbench.focus.setActiveRegion("main")}>
             Focus main
           </button>
-          <button onClick={() => workbench.focus.setActiveArea("panel")}>
+          <button onClick={() => workbench.focus.setActiveRegion("secondary")}>
             Focus panel
           </button>
           <button onClick={() => ctx.context.set(SELECTED_KIND_CONTEXT_KEY, "guide")}>
@@ -60,6 +60,6 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
 
     ctx.layout.openWidget("docs.focus-context.main");
     ctx.layout.openWidget("docs.focus-context.panel");
-    ctx.focus.setActiveArea("main");
+    ctx.focus.setActiveRegion("main");
   },
 });`;

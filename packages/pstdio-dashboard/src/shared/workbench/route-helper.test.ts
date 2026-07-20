@@ -27,7 +27,7 @@ const setup = (): RouteContractHarness => {
       ctx.layout.registerWidget({
         id: "route-test-root",
         title: "Root",
-        area: "main",
+        region: "main",
         singleton: true,
         rendererId: "noop",
         resourceKinds: ["dashboard-view"],
@@ -35,7 +35,7 @@ const setup = (): RouteContractHarness => {
       ctx.layout.registerWidget({
         id: "route-test-detail",
         title: "Detail",
-        area: "main",
+        region: "main",
         singleton: true,
         rendererId: "noop",
         resourceKinds: [DETAIL_KIND],

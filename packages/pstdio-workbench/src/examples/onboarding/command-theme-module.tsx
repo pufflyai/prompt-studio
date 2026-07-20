@@ -90,7 +90,7 @@ export const createCommandKeybindingThemeModule = (): WorkbenchModuleContributio
     ctx.layout.registerWidget({
       id: COMMANDS_WIDGET_ID,
       title: "Commands",
-      area: "main",
+      region: "main",
       rendererId: COMMANDS_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({

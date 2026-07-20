@@ -241,9 +241,8 @@ test.describe("Extension webviews", () => {
     await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
     await expectVisibleTerminalOutput();
 
-    await page.getByRole("separator", { name: "Resize main-bottom panel" }).press("Home");
+    await page.getByRole("separator", { name: "Resize Secondary Panel" }).press("Home");
     await expect(page.getByRole("button", { name: "Show terminal panel" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Show main-bottom panel" })).toHaveCount(0);
     await page.getByRole("button", { name: "Show terminal panel" }).click();
     await expectVisibleTerminalOutput();
 

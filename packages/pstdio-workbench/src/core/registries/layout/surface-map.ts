@@ -1,13 +1,11 @@
-import { type WorkbenchArea, workbenchAreas } from "./layout-types";
+import { type WorkbenchRegion, workbenchRegions } from "./layout-types";
 
-// The surface map describes the *behavioural* role of each workbench area: which
-// areas host a resource (anchors), which render an anchor's resource (projections),
-// and which are frame chrome or the transient overlay layer. It is additive metadata
-// over the existing area ids — the cosmetic rename (main-bottom → secondary, etc.) and
-// the region collapse happen in a later phase. The project scope root is NOT a surface;
-// it is handled by the layout persistence scope.
+// The surface map describes the *behavioural* role of each workbench region: which
+// regions host a resource (anchors), which render an anchor's resource (projections),
+// and which are frame chrome or the transient overlay layer. The project scope root is
+// not a surface; it is handled by the layout persistence scope.
 
-// Logical anchor identity, independent of the area id that currently hosts it.
+// Logical anchor identity, independent of the region id that currently hosts it.
 export type AnchorId = "primary" | "secondary" | "attached";
 
 // Does an anchor's active selection survive a primary change?
@@ -33,7 +31,7 @@ export interface AnchorSurface {
 export interface ProjectionSurface {
   role: "projection";
   reads: AnchorReadId[];
-  // The left navigator both reads primary (highlight) and selects it (the picker).
+  // The sidebar navigator both reads primary (highlight) and selects it (the picker).
   navigator?: boolean;
 }
 
@@ -60,45 +58,45 @@ const projection = (reads: AnchorReadId[], navigator = false): ProjectionSurface
 const chrome: ChromeSurface = { role: "chrome" };
 const transient: TransientSurface = { role: "transient" };
 
-export const surfaceMap: Record<WorkbenchArea, SurfaceDescriptor> = {
+export const surfaceMap: Record<WorkbenchRegion, SurfaceDescriptor> = {
   // The top bar hosts breadcrumbs (primary trail) and session status (attached), so it
   // reads both anchors — it is a projection, not inert chrome.
   nav: projection(["primary", "attached"]),
   activity: chrome,
-  "left-header": projection(["primary"]),
-  left: projection(["primary"], true),
+  "sidebar-header": projection(["primary"]),
+  sidebar: projection(["primary"], true),
   "main-header": projection(["primary"]),
-  "main-left": projection(["primary"]),
+  "main-left-menu": projection(["primary"]),
   main: anchor("primary", "primary", "global"),
-  "main-right": projection(["primary"]),
+  "main-right-menu": projection(["primary"]),
   "secondary-header": projection(["primary"]),
   secondary: anchor("secondary", "derived", "scoped"),
   status: projection(["primary", "attached"]),
   overlay: transient,
-  "floating-header": projection(["attached"]),
-  floating: anchor("attached", "detached", "scoped"),
+  "side-header": projection(["attached"]),
+  side: anchor("attached", "detached", "scoped"),
 };
 
-export const getSurface = (area: WorkbenchArea) => surfaceMap[area];
+export const getSurface = (region: WorkbenchRegion) => surfaceMap[region];
 
-export const listAnchorAreas = () =>
-  workbenchAreas.filter((area): area is WorkbenchArea => surfaceMap[area].role === "anchor");
+export const listAnchorRegions = () =>
+  workbenchRegions.filter((region): region is WorkbenchRegion => surfaceMap[region].role === "anchor");
 
-export const listProjectionAreas = () =>
-  workbenchAreas.filter((area): area is WorkbenchArea => surfaceMap[area].role === "projection");
+export const listProjectionRegions = () =>
+  workbenchRegions.filter((region): region is WorkbenchRegion => surfaceMap[region].role === "projection");
 
 export const listProjectionsReading = (anchorId: AnchorReadId) =>
-  workbenchAreas.filter((area) => {
-    const surface = surfaceMap[area];
+  workbenchRegions.filter((region) => {
+    const surface = surfaceMap[region];
     return surface.role === "projection" && surface.reads.includes(anchorId);
   });
 
-// Reverse lookup: which area currently hosts a given logical anchor.
-export const resolveAnchorArea = (anchorId: AnchorId) => {
-  const area = workbenchAreas.find((candidate) => {
+// Reverse lookup: which region currently hosts a given logical anchor.
+export const resolveAnchorRegion = (anchorId: AnchorId) => {
+  const region = workbenchRegions.find((candidate) => {
     const surface = surfaceMap[candidate];
     return surface.role === "anchor" && surface.anchor === anchorId;
   });
-  if (!area) throw new Error(`No area hosts anchor: ${anchorId}`);
-  return area;
+  if (!region) throw new Error(`No region hosts anchor: ${anchorId}`);
+  return region;
 };

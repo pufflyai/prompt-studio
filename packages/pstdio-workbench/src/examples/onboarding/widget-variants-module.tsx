@@ -78,8 +78,8 @@ const VariantCount = (props: { label: string; count: number }) => {
 
 const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const mainArea = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.main);
-  const placements = mainArea.widgets;
+  const mainRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main);
+  const placements = mainRegion.widgets;
   const scratchCount = countPlacements(placements, SCRATCH_WIDGET_ID);
 
   const openResource = (id: VariantNoteId) => {
@@ -97,7 +97,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
       <Stack gap="xs">
         <Text textStyle="title/S/semibold">Widget variants</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Open each contribution more than once and compare the tabs in the main area.
+          Open each contribution more than once and compare the tabs in the main region.
         </Text>
       </Stack>
 
@@ -241,8 +241,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CONTROLS_WIDGET_ID,
       title: "Variants",
-      area: "left",
-      areaSize: { defaultPx: 280, minPx: 240 },
+      region: "sidebar",
+      regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: CONTROLS_RENDERER_ID,
     });
     ctx.renderers.registerRenderer({
@@ -253,7 +253,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: DEFAULT_SINGLETON_WIDGET_ID,
       title: "Default singleton",
-      area: "main",
+      region: "main",
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
         label: "Default singleton",
@@ -264,7 +264,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CLOSABLE_SINGLETON_WIDGET_ID,
       title: "Closable singleton",
-      area: "main",
+      region: "main",
       closable: true,
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
@@ -276,7 +276,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: RESOURCE_WIDGET_ID,
       title: "Resource tab",
-      area: "main",
+      region: "main",
       singleton: false,
       resourceKinds: [VARIANT_RESOURCE_KIND],
       rendererId: VARIANT_RENDERER_ID,
@@ -289,7 +289,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: SCRATCH_WIDGET_ID,
       title: "Scratch",
-      area: "main",
+      region: "main",
       singleton: false,
       reuse: "none",
       rendererId: VARIANT_RENDERER_ID,

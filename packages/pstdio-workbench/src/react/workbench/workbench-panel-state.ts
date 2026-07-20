@@ -1,14 +1,14 @@
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { WorkbenchCore, WorkbenchRegion } from "../../core";
 
-// Panel areas the workbench chrome can collapse and reveal.
-export type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "secondary";
+// Panel regions the workbench chrome can collapse and reveal.
+export type WorkbenchPanelRegionId = "sidebar" | "main-left-menu" | "main-right-menu" | "secondary";
 
-export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: WorkbenchArea[]) =>
-  areas.every((area) => workbench.layout.getAreaCollapsible(area));
+export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...regions: WorkbenchRegion[]) =>
+  regions.every((region) => workbench.layout.getRegionCollapsible(region));
 
 // Opening or closing a panel is two writes kept in lockstep: the panels
-// controller owns the open flag, the layout model owns area visibility.
-export const setWorkbenchPanelOpen = (workbench: WorkbenchCore, area: WorkbenchPanelAreaId, open: boolean) => {
-  workbench.panels.setOpen(area, open);
-  workbench.layout.setAreaVisible(area, open);
+// controller owns the open flag, the layout model owns region visibility.
+export const setWorkbenchPanelOpen = (workbench: WorkbenchCore, region: WorkbenchPanelRegionId, open: boolean) => {
+  workbench.panels.setOpen(region, open);
+  workbench.layout.setRegionVisible(region, open);
 };

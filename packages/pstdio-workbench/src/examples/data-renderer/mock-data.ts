@@ -52,8 +52,8 @@ const INITIAL_STORY_ATTRIBUTES: AttributeDescriptor[] = [
     displayable: true,
   },
   {
-    id: "area",
-    label: "Area",
+    id: "region",
+    label: "Region",
     type: {
       kind: "enum",
       options: [
@@ -115,7 +115,7 @@ const baseRows = [
     status: "in-progress",
     assignee: "Aure",
     priority: "high",
-    area: "renderer",
+    region: "renderer",
     updated: "2026-05-17T09:00:00Z",
   },
   {
@@ -124,7 +124,7 @@ const baseRows = [
     status: "review",
     assignee: "Mika",
     priority: "high",
-    area: "workbench",
+    region: "workbench",
     updated: "2026-05-16T18:30:00Z",
   },
   {
@@ -133,7 +133,7 @@ const baseRows = [
     status: "backlog",
     assignee: "Sam",
     priority: "medium",
-    area: "workbench",
+    region: "workbench",
     updated: "2026-05-15T12:00:00Z",
   },
   {
@@ -142,7 +142,7 @@ const baseRows = [
     status: "in-progress",
     assignee: "Aure",
     priority: "medium",
-    area: "renderer",
+    region: "renderer",
     updated: "2026-05-15T10:15:00Z",
   },
   {
@@ -151,7 +151,7 @@ const baseRows = [
     status: "done",
     assignee: "Nora",
     priority: "low",
-    area: "renderer",
+    region: "renderer",
     updated: "2026-05-14T16:45:00Z",
   },
   {
@@ -160,7 +160,7 @@ const baseRows = [
     status: "review",
     assignee: "Mika",
     priority: "low",
-    area: "ui",
+    region: "ui",
     updated: "2026-05-14T11:00:00Z",
   },
   {
@@ -169,7 +169,7 @@ const baseRows = [
     status: "backlog",
     assignee: "Sam",
     priority: "medium",
-    area: "renderer",
+    region: "renderer",
     updated: "2026-05-13T08:20:00Z",
   },
   {
@@ -178,13 +178,13 @@ const baseRows = [
     status: "in-progress",
     assignee: "Aure",
     priority: "low",
-    area: "ui",
+    region: "ui",
     updated: "2026-05-12T14:30:00Z",
   },
 ];
 
-export const storyRows: StoryRow[] = baseRows.map(({ id, title, status, assignee, priority, area, updated }) => ({
+export const storyRows: StoryRow[] = baseRows.map(({ id, title, status, assignee, priority, region, updated }) => ({
   id,
   title,
-  attributes: { status, assignee, priority, area, updated },
+  attributes: { status, assignee, priority, region, updated },
 }));

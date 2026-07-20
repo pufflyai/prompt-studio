@@ -25,8 +25,8 @@ const getClosableActiveWidgetId = (workbench: Pick<WorkbenchCore, "layout">) => 
   const activeWidgetId = layout.activeWidgetId;
   if (!activeWidgetId) return undefined;
 
-  for (const area of Object.values(layout.areas)) {
-    const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
+  for (const region of Object.values(layout.regions)) {
+    const placement = region.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
     if (placement?.closable) return placement.widgetId;
   }
 
@@ -160,8 +160,8 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: HOME_WIDGET_ID,
       title: "History demo",
-      area: "secondary",
-      areaSize: { defaultPx: 320 },
+      region: "secondary",
+      regionSize: { defaultPx: 320 },
       singleton: true,
       rendererId: HOME_RENDERER_ID,
     });
@@ -169,7 +169,7 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
-      area: "main",
+      region: "main",
       closable: true,
       singleton: true,
       rendererId: TICKET_RENDERER_ID,

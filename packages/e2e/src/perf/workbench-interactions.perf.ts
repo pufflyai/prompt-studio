@@ -103,7 +103,7 @@ test.describe("PS-165 workbench interactions", () => {
 
     await page.goto(`/projects/${project.id}`);
     await page.getByRole("option", { name: "Open terminal", exact: true }).click();
-    const separator = page.getByRole("separator", { name: "Resize main-bottom panel" });
+    const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
     await expect(separator).toBeVisible();
     await expect(page.locator(".xterm").first()).toBeVisible();
     await afterTwoFrames(page);

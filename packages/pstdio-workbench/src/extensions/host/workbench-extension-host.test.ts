@@ -153,13 +153,13 @@ describe("registerWorkbenchExtensionContributions", () => {
 
     expect(workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)).toBeDefined();
     expect(workbench.layout.getWidget("lab.ticketPanel")).toMatchObject({
-      area: "main",
+      region: "main",
       rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
       resourceKinds: ["ticket"],
       config: expect.objectContaining({ moduleUrl: "/ticket.js" }),
     });
     expect(workbench.layout.getWidget("lab.ticketModal")).toMatchObject({
-      area: "overlay",
+      region: "overlay",
       rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
       resourceKinds: ["ticket"],
       config: expect.objectContaining({
@@ -183,7 +183,7 @@ describe("registerWorkbenchExtensionContributions", () => {
     const renderer = workbench.renderers.getDataRenderer("lab.rows");
     expect(renderer).toMatchObject({ id: "lab.rows", title: "Rows" });
     expect(workbench.layout.getWidget("lab.rows")).toMatchObject({
-      area: "main",
+      region: "main",
       rendererId: "lab.rows",
       resourceKinds: ["ticket"],
     });
@@ -228,10 +228,10 @@ describe("registerWorkbenchExtensionContributions", () => {
       uri: "workbench://extension-route/lab.details",
       id: "lab.details",
     });
-    expect(workbench.layout.getLayout().areas.main.widgets.at(-1)).toMatchObject({ contributionId: "lab.details" });
+    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({ contributionId: "lab.details" });
 
     workbench.modes.setActiveMode("lab.review");
-    expect(workbench.layout.getLayout().areas.main.widgets.at(-1)).toMatchObject({
+    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({
       contributionId: "lab.ticketPanel",
       pinned: true,
     });

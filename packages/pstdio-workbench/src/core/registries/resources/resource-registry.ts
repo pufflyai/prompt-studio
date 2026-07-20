@@ -59,7 +59,7 @@ export interface OpenResourceInput {
 
 // The anchor a resource kind routes to. `primary` is the main subject; `secondary` and
 // `attached` are the side anchors (derived terminals, detached sessions). Independent of
-// the area id that currently hosts each anchor.
+// the region id that currently hosts each anchor.
 export type ResourceSurface = "primary" | "secondary" | "attached";
 
 export interface ResourceKindContribution {

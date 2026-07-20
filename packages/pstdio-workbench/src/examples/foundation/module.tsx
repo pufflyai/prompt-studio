@@ -74,7 +74,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const context = useWorkbenchStore(input.workbench.context.store, (state) => state.values);
   const activeMode = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId) ?? "none";
-  const focusArea = useWorkbenchStore(input.workbench.focus.store, (state) => state.activeArea) ?? "none";
+  const focusRegion = useWorkbenchStore(input.workbench.focus.store, (state) => state.activeRegion) ?? "none";
   const { themePreference, toggleThemePreference } = useThemePreference();
   useWorkbenchStore(input.workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(input.workbench.commands.store, (state) => state.commands);
@@ -84,15 +84,15 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
     <ScrollArea h="full" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette="blue">mode {activeMode}</Badge>
-        <Badge colorPalette="green">focus {focusArea}</Badge>
+        <Badge colorPalette="green">focus {focusRegion}</Badge>
         <Badge colorPalette="purple">theme {themePreference}</Badge>
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => input.workbench.focus.setActiveArea("sideBar")}>
+        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("sidebar")}>
           <WorkbenchIcon name="PanelLeft" />
           Focus sidebar
         </Button>
-        <Button size="sm" onClick={() => input.workbench.focus.setActiveArea("panel")}>
+        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("secondary")}>
           <WorkbenchIcon name="PanelBottom" />
           Focus panel
         </Button>
@@ -159,35 +159,35 @@ const registerWidgets = (workbench: WorkbenchCore) => {
   workbench.layout.registerWidget({
     id: "foundation.activity",
     title: "Activity",
-    area: "activity",
+    region: "activity",
     rendererId: foundationRendererId,
     config: "Blocks",
   });
   workbench.layout.registerWidget({
     id: "foundation.sidebar",
     title: "Sidebar",
-    area: "left",
+    region: "sidebar",
     rendererId: foundationRendererId,
     config: "PanelLeft",
   });
   workbench.layout.registerWidget({
     id: "foundation.main",
     title: "Foundation",
-    area: "main",
+    region: "main",
     rendererId: foundationRendererId,
     closable: true,
   });
   workbench.layout.registerWidget({
     id: "foundation.panel",
     title: "Panel",
-    area: "secondary",
+    region: "secondary",
     rendererId: foundationRendererId,
     closable: true,
   });
   workbench.layout.registerWidget({
     id: "foundation.status",
     title: "Ready",
-    area: "status",
+    region: "status",
     rendererId: foundationRendererId,
     config: "CircleCheck",
   });
@@ -204,15 +204,20 @@ export const createFoundationWorkbench = () => {
 
   registerWidgets(workbench);
   workbench.context.set("foundation.host", true);
-  workbench.layout.setAreaSize("left", 280);
-  workbench.layout.setAreaSize("secondary", 260);
+  workbench.layout.setRegionSize("sidebar", 280);
+  workbench.layout.setRegionSize("secondary", 260);
   workbench.layout.openWidget("foundation.activity", { pinned: true });
   workbench.layout.openWidget("foundation.sidebar", { pinned: true });
   workbench.layout.openWidget("foundation.status", { pinned: true });
   workbench.layout.openWidget("foundation.main", { closable: true });
   workbench.layout.openWidget("foundation.panel", { closable: true });
   workbench.commands.registerCommand(
-    { id: "foundation.markReviewed", label: "Mark reviewed", category: "Foundation", when: "mainFocus || panelFocus" },
+    {
+      id: "foundation.markReviewed",
+      label: "Mark reviewed",
+      category: "Foundation",
+      when: "mainFocus || secondaryFocus",
+    },
     { execute: () => workbench.notifications.show({ level: "success", title: "Reviewed" }) },
   );
   workbench.keybindings.registerKeybinding({

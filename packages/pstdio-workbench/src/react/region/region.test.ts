@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchWidgetPlacement } from "../../core";
-import { resolveRenderedAreaPlacements } from "./area";
+import { resolveRenderedRegionPlacements } from "./region";
 
 const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidgetPlacement => ({
   widgetId: overrides.widgetId ?? "widget",
@@ -8,13 +8,13 @@ const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidge
   ...overrides,
 });
 
-describe("resolveRenderedAreaPlacements", () => {
+describe("resolveRenderedRegionPlacements", () => {
   test("keeps inactive keep-mounted placements in the render set", () => {
     const active = placement({ widgetId: "active" });
     const inactiveTerminal = placement({ widgetId: "terminal", mountStrategy: "keep-mounted" });
     const inactivePlain = placement({ widgetId: "plain" });
 
-    expect(resolveRenderedAreaPlacements([active, inactiveTerminal, inactivePlain], "active")).toEqual([
+    expect(resolveRenderedRegionPlacements([active, inactiveTerminal, inactivePlain], "active")).toEqual([
       active,
       inactiveTerminal,
     ]);

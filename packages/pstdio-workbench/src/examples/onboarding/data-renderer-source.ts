@@ -32,7 +32,7 @@ export const createRowsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: ROWS_WIDGET_ID,
       title: "Rows",
-      area: "main",
+      region: "main",
       rendererId: ROWS_WIDGET_ID,
     });
     ctx.layout.openWidget(ROWS_WIDGET_ID);

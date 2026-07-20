@@ -21,8 +21,8 @@ ctx.renderers.registerControlsRenderer({
 ctx.layout.registerWidget({
   id: "card-inspector",
   title: "Card inspector",
-  area: "main-right",
-  areaSize: { defaultPx: 320, minPx: 260, maxPx: 480 },
+  region: "main-right-menu",
+  regionSize: { defaultPx: 320, minPx: 260, maxPx: 480 },
   rendererId: "card-inspector",
 });
 `;

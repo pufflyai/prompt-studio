@@ -23,7 +23,7 @@ describe("openCreatedSessionFromDraft", () => {
     workbench.layout.registerWidget({
       id: dashboardWidgetIds.session,
       title: "Session",
-      area: "main",
+      region: "main",
       rendererId: dashboardWidgetIds.session,
     });
     const placement = workbench.layout.openWidget(dashboardWidgetIds.session, {
@@ -44,7 +44,7 @@ describe("openCreatedSessionFromDraft", () => {
       projectId: "project-1",
     });
 
-    const opened = workbench.layout.getLayout().areas.main.widgets[0];
+    const opened = workbench.layout.getLayout().regions.main.widgets[0];
 
     expect(opened?.resourceUri).toBe("dashboard-workbench://session/session-created-from-draft");
     expect(opened?.resource?.kind).toBe("session");

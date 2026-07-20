@@ -8,8 +8,8 @@ describe("workbench built-ins", () => {
     const workbench = createWorkbenchCore();
 
     await workbench.commands.executeCommand("workbench.toggleSideBar");
-    expect(workbench.panels.isOpen("left")).toBe(false);
-    expect(workbench.layout.getLayout().areas.left.visible).toBe(false);
+    expect(workbench.panels.isOpen("sidebar")).toBe(false);
+    expect(workbench.layout.getLayout().regions.sidebar.visible).toBe(false);
 
     await workbench.commands.executeCommand("workbench.toggleCommandPalette");
     expect(workbench.commandPalette.isOpen()).toBe(true);

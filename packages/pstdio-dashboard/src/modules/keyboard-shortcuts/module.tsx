@@ -14,7 +14,7 @@ export const createKeyboardShortcutsModule = () =>
       ctx.layout.registerWidget({
         id: dashboardWidgetIds.shortcutHelp,
         title: "Keyboard shortcuts",
-        area: "overlay",
+        region: "overlay",
         singleton: true,
         closable: true,
         rendererId: dashboardWidgetIds.shortcutHelp,

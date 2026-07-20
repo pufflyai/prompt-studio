@@ -73,7 +73,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
           command
         </Text>
         <Button size="sm" onClick={() => fire(`nav://command?id=${FOCUS_MAIN_COMMAND_ID}`)}>
-          Focus main area (via command target)
+          Focus main region (via command target)
         </Button>
       </Box>
       <Box>
@@ -92,8 +92,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
   id: "navigation.example",
   activate(ctx) {
     ctx.commands.registerCommand(
-      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main area", category: "Navigation", icon: "Crosshair" },
-      { execute: () => ctx.focus.setActiveArea("main") },
+      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main region", category: "Navigation", icon: "Crosshair" },
+      { execute: () => ctx.focus.setActiveRegion("main") },
     );
 
     ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "component" });
@@ -124,7 +124,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: HOME_WIDGET_ID,
       title: "Navigation demo",
-      area: "main",
+      region: "main",
       singleton: true,
       rendererId: HOME_RENDERER_ID,
     });
@@ -132,7 +132,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
-      area: "main",
+      region: "main",
       closable: true,
       singleton: true,
       rendererId: TICKET_RENDERER_ID,
@@ -142,8 +142,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: TREE_WIDGET_ID,
       title: "Workspace tree",
-      area: "left",
-      areaSize: { defaultPx: 240, minPx: 200 },
+      region: "sidebar",
+      regionSize: { defaultPx: 240, minPx: 200 },
       singleton: true,
       rendererId: TREE_RENDERER_ID,
     });

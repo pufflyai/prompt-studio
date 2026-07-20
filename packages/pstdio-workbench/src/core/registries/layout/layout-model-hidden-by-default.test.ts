@@ -8,7 +8,7 @@ describe("createLayoutModel — hiddenByDefault propagation", () => {
     registerTestWidget(layout, {
       id: "project.hidden-default",
       title: "Hidden by default",
-      area: "main",
+      region: "main",
       singleton: false,
       closable: false,
       hiddenByDefault: true,
@@ -16,7 +16,7 @@ describe("createLayoutModel — hiddenByDefault propagation", () => {
     registerTestWidget(layout, {
       id: "project.hidden-override",
       title: "Hidden override",
-      area: "main",
+      region: "main",
       singleton: false,
       closable: false,
       hiddenByDefault: true,
@@ -31,7 +31,7 @@ describe("createLayoutModel — hiddenByDefault propagation", () => {
     registerTestWidget(layout, {
       id: "terminal",
       title: "Terminal",
-      area: "secondary",
+      region: "secondary",
       singleton: false,
       mountStrategy: "keep-mounted",
     });

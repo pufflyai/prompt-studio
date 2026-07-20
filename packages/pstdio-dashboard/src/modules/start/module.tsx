@@ -11,7 +11,7 @@ const registerStartWidget = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.start,
       title: "Start",
-      area: "main",
+      region: "main",
       rendererId: dashboardWidgetIds.start,
       singleton: true,
       resourceKinds: ["dashboard-view"],

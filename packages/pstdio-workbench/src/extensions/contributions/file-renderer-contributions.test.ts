@@ -72,7 +72,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
     const contribution = workbench.renderers.getFileRenderer("lab.ticketContent");
     expect(contribution).toMatchObject({ id: "lab.ticketContent", title: "Ticket", resourceKind: "ticket" });
     expect(workbench.layout.getWidget("lab.ticketEditor")).toMatchObject({
-      area: "main",
+      region: "main",
       rendererId: "lab.ticketContent",
       resourceKinds: ["ticket"],
     });

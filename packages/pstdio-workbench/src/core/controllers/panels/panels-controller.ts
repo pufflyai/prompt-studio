@@ -2,11 +2,11 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export interface WorkbenchPanelsState {
-  openByAreaId: Record<string, boolean>;
+  openByRegionId: Record<string, boolean>;
 }
 
 export interface PersistedWorkbenchPanels {
-  openByAreaId: Record<string, boolean>;
+  openByRegionId: Record<string, boolean>;
 }
 
 export interface WorkbenchPanelsPersistenceAdapter {
@@ -18,9 +18,9 @@ export type WorkbenchPanelsChangeListener = (state: WorkbenchPanelsState) => voi
 
 export interface WorkbenchPanelsController {
   store: WorkbenchStore<WorkbenchPanelsState>;
-  isOpen(areaId: string): boolean;
-  setOpen(areaId: string, open: boolean): void;
-  toggle(areaId: string): void;
+  isOpen(regionId: string): boolean;
+  setOpen(regionId: string, open: boolean): void;
+  toggle(regionId: string): void;
   onDidChange(listener: WorkbenchPanelsChangeListener): Disposable;
 }
 
@@ -35,27 +35,27 @@ export const createWorkbenchPanelsController = (
 
   const store = createWorkbenchStore<WorkbenchPanelsState>({
     name: "workbench.panels",
-    initialState: { openByAreaId: persisted?.openByAreaId ?? {} },
+    initialState: { openByRegionId: persisted?.openByRegionId ?? {} },
   });
 
   const persistState = () => {
     if (!input.persistence) return;
-    input.persistence.setPanelStates({ openByAreaId: store.getState().openByAreaId });
+    input.persistence.setPanelStates({ openByRegionId: store.getState().openByRegionId });
   };
 
-  const isOpen = (areaId: string) => store.getState().openByAreaId[areaId] ?? true;
+  const isOpen = (regionId: string) => store.getState().openByRegionId[regionId] ?? true;
 
   return {
     store,
 
     isOpen,
 
-    setOpen(areaId, open) {
+    setOpen(regionId, open) {
       const snapshot = store.getState();
-      if ((snapshot.openByAreaId[areaId] ?? true) === open) return;
+      if ((snapshot.openByRegionId[regionId] ?? true) === open) return;
       store.setState(
         {
-          openByAreaId: { ...snapshot.openByAreaId, [areaId]: open },
+          openByRegionId: { ...snapshot.openByRegionId, [regionId]: open },
         },
         false,
         "setPanelOpen",
@@ -63,8 +63,8 @@ export const createWorkbenchPanelsController = (
       persistState();
     },
 
-    toggle(areaId) {
-      this.setOpen(areaId, !isOpen(areaId));
+    toggle(regionId) {
+      this.setOpen(regionId, !isOpen(regionId));
     },
 
     onDidChange(listener) {

@@ -121,7 +121,7 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
   });
-  const mainArea = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.areas.main);
+  const mainRegion = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.regions.main);
   const view = resolveDashboardSessionViewForPlacement(input.placement);
   const sessions = createDashboardSessions(projectId);
   const selectedSession = sessions.find((session) => session.id === view.sessionId);
@@ -131,7 +131,7 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
     placement: input.placement,
   });
   const workspace = getWorkspaceResource({
-    activeMainPlacement: getActivePlacement(mainArea.widgets, mainArea.activeWidgetId),
+    activeMainPlacement: getActivePlacement(mainRegion.widgets, mainRegion.activeWidgetId),
     headerPlacement: input.placement,
     projectId,
   });
@@ -172,7 +172,7 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
                             session={session}
                             isSelected={session.id === view.sessionId}
                             onSelect={() => {
-                              void input.workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
+                              void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
                                 resource: session.resource,
                               });
                             }}

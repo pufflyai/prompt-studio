@@ -198,7 +198,7 @@ describe("createExtensionsModule", () => {
 });
 
 describe("createExtensionsModule command results and refresh", () => {
-  test("opens successful session command results in the floating session panel", async () => {
+  test("opens successful session command results in the Side Panel", async () => {
     const refineCommandId = "extension-lab.refine-ticket";
     const loadMetadata = mock(async () => ({
       ...metadata,
@@ -245,7 +245,7 @@ describe("createExtensionsModule command results and refresh", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
       expect(workbench.sessionPanel.getMode()).toBe("bubble");
       expect(placement?.resource).toMatchObject({
@@ -338,7 +338,9 @@ describe("createExtensionsModule command results and refresh", () => {
       getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
       await flushMicrotasks();
 
-      const placement = workbench.layout.getLayout().areas.main.widgets.find((widget) => widget.resource?.id === "lab");
+      const placement = workbench.layout
+        .getLayout()
+        .regions.main.widgets.find((widget) => widget.resource?.id === "lab");
       expect(placement?.resource?.metadata?.route).toMatchObject({
         webview: expect.objectContaining({
           moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=2",

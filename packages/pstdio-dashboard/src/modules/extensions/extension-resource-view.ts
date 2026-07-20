@@ -9,7 +9,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
-import { extensionModeLayoutArea, extensionViewArea, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { extensionModeLayoutRegion, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 const outcomeValueId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
@@ -35,8 +35,8 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<ExtensionModeRecord["layout"]
 
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
 
-const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef, area: string) =>
-  area === "left" || area === "main-left" ? (resource.label ?? view.title) : view.title;
+const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef, region: string) =>
+  region === "sidebar" || region === "main-left-menu" ? (resource.label ?? view.title) : view.title;
 
 const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
   metadata.modes.find((mode) => mode.resourceKind === kind);
@@ -50,20 +50,20 @@ const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId
   group.primary.extensionId === event.extensionId ||
   group.companions.some((companion) => companion.extensionId === event.extensionId);
 
-const companionViewArea = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
-  modeEntry ? extensionModeLayoutArea(modeEntry.target) : extensionViewArea(view.target);
+const companionViewRegion = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
+  modeEntry ? extensionModeLayoutRegion(modeEntry.target) : extensionViewRegion(view.target);
 
 const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widgetId: string, resource: ResourceRef) =>
-  Object.values(ctx.layout.getLayout().areas).some((area) =>
-    area.widgets.some((placement) => placement.contributionId === widgetId && placement.resourceUri === resource.uri),
+  Object.values(ctx.layout.getLayout().regions).some((region) =>
+    region.widgets.some((placement) => placement.contributionId === widgetId && placement.resourceUri === resource.uri),
   );
 
 const updatePlacementForResource = (
   ctx: WorkbenchModuleContributionContext,
   input: { widgetId: string; resource: ResourceRef; title?: string; pinned?: boolean },
 ) => {
-  for (const area of Object.values(ctx.layout.getLayout().areas)) {
-    const placement = area.widgets.find(
+  for (const region of Object.values(ctx.layout.getLayout().regions)) {
+    const placement = region.widgets.find(
       (candidate) => candidate.contributionId === input.widgetId && candidate.resourceUri === input.resource.uri,
     );
     if (placement) {
@@ -172,8 +172,8 @@ const removeManagedCompanions = (
   managedWidgetIds: Set<string>,
   keepWidgetIds = new Set<string>(),
 ) => {
-  for (const area of Object.values(ctx.layout.getLayout().areas)) {
-    for (const placement of area.widgets) {
+  for (const region of Object.values(ctx.layout.getLayout().regions)) {
+    for (const placement of region.widgets) {
       if (!managedWidgetIds.has(placement.contributionId) || keepWidgetIds.has(placement.contributionId)) continue;
       ctx.layout.removeWidgetPlacement(placement.widgetId);
     }
@@ -213,23 +213,23 @@ const openResourceCompanionViews = (
 ) => {
   const { companions, resource, resourceMode } = input;
 
-  // replaceActive keeps a single companion in its area as the user switches
+  // replaceActive keeps a single companion in its region as the user switches
   // resources instead of stacking a new panel per open.
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
-    const area = companionViewArea(companion, modeEntry);
+    const region = companionViewRegion(companion, modeEntry);
     const widgetId = widgetIdFor(companion);
-    const title = companionViewTitle(companion, resource, area);
+    const title = companionViewTitle(companion, resource, region);
     const updateInput = {
       resource,
-      area,
+      region,
       pinned: modeEntry?.pinned,
       title,
       replaceActive: true,
     };
 
     if (hasPlacementForResource(ctx, widgetId, resource)) {
-      ctx.layout.openWidget(widgetId, { resource, area, pinned: modeEntry?.pinned, title });
+      ctx.layout.openWidget(widgetId, { resource, region, pinned: modeEntry?.pinned, title });
       continue;
     }
 
@@ -238,7 +238,7 @@ const openResourceCompanionViews = (
 };
 
 // A view that declares a `resourceKind` is the primary view for that kind. Opening a domain
-// resource of that kind mounts the primary extension webview in the main area, plus any
+// resource of that kind mounts the primary extension webview in the main region, plus any
 // companion side-panel views (e.g. a properties panel) bound to the same resource. The domain
 // resource stays the navigable identity — the renderer derives which view to mount from the
 // resource kind + cached manifest (PS-11), so no renderer metadata is stored on the resource.
@@ -284,7 +284,7 @@ export const registerExtensionResourceView = (
     );
   }
 
-  // Tracks the editor resource currently in the primary area so the command feed can
+  // Tracks the editor resource currently in the primary region so the command feed can
   // refresh just its breadcrumb when a save changes the display title.
   let activeResource: ResourceRef | undefined;
 
@@ -329,11 +329,11 @@ export const registerExtensionResourceView = (
       const resourceMode = resourceModeFor(input.metadata, activeResource.kind);
       for (const companion of group.companions) {
         const modeEntry = resourceModeEntryForView(companion, resourceMode);
-        const area = companionViewArea(companion, modeEntry);
+        const region = companionViewRegion(companion, modeEntry);
         updatePlacementForResource(ctx, {
           widgetId: widgetIdFor(companion),
           resource: activeResource,
-          title: companionViewTitle(companion, activeResource, area),
+          title: companionViewTitle(companion, activeResource, region),
           pinned: modeEntry?.pinned,
         });
       }

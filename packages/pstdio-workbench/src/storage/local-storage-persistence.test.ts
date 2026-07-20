@@ -41,7 +41,7 @@ describe("local storage workbench persistence", () => {
       scope: "project:one",
       storage,
     });
-    const panels: PersistedWorkbenchPanels = { openByAreaId: { left: false, status: true } };
+    const panels: PersistedWorkbenchPanels = { openByRegionId: { sidebar: false, status: true } };
 
     persistence.setPanelStates(panels);
 
@@ -81,7 +81,7 @@ describe("local storage workbench persistence", () => {
       scope: "project:one",
       storage,
     });
-    const panels: PersistedWorkbenchPanels = { openByAreaId: { left: false } };
+    const panels: PersistedWorkbenchPanels = { openByRegionId: { sidebar: false } };
     const layout = createDefaultWorkbenchLayout();
     const trees: PersistedTreeRendererStates = {
       statesByTreeId: {

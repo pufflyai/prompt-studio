@@ -216,7 +216,7 @@ export const StartWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
   const data = createStartData(projectId, dashboardDataVersion);
   const openSession = (session: StartSession) => {
-    void input.workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
+    void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
       resource: session.resource,
     });
   };

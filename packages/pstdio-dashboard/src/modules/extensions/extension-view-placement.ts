@@ -1,4 +1,4 @@
-import type { WorkbenchArea } from "@pstdio/workbench/core";
+import type { WorkbenchRegion } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -8,15 +8,15 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layou
 
 export const dashboardExtensionViewKind = "extension-view";
 
-const targetArea = {
-  "workbench.left": "left",
-  "workbench.main.left": "main-left",
+const targetRegion = {
+  "workbench.left": "sidebar",
+  "workbench.main.left": "main-left-menu",
   "workbench.main": "main",
-  "workbench.main.right": "main-right",
+  "workbench.main.right": "main-right-menu",
   "workbench.secondary": "secondary",
-} as const satisfies Record<ModeLayoutOpenEntry["target"], WorkbenchArea>;
+} as const satisfies Record<ModeLayoutOpenEntry["target"], WorkbenchRegion>;
 
-export const extensionModeLayoutArea = (target: ModeLayoutOpenEntry["target"]) => targetArea[target];
+export const extensionModeLayoutRegion = (target: ModeLayoutOpenEntry["target"]) => targetRegion[target];
 
 export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.extensionView}.${viewId}`;
 
@@ -26,5 +26,5 @@ export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.e
 export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id" | "webview">) =>
   view.webview ? extensionViewWidgetId(view.id) : view.id;
 
-export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
-  target ? targetArea[target] : "main";
+export const extensionViewRegion = (target: DashboardExtensionView["target"] | undefined) =>
+  target ? targetRegion[target] : "main";
