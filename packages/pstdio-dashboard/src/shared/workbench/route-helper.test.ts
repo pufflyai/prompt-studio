@@ -65,5 +65,6 @@ describeResourceRouteContract({
   root: ROOT,
   detail: { kind: DETAIL_KIND, uri: "route-test://detail/1", id: "1", label: "Detail 1" },
   detailB: { kind: DETAIL_KIND, uri: "route-test://detail/2", id: "2", label: "Detail 2" },
+  rootDetailHistory: "retained",
   expectedMode: MODE,
 });

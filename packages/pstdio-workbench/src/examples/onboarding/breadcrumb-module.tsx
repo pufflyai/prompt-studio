@@ -12,7 +12,7 @@ import { WorkbenchIcon } from "../../react/shared/icon";
 
 const DOCS_KIND = "onboarding.breadcrumb.docs";
 const SECTION_KIND = "onboarding.breadcrumb.section";
-const PAGE_KIND = "onboarding.breadcrumb.page";
+const PAGE_KIND = "onboarding.breadcrumb.session";
 
 const BREADCRUMB_TREE_ID = "onboarding.breadcrumb.tree";
 const DOCS_HOME_WIDGET_ID = "onboarding.breadcrumb.home";
@@ -26,6 +26,7 @@ interface OnboardingPage {
   id: string;
   label: string;
   body: string;
+  status: "in_progress" | "completed";
 }
 
 interface OnboardingSection {
@@ -43,8 +44,18 @@ const sections: OnboardingSection[] = [
     icon: "BookOpen",
     description: "The vocabulary the workbench shell is built on.",
     pages: [
-      { id: "regions", label: "Regions", body: "Named layout slots widgets pin themselves to." },
-      { id: "widgets", label: "Widgets", body: "Registrations that place a renderer into an region." },
+      {
+        id: "regions",
+        label: "Regions",
+        body: "Named layout slots widgets pin themselves to.",
+        status: "in_progress",
+      },
+      {
+        id: "widgets",
+        label: "Widgets",
+        body: "Registrations that place a renderer into an region.",
+        status: "completed",
+      },
     ],
   },
   {
@@ -53,8 +64,18 @@ const sections: OnboardingSection[] = [
     icon: "PanelsTopLeft",
     description: "Where contributions show up in the running shell.",
     pages: [
-      { id: "menus", label: "Menus", body: "Command-backed actions on header and tree paths." },
-      { id: "commands", label: "Commands", body: "Executable actions wired to menus and shortcuts." },
+      {
+        id: "menus",
+        label: "Menus",
+        body: "Command-backed actions on header and tree paths.",
+        status: "in_progress",
+      },
+      {
+        id: "commands",
+        label: "Commands",
+        body: "Executable actions wired to menus and shortcuts.",
+        status: "completed",
+      },
     ],
   },
 ];
@@ -81,8 +102,8 @@ const pageResource = (section: OnboardingSection, page: OnboardingPage): Resourc
   uri: `${PAGE_KIND}:${section.id}/${page.id}`,
   id: `${section.id}/${page.id}`,
   label: page.label,
-  icon: "FileText",
-  metadata: { sectionId: section.id, body: page.body },
+  icon: "MessageCircle",
+  metadata: { sectionId: section.id, body: page.body, status: page.status },
 });
 
 const findSection = (sectionId: string | undefined) => sections.find((section) => section.id === sectionId);
@@ -101,7 +122,7 @@ const pageTreeNode = (section: OnboardingSection, page: OnboardingPage): TreeNod
   return {
     id: resource.uri,
     label: page.label,
-    icon: "FileText",
+    icon: "MessageCircle",
     resource,
   };
 };
@@ -253,6 +274,7 @@ const breadcrumbItemForResource = (
 ): WorkbenchBreadcrumbItem => ({
   title: resource.label ?? "Untitled",
   icon: resource.icon,
+  indicator: resource.kind === PAGE_KIND ? "session-status" : undefined,
   resource,
   onClick: options.current ? undefined : () => void resources.openResource(resource),
 });
@@ -262,7 +284,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.resources.registerKind({ kind: DOCS_KIND, label: "Docs", icon: "Library" });
     ctx.resources.registerKind({ kind: SECTION_KIND, label: "Section", icon: "BookOpen" });
-    ctx.resources.registerKind({ kind: PAGE_KIND, label: "Page", icon: "FileText" });
+    ctx.resources.registerKind({ kind: PAGE_KIND, label: "Session", icon: "MessageCircle" });
 
     // Each opener swaps content into the active main tab via replaceActive so
     // walking up and down the trail does not accumulate one tab per category.
@@ -377,8 +399,10 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
 
     ctx.layout.openWidget(BREADCRUMB_TREE_ID);
 
-    // Land on the docs home so the breadcrumb shows the root entry on first
-    // paint — drilling in from there exercises each level of the trail.
-    void ctx.resources.openResource(docsResource);
+    const initialSection = sections[0];
+    const initialPage = initialSection?.pages[0];
+    if (initialSection && initialPage) {
+      void ctx.resources.openResource(pageResource(initialSection, initialPage));
+    }
   },
 });

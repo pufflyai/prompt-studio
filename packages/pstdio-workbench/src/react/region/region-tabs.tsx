@@ -34,6 +34,19 @@ export const shouldShowRegionTabs = (
   options: { hasLeadingActions?: boolean } = {},
 ) => options.hasLeadingActions === true || placements.length > 1 || placements.some(isPlacementCloseable);
 
+export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchRegionId) => {
+  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
+  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const placements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region].widgets);
+  const leadingItems = listWorkbenchMenuItemsFromState(
+    { itemsByPath, commands, contextValues },
+    workbenchRegionTabLeadingMenuPath(region),
+  );
+
+  return shouldShowRegionTabs(placements, { hasLeadingActions: leadingItems.length > 0 });
+};
+
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);

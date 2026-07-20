@@ -117,7 +117,7 @@ describe("createHistoryController", () => {
     expect(snapshot.cursor).toBe(1);
   });
 
-  test("records successful resource opens that do not activate a layout placement", async () => {
+  test("ignores resource opens that do not activate a tab", async () => {
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
     workbench.resources.registerOpener({
@@ -129,8 +129,8 @@ describe("createHistoryController", () => {
     await openTicket(workbench, "PS-1");
 
     const snapshot = workbench.history.store.getState();
-    expect(snapshot.entries.map((entry) => entry.resource?.id)).toEqual(["PS-1"]);
-    expect(snapshot.cursor).toBe(0);
+    expect(snapshot.entries).toEqual([]);
+    expect(snapshot.cursor).toBe(-1);
   });
 
   test("opening after goBack truncates the forward history", async () => {
@@ -148,7 +148,7 @@ describe("createHistoryController", () => {
     expect(snapshot.cursor).toBe(1);
   });
 
-  test("goBack and goForward replace the active placement when replaying closed resources", async () => {
+  test("does not recreate a replaced tab through Back or Forward", async () => {
     const workbench = createWorkbenchCore();
     const board = { kind: "history.test.board", uri: "history.test.board:tickets", label: "Tickets" };
     const ticket = { kind: TICKET_KIND, uri: `${TICKET_KIND}:PS-1`, id: "PS-1", label: "Ticket PS-1" };
@@ -197,28 +197,109 @@ describe("createHistoryController", () => {
       "ticket-editor",
     ]);
 
-    workbench.history.goBack();
-    await Promise.resolve();
-
-    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-      "board-view",
-    ]);
-    // Replaying must not append entries — the primary stays a single placement and the
-    // recorded history length is unchanged across both Back and Forward.
-    expect(workbench.history.store.getState().entries.length).toBe(2);
-
-    workbench.history.goForward();
-    await Promise.resolve();
-
+    expect(workbench.history.goBack()).toBeUndefined();
+    expect(workbench.history.goForward()).toBeUndefined();
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
-    expect(workbench.history.store.getState().entries.length).toBe(2);
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([ticket.uri]);
+  });
+
+  test("Back and Forward activate existing resource tabs without changing the tab set", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    workbench.layout.registerWidget({
+      id: "ticket-editor",
+      title: "Ticket",
+      region: "main",
+      singleton: false,
+      rendererId: "noop",
+      resourceKinds: [TICKET_KIND],
+    });
+    workbench.resources.registerOpener({
+      id: "ticket-editor-opener",
+      canOpen: (resource) => resource.kind === TICKET_KIND,
+      open: (resource, input) =>
+        workbench.layout.openWidget("ticket-editor", {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
+    });
+
+    await workbench.resources.openResource({
+      kind: TICKET_KIND,
+      uri: `${TICKET_KIND}:PS-1`,
+      id: "PS-1",
+      label: "Ticket PS-1",
+    });
+    await workbench.resources.openResource({
+      kind: TICKET_KIND,
+      uri: `${TICKET_KIND}:PS-2`,
+      id: "PS-2",
+      label: "Ticket PS-2",
+    });
+    const widgetIds = workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId);
+
+    expect(workbench.history.goBack()?.resource?.id).toBe("PS-1");
+    await Promise.resolve();
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(`${TICKET_KIND}:PS-1`);
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId)).toEqual(widgetIds);
+
+    expect(workbench.history.goForward()?.resource?.id).toBe("PS-2");
+    await Promise.resolve();
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(`${TICKET_KIND}:PS-2`);
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId)).toEqual(widgetIds);
+  });
+});
+
+describe("createHistoryController cleanup", () => {
+  test("closing visited tabs compacts duplicate history for the remaining tab", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    workbench.layout.registerWidget({
+      id: "palette",
+      title: "Palette resources",
+      region: "main",
+      rendererId: "noop",
+    });
+    workbench.layout.registerWidget({
+      id: "ticket-editor",
+      title: "Ticket",
+      region: "main",
+      singleton: false,
+      rendererId: "noop",
+      resourceKinds: [TICKET_KIND],
+    });
+    workbench.resources.registerOpener({
+      id: "ticket-editor-opener",
+      canOpen: (resource) => resource.kind === TICKET_KIND,
+      open: (resource) => workbench.layout.openWidget("ticket-editor", { resource, title: resource.label }),
+    });
+
+    const palette = workbench.layout.openWidget("palette");
+    for (const id of ["PS-1", "PS-2", "PS-3"]) {
+      workbench.layout.activateWidget(palette.widgetId);
+      await openTicket(workbench, id);
+    }
+
+    const ticketWidgetIds = workbench.layout
+      .getLayout()
+      .regions.main.widgets.filter((widget) => widget.contributionId === "ticket-editor")
+      .map((widget) => widget.widgetId)
+      .reverse();
+    for (const widgetId of ticketWidgetIds) workbench.layout.closeWidget(widgetId);
+
+    const snapshot = workbench.history.store.getState();
+    expect(snapshot.entries.map((entry) => entry.widgetId)).toEqual([palette.widgetId]);
+    expect(snapshot.cursor).toBe(0);
+    expect(workbench.history.goBack()).toBeUndefined();
+    expect(workbench.history.goForward()).toBeUndefined();
   });
 });
 
 describe("createHistoryController mode-aware navigation", () => {
-  test("goBack restores the entry mode before reopening its resource", async () => {
+  test("does not restore a mode whose tab was removed", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
@@ -291,9 +372,9 @@ describe("createHistoryController mode-aware navigation", () => {
     const back = workbench.history.goBack();
     await Promise.resolve();
 
-    expect(back?.resource?.id).toBe("PS-1");
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.layout.getLayout().activeResourceUri).toBe("history.test.project-item:PS-1");
+    expect(back).toBeUndefined();
+    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe("history.test.workspace-file:file-a");
   });
 
   test("records and replays mode-only navigation entries", () => {

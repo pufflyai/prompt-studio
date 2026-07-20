@@ -427,5 +427,6 @@ describeResourceRouteContract({
   detailB: createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
     status: "completed",
   }),
+  rootDetailHistory: "retained",
   expectedMode: "sessions",
 });

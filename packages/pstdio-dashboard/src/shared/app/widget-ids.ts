@@ -1,7 +1,6 @@
 // Widget IDs are the cross-slice contract: a slice registers a widget under an
 // id, and other slices (routing, bootstrap) open it by the same id.
 export const dashboardWidgetIds = {
-  header: "dashboard-workbench.header",
   sidebarHeader: "dashboard-workbench.sidebar-header",
   start: "dashboard-workbench.start",
   workspaces: "dashboard-workbench.workspaces",

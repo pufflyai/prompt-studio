@@ -136,6 +136,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CONTEXT_ID,
       title: "Context",
+      icon: "ListTree",
       region: "main-left-menu",
       rendererId: CONTEXT_RENDERER_ID,
     });

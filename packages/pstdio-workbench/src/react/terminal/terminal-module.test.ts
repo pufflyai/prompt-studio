@@ -47,8 +47,12 @@ describe("createWorkbenchTerminalModule", () => {
       closable: true,
       mountStrategy: "keep-mounted",
       reuse: "none",
+      regionSize: { defaultPx: 240, minPx: 128 },
       singleton: false,
       title: "Terminal",
+    });
+    expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
+      regionSize: { defaultPx: 240, minPx: 128 },
     });
   });
 
@@ -90,13 +94,8 @@ describe("createWorkbenchTerminalModule", () => {
     expect(workbench.panels.isOpen("secondary")).toBe(true);
   });
 
-  test("keeps a hidden terminal launcher after the terminal has opened", async () => {
+  test("mounts a hidden terminal launcher before the first terminal opens", () => {
     const workbench = setup();
-
-    expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([]);
-
-    await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
-    workbench.layout.closeWidget(WORKBENCH_TERMINAL_WIDGET_ID);
 
     expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([
       expect.objectContaining({

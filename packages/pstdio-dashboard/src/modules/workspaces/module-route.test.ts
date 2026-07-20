@@ -24,4 +24,5 @@ describeResourceRouteContract({
     workspaceId: "workspace-2",
     workspaceShorthand: "PS-308_A1",
   }),
+  rootDetailHistory: "replaced",
 });

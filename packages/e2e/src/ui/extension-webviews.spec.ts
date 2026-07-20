@@ -242,8 +242,8 @@ test.describe("Extension webviews", () => {
     await expectVisibleTerminalOutput();
 
     await page.getByRole("separator", { name: "Resize Secondary Panel" }).press("Home");
-    await expect(page.getByRole("button", { name: "Show terminal panel" })).toBeVisible();
-    await page.getByRole("button", { name: "Show terminal panel" }).click();
+    await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
+    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
     await expectVisibleTerminalOutput();
 
     // Close both terminals via the active tab's close button, then reopen one.

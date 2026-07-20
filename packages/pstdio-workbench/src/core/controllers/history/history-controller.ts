@@ -1,5 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import { getActivePlacement } from "../../registries/layout/layout-operations";
+import { findPlacementByWidgetId, getActivePlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { resolveAnchorRegion } from "../../registries/layout/surface-map";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
@@ -51,10 +51,25 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
   return left.widgetId === right.widgetId;
 };
 
-// History tracks the PRIMARY (main) region's active placement only, so activating a supporting
-// surface (the Sidebar, Secondary Panel, or Side Panel) never pushes a back/forward
-// entry. Navigation ingress (resource opens) is still recorded globally via
-// onDidOpenResource below — that is a distinct, intentional history source.
+const compactAdjacentEntries = (entries: readonly HistoryEntry[]) => {
+  const compacted: HistoryEntry[] = [];
+  for (const entry of entries) {
+    const lastIndex = compacted.length - 1;
+    if (isSameEntry(compacted[lastIndex], entry)) compacted[lastIndex] = entry;
+    else compacted.push(entry);
+  }
+  return compacted;
+};
+
+const findLastEquivalentEntry = (entries: readonly HistoryEntry[], target: HistoryEntry) => {
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (isSameEntry(entries[index], target)) return index;
+  }
+  return -1;
+};
+
+// History tracks the PRIMARY (main) region's live placements only, so supporting surfaces never
+// push Back/Forward entries and removed tabs cannot be recreated by navigation.
 const activePlacementFromLayout = (layout: LayoutModel) =>
   getActivePlacement(layout.getLayout().regions[resolveAnchorRegion("primary")]);
 
@@ -72,8 +87,8 @@ const entryFromPlacement = (
   kind: placement.resource ? "resource" : "widget",
   modeId,
   resource: placement.resource,
-  widgetId: placement.resource ? undefined : placement.widgetId,
-  contributionId: placement.resource ? undefined : placement.contributionId,
+  widgetId: placement.widgetId,
+  contributionId: placement.contributionId,
   title: placement.title,
 });
 
@@ -151,13 +166,30 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
 
   let lastPlacements = placementsByWidgetId();
 
+  const pruneRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
+    const snapshot = store.getState();
+    const current = snapshot.entries[snapshot.cursor];
+    const retained = snapshot.entries.filter((entry) => entry.widgetId !== placement.widgetId);
+    if (retained.length === snapshot.entries.length) return;
+    const entries = compactAdjacentEntries(retained);
+
+    const retainedCursor = current ? entries.findIndex((entry) => entry.entryId === current.entryId) : -1;
+    const equivalentCursor = current ? findLastEquivalentEntry(entries, current) : -1;
+    let cursor = Math.min(snapshot.cursor, entries.length - 1);
+    if (equivalentCursor >= 0) cursor = equivalentCursor;
+    if (retainedCursor >= 0) cursor = retainedCursor;
+    store.setState({ ...snapshot, entries, cursor }, false, "history.pruneRemovedPlacement");
+  };
+
   const layoutListener = () => {
     const snapshot = input.layout.getLayout();
     const nextPlacements = placementsByWidgetId(snapshot);
 
     // Detect closed widgets to feed recentlyClosed.
     for (const [widgetId, placement] of lastPlacements) {
-      if (!nextPlacements.has(widgetId) && placement.closable) pushRecentlyClosed(placement);
+      if (nextPlacements.has(widgetId)) continue;
+      if (placement.closable) pushRecentlyClosed(placement);
+      pruneRemovedPlacement(placement);
     }
     lastPlacements = nextPlacements;
 
@@ -181,14 +213,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   input.resources.onDidOpenResource((resource) => {
     if (navigating) return;
     if (replayingResourceUris.has(resource.uri)) return;
-    appendEntry({
-      widgetId: resource.uri,
-      contributionId: resource.uri,
-      title: resource.label,
-      closable: false,
-      pinned: false,
-      resource,
-    });
+    const active = activePlacementFromLayout(input.layout);
+    if (active?.resourceUri === resource.uri) appendEntry(active);
   });
 
   const runSilent = (action: () => unknown) => {
@@ -226,23 +252,32 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     input.modes.setActiveMode(entry.modeId);
   };
 
-  const reopen = (entry: HistoryEntry) => {
+  const activateEntry = (entry: HistoryEntry) => {
     restoreMode(entry);
 
     if (entry.kind === "mode") return;
 
+    const placement = entry.widgetId
+      ? findPlacementByWidgetId(input.layout.getLayout(), entry.widgetId)?.placement
+      : undefined;
+    if (!placement) return;
+
     if (entry.kind === "resource" && entry.resource) {
+      if (placement.resourceUri === entry.resource.uri) return input.layout.activateWidget(placement.widgetId);
       replayingResourceUris.add(entry.resource.uri);
       return input.resources.openResource(entry.resource, { replaceActive: true }).finally(() => {
         if (entry.resource) replayingResourceUris.delete(entry.resource.uri);
       });
     }
+    return input.layout.activateWidget(placement.widgetId);
+  };
+
+  const reopenClosed = (entry: HistoryEntry) => {
+    restoreMode(entry);
+
+    if (entry.kind === "mode") return;
+    if (entry.kind === "resource" && entry.resource) return input.resources.openResource(entry.resource);
     if (entry.kind === "widget" && entry.widgetId) {
-      const layout = input.layout.getLayout();
-      const existing = Object.values(layout.regions).some((region) =>
-        region.widgets.some((placement) => placement.widgetId === entry.widgetId),
-      );
-      if (existing) return input.layout.activateWidget(entry.widgetId);
       return input.layout.openWidget(entry.contributionId ?? entry.widgetId);
     }
   };
@@ -254,7 +289,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     if (!entry) return undefined;
 
     store.setState({ ...snapshot, cursor: nextCursor }, false, delta < 0 ? "history.goBack" : "history.goForward");
-    runSilent(() => reopen(entry));
+    runSilent(() => activateEntry(entry));
     return entry;
   };
 
@@ -277,7 +312,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         const candidate = snapshot.entries[index];
         if (!isSameEntry(candidate, current)) {
           store.setState({ ...snapshot, cursor: index }, false, "history.goPrevious");
-          runSilent(() => reopen(candidate));
+          runSilent(() => activateEntry(candidate));
           return candidate;
         }
       }
@@ -298,7 +333,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         false,
         "history.reopenLastClosed",
       );
-      runSilent(() => reopen(last));
+      runSilent(() => reopenClosed(last));
       return last;
     },
 

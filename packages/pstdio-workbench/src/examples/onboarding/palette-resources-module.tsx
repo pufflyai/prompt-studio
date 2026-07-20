@@ -140,7 +140,7 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
               icon: "Ticket",
               keywords: [...ticket.keywords],
               activate: () => {
-                void ctx.resources.openResource(ticketResource(ticket), { replaceActive: true });
+                void ctx.resources.openResource(ticketResource(ticket));
               },
             }),
           ),

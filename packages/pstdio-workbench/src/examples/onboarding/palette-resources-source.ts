@@ -26,15 +26,12 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
               label: ticket.label,
               icon: "Ticket",
               activate: () =>
-                ctx.resources.openResource(
-                  {
-                    kind: "ticket",
-                    uri: \`ticket:\${ticket.id}\`,
-                    id: ticket.id,
-                    label: ticket.label,
-                  },
-                  { replaceActive: true },
-                ),
+                ctx.resources.openResource({
+                  kind: "ticket",
+                  uri: \`ticket:\${ticket.id}\`,
+                  id: ticket.id,
+                  label: ticket.label,
+                }),
             }),
           ),
     });

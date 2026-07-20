@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchRegion } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
+import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
@@ -25,7 +26,6 @@ import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelRegi
 import {
   WORKBENCH_STATUS_BAR_HEIGHT,
   WorkbenchActivityBar,
-  WorkbenchHeader,
   WorkbenchSidebar,
   WorkbenchStatusBar,
 } from "./workbench-panels";
@@ -36,9 +36,6 @@ interface WorkbenchProps {
   workbench: WorkbenchCore;
   renderParamField?: CommandParamFieldRenderer;
 }
-
-type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
-type WorkbenchPlaceholderState = ReturnType<WorkbenchCore["layout"]["store"]["getState"]>["placeholders"];
 
 const SIDEBAR_PANEL_ID = "sidebar";
 
@@ -75,22 +72,74 @@ const resolveActiveSessionSlot = (input: {
   return null;
 };
 
-const hasRegionContent = (
-  layout: WorkbenchLayoutState,
-  placeholders: WorkbenchPlaceholderState,
-  region: WorkbenchRegion,
-) => layout.regions[region].widgets.length > 0 || Boolean(placeholders[region]);
+const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) =>
+  useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.regions[region].widgets.length > 0 || Boolean(state.placeholders[region]),
+  );
 
-const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
+const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   return {
-    hasNavWidgets: hasRegionContent(layout, placeholders, "nav"),
-    hasActivityBarWidgets: hasRegionContent(layout, placeholders, "activity"),
-    hasSidebarHeaderWidgets: hasRegionContent(layout, placeholders, "sidebar-header"),
-    hasSidebarWidgets: hasRegionContent(layout, placeholders, "sidebar"),
-    hasSideHeaderWidgets: hasRegionContent(layout, placeholders, "side-header"),
-    hasSideWidgets: hasRegionContent(layout, placeholders, "side"),
-    hasStatusWidgets: hasRegionContent(layout, placeholders, "status"),
+    hasNavWidgets: useHasRegionContent(workbench, "nav"),
+    hasActivityBarWidgets: useHasRegionContent(workbench, "activity"),
+    hasSidebarHeaderWidgets: useHasRegionContent(workbench, "sidebar-header"),
+    hasSidebarWidgets: useHasRegionContent(workbench, "sidebar"),
+    hasSecondaryHeaderWidgets: useHasRegionContent(workbench, "secondary-header"),
+    hasSecondaryWidgets: useHasRegionContent(workbench, "secondary"),
+    hasSideHeaderWidgets: useHasRegionContent(workbench, "side-header"),
+    hasSideWidgets: useHasRegionContent(workbench, "side"),
+    hasStatusWidgets: useHasRegionContent(workbench, "status"),
   };
+};
+
+interface WorkbenchRegionControlsInput {
+  workbench: WorkbenchCore;
+  showSidebar: boolean;
+  sidebarCollapsible: boolean;
+  sidebarOpen: boolean;
+  showSecondaryPanel: boolean;
+  secondaryPanelCollapsible: boolean;
+  secondaryPanelOpen: boolean;
+  hasSidePanel: boolean;
+  sessionPanelMode: "attached" | "bubble" | "closed";
+  setPanelOpen: (region: WorkbenchPanelRegionId, open: boolean) => void;
+}
+
+const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
+  const controls: WorkbenchNavRegionControl[] = [];
+
+  if (input.showSidebar && input.sidebarCollapsible && !input.sidebarOpen) {
+    controls.push({
+      id: "sidebar",
+      label: "Show Sidebar",
+      icon: "PanelLeft",
+      open: false,
+      onToggle: () => input.setPanelOpen(SIDEBAR_PANEL_ID, true),
+    });
+  }
+
+  if (input.showSecondaryPanel && input.secondaryPanelCollapsible) {
+    controls.push({
+      id: "secondary",
+      label: input.secondaryPanelOpen ? "Hide Secondary Panel" : "Show Secondary Panel",
+      icon: "PanelBottom",
+      open: input.secondaryPanelOpen,
+      onToggle: () => input.setPanelOpen("secondary", !input.secondaryPanelOpen),
+    });
+  }
+
+  if (input.hasSidePanel) {
+    const open = input.sessionPanelMode === "attached";
+    controls.push({
+      id: "side",
+      label: open ? "Hide Side Panel" : "Show Side Panel",
+      icon: "PanelRight",
+      open,
+      onToggle: () => input.workbench.sessionPanel.setMode(open ? "closed" : "attached"),
+    });
+  }
+
+  return controls;
 };
 
 const WorkbenchContent = (props: WorkbenchProps) => {
@@ -105,14 +154,19 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sessionHostRef = useRef<HTMLDivElement | null>(null);
   if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
 
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
   const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const sidebarOpen = useWorkbenchStore(
     workbench.panels.store,
     (state) => state.openByRegionId[SIDEBAR_PANEL_ID] ?? true,
+  );
+  const secondaryPanelOpen = useWorkbenchStore(
+    workbench.panels.store,
+    (state) => state.openByRegionId.secondary ?? true,
+  );
+  const secondaryPanelCollapsible = useWorkbenchStore(workbench.layout.store, () =>
+    resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
 
   const {
@@ -122,17 +176,32 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideWidgets,
     hasSidebarHeaderWidgets,
     hasSidebarWidgets,
+    hasSecondaryHeaderWidgets,
+    hasSecondaryWidgets,
     hasStatusWidgets,
-  } = deriveLayoutFlags(layoutState, placeholders);
+  } = useWorkbenchLayoutFlags(workbench);
   const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets;
   const showSidebar = hasSidebarWidgets || hasSidebarHeaderWidgets;
   const sidebarCollapsible = resolvePanelCollapsible(workbench, "sidebar-header", "sidebar");
+  const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets;
   const sidebarSize = resolveSidebarSize(workbench);
   const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasSidePanel && sessionPanelMode === "bubble";
   const mountSessionPanel = hasSidePanel && sessionPanelMode !== "closed";
   const setPanelOpen = (region: WorkbenchPanelRegionId, open: boolean) =>
     setWorkbenchPanelOpen(workbench, region, open);
+  const regionControls = createWorkbenchRegionControls({
+    workbench,
+    showSidebar,
+    sidebarCollapsible,
+    sidebarOpen,
+    showSecondaryPanel,
+    secondaryPanelCollapsible,
+    secondaryPanelOpen,
+    hasSidePanel,
+    sessionPanelMode,
+    setPanelOpen,
+  });
 
   const sideHeader = <WorkbenchSessionRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
   const activeSessionSlot = resolveActiveSessionSlot({
@@ -154,12 +223,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchHeader
-        workbench={workbench}
-        hasNav={hasNavWidgets}
-        showSidebarOpener={Boolean(showSidebar && !sidebarOpen && sidebarCollapsible)}
-        onOpenSidebar={() => setPanelOpen(SIDEBAR_PANEL_ID, true)}
-      />
+      <WorkbenchNavChrome workbench={workbench} hasNav={hasNavWidgets} regionControls={regionControls} />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchBody workbench={workbench} />
       </Flex>

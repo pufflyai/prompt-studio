@@ -198,6 +198,9 @@ export const IconOnly = {
       <IconButton variant="ghost" aria-label="Delete">
         <Icon as={Trash2} boxSize="16px" />
       </IconButton>
+      <IconButton variant="ghost" aria-label="Open panel" aria-pressed="true">
+        <Icon as={Settings} boxSize="16px" />
+      </IconButton>
     </HStack>
   ),
 };

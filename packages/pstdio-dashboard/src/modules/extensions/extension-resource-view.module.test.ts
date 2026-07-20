@@ -14,7 +14,7 @@ import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
 describe("createExtensionsModule resource views", () => {
-  test("navigates back from a ticket editor to the tickets board", async () => {
+  test("does not recreate the tickets board through Back after it was replaced", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
@@ -53,21 +53,12 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
+      const widgetIds = workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId);
 
       const back = workbench.history.goBack();
       await flushMicrotasks();
 
-      expect(back?.resource?.uri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe("pstdio-core-tickets.tickets");
-      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "pstdio-core-tickets.tickets",
-      ]);
-
-      const forward = workbench.history.goForward();
-      await flushMicrotasks();
-
-      expect(forward?.resource?.uri).toBe(ticket.uri);
+      expect(back).toBeUndefined();
       expect(workbench.layout.getLayout().activeWidgetId).toBe(
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
       );
@@ -75,6 +66,16 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
       ]);
+
+      const forward = workbench.history.goForward();
+      await flushMicrotasks();
+
+      expect(forward).toBeUndefined();
+      expect(workbench.layout.getLayout().activeWidgetId).toBe(
+        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
+      );
+      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId)).toEqual(widgetIds);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -343,4 +344,5 @@ describeResourceRouteContract({
     label: "PS-11 Ticket",
     metadata: { projectId: "project-1" },
   },
+  rootDetailHistory: "replaced",
 });

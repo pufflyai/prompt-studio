@@ -7,7 +7,9 @@ import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "./workbench-pane
 export interface WorkbenchPanelView {
   has: boolean;
   hasHeader: boolean;
+  icon?: string;
   collapsible: boolean;
+  open: boolean;
   collapsed: boolean;
   onOpen: () => void;
   onCollapsedChange: (collapsed: boolean) => void;
@@ -22,52 +24,67 @@ export interface WorkbenchMainPanels {
 
 type MainPanelRegionId = "main-left-menu" | "main-right-menu" | "secondary";
 
-// Derives the main-region panel state from the layout and panels stores. Owned by
-// WorkbenchBody — WorkbenchContent does not use any of these values itself.
-export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainPanels => {
-  const regions = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
-  const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
-  const openByRegionId = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId);
+const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) =>
+  useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.regions[region].widgets.length > 0 || Boolean(state.placeholders[region]),
+  );
 
-  const hasContent = (region: WorkbenchRegion) => regions[region].widgets.length > 0 || Boolean(placeholders[region]);
-
-  // Main menus are companions of the primary (main) anchor — they only make
-  // sense alongside a main resource. When `main` has no active resource (e.g. the last
-  // main tab was closed) they are hidden by the framework, so apps never wire that.
-  const mainActive =
-    regions.main.widgets.find((p) => p.widgetId === regions.main.activeWidgetId) ?? regions.main.widgets[0];
-  const hasPrimary = Boolean(mainActive?.resource);
-
-  // The Main Panel menus are headerless; only `secondary` carries a
-  // header region, so `headerRegion` is optional. `companionOfPrimary` panels also require a
-  // primary resource to be shown.
-  const resolvePanel = (
-    region: MainPanelRegionId,
-    headerRegion?: WorkbenchRegion,
-    companionOfPrimary = false,
-  ): WorkbenchPanelView => {
-    const collapsible = headerRegion
-      ? resolvePanelCollapsible(workbench, headerRegion, region)
-      : resolvePanelCollapsible(workbench, region);
-    const open = openByRegionId[region] ?? true;
-    const hasOwnContent = hasContent(region) || (headerRegion ? hasContent(headerRegion) : false);
-
-    return {
-      has: hasOwnContent && (!companionOfPrimary || hasPrimary),
-      hasHeader: headerRegion ? hasContent(headerRegion) : false,
-      collapsible,
-      collapsed: !open && collapsible,
-      onOpen: () => setWorkbenchPanelOpen(workbench, region, true),
-      onCollapsedChange: (collapsed) => {
-        if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, region, !collapsed);
-      },
-    };
-  };
+const usePanelView = (
+  workbench: WorkbenchCore,
+  region: MainPanelRegionId,
+  options: { hasPrimary: boolean; headerRegion?: WorkbenchRegion; companionOfPrimary?: boolean },
+): WorkbenchPanelView => {
+  const hasContent = useHasRegionContent(workbench, region);
+  const hasHeader = useHasRegionContent(workbench, options.headerRegion ?? region);
+  const icon = useWorkbenchStore(workbench.layout.store, (state) => {
+    const regionState = state.layout.regions[region];
+    const activePlacement =
+      regionState.widgets.find((placement) => placement.widgetId === regionState.activeWidgetId) ??
+      regionState.widgets[0];
+    return activePlacement ? state.widgets[activePlacement.contributionId]?.icon : undefined;
+  });
+  const collapsible = useWorkbenchStore(workbench.layout.store, () =>
+    options.headerRegion
+      ? resolvePanelCollapsible(workbench, options.headerRegion, region)
+      : resolvePanelCollapsible(workbench, region),
+  );
+  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId[region] ?? true);
+  const has =
+    (hasContent || (options.headerRegion ? hasHeader : false)) && (!options.companionOfPrimary || options.hasPrimary);
 
   return {
-    hasMainHeader: hasContent("main-header"),
-    mainLeftMenu: resolvePanel("main-left-menu", undefined, true),
-    mainRightMenu: resolvePanel("main-right-menu", undefined, true),
-    secondaryPanel: resolvePanel("secondary", "secondary-header"),
+    has,
+    hasHeader: options.headerRegion ? hasHeader : false,
+    icon,
+    collapsible,
+    open,
+    collapsed: !open && collapsible,
+    onOpen: () => setWorkbenchPanelOpen(workbench, region, true),
+    onCollapsedChange: (collapsed) => {
+      if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, region, !collapsed);
+    },
+  };
+};
+
+// Subscribe to derived panel facts rather than the whole layout. Replaying a
+// resource can replace the active main placement without rebuilding the shell.
+export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainPanels => {
+  const hasMainHeader = useHasRegionContent(workbench, "main-header");
+  const hasPrimary = useWorkbenchStore(workbench.layout.store, (state) => {
+    const region = state.layout.regions.main;
+    const active =
+      region.widgets.find((placement) => placement.widgetId === region.activeWidgetId) ?? region.widgets[0];
+    return Boolean(active?.resource);
+  });
+  const mainLeftMenu = usePanelView(workbench, "main-left-menu", { hasPrimary, companionOfPrimary: true });
+  const mainRightMenu = usePanelView(workbench, "main-right-menu", { hasPrimary, companionOfPrimary: true });
+  const secondaryPanel = usePanelView(workbench, "secondary", { hasPrimary, headerRegion: "secondary-header" });
+
+  return {
+    hasMainHeader,
+    mainLeftMenu,
+    mainRightMenu,
+    secondaryPanel,
   };
 };

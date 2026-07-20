@@ -27,19 +27,18 @@ export interface ResourceRouteContract {
   root: ResourceRef;
   detail: ResourceRef;
   detailB?: ResourceRef;
+  rootDetailHistory: "retained" | "replaced";
   expectedMode?: string;
 }
 
-// Two microtasks settle a Back/Forward replay: the cursor moves synchronously, then the
-// silent resource reopen resolves on the microtask queue.
+// Two microtasks settle resource activation and any opener work on the active tab.
 const flush = async () => {
   await Promise.resolve();
   await Promise.resolve();
 };
 
-// Shared navigation invariants every resource-first root/detail route must satisfy. Drives a
-// real workbench core (provided by `setup`) and asserts the user-visible Back/Forward state:
-// root stays root, detail replays, mode is restored, and the primary region never grows tabs.
+// Shared navigation invariants every resource-first root/detail route must satisfy. Back and
+// Forward activate tabs retained by the route without creating or removing placements.
 export const describeResourceRouteContract = (contract: ResourceRouteContract) => {
   describe(`${contract.name} navigation contract`, () => {
     let harness: RouteContractHarness;
@@ -55,48 +54,83 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
     });
 
     const open = async (resource: ResourceRef) => {
-      await workbench.resources.openResource(resource, { replaceActive: true });
+      await workbench.resources.openResource(resource);
       await flush();
     };
 
-    test("root -> detail -> Back activates the root", async () => {
-      await open(contract.root);
-      await open(contract.detail);
+    const primaryWidgetIds = () => unpinnedPrimaryPlacements(workbench).map((placement) => placement.widgetId);
 
-      const back = workbench.history.goBack();
-      await flush();
-
-      expect(activePrimaryResource(workbench)?.uri).toBe(contract.root.uri);
-      expect(back?.resource?.uri).toBe(contract.root.uri);
-      expect(unpinnedPrimaryPlacements(workbench)).toHaveLength(1);
-    });
-
-    test("root -> detail -> Back -> Forward activates the detail", async () => {
-      await open(contract.root);
-      await open(contract.detail);
-
-      workbench.history.goBack();
-      await flush();
-      const forward = workbench.history.goForward();
-      await flush();
-
-      expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
-      expect(forward?.resource?.uri).toBe(contract.detail.uri);
-      expect(unpinnedPrimaryPlacements(workbench)).toHaveLength(1);
-    });
-
-    if (contract.detailB) {
-      const detailB = contract.detailB;
-      test("detail A -> detail B -> Back activates detail A", async () => {
+    if (contract.rootDetailHistory === "retained") {
+      test("root -> detail -> Back uses only a retained root tab", async () => {
         await open(contract.root);
         await open(contract.detail);
-        await open(detailB);
+        const widgetIds = primaryWidgetIds();
+        expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
+
+        const back = workbench.history.goBack();
+        await flush();
+
+        expect(activePrimaryResource(workbench)?.uri).toBe(contract.root.uri);
+        expect(back?.resource?.uri).toBe(contract.root.uri);
+        expect(primaryWidgetIds()).toEqual(widgetIds);
+      });
+
+      test("root -> detail -> Back -> Forward keeps the live tab set stable", async () => {
+        await open(contract.root);
+        await open(contract.detail);
+        const widgetIds = primaryWidgetIds();
+        expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
 
         workbench.history.goBack();
         await flush();
+        const forward = workbench.history.goForward();
+        await flush();
 
         expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
-        expect(unpinnedPrimaryPlacements(workbench)).toHaveLength(1);
+        expect(forward?.resource?.uri).toBe(contract.detail.uri);
+        expect(primaryWidgetIds()).toEqual(widgetIds);
+      });
+    } else {
+      test("root -> detail replacement makes Back unavailable", async () => {
+        await open(contract.root);
+        await open(contract.detail);
+        const widgetIds = primaryWidgetIds();
+        const history = workbench.history.store.getState();
+
+        expect(history.entries.map((entry) => entry.resource?.uri)).toEqual([contract.detail.uri]);
+        expect(history.cursor).toBe(0);
+        expect(workbench.history.goBack()).toBeUndefined();
+        expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
+        expect(primaryWidgetIds()).toEqual(widgetIds);
+      });
+
+      test("root -> detail replacement keeps Forward unavailable after Back", async () => {
+        await open(contract.root);
+        await open(contract.detail);
+        const widgetIds = primaryWidgetIds();
+
+        expect(workbench.history.goBack()).toBeUndefined();
+        expect(workbench.history.goForward()).toBeUndefined();
+        expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
+        expect(primaryWidgetIds()).toEqual(widgetIds);
+      });
+    }
+
+    if (contract.detailB) {
+      const detailB = contract.detailB;
+      test("detail A -> detail B -> Back changes only a retained detail tab", async () => {
+        await open(contract.root);
+        await open(contract.detail);
+        await open(detailB);
+        const widgetIds = primaryWidgetIds();
+        expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
+
+        const back = workbench.history.goBack();
+        await flush();
+
+        expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
+        expect(back?.resource?.uri).toBe(contract.detail.uri);
+        expect(primaryWidgetIds()).toEqual(widgetIds);
       });
     }
 

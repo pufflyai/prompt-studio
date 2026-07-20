@@ -85,6 +85,10 @@ export const buttonRecipe = defineRecipe({
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
         _expanded: { bg: "bg.active" },
+        "&[aria-pressed=true]": {
+          bg: "bg.active",
+          _hover: { bg: "bg.active" },
+        },
         _disabled: {
           bg: "transparent",
           _hover: { bg: "transparent" },

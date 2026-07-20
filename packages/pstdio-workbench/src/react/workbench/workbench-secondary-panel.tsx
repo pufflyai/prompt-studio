@@ -3,18 +3,18 @@ import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchRegion } from "../region/region";
-import { WorkbenchRegionTabs } from "../region/region-tabs";
+import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchSecondaryPanelProps {
   workbench: WorkbenchCore;
   hasSecondaryHeader: boolean;
-  hasSecondaryContentTabs: boolean;
 }
 
 export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => {
-  const { workbench, hasSecondaryHeader, hasSecondaryContentTabs } = props;
+  const { workbench, hasSecondaryHeader } = props;
+  const hasSecondaryContentTabs = useWorkbenchRegionTabsVisible(workbench, "secondary");
 
   return (
     <WorkbenchFocusRegion

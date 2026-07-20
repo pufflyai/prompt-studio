@@ -122,7 +122,7 @@ test.describe("PS-165 workbench interactions", () => {
     await separator.evaluate((element) => {
       element.dataset.ps165Action = "close";
     });
-    const showPanelButton = page.getByRole("button", { name: "Show terminal panel" });
+    const showPanelButton = page.getByRole("button", { name: "Show Secondary Panel" });
     const close = await measure(
       page,
       "close",

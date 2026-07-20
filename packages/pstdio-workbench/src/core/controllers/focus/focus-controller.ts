@@ -22,6 +22,7 @@ export interface WorkbenchFocusController {
 
 export interface CreateWorkbenchFocusControllerInput {
   context: ContextKeyService;
+  isRegionFocusable?: (region: WorkbenchFocusRegionId) => boolean;
 }
 
 const focusContextByRegion = {
@@ -56,6 +57,7 @@ export const createWorkbenchFocusController = (
     store,
 
     setActiveRegion(region) {
+      if (input.isRegionFocusable?.(region) === false) return;
       if (store.getState().activeRegion === region) return;
       store.setState({ activeRegion: region }, false, "setActiveWorkbenchFocusRegion");
       applyContext(region);

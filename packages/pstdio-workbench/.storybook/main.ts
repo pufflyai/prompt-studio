@@ -19,6 +19,10 @@ const config: StorybookConfig = {
         alias: [
           { find: /^@pstdio\/ui$/, replacement: resolve(rootDir, "../../ui/src/index.ts") },
           { find: /^@pstdio\/ui\/chat-ui$/, replacement: resolve(rootDir, "../../ui/src/components/chat-ui/index.ts") },
+          {
+            find: /^@pstdio\/ui\/diff$/,
+            replacement: resolve(rootDir, "../../ui/src/components/diff-viewer/index.ts"),
+          },
           { find: /^@pstdio\/ui\/style\.css$/, replacement: resolve(rootDir, "../../ui/dist/style.css") },
           { find: /^@\//, replacement: `${resolve(rootDir, "../../ui/src")}/` },
         ],

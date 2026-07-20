@@ -45,10 +45,7 @@ const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.createProject,
 ]);
 
-const persistentDashboardChromeWidgetIds = new Set<string>([
-  dashboardWidgetIds.header,
-  dashboardWidgetIds.sidebarHeader,
-]);
+const persistentDashboardChromeWidgetIds = new Set<string>([dashboardWidgetIds.sidebarHeader]);
 
 const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
   const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;

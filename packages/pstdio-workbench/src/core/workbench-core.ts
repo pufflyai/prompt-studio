@@ -354,20 +354,28 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const dataTableRendererRegistry = createDataTableRendererRegistry({ rendererRegistry });
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
   const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
+  const layout = {
+    ...createLayoutModel({ persistence: input.layoutPersistence }),
+    ...createMenuRegistry({ commands }),
+  };
+  const focus = createWorkbenchFocusController({
+    context,
+    isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
+  });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
     context,
-    focus: createWorkbenchFocusController({ context }),
+    focus,
     history: undefined as unknown as HistoryController,
     keybindings: createKeybindingRegistry({ commands, context }),
     lastResource: createWorkbenchLastResourceController({
       persistence: input.lastResourcePersistence,
       openResource: (resource) => core.resources.openResource(resource, { replaceActive: true }),
     }),
-    layout: { ...createLayoutModel({ persistence: input.layoutPersistence }), ...createMenuRegistry({ commands }) },
+    layout,
     modes: undefined as unknown as WorkbenchModeRegistry,
     notifications: createNotificationRegistry(),
     navigation: createNavigationRegistry({
@@ -492,6 +500,11 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
 
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
   core.history = createHistoryController({ layout: core.layout, modes: core.modes, resources: core.resources });
+
+  core.layout.store.subscribe((state) => {
+    const activeRegion = core.focus.getActiveRegion();
+    if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
+  });
 
   // The panels controller is workbench-global, but layout region visibility is
   // per-scope. After a scope switch, mirror each region's `visible` flag into

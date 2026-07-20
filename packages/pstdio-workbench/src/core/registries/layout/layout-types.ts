@@ -34,6 +34,7 @@ export type WidgetMountStrategy = "active" | "keep-mounted";
 export interface WidgetContribution {
   id: string;
   title: string;
+  icon?: string;
   region: WorkbenchRegion;
   fallbackRegion?: WorkbenchRegion;
   singleton?: boolean;

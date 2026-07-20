@@ -1,20 +1,11 @@
 import { Box, Grid, HStack, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
-import {
-  headerTrailingMenuPath,
-  type WorkbenchCore,
-  type WorkbenchRegionSize,
-  type WorkbenchWidgetPlacement,
-  workbenchRegionTabLeadingMenuPath,
-} from "../../core";
+import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
-import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchRegion } from "../region/region";
-import { shouldShowRegionTabs, WorkbenchRegionTabs } from "../region/region-tabs";
+import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchIcon } from "../shared/icon";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "../terminal/terminal-module";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
@@ -43,19 +34,12 @@ const resolveRegionSize = (regionSize: WorkbenchRegionSize | undefined, fallback
 interface MainHeaderBarProps {
   workbench: WorkbenchCore;
   hasMainHeader: boolean;
-  hasMainContentTabs: boolean;
+  mainLeftMenuIcon?: string;
+  mainRightMenuIcon?: string;
   showMainLeftMenuOpener: boolean;
   showMainRightMenuOpener: boolean;
-  showSecondaryOpener: boolean;
-  secondaryPanelOpener: MainPanelOpenerDetails;
   onOpenMainLeftMenu: () => void;
   onOpenMainRightMenu: () => void;
-  onOpenSecondaryPanel: () => void;
-}
-
-interface MainPanelOpenerDetails {
-  label: string;
-  icon: string;
 }
 
 interface MainPanelOpener {
@@ -81,7 +65,7 @@ const MainPanelOpeners = (props: MainPanelOpenersProps) => {
       {visibleOpeners.map((opener) => (
         <Tooltip key={opener.id} content={opener.label}>
           <IconButton variant="ghost" size="xs" aria-label={opener.label} flexShrink={0} onClick={opener.onOpen}>
-            <WorkbenchIcon name={opener.icon} size={16} />
+            <WorkbenchIcon name={opener.icon} size={14} />
           </IconButton>
         </Tooltip>
       ))}
@@ -89,56 +73,30 @@ const MainPanelOpeners = (props: MainPanelOpenersProps) => {
   );
 };
 
-const genericSecondaryPanelOpener: MainPanelOpenerDetails = {
-  label: "Show Secondary Panel",
-  icon: "PanelBottom",
-};
-
-const terminalPlacementContributionIds = new Set([WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID]);
-
-export const resolveSecondaryPanelOpener = (placements: WorkbenchWidgetPlacement[]): MainPanelOpenerDetails => {
-  if (
-    placements.length > 0 &&
-    placements.every((placement) => terminalPlacementContributionIds.has(placement.contributionId))
-  ) {
-    return { label: "Show terminal panel", icon: "SquareTerminal" };
-  }
-
-  return genericSecondaryPanelOpener;
-};
-
 const MainHeaderBar = (props: MainHeaderBarProps) => {
   const {
     workbench,
     hasMainHeader,
-    hasMainContentTabs,
+    mainLeftMenuIcon,
+    mainRightMenuIcon,
     showMainLeftMenuOpener,
     showMainRightMenuOpener,
-    showSecondaryOpener,
-    secondaryPanelOpener,
     onOpenMainLeftMenu,
     onOpenMainRightMenu,
-    onOpenSecondaryPanel,
   } = props;
+  const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
   const mainPanelOpeners: MainPanelOpener[] = [
     {
       id: "main-left-menu",
       label: "Show Main left menu",
-      icon: "PanelLeft",
+      icon: mainLeftMenuIcon ?? "PanelLeft",
       show: showMainLeftMenuOpener,
       onOpen: onOpenMainLeftMenu,
     },
     {
-      id: "secondary",
-      label: secondaryPanelOpener.label,
-      icon: secondaryPanelOpener.icon,
-      show: showSecondaryOpener,
-      onOpen: onOpenSecondaryPanel,
-    },
-    {
       id: "main-right-menu",
       label: "Show Main right menu",
-      icon: "PanelRight",
+      icon: mainRightMenuIcon ?? "PanelRight",
       show: showMainRightMenuOpener,
       onOpen: onOpenMainRightMenu,
     },
@@ -170,29 +128,10 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
-  const { hasMainHeader, mainLeftMenu, mainRightMenu, secondaryPanel } = useWorkbenchMainPanels(workbench);
-  const layoutRegions = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
+  const panels = useWorkbenchMainPanels(workbench);
+  const { hasMainHeader, mainLeftMenu, mainRightMenu, secondaryPanel } = panels;
   const showMainLeftMenuOpener = mainLeftMenu.has && mainLeftMenu.collapsed && mainLeftMenu.collapsible;
   const showMainRightMenuOpener = mainRightMenu.has && mainRightMenu.collapsed && mainRightMenu.collapsible;
-  const showSecondaryOpener = secondaryPanel.has && secondaryPanel.collapsed && secondaryPanel.collapsible;
-  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const hasMainContentTabs = shouldShowRegionTabs(layoutRegions.main.widgets, {
-    hasLeadingActions:
-      listWorkbenchMenuItemsFromState(
-        { itemsByPath, commands, contextValues },
-        workbenchRegionTabLeadingMenuPath("main"),
-      ).length > 0,
-  });
-  const hasSecondaryContentTabs = shouldShowRegionTabs(layoutRegions.secondary.widgets, {
-    hasLeadingActions:
-      listWorkbenchMenuItemsFromState(
-        { itemsByPath, commands, contextValues },
-        workbenchRegionTabLeadingMenuPath("secondary"),
-      ).length > 0,
-  });
-  const secondaryPanelOpener = resolveSecondaryPanelOpener(layoutRegions.secondary.widgets);
   const mainLeftMenuSize = resolveRegionSize(workbench.layout.getRegionSize("main-left-menu"), MAIN_LEFT_MENU_SIZE);
   const mainRightMenuSize = resolveRegionSize(workbench.layout.getRegionSize("main-right-menu"), MAIN_RIGHT_MENU_SIZE);
   const secondaryPanelSize = resolveRegionSize(workbench.layout.getRegionSize("secondary"), SECONDARY_PANEL_SIZE);
@@ -261,14 +200,12 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       <MainHeaderBar
         workbench={workbench}
         hasMainHeader={hasMainHeader}
-        hasMainContentTabs={hasMainContentTabs}
+        mainLeftMenuIcon={mainLeftMenu.icon}
+        mainRightMenuIcon={mainRightMenu.icon}
         showMainLeftMenuOpener={showMainLeftMenuOpener}
         showMainRightMenuOpener={showMainRightMenuOpener}
-        showSecondaryOpener={showSecondaryOpener}
-        secondaryPanelOpener={secondaryPanelOpener}
         onOpenMainLeftMenu={mainLeftMenu.onOpen}
         onOpenMainRightMenu={mainRightMenu.onOpen}
-        onOpenSecondaryPanel={secondaryPanel.onOpen}
       />
       {mainPanelWithMenus}
     </Grid>
@@ -288,13 +225,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minW="0"
       resizableSide="bottom"
       contentPanel={mainContent}
-      resizablePanel={
-        <WorkbenchSecondaryPanel
-          workbench={workbench}
-          hasSecondaryHeader={secondaryPanel.hasHeader}
-          hasSecondaryContentTabs={hasSecondaryContentTabs}
-        />
-      }
+      resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
       collapsed={secondaryPanel.collapsed && secondaryPanel.collapsible}
       collapsible={secondaryPanel.collapsible}
       defaultSizePx={secondaryPanelSize.defaultPx}

@@ -2,6 +2,24 @@ import { describe, expect, it } from "bun:test";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
+  it("does not retain or assign focus to a closed region", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.focus.setActiveRegion("secondary");
+    workbench.layout.setRegionVisible("secondary", false);
+
+    expect(workbench.focus.getActiveRegion()).toBeUndefined();
+
+    workbench.focus.setActiveRegion("main");
+    workbench.focus.setActiveRegion("secondary");
+
+    expect(workbench.focus.getActiveRegion()).toBe("main");
+
+    workbench.layout.setRegionVisible("main", false);
+
+    expect(workbench.focus.getActiveRegion()).toBeUndefined();
+  });
+
   it("registers workbench modules through the workbench core API", () => {
     const workbench = createWorkbenchCore();
     const module: WorkbenchModuleContribution = {

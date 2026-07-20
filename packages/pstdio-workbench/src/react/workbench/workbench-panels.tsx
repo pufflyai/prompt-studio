@@ -1,76 +1,12 @@
-import { Box, Flex, IconButton } from "@chakra-ui/react";
-import { Header, Tooltip } from "@pstdio/ui";
-import {
-  getAnchorResource,
-  type WorkbenchCore,
-  workbenchTopHeaderLeadingMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
-} from "../../core";
-import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
+import { Box, Flex } from "@chakra-ui/react";
+import { Header } from "@pstdio/ui";
+import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchHeaderActions } from "../header/header-actions";
-import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchRegion } from "../region/region";
 import { shouldShowRegionTabs, WorkbenchRegionTabs } from "../region/region-tabs";
-import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
-
-interface WorkbenchHeaderProps {
-  workbench: WorkbenchCore;
-  hasNav: boolean;
-  showSidebarOpener: boolean;
-  onOpenSidebar: () => void;
-}
-
-export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
-  const { workbench, hasNav, showSidebarOpener, onOpenSidebar } = props;
-  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
-  const breadcrumbItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
-  const menuState = { itemsByPath, commands, contextValues };
-  const menuContext = { resource };
-  const hasLeadingActions =
-    listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath, menuContext).length > 0;
-  const hasTrailingActions =
-    listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath, menuContext).length > 0;
-  const hasBreadcrumb = breadcrumbItems.length > 0;
-  const hasCenter = hasNav || hasBreadcrumb;
-
-  if (!showSidebarOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions) return null;
-
-  return (
-    <Header
-      data-workbench-region="nav"
-      variant="main"
-      bg={workbenchBackgrounds.main}
-      position="relative"
-      flexShrink={0}
-      gap="xs"
-      overflow="hidden"
-      overflowY="hidden"
-    >
-      {showSidebarOpener ? (
-        <Tooltip content="Show Sidebar">
-          <IconButton variant="ghost" size="xs" aria-label="Show Sidebar" flexShrink={0} onClick={onOpenSidebar}>
-            <WorkbenchIcon name="PanelLeft" size={16} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-      <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-      {hasCenter ? (
-        <Box flex="1" h="full" minW="0" overflow="hidden">
-          {hasNav ? <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" /> : null}
-          {!hasNav && hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
-        </Box>
-      ) : null}
-      <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
-    </Header>
-  );
-};
 
 interface WorkbenchSidebarProps {
   workbench: WorkbenchCore;

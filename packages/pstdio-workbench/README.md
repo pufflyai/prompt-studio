@@ -118,10 +118,11 @@ A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table render
 
 ### Breadcrumb (TODO: make it a renderer as well)
 
-`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` Nav Chrome renders it automatically; embed it directly when a host renders custom chrome (a Main Panel header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
+`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` renders it in the persistent Nav Chrome; a custom `nav` widget replaces only that trail area. Panel headers do not own breadcrumbs. Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
 
 - Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `pstdio-workbench/react`
 - Drive items with `workbench.breadcrumbs.setItems([...])` (typically from a resource opener)
+- Set `indicator: "session-status"` when a breadcrumb should show the resource's session completion status
 
 #### Examples
 
@@ -349,6 +350,6 @@ The command palette, toast notifications, and resize handles are workbench chrom
 
 ## Header Actions
 
-Each region header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(region)` and `headerTrailingMenuPath(region)`. Nav Chrome reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths to expose compact controls while keeping breadcrumbs and the `nav` region as workbench-owned chrome.
+Each region header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(region)` and `headerTrailingMenuPath(region)`. Nav Chrome reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. It keeps history, the breadcrumb trail, the trailing breadcrumb-action slot, and Sidebar/Secondary/Side visibility controls mounted in that order. Workbench modules can register commands and add menu actions to those paths without moving navigation into a Panel Header.
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.

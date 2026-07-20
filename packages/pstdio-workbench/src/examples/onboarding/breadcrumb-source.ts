@@ -7,7 +7,7 @@ export const breadcrumbSource = `import type {
 
 const DOCS_KIND = "docs.root";
 const SECTION_KIND = "docs.section";
-const PAGE_KIND = "docs.page";
+const PAGE_KIND = "docs.session";
 
 const DOCS_HOME_WIDGET_ID = "docs.home";
 const SECTION_WIDGET_ID = "docs.section";
@@ -38,6 +38,7 @@ const trailItem = (
 ): WorkbenchBreadcrumbItem => ({
   title: resource.label ?? "Untitled",
   icon: resource.icon,
+  indicator: resource.kind === PAGE_KIND ? "session-status" : undefined,
   resource,
   onClick: options.current ? undefined : () => void resources.openResource(resource),
 });

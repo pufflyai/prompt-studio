@@ -100,13 +100,13 @@ test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async
   await dragPanelToRawSize(page, separator, 72);
 
   await expect(separator).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Show terminal panel" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
   expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await terminalHostNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
 
-  await page.getByRole("button", { name: "Show terminal panel" }).click();
+  await page.getByRole("button", { name: "Show Secondary Panel" }).click();
   await expect(separator).toBeVisible();
   await expect(separator).toHaveAttribute("aria-valuenow", "320");
   await expect(terminal).toBeVisible();

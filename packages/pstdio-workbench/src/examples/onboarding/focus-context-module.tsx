@@ -86,6 +86,14 @@ const ActionAvailability = (props: ActionAvailabilityProps) => {
 const FocusContextPanel = (props: FocusContextPanelProps) => {
   const { input, context } = props;
   const values = useWorkbenchStore(input.workbench.context.store, (state) => state.values);
+  const sidebarVisible = useWorkbenchStore(
+    input.workbench.layout.store,
+    (state) => state.layout.regions.sidebar.visible,
+  );
+  const secondaryPanelVisible = useWorkbenchStore(
+    input.workbench.layout.store,
+    (state) => state.layout.regions.secondary.visible,
+  );
   const activeRegion = useWorkbenchStore(input.workbench.focus.store, (state) => state.activeRegion) ?? "none";
   const selectedKindValue = values[SELECTED_KIND_CONTEXT_KEY];
   const selectedKind = typeof selectedKindValue === "string" ? selectedKindValue : "none";
@@ -123,11 +131,15 @@ const FocusContextPanel = (props: FocusContextPanelProps) => {
           <WorkbenchIcon name="PanelTop" />
           Focus main
         </Button>
-        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("sidebar")}>
+        <Button size="sm" disabled={!sidebarVisible} onClick={() => input.workbench.focus.setActiveRegion("sidebar")}>
           <WorkbenchIcon name="PanelLeft" />
           Focus sidebar
         </Button>
-        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("secondary")}>
+        <Button
+          size="sm"
+          disabled={!secondaryPanelVisible}
+          onClick={() => input.workbench.focus.setActiveRegion("secondary")}
+        >
           <WorkbenchIcon name="PanelBottom" />
           Focus panel
         </Button>

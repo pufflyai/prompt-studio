@@ -5,6 +5,7 @@ import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/wo
 export interface WorkbenchBreadcrumbItem {
   title: unknown;
   icon?: string;
+  indicator?: "session-status";
   url?: string;
   onClick?: () => void;
   resource?: ResourceRef;

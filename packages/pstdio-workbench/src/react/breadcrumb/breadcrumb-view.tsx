@@ -10,7 +10,7 @@ interface WorkbenchBreadcrumbViewProps {
 }
 
 const getSessionStatus = (item: WorkbenchBreadcrumbItem) =>
-  item.resource?.kind === "session" && typeof item.resource.metadata?.status === "string"
+  typeof item.resource?.metadata?.status === "string"
     ? (item.resource.metadata.status as SessionCompletionStatus)
     : undefined;
 
@@ -18,7 +18,7 @@ const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
   const { item } = props;
   const status = getSessionStatus(item);
 
-  if (item.resource?.kind === "session") {
+  if (item.indicator === "session-status" || item.resource?.kind === "session") {
     return <SessionIndicator status={status} boxSize="14px" />;
   }
 

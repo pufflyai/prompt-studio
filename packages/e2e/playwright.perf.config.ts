@@ -7,6 +7,7 @@ import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3300");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5175");
 const runId = process.env.E2E_RUN_ID ?? `perf-${Date.now()}-${process.pid}`;
+process.env.E2E_RUN_ID = runId;
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-perf-home-"));
 const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-perf-bun-cache", runId);
 

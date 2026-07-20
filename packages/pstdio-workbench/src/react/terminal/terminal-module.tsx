@@ -15,6 +15,7 @@ export const WORKBENCH_TERMINAL_OPEN_COMMAND_ID = "workbench.terminal.open";
 
 const RENDERER_ID = "workbench.terminal.renderer";
 const LAUNCHER_RENDERER_ID = "workbench.terminal.launcher.renderer";
+const TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
 type OpenWorkbenchTerminalInput = NonNullable<Parameters<WorkbenchCoreContributionContext["layout"]["openWidget"]>[1]>;
 type TerminalResource = OpenWorkbenchTerminalInput["resource"];
 
@@ -96,7 +97,7 @@ export const openWorkbenchTerminal = (
 export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => ({
   id: "workbench.terminal.surface",
   activate(ctx) {
-    return [
+    const disposables = [
       ctx.layout.registerWidget({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
@@ -106,7 +107,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         closable: true,
         mountStrategy: "keep-mounted",
         rendererId: RENDERER_ID,
-        regionSize: { defaultPx: 240, minPx: 120 },
+        regionSize: TERMINAL_PANEL_SIZE,
       }),
       ctx.renderers.registerRenderer({
         id: RENDERER_ID,
@@ -121,7 +122,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         closable: false,
         hiddenByDefault: true,
         rendererId: LAUNCHER_RENDERER_ID,
-        regionSize: { defaultPx: 240, minPx: 120 },
+        regionSize: TERMINAL_PANEL_SIZE,
       }),
       ctx.commands.registerCommand(
         {
@@ -139,5 +140,8 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         order: -100,
       }),
     ];
+
+    ensureTerminalLauncher(ctx);
+    return disposables;
   },
 });

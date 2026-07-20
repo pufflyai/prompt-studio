@@ -7,7 +7,6 @@ import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
-import { DashboardMainHeader } from "./components/dashboard-main-header";
 import { DashboardSidebarHeader } from "./components/dashboard-sidebar-header";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { StatusWidget } from "./components/status-widget";
@@ -24,22 +23,6 @@ const dashboardResourceKinds = [
 ] as const;
 
 const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget(
-    {
-      id: dashboardWidgetIds.header,
-      title: "Dashboard header",
-      region: "nav",
-      singleton: true,
-      rendererId: dashboardWidgetIds.header,
-      priority: 100,
-    },
-    { priority: 100 },
-  );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.header,
-    render: (input) => <DashboardMainHeader input={input} />,
-  });
-
   ctx.layout.registerWidget({
     id: SIDEBAR_HEADER_WIDGET_ID,
     title: "Project brand",
@@ -84,12 +67,11 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <ExtensionRouteWidget input={input} />,
   });
 
-  ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
   ctx.layout.openWidget(SIDEBAR_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
 };
 
-// The shell slice: the workbench chrome (header, brand, status bar), the global
+// The shell slice: the project brand and status bar, the global
 // command palette, the project navigation mode, and extension-route surfaces.
 export const createShellModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.shell",
