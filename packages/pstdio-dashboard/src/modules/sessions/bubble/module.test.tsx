@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createWorkbenchCore,
-  workbenchRegionTabAddMenuPath,
-  workbenchRegionTabLeadingMenuPath,
-} from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -14,25 +10,27 @@ import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule", () => {
-  test("mounts empty session panel chrome on activation", () => {
+  test("registers session Sub Panel eligibility without opening a rogue tab", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
 
     const layout = workbench.layout.getLayout();
 
-    expect(layout.regions.side.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubble,
-    ]);
+    expect(layout.regions.side.widgets).toEqual([]);
     expect(layout.regions["side-header"].widgets).toEqual([]);
-    expect(layout.regions.side.widgets[0]?.resource).toBeUndefined();
-    expect(layout.regions.side.widgets[0]?.tab).toEqual({
-      contentRendererId: "dashboard-workbench.session-tab",
-      contextMenuRendererId: "dashboard-workbench.session-tab-context-menu",
+    expect(workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)).toMatchObject({
+      role: "sub-panel",
+      eligibleLocations: { resourceKinds: ["ticket", "workspace"] },
+      openCommandId: dashboardCommandIds.createSession,
+      tab: {
+        contentRendererId: "dashboard-workbench.session-tab",
+        contextMenuRendererId: "dashboard-workbench.session-tab-context-menu",
+      },
     });
   });
 
-  test("restores empty session chrome when mode chrome reactivates after Side regions are cleared", () => {
+  test("does not synthesize a session tab when mode chrome reactivates", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
@@ -44,9 +42,7 @@ describe("createSessionBubbleModule", () => {
     const layout = workbench.layout.getLayout();
 
     expect(workbench.sessionPanel.getMode()).toBe("closed");
-    expect(layout.regions.side.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubble,
-    ]);
+    expect(layout.regions.side.widgets).toEqual([]);
     expect(layout.regions["side-header"].widgets).toEqual([]);
   });
 
@@ -86,21 +82,21 @@ describe("createSessionBubbleModule", () => {
       .getLayout()
       .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
-    expect(placements).toHaveLength(3);
-    expect(placements.slice(1).map((placement) => placement.resource?.uri)).toHaveLength(2);
-    expect(new Set(placements.slice(1).map((placement) => placement.resource?.uri)).size).toBe(2);
-    expect(placements.slice(1).every((placement) => placement.closable)).toBe(true);
+    expect(placements).toHaveLength(2);
+    expect(placements.map((placement) => placement.resource?.uri)).toHaveLength(2);
+    expect(new Set(placements.map((placement) => placement.resource?.uri)).size).toBe(2);
+    expect(placements.every((placement) => placement.closable)).toBe(true);
   });
 
-  test("contributes New session to Add panel without adding a header button", () => {
+  test("contributes New session through explicit Sub Panel registration", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
 
-    expect(workbench.layout.listMenuItems(workbenchRegionTabAddMenuPath("side"))).toContainEqual(
-      expect.objectContaining({ commandId: dashboardCommandIds.createSession }),
-    );
-    expect(workbench.layout.listMenuItems(workbenchRegionTabLeadingMenuPath("side"))).toEqual([]);
+    expect(workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)).toMatchObject({
+      role: "sub-panel",
+      openCommandId: dashboardCommandIds.createSession,
+    });
   });
 
   test("opens an unscoped session draft on the project default workspace", async () => {

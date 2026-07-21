@@ -238,7 +238,7 @@ describe("normalizeExtensionSources runtime records", () => {
         },
       },
       views: {
-        health: { title: "Health", target: "workbench.main", dataTableRenderer: "health" },
+        health: { title: "Health", role: "location", target: "workbench.main", dataTableRenderer: "health" },
       },
     });
 
@@ -267,6 +267,7 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
       views: {
         ticketFiles: {
           title: "Files",
+          role: "location",
           resourceKind: "ticket",
           target: "workbench.main.left",
           treeRenderer: "files",
@@ -306,6 +307,7 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
       views: {
         ticketEditor: {
           title: "Ticket",
+          role: "location",
           resourceKind: "ticket",
           webview: { entry: packageAsset("./editor.tsx", "file:///fake/planner/extension.ts") },
         },
@@ -833,6 +835,7 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
       views: {
         sidebar: {
           title: "Sidebar",
+          role: "location",
           slot: projectSlots.headerPrimary as never,
           webview: {
             entry: packageAsset("./dist/sidebar.js", "file:///fake/extension.ts"),

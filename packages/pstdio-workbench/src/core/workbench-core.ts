@@ -7,7 +7,11 @@ import {
   type WorkbenchCommandPaletteController,
 } from "./controllers/command-palette/command-palette-controller";
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
-import { createHistoryController, type HistoryController } from "./controllers/history/history-controller";
+import {
+  createHistoryController,
+  type HistoryController,
+  type WorkbenchHistoryPersistence,
+} from "./controllers/history/history-controller";
 import {
   createWorkbenchLastResourceController,
   type LastResourcePersistenceAdapter,
@@ -35,9 +39,7 @@ import {
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
-import { getActivePlacement } from "./registries/layout/layout-operations";
-import { resolveAnchorRegion } from "./registries/layout/surface-map";
-import { getAnchorResource } from "./registries/layout/surface-reconcile";
+import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
@@ -145,6 +147,7 @@ export interface CreateWorkbenchCoreInput {
   // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
+  historyPersistence?: WorkbenchHistoryPersistence;
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
@@ -249,6 +252,12 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
       registerWidget: (widget, metadata) =>
         track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
+      registerLocation: (location, metadata) =>
+        track(core.layout.registerLocation(location, withModuleMetadata(input, metadata))),
+      registerSubPanel: (subPanel, metadata) =>
+        track(core.layout.registerSubPanel(subPanel, withModuleMetadata(input, metadata))),
+      registerPanelMenu: (panelMenu, metadata) =>
+        track(core.layout.registerPanelMenu(panelMenu, withModuleMetadata(input, metadata))),
       registerMenuItem: (path, item, metadata) =>
         track(core.layout.registerMenuItem(path, item, withModuleMetadata(input, metadata))),
       onDidChangePersistenceScope: (listener) => track(core.layout.onDidChangePersistenceScope(listener)),
@@ -420,7 +429,9 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       ...controlsRendererRegistry,
     },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
-    resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
+    resources: createResourceRegistry({
+      getPrimary: () => getActiveLocationPlacement(core.layout.getLayout())?.resource,
+    }),
     settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     terminal: createWorkbenchTerminalController(),
@@ -449,13 +460,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
 
     getPrimaryResource() {
-      return getAnchorResource(core.layout.getLayout(), "primary");
+      return getActiveLocationPlacement(core.layout.getLayout())?.resource;
     },
 
     onDidChangePrimaryResource(listener) {
       return createDisposable(
         core.layout.store.subscribeSelector(
-          (state) => getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resourceUri,
+          (state) => getActiveLocationPlacement(state.layout)?.resourceUri,
           () => listener(core.getPrimaryResource()),
         ),
       );
@@ -499,7 +510,12 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   };
 
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
-  core.history = createHistoryController({ layout: core.layout, modes: core.modes, resources: core.resources });
+  core.history = createHistoryController({
+    layout: core.layout,
+    modes: core.modes,
+    resources: core.resources,
+    persistence: input.historyPersistence,
+  });
 
   core.layout.store.subscribe((state) => {
     const activeRegion = core.focus.getActiveRegion();

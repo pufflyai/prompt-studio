@@ -28,6 +28,10 @@ const singleViewBodyMessage =
   "Extension views must declare exactly one body: webview, treeRendererId, fileRendererId, controlsRendererId, or dataTableRendererId";
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
+const workbenchPanelMenuOwnerSchema = z.discriminatedUnion("level", [
+  z.object({ level: z.literal("panel") }),
+  z.object({ level: z.literal("sub-panel"), contributionId: z.string() }),
+]);
 
 const extensionViewRecordBaseSchema = z.object({
   id: z.string(),
@@ -35,12 +39,12 @@ const extensionViewRecordBaseSchema = z.object({
   slotId: z.string(),
   target: workbenchViewTargetSchema.optional(),
   title: localizableStringSchema,
+  role: z.enum(["location", "sub-panel", "panel-menu", "modal"]),
+  panelMenuOwner: workbenchPanelMenuOwnerSchema.optional(),
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   /** When set, the host opens this view's webview for resources of this kind. */
   resourceKind: z.string().optional(),
-  /** `modal` mounts the view as an overlay dialog (e.g. data-renderer create flows). */
-  surface: z.enum(["panel", "modal"]).optional(),
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "../resources/resource-registry";
 import { createDefaultWorkbenchLayout, type RegisteredWidgetContribution } from "./layout-types";
-import { listEligiblePanelWidgets } from "./panel-widget-eligibility";
+import { listEligibleSubPanels, matchesWorkbenchPanelMenuOwner } from "./panel-widget-eligibility";
 
 const resource: ResourceRef = {
   kind: "workspace",
@@ -13,7 +13,7 @@ const widget = (overrides: Partial<RegisteredWidgetContribution>): RegisteredWid
   title: "Files",
   region: "main",
   rendererId: "files.renderer",
-  panelAddable: true,
+  role: "sub-panel",
   singleton: true,
   reuse: "resource",
   source: "module",
@@ -22,12 +22,13 @@ const widget = (overrides: Partial<RegisteredWidgetContribution>): RegisteredWid
   ...overrides,
 });
 
-describe("listEligiblePanelWidgets", () => {
+describe("listEligibleSubPanels", () => {
   test("uses destination, resource, and singleton state for one shared openability decision", () => {
     const layout = createDefaultWorkbenchLayout();
     layout.regions.main.widgets.push({
       widgetId: "open-preview",
       contributionId: "preview",
+      ownerResourceUri: resource.uri,
     });
 
     const widgets = [
@@ -36,27 +37,86 @@ describe("listEligiblePanelWidgets", () => {
       widget({ id: "preview", singleton: true }),
       widget({ id: "terminal", region: "secondary", singleton: false, reuse: "none" }),
       widget({ id: "unavailable", canOpen: () => false }),
-      widget({ id: "settings", panelAddable: false }),
+      widget({ id: "settings", role: "content" }),
     ];
 
-    expect(listEligiblePanelWidgets({ widgets, layout, region: "main", resource }).map((item) => item.id)).toEqual([
+    expect(listEligibleSubPanels({ widgets, layout, region: "main", resource }).map((item) => item.id)).toEqual([
       "files",
     ]);
-    expect(listEligiblePanelWidgets({ widgets, layout, region: "side", resource }).map((item) => item.id)).toEqual([
+    expect(listEligibleSubPanels({ widgets, layout, region: "side", resource }).map((item) => item.id)).toEqual([
       "files",
     ]);
-    expect(listEligiblePanelWidgets({ widgets, layout, region: "secondary", resource }).map((item) => item.id)).toEqual(
-      ["terminal"],
-    );
+    expect(listEligibleSubPanels({ widgets, layout, region: "secondary", resource }).map((item) => item.id)).toEqual([
+      "terminal",
+    ]);
   });
 
   test("requires widgets to opt into the Add panel menu", () => {
-    const widgets = [widget({ id: "workspaces" }), widget({ id: "settings", panelAddable: false })];
+    const widgets = [widget({ id: "workspaces" }), widget({ id: "settings", role: "content" })];
 
     expect(
-      listEligiblePanelWidgets({ widgets, layout: createDefaultWorkbenchLayout(), region: "main" }).map(
-        (item) => item.id,
-      ),
+      listEligibleSubPanels({ widgets, layout: createDefaultWorkbenchLayout(), region: "main" }).map((item) => item.id),
     ).toEqual(["workspaces"]);
+  });
+
+  test("matches explicit location owners", () => {
+    const widgets = [
+      widget({ id: "ticket-files", eligibleLocations: { resourceKinds: ["ticket"] } }),
+      widget({ id: "workspace-files", eligibleLocations: { resourceKinds: ["workspace"] } }),
+    ];
+
+    expect(
+      listEligibleSubPanels({ widgets, layout: createDefaultWorkbenchLayout(), region: "main", resource }),
+    ).toEqual([expect.objectContaining({ id: "workspace-files" })]);
+  });
+
+  test("allows one singleton Sub Panel placement in each Location", () => {
+    const layout = createDefaultWorkbenchLayout();
+    layout.regions.main.widgets.push({
+      widgetId: "files-alpha",
+      contributionId: "files",
+      role: "sub-panel",
+      ownerResourceUri: "workspace:alpha",
+    });
+
+    expect(listEligibleSubPanels({ widgets: [widget({})], layout, region: "main", resource })).toEqual([
+      expect.objectContaining({ id: "files" }),
+    ]);
+  });
+});
+
+describe("matchesWorkbenchPanelMenuOwner", () => {
+  const panelMenu = (owner: RegisteredWidgetContribution["panelMenuOwner"]): RegisteredWidgetContribution =>
+    widget({ id: "inspector", role: "panel-menu", region: "main-right-menu", panelMenuOwner: owner });
+
+  test("keeps Panel-owned menus visible across Sub Panel selection", () => {
+    expect(matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), undefined)).toBe(true);
+    expect(
+      matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), {
+        widgetId: "notes",
+        contributionId: "notes",
+        role: "sub-panel",
+      }),
+    ).toBe(true);
+  });
+
+  test("shows Sub-Panel-owned menus only with their owning Sub Panel", () => {
+    const contribution = panelMenu({ level: "sub-panel", contributionId: "notes" });
+
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        widgetId: "notes",
+        contributionId: "notes",
+        role: "sub-panel",
+      }),
+    ).toBe(true);
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        widgetId: "reports",
+        contributionId: "reports",
+        role: "sub-panel",
+      }),
+    ).toBe(false);
+    expect(matchesWorkbenchPanelMenuOwner(contribution, undefined)).toBe(false);
   });
 });

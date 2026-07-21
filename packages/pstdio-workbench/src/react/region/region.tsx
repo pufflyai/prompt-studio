@@ -3,9 +3,18 @@ import { ScrollArea } from "@pstdio/ui";
 import type {
   RegisteredPlaceholderContribution,
   WorkbenchCore,
+  WorkbenchPanelMenuRegion,
   WorkbenchRegion as WorkbenchRegionId,
   WorkbenchWidgetPlacement,
 } from "../../core";
+import {
+  getActiveWorkbenchSubPanel,
+  getWorkbenchPanelForMenuRegion,
+  matchesWorkbenchLocationEligibility,
+  matchesWorkbenchPanelMenuOwner,
+  workbenchPanelMenuRegions,
+} from "../../core";
+import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { WorkbenchWidgetHost } from "./widget-host";
@@ -28,6 +37,10 @@ const horizontalScrollRegions = new Set<WorkbenchRegionId>([
   "side-header",
   "status",
 ]);
+
+const panelMenuRegionIds = new Set<WorkbenchRegionId>(
+  Object.values(workbenchPanelMenuRegions).flatMap((regions) => Object.values(regions)),
+);
 
 // A flex column at least as tall as the viewport lets a widget fill the region
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
@@ -80,7 +93,28 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
 
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
-  const regionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
+  const locationResource = useWorkbenchLocationResource(workbench);
+  const modeId = useWorkbenchActiveModeId(workbench);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const currentRegionState = layout.regions[region];
+  const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
+  const activeSubPanel = panelMenuRegionIds.has(region)
+    ? getActiveWorkbenchSubPanel(
+        layout,
+        getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
+        locationResource,
+      )
+    : undefined;
+  const regionState = {
+    ...currentRegionState,
+    widgets: currentRegionState.widgets.filter((placement) => {
+      const contribution = registeredWidgets[placement.contributionId];
+      return contribution
+        ? matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement) &&
+            matchesWorkbenchPanelMenuOwner(contribution, activeSubPanel)
+        : false;
+    }),
+  };
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
   const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(region);

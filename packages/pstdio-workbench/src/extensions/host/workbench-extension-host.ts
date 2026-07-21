@@ -39,6 +39,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
+import { registerWorkbenchExtensionViewWidget } from "../contributions/view-widget-contributions";
 import { resolveWorkbenchModeRegion, resolveWorkbenchViewRegion } from "../shared/workbench-targets";
 import {
   createExtensionSlot,
@@ -205,18 +206,24 @@ const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInpu
   input.metadata.views.flatMap((view) => {
     if (!view.webview) return [];
     return [
-      input.workbench.layout.registerWidget({
-        id: view.id,
-        title: text(view.title, view.id),
-        region: view.surface === "modal" ? "overlay" : resolveWorkbenchViewRegion(view.target),
-        rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-        singleton: true,
-        resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-        config: {
-          ...toBridgeWebviewConfig(view.webview),
-          ...(view.surface === "modal"
-            ? { size: "lg", scrollBehavior: "inside", contentHeight: "min(560px, calc(100dvh - 48px))" }
-            : {}),
+      registerWorkbenchExtensionViewWidget({
+        workbench: input.workbench,
+        role: view.role,
+        contribution: {
+          id: view.id,
+          title: text(view.title, view.id),
+          region: resolveWorkbenchViewRegion(view.target),
+          rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+          singleton: true,
+          resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+          eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
+          panelMenuOwner: view.panelMenuOwner,
+          config: {
+            ...toBridgeWebviewConfig(view.webview),
+            ...(view.role === "modal"
+              ? { size: "lg", scrollBehavior: "inside", contentHeight: "min(560px, calc(100dvh - 48px))" }
+              : {}),
+          },
         },
       }),
     ];
@@ -293,7 +300,7 @@ const registerResourceOpeners = (input: RegisterWorkbenchExtensionContributionsI
         id: `workbench.extension.resource.${kind}`,
         canOpen: (resource) => resource.kind === kind,
         open: (resource) => {
-          const views = input.metadata.views.filter((view) => view.resourceKind === kind && view.surface !== "modal");
+          const views = input.metadata.views.filter((view) => view.resourceKind === kind && view.role !== "modal");
           return views.map((view) =>
             input.workbench.layout.openWidget(view.id, {
               resource,

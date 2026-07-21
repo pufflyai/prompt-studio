@@ -5,11 +5,10 @@ import { openPanelWidget } from "./panel-widget-open";
 describe("openPanelWidget", () => {
   test("opens Add panel widgets as closable tabs", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerWidget({
+    workbench.layout.registerSubPanel({
       id: "workspaces",
       title: "Workspaces",
       region: "main",
-      panelAddable: true,
       rendererId: "workspaces.renderer",
     });
 

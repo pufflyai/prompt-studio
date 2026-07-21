@@ -59,6 +59,26 @@ describe("createWorkbenchPanelsController", () => {
     expect(stored.at(-1)?.openByRegionId).toEqual({ sidebar: true, "main-right-menu": false });
   });
 
+  test("persists independent open state per project scope", () => {
+    const stored = new Map<string, PersistedWorkbenchPanels>();
+    const panels = createWorkbenchPanelsController({
+      persistence: {
+        getPanelStates: (scope) => stored.get(scope ?? "global"),
+        setPanelStates: (state, scope) => stored.set(scope ?? "global", state),
+      },
+    });
+
+    panels.setPersistenceScope("project:one");
+    panels.setOpen("main-right-menu", false);
+    panels.setPersistenceScope("project:two");
+    expect(panels.isOpen("main-right-menu")).toBe(true);
+
+    panels.setOpen("main-right-menu", true);
+    panels.setPersistenceScope("project:one");
+    expect(panels.isOpen("main-right-menu")).toBe(false);
+    expect(panels.getPersistenceScope()).toBe("project:one");
+  });
+
   test("onDidChange fires for any state mutation", () => {
     const panels = createWorkbenchPanelsController();
     const events: string[] = [];

@@ -10,8 +10,8 @@ export interface PersistedWorkbenchPanels {
 }
 
 export interface WorkbenchPanelsPersistenceAdapter {
-  getPanelStates(): PersistedWorkbenchPanels | undefined;
-  setPanelStates(state: PersistedWorkbenchPanels): void;
+  getPanelStates(scope?: string): PersistedWorkbenchPanels | undefined;
+  setPanelStates(state: PersistedWorkbenchPanels, scope?: string): void;
 }
 
 export type WorkbenchPanelsChangeListener = (state: WorkbenchPanelsState) => void;
@@ -21,6 +21,8 @@ export interface WorkbenchPanelsController {
   isOpen(regionId: string): boolean;
   setOpen(regionId: string, open: boolean): void;
   toggle(regionId: string): void;
+  setPersistenceScope(scope: string | undefined): void;
+  getPersistenceScope(): string | undefined;
   onDidChange(listener: WorkbenchPanelsChangeListener): Disposable;
 }
 
@@ -31,7 +33,8 @@ export interface CreateWorkbenchPanelsControllerInput {
 export const createWorkbenchPanelsController = (
   input: CreateWorkbenchPanelsControllerInput = {},
 ): WorkbenchPanelsController => {
-  const persisted = input.persistence?.getPanelStates();
+  let currentScope: string | undefined;
+  const persisted = input.persistence?.getPanelStates(currentScope);
 
   const store = createWorkbenchStore<WorkbenchPanelsState>({
     name: "workbench.panels",
@@ -40,7 +43,7 @@ export const createWorkbenchPanelsController = (
 
   const persistState = () => {
     if (!input.persistence) return;
-    input.persistence.setPanelStates({ openByRegionId: store.getState().openByRegionId });
+    input.persistence.setPanelStates({ openByRegionId: store.getState().openByRegionId }, currentScope);
   };
 
   const isOpen = (regionId: string) => store.getState().openByRegionId[regionId] ?? true;
@@ -66,6 +69,16 @@ export const createWorkbenchPanelsController = (
     toggle(regionId) {
       this.setOpen(regionId, !isOpen(regionId));
     },
+
+    setPersistenceScope(scope) {
+      if (scope === currentScope) return;
+      persistState();
+      currentScope = scope;
+      const incoming = input.persistence?.getPanelStates(currentScope);
+      store.setState({ openByRegionId: incoming?.openByRegionId ?? {} }, false, "setPersistenceScope");
+    },
+
+    getPersistenceScope: () => currentScope,
 
     onDidChange(listener) {
       const unsubscribe = store.subscribe((state) => listener(state));

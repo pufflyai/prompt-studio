@@ -108,9 +108,13 @@ export interface WebviewContribution {
 }
 
 export type HostTreeDefault = "default" | "none";
+export type WorkbenchViewRole = "location" | "sub-panel" | "panel-menu" | "modal";
+export type PanelMenuOwner = { level: "panel" } | { level: "sub-panel"; view: string };
 
 export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
   title: Localizable<string>;
+  role: WorkbenchViewRole;
+  panelMenuOwner?: PanelMenuOwner;
   target?: WorkbenchViewTarget;
   slot?: SlotRef<TSlotContext, "view"> | string;
   group?: string;
@@ -121,13 +125,6 @@ export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
    * this kind is opened — e.g. a `ticket` data-renderer row opening the editor.
    */
   resourceKind?: string;
-  /**
-   * Where the host mounts the view. `panel` (default) docks it in a workbench area;
-   * `modal` mounts it as an overlay dialog — used by data-renderer create flows where
-   * a row's create button opens the matching `resourceKind` modal instead of the
-   * inline create command.
-   */
-  surface?: "panel" | "modal";
   /** Opts tree-backed views into host-owned default header rows such as dashboard Search. */
   hostTreeHeader?: HostTreeDefault;
   /** Opts tree-backed views into host-owned default footer rows such as dashboard Settings. */

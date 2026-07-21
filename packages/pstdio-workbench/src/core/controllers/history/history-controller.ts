@@ -1,27 +1,50 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import { findPlacementByWidgetId, getActivePlacement } from "../../registries/layout/layout-operations";
+import { findPlacementByWidgetId, getActiveLocationPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { resolveAnchorRegion } from "../../registries/layout/surface-map";
+import {
+  type WorkbenchPanelRegion,
+  type WorkbenchRegion,
+  workbenchPanelRegions,
+} from "../../registries/layout/layout-types";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
-import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
+import type { ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import {
+  emptyHistoryState,
+  hydrateHistoryState,
+  reconcileHistoryState,
+  WORKBENCH_HISTORY_VERSION,
+} from "./history-reconciliation";
+import {
+  closedNavigationEntry,
+  compactNavigationEntries,
+  entryFromCurrentSnapshot,
+  findSubPanelPlacement,
+  isSameNavigationEntry,
+  withoutSubPanelSelection,
+  workbenchPlacementRole,
+} from "./history-snapshot";
+import type {
+  HistoryEntry,
+  HistoryStoreState,
+  WorkbenchHistoryPersistence,
+  WorkbenchNavigationEntry,
+} from "./history-types";
 
-export interface HistoryEntry {
-  entryId: string;
-  recordedAt: number;
-  kind: "resource" | "widget" | "mode";
-  modeId?: string;
-  resource?: ResourceRef;
-  widgetId?: string;
-  contributionId?: string;
-  title?: string;
-}
-
-export interface HistoryStoreState {
-  entries: readonly HistoryEntry[];
-  cursor: number; // -1 when entries is empty
-  recentlyClosed: readonly HistoryEntry[];
-}
+export type {
+  HistoryEntry,
+  HistoryStoreState,
+  PersistedWorkbenchHistory,
+  WorkbenchHistoryPersistence,
+  WorkbenchLocation,
+  WorkbenchLocationRef,
+  WorkbenchLocationWorkspaceState,
+  WorkbenchNavigationEntry,
+  WorkbenchPanelMenuRef,
+  WorkbenchPanelMenuWorkspaceState,
+  WorkbenchPanelWorkspaceState,
+  WorkbenchSubPanelRef,
+} from "./history-types";
 
 export interface HistoryController {
   store: WorkbenchStore<HistoryStoreState>;
@@ -30,6 +53,10 @@ export interface HistoryController {
   goPrevious(): HistoryEntry | undefined;
   recentlyClosed(): readonly HistoryEntry[];
   reopenLastClosed(): HistoryEntry | undefined;
+  setPersistenceScope(scope: string | undefined): void;
+  getPersistenceScope(): string | undefined;
+  restore(): HistoryEntry | undefined;
+  flush(): void;
   clear(): void;
 }
 
@@ -40,316 +67,379 @@ export interface CreateHistoryControllerInput {
     "getActiveModeId" | "getMode" | "isTransitioning" | "onDidChangeActive" | "setActiveMode"
   >;
   resources: ResourceRegistry;
+  persistence?: WorkbenchHistoryPersistence;
   maxEntries?: number;
 }
 
 const DEFAULT_MAX_ENTRIES = 50;
 const RECENTLY_CLOSED_LIMIT = 20;
+const PERSISTENCE_DELAY_MS = 50;
 
-const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undefined) => {
-  if (!left || !right) return false;
-  if (left.kind !== right.kind) return false;
-  if (left.kind === "resource") return left.resource?.uri === right.resource?.uri;
-  if (left.kind === "mode") return left.modeId === right.modeId;
-  return left.widgetId === right.widgetId;
-};
-
-const compactAdjacentEntries = (entries: readonly HistoryEntry[]) => {
-  const compacted: HistoryEntry[] = [];
-  for (const entry of entries) {
-    const lastIndex = compacted.length - 1;
-    if (isSameEntry(compacted[lastIndex], entry)) compacted[lastIndex] = entry;
-    else compacted.push(entry);
+const placementsByWidgetId = (layout: LayoutModel) => {
+  const placements = new Map<string, { placement: WorkbenchWidgetPlacement; region: WorkbenchRegion }>();
+  for (const region of Object.values(layout.getLayout().regions)) {
+    for (const placement of region.widgets) placements.set(placement.widgetId, { placement, region: region.id });
   }
-  return compacted;
+  return placements;
 };
 
-const findLastEquivalentEntry = (entries: readonly HistoryEntry[], target: HistoryEntry) => {
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    if (isSameEntry(entries[index], target)) return index;
+interface ActivateHistoryResourceInput {
+  entry: WorkbenchNavigationEntry;
+  resource: NonNullable<WorkbenchNavigationEntry["resource"]>;
+  placement?: WorkbenchWidgetPlacement;
+  layout: LayoutModel;
+  resources: ResourceRegistry;
+  replayCurrentLocation?: boolean;
+  replayResource(entry: WorkbenchNavigationEntry): Promise<unknown>;
+  restoreSelections(entry: WorkbenchNavigationEntry): void;
+}
+
+const activateHistoryResource = (input: ActivateHistoryResourceInput) => {
+  const { entry, layout, placement, replayCurrentLocation, replayResource, resource, resources, restoreSelections } =
+    input;
+  const opener = Object.values(resources.store.getState().openers).find((candidate) => candidate.canOpen(resource));
+  const activeLocationUri = getActiveLocationPlacement(layout.getLayout())?.resourceUri;
+  if (opener && (replayCurrentLocation || activeLocationUri !== resource.uri)) return replayResource(entry);
+
+  if (placement?.resourceUri === resource.uri) layout.activateWidget(placement.widgetId);
+  else if (entry.contributionId && layout.getWidget(entry.contributionId)?.role === "location") {
+    layout.openWidget(entry.contributionId, {
+      resource,
+      title: entry.title,
+      replaceActive: Boolean(placement),
+    });
+  } else if (placement) layout.activateWidget(placement.widgetId);
+  else if (entry.contributionId && layout.getWidget(entry.contributionId)) {
+    layout.openWidget(entry.contributionId, { title: entry.title });
   }
-  return -1;
+  restoreSelections(entry);
+  return undefined;
 };
 
-// History tracks the PRIMARY (main) region's live placements only, so supporting surfaces never
-// push Back/Forward entries.
-const activePlacementFromLayout = (layout: LayoutModel) =>
-  getActivePlacement(layout.getLayout().regions[resolveAnchorRegion("primary")]);
+interface CreateHistoryControllerApiInput {
+  controllerInput: CreateHistoryControllerInput;
+  store: WorkbenchStore<HistoryStoreState>;
+  activateEntry(
+    entry: WorkbenchNavigationEntry,
+    options?: { replayCurrentLocation?: boolean },
+  ): Promise<unknown> | undefined;
+  finishRestore(): void;
+  flush(): void;
+  getPersistenceScope(): string | undefined;
+  moveCursor(delta: number): WorkbenchNavigationEntry | undefined;
+  runSilent(action: () => unknown): void;
+  setPersistenceScope(scope: string | undefined): void;
+  setState(state: HistoryStoreState, action: string, persist?: boolean): void;
+}
 
-const createEntryBase = (counter: number) => {
-  const recordedAt = Date.now();
-  return { entryId: `history-${recordedAt}-${counter}`, recordedAt };
+const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): HistoryController => {
+  const {
+    activateEntry,
+    controllerInput,
+    finishRestore,
+    flush,
+    getPersistenceScope,
+    moveCursor,
+    runSilent,
+    setPersistenceScope,
+    setState,
+    store,
+  } = input;
+
+  return {
+    store,
+    goBack: () => moveCursor(-1),
+    goForward: () => moveCursor(1),
+    goPrevious() {
+      const snapshot = store.getState();
+      const current = snapshot.entries[snapshot.cursor];
+      for (let index = snapshot.entries.length - 1; index >= 0; index -= 1) {
+        const candidate = snapshot.entries[index];
+        if (isSameNavigationEntry(candidate, current)) continue;
+        setState({ ...snapshot, cursor: index }, "history.goPrevious");
+        runSilent(() => activateEntry(candidate));
+        return candidate;
+      }
+      return undefined;
+    },
+    recentlyClosed: () => store.getState().recentlyClosed,
+    reopenLastClosed() {
+      const snapshot = store.getState();
+      const last = snapshot.recentlyClosed.at(-1);
+      if (!last) return undefined;
+      setState({ ...snapshot, recentlyClosed: snapshot.recentlyClosed.slice(0, -1) }, "history.reopenClosed");
+      runSilent(() => {
+        const pending = activateEntry(last);
+        const reopenSubPanel = () => {
+          if (!last.closedSubPanel) return;
+          controllerInput.layout.openWidget(last.closedSubPanel.reference.contributionId, {
+            region: last.closedSubPanel.region,
+            resource: last.closedSubPanel.resource,
+            title: last.closedSubPanel.title,
+            closable: true,
+          });
+        };
+        if (pending instanceof Promise) void pending.then(reopenSubPanel);
+        else reopenSubPanel();
+      });
+      return last;
+    },
+    setPersistenceScope,
+    getPersistenceScope,
+    restore() {
+      const snapshot = reconcileHistoryState({
+        state: store.getState(),
+        layout: controllerInput.layout,
+        modes: controllerInput.modes,
+        resources: controllerInput.resources,
+      });
+      setState(snapshot, "history.reconcile");
+      const entry = snapshot.entries[snapshot.cursor];
+      if (entry) runSilent(() => activateEntry(entry, { replayCurrentLocation: true }));
+      finishRestore();
+      return entry;
+    },
+    flush,
+    clear() {
+      finishRestore();
+      setState(emptyHistoryState(), "history.clear");
+    },
+  };
 };
-
-const entryFromPlacement = (
-  placement: WorkbenchWidgetPlacement,
-  counter: number,
-  modeId: string | undefined,
-): HistoryEntry => ({
-  ...createEntryBase(counter),
-  kind: placement.resource ? "resource" : "widget",
-  modeId,
-  resource: placement.resource,
-  widgetId: placement.widgetId,
-  contributionId: placement.contributionId,
-  title: placement.title,
-});
-
-const entryFromMode = (
-  mode: ReturnType<WorkbenchModeRegistry["getMode"]>,
-  counter: number,
-  modeId: string | undefined,
-): HistoryEntry => ({
-  ...createEntryBase(counter),
-  kind: "mode",
-  modeId,
-  title: mode?.label ?? modeId,
-});
 
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
   const maxEntries = input.maxEntries ?? DEFAULT_MAX_ENTRIES;
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
-    initialState: { entries: [], cursor: -1, recentlyClosed: [] },
+    initialState: emptyHistoryState(),
   });
-
   let counter = 0;
   let navigating = false;
-  let silentLayoutChanged = false;
-  let restoredModeDuringReplay = false;
+  let awaitingRestore = false;
+  let currentScope: string | undefined;
+  let persistTimer: ReturnType<typeof setTimeout> | undefined;
   const replayingResourceUris = new Set<string>();
 
-  const appendHistoryEntry = (candidate: HistoryEntry) => {
+  const flush = () => {
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = undefined;
+    if (!input.persistence) return;
+    input.persistence.setHistory({ ...store.getState(), version: WORKBENCH_HISTORY_VERSION }, currentScope);
+  };
+
+  const schedulePersist = () => {
+    if (!input.persistence || persistTimer) return;
+    persistTimer = setTimeout(flush, PERSISTENCE_DELAY_MS);
+  };
+
+  const setState = (state: HistoryStoreState, action: string, persist = true) => {
+    store.setState(state, false, action);
+    if (persist) schedulePersist();
+  };
+
+  const appendEntry = (candidate: WorkbenchNavigationEntry | undefined) => {
+    if (!candidate) return;
     const snapshot = store.getState();
     const current = snapshot.entries[snapshot.cursor];
-    if (isSameEntry(current, candidate)) return;
-
+    if (isSameNavigationEntry(current, candidate)) return;
     const trimmed = snapshot.entries.slice(0, snapshot.cursor + 1);
     const replacesCurrentMode =
       current?.kind === "mode" && candidate.kind !== "mode" && current.modeId === candidate.modeId;
-    const withCandidate = replacesCurrentMode ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate];
-    const overflow = withCandidate.length - maxEntries;
-    const entries = overflow > 0 ? withCandidate.slice(overflow) : withCandidate;
-    const cursor = entries.length - 1;
-
-    store.setState({ ...snapshot, entries, cursor }, false, "history.record");
+    const appended = compactNavigationEntries(
+      replacesCurrentMode ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate],
+    );
+    const entries = appended.slice(Math.max(0, appended.length - maxEntries));
+    setState({ ...snapshot, entries, cursor: entries.length - 1 }, "history.record");
   };
 
-  const appendEntry = (placement: WorkbenchWidgetPlacement) => {
-    if (placement.pinned) return;
-
+  const recordSnapshot = (suppressModeOnly = false) => {
+    if (navigating || awaitingRestore) return;
     counter += 1;
-    appendHistoryEntry(entryFromPlacement(placement, counter, input.modes?.getActiveModeId()));
+    const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
+    if (suppressModeOnly && input.modes?.isTransitioning() && entry?.kind === "mode") return;
+    if (entry?.location.resource && replayingResourceUris.has(entry.location.resource.uri)) return;
+    appendEntry(entry);
   };
 
-  const appendModeEntry = () => {
-    if (navigating) return;
+  let lastPlacements = placementsByWidgetId(input.layout);
 
-    const modeId = input.modes?.getActiveModeId();
-    counter += 1;
-    appendHistoryEntry(entryFromMode(modeId ? input.modes?.getMode(modeId) : undefined, counter, modeId));
-  };
-
-  const pushRecentlyClosed = (placement: WorkbenchWidgetPlacement) => {
-    counter += 1;
-    const closed = entryFromPlacement(placement, counter, input.modes?.getActiveModeId());
+  const normalizeRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
     const snapshot = store.getState();
-    const next = [...snapshot.recentlyClosed.filter((entry) => !isSameEntry(entry, closed)), closed];
-    const trimmed = next.length > RECENTLY_CLOSED_LIMIT ? next.slice(next.length - RECENTLY_CLOSED_LIMIT) : next;
-    store.setState({ ...snapshot, recentlyClosed: trimmed }, false, "history.recordClosed");
-  };
-
-  const placementsByWidgetId = (layout = input.layout.getLayout()) => {
-    const map = new Map<string, WorkbenchWidgetPlacement>();
-    for (const region of Object.values(layout.regions)) {
-      for (const placement of region.widgets) map.set(placement.widgetId, placement);
-    }
-    return map;
-  };
-
-  let lastPlacements = placementsByWidgetId();
-
-  const pruneRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
-    const snapshot = store.getState();
-    const current = snapshot.entries[snapshot.cursor];
-    // Mode changes tear down their placements before activating the next layout. Keep those
-    // entries so Back can reactivate the mode and reopen its resource; an explicitly closed tab
-    // outside that transition should still be removed from history.
-    if (input.modes?.isTransitioning()) return;
-    if (!input.layout.getWidget(placement.contributionId)) return;
-    const retained = snapshot.entries.filter((entry) => entry.widgetId !== placement.widgetId);
-    if (retained.length === snapshot.entries.length) return;
-    const entries = compactAdjacentEntries(retained);
-
-    const retainedCursor = current ? entries.findIndex((entry) => entry.entryId === current.entryId) : -1;
-    const equivalentCursor = current ? findLastEquivalentEntry(entries, current) : -1;
-    let cursor = Math.min(snapshot.cursor, entries.length - 1);
-    if (equivalentCursor >= 0) cursor = equivalentCursor;
-    if (retainedCursor >= 0) cursor = retainedCursor;
-    store.setState({ ...snapshot, entries, cursor }, false, "history.pruneRemovedPlacement");
-  };
-
-  const layoutListener = () => {
-    const snapshot = input.layout.getLayout();
-    const nextPlacements = placementsByWidgetId(snapshot);
-
-    // Detect closed widgets to feed recentlyClosed.
-    for (const [widgetId, placement] of lastPlacements) {
-      if (nextPlacements.has(widgetId)) continue;
-      if (placement.closable) pushRecentlyClosed(placement);
-      pruneRemovedPlacement(placement);
-    }
-    lastPlacements = nextPlacements;
-
-    if (navigating) {
-      silentLayoutChanged = true;
+    const role = workbenchPlacementRole(input.layout, placement);
+    if (role === "location") return;
+    if (role !== "sub-panel") {
+      if (input.modes?.isTransitioning() || !input.layout.getWidget(placement.contributionId)) return;
+      const entries = compactNavigationEntries(
+        snapshot.entries.filter((entry) => entry.widgetId !== placement.widgetId),
+      );
+      if (entries.length === snapshot.entries.length) return;
+      setState({ ...snapshot, entries, cursor: Math.min(snapshot.cursor, entries.length - 1) }, "history.prune");
       return;
     }
 
-    const active = activePlacementFromLayout(input.layout);
-    if (!active) return;
-    appendEntry(active);
+    const currentId = snapshot.entries[snapshot.cursor]?.entryId;
+    const entries = compactNavigationEntries(
+      snapshot.entries.map((entry) => withoutSubPanelSelection(entry, placement)),
+    );
+    const retainedCursor = currentId ? entries.findIndex((entry) => entry.entryId === currentId) : -1;
+    setState(
+      {
+        ...snapshot,
+        entries,
+        cursor: retainedCursor >= 0 ? retainedCursor : Math.min(snapshot.cursor, entries.length - 1),
+      },
+      "history.removeSubPanel",
+    );
+  };
+
+  const pushRecentlyClosed = (placement: WorkbenchWidgetPlacement, region: WorkbenchRegion) => {
+    counter += 1;
+    const snapshot = store.getState();
+    const role = workbenchPlacementRole(input.layout, placement);
+    const entry = closedNavigationEntry({
+      placement,
+      counter,
+      current: role === "sub-panel" ? snapshot.entries[snapshot.cursor] : undefined,
+      modeId: input.modes?.getActiveModeId(),
+      closedSubPanel:
+        role === "sub-panel" && workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
+          ? {
+              region: region as WorkbenchPanelRegion,
+              reference: {
+                contributionId: placement.contributionId,
+                resourceUri: placement.resourceUri,
+                instanceKey: placement.widgetId,
+              },
+              resource: placement.resource,
+              title: placement.title,
+            }
+          : undefined,
+    });
+    const recentlyClosed = [
+      ...snapshot.recentlyClosed.filter((candidate) => !isSameNavigationEntry(candidate, entry)),
+      entry,
+    ].slice(-RECENTLY_CLOSED_LIMIT);
+    setState({ ...snapshot, recentlyClosed }, "history.recordClosed");
   };
 
   input.layout.store.subscribeSelector(
     (state) => state.layout,
-    () => layoutListener(),
-  );
-
-  input.modes?.onDidChangeActive(() => appendModeEntry());
-
-  input.resources.onDidOpenResource((resource) => {
-    if (navigating) return;
-    if (replayingResourceUris.has(resource.uri)) return;
-    const active = activePlacementFromLayout(input.layout);
-    if (active?.resourceUri === resource.uri) appendEntry(active);
-  });
-
-  const runSilent = (action: () => unknown) => {
-    navigating = true;
-    silentLayoutChanged = false;
-    restoredModeDuringReplay = false;
-    let deferred = false;
-    try {
-      const result = action();
-      if (
-        result &&
-        typeof (result as Promise<unknown>).finally === "function" &&
-        (!silentLayoutChanged || restoredModeDuringReplay)
-      ) {
-        deferred = true;
-        void (result as Promise<unknown>).then(
-          () => {
-            navigating = false;
-          },
-          () => {
-            navigating = false;
-          },
-        );
+    () => {
+      const nextPlacements = placementsByWidgetId(input.layout);
+      if (awaitingRestore) {
+        lastPlacements = nextPlacements;
         return;
       }
-    } finally {
-      if (!deferred) navigating = false;
+      for (const [widgetId, tracked] of lastPlacements) {
+        if (nextPlacements.has(widgetId)) continue;
+        if (tracked.placement.closable) pushRecentlyClosed(tracked.placement, tracked.region);
+        normalizeRemovedPlacement(tracked.placement);
+      }
+      lastPlacements = nextPlacements;
+      recordSnapshot(true);
+    },
+  );
+  input.modes?.onDidChangeActive(recordSnapshot);
+
+  const restoreSelections = (entry: WorkbenchNavigationEntry) => {
+    for (const region of workbenchPanelRegions) {
+      const reference = entry.selectedSubPanels[region];
+      const placement = reference ? findSubPanelPlacement(input.layout, reference) : undefined;
+      if (placement) {
+        input.layout.activateWidget(placement.widgetId);
+        continue;
+      }
+      const fallbackWidgetId = region === "main" ? input.layout.getLayout().activeLocationWidgetId : undefined;
+      input.layout.setRegionActiveWidget(region, fallbackWidgetId);
     }
   };
 
-  const restoreMode = (entry: HistoryEntry) => {
-    if (!input.modes) return;
-    if (input.modes.getActiveModeId() === entry.modeId) return;
-    restoredModeDuringReplay = true;
-    input.modes.setActiveMode(entry.modeId);
+  const restoreMode = (entry: WorkbenchNavigationEntry) => {
+    if (input.modes && input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
   };
 
-  const activateEntry = (entry: HistoryEntry) => {
+  const replayResource = (entry: WorkbenchNavigationEntry) => {
+    const resource = entry.resource!;
+    replayingResourceUris.add(resource.uri);
+    return input.resources.openResource(resource).finally(() => {
+      restoreSelections(entry);
+      replayingResourceUris.delete(resource.uri);
+    });
+  };
+
+  const activateEntry = (entry: WorkbenchNavigationEntry, options: { replayCurrentLocation?: boolean } = {}) => {
     restoreMode(entry);
-
-    if (entry.kind === "mode") return;
-
+    if (entry.kind === "mode") {
+      restoreSelections(entry);
+      return undefined;
+    }
     const placement = entry.widgetId
       ? findPlacementByWidgetId(input.layout.getLayout(), entry.widgetId)?.placement
       : undefined;
-
     if (entry.kind === "resource" && entry.resource) {
-      if (placement?.resourceUri === entry.resource.uri) return input.layout.activateWidget(placement.widgetId);
-      replayingResourceUris.add(entry.resource.uri);
-      return input.resources.openResource(entry.resource, { replaceActive: Boolean(placement) }).finally(() => {
-        if (entry.resource) replayingResourceUris.delete(entry.resource.uri);
+      return activateHistoryResource({
+        entry,
+        resource: entry.resource,
+        placement,
+        layout: input.layout,
+        resources: input.resources,
+        replayCurrentLocation: options.replayCurrentLocation,
+        replayResource,
+        restoreSelections,
       });
     }
-    if (!placement && entry.contributionId && input.layout.getWidget(entry.contributionId)) {
-      return input.layout.openWidget(entry.contributionId, { title: entry.title });
+    if (placement) input.layout.activateWidget(placement.widgetId);
+    else if (entry.contributionId && input.layout.getWidget(entry.contributionId)) {
+      input.layout.openWidget(entry.contributionId, { title: entry.title });
     }
-    if (!placement) return;
-    return input.layout.activateWidget(placement.widgetId);
+    restoreSelections(entry);
+    return undefined;
   };
 
-  const reopenClosed = (entry: HistoryEntry) => {
-    restoreMode(entry);
-
-    if (entry.kind === "mode") return;
-    if (entry.kind === "resource" && entry.resource) return input.resources.openResource(entry.resource);
-    if (entry.kind === "widget" && entry.widgetId) {
-      return input.layout.openWidget(entry.contributionId ?? entry.widgetId);
+  const runSilent = (action: () => unknown) => {
+    navigating = true;
+    try {
+      action();
+    } finally {
+      navigating = false;
     }
   };
 
-  const moveCursor = (delta: number): HistoryEntry | undefined => {
+  const moveCursor = (delta: number) => {
     const snapshot = store.getState();
-    const nextCursor = snapshot.cursor + delta;
-    const entry = snapshot.entries[nextCursor];
+    const cursor = snapshot.cursor + delta;
+    const entry = snapshot.entries[cursor];
     if (!entry) return undefined;
-
-    store.setState({ ...snapshot, cursor: nextCursor }, false, delta < 0 ? "history.goBack" : "history.goForward");
+    setState({ ...snapshot, cursor }, delta < 0 ? "history.goBack" : "history.goForward");
     runSilent(() => activateEntry(entry));
     return entry;
   };
 
-  return {
-    store,
-
-    goBack() {
-      return moveCursor(-1);
-    },
-
-    goForward() {
-      return moveCursor(1);
-    },
-
-    goPrevious() {
-      // VS Code-style: jump to the most recent entry that is not the current one.
-      const snapshot = store.getState();
-      const current = snapshot.entries[snapshot.cursor];
-      for (let index = snapshot.entries.length - 1; index >= 0; index -= 1) {
-        const candidate = snapshot.entries[index];
-        if (!isSameEntry(candidate, current)) {
-          store.setState({ ...snapshot, cursor: index }, false, "history.goPrevious");
-          runSilent(() => activateEntry(candidate));
-          return candidate;
-        }
-      }
-      return undefined;
-    },
-
-    recentlyClosed() {
-      return store.getState().recentlyClosed;
-    },
-
-    reopenLastClosed() {
-      const snapshot = store.getState();
-      const last = snapshot.recentlyClosed[snapshot.recentlyClosed.length - 1];
-      if (!last) return undefined;
-
-      store.setState(
-        { ...snapshot, recentlyClosed: snapshot.recentlyClosed.slice(0, -1) },
-        false,
-        "history.reopenLastClosed",
-      );
-      runSilent(() => reopenClosed(last));
-      return last;
-    },
-
-    clear() {
-      store.setState({ entries: [], cursor: -1, recentlyClosed: [] }, false, "history.clear");
-    },
+  const setPersistenceScope = (scope: string | undefined) => {
+    if (scope === currentScope) return;
+    flush();
+    currentScope = scope;
+    const hydrated = hydrateHistoryState(input.persistence?.getHistory(scope));
+    awaitingRestore = hydrated.entries.length > 0;
+    setState(hydrated, "history.setPersistenceScope", false);
   };
+
+  input.layout.onDidChangePersistenceScope(setPersistenceScope);
+
+  if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
+
+  return createHistoryControllerApi({
+    controllerInput: input,
+    store,
+    finishRestore: () => {
+      awaitingRestore = false;
+    },
+    setPersistenceScope,
+    getPersistenceScope: () => currentScope,
+    activateEntry,
+    moveCursor,
+    runSilent,
+    setState,
+    flush,
+  });
 };

@@ -9,7 +9,6 @@ import type { ResourceRef } from "@pstdio/workbench/core";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { GitBranch } from "lucide-react";
 import { useSyncExternalStore } from "react";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import {
@@ -216,9 +215,7 @@ export const StartWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
   const data = createStartData(projectId, dashboardDataVersion);
   const openSession = (session: StartSession) => {
-    void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-      resource: session.resource,
-    });
+    void input.workbench.resources.openResource(session.resource, { replaceActive: true });
   };
   const openWorkspace = (resource: ResourceRef) => {
     void input.workbench.resources.openResource(resource, { replaceActive: true });

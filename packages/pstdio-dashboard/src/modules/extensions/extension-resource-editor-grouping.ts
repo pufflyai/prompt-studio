@@ -23,17 +23,25 @@ export const groupResourceEditorViews = (views: ExtensionViewRecord[]): Resource
   const byKind = new Map<string, ExtensionViewRecord[]>();
 
   for (const view of views) {
-    if (!view.resourceKind || view.surface === "modal") continue;
+    if (!view.resourceKind || view.role === "modal") continue;
     const group = byKind.get(view.resourceKind) ?? [];
     group.push(view);
     byKind.set(view.resourceKind, group);
   }
 
-  return [...byKind].map(([kind, kindViews]) => {
-    const primary =
-      kindViews.find((view) => explicitMainTarget(view.target)) ??
-      kindViews.find((view) => defaultMainTarget(view.target)) ??
-      kindViews[0];
-    return { kind, primary, companions: kindViews.filter((view) => view !== primary) };
-  });
+  return [...byKind]
+    .map(([kind, kindViews]) => {
+      const locations = kindViews.filter((view) => view.role === "location");
+      const primary =
+        locations.find((view) => explicitMainTarget(view.target)) ??
+        locations.find((view) => defaultMainTarget(view.target));
+      return primary
+        ? {
+            kind,
+            primary,
+            companions: kindViews.filter((view) => view.role === "sub-panel" || view.role === "panel-menu"),
+          }
+        : undefined;
+    })
+    .filter((group): group is ResourceEditorGroup => Boolean(group));
 };

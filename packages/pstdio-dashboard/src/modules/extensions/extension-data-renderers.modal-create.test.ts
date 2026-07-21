@@ -30,7 +30,7 @@ const modalCreateMetadata: DashboardExtensionMetadata = {
       extensionId: "pstdio.pstdio-core-tickets",
       slotId: "workbench.modal",
       target: "workbench.main",
-      surface: "modal",
+      role: "modal",
       resourceKind: "ticket",
       title: "Create ticket",
       webview: {

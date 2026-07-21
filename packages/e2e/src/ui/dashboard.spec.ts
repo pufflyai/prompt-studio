@@ -60,7 +60,9 @@ test("dashboard selects the only project on first load", async ({ page, request 
   await page.goto("/");
 
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Single Project Start Test" })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .toBeTruthy();
 });
 
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
@@ -82,8 +84,6 @@ test("dashboard opens the start page for a selected project without a saved loca
     .getByRole("button", { name: /Recent start session/ })
     .click();
 
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
-  await expect(
-    page.getByTestId("workbench-session-bubble").getByRole("tab", { name: new RegExp(session.title) }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Main").getByText(session.title, { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Breadcrumb").getByText(session.title, { exact: true })).toBeVisible();
 });

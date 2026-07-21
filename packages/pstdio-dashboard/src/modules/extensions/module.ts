@@ -213,7 +213,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
       ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
       registerExtensionSidebarContributions(ctx, () => ({ metadata, projectId }));
-      ctx.layout.registerWidget(
+      ctx.layout.registerLocation(
         {
           id: dashboardWidgetIds.extensionRoute,
           title: "Extension route",

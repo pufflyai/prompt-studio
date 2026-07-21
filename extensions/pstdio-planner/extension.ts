@@ -168,7 +168,7 @@ export default defineExtension({
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+        open: [{ target: "workbench.main.left", view: "ticketFiles", pinned: true }],
       },
     },
   },
@@ -187,6 +187,7 @@ export default defineExtension({
   views: {
     ticketEditor: {
       title: l10n("views.ticketEditor.title", "Ticket"),
+      role: "location",
       resourceKind: "ticket",
       fileRenderer: "ticketContent",
     },
@@ -194,8 +195,10 @@ export default defineExtension({
     // in place (it runs select-ticket-document); the tree never tears down.
     ticketFiles: {
       title: l10n("views.ticketFiles.title", "Files"),
+      role: "panel-menu",
+      panelMenuOwner: { level: "panel" },
       resourceKind: "ticket",
-      surface: "panel",
+      target: "workbench.main.left",
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
     },
@@ -203,15 +206,16 @@ export default defineExtension({
     // ticketProperties controls renderer.
     ticketProperties: {
       title: l10n("views.ticketProperties.title", "Properties"),
+      role: "panel-menu",
+      panelMenuOwner: { level: "panel" },
       resourceKind: "ticket",
-      surface: "panel",
       target: "workbench.main.right",
       controlsRenderer: "ticketProperties",
     },
     createTicketModal: {
       title: l10n("views.createTicketModal.title", "New ticket"),
+      role: "modal",
       resourceKind: "ticket",
-      surface: "modal",
       webview: {
         entry: packageAsset("./src/views/create-ticket-modal.tsx", import.meta.url),
         capabilities: ["commands.execute", "notification.show", "files.upload", "files.list", "files.delete"],

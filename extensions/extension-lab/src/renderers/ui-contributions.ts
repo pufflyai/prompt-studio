@@ -28,10 +28,12 @@ export const createLabViews = (baseUrl: string) =>
   ({
     labSidebar: {
       title: l10n("views.labSidebar.title", "Lab"),
+      role: "location",
       webview: { entry: packageAsset("./src/views/lab-sidebar.tsx", baseUrl) },
     },
     labOverview: {
       title: l10n("views.labOverview.title", "Lab overview"),
+      role: "location",
       webview: {
         entry: packageAsset("./src/views/lab-overview.tsx", baseUrl),
         capabilities: [

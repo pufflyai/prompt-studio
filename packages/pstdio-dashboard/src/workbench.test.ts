@@ -3,6 +3,12 @@ import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } f
 import { createDashboardWorkbench } from "./workbench";
 
 describe("createDashboardWorkbench", () => {
+  test("starts the eligible Side Panel closed", () => {
+    const workbench = createDashboardWorkbench();
+
+    expect(workbench.sessionPanel.getMode()).toBe("closed");
+  });
+
   test("registers the host terminal surface and API session opener", () => {
     const workbench = createDashboardWorkbench();
 

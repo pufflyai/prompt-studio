@@ -23,8 +23,8 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       extensionId: "acme.image-tools",
       slotId: "inspector-panel",
       title: "Inspector",
+      role: "panel-menu",
       resourceKind: "image",
-      surface: "panel",
       target: "workbench.main.right",
       controlsRendererId: "inspector",
     } satisfies ControlsViewRecord;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type LayoutPersistenceAdapter, type WorkbenchLayout } from "@pstdio/workbench/core";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
@@ -20,6 +20,9 @@ describe("createProjectsModule", () => {
 
     expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
     expect(workbench.getPrimaryResource()).toBeUndefined();
+    expect(workbench.layout.getPersistenceScope()).toBe("project:project-1");
+    expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
+    expect(workbench.panels.getPersistenceScope()).toBe("project:project-1");
   });
 
   test("clears the back-stack when the selected project is cleared", async () => {
@@ -61,6 +64,53 @@ describe("createProjectsModule", () => {
 
       expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
       expect(workbench.modes.getActiveModeId()).toBeUndefined();
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+
+  test("keeps restored project Sub Panels when leaving project selection", () => {
+    const layouts = new Map<string | undefined, WorkbenchLayout>();
+    const layoutPersistence = {
+      getLayout: (scope) => layouts.get(scope),
+      setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+    } satisfies LayoutPersistenceAdapter;
+    const seed = createWorkbenchCore({ layoutPersistence });
+    seed.layout.setPersistenceScope("project:project-1");
+    seed.layout.registerLocation({ id: "start", title: "Start", region: "main", rendererId: "noop" });
+    seed.layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
+    seed.layout.openWidget("start", {
+      resource: { kind: "dashboard-view", uri: "dashboard-workbench://start", id: "start" },
+    });
+    seed.layout.openWidget("terminal");
+
+    let selectedProjectId: string | undefined = "project-1";
+    const workbench = createWorkbenchCore({ layoutPersistence });
+    workbench.layout.registerLocation({ id: "start", title: "Start", region: "main", rendererId: "noop" });
+    workbench.layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
+    getWriter("projects")?.truncateAndWrite([]);
+    const projects = workbench.registerModule(
+      createProjectsModule({
+        projectSelectionPersistence: {
+          getSelectedProjectId: () => selectedProjectId,
+          setSelectedProjectId: (projectId) => {
+            selectedProjectId = projectId;
+          },
+        },
+      }),
+    );
+
+    try {
+      workbench.modes.setActiveMode("project-selection");
+      getWriter("projects")?.truncateAndWrite([
+        { id: "project-1", name: "Prompt Studio", created_at: "2026-01-01T00:00:00.000Z" },
+      ]);
+      workbench.modes.setActiveMode(undefined);
+
+      expect(workbench.layout.getLayout().regions.secondary.widgets.map((widget) => widget.contributionId)).toEqual([
+        "terminal",
+      ]);
     } finally {
       projects.dispose();
       getWriter("projects")?.truncateAndWrite([]);

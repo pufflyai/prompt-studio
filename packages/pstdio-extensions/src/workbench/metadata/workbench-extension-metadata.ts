@@ -170,10 +170,17 @@ const toViewRecord = (
     slotId: legacyViewSlotId(view.contribution),
     target: view.contribution.target,
     title: view.contribution.title,
+    role: view.contribution.role,
+    panelMenuOwner:
+      view.contribution.panelMenuOwner?.level === "sub-panel"
+        ? {
+            level: "sub-panel",
+            contributionId: resolveContributionId(view.name, view.contribution.panelMenuOwner.view),
+          }
+        : view.contribution.panelMenuOwner,
     group: view.contribution.group,
     placement: view.contribution.placement,
     resourceKind: view.contribution.resourceKind,
-    surface: view.contribution.surface,
     hostTreeHeader: view.contribution.hostTreeHeader,
     hostTreeFooter: view.contribution.hostTreeFooter,
     ...(webview ? { webview } : {}),

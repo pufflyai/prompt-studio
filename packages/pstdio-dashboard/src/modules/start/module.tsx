@@ -7,7 +7,7 @@ import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
 
 const registerStartWidget = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget(
+  ctx.layout.registerLocation(
     {
       id: dashboardWidgetIds.start,
       title: "Start",

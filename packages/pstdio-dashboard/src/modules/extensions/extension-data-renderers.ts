@@ -191,7 +191,7 @@ export const registerExtensionDataRenderers = (
 
   const findModalView = (resourceKind: string | undefined) =>
     resourceKind
-      ? metadata.views.find((view) => view.surface === "modal" && view.resourceKind === resourceKind)
+      ? metadata.views.find((view) => view.role === "modal" && view.resourceKind === resourceKind)
       : undefined;
 
   const openResource = (resource: ResourceRef | undefined) => {

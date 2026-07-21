@@ -31,6 +31,11 @@ import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
 import { createPaletteResourcesModule } from "./palette-resources-module";
 import { paletteResourcesSource } from "./palette-resources-source";
+import {
+  createPanelCompositionWorkbench,
+  createProjectIsolatedPanelCompositionWorkbench,
+  createRestoredPanelCompositionWorkbench,
+} from "./panel-compositions-module";
 import { settingsSource } from "./settings-source";
 import { createSidePanelsModule } from "./side-panels-module";
 import { sidePanelsSource } from "./side-panels-source";
@@ -90,6 +95,20 @@ const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
 sidePanelsWorkbench.sessionPanel.setMode("attached");
+const panelCompositionWorkbenches = {
+  locationOnly: createPanelCompositionWorkbench("location-only"),
+  eligible: createPanelCompositionWorkbench("eligible"),
+  open: createPanelCompositionWorkbench("open"),
+  menuOnly: createPanelCompositionWorkbench("menu-only"),
+  collapsedMenu: createPanelCompositionWorkbench("collapsed-menu"),
+  subPanelsMenu: createPanelCompositionWorkbench("sub-panels-menu"),
+  allPanels: createPanelCompositionWorkbench("all-panels"),
+  locationSwitch: createPanelCompositionWorkbench("location-switch"),
+  crossPanelHistory: createPanelCompositionWorkbench("cross-panel-history"),
+  refreshEnd: createRestoredPanelCompositionWorkbench(false),
+  refreshAfterBack: createRestoredPanelCompositionWorkbench(true),
+  projectIsolation: createProjectIsolatedPanelCompositionWorkbench(),
+};
 const settingsWorkbench = createWorkbench(createSettingsModule());
 const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
 const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule());
@@ -186,6 +205,66 @@ export const SidePanels: Story = {
   name: "14. Side panels",
   parameters: sourceParameters(sidePanelsSource),
   render: () => <WorkbenchFrame workbench={sidePanelsWorkbench} />,
+};
+
+export const LocationContentOnly: Story = {
+  name: "14.1 Location content only",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.locationOnly} />,
+};
+
+export const EligibleSubPanels: Story = {
+  name: "14.2 Eligible Sub Panels",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.eligible} />,
+};
+
+export const OpenSubPanels: Story = {
+  name: "14.3 Open Sub Panels",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.open} />,
+};
+
+export const PanelMenuOnly: Story = {
+  name: "14.4 Panel Menu only",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.menuOnly} />,
+};
+
+export const CollapsedPanelMenu: Story = {
+  name: "14.5 Collapsed Panel Menu",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.collapsedMenu} />,
+};
+
+export const SubPanelsWithPanelMenus: Story = {
+  name: "14.6 Sub Panels with Panel Menus",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.subPanelsMenu} />,
+};
+
+export const AllThreePanels: Story = {
+  name: "14.7 All three Panels",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.allPanels} />,
+};
+
+export const LocationSwitch: Story = {
+  name: "14.8 Location switch",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.locationSwitch} />,
+};
+
+export const CrossPanelHistory: Story = {
+  name: "14.9 Cross-Panel history",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.crossPanelHistory} />,
+};
+
+export const RefreshAtTimelineEnd: Story = {
+  name: "14.10 Refresh at timeline end",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.refreshEnd} />,
+};
+
+export const RefreshAfterBack: Story = {
+  name: "14.11 Refresh after Back",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.refreshAfterBack} />,
+};
+
+export const ProjectHistoryIsolation: Story = {
+  name: "14.12 Project history isolation",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.projectIsolation} />,
 };
 
 export const Settings: Story = {

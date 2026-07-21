@@ -46,6 +46,7 @@ const metadata = {
       slotId: "workbench.main",
       target: "workbench.main",
       title: "Ticket",
+      role: "location",
       resourceKind: "ticket",
       webview,
     },

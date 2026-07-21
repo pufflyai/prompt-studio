@@ -213,8 +213,6 @@ const openResourceCompanionViews = (
 ) => {
   const { companions, resource, resourceMode } = input;
 
-  // replaceActive keeps a single companion in its region as the user switches
-  // resources instead of stacking a new panel per open.
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
     const region = companionViewRegion(companion, modeEntry);
@@ -225,7 +223,6 @@ const openResourceCompanionViews = (
       region,
       pinned: modeEntry?.pinned,
       title,
-      replaceActive: true,
     };
 
     if (hasPlacementForResource(ctx, widgetId, resource)) {

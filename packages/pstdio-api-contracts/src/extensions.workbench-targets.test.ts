@@ -56,6 +56,7 @@ describe("workbench extension metadata targets", () => {
           slotId: "workbench.main.left",
           target: "workbench.main.left",
           title: "Files",
+          role: "panel-menu",
           resourceKind: "ticket",
           treeRendererId: "lab.files",
           hostTreeHeader: "default",

@@ -38,6 +38,14 @@ export const reconcileAnchors = ({ layout, primary, isInScope }: ReconcileAnchor
     const placement = getActivePlacement(layout.regions[region]);
     if (!placement?.resource) continue;
 
+    // Sub Panels are subordinate to their Location workspace. A Location switch
+    // changes which placement is selected and rendered; it must not delete the
+    // placements retained for the Location that is leaving the foreground.
+    if (placement.role === "sub-panel" && placement.ownerResourceUri) {
+      actions.push({ region, action: "keep" });
+      continue;
+    }
+
     if (surface.persistence === "derived") {
       actions.push({ region, action: "clear" });
       continue;

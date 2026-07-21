@@ -39,6 +39,17 @@ export const workbenchPanelMenuRegions = {
 
 export type WorkbenchPanelMenuRegion = (typeof workbenchPanelMenuRegions)[WorkbenchPanelRegion][WorkbenchPanelMenuSide];
 
+const workbenchPanelByMenuRegion = {
+  "main-left-menu": "main",
+  "main-right-menu": "main",
+  "secondary-left-menu": "secondary",
+  "secondary-right-menu": "secondary",
+  "side-left-menu": "side",
+  "side-right-menu": "side",
+} as const satisfies Record<WorkbenchPanelMenuRegion, WorkbenchPanelRegion>;
+
+export const getWorkbenchPanelForMenuRegion = (region: WorkbenchPanelMenuRegion) => workbenchPanelByMenuRegion[region];
+
 export interface WorkbenchRegionSize {
   defaultPx?: number;
   minPx?: number;
@@ -48,6 +59,16 @@ export interface WorkbenchRegionSize {
 export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
+
+export type WorkbenchWidgetRole = "content" | "location" | "sub-panel" | "panel-menu";
+
+export interface WorkbenchLocationEligibility {
+  modeIds?: string[];
+  resourceKinds?: string[];
+  resourceIds?: string[];
+}
+
+export type WorkbenchPanelMenuOwner = { level: "panel" } | { level: "sub-panel"; contributionId: string };
 
 export interface WorkbenchWidgetTab {
   contentRendererId?: string;
@@ -74,16 +95,30 @@ export interface WidgetContribution {
   priority?: number;
   rendererId: string;
   openCommandId?: string;
-  // Only explicitly addable widgets appear in panel add menus and palette entries.
-  panelAddable?: boolean;
+  role?: WorkbenchWidgetRole;
+  eligibleLocations?: WorkbenchLocationEligibility;
+  panelMenuOwner?: WorkbenchPanelMenuOwner;
   tab?: WorkbenchWidgetTab;
   config?: unknown;
   canOpen?(resource: ResourceRef): boolean;
 }
 
+export type WorkbenchLocationContribution = Omit<WidgetContribution, "role">;
+
+export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
+  region: WorkbenchPanelRegion;
+  fallbackRegion?: WorkbenchPanelRegion;
+};
+
+export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
+  region: WorkbenchPanelMenuRegion;
+  fallbackRegion?: WorkbenchPanelMenuRegion;
+};
+
 export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" | "singleton" | "reuse"> & {
   singleton: boolean;
   reuse: WidgetReusePolicy;
+  role: WorkbenchWidgetRole;
 } & RegisteredContributionMetadata;
 
 export interface PlaceholderContribution {
@@ -107,12 +142,14 @@ export interface WorkbenchWidgetPlacement {
   source?: ContributionSource;
   resource?: ResourceRef;
   resourceUri?: string;
+  ownerResourceUri?: string;
   title?: string;
   pinned?: boolean;
   closable?: boolean;
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
   tab?: WorkbenchWidgetTab;
+  role?: WorkbenchWidgetRole;
 }
 
 export interface WorkbenchRegionState {
@@ -125,7 +162,9 @@ export interface WorkbenchRegionState {
 
 export interface WorkbenchLayout {
   regions: Record<WorkbenchRegion, WorkbenchRegionState>;
+  locationSubPanelSelections?: Record<string, Partial<Record<WorkbenchPanelRegion, string>>>;
   activeWidgetId?: string;
+  activeLocationWidgetId?: string;
   activeResourceUri?: string;
 }
 

@@ -110,10 +110,12 @@ const extension = defineExtension({
   views: {
     labSidebar: {
       title: "Lab sidebar",
+      role: "location",
       webview: { entry: packageAsset("./lab-sidebar.tsx", import.meta.url) },
     },
     labOverview: {
       title: "Lab overview",
+      role: "location",
       webview: { entry: packageAsset("./lab-overview.tsx", import.meta.url) },
     },
   },

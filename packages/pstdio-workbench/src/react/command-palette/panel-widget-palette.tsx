@@ -1,5 +1,5 @@
 import type { PaletteEntry } from "@pstdio/ui";
-import { listEligiblePanelWidgets, type WorkbenchCore, workbenchPanelRegions } from "../../core";
+import { listEligibleSubPanels, type WorkbenchCore, workbenchPanelRegions } from "../../core";
 import { getPanelLabel, openPanelWidget } from "../region/panel-widget-open";
 import { WorkbenchIcon } from "../shared/icon";
 import { COMMAND_MODE_ID } from "./palette-view";
@@ -11,7 +11,13 @@ export const createWorkbenchPanelWidgetPaletteEntries = (input: { workbench: Wor
   const layout = workbench.layout.getLayout();
 
   return workbenchPanelRegions.flatMap((region) =>
-    listEligiblePanelWidgets({ widgets, layout, region, resource }).map((widget): PaletteEntry => {
+    listEligibleSubPanels({
+      widgets,
+      layout,
+      region,
+      resource,
+      modeId: workbench.modes.getActiveModeId(),
+    }).map((widget): PaletteEntry => {
       const panelLabel = getPanelLabel(region);
       const label = `Open ${widget.title} in ${panelLabel} Panel`;
 

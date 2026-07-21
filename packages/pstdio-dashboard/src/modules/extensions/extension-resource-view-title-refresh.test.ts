@@ -19,7 +19,7 @@ const metadata = {
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.left", view: "tickets.files", pinned: true }],
+        open: [{ target: "workbench.main.left", view: "tickets.files", pinned: true }],
       },
     },
   ],
@@ -44,14 +44,17 @@ const metadata = {
       slotId: "workbench.main",
       target: "workbench.main",
       title: "Ticket",
+      role: "location",
       resourceKind: "ticket",
       fileRendererId: "tickets.content",
     },
     {
       id: "tickets.files",
       extensionId: "tickets",
-      slotId: "workbench.left",
+      slotId: "workbench.main.left",
+      target: "workbench.main.left",
       title: "Files",
+      role: "panel-menu",
       resourceKind: "ticket",
       treeRendererId: "tickets.files",
     },
@@ -82,7 +85,7 @@ describe("registerExtensionResourceView title refresh", () => {
     workbench.layout.registerWidget({
       id: "tickets.files",
       title: "Files",
-      region: "sidebar",
+      region: "main-left-menu",
       rendererId: "tickets.files",
       resourceKinds: ["ticket"],
     });
@@ -102,7 +105,7 @@ describe("registerExtensionResourceView title refresh", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
 
       const beforeSave = workbench.layout.getLayout().regions.main.widgets[0];
-      const companionBeforeSave = workbench.layout.getLayout().regions.sidebar.widgets[0];
+      const companionBeforeSave = workbench.layout.getLayout().regions["main-left-menu"].widgets[0];
       expect(beforeSave?.resource?.id).toBe("ticket-1");
       expect(companionBeforeSave?.resource?.id).toBe("ticket-1");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
@@ -129,11 +132,15 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(afterSave?.widgetId).toBe(beforeSave?.widgetId);
       expect(afterSave?.resource).toBe(beforeSave?.resource);
       expect(afterSave?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.title).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.widgetId).toBe(companionBeforeSave?.widgetId);
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[1]?.widgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.title).toBe("T-1 New title");
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.widgetId).toBe(
+        companionBeforeSave?.widgetId,
+      );
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.resource).toBe(
+        companionBeforeSave?.resource,
+      );
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.resource?.label).toBe("T-1 New title");
+      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.widgetId).toBe(scratch.widgetId);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {

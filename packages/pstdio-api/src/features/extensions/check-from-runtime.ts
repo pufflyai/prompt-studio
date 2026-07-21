@@ -170,7 +170,14 @@ const toViewRecord = (view: ExtensionRuntime["views"][number]) => ({
   group: view.contribution.group,
   placement: view.contribution.placement,
   resourceKind: view.contribution.resourceKind,
-  surface: view.contribution.surface,
+  role: view.contribution.role,
+  panelMenuOwner:
+    view.contribution.panelMenuOwner?.level === "sub-panel"
+      ? {
+          level: "sub-panel" as const,
+          contributionId: resolveContributionId(view.name, view.contribution.panelMenuOwner.view),
+        }
+      : view.contribution.panelMenuOwner,
   hostTreeHeader: view.contribution.hostTreeHeader,
   hostTreeFooter: view.contribution.hostTreeFooter,
   webview: view.contribution.webview,

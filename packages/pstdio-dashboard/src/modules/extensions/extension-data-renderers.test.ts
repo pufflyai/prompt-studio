@@ -44,7 +44,7 @@ describe("registerExtensionDataRenderers", () => {
     expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(workbench.layout.getWidget("pstdio-core-tickets.tickets")).toMatchObject({
       region: "main",
-      panelAddable: true,
+      role: "location",
       rendererId: "pstdio-core-tickets.tickets",
       singleton: true,
     });

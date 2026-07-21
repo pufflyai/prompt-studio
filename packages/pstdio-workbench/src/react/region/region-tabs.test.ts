@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { listWorkbenchMenuItems } from "../menus/menu-items";
-import { shouldShowRegionTabs } from "./region-tabs";
+import { shouldShowPanelHeader } from "./region-tabs";
 
 describe("WorkbenchRegionTabs leading actions", () => {
   test("resolves leading actions from the region tab menu path", () => {
@@ -21,7 +21,15 @@ describe("WorkbenchRegionTabs leading actions", () => {
     ]);
   });
 
-  test("keeps the tab strip visible when only leading actions remain", () => {
-    expect(shouldShowRegionTabs([], { hasLeadingActions: true })).toBe(true);
+  test("keeps the panel header visible when only leading actions remain", () => {
+    expect(shouldShowPanelHeader({ hasHeaderActions: true })).toBe(true);
+  });
+
+  test("keeps the panel header visible for a panel-menu-only composition", () => {
+    expect(shouldShowPanelHeader({ hasPanelMenus: true })).toBe(true);
+  });
+
+  test("omits the panel header for location content without subordinate chrome", () => {
+    expect(shouldShowPanelHeader({})).toBe(false);
   });
 });

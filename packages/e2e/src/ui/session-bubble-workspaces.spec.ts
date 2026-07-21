@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { createPlannerTicket } from "../helpers/planner-api";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -67,17 +68,28 @@ test.describe("Session bubble workspace selection", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, apiBase, projectId, "session-bubble-repo", repoRoot);
     const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    const ticket = await createPlannerTicket(request, apiBase, projectId, {
+      content: "Choose a session workspace",
+    });
 
     await page.goto(`/projects/${projectId}/tickets`);
+    await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    await page.getByText(ticket.content, { exact: true }).click();
 
-    const bubble = page.locator("[data-testid='workbench-session-bubble']");
-    await expect(bubble).toBeVisible();
+    const nav = page.locator('[data-workbench-region="nav"]');
+    await nav.getByRole("button", { name: "Show Side Panel" }).click();
+    await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+    await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "New session" }).click();
+    const sessionPanel = page.getByTestId("workbench-session-attached-panel");
+    await expect(sessionPanel).toBeVisible();
 
-    await bubble.getByRole("button", { name: "Select workspace" }).click();
+    await sessionPanel.getByRole("button", { name: "Select workspace" }).click();
     await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
 
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/tickets$`));
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(bubble.getByRole("button", { name: "Select workspace" })).toContainText(workspace.workspace_shorthand);
+    await expect(sessionPanel.getByRole("button", { name: "Select workspace" })).toContainText(
+      workspace.workspace_shorthand,
+    );
   });
 });

@@ -27,6 +27,7 @@ const metadata = {
       slotId: "workbench.main.left",
       target: "workbench.main.left",
       title: "Files",
+      role: "location",
       resourceKind: "ticket",
       treeRendererId: "lab.files",
     },

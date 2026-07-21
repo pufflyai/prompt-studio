@@ -366,7 +366,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
               title: "Files",
               resourceKind: "ticket",
               target: "workbench.main.left",
-              surface: "panel",
+              role: "location",
               treeRenderer: "files",
               hostTreeHeader: "default",
               hostTreeFooter: "none",

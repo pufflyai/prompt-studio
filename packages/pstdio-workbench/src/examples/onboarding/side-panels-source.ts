@@ -133,14 +133,14 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       region: "sidebar",
       rendererId: PICKER_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanelMenu({
       id: CONTEXT_ID,
       title: "Context",
       icon: "ListTree",
       region: "main-left-menu",
       rendererId: CONTEXT_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerLocation({
       id: DETAIL_ID,
       title: "Detail",
       region: "main",
@@ -148,13 +148,13 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       resourceKinds: [ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerSubPanel({
       id: INSPECTOR_ID,
       title: "Inspector",
       region: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerSubPanel({
       id: ACTIVITY_ID,
       title: "Activity",
       region: "secondary",

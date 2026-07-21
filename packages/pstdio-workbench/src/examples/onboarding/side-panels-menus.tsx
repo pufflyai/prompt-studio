@@ -11,7 +11,7 @@ const menuExamples: Array<{
   icon: string;
   region: WorkbenchPanelMenuRegion;
 }> = [
-  { id: "main-properties", title: "Properties", icon: "SlidersHorizontal", region: "main-right-menu" },
+  { id: "main-inspector", title: "Inspector", icon: "SlidersHorizontal", region: "main-right-menu" },
   { id: "secondary-runs", title: "Runs", icon: "ListTree", region: "secondary-left-menu" },
   { id: "secondary-problems", title: "Problems", icon: "CircleAlert", region: "secondary-right-menu" },
   { id: "side-files", title: "Files", icon: "Folder", region: "side-left-menu" },
@@ -38,9 +38,9 @@ export const registerSidePanelMenuExamples = (ctx: WorkbenchModuleContributionCo
     ),
   });
 
-  for (const menu of menuExamples) {
+  const widgetIds = menuExamples.map((menu) => {
     const widgetId = `onboarding.side-panels.${menu.id}`;
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanelMenu({
       id: widgetId,
       title: menu.title,
       icon: menu.icon,
@@ -49,6 +49,8 @@ export const registerSidePanelMenuExamples = (ctx: WorkbenchModuleContributionCo
       singleton: true,
       rendererId: RENDERER_ID,
     });
-    ctx.layout.openWidget(widgetId, { pinned: true });
-  }
+    return widgetId;
+  });
+
+  return widgetIds;
 };

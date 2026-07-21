@@ -2,9 +2,11 @@ import type {
   LastResourcePersistenceAdapter,
   LayoutPersistenceAdapter,
   PersistedTreeRendererStates,
+  PersistedWorkbenchHistory,
   PersistedWorkbenchPanels,
   ResourceRef,
   TreeRendererPersistenceAdapter,
+  WorkbenchHistoryPersistence,
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
 } from "../core";
@@ -15,7 +17,14 @@ export interface WorkbenchStorageLike {
   removeItem?(key: string): void;
 }
 
-export type WorkbenchStoragePersistenceKind = "layout" | "panels" | "tree" | "last-resource";
+export type WorkbenchStoragePersistenceKind = "history" | "layout" | "panels" | "tree" | "last-resource";
+
+interface PersistedWorkbenchLayout {
+  version: 1;
+  layout: WorkbenchLayout;
+}
+
+const WORKBENCH_LAYOUT_VERSION = 1 as const;
 
 interface CreateWorkbenchStoragePersistenceInput {
   namespace: string;
@@ -74,10 +83,29 @@ export const createLocalStorageLayoutPersistence = (
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
   return {
-    getLayout: (scope) =>
-      readJson<WorkbenchLayout>(storage, workbenchStoragePersistenceKey(input.namespace, "layout", scope)),
+    getLayout: (scope) => {
+      const persisted = readJson<PersistedWorkbenchLayout>(
+        storage,
+        workbenchStoragePersistenceKey(input.namespace, "layout", scope),
+      );
+      return persisted?.version === WORKBENCH_LAYOUT_VERSION ? persisted.layout : undefined;
+    },
     setLayout: (layout, scope) => {
-      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", scope), JSON.stringify(layout));
+      const persisted: PersistedWorkbenchLayout = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", scope), JSON.stringify(persisted));
+    },
+  };
+};
+
+export const createLocalStorageHistoryPersistence = (
+  input: CreateWorkbenchStoragePersistenceInput,
+): WorkbenchHistoryPersistence => {
+  const storage = resolveStorage(input.storage);
+  return {
+    getHistory: (scope) =>
+      readJson<PersistedWorkbenchHistory>(storage, workbenchStoragePersistenceKey(input.namespace, "history", scope)),
+    setHistory: (history, scope) => {
+      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "history", scope), JSON.stringify(history));
     },
   };
 };
@@ -86,10 +114,14 @@ export const createLocalStoragePanelsPersistence = (
   input: CreateLocalStoragePanelsPersistenceInput,
 ): WorkbenchPanelsPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "panels", input.scope);
   return {
-    getPanelStates: () => readJson<PersistedWorkbenchPanels>(storage, key),
-    setPanelStates: (state) => {
+    getPanelStates: (scope) =>
+      readJson<PersistedWorkbenchPanels>(
+        storage,
+        workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope),
+      ),
+    setPanelStates: (state, scope) => {
+      const key = workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope);
       storage.setItem(key, JSON.stringify(state));
     },
   };
@@ -139,6 +171,10 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
   const storage = resolveStorage(input.storage);
 
   return {
+    historyPersistence: createLocalStorageHistoryPersistence({
+      namespace: input.namespace,
+      storage,
+    }),
     layoutPersistence: createLocalStorageLayoutPersistence({
       namespace: input.namespace,
       storage,

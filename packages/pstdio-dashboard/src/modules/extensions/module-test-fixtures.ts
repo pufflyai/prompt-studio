@@ -97,6 +97,7 @@ export const metadataWithLabMode = {
       slotId: "workbench.left",
       target: "workbench.main.left",
       title: "Lab",
+      role: "location",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-sidebar.tsx", baseUrl: "file:///extension/extension.ts" },
         runtimeUrl: "/v1/extensions/runtime",
@@ -109,6 +110,7 @@ export const metadataWithLabMode = {
       slotId: "workbench.main",
       target: "workbench.main",
       title: "Lab overview",
+      role: "location",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
         runtimeUrl: "/v1/extensions/runtime",
@@ -147,7 +149,7 @@ export const metadataWithTickets = {
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
+        open: [{ target: "workbench.main.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
       },
     },
   ],
@@ -158,6 +160,7 @@ export const metadataWithTickets = {
       slotId: "workbench.main",
       target: "workbench.main",
       title: "Ticket",
+      role: "location",
       resourceKind: "ticket",
       webview: {
         entry: {
@@ -172,8 +175,10 @@ export const metadataWithTickets = {
     {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "unknown",
+      slotId: "workbench.main.left",
+      target: "workbench.main.left",
       title: "Files",
+      role: "panel-menu",
       resourceKind: "ticket",
       treeRendererId: "pstdio-core-tickets.ticketFiles",
       hostTreeHeader: "default",
@@ -184,6 +189,7 @@ export const metadataWithTickets = {
       slotId: "workbench.main.right",
       target: "workbench.main.right",
       title: "Properties",
+      role: "panel-menu",
       resourceKind: "ticket",
       webview: {
         entry: {

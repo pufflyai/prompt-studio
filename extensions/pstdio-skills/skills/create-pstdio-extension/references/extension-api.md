@@ -207,10 +207,13 @@ Use this for custom webview pages only; native resource screens should use `mode
 
 For an editable inspector/property panel, define a `controlsRenderers` renderer with a `queryCommand` (returns
 `{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `updateValueCommand`, `applyCommand`,
-and `resetCommand`, then place it with a `view` — `{ resourceKind, surface: "panel", target: "workbench.main.right",
-controlsRenderer: "<id>" }` — exactly like `treeRenderer`/`fileRenderer` views. The view companions its
-`resourceKind`; omitting both `updateValueCommand` and `applyCommand` makes it read-only. Command payloads must be
-JSON — commit file metadata or data URLs, never live `File` objects.
+and `resetCommand`, then place it with a `view` — `{ resourceKind, role: "panel-menu", target: "workbench.main.right",
+panelMenuOwner: { level: "panel" }, controlsRenderer: "<id>" }` — exactly like `treeRenderer`/`fileRenderer` views.
+Panel ownership is the default and keeps the menu available while Sub Panel tabs change. To make the menu specific to
+one Sub Panel, use `panelMenuOwner: { level: "sub-panel", view: "<sub-panel-view-id>" }`; the menu then follows that
+tab and retains its own attached or collapsed state. The view companions its `resourceKind`; omitting both
+`updateValueCommand` and `applyCommand` makes it read-only. Command payloads must be JSON — commit file metadata or
+data URLs, never live `File` objects.
 
 ## Harnesses
 

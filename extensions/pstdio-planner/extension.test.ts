@@ -38,7 +38,7 @@ describe("pstdio planner extension contributions", () => {
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+        open: [{ target: "workbench.main.left", view: "ticketFiles", pinned: true }],
       },
     });
   });
@@ -53,11 +53,11 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.views?.ticketFiles).toMatchObject({
       title: { $l10n: "views.ticketFiles.title", default: "Files" },
       resourceKind: "ticket",
-      surface: "panel",
+      role: "panel-menu",
+      target: "workbench.main.left",
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
     });
-    expect(extension.views?.ticketFiles).not.toHaveProperty("target");
     expect(extension.views?.ticketFiles).not.toHaveProperty("webview");
   });
 

@@ -14,7 +14,7 @@ describe("extension-mode-layout exports", () => {
     expect(extensionViewRegion("workbench.main.left")).toBe("main-left-menu");
   });
 
-  test("registers docked extension views as project-scoped Add panel widgets", () => {
+  test("registers explicit Sub Panel views as project-scoped Add panel widgets", () => {
     const workbench = createWorkbenchCore();
     const metadata = {
       ...emptyDashboardExtensionMetadata,
@@ -24,6 +24,7 @@ describe("extension-mode-layout exports", () => {
           extensionId: "pstdio.pstdio-lab",
           slotId: "workbench.main",
           title: "Lab overview",
+          role: "sub-panel" as const,
           target: "workbench.main" as const,
           webview: {
             entry: {
@@ -42,7 +43,8 @@ describe("extension-mode-layout exports", () => {
 
     const widget = workbench.layout.getWidget(extensionViewWidgetId("pstdio-lab.overview"))!;
     expect(widget).toMatchObject({
-      panelAddable: true,
+      role: "sub-panel",
+      closable: true,
       config: { projectId: "project-1" },
     });
 

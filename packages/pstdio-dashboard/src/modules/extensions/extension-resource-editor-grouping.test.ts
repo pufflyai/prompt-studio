@@ -9,15 +9,21 @@ const view = (overrides: Partial<ExtensionViewRecord> & { id: string }): Extensi
     extensionId: "ext",
     slotId: "workbench.main",
     title: overrides.id,
+    role: "location",
     webview: { id: overrides.id, entry: "entry", capabilities: [] },
     ...overrides,
   }) as ExtensionViewRecord;
 
 describe("groupResourceEditorViews", () => {
   test("pairs the main editor with companion side-panels for the same resource kind", () => {
-    const properties = view({ id: "properties", resourceKind: "ticket", target: "workbench.main.right" });
+    const properties = view({
+      id: "properties",
+      resourceKind: "ticket",
+      role: "panel-menu",
+      target: "workbench.main.right",
+    });
     const editor = view({ id: "editor", resourceKind: "ticket" });
-    const modal = view({ id: "modal", resourceKind: "ticket", surface: "modal" });
+    const modal = view({ id: "modal", resourceKind: "ticket", role: "modal" });
 
     const groups = groupResourceEditorViews([properties, editor, modal]);
 
@@ -29,7 +35,7 @@ describe("groupResourceEditorViews", () => {
   });
 
   test("prefers an explicit main target over a no-target companion", () => {
-    const files = view({ id: "files", resourceKind: "ticket", slotId: "unknown" });
+    const files = view({ id: "files", resourceKind: "ticket", role: "sub-panel", slotId: "unknown" });
     const editor = view({ id: "editor", resourceKind: "ticket", target: "workbench.main" });
 
     const groups = groupResourceEditorViews([files, editor]);
@@ -41,7 +47,7 @@ describe("groupResourceEditorViews", () => {
   test("excludes modal and kind-less views, and keeps kinds independent", () => {
     const ticketEditor = view({ id: "ticket-editor", resourceKind: "ticket" });
     const sessionEditor = view({ id: "session-editor", resourceKind: "session" });
-    const onlyModal = view({ id: "create", resourceKind: "note", surface: "modal" });
+    const onlyModal = view({ id: "create", resourceKind: "note", role: "modal" });
     const kindless = view({ id: "overview" });
 
     const groups = groupResourceEditorViews([ticketEditor, sessionEditor, onlyModal, kindless]);

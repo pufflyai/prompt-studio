@@ -45,8 +45,6 @@ const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.createProject,
 ]);
 
-const persistentDashboardChromeWidgetIds = new Set<string>([dashboardWidgetIds.sidebarHeader]);
-
 const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
   const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;
 
@@ -54,15 +52,6 @@ const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) 
     if (projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
       ctx.layout.removeWidgetPlacement(placement.widgetId);
     }
-  }
-};
-
-const clearProjectScopedPlacements = (ctx: WorkbenchModuleContributionContext) => {
-  const placements = Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets);
-
-  for (const placement of placements) {
-    if (persistentDashboardChromeWidgetIds.has(placement.contributionId)) continue;
-    ctx.layout.removeWidgetPlacement(placement.widgetId);
   }
 };
 
@@ -74,7 +63,19 @@ const resetProjectModeOnProjectChange = (
   if (previousProjectId === nextProjectId) return;
 
   ctx.modes.setActiveMode(undefined);
-  clearProjectScopedPlacements(ctx);
+};
+
+const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContributionContext) => {
+  const syncScope = () => {
+    const projectId = getDashboardSelectedProjectId(ctx);
+    const scope = projectId ? `project:${projectId}` : undefined;
+    ctx.history.setPersistenceScope(scope);
+    ctx.panels.setPersistenceScope(scope);
+    ctx.layout.setPersistenceScope(scope);
+  };
+
+  syncScope();
+  return { dispose: subscribeDashboardSelectedProject(ctx, syncScope) };
 };
 
 const clearSelectedProject = (
@@ -100,6 +101,7 @@ const selectPersistedProject = (
   const project = findDashboardProject(projectId);
   if (!project) return undefined;
 
+  resetProjectModeOnProjectChange(ctx, getDashboardSelectedProjectId(ctx), project.id);
   selectDashboardProject({ context: ctx.context.createScope("dashboard.selectedProject") }, project, persistence);
   return project;
 };
@@ -354,6 +356,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectSelectionMode(ctx);
       registerProjects(ctx, selectedProjectContext, input.projectSelectionPersistence);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      const projectWorkbenchScope = registerProjectWorkbenchScope(ctx);
       const persistedProjectSelection = registerPersistedProjectSelection(ctx, input.projectSelectionPersistence);
       const singleProjectSelection = registerSingleProjectSelectionSync(
         ctx,
@@ -373,6 +376,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
 
       return [
         ...(persistedProjectSelection ? [persistedProjectSelection] : []),
+        projectWorkbenchScope,
         singleProjectSelection,
         selectedProjectDeletionSync,
       ];

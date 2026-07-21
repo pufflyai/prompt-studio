@@ -23,6 +23,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       extensionId: "pstdio.lab",
       slotId: "health",
       title: "Health",
+      role: "location",
       target: "workbench.main",
       dataTableRendererId: "lab.health",
     } satisfies ViewRecord;

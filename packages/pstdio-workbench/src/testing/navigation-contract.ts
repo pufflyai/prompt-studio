@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { ResourceRef, WorkbenchCore } from "../core";
-import { getAnchorResource, resolveAnchorRegion } from "../core";
+import { resolveAnchorRegion } from "../core";
 
 // The primary/main surface hosts the "primary" anchor (see surface-map). Reading placements
 // and the active resource through the anchor — not the global activeResourceUri, which any
@@ -12,8 +12,7 @@ export const primaryPlacements = (workbench: WorkbenchCore) =>
 export const unpinnedPrimaryPlacements = (workbench: WorkbenchCore) =>
   primaryPlacements(workbench).filter((placement) => !placement.pinned);
 
-export const activePrimaryResource = (workbench: WorkbenchCore) =>
-  getAnchorResource(workbench.layout.getLayout(), "primary");
+export const activePrimaryResource = (workbench: WorkbenchCore) => workbench.getPrimaryResource();
 
 export interface RouteContractHarness {
   workbench: WorkbenchCore;
@@ -91,28 +90,27 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
         expect(primaryWidgetIds()).toEqual(widgetIds);
       });
     } else {
-      test("root -> detail replacement makes Back unavailable", async () => {
+      test("root -> detail replacement replays the prior Location through Back", async () => {
         await open(contract.root);
         await open(contract.detail);
-        const widgetIds = primaryWidgetIds();
         const history = workbench.history.store.getState();
 
-        expect(history.entries.map((entry) => entry.resource?.uri)).toEqual([contract.detail.uri]);
-        expect(history.cursor).toBe(0);
-        expect(workbench.history.goBack()).toBeUndefined();
-        expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
-        expect(primaryWidgetIds()).toEqual(widgetIds);
+        expect(history.entries.map((entry) => entry.resource?.uri)).toEqual([contract.root.uri, contract.detail.uri]);
+        expect(history.cursor).toBe(1);
+        expect(workbench.history.goBack()?.resource?.uri).toBe(contract.root.uri);
+        await flush();
+        expect(activePrimaryResource(workbench)?.uri).toBe(contract.root.uri);
       });
 
-      test("root -> detail replacement keeps Forward unavailable after Back", async () => {
+      test("root -> detail replacement retains Forward after Back", async () => {
         await open(contract.root);
         await open(contract.detail);
-        const widgetIds = primaryWidgetIds();
 
-        expect(workbench.history.goBack()).toBeUndefined();
-        expect(workbench.history.goForward()).toBeUndefined();
+        expect(workbench.history.goBack()?.resource?.uri).toBe(contract.root.uri);
+        await flush();
+        expect(workbench.history.goForward()?.resource?.uri).toBe(contract.detail.uri);
+        await flush();
         expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
-        expect(primaryWidgetIds()).toEqual(widgetIds);
       });
     }
 

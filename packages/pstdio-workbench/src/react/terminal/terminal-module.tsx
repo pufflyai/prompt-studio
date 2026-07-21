@@ -94,7 +94,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
   id: "workbench.terminal.surface",
   activate(ctx) {
     const disposables = [
-      ctx.layout.registerWidget({
+      ctx.layout.registerSubPanel({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
         region: "secondary",
@@ -102,7 +102,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         reuse: "none",
         closable: true,
         mountStrategy: "keep-mounted",
-        panelAddable: true,
         rendererId: RENDERER_ID,
         openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
         regionSize: TERMINAL_PANEL_SIZE,

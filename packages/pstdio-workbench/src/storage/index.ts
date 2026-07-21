@@ -7,6 +7,7 @@ export type {
   WorkbenchStoragePersistenceKind,
 } from "./local-storage-persistence";
 export {
+  createLocalStorageHistoryPersistence,
   createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,

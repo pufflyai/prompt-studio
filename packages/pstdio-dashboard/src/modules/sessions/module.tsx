@@ -23,7 +23,7 @@ import { createDashboardSessions, findDashboardSession } from "./data/dashboard-
 import { createSessionsSidebarSections } from "./sessions-sidebar-tree";
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget(
+  ctx.layout.registerLocation(
     {
       id: dashboardWidgetIds.session,
       title: "Session",

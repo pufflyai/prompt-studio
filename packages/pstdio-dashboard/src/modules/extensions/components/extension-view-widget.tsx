@@ -54,7 +54,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchWidgetRenderInput }
     />
   );
 
-  if (view.surface !== "modal") return frame;
+  if (view.role !== "modal") return frame;
 
   return (
     <Box h={modalWebviewHeight} minH="0" overflow="hidden" w="full">

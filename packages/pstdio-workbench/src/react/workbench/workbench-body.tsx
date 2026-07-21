@@ -5,7 +5,11 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { WorkbenchRegion } from "../region/region";
-import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
+import {
+  useWorkbenchPanelHeaderVisible,
+  useWorkbenchRegionTabsVisible,
+  WorkbenchRegionTabs,
+} from "../region/region-tabs";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
@@ -34,6 +38,9 @@ interface MainHeaderBarProps {
 const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
+  const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
+
+  if (!hasMainHeader && !hasPanelHeader) return null;
 
   return (
     <Header
@@ -94,7 +101,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const mainContent = (
     <Grid data-workbench-panel="main" gridTemplateRows="auto minmax(0, 1fr)" h="full" minH="0" minW="0" w="full">
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
-      {mainPanelWithMenus}
+      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
+        {mainPanelWithMenus}
+      </Box>
     </Grid>
   );
 

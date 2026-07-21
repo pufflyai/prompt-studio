@@ -219,7 +219,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
     render: (input) => <RenameWorkspaceWidget input={input} />,
   });
 
-  ctx.layout.registerWidget(
+  ctx.layout.registerLocation(
     {
       id: dashboardWidgetIds.workspace,
       title: "Workspace",

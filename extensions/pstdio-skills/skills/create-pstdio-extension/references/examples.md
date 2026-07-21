@@ -281,13 +281,16 @@ export default defineExtension({
   views: {
     noteEditor: {
       title: l10n("views.noteEditor.title", "Note"),
+      role: "location",
       resourceKind: "note",
       fileRenderer: "noteContent",
     },
     noteTree: {
       title: l10n("views.noteTree.title", "Files"),
+      role: "panel-menu",
+      panelMenuOwner: { level: "panel" },
       resourceKind: "note",
-      surface: "panel",
+      target: "workbench.main.left",
       treeRenderer: "noteTree",
       hostTreeHeader: "default",
     },

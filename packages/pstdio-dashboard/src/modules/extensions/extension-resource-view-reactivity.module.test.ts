@@ -156,7 +156,7 @@ describe("createExtensionsModule ticket reactivity", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
 
-      const leftPlacement = workbench.layout.getLayout().regions.sidebar.widgets[0];
+      const leftPlacement = workbench.layout.getLayout().regions["main-left-menu"].widgets[0];
       expect(leftPlacement).toMatchObject({
         contributionId: "pstdio-core-tickets.ticketFiles",
         title: "PS-10 Ticket",
@@ -169,7 +169,7 @@ describe("createExtensionsModule ticket reactivity", () => {
         outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
       });
 
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.title).toBe("PS-10 Write a haiku");
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.title).toBe("PS-10 Write a haiku");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

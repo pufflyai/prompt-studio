@@ -54,6 +54,7 @@ describe("createPreviewResource", () => {
           id: "tickets.editor",
           extensionId: "pstdio.tickets",
           resourceKind: "ticket",
+          role: "location",
           slotId: "workbench.main",
           title: "Ticket",
         },

@@ -52,6 +52,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           slotId: "workbench.main",
           target: "workbench.main",
           title: "Ticket",
+          role: "location",
           resourceKind: "ticket",
           fileRendererId: "lab.ticketContent",
         },

@@ -56,6 +56,7 @@ const metadata = {
       extensionId: "pstdio.extension-lab",
       slotId: "workbench.left",
       title: "Lab sidebar",
+      role: "location",
       webview,
     },
   ],

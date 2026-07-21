@@ -2,6 +2,8 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
+const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
+const apiBase = `http://localhost:${apiPort}`;
 const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 
 interface MenuCase {
@@ -34,6 +36,28 @@ const dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, sid
   await page.mouse.up();
 };
 
+test("PS-170 preserves Forward history when refreshing after Back", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 History" } });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/tickets`);
+
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Navigate back" }).click();
+  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+
+  await page.reload();
+  const forward = page.getByRole("button", { name: "Navigate forward" });
+  await expect(forward).toBeEnabled();
+  await forward.click();
+  await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+});
+
 test.describe("PS-170 Panel-owned menus", () => {
   test.slow();
 
@@ -60,16 +84,6 @@ test.describe("PS-170 Panel-owned menus", () => {
         await expect(menu.getByRole("button", { name: /^Close/ })).toHaveCount(0);
       }
     }
-
-    await expect(page.locator('[data-workbench-panel-menu="main-right"]')).toContainText("Properties");
-    await page.getByRole("button", { name: "Detach panel" }).click();
-    const bubble = page.getByTestId("workbench-session-bubble");
-    await expect(bubble).toBeVisible();
-    await expect(bubble).not.toContainText("Properties");
-    await expect(page.locator('[data-workbench-panel-menu="side-left"]')).not.toBeVisible();
-    await expect(page.locator('[data-workbench-panel-menu="side-right"]')).not.toBeVisible();
-    await bubble.getByRole("button", { name: "Attach panel" }).click();
-    await expect(page.locator('[data-workbench-panel-menu="side-left"]')).toBeVisible();
 
     for (const entry of testedMenus) {
       const menu = menuRegion(page, entry);
@@ -102,6 +116,7 @@ test.describe("PS-170 Panel-owned menus", () => {
         .toBeLessThanOrEqual(1);
       await expect(controls).toHaveCSS("box-shadow", "none");
       await expect(controls.getByText("Reattach", { exact: true })).toHaveCount(0);
+      await expect(controls.getByRole("region", { name: menuName(entry) })).toBeVisible();
 
       const attach = controls.getByRole("button", { name: `Attach ${menuName(entry)}` });
       await expect(attach).toHaveCount(1);

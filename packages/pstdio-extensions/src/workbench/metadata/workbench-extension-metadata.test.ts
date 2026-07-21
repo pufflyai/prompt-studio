@@ -73,12 +73,18 @@ describe("createWorkbenchExtensionMetadata", () => {
           views: {
             files: {
               title: "Files",
+              role: "location",
               target: "workbench.main.left",
               treeRenderer: "files",
               hostTreeHeader: "default",
               hostTreeFooter: "none",
             },
-            ticketPanel: { title: "Ticket", resourceKind: "ticket", webview: { entry: webviewAsset("./ticket.tsx") } },
+            ticketPanel: {
+              title: "Ticket",
+              role: "location",
+              resourceKind: "ticket",
+              webview: { entry: webviewAsset("./ticket.tsx") },
+            },
           },
         },
       },
@@ -230,6 +236,61 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 });
 
+describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
+  test("resolves a Sub Panel view reference to its contribution id", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          views: {
+            notes: {
+              title: "Notes",
+              role: "sub-panel",
+              target: "workbench.main",
+              webview: { entry: webviewAsset("./notes.tsx") },
+            },
+            notesTools: {
+              title: "Notes tools",
+              role: "panel-menu",
+              target: "workbench.main.right",
+              panelMenuOwner: { level: "sub-panel", view: "notes" },
+              webview: { entry: webviewAsset("./notes-tools.tsx") },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({
+      runtime,
+      resolveWebview: ({ id, webview }) => ({
+        ...webview,
+        runtimeUrl: `/runtime/${id}.html`,
+        moduleUrl: `/modules/${id}.js`,
+        styles: [],
+      }),
+    });
+
+    expect(metadata.views).toContainEqual(
+      expect.objectContaining({
+        id: "lab.notesTools",
+        panelMenuOwner: { level: "sub-panel", contributionId: "lab.notes" },
+      }),
+    );
+  });
+});
+
 describe("createWorkbenchExtensionMetadata data table renderers", () => {
   test("maps table contributions and table-backed views", () => {
     const runtime = normalizeExtensionSources([
@@ -252,7 +313,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             health: { title: "Health", queryCommand: "queryTable", columns: [{ id: "score", label: "Score" }] },
           },
           views: {
-            health: { title: "Health", target: "workbench.main", dataTableRenderer: "health" },
+            health: { title: "Health", role: "location", target: "workbench.main", dataTableRenderer: "health" },
           },
         },
       },

@@ -1,4 +1,5 @@
 import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { registerWorkbenchExtensionViewWidget } from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -145,15 +146,20 @@ const registerExtensionViews = (
 
   for (const view of metadata.views) {
     if (!view.webview) continue;
-    const isModal = view.surface === "modal";
     disposables.push(
-      ctx.layout.registerWidget({
-        id: extensionViewWidgetId(view.id),
-        title: resolveLocalizableString(view.title, view.extensionId),
-        region: isModal ? "overlay" : extensionViewRegionForPlacement(view.target),
-        rendererId: dashboardWidgetIds.extensionView,
-        config: { ...(isModal ? modalOverlayConfig : {}), projectId },
-        ...(isModal ? { closable: true } : { panelAddable: true }),
+      registerWorkbenchExtensionViewWidget({
+        workbench: ctx,
+        role: view.role,
+        contribution: {
+          id: extensionViewWidgetId(view.id),
+          title: resolveLocalizableString(view.title, view.extensionId),
+          region: extensionViewRegionForPlacement(view.target),
+          rendererId: dashboardWidgetIds.extensionView,
+          config: { ...(view.role === "modal" ? modalOverlayConfig : {}), projectId },
+          resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+          eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
+          panelMenuOwner: view.panelMenuOwner,
+        },
       }),
     );
   }

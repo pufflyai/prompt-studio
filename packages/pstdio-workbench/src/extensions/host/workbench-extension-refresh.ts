@@ -54,7 +54,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
   const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
 
   for (const view of metadata.views) {
-    if (!view.webview || view.surface === "modal") continue;
+    if (!view.webview || view.role === "modal") continue;
     const placement = findOpenPlacement(workbench, view.id);
     if (!placement) continue;
     workbench.layout.openWidget(view.id, {

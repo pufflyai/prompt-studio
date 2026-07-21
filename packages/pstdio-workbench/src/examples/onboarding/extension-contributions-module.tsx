@@ -83,6 +83,7 @@ const metadata = {
       id: TREE_VIEW_ID,
       extensionId: EXTENSION_ID,
       slotId: "workbench.main.left",
+      role: "location",
       target: "workbench.main.left",
       title: "Lab tree",
       treeRendererId: TREE_ID,

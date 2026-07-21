@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createDefaultWorkbenchLayout, type PersistedTreeRendererStates, type PersistedWorkbenchPanels } from "../core";
+import {
+  createDefaultWorkbenchLayout,
+  type PersistedTreeRendererStates,
+  type PersistedWorkbenchHistory,
+  type PersistedWorkbenchPanels,
+} from "../core";
 import {
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,
@@ -28,7 +33,7 @@ describe("local storage workbench persistence", () => {
     persistence.setLayout(layout, "project:one");
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify(layout),
+      JSON.stringify({ version: 1, layout }),
     );
     expect(persistence.getLayout("project:one")).toEqual(layout);
     expect(persistence.getLayout("project:two")).toBeUndefined();
@@ -93,14 +98,29 @@ describe("local storage workbench persistence", () => {
       },
     };
     const resource = { kind: "workspace", uri: "workspace:one", label: "Workspace One" };
+    const history: PersistedWorkbenchHistory = {
+      version: 1,
+      cursor: 0,
+      entries: [
+        {
+          entryId: "entry-one",
+          recordedAt: 1,
+          kind: "widget",
+          location: { key: "location:one", contributionId: "location.one" },
+          selectedSubPanels: {},
+        },
+      ],
+      recentlyClosed: [],
+    };
 
     persistence.layoutPersistence.setLayout(layout, "project:one");
     persistence.panelsPersistence.setPanelStates(panels);
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
+    persistence.historyPersistence.setHistory(history, "project:one");
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify(layout),
+      JSON.stringify({ version: 1, layout }),
     );
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBe(
       JSON.stringify(panels),
@@ -113,11 +133,23 @@ describe("local storage workbench persistence", () => {
     expect(persistence.panelsPersistence.getPanelStates()).toEqual(panels);
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
+    expect(persistence.historyPersistence.getHistory("project:one")).toEqual(history);
+    expect(persistence.historyPersistence.getHistory("project:two")).toBeUndefined();
   });
 
   test("ignores malformed persisted JSON", () => {
     const storage = createStore();
     storage.setItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"), "{");
+
+    const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
+
+    expect(persistence.getLayout("project:one")).toBeUndefined();
+  });
+
+  test("invalidates layout state from an incompatible schema version", () => {
+    const storage = createStore();
+    const key = workbenchStoragePersistenceKey("demo", "layout", "project:one");
+    storage.setItem(key, JSON.stringify({ version: 0, layout: createDefaultWorkbenchLayout() }));
 
     const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
 

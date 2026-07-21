@@ -68,6 +68,15 @@ const isExtensionsReadyForSelectedProject = (ctx: Parameters<WorkbenchModuleCont
   return Boolean(projectId && getDashboardExtensionsReadyProjectId(ctx) === projectId);
 };
 
+const hasHistoryForSelectedProject = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  return Boolean(
+    projectId &&
+      ctx.history.getPersistenceScope() === `project:${projectId}` &&
+      ctx.history.store.getState().entries.length > 0,
+  );
+};
+
 const isExtensionRestoreResource = (resource: ResourceRef) =>
   resource.kind === dashboardExtensionViewKind || resource.kind === dashboardExtensionRouteKind;
 
@@ -75,10 +84,20 @@ const shouldWaitForExtensions = (ctx: Parameters<WorkbenchModuleContribution["ac
   !isExtensionsReadyForSelectedProject(ctx) &&
   (isExtensionRestoreResource(resource) || !canOpenResource(ctx, resource));
 
+const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  if (!hasHistoryForSelectedProject(ctx)) return "empty" as const;
+  if (!isExtensionsReadyForSelectedProject(ctx)) return "pending" as const;
+  return ctx.history.restore() ? ("restored" as const) : ("empty" as const);
+};
+
 const openSelectedProjectLanding = async (
   ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
   guard: LandingRunGuard,
 ) => {
+  const historyRestore = restoreSelectedProjectHistory(ctx);
+  if (historyRestore === "pending") return "pending";
+  if (historyRestore === "restored") return { status: "opened" } as const;
+
   const lastResource = ctx.lastResource.get();
 
   if (lastResource) {
@@ -123,17 +142,20 @@ const openSelectedProjectLandingWhenReady = (
 
   open();
   const lastResource = ctx.lastResource.get();
-  if (!lastResource) return undefined;
+  const shouldWaitForHistory = hasHistoryForSelectedProject(ctx) && !isExtensionsReadyForSelectedProject(ctx);
+  if (!lastResource && !shouldWaitForHistory) return undefined;
 
-  const shouldWaitForSyncedResource = isWaitingForSyncedResource(lastResource);
-  const shouldWaitForExtensionResource = shouldWaitForExtensions(ctx, lastResource);
+  const shouldWaitForSyncedResource = lastResource ? isWaitingForSyncedResource(lastResource) : false;
+  const shouldWaitForExtensionResource = lastResource ? shouldWaitForExtensions(ctx, lastResource) : false;
 
-  if (!shouldWaitForSyncedResource && !shouldWaitForExtensionResource) {
+  if (!shouldWaitForSyncedResource && !shouldWaitForExtensionResource && !shouldWaitForHistory) {
     return undefined;
   }
 
   if (shouldWaitForSyncedResource) unsubscribeDashboardData = subscribeDashboardData(open);
-  if (shouldWaitForExtensionResource) unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
+  if (shouldWaitForExtensionResource || shouldWaitForHistory) {
+    unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
+  }
 
   return { dispose };
 };

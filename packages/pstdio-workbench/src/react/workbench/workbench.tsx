@@ -8,6 +8,7 @@ import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/wo
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataRenderer } from "../renderers/data/install-data-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
@@ -168,6 +169,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const secondaryPanelCollapsible = useWorkbenchStore(workbench.layout.store, () =>
     resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
+  const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
+  const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
 
   const {
     hasActivityBarWidgets,
@@ -180,10 +183,10 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSecondaryWidgets,
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
-  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets;
+  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader;
   const showSidebar = hasSidebarWidgets || hasSidebarHeaderWidgets;
   const sidebarCollapsible = resolvePanelCollapsible(workbench, "sidebar-header", "sidebar");
-  const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets;
+  const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
   const sidebarSize = resolveSidebarSize(workbench);
   const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the

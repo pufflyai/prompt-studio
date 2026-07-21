@@ -205,8 +205,9 @@ describe("createHistoryController", () => {
     expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([ticket.uri]);
   });
 
-  test("Back and Forward activate existing resource tabs without changing the tab set", async () => {
+  test("Back and Forward replay existing resource openers without changing the tab set", async () => {
     const workbench = createWorkbenchCore();
+    const opened: string[] = [];
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
     workbench.layout.registerWidget({
       id: "ticket-editor",
@@ -219,12 +220,14 @@ describe("createHistoryController", () => {
     workbench.resources.registerOpener({
       id: "ticket-editor-opener",
       canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: (resource, input) =>
-        workbench.layout.openWidget("ticket-editor", {
+      open: (resource, input) => {
+        opened.push(resource.uri);
+        return workbench.layout.openWidget("ticket-editor", {
           resource,
           title: resource.label,
           replaceActive: input.replaceActive,
-        }),
+        });
+      },
     });
 
     await workbench.resources.openResource({
@@ -250,6 +253,12 @@ describe("createHistoryController", () => {
     await Promise.resolve();
     expect(workbench.layout.getLayout().activeResourceUri).toBe(`${TICKET_KIND}:PS-2`);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId)).toEqual(widgetIds);
+    expect(opened).toEqual([
+      `${TICKET_KIND}:PS-1`,
+      `${TICKET_KIND}:PS-2`,
+      `${TICKET_KIND}:PS-1`,
+      `${TICKET_KIND}:PS-2`,
+    ]);
   });
 });
 
@@ -499,5 +508,322 @@ describe("createHistoryController widget history", () => {
     expect(snapshot.entries).toEqual([]);
     expect(snapshot.cursor).toBe(-1);
     expect(snapshot.recentlyClosed).toEqual([]);
+  });
+});
+
+const registerSnapshotFixtures = (workbench: ReturnType<typeof createWorkbenchCore>) => {
+  workbench.resources.registerKind({ kind: "snapshot.location", label: "Location" });
+  workbench.layout.registerLocation({
+    id: "snapshot.location",
+    title: "Location",
+    region: "main",
+    rendererId: "noop",
+  });
+  for (const region of ["main", "secondary", "side"] as const) {
+    for (const name of ["a", "b"]) {
+      workbench.layout.registerSubPanel({
+        id: `snapshot.${region}.${name}`,
+        title: `${region} ${name}`,
+        region,
+        singleton: true,
+        rendererId: "noop",
+      });
+    }
+  }
+};
+
+describe("createHistoryController Sub Panel snapshots", () => {
+  test("records and restores tab selection in every Panel", () => {
+    const workbench = createWorkbenchCore();
+    registerSnapshotFixtures(workbench);
+    workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    for (const region of ["main", "secondary", "side"] as const) {
+      workbench.layout.openWidget(`snapshot.${region}.a`);
+      workbench.layout.openWidget(`snapshot.${region}.b`);
+    }
+
+    const entry = workbench.history.goBack();
+    expect(entry?.selectedSubPanels.side?.contributionId).toBe("snapshot.side.a");
+    expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe("snapshot.side.a");
+    expect(workbench.layout.getLayout().regions.secondary.activeWidgetId).toBe("snapshot.secondary.b");
+  });
+
+  test("keeps Sub Panel selections subordinate to their Location", () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "snapshot.location", label: "Location" });
+    workbench.layout.registerLocation({
+      id: "snapshot.location",
+      title: "Location",
+      region: "main",
+      singleton: false,
+      rendererId: "noop",
+    });
+    for (const region of ["main", "secondary", "side"] as const) {
+      workbench.layout.registerSubPanel({
+        id: `snapshot.${region}.owned`,
+        title: `${region} owned`,
+        region,
+        singleton: true,
+        rendererId: "noop",
+        eligibleLocations: { resourceIds: ["one"] },
+      });
+    }
+
+    const firstLocation = workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", id: "one", label: "One" },
+    });
+    for (const region of ["main", "secondary", "side"] as const) {
+      workbench.layout.openWidget(`snapshot.${region}.owned`);
+    }
+    const secondLocation = workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:two", id: "two", label: "Two" },
+    });
+
+    const current = workbench.history.store.getState();
+    expect(current.entries[current.cursor]?.location.resource?.id).toBe("two");
+    expect(current.entries[current.cursor]?.selectedSubPanels).toEqual({});
+
+    expect(workbench.history.goBack()).toMatchObject({
+      location: { resource: { id: "one" } },
+      selectedSubPanels: {
+        main: { contributionId: "snapshot.main.owned" },
+        secondary: { contributionId: "snapshot.secondary.owned" },
+        side: { contributionId: "snapshot.side.owned" },
+      },
+    });
+    expect(workbench.layout.getLayout()).toMatchObject({
+      activeLocationWidgetId: firstLocation.widgetId,
+      regions: {
+        main: { activeWidgetId: "snapshot.main.owned" },
+        secondary: { activeWidgetId: "snapshot.secondary.owned" },
+        side: { activeWidgetId: "snapshot.side.owned" },
+      },
+    });
+
+    expect(workbench.history.goForward()).toMatchObject({ location: { resource: { id: "two" } } });
+    expect(workbench.layout.getLayout()).toMatchObject({
+      activeLocationWidgetId: secondLocation.widgetId,
+      regions: {
+        main: { activeWidgetId: secondLocation.widgetId },
+        secondary: { activeWidgetId: undefined },
+        side: { activeWidgetId: undefined },
+      },
+    });
+
+    workbench.layout.activateWidget(firstLocation.widgetId);
+    expect(workbench.layout.getLayout()).toMatchObject({
+      activeLocationWidgetId: firstLocation.widgetId,
+      regions: {
+        main: { activeWidgetId: "snapshot.main.owned" },
+        secondary: { activeWidgetId: "snapshot.secondary.owned" },
+        side: { activeWidgetId: "snapshot.side.owned" },
+      },
+    });
+  });
+});
+
+describe("createHistoryController persisted Sub Panel snapshots", () => {
+  test("persists entries and cursor per project scope", () => {
+    const states = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const persistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => states.get(scope ?? "global"),
+      setHistory: (state, scope) => states.set(scope ?? "global", state),
+    };
+    const first = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.layout.openWidget("snapshot.main.a");
+    first.layout.openWidget("snapshot.main.b");
+    first.history.goBack();
+    first.history.flush();
+
+    const second = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(second);
+    second.history.setPersistenceScope("project-one");
+
+    expect(second.history.store.getState().entries).toHaveLength(3);
+    expect(second.history.store.getState().cursor).toBe(1);
+    expect(second.history.goForward()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.b");
+  });
+
+  test("restores the cursor entry and Forward entries after refreshing from the middle", () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const layouts = new Map<string, import("../../registries/layout/layout-model").WorkbenchLayout>();
+    const historyPersistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => histories.get(scope ?? "global"),
+      setHistory: (state, scope) => histories.set(scope ?? "global", state),
+    };
+    const layoutPersistence: import("../../registries/layout/layout-model").LayoutPersistenceAdapter = {
+      getLayout: (scope) => layouts.get(scope ?? "global"),
+      setLayout: (layout, scope) => layouts.set(scope ?? "global", layout),
+    };
+    const first = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(first);
+    first.layout.setPersistenceScope("project-one");
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.layout.openWidget("snapshot.main.a");
+    first.layout.openWidget("snapshot.main.b");
+    first.history.goBack();
+    first.history.flush();
+
+    const second = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(second);
+    second.layout.setPersistenceScope("project-one");
+    second.history.setPersistenceScope("project-one");
+    second.history.restore();
+
+    expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.a");
+    expect(second.history.goForward()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.b");
+    expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
+  });
+
+  test("does not truncate persisted Forward entries while contributions finish hydrating", () => {
+    const states = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const persistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => states.get(scope ?? "global"),
+      setHistory: (state, scope) => states.set(scope ?? "global", state),
+    };
+    const first = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.layout.openWidget("snapshot.main.a");
+    first.layout.openWidget("snapshot.main.b");
+    first.history.goBack();
+    first.history.flush();
+
+    const second = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(second);
+    second.history.setPersistenceScope("project-one");
+
+    second.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    second.layout.openWidget("snapshot.main.b");
+    second.history.restore();
+
+    expect(second.history.store.getState().cursor).toBe(1);
+    expect(second.history.goForward()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.b");
+  });
+
+  test("keeps each project's timeline and workspace isolated", () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const layouts = new Map<string, import("../../registries/layout/layout-model").WorkbenchLayout>();
+    const workbench = createWorkbenchCore({
+      historyPersistence: {
+        getHistory: (scope) => histories.get(scope ?? "global"),
+        setHistory: (state, scope) => histories.set(scope ?? "global", state),
+      },
+      layoutPersistence: {
+        getLayout: (scope) => layouts.get(scope ?? "global"),
+        setLayout: (layout, scope) => layouts.set(scope ?? "global", layout),
+      },
+    });
+    registerSnapshotFixtures(workbench);
+
+    workbench.layout.setPersistenceScope("project-one");
+    workbench.history.setPersistenceScope("project-one");
+    workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    workbench.layout.openWidget("snapshot.main.a");
+
+    workbench.layout.setPersistenceScope("project-two");
+    workbench.history.setPersistenceScope("project-two");
+    workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:two", label: "Two" },
+    });
+    workbench.layout.openWidget("snapshot.main.b");
+
+    workbench.layout.setPersistenceScope("project-one");
+    workbench.history.setPersistenceScope("project-one");
+    workbench.history.restore();
+    expect(workbench.history.store.getState().entries.at(-1)?.location.resource?.uri).toBe("snapshot.location:one");
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.a");
+
+    workbench.layout.setPersistenceScope("project-two");
+    workbench.history.setPersistenceScope("project-two");
+    workbench.history.restore();
+    expect(workbench.history.store.getState().entries.at(-1)?.location.resource?.uri).toBe("snapshot.location:two");
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
+  });
+
+  test("persists recently closed Sub Panels and reopens them after refresh", () => {
+    const states = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const persistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => states.get(scope ?? "global"),
+      setHistory: (state, scope) => states.set(scope ?? "global", state),
+    };
+    const first = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    const subPanel = first.layout.openWidget("snapshot.side.a");
+    first.layout.closeWidget(subPanel.widgetId);
+    first.history.flush();
+
+    const second = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(second);
+    second.history.setPersistenceScope("project-one");
+    second.history.restore();
+
+    expect(second.history.recentlyClosed()).toHaveLength(1);
+    second.history.reopenLastClosed();
+    expect(second.layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({ contributionId: "snapshot.side.a" }),
+    ]);
+  });
+
+  test("reconciles unavailable Locations and Sub Panels after contributions register", () => {
+    const persistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: () => ({
+        version: 1,
+        cursor: 1,
+        entries: [
+          {
+            entryId: "missing-location",
+            recordedAt: 1,
+            kind: "widget",
+            location: { key: "missing", contributionId: "snapshot.missing" },
+            contributionId: "snapshot.missing",
+            selectedSubPanels: {},
+          },
+          {
+            entryId: "valid-location",
+            recordedAt: 2,
+            kind: "widget",
+            location: { key: "valid", contributionId: "snapshot.location" },
+            contributionId: "snapshot.location",
+            selectedSubPanels: {
+              main: { contributionId: "snapshot.missing-sub-panel" },
+            },
+          },
+        ],
+        recentlyClosed: [],
+      }),
+      setHistory: () => undefined,
+    };
+    const workbench = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(workbench);
+    workbench.history.setPersistenceScope("project-one");
+
+    workbench.history.restore();
+
+    expect(workbench.history.store.getState().entries).toEqual([
+      expect.objectContaining({ entryId: "valid-location", selectedSubPanels: {} }),
+    ]);
+    expect(workbench.history.store.getState().cursor).toBe(0);
   });
 });

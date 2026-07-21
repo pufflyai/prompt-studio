@@ -14,7 +14,7 @@ import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
 describe("createExtensionsModule resource views", () => {
-  test("does not recreate the tickets board through Back after it was replaced", async () => {
+  test("restores the Tickets Location through Back after opening a ticket", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
@@ -53,36 +53,24 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
-      const widgetIds = workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId);
-
       const back = workbench.history.goBack();
       await flushMicrotasks();
 
-      expect(back).toBeUndefined();
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
-      );
-      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
-      ]);
+      expect(back?.resource?.uri).toBe(ticketsBoard?.uri);
+      expect(workbench.getPrimaryResource()?.uri).toBe(ticketsBoard?.uri);
 
       const forward = workbench.history.goForward();
       await flushMicrotasks();
 
-      expect(forward).toBeUndefined();
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
-      );
-      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.widgetId)).toEqual(widgetIds);
+      expect(forward?.resource?.uri).toBe(ticket.uri);
+      expect(workbench.getPrimaryResource()?.uri).toBe(ticket.uri);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
 
-  test("opens ticket detail in its resource mode with companions in sidebar regions", async () => {
+  test("opens ticket detail with its attached Panel Menus", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const executeCommand = mock(async () => response);
@@ -119,20 +107,27 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.renderers.getTreeRenderer("pstdio-core-tickets.ticketFiles")).toMatchObject({
         title: "Files",
       });
-      expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
-        "pstdio-core-tickets.ticketFiles",
-      ]);
-      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
+      expect(
+        workbench.layout.getLayout().regions["main-left-menu"].widgets.map((widget) => widget.contributionId),
+      ).toEqual(["pstdio-core-tickets.ticketFiles"]);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
       expect(
         workbench.layout.getLayout().regions["main-right-menu"].widgets.map((widget) => widget.contributionId),
       ).toEqual(["dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties"]);
 
       await workbench.resources.openResource(ticketB, { replaceActive: true });
 
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.resource?.id).toBe("PS-11");
-      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().regions["main-right-menu"].widgets[0]?.resource?.id).toBe("PS-11");
+      const leftMenu = workbench.layout.getLayout().regions["main-left-menu"];
+      const rightMenu = workbench.layout.getLayout().regions["main-right-menu"];
+
+      expect(leftMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-10", "PS-11"]);
+      expect(leftMenu.widgets.find((widget) => widget.widgetId === leftMenu.activeWidgetId)?.resource?.id).toBe(
+        "PS-11",
+      );
+      expect(rightMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-10", "PS-11"]);
+      expect(rightMenu.widgets.find((widget) => widget.widgetId === rightMenu.activeWidgetId)?.resource?.id).toBe(
+        "PS-11",
+      );
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -241,8 +236,8 @@ describe("createExtensionsModule resource views", () => {
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toHaveLength(1);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });

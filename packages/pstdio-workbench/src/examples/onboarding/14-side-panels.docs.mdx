@@ -5,34 +5,122 @@ export const parameters = {
   layout: "padded",
 };
 
-<Meta of={OnboardingStories} name="14. Side panels" parameters={{ layout: "padded" }} />
+<Meta of={OnboardingStories} name="14. Locations, Panels, and Sub Panels" parameters={{ layout: "padded" }} />
 
-# 14. Keep Side Panels In Sync
+# 14. Locations, Panels, Sub Panels, and Panel Menus
 
-Side panels should follow the selected main resource, not whichever panel was
-clicked most recently. Use `getPrimaryResource()` or
-`onDidChangePrimaryResource(...)` when a projection panel needs to mirror the
-main work region.
+The Workbench uses one domain-neutral hierarchy. A navigated Location is the active Panel; Main, Secondary, and Side
+are the surfaces through which that Panel presents its workspace:
 
-<Canvas of={OnboardingStories.SidePanels} sourceState="shown" />
+```text
+Breadcrumb
+└── Location Panel
+    ├── fixed Location content
+    ├── Main / Secondary / Side surfaces
+    │   └── tabbed Sub Panels
+    └── left/right Panel Menus
+        ├── owned by the Location Panel
+        └── or owned by one Sub Panel
+```
 
-This story opens a resource picker in `left`, a resource-dependent context panel
-in `main-left`, resource detail tabs in `main`, and an inspector in
-`main-right`. Pick resources from the left panel or from the buttons in the
-detail view: the main resource changes, the context and inspector panels
-re-render against that primary resource, and distinct resources open as multiple
-main tabs instead of replacing each other.
+A **Location Panel** is the navigated subject represented by the breadcrumb. It is not a tab. A **Sub Panel** is
+removable tabbed content inside that Location Panel. A **Panel Menu** is supporting content attached to either the
+Location Panel or one specific Sub Panel; it never becomes a tab or an Add-panel entry.
 
-The key pieces are:
+## Header and ownership rules
 
-- Register the opened resource kind as the primary surface.
-- Put resource selection in `left`, and projection panels in `main-left` /
-  `main-right`.
-- Use `singleton: false` for the main detail widget and omit `replaceActive`
-  when normal resource selection should open another tab.
-- In React projection renderers, read the primary anchor from layout state with
-  `getAnchorResource(state.layout, "primary")`.
+The Panel Header is shown when the Panel has at least one open Sub Panel, one eligible closed Sub Panel, one attached
+or collapsed Panel Menu, or a header action. Tabs render only for open Sub Panels. `Add panel` renders only when an
+eligible closed Sub Panel exists. Therefore a Location with no subordinate UI has no header, while a Panel containing
+only a Panel Menu retains its header without emitting an empty ARIA tab list.
 
-That keeps side panels stable even if focus moves into a panel, because the
-primary resource is scoped to the main anchor rather than the global active
-widget.
+Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. A Panel-owned menu
+remains available while tabs change. A Sub-Panel-owned menu appears only while its owner tab is selected. Each menu
+placement retains its own attached or collapsed state. Clicking a collapsed menu icon opens the menu's live content in
+a portal-positioned dropdown; the dropdown also offers the action that attaches it again.
+
+Each Location owns its open Sub Panel placements and selection. Switching Locations does not close those tabs:
+returning by a Location action, Back, or Forward restores that Location's previous open tabs and active selection.
+Contributions that are not eligible for the active Location remain out of its tabs, Add-panel menu, and menu layout.
+Every Sub Panel offered by `Add panel` is removable and becomes eligible again after closing.
+
+<Canvas of={OnboardingStories.LocationContentOnly} />
+
+<Canvas of={OnboardingStories.EligibleSubPanels} />
+
+<Canvas of={OnboardingStories.OpenSubPanels} />
+
+<Canvas of={OnboardingStories.PanelMenuOnly} />
+
+<Canvas of={OnboardingStories.CollapsedPanelMenu} />
+
+<Canvas of={OnboardingStories.SubPanelsWithPanelMenus} />
+
+<Canvas of={OnboardingStories.AllThreePanels} />
+
+<Canvas of={OnboardingStories.LocationSwitch} />
+
+## Navigation and persistence
+
+Selecting a Sub Panel in Main, Secondary, or Side records one navigation entry. The entry snapshots the Location and
+the selected Sub Panel in every Panel. Back and Forward replay the complete snapshot without adding another entry;
+navigating after Back truncates Forward entries. Closing a Sub Panel removes its selection from older snapshots so
+history cannot recreate it implicitly.
+
+The project-scoped persistence record contains the ordered entries, cursor, recently closed entries, and schema
+version. Layout persistence retains open Sub Panel placements, active Location, region visibility and sizes, and Panel
+Menu placement, collapsed state, and size. On reload, the host waits for native and extension contributions, removes
+missing Locations, clears unavailable Sub Panel selections, compacts adjacent equivalent entries, clamps the cursor,
+and restores the cursor entry atomically. Forward entries remain available when reload occurs from the middle of the
+timeline.
+
+<Canvas of={OnboardingStories.CrossPanelHistory} />
+
+<Canvas of={OnboardingStories.RefreshAtTimelineEnd} />
+
+<Canvas of={OnboardingStories.RefreshAfterBack} />
+
+<Canvas of={OnboardingStories.ProjectHistoryIsolation} />
+
+## Extension roles
+
+Extension views declare their relationship explicitly:
+
+```ts
+views: {
+  overview: {
+    title: "Overview",
+    role: "location",
+    webview: { entry: packageAsset("./overview.tsx", import.meta.url) },
+  },
+  report: {
+    title: "Report",
+    role: "sub-panel",
+    target: "workbench.secondary",
+    webview: { entry: packageAsset("./report.tsx", import.meta.url) },
+  },
+  inspector: {
+    title: "Inspector",
+    role: "panel-menu",
+    target: "workbench.main.right",
+    panelMenuOwner: { level: "panel" },
+    controlsRenderer: "inspectorControls",
+  },
+  reportTools: {
+    title: "Report tools",
+    role: "panel-menu",
+    target: "workbench.secondary.right",
+    panelMenuOwner: { level: "sub-panel", view: "report" },
+    controlsRenderer: "reportToolsControls",
+  },
+  createItem: {
+    title: "New item",
+    role: "modal",
+    webview: { entry: packageAsset("./create-item.tsx", import.meta.url) },
+  },
+}
+```
+
+Product concepts stay outside `@pstdio/workbench`: a host decides which routes are Locations, which resource-owned
+views are Sub Panels, and which attached tools are Panel Menus. For example, a dashboard can bind a Properties controls
+renderer to a ticket Location as an anonymous generic Panel Menu without adding ticket or planner logic to Workbench.

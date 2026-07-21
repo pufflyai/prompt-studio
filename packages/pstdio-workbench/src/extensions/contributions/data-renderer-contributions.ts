@@ -401,11 +401,10 @@ export const registerWorkbenchExtensionDataRenderers = (
     );
 
     disposables.push(
-      context.workbench.layout.registerWidget({
+      context.workbench.layout.registerLocation({
         id: record.id,
         title: localize(record.title, record.id),
         region: "main",
-        panelAddable: true,
         rendererId: record.id,
         singleton: true,
         resourceKinds: record.resourceKind ? [record.resourceKind] : undefined,

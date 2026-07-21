@@ -91,7 +91,7 @@ const viewItems = (props: ContributionExplorerProps) => {
     label: text(view.title, view.id),
     description: view.id,
     onActivate: () => {
-      const isModal = view.surface === "modal";
+      const isModal = view.role === "modal";
       workbench.layout.openWidget(view.id, {
         closable: isModal ? true : undefined,
         pinned: !isModal,

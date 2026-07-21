@@ -1,11 +1,17 @@
 import type { ResourceRef } from "../resources/resource-registry";
-import type { RegisteredWidgetContribution, WorkbenchLayout, WorkbenchPanelRegion } from "./layout-types";
+import type {
+  RegisteredWidgetContribution,
+  WorkbenchLayout,
+  WorkbenchPanelRegion,
+  WorkbenchWidgetPlacement,
+} from "./layout-types";
 
 interface PanelWidgetEligibilityInput {
   widget: RegisteredWidgetContribution;
   layout: WorkbenchLayout;
   region: WorkbenchPanelRegion;
   resource?: ResourceRef;
+  modeId?: string;
 }
 
 interface ListEligiblePanelWidgetsInput {
@@ -13,6 +19,7 @@ interface ListEligiblePanelWidgetsInput {
   layout: WorkbenchLayout;
   region: WorkbenchPanelRegion;
   resource?: ResourceRef;
+  modeId?: string;
 }
 
 const supportsPanelRegion = (widget: RegisteredWidgetContribution, region: WorkbenchPanelRegion) =>
@@ -24,17 +31,70 @@ const supportsResource = (widget: RegisteredWidgetContribution, resource: Resour
   return true;
 };
 
-const hasOpenSingleton = (widget: RegisteredWidgetContribution, layout: WorkbenchLayout) =>
+export const getActiveWorkbenchSubPanel = (
+  layout: WorkbenchLayout,
+  region: WorkbenchPanelRegion,
+  resource: ResourceRef | undefined,
+) => {
+  const panel = layout.regions[region];
+  return panel.widgets.find(
+    (placement) =>
+      placement.widgetId === panel.activeWidgetId &&
+      placement.role === "sub-panel" &&
+      (!placement.ownerResourceUri || placement.ownerResourceUri === resource?.uri),
+  );
+};
+
+export const matchesWorkbenchLocationEligibility = (
+  widget: RegisteredWidgetContribution,
+  resource: ResourceRef | undefined,
+  modeId: string | undefined,
+  placement?: WorkbenchWidgetPlacement,
+) => {
+  const eligibleLocations = widget.eligibleLocations;
+  if (eligibleLocations?.modeIds?.length && (!modeId || !eligibleLocations.modeIds.includes(modeId))) return false;
+  if (
+    eligibleLocations?.resourceKinds?.length &&
+    (!resource || !eligibleLocations.resourceKinds.includes(resource.kind))
+  ) {
+    return false;
+  }
+  if (
+    eligibleLocations?.resourceIds?.length &&
+    (!resource?.id || !eligibleLocations.resourceIds.includes(resource.id))
+  ) {
+    return false;
+  }
+  if (placement?.ownerResourceUri && placement.ownerResourceUri !== resource?.uri) return false;
+  return true;
+};
+
+export const matchesWorkbenchPanelMenuOwner = (
+  widget: RegisteredWidgetContribution,
+  activeSubPanel: WorkbenchWidgetPlacement | undefined,
+) => {
+  const owner = widget.panelMenuOwner ?? { level: "panel" };
+  return owner.level === "panel" || activeSubPanel?.contributionId === owner.contributionId;
+};
+
+const hasOpenSingleton = (
+  widget: RegisteredWidgetContribution,
+  layout: WorkbenchLayout,
+  resource: ResourceRef | undefined,
+) =>
   widget.singleton &&
   Object.values(layout.regions).some((region) =>
-    region.widgets.some((placement) => placement.contributionId === widget.id),
+    region.widgets.some(
+      (placement) => placement.contributionId === widget.id && placement.ownerResourceUri === resource?.uri,
+    ),
   );
 
-export const isWidgetEligibleForPanel = (input: PanelWidgetEligibilityInput) =>
-  input.widget.panelAddable === true &&
+export const isSubPanelEligible = (input: PanelWidgetEligibilityInput) =>
+  input.widget.role === "sub-panel" &&
   supportsPanelRegion(input.widget, input.region) &&
   supportsResource(input.widget, input.resource) &&
-  !hasOpenSingleton(input.widget, input.layout);
+  matchesWorkbenchLocationEligibility(input.widget, input.resource, input.modeId) &&
+  !hasOpenSingleton(input.widget, input.layout, input.resource);
 
-export const listEligiblePanelWidgets = (input: ListEligiblePanelWidgetsInput) =>
-  input.widgets.filter((widget) => isWidgetEligibleForPanel({ ...input, widget }));
+export const listEligibleSubPanels = (input: ListEligiblePanelWidgetsInput) =>
+  input.widgets.filter((widget) => isSubPanelEligible({ ...input, widget }));

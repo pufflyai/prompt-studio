@@ -110,13 +110,13 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
       render: ({ placement }) => <TicketPanel resource={placement.resource} />,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerLocation({
       id: PANEL_WIDGET_ID,
       title: "Palette resources",
       region: "main",
       rendererId: PANEL_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerSubPanel({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",

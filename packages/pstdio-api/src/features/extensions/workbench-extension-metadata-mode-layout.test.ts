@@ -39,10 +39,12 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
           views: {
             sidebar: {
               title: "Lab sidebar",
+              role: "location",
               webview: { entry: asset("./src/sidebar.tsx") },
             },
             overview: {
               title: "Lab overview",
+              role: "location",
               webview: { entry: asset("./src/overview.tsx") },
             },
           },

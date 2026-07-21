@@ -26,6 +26,16 @@ export type {
   HistoryController,
   HistoryEntry,
   HistoryStoreState,
+  PersistedWorkbenchHistory,
+  WorkbenchHistoryPersistence,
+  WorkbenchLocation,
+  WorkbenchLocationRef,
+  WorkbenchLocationWorkspaceState,
+  WorkbenchNavigationEntry,
+  WorkbenchPanelMenuRef,
+  WorkbenchPanelMenuWorkspaceState,
+  WorkbenchPanelWorkspaceState,
+  WorkbenchSubPanelRef,
 } from "./controllers/history/history-controller";
 export { createHistoryController } from "./controllers/history/history-controller";
 export type {
@@ -105,25 +115,35 @@ export type {
   WidgetReusePolicy,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
+  WorkbenchLocationContribution,
+  WorkbenchLocationEligibility,
+  WorkbenchPanelMenuContribution,
+  WorkbenchPanelMenuOwner,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,
   WorkbenchPanelRegion,
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
+  WorkbenchSubPanelContribution,
   WorkbenchWidgetPlacement,
+  WorkbenchWidgetRole,
   WorkbenchWidgetTab,
 } from "./registries/layout/layout-model";
 export {
   createDefaultWorkbenchLayout,
   createLayoutModel,
+  getWorkbenchPanelForMenuRegion,
   workbenchPanelMenuRegions,
   workbenchPanelRegions,
   workbenchRegions,
 } from "./registries/layout/layout-model";
 export {
-  isWidgetEligibleForPanel,
-  listEligiblePanelWidgets,
+  getActiveWorkbenchSubPanel,
+  isSubPanelEligible,
+  listEligibleSubPanels,
+  matchesWorkbenchLocationEligibility,
+  matchesWorkbenchPanelMenuOwner,
 } from "./registries/layout/panel-widget-eligibility";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {

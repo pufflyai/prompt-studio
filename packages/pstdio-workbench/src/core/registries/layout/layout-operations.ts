@@ -2,10 +2,12 @@ import type {
   OpenWidgetInput,
   RegisteredWidgetContribution,
   WorkbenchLayout,
+  WorkbenchPanelRegion,
   WorkbenchRegion,
   WorkbenchRegionState,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
+import { workbenchPanelRegions } from "./layout-types";
 import { resolveUniqueWidgetId } from "./widget-id";
 
 export const findPlacement = (layout: WorkbenchLayout, contributionId: string) => {
@@ -43,6 +45,49 @@ export const createUniqueWidgetId = (layout: WorkbenchLayout, contributionId: st
 
 export const getActivePlacement = (region: WorkbenchRegionState) =>
   region.widgets.find((placement) => placement.widgetId === region.activeWidgetId) ?? region.widgets[0];
+
+const isLocationPlacement = (placement: WorkbenchWidgetPlacement) =>
+  placement.role !== "sub-panel" && placement.role !== "panel-menu";
+
+export const locationWorkspaceKey = (placement: WorkbenchWidgetPlacement) =>
+  placement.resourceUri ?? `${placement.contributionId}:${placement.widgetId}`;
+
+export const setLocationSubPanelSelection = (
+  layout: WorkbenchLayout,
+  location: WorkbenchWidgetPlacement | undefined,
+  region: WorkbenchPanelRegion,
+  widgetId: string | undefined,
+) => {
+  if (!location) return layout;
+  const key = locationWorkspaceKey(location);
+  const current = layout.locationSubPanelSelections?.[key] ?? {};
+  const next = { ...current };
+  if (widgetId) next[region] = widgetId;
+  else delete next[region];
+  return {
+    ...layout,
+    locationSubPanelSelections: {
+      ...layout.locationSubPanelSelections,
+      [key]: next,
+    },
+  };
+};
+
+export const removeLocationSubPanelSelection = (layout: WorkbenchLayout, widgetId: string) => {
+  if (!layout.locationSubPanelSelections) return layout;
+  const locationSubPanelSelections = Object.fromEntries(
+    Object.entries(layout.locationSubPanelSelections).map(([key, selections]) => [
+      key,
+      Object.fromEntries(Object.entries(selections).filter(([, selectedId]) => selectedId !== widgetId)),
+    ]),
+  ) as WorkbenchLayout["locationSubPanelSelections"];
+  return { ...layout, locationSubPanelSelections };
+};
+
+export const getActiveLocationPlacement = (layout: WorkbenchLayout) => {
+  const locations = layout.regions.main.widgets.filter(isLocationPlacement);
+  return locations.find((placement) => placement.widgetId === layout.activeLocationWidgetId) ?? locations.at(-1);
+};
 
 export const buildUpdatedPlacement = (
   placement: WorkbenchWidgetPlacement,
@@ -86,6 +131,7 @@ export const createPlacement = (
   mountStrategy: spec.mountStrategy ?? widget.mountStrategy,
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
   tab: spec.tab ?? widget.tab,
+  role: widget.role,
 });
 
 interface ReplaceRegionWidgetsOptions {
@@ -110,6 +156,10 @@ export const replaceRegionWidgets = (
 
   return {
     ...layout,
+    activeLocationWidgetId:
+      regionId === "main" && !widgets.some((placement) => placement.widgetId === layout.activeLocationWidgetId)
+        ? widgets.filter(isLocationPlacement).at(-1)?.widgetId
+        : layout.activeLocationWidgetId,
     regions: {
       ...layout.regions,
       [regionId]: { ...region, widgets, activeWidgetId },
@@ -121,6 +171,7 @@ export const removePlacementsForContribution = (layout: WorkbenchLayout, contrib
   let nextLayout = layout;
 
   for (const region of Object.values(layout.regions)) {
+    const removed = region.widgets.filter((placement) => placement.contributionId === contributionId);
     const filtered = region.widgets.filter((placement) => placement.contributionId !== contributionId);
     if (filtered.length === region.widgets.length) continue;
     const activeWidgetId =
@@ -134,6 +185,9 @@ export const removePlacementsForContribution = (layout: WorkbenchLayout, contrib
         [region.id]: { ...region, widgets: filtered, activeWidgetId },
       },
     };
+    for (const placement of removed) {
+      nextLayout = removeLocationSubPanelSelection(nextLayout, placement.widgetId);
+    }
   }
 
   const hasActiveWidget = Object.values(nextLayout.regions).some((region) =>
@@ -149,6 +203,16 @@ export const removePlacementsForContribution = (layout: WorkbenchLayout, contrib
     nextLayout = { ...nextLayout, activeWidgetId: undefined, activeResourceUri: undefined };
   }
 
+  if (
+    nextLayout.activeLocationWidgetId &&
+    !nextLayout.regions.main.widgets.some((placement) => placement.widgetId === nextLayout.activeLocationWidgetId)
+  ) {
+    nextLayout = {
+      ...nextLayout,
+      activeLocationWidgetId: nextLayout.regions.main.widgets.filter(isLocationPlacement).at(-1)?.widgetId,
+    };
+  }
+
   return nextLayout;
 };
 
@@ -159,16 +223,45 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   const region = layout.regions[found.regionId];
   const widgets = region.widgets.filter((placement) => placement.widgetId !== widgetId);
   const closingEffectiveActive = region.activeWidgetId === widgetId || (!region.activeWidgetId && found.index === 0);
-  const nextActivePlacement = widgets[found.index] ?? widgets[found.index - 1];
+  const fallbackSubPanel =
+    found.placement.role === "sub-panel"
+      ? widgets.find(
+          (placement) =>
+            placement.role === "sub-panel" && placement.ownerResourceUri === found.placement.ownerResourceUri,
+        )
+      : undefined;
+  const nextActivePlacement =
+    fallbackSubPanel ??
+    (found.placement.role === "sub-panel" && found.regionId === "main"
+      ? getActiveLocationPlacement(layout)
+      : (widgets[found.index] ?? widgets[found.index - 1]));
   const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : region.activeWidgetId;
   const nextRegion = { ...region, widgets, activeWidgetId };
-  let nextLayout: WorkbenchLayout = {
-    ...layout,
-    regions: {
-      ...layout.regions,
-      [region.id]: nextRegion,
+  let nextLayout: WorkbenchLayout = removeLocationSubPanelSelection(
+    {
+      ...layout,
+      activeLocationWidgetId:
+        layout.activeLocationWidgetId === widgetId
+          ? layout.regions.main.widgets
+              .filter((placement) => placement.widgetId !== widgetId && isLocationPlacement(placement))
+              .at(-1)?.widgetId
+          : layout.activeLocationWidgetId,
+      regions: {
+        ...layout.regions,
+        [region.id]: nextRegion,
+      },
     },
-  };
+    widgetId,
+  );
+
+  if (closingEffectiveActive && workbenchPanelRegions.includes(found.regionId as WorkbenchPanelRegion)) {
+    nextLayout = setLocationSubPanelSelection(
+      nextLayout,
+      getActiveLocationPlacement(nextLayout),
+      found.regionId as WorkbenchPanelRegion,
+      nextActivePlacement?.role === "sub-panel" ? nextActivePlacement.widgetId : undefined,
+    );
+  }
 
   if (layout.activeWidgetId === widgetId) {
     nextLayout = {
@@ -192,12 +285,48 @@ export const activateInLayout = (
   placement: WorkbenchWidgetPlacement,
 ): WorkbenchLayout => {
   const region = layout.regions[regionId];
+  if (regionId === "main" && isLocationPlacement(placement)) {
+    const selections = layout.locationSubPanelSelections?.[locationWorkspaceKey(placement)] ?? {};
+    const regions = { ...layout.regions };
+    for (const panelRegion of workbenchPanelRegions) {
+      const panel = regions[panelRegion];
+      const selectedId = selections[panelRegion];
+      const selected = panel.widgets.find(
+        (candidate) =>
+          candidate.widgetId === selectedId &&
+          candidate.role === "sub-panel" &&
+          (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
+      );
+      regions[panelRegion] = {
+        ...panel,
+        activeWidgetId: selected?.widgetId ?? (panelRegion === "main" ? placement.widgetId : undefined),
+      };
+    }
+    return {
+      ...layout,
+      activeWidgetId: placement.widgetId,
+      activeLocationWidgetId: placement.widgetId,
+      activeResourceUri: placement.resourceUri,
+      regions,
+    };
+  }
+
+  const withSelection =
+    placement.role === "sub-panel" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)
+      ? setLocationSubPanelSelection(
+          layout,
+          getActiveLocationPlacement(layout),
+          regionId as WorkbenchPanelRegion,
+          placement.widgetId,
+        )
+      : layout;
   return {
-    ...layout,
+    ...withSelection,
     activeWidgetId: placement.widgetId,
+    activeLocationWidgetId: layout.activeLocationWidgetId,
     activeResourceUri: placement.resourceUri,
     regions: {
-      ...layout.regions,
+      ...withSelection.regions,
       [regionId]: { ...region, activeWidgetId: placement.widgetId },
     },
   };

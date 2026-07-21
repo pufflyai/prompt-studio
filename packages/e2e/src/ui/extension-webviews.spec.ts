@@ -196,7 +196,7 @@ test.describe("Extension webviews", () => {
 
     await labFrame.getByRole("button", { name: "Create inbox item" }).click();
 
-    await page.getByRole("option", { name: /Notifications/ }).click();
+    await page.keyboard.press("Alt+Shift+N");
 
     const notificationsModal = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search notifications") });
     await expect(notificationsModal).toBeVisible();

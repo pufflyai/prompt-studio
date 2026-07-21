@@ -29,6 +29,22 @@ describe("reconcileAnchors", () => {
     expect(actions).toContainEqual({ region: "secondary", action: "clear" });
   });
 
+  test("keeps a Location-owned Sub Panel when its Location becomes active", () => {
+    const layout = createLayoutModel();
+    layout.registerLocation({ id: "ticket", title: "Ticket", region: "main", rendererId: "noop" });
+    layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
+    layout.openWidget("ticket", { resource: ticket });
+    layout.openWidget("terminal", { resource: { kind: "terminal", uri: "pstdio://terminal/x" } });
+
+    const actions = reconcileAnchors({
+      layout: layout.getLayout(),
+      primary: ticket,
+      isInScope: scopeContaining(),
+    });
+
+    expect(actions).toContainEqual({ region: "secondary", action: "keep" });
+  });
+
   test("keeps a detached anchor (session) that is still in scope", () => {
     const layout = createLayoutModel();
     registerTestWidget(layout, { id: "session", title: "Session", region: "side" });
