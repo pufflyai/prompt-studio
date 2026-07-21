@@ -5,6 +5,7 @@ import "@fontsource/playfair-display/600.css";
 import "@fontsource/playfair-display/700.css";
 import "@fontsource/onest/400.css";
 import "@fontsource/onest/500.css";
+import "@fontsource/onest/600.css";
 import "@fontsource/onest/700.css";
 
 export type { MonacoThemeData, VsCodeColorTheme } from "./custom";
