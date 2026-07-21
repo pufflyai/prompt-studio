@@ -3,9 +3,9 @@ import { ListRow, TreeList, type TreeListNode, type TreeListSection } from "@pst
 import { ArrowUpRight, Bell, ChevronRight, CircleHelp, GitBranch, Github, MessagesSquare, Search } from "lucide-react";
 import { useRef, useState } from "react";
 import {
-  DOCUMENTATION_GROUP_META,
-  type DocumentationGroupId,
   type LandingView,
+  NAVIGATION_GROUP_META,
+  type NavigationGroupId,
   SITE_LINKS,
   VIEW_META,
 } from "./landing-content";
@@ -26,8 +26,8 @@ const viewNode = (view: LandingView, label?: string): TreeListNode => {
 };
 
 // container rows toggle on click (workbench tree semantics)
-const groupNode = (group: DocumentationGroupId, children: LandingView[]): TreeListNode => {
-  const meta = DOCUMENTATION_GROUP_META[group];
+const groupNode = (group: NavigationGroupId, children: LandingView[]): TreeListNode => {
+  const meta = NAVIGATION_GROUP_META[group];
   return {
     id: `${group}-group`,
     label: meta.label,
@@ -50,34 +50,45 @@ const externalNode = (id: keyof typeof EXTERNAL_NODES): TreeListNode => {
   };
 };
 
+// Keep the routes available while the documentation group is hidden from navigation.
+const SHOW_DOCUMENTATION = false;
+
 const SIDEBAR_SECTIONS: TreeListSection[] = [
-  { id: "explore", label: "Explore", nodes: [viewNode("start"), viewNode("gallery")] },
   {
-    id: "documentation",
-    label: "Documentation",
-    nodes: [
-      viewNode("concepts"),
-      groupNode("guides", [
-        "guide-getting-started",
-        "guide-create-ticket",
-        "guide-implement-ticket",
-        "guide-create-proposal",
-        "guide-create-sub-tickets",
-        "guide-refine-ticket",
-        "guide-create-extension",
-      ]),
-      groupNode("cli-reference", [
-        "cli-projects",
-        "cli-workspaces",
-        "cli-agents",
-        "cli-sessions",
-        "cli-extensions",
-        "cli-planner",
-        "cli-configuration",
-      ]),
-      groupNode("sdk-reference", ["sdk-commands", "sdk-views", "sdk-hooks", "sdk-client", "sdk-assets"]),
-    ],
+    id: "explore",
+    label: NAVIGATION_GROUP_META.explore.label,
+    nodes: [viewNode("start"), viewNode("why-prompt-studio"), viewNode("gallery")],
   },
+  ...(SHOW_DOCUMENTATION
+    ? [
+        {
+          id: "documentation",
+          label: "Documentation",
+          nodes: [
+            viewNode("concepts"),
+            groupNode("guides", [
+              "guide-getting-started",
+              "guide-create-ticket",
+              "guide-implement-ticket",
+              "guide-create-proposal",
+              "guide-create-sub-tickets",
+              "guide-refine-ticket",
+              "guide-create-extension",
+            ]),
+            groupNode("cli-reference", [
+              "cli-projects",
+              "cli-workspaces",
+              "cli-agents",
+              "cli-sessions",
+              "cli-extensions",
+              "cli-planner",
+              "cli-configuration",
+            ]),
+            groupNode("sdk-reference", ["sdk-commands", "sdk-views", "sdk-hooks", "sdk-client", "sdk-assets"]),
+          ],
+        },
+      ]
+    : []),
   { id: "blog", label: "Blog", nodes: [viewNode("blog", "All posts")] },
   { id: "links", label: "Links", nodes: [externalNode("github"), externalNode("discord")] },
 ];

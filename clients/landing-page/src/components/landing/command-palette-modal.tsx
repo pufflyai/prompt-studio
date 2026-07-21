@@ -4,6 +4,7 @@ import { INSTALL_COMMANDS, type LandingView, SITE_LINKS, VIEW_META } from "./lan
 
 const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
   start: "home landing start here",
+  "why-prompt-studio": "why Prompt Studio value proposition workflow tools differentiation",
   gallery: "extensions gallery marketplace install",
   concepts: "concepts documentation how it works",
   "guide-getting-started": "guide install setup project agent getting started",

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { BlogView } from "./blog-view";
 import { ChangelogModal } from "./changelog-modal";
 import { CommandPaletteModal } from "./command-palette-modal";
-import { BLOG_POSTS } from "./content/blog";
+import { BLOG_POSTS, VISIBLE_BLOG_POSTS } from "./content/blog";
 import { cliAgentsPage } from "./content/cli-agents";
 import {
   cliConfigurationPage,
@@ -16,6 +16,7 @@ import {
 } from "./content/cli-reference";
 import { cliSessionsPage } from "./content/cli-sessions";
 import { conceptsPage } from "./content/docs";
+import { extensionsPage } from "./content/extensions";
 import {
   createExtensionGuide,
   createProposalGuide,
@@ -34,20 +35,24 @@ import {
   sdkOverviewPage,
   sdkViewsPage,
 } from "./content/sdk-reference";
+import { whyPromptStudioPage } from "./content/why-prompt-studio";
+import { docPageToMarkdown } from "./doc-page-markdown";
 import { type DocPage, DocView } from "./doc-view";
 import { DotLatticeBackground } from "./dot-lattice-background";
 import { ExtensionGallery } from "./extension-gallery";
 import type { LandingView, ProjectTabId } from "./landing-content";
-import { LANDING_DOCUMENT_TITLE, LandingDocument } from "./landing-document";
+import { LANDING_DOCUMENT_PAGE, LandingDocument } from "./landing-document";
 import { type LandingLocation, landingLocationFromPath, landingPathForLocation } from "./landing-route";
 import { INITIAL_NOTIFICATIONS, NotificationsModal } from "./notifications-modal";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { ResourceSidebar } from "./resource-sidebar";
-import { TabTeaser } from "./tab-teaser";
+import { WhyPromptStudioView } from "./why-prompt-studio-view";
 import { WorkbenchNav } from "./workbench-nav";
 import { WorkbenchStatusBar } from "./workbench-status-bar";
 
 const DOC_PAGES: Partial<Record<LandingView, DocPage>> = {
+  gallery: extensionsPage,
+  "why-prompt-studio": whyPromptStudioPage,
   concepts: conceptsPage,
   "guide-getting-started": gettingStartedGuide,
   "guide-create-ticket": createTicketGuide,
@@ -79,9 +84,17 @@ interface WorkbenchLandingProps {
 }
 
 const resolveResourceTitle = (activeView: LandingView, docPage: DocPage | undefined, blogPostId?: string) => {
-  if (activeView === "start") return LANDING_DOCUMENT_TITLE;
-  if (activeView === "blog") return BLOG_POSTS.find((post) => post.id === blogPostId)?.title ?? BLOG_POSTS[0].title;
+  if (activeView === "blog") return (BLOG_POSTS.find((post) => post.id === blogPostId) ?? VISIBLE_BLOG_POSTS[0]).title;
   return docPage?.title;
+};
+
+const resolveResourceMarkdown = (activeView: LandingView, docPage: DocPage | undefined, blogPostId?: string) => {
+  if (activeView === "start") return docPageToMarkdown(LANDING_DOCUMENT_PAGE);
+  if (activeView === "blog") {
+    const post = BLOG_POSTS.find((candidate) => candidate.id === blogPostId) ?? VISIBLE_BLOG_POSTS[0];
+    return docPageToMarkdown(post.page);
+  }
+  return docPage ? docPageToMarkdown(docPage) : undefined;
 };
 
 export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
@@ -99,6 +112,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   const unreadCount = notifications.filter((item) => item.status === "open").length;
   const docPage = DOC_PAGES[activeView];
   const resourceTitle = resolveResourceTitle(activeView, docPage, blogPostId);
+  const resourceMarkdown = resolveResourceMarkdown(activeView, docPage, blogPostId);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -132,7 +146,11 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   };
 
   const selectBlogPost = (postId: string) => {
-    updateLocation({ activeTab: "docs", activeView: "blog", blogPostId: postId });
+    updateLocation({
+      activeTab: "docs",
+      activeView: "blog",
+      blogPostId: postId,
+    });
   };
 
   const closeNotifications = () => {
@@ -165,25 +183,19 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
           <WorkbenchNav
             activeTab={activeTab}
             activeView={activeView}
+            resourceMarkdown={resourceMarkdown}
             resourceTitle={resourceTitle}
             sidebarOpen={sidebarOpen}
-            showPostListOpener={activeTab === "docs" && activeView === "blog" && !blogPostListOpen}
+            showPostListOpener={activeView === "blog" && !blogPostListOpen}
             onSelectTab={selectTab}
             onNavigate={navigate}
             onOpenPostList={() => setBlogPostListOpen(true)}
             onToggleSidebar={() => setSidebarOpen((open) => !open)}
-            onOpenChangelog={() => setChangelogOpen(true)}
           />
           <Box as="main" flex="1" minHeight="0" position="relative">
             <DotLatticeBackground />
-            <Box
-              position="absolute"
-              inset="0"
-              overflowY={activeView === "blog" && activeTab === "docs" ? "hidden" : "auto"}
-            >
-              {activeTab !== "docs" ? (
-                <TabTeaser tabId={activeTab} />
-              ) : activeView === "gallery" ? (
+            <Box position="absolute" inset="0" overflowY={activeView === "blog" ? "hidden" : "auto"}>
+              {activeView === "gallery" ? (
                 <ExtensionGallery />
               ) : activeView === "blog" ? (
                 <BlogView
@@ -192,6 +204,8 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
                   onPostListOpenChange={setBlogPostListOpen}
                   onSelectPost={selectBlogPost}
                 />
+              ) : activeView === "why-prompt-studio" ? (
+                <WhyPromptStudioView onNavigate={navigate} />
               ) : docPage ? (
                 <Flex justify="center">
                   <DocView page={docPage} />

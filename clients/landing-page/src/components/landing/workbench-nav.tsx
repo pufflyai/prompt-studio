@@ -1,18 +1,12 @@
 import { Circle, Flex, HStack, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
-import { BookOpen, ChevronDown, ChevronsUpDown, Copy, GitBranch, Link as LinkIcon, PanelLeft } from "lucide-react";
-import {
-  DOCUMENTATION_GROUP_META,
-  INSTALL_COMMANDS,
-  type LandingView,
-  PROJECT_TABS,
-  type ProjectTabId,
-  VIEW_META,
-} from "./landing-content";
+import { ChevronDown, ChevronsUpDown, Copy, PanelLeft } from "lucide-react";
+import { type LandingView, NAVIGATION_GROUP_META, PROJECT_TABS, type ProjectTabId, VIEW_META } from "./landing-content";
 
 interface WorkbenchNavProps {
   activeTab: ProjectTabId;
   activeView: LandingView;
+  resourceMarkdown?: string;
   resourceTitle?: string;
   sidebarOpen: boolean;
   showPostListOpener: boolean;
@@ -20,13 +14,13 @@ interface WorkbenchNavProps {
   onNavigate: (view: LandingView) => void;
   onOpenPostList: () => void;
   onToggleSidebar: () => void;
-  onOpenChangelog: () => void;
 }
 
 export const WorkbenchNav = (props: WorkbenchNavProps) => {
   const {
     activeTab,
     activeView,
+    resourceMarkdown,
     resourceTitle,
     sidebarOpen,
     showPostListOpener,
@@ -34,43 +28,23 @@ export const WorkbenchNav = (props: WorkbenchNavProps) => {
     onNavigate,
     onOpenPostList,
     onToggleSidebar,
-    onOpenChangelog,
   } = props;
 
   const viewMeta = VIEW_META[activeView];
-  const parentMeta = viewMeta.parent ? DOCUMENTATION_GROUP_META[viewMeta.parent] : undefined;
+  const parentMeta = viewMeta.parent ? NAVIGATION_GROUP_META[viewMeta.parent] : undefined;
   const activeProjectTab = PROJECT_TABS.find((tab) => tab.id === activeTab) ?? PROJECT_TABS[0];
   const hasResourceTitle = Boolean(resourceTitle && resourceTitle !== viewMeta.label);
 
-  const resourceActions = [
-    {
-      id: "copy-link",
-      label: "Copy link",
-      icon: <LinkIcon size={14} />,
-      onAction: () => navigator.clipboard.writeText(window.location.href),
-    },
-    {
-      id: "copy-install",
-      label: "Copy install command",
-      icon: <Copy size={14} />,
-      onAction: () => navigator.clipboard.writeText(INSTALL_COMMANDS.join("\n")),
-    },
-    {
-      id: "open-docs",
-      label: "Open docs",
-      icon: <BookOpen size={14} />,
-      onAction: () => onNavigate("concepts"),
-    },
-    {
-      id: "view-changelog",
-      label: "View changelog",
-      icon: <GitBranch size={14} />,
-      onAction: onOpenChangelog,
-    },
-  ];
-
   return (
-    <HStack height="40px" flexShrink="0" gap="5px" px="10px" bg="bg.subtle">
+    <HStack
+      height="40px"
+      flexShrink="0"
+      gap="5px"
+      px="10px"
+      bg="bg.subtle"
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
       {!sidebarOpen && (
         <Tooltip content="Open sidebar">
           <IconButton
@@ -163,50 +137,62 @@ export const WorkbenchNav = (props: WorkbenchNavProps) => {
         </HStack>
       )}
 
-      <Menu.Root lazyMount closeOnSelect positioning={{ placement: "bottom-start" }}>
-        <HStack gap="2px" display={{ base: "none", md: "flex" }}>
-          <Text fontFamily="body" fontSize="13px" color="fg.subtle">
-            /
-          </Text>
-          <Menu.Trigger asChild>
-            <HStack
-              as="button"
-              aria-label="Resource actions"
-              cursor="pointer"
-              height="28px"
-              px="8px"
-              gap="4px"
-              rounded="4px"
-              minWidth="0"
-              _hover={{ bg: "bg.hover" }}
-            >
-              {!hasResourceTitle && <viewMeta.icon size={14} />}
-              <Text fontFamily="body" fontWeight="medium" fontSize="13px" whiteSpace="nowrap" truncate>
-                {resourceTitle ?? viewMeta.label}
-              </Text>
-              <ChevronDown size={13} />
-            </HStack>
-          </Menu.Trigger>
-        </HStack>
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content minW="14rem">
-              {resourceActions.map((action) => (
-                <Menu.Item key={action.id} value={action.id} asChild>
-                  <ListRow variant="full-width" icon={action.icon} label={action.label} onClick={action.onAction} />
-                </Menu.Item>
-              ))}
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
+      <HStack gap="2px" display={{ base: "none", md: "flex" }}>
+        <Text fontFamily="body" fontSize="13px" color="fg.subtle">
+          /
+        </Text>
+        {resourceMarkdown ? (
+          <Menu.Root lazyMount closeOnSelect positioning={{ placement: "bottom-start" }}>
+            <Menu.Trigger asChild>
+              <HStack
+                as="button"
+                aria-label="Page actions"
+                cursor="pointer"
+                height="28px"
+                px="8px"
+                gap="4px"
+                rounded="4px"
+                minWidth="0"
+                _hover={{ bg: "bg.hover" }}
+              >
+                {!hasResourceTitle && <viewMeta.icon size={14} />}
+                <Text fontFamily="body" fontWeight="medium" fontSize="13px" whiteSpace="nowrap" truncate>
+                  {resourceTitle ?? viewMeta.label}
+                </Text>
+                <ChevronDown size={13} />
+              </HStack>
+            </Menu.Trigger>
+            <Portal>
+              <Menu.Positioner>
+                <Menu.Content minW="14rem">
+                  <Menu.Item value="copy-markdown" asChild>
+                    <ListRow
+                      variant="full-width"
+                      icon={<Copy size={14} />}
+                      label="Copy markdown"
+                      onClick={() => navigator.clipboard.writeText(resourceMarkdown)}
+                    />
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Portal>
+          </Menu.Root>
+        ) : (
+          <HStack height="28px" px="8px" gap="4px" minWidth="0">
+            {!hasResourceTitle && <viewMeta.icon size={14} />}
+            <Text fontFamily="body" fontWeight="medium" fontSize="13px" whiteSpace="nowrap" truncate>
+              {resourceTitle ?? viewMeta.label}
+            </Text>
+          </HStack>
+        )}
+      </HStack>
 
       <Flex flex="1" />
 
       {showPostListOpener && (
         <Tooltip content="Open post list">
-          <IconButton aria-label="Open post list" variant="ghost" size="2xs" onClick={onOpenPostList}>
-            <PanelLeft size={13} />
+          <IconButton aria-label="Open post list" variant="ghost" size="xs" onClick={onOpenPostList}>
+            <PanelLeft size={14} />
           </IconButton>
         </Tooltip>
       )}

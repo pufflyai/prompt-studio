@@ -8,6 +8,7 @@ import {
 
 const locations: LandingLocation[] = [
   { activeTab: "docs", activeView: "start" },
+  { activeTab: "docs", activeView: "why-prompt-studio" },
   { activeTab: "docs", activeView: "gallery" },
   { activeTab: "docs", activeView: "concepts" },
   { activeTab: "docs", activeView: "guide-getting-started" },
@@ -25,10 +26,6 @@ const locations: LandingLocation[] = [
   { activeTab: "docs", activeView: "blog", blogPostId: "hello-world" },
   { activeTab: "docs", activeView: "privacy" },
   { activeTab: "docs", activeView: "terms" },
-  { activeTab: "agentic-kanban", activeView: "start" },
-  { activeTab: "agentic-design", activeView: "start" },
-  { activeTab: "agentic-data-analysis", activeView: "start" },
-  { activeTab: "workflow-builder", activeView: "start" },
 ];
 
 describe("landing routes", () => {
@@ -49,6 +46,12 @@ describe("landing routes", () => {
   test("gives agents and sessions distinct reference paths", () => {
     expect(landingPathForLocation({ activeTab: "docs", activeView: "cli-agents" })).toBe("/docs/cli/agents");
     expect(landingPathForLocation({ activeTab: "docs", activeView: "cli-sessions" })).toBe("/docs/cli/sessions");
+  });
+
+  test("gives the value proposition its own Explore path", () => {
+    expect(landingPathForLocation({ activeTab: "docs", activeView: "why-prompt-studio" })).toBe(
+      "/explore/why-prompt-studio",
+    );
   });
 
   test("falls back to the start view for an unknown path", () => {

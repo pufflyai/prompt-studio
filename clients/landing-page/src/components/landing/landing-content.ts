@@ -1,22 +1,20 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BadgeCheck,
   Blocks,
   BookOpen,
   Bot,
   Boxes,
   Braces,
-  ChartNoAxesCombined,
-  Columns3,
   Command,
+  Compass,
   FileText,
   FolderGit2,
   GitBranch,
   LayoutPanelLeft,
   MessagesSquare,
   Package,
-  PenTool,
   Plug,
-  Rss,
   Scale,
   Server,
   Settings2,
@@ -41,6 +39,7 @@ export const SITE_LINKS = {
 /** In-app views rendered inside the workbench main area. */
 export type LandingView =
   | "start"
+  | "why-prompt-studio"
   | "gallery"
   | "concepts"
   | "guide-getting-started"
@@ -71,13 +70,14 @@ export type LandingView =
 export interface ViewMeta {
   label: string;
   icon: LucideIcon;
-  /** Parent documentation group, rendered as a breadcrumb and tree nesting. */
-  parent?: DocumentationGroupId;
+  /** Parent navigation group, rendered as a breadcrumb and tree nesting. */
+  parent?: NavigationGroupId;
 }
 
 export const VIEW_META: Record<LandingView, ViewMeta> = {
-  start: { label: "Start here", icon: Sparkles },
-  gallery: { label: "Extension gallery", icon: Blocks },
+  start: { label: "Start here", icon: Sparkles, parent: "explore" },
+  "why-prompt-studio": { label: "Why Prompt Studio", icon: BadgeCheck, parent: "explore" },
+  gallery: { label: "Extensions", icon: Blocks, parent: "explore" },
   concepts: { label: "Concepts", icon: BookOpen },
   "guide-getting-started": { label: "Set up Prompt Studio", icon: SquareTerminal, parent: "guides" },
   "guide-create-ticket": { label: "Create a ticket", icon: Ticket, parent: "guides" },
@@ -100,20 +100,21 @@ export const VIEW_META: Record<LandingView, ViewMeta> = {
   "sdk-hooks": { label: "Hooks & schedules", icon: Webhook, parent: "sdk-reference" },
   "sdk-client": { label: "Client & types", icon: Plug, parent: "sdk-reference" },
   "sdk-assets": { label: "Assets & catalog", icon: Package, parent: "sdk-reference" },
-  blog: { label: "Blog", icon: Rss },
+  blog: { label: "Blog", icon: FileText },
   privacy: { label: "Privacy policy", icon: FileText },
   terms: { label: "Terms of service", icon: Scale },
 };
 
-export type DocumentationGroupId = "guides" | "cli-reference" | "sdk-reference";
+export type NavigationGroupId = "explore" | "guides" | "cli-reference" | "sdk-reference";
 
-export interface DocumentationGroupMeta {
+export interface NavigationGroupMeta {
   label: string;
   icon: LucideIcon;
   overview?: LandingView;
 }
 
-export const DOCUMENTATION_GROUP_META: Record<DocumentationGroupId, DocumentationGroupMeta> = {
+export const NAVIGATION_GROUP_META: Record<NavigationGroupId, NavigationGroupMeta> = {
+  explore: { label: "Explore", icon: Compass, overview: "start" },
   guides: { label: "Guides", icon: BookOpen },
   "cli-reference": { label: "CLI reference", icon: SquareTerminal, overview: "cli-reference" },
   "sdk-reference": { label: "SDK reference", icon: Braces, overview: "sdk-reference" },
@@ -125,15 +126,9 @@ export interface ProjectTab {
   icon: LucideIcon;
 }
 
-export type ProjectTabId = "docs" | "agentic-kanban" | "agentic-design" | "agentic-data-analysis" | "workflow-builder";
+export type ProjectTabId = "docs";
 
-export const PROJECT_TABS: ProjectTab[] = [
-  { id: "docs", label: "Docs", icon: BookOpen },
-  { id: "agentic-kanban", label: "Agentic kanban", icon: Columns3 },
-  { id: "agentic-design", label: "Agentic design", icon: PenTool },
-  { id: "agentic-data-analysis", label: "Agentic data analysis", icon: ChartNoAxesCombined },
-  { id: "workflow-builder", label: "Workflow builder", icon: Workflow },
-];
+export const PROJECT_TABS: ProjectTab[] = [{ id: "docs", label: "Prompt Studio Docs", icon: BookOpen }];
 
 export interface ChangelogEntry {
   version: string;
