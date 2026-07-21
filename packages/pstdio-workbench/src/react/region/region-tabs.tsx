@@ -1,4 +1,4 @@
-import { CloseButton, IconButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
+import { IconButton, Menu, Portal, Tabs } from "@chakra-ui/react";
 import {
   buildTabVisibilityMenuActions,
   filterVisibleTabs,
@@ -11,14 +11,19 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
   type WorkbenchCore,
+  type WorkbenchPanelRegion,
   type WorkbenchRegion as WorkbenchRegionId,
   type WorkbenchWidgetPlacement,
+  workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
-import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
+import type { WorkbenchMenuItem } from "../menus/menu-items";
+import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WorkbenchPanelAddMenu } from "./panel-add-menu";
+import { WorkbenchRegionTab } from "./region-tab";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./region-tabs-visibility";
 
 interface WorkbenchRegionTabsProps {
@@ -29,10 +34,17 @@ interface WorkbenchRegionTabsProps {
 
 const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
 
+const isWorkbenchPanelRegion = (region: WorkbenchRegionId): region is WorkbenchPanelRegion =>
+  workbenchPanelRegions.some((panelRegion) => panelRegion === region);
+
 export const shouldShowRegionTabs = (
   placements: WorkbenchWidgetPlacement[],
-  options: { hasLeadingActions?: boolean } = {},
-) => options.hasLeadingActions === true || placements.length > 1 || placements.some(isPlacementCloseable);
+  options: { hasLeadingActions?: boolean; hasAddAction?: boolean } = {},
+) =>
+  options.hasAddAction === true ||
+  options.hasLeadingActions === true ||
+  placements.length > 1 ||
+  placements.some(isPlacementCloseable);
 
 export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchRegionId) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
@@ -44,7 +56,10 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
     workbenchRegionTabLeadingMenuPath(region),
   );
 
-  return shouldShowRegionTabs(placements, { hasLeadingActions: leadingItems.length > 0 });
+  return shouldShowRegionTabs(placements, {
+    hasLeadingActions: leadingItems.length > 0,
+    hasAddAction: isWorkbenchPanelRegion(region),
+  });
 };
 
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
@@ -92,7 +107,11 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     { itemsByPath, commands, contextValues },
     workbenchRegionTabLeadingMenuPath(region),
   );
-  const showTabs = shouldShowRegionTabs(visiblePlacements, { hasLeadingActions: leadingItems.length > 0 });
+  const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
+  const showTabs = shouldShowRegionTabs(visiblePlacements, {
+    hasLeadingActions: leadingItems.length > 0,
+    hasAddAction: Boolean(panelRegion),
+  });
 
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;
@@ -162,6 +181,15 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
         <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
+          {visiblePlacements.map((placement) => (
+            <WorkbenchRegionTab
+              key={placement.widgetId}
+              workbench={workbench}
+              placement={placement}
+              activeWidgetId={activeWidgetId}
+            />
+          ))}
+          {panelRegion ? <WorkbenchPanelAddMenu workbench={workbench} region={panelRegion} /> : null}
           {leadingItems.map((item) => (
             <Tooltip key={item.id} content={item.label}>
               <IconButton
@@ -180,68 +208,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
               </IconButton>
             </Tooltip>
           ))}
-          {visiblePlacements.map((placement) => {
-            const closable = isPlacementCloseable(placement);
-            const isActive = placement.widgetId === activeWidgetId;
-            const label = placement.title ?? placement.contributionId;
-            const icon =
-              placement.resource?.icon ??
-              (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined);
-
-            return (
-              <Tabs.Trigger
-                key={placement.widgetId}
-                value={placement.widgetId}
-                h="1.25rem"
-                maxW="12rem"
-                minW="0"
-                flexShrink={0}
-                gap="2xs"
-                px="xs"
-                py="0"
-                borderRadius="2xs"
-                borderWidth="1px"
-                borderColor="border.subtle"
-                textStyle="label/XS/medium"
-                title={label}
-                className="group"
-                _selected={{ color: "fg", borderColor: "border.subtle" }}
-                _hover={isActive ? undefined : { bg: "bg.hover", borderColor: "border.subtle", color: "fg" }}
-              >
-                {icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null}
-                <Text as="span" minW="0" truncate>
-                  {label}
-                </Text>
-                {closable ? (
-                  <CloseButton
-                    as="span"
-                    role="button"
-                    aria-label={`Close ${label}`}
-                    size="2xs"
-                    boxSize="1rem"
-                    minW="1rem"
-                    p="0"
-                    borderRadius="2xs"
-                    flexShrink={0}
-                    me="-1"
-                    opacity={isActive ? "1" : "0"}
-                    pointerEvents={isActive ? "auto" : "none"}
-                    color="fg.muted"
-                    _groupHover={{ opacity: "1", pointerEvents: "auto" }}
-                    _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
-                    _hover={{ bg: "transparent", color: "fg" }}
-                    _active={{ bg: "transparent" }}
-                    transition="opacity 120ms ease"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      workbench.layout.closeWidget(placement.widgetId);
-                    }}
-                  />
-                ) : null}
-              </Tabs.Trigger>
-            );
-          })}
         </Tabs.List>
       </ScrollArea>
       {hasVisibilityMenu ? (

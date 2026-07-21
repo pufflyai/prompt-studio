@@ -107,6 +107,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         closable: true,
         mountStrategy: "keep-mounted",
         rendererId: RENDERER_ID,
+        openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
         regionSize: TERMINAL_PANEL_SIZE,
       }),
       ctx.renderers.registerRenderer({
@@ -136,7 +137,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
       ctx.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("secondary"), {
         commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
         label: "New terminal",
-        icon: "Plus",
+        icon: "SquareTerminal",
         order: -100,
       }),
     ];

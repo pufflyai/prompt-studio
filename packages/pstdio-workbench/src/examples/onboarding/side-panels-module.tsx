@@ -1,4 +1,4 @@
-import { Badge, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Code, HStack, Menu, Stack, Text } from "@chakra-ui/react";
 import { ListRow, ScrollArea } from "@pstdio/ui";
 import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
@@ -15,6 +15,11 @@ const INSPECTOR_WIDGET_ID = "onboarding.side-panels.inspector";
 const INSPECTOR_RENDERER_ID = "onboarding.side-panels.inspector.renderer";
 const ACTIVITY_WIDGET_ID = "onboarding.side-panels.activity";
 const ACTIVITY_RENDERER_ID = "onboarding.side-panels.activity.renderer";
+const ACTIVITY_TAB_RENDERER_ID = "onboarding.side-panels.activity.tab";
+const ACTIVITY_TAB_MENU_RENDERER_ID = "onboarding.side-panels.activity.tab-menu";
+const PREVIEW_WIDGET_ID = "onboarding.side-panels.preview";
+const PROBLEMS_WIDGET_ID = "onboarding.side-panels.problems";
+const FILES_WIDGET_ID = "onboarding.side-panels.files";
 
 interface SidePanelItem {
   id: string;
@@ -69,6 +74,22 @@ const findItem = (resource: ResourceRef | undefined) => items.find((item) => ite
 
 const usePrimaryResource = (workbench: WorkbenchCore) =>
   useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+
+const ActivityTab = () => (
+  <HStack gap="2xs" minW="0">
+    <WorkbenchIcon name="Activity" size={12} />
+    <Text as="span">Activity</Text>
+    <Badge size="sm" colorPalette="green">
+      Live
+    </Badge>
+  </HStack>
+);
+
+const ActivityTabMenu = () => (
+  <Menu.Item value="live" disabled asChild>
+    <ListRow asChild variant="full-width" label="Live context" disabled />
+  </Menu.Item>
+);
 
 const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
@@ -272,6 +293,8 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       id: ACTIVITY_RENDERER_ID,
       render: ({ workbench }) => <ResourceActivityPanel workbench={workbench} />,
     });
+    ctx.renderers.registerRenderer({ id: ACTIVITY_TAB_RENDERER_ID, render: () => <ActivityTab /> });
+    ctx.renderers.registerRenderer({ id: ACTIVITY_TAB_MENU_RENDERER_ID, render: () => <ActivityTabMenu /> });
 
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
@@ -313,6 +336,32 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       regionSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
       singleton: true,
       rendererId: ACTIVITY_RENDERER_ID,
+      tab: {
+        contentRendererId: ACTIVITY_TAB_RENDERER_ID,
+        contextMenuRendererId: ACTIVITY_TAB_MENU_RENDERER_ID,
+      },
+    });
+    ctx.layout.registerWidget({
+      id: PREVIEW_WIDGET_ID,
+      title: "Preview",
+      icon: "Eye",
+      region: "main",
+      resourceKinds: [ITEM_KIND],
+      rendererId: DETAIL_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: PROBLEMS_WIDGET_ID,
+      title: "Problems",
+      icon: "CircleAlert",
+      region: "secondary",
+      rendererId: ACTIVITY_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: FILES_WIDGET_ID,
+      title: "Files",
+      icon: "Folder",
+      region: "side",
+      rendererId: CONTEXT_RENDERER_ID,
     });
 
     // Context demonstrates a Main Panel menu while Inspector demonstrates the independent

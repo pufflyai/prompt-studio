@@ -66,9 +66,13 @@ describe("createWorkbenchTerminalModule", () => {
     ).toBe(false);
   });
 
-  test("the secondary tab strip keeps the terminal opener", () => {
+  test("exposes the terminal opener to the secondary add menu and direct tab action", () => {
     const workbench = setup();
 
+    expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
+      openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
+      region: "secondary",
+    });
     expect(workbench.layout.listMenuItems(workbenchRegionTabLeadingMenuPath("secondary"))).toContainEqual(
       expect.objectContaining({ commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID, label: "New terminal" }),
     );

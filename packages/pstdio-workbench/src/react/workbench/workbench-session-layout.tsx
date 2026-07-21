@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchRegion } from "../region/region";
+import { WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchSessionAttachedPanel } from "../session-panel/session-panel";
 
 const ATTACHED_PANEL_DEFAULT_SIZE_PX = 420;
@@ -32,11 +33,14 @@ interface WorkbenchSessionRegionHeaderProps {
 export const WorkbenchSessionRegionHeader = (props: WorkbenchSessionRegionHeaderProps) => {
   const { workbench, hasSideHeader } = props;
 
-  if (!hasSideHeader) return null;
-
   return (
     <Box alignItems="center" display="flex" flex="1" h="full" minW="0" overflow="hidden" w="full">
-      <WorkbenchRegion workbench={workbench} region="side-header" title="Side Panel header" transparent />
+      <WorkbenchRegionTabs workbench={workbench} region="side" />
+      {hasSideHeader ? (
+        <Box flex="1" h="full" minW="0" overflow="hidden">
+          <WorkbenchRegion workbench={workbench} region="side-header" title="Side Panel header" transparent />
+        </Box>
+      ) : null}
     </Box>
   );
 };

@@ -32,6 +32,7 @@ import {
   isPickerPaletteView,
   isThemePaletteView,
 } from "./palette-view";
+import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette";
 import { createWorkbenchResourcePaletteEntries } from "./resource-palette";
 import {
   createWorkbenchThemePreferencePaletteEntries,
@@ -240,10 +241,12 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose: commitThemePreview,
   });
   const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
+  const panelWidgetEntries = createWorkbenchPanelWidgetPaletteEntries({ workbench, onClose });
   const entries = [
     ...resourceEntries,
     ...commandPaletteResourceEntries,
     ...commandEntries,
+    ...panelWidgetEntries,
     ...themeEntries,
     ...modeEntries,
   ];

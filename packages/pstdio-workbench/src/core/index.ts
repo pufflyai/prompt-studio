@@ -105,12 +105,23 @@ export type {
   WidgetReusePolicy,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
+  WorkbenchPanelRegion,
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
   WorkbenchWidgetPlacement,
+  WorkbenchWidgetTab,
 } from "./registries/layout/layout-model";
-export { createDefaultWorkbenchLayout, createLayoutModel, workbenchRegions } from "./registries/layout/layout-model";
+export {
+  createDefaultWorkbenchLayout,
+  createLayoutModel,
+  workbenchPanelRegions,
+  workbenchRegions,
+} from "./registries/layout/layout-model";
+export {
+  isWidgetEligibleForPanel,
+  listEligiblePanelWidgets,
+} from "./registries/layout/panel-widget-eligibility";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {
   getSurface,

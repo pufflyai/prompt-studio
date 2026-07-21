@@ -61,6 +61,7 @@ export const buildUpdatedPlacement = (
   if (update.closable !== undefined) next.closable = update.closable;
   if (update.mountStrategy !== undefined) next.mountStrategy = update.mountStrategy;
   if (update.hiddenByDefault !== undefined) next.hiddenByDefault = update.hiddenByDefault;
+  if (update.tab !== undefined) next.tab = update.tab;
   if (update.ownerId !== undefined) next.ownerId = update.ownerId;
   if (update.source !== undefined) next.source = update.source;
   return next;
@@ -84,6 +85,7 @@ export const createPlacement = (
   closable: spec.closable ?? widget.closable ?? !widget.singleton,
   mountStrategy: spec.mountStrategy ?? widget.mountStrategy,
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
+  tab: spec.tab ?? widget.tab,
 });
 
 interface ReplaceRegionWidgetsOptions {

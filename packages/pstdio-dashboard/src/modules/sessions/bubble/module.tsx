@@ -3,6 +3,7 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
+import { workbenchRegionTabLeadingMenuPath } from "@pstdio/workbench/core";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,
@@ -16,7 +17,10 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerModeChromeContribution } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import { openSessionBubbleWidgets } from "./session-bubble";
-import { SessionBubbleHeader } from "./session-bubble-header";
+import { SessionPanelActions, SessionTabContent, SessionTabContextMenu } from "./session-tab";
+
+const sessionTabRendererId = "dashboard-workbench.session-tab";
+const sessionTabContextMenuRendererId = "dashboard-workbench.session-tab-context-menu";
 
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
@@ -78,7 +82,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
   ctx.layout.registerWidget(
     {
       id: dashboardWidgetIds.sessionBubbleHeader,
-      title: "Session bubble header",
+      title: "Session actions",
       region: "side-header",
       singleton: true,
       rendererId: dashboardWidgetIds.sessionBubbleHeader,
@@ -86,10 +90,9 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     },
     { priority: 30 },
   );
-
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubbleHeader,
-    render: (input) => <SessionBubbleHeader input={input} />,
+    render: (input) => <SessionPanelActions input={input} />,
   });
 
   ctx.layout.registerWidget(
@@ -99,6 +102,11 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
       region: "side",
       singleton: true,
       rendererId: dashboardWidgetIds.sessionBubble,
+      icon: "MessageCircle",
+      tab: {
+        contentRendererId: sessionTabRendererId,
+        contextMenuRendererId: sessionTabContextMenuRendererId,
+      },
       priority: 30,
     },
     { priority: 30 },
@@ -107,6 +115,14 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubble,
     render: (input) => <SessionWidget input={input} />,
+  });
+  ctx.renderers.registerRenderer({
+    id: sessionTabRendererId,
+    render: (input) => <SessionTabContent input={input} />,
+  });
+  ctx.renderers.registerRenderer({
+    id: sessionTabContextMenuRendererId,
+    render: (input) => <SessionTabContextMenu input={input} />,
   });
 
   openSessionBubbleWidgets(ctx);
@@ -178,6 +194,11 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
       },
     },
   );
+  ctx.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("side"), {
+    commandId: dashboardCommandIds.createSession,
+    label: "New session",
+    icon: "PenBox",
+  });
 };
 
 export const createSessionBubbleModule = () =>

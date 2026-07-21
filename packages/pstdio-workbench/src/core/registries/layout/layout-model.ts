@@ -47,12 +47,14 @@ export type {
   WidgetReusePolicy,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
+  WorkbenchPanelRegion,
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
   WorkbenchWidgetPlacement,
+  WorkbenchWidgetTab,
 } from "./layout-types";
-export { createDefaultWorkbenchLayout, workbenchRegions } from "./layout-types";
+export { createDefaultWorkbenchLayout, workbenchPanelRegions, workbenchRegions } from "./layout-types";
 
 export type LayoutScope = string;
 

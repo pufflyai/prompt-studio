@@ -21,6 +21,10 @@ export const workbenchRegions = [
 
 export type WorkbenchRegion = (typeof workbenchRegions)[number];
 
+export const workbenchPanelRegions = ["main", "secondary", "side"] as const satisfies readonly WorkbenchRegion[];
+
+export type WorkbenchPanelRegion = (typeof workbenchPanelRegions)[number];
+
 export interface WorkbenchRegionSize {
   defaultPx?: number;
   minPx?: number;
@@ -30,6 +34,11 @@ export interface WorkbenchRegionSize {
 export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
+
+export interface WorkbenchWidgetTab {
+  contentRendererId?: string;
+  contextMenuRendererId?: string;
+}
 
 export interface WidgetContribution {
   id: string;
@@ -50,6 +59,8 @@ export interface WidgetContribution {
   resourceKinds?: string[];
   priority?: number;
   rendererId: string;
+  openCommandId?: string;
+  tab?: WorkbenchWidgetTab;
   config?: unknown;
   canOpen?(resource: ResourceRef): boolean;
 }
@@ -85,6 +96,7 @@ export interface WorkbenchWidgetPlacement {
   closable?: boolean;
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
+  tab?: WorkbenchWidgetTab;
 }
 
 export interface WorkbenchRegionState {
@@ -117,6 +129,7 @@ export interface OpenWidgetInput {
   closable?: boolean;
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
+  tab?: WorkbenchWidgetTab;
   replaceActive?: boolean;
 }
 
