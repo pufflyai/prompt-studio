@@ -135,19 +135,34 @@ test.describe("Extension webviews", () => {
       .toBe(200);
 
     await bypassOnboarding(page, project.id);
+    await page.setViewportSize({ width: 1280, height: 600 });
 
     await openExtensionLab(page, project.id);
     const labIframe = page.locator('iframe[title="Lab"]');
+    const labFrame = page.frameLocator('iframe[title="Lab"]');
     await expect(labIframe).toBeVisible();
     await expect(labIframe).not.toHaveAttribute("sandbox", /allow-same-origin/);
-    await expect(
-      page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" }),
-    ).toBeVisible();
+    await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+
+    const labBody = labFrame.locator("body");
+    const scrollMetrics = await labBody.evaluate((body) => {
+      return {
+        clientHeight: body.clientHeight,
+        overflowY: getComputedStyle(body).overflowY,
+        scrollHeight: body.scrollHeight,
+      };
+    });
+    expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
+    expect(["auto", "scroll"]).toContain(scrollMetrics.overflowY);
+
+    await labBody.hover();
+    await page.mouse.wheel(0, 200);
+    await expect.poll(() => labBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
 
     // The route renders through `ShellWorkbench`: the lab guest reaches the dashboard host
     // bridge via the shell renderer's injected host capabilities. Clicking "Say hello" calls
     // `notification.show`, which the dashboard surfaces as a single toast in the host document.
-    await page.frameLocator('iframe[title="Lab"]').getByRole("button", { name: "Say hello" }).click();
+    await labFrame.getByRole("button", { name: "Say hello" }).click();
     await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
   });
 
@@ -220,19 +235,23 @@ test.describe("Extension webviews", () => {
     await page.goto(`/projects/${project.id}`);
     await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-    // Host terminal tabs are named after their foreground process (VSCode-style),
-    // so identify the strip by its "New terminal" action and address tabs by position.
-    const terminalTabList = page
-      .getByRole("tablist")
-      .filter({ has: page.getByRole("button", { name: "New terminal" }) });
+    const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');
+    const terminalTabList = secondaryHeader.getByRole("tablist");
     const terminalTabs = terminalTabList.getByRole("tab");
+    const addTerminal = async () => {
+      await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
+      await page
+        .getByRole("menu", { name: "Add panel" })
+        .getByRole("menuitem", { name: "Terminal", exact: true })
+        .click();
+    };
 
     await expect(terminalTabs).toHaveCount(1);
     await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
     await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
-    await terminalTabList.getByRole("button", { name: "New terminal" }).click();
+    await addTerminal();
     await expect(terminalTabs).toHaveCount(2);
     await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
     await expectVisibleTerminalOutput();
@@ -255,8 +274,7 @@ test.describe("Extension webviews", () => {
       .first()
       .getByRole("button", { name: /^Close/ })
       .click();
-    await expect(page.getByRole("banner").getByRole("button", { name: "New terminal" })).toHaveCount(0);
-    await page.getByRole("button", { name: "New terminal" }).click();
+    await addTerminal();
     await expect(terminalTabs).toHaveCount(1);
     await expectVisibleTerminalOutput();
   });

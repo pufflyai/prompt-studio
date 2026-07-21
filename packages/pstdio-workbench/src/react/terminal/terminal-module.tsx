@@ -1,8 +1,4 @@
-import {
-  type WorkbenchCoreContributionContext,
-  type WorkbenchModuleContribution,
-  workbenchRegionTabLeadingMenuPath,
-} from "../../core";
+import type { WorkbenchCoreContributionContext, WorkbenchModuleContribution } from "../../core";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
@@ -135,12 +131,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         },
         { execute: (_args, context) => openWorkbenchTerminal(ctx, { resource: context?.resource }) },
       ),
-      ctx.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("secondary"), {
-        commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
-        label: "New terminal",
-        icon: "SquareTerminal",
-        order: -100,
-      }),
     ];
 
     ensureTerminalLauncher(ctx);

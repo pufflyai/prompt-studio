@@ -299,7 +299,7 @@ describe("createHistoryController cleanup", () => {
 });
 
 describe("createHistoryController mode-aware navigation", () => {
-  test("does not restore a mode whose tab was removed", async () => {
+  test("restores a resource after its mode layout was deactivated", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
@@ -372,7 +372,14 @@ describe("createHistoryController mode-aware navigation", () => {
     const back = workbench.history.goBack();
     await Promise.resolve();
 
-    expect(back).toBeUndefined();
+    expect(back?.resource?.id).toBe("PS-1");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe("history.test.project-item:PS-1");
+
+    const forward = workbench.history.goForward();
+    await Promise.resolve();
+
+    expect(forward?.resource?.id).toBe("file-a");
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("history.test.workspace-file:file-a");
   });

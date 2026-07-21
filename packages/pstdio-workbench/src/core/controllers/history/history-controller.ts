@@ -69,7 +69,7 @@ const findLastEquivalentEntry = (entries: readonly HistoryEntry[], target: Histo
 };
 
 // History tracks the PRIMARY (main) region's live placements only, so supporting surfaces never
-// push Back/Forward entries and removed tabs cannot be recreated by navigation.
+// push Back/Forward entries.
 const activePlacementFromLayout = (layout: LayoutModel) =>
   getActivePlacement(layout.getLayout().regions[resolveAnchorRegion("primary")]);
 
@@ -169,6 +169,10 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   const pruneRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
     const snapshot = store.getState();
     const current = snapshot.entries[snapshot.cursor];
+    // Mode changes tear down their widget registrations and placements together. Keep those
+    // entries so Back can reactivate the mode and reopen its resource; an explicitly closed tab
+    // still has a live contribution and should be removed from history.
+    if (!input.layout.getWidget(placement.contributionId)) return;
     const retained = snapshot.entries.filter((entry) => entry.widgetId !== placement.widgetId);
     if (retained.length === snapshot.entries.length) return;
     const entries = compactAdjacentEntries(retained);
@@ -260,15 +264,18 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     const placement = entry.widgetId
       ? findPlacementByWidgetId(input.layout.getLayout(), entry.widgetId)?.placement
       : undefined;
-    if (!placement) return;
 
     if (entry.kind === "resource" && entry.resource) {
-      if (placement.resourceUri === entry.resource.uri) return input.layout.activateWidget(placement.widgetId);
+      if (placement?.resourceUri === entry.resource.uri) return input.layout.activateWidget(placement.widgetId);
       replayingResourceUris.add(entry.resource.uri);
-      return input.resources.openResource(entry.resource, { replaceActive: true }).finally(() => {
+      return input.resources.openResource(entry.resource, { replaceActive: Boolean(placement) }).finally(() => {
         if (entry.resource) replayingResourceUris.delete(entry.resource.uri);
       });
     }
+    if (!placement && entry.contributionId && input.layout.getWidget(entry.contributionId)) {
+      return input.layout.openWidget(entry.contributionId, { title: entry.title });
+    }
+    if (!placement) return;
     return input.layout.activateWidget(placement.widgetId);
   };
 

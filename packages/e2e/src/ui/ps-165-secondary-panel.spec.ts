@@ -28,6 +28,14 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
 const panelSize = async (separator: import("@playwright/test").Locator) =>
   Number(await separator.getAttribute("aria-valuenow"));
 
+const getSecondaryHeader = (page: import("@playwright/test").Page) =>
+  page.locator('[data-workbench-panel-header="secondary"]');
+
+const addTerminal = async (page: import("@playwright/test").Page) => {
+  await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal", exact: true }).click();
+};
+
 const dragPanelToRawSize = async (
   page: import("@playwright/test").Page,
   separator: import("@playwright/test").Locator,
@@ -122,9 +130,9 @@ test("PS-165 restores terminal tabs and opens a unique tab after refresh", async
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-  const terminalTabList = page.getByRole("tablist").filter({ has: page.getByRole("button", { name: "New terminal" }) });
+  const terminalTabList = getSecondaryHeader(page).getByRole("tablist");
   const terminalTabs = terminalTabList.getByRole("tab");
-  await terminalTabList.getByRole("button", { name: "New terminal" }).click();
+  await addTerminal(page);
   await expect(terminalTabs).toHaveCount(2);
 
   await page.reload();
@@ -134,7 +142,7 @@ test("PS-165 restores terminal tabs and opens a unique tab after refresh", async
   await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".xterm")).toHaveCount(2);
 
-  await terminalTabList.getByRole("button", { name: "New terminal" }).click();
+  await addTerminal(page);
   await expect(terminalTabs).toHaveCount(3);
   await expect(terminalTabList.getByRole("tab", { selected: true })).toHaveCount(1);
   await expect(terminalTabs.nth(2)).toHaveAttribute("aria-selected", "true");
@@ -155,7 +163,7 @@ test("PS-165 restores terminal tabs and opens a unique tab after refresh", async
   await expect(terminalTabList.getByRole("tab", { selected: true })).toHaveCount(1);
   await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
 
-  await terminalTabList.getByRole("button", { name: "New terminal" }).click();
+  await addTerminal(page);
   await expect(terminalTabs).toHaveCount(4);
   await expect(terminalTabList.getByRole("tab", { selected: true })).toHaveCount(1);
   await expect(terminalTabs.nth(3)).toHaveAttribute("aria-selected", "true");
@@ -171,9 +179,8 @@ test("PS-165 accepts input after rapidly opening five terminal sessions", async 
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-  const terminalTabList = page.getByRole("tablist").filter({ has: page.getByRole("button", { name: "New terminal" }) });
-  const newTerminal = terminalTabList.getByRole("button", { name: "New terminal" });
-  for (let index = 0; index < 4; index += 1) await newTerminal.click();
+  const terminalTabList = getSecondaryHeader(page).getByRole("tablist");
+  for (let index = 0; index < 4; index += 1) await addTerminal(page);
 
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
   await expect(terminalInput).toBeFocused();

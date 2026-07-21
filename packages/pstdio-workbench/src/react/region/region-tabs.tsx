@@ -221,6 +221,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
           positioning={{
             placement: "bottom-start",
             getAnchorRect: () => anchor,
+            offset: { mainAxis: 0 },
           }}
         >
           <Portal>

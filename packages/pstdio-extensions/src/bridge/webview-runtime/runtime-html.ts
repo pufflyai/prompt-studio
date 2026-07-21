@@ -16,6 +16,10 @@ const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
         margin: 0;
         background: transparent;
       }
+      body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+      }
       #${MOUNT_ID} {
         height: 100%;
         width: 100%;

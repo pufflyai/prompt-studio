@@ -6,6 +6,16 @@ const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
+const getVerticalMenuGap = async (
+  tab: import("@playwright/test").Locator,
+  menu: import("@playwright/test").Locator,
+) => {
+  const tabBox = await tab.boundingBox();
+  const menuBox = await menu.boundingBox();
+  if (!tabBox || !menuBox) throw new Error("Tab menu geometry is unavailable");
+  return Math.abs(menuBox.y - (tabBox.y + tabBox.height));
+};
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
   expect(response.ok()).toBe(true);
@@ -41,6 +51,8 @@ test("PS-169 gives the Session tab its own right-click menu", async ({ page, req
   await expect(sessionMenu).toBeVisible();
   await expect(sessionMenu.getByRole("button", { name: "New session" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "No sessions yet" })).toBeVisible();
+
+  await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });
 
 test.describe("PS-169 Panel tabs", () => {
@@ -72,6 +84,9 @@ test.describe("PS-169 Panel tabs", () => {
     await expect(
       page.getByRole("menu", { name: "Activity actions" }).getByRole("menuitem", { name: "Live context" }),
     ).toBeVisible();
+
+    const activityMenu = page.getByRole("menu", { name: "Activity actions" });
+    await expect.poll(() => getVerticalMenuGap(activityTab, activityMenu)).toBeLessThanOrEqual(1);
     await page.keyboard.press("Escape");
 
     const addSidePanel = page

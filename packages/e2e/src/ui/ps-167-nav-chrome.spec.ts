@@ -156,7 +156,7 @@ test("PS-167 opens the Secondary Panel from Workspaces before the first terminal
   await expect(nav.getByRole("button", { name: "Hide Secondary Panel" })).toHaveAttribute("aria-pressed", "true");
   const secondaryPanel = page.locator('[data-workbench-region="secondary"]');
   await expect(secondaryPanel).toBeVisible();
-  await expect(secondaryPanel.getByRole("button", { name: "New terminal" })).toBeVisible();
+  await expect(secondaryPanel.getByRole("button", { name: "Add panel" })).toBeVisible();
 });
 
 test.describe("PS-167 breadcrumb Storybook contract", () => {

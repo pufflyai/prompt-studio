@@ -106,7 +106,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       <Menu.Root
         open={menuOpen}
         onOpenChange={(details) => setMenuOpen(details.open)}
-        positioning={{ placement: "bottom-start", getAnchorRect: () => anchor }}
+        positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
       >
         <Portal>
           <Menu.Positioner>
