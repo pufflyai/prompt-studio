@@ -1,6 +1,10 @@
 ---
 import { IndexPage } from "../components/index-page";
+import { ALL_LANDING_PATHS } from "../components/landing/landing-route";
 import BaseLayout from "../layouts/base-layout.astro";
+
+export const getStaticPaths = () =>
+  ALL_LANDING_PATHS.filter((path) => path !== "/").map((path) => ({ params: { path: path.slice(1) } }));
 ---
 
 <BaseLayout>
@@ -8,8 +12,6 @@ import BaseLayout from "../layouts/base-layout.astro";
 </BaseLayout>
 
 <script>
-  // apply the stored (or system) theme before hydration so the page doesn't flash;
-  // ThemePreferenceProvider takes over once React mounts
   const stored = localStorage.getItem("theme-preference");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const dark = stored ? stored.includes("dark") : prefersDark;
