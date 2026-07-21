@@ -301,73 +301,74 @@ describe("createHistoryController cleanup", () => {
 describe("createHistoryController mode-aware navigation", () => {
   test("restores a resource after its mode layout was deactivated", async () => {
     const workbench = createWorkbenchCore();
+    const projectItem = {
+      kind: "history.test.project-item",
+      uri: "history.test.project-item:PS-1",
+      id: "PS-1",
+      label: "Project item",
+    };
+    const workspaceFile = {
+      kind: "history.test.workspace-file",
+      uri: "history.test.workspace-file:file-a",
+      id: "file-a",
+      label: "Workspace file",
+    };
 
     workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
     workbench.resources.registerKind({ kind: "history.test.workspace-file", label: "Workspace file" });
-
+    workbench.layout.registerWidget({
+      id: "project-viewer",
+      title: "Project",
+      region: "main",
+      singleton: true,
+      rendererId: "noop",
+      resourceKinds: ["history.test.project-item"],
+    });
+    workbench.layout.registerWidget({
+      id: "workspace-viewer",
+      title: "Workspace",
+      region: "main",
+      singleton: true,
+      rendererId: "noop",
+      resourceKinds: ["history.test.workspace-file"],
+    });
+    workbench.resources.registerOpener({
+      id: "project-opener",
+      canOpen: (resource) => resource.kind === "history.test.project-item",
+      open: (resource, input) =>
+        workbench.layout.openWidget("project-viewer", {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
+    });
+    workbench.resources.registerOpener({
+      id: "workspace-opener",
+      canOpen: (resource) => resource.kind === "history.test.workspace-file",
+      open: (resource, input) =>
+        workbench.layout.openWidget("workspace-viewer", {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
+    });
     workbench.modes.registerMode({
       id: "project",
       activate: (ctx) => {
-        const widget = ctx.layout.registerWidget({
-          id: "project-viewer",
-          title: "Project",
-          region: "main",
-          singleton: true,
-          rendererId: "noop",
-          resourceKinds: ["history.test.project-item"],
-        });
-        const opener = ctx.resources.registerOpener({
-          id: "project-opener",
-          canOpen: (resource) => resource.kind === "history.test.project-item",
-          open: (resource, input) =>
-            ctx.layout.openWidget("project-viewer", {
-              resource,
-              title: resource.label,
-              replaceActive: input.replaceActive,
-            }),
-        });
-        return [widget, opener];
+        ctx.layout.clearRegion("main");
+        ctx.layout.openWidget("project-viewer", { resource: projectItem, title: projectItem.label });
       },
     });
     workbench.modes.registerMode({
       id: "workspace",
       activate: (ctx) => {
-        const widget = ctx.layout.registerWidget({
-          id: "workspace-viewer",
-          title: "Workspace",
-          region: "main",
-          singleton: true,
-          rendererId: "noop",
-          resourceKinds: ["history.test.workspace-file"],
-        });
-        const opener = ctx.resources.registerOpener({
-          id: "workspace-opener",
-          canOpen: (resource) => resource.kind === "history.test.workspace-file",
-          open: (resource, input) =>
-            ctx.layout.openWidget("workspace-viewer", {
-              resource,
-              title: resource.label,
-              replaceActive: input.replaceActive,
-            }),
-        });
-        return [widget, opener];
+        ctx.layout.clearRegion("main");
+        ctx.layout.openWidget("workspace-viewer", { resource: workspaceFile, title: workspaceFile.label });
       },
     });
 
     workbench.modes.setActiveMode("project");
-    await workbench.resources.openResource({
-      kind: "history.test.project-item",
-      uri: "history.test.project-item:PS-1",
-      id: "PS-1",
-      label: "Project item",
-    });
     workbench.modes.setActiveMode("workspace");
-    await workbench.resources.openResource({
-      kind: "history.test.workspace-file",
-      uri: "history.test.workspace-file:file-a",
-      id: "file-a",
-      label: "Workspace file",
-    });
 
     const back = workbench.history.goBack();
     await Promise.resolve();

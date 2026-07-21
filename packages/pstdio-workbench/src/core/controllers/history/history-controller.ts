@@ -35,7 +35,10 @@ export interface HistoryController {
 
 export interface CreateHistoryControllerInput {
   layout: LayoutModel;
-  modes?: Pick<WorkbenchModeRegistry, "getActiveModeId" | "getMode" | "onDidChangeActive" | "setActiveMode">;
+  modes?: Pick<
+    WorkbenchModeRegistry,
+    "getActiveModeId" | "getMode" | "isTransitioning" | "onDidChangeActive" | "setActiveMode"
+  >;
   resources: ResourceRegistry;
   maxEntries?: number;
 }
@@ -169,9 +172,10 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   const pruneRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
     const snapshot = store.getState();
     const current = snapshot.entries[snapshot.cursor];
-    // Mode changes tear down their widget registrations and placements together. Keep those
+    // Mode changes tear down their placements before activating the next layout. Keep those
     // entries so Back can reactivate the mode and reopen its resource; an explicitly closed tab
-    // still has a live contribution and should be removed from history.
+    // outside that transition should still be removed from history.
+    if (input.modes?.isTransitioning()) return;
     if (!input.layout.getWidget(placement.contributionId)) return;
     const retained = snapshot.entries.filter((entry) => entry.widgetId !== placement.widgetId);
     if (retained.length === snapshot.entries.length) return;

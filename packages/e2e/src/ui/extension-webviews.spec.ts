@@ -159,6 +159,12 @@ test.describe("Extension webviews", () => {
     await page.mouse.wheel(0, 200);
     await expect.poll(() => labBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
 
+    await page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(page.getByRole("link", { name: "Lab", exact: true })).toBeVisible();
+    await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+
     // The route renders through `ShellWorkbench`: the lab guest reaches the dashboard host
     // bridge via the shell renderer's injected host capabilities. Clicking "Say hello" calls
     // `notification.show`, which the dashboard surfaces as a single toast in the host document.

@@ -26,6 +26,7 @@ export interface WorkbenchModeRegistry {
   getMode(id: string): WorkbenchModeContribution | undefined;
   listModes(): WorkbenchModeContribution[];
   getActiveModeId(): string | undefined;
+  isTransitioning(): boolean;
   setActiveMode(id: string | undefined): void;
   onDidChangeActive(listener: WorkbenchModeChangeListener): Disposable;
 }
@@ -50,6 +51,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let activeBaselinePlacementIds = new Set<string>();
   let activeLayoutSubscription: (() => void) | undefined;
   let activeModeContext: Disposable | undefined;
+  let transitioning = false;
 
   const listPlacementIds = (layout: WorkbenchLayout) =>
     Object.values(layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId));
@@ -133,10 +135,19 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       return store.getState().activeModeId;
     },
 
+    isTransitioning() {
+      return transitioning;
+    },
+
     setActiveMode(id) {
       if (id === store.getState().activeModeId) return;
-      disposeActive({ publish: id === undefined });
-      if (id !== undefined) activate(id);
+      transitioning = true;
+      try {
+        disposeActive({ publish: id === undefined });
+        if (id !== undefined) activate(id);
+      } finally {
+        transitioning = false;
+      }
     },
 
     onDidChangeActive(listener) {
