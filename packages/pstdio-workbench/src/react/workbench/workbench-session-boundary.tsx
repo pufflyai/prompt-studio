@@ -87,7 +87,7 @@ export const WorkbenchSessionBoundary = (props: WorkbenchSessionBoundaryProps) =
         contentMinSizePx={contentMinSizePx}
         header={sideHeader}
         onAttachedSlotChange={onAttachedSlotChange}
-        onCollapseToBubble={() => workbench.sessionPanel.setMode("bubble")}
+        onCollapse={() => workbench.sessionPanel.setMode("closed")}
       />
     </WorkbenchKeyboardFrame>
   );

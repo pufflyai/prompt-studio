@@ -10,7 +10,7 @@ export interface PerfStats {
 
 declare global {
   interface Window {
-    __longTasks?: Array<{ duration: number }>;
+    __longTasks?: Array<{ duration: number; startTime: number }>;
   }
 }
 
@@ -31,7 +31,9 @@ export const installLongTaskObserver = async (page: Page) => {
   await page.addInitScript(() => {
     window.__longTasks = [];
     new PerformanceObserver((list) => {
-      window.__longTasks?.push(...list.getEntries().map((entry) => ({ duration: entry.duration })));
+      window.__longTasks?.push(
+        ...list.getEntries().map((entry) => ({ duration: entry.duration, startTime: entry.startTime })),
+      );
     }).observe({ type: "longtask", buffered: true });
   });
 };

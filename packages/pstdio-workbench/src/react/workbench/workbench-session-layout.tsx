@@ -48,12 +48,11 @@ interface WorkbenchAttachedSessionLayoutProps {
   contentMinSizePx: number;
   header: ReactNode;
   onAttachedSlotChange: (slot: HTMLDivElement | null) => void;
-  onCollapseToBubble: () => void;
+  onCollapse: () => void;
 }
 
 export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLayoutProps) => {
-  const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } =
-    props;
+  const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapse } = props;
 
   return (
     <ResizableSplitLayout
@@ -73,7 +72,7 @@ export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLa
       resizeLabel="Resize Side Panel"
       showResizeSeparator
       onCollapsedChange={(collapsed) => {
-        if (attached && collapsed) onCollapseToBubble();
+        if (attached && collapsed) onCollapse();
       }}
     />
   );

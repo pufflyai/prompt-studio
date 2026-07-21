@@ -62,14 +62,14 @@ const createSessionPanelHost = () => {
 };
 
 const resolveActiveSessionSlot = (input: {
-  showAttachedSessionPanel: boolean;
-  showBubbleSessionPanel: boolean;
+  mounted: boolean;
+  mode: "attached" | "bubble" | "closed";
   sessionAttachedSlot: HTMLDivElement | null;
   sessionBubbleSlot: HTMLDivElement | null;
 }) => {
-  if (input.showAttachedSessionPanel) return input.sessionAttachedSlot;
-  if (input.showBubbleSessionPanel) return input.sessionBubbleSlot;
-  return null;
+  if (!input.mounted) return null;
+  if (input.mode === "bubble") return input.sessionBubbleSlot;
+  return input.sessionAttachedSlot;
 };
 
 const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) =>
@@ -186,8 +186,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets;
   const sidebarSize = resolveSidebarSize(workbench);
   const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
-  const showBubbleSessionPanel = hasSidePanel && sessionPanelMode === "bubble";
-  const mountSessionPanel = hasSidePanel && sessionPanelMode !== "closed";
+  // Closed removes the Side Panel's footprint, not its live region. Keeping the
+  // portal in the hidden attached slot preserves provider and renderer state.
+  const mountSessionPanel = hasSidePanel;
   const setPanelOpen = (region: WorkbenchPanelRegionId, open: boolean) =>
     setWorkbenchPanelOpen(workbench, region, open);
   const regionControls = createWorkbenchRegionControls({
@@ -205,8 +206,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const sideHeader = <WorkbenchSessionRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
   const activeSessionSlot = resolveActiveSessionSlot({
-    showAttachedSessionPanel,
-    showBubbleSessionPanel,
+    mounted: mountSessionPanel,
+    mode: sessionPanelMode,
     sessionAttachedSlot,
     sessionBubbleSlot,
   });
