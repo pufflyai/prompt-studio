@@ -1,7 +1,6 @@
-import { Box, Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { ResizableSplitLayout, Tooltip, TreeList } from "@pstdio/ui";
-import { FileText, PanelLeftClose } from "lucide-react";
-import { BLOG_POSTS } from "./content/blog";
+import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { ResizableSplitLayout, TreeList } from "@pstdio/ui";
+import { BLOG_POSTS, VISIBLE_BLOG_POSTS } from "./content/blog";
 import { DocView } from "./doc-view";
 
 interface BlogViewProps {
@@ -13,38 +12,35 @@ interface BlogViewProps {
 
 interface PostListProps {
   activePostId: string;
-  onClose: () => void;
   onSelectPost: (postId: string) => void;
 }
 
 const PostList = (props: PostListProps) => {
-  const { activePostId, onClose, onSelectPost } = props;
+  const { activePostId, onSelectPost } = props;
 
   return (
-    <Stack width="full" height="full" gap="0" py="8px" bg="bg.subtle" overflowY="auto">
-      <HStack height="28px" px="10px" justify="space-between">
+    <Stack
+      width="full"
+      height="full"
+      gap="0"
+      py="8px"
+      bg="bg.subtle"
+      borderRightWidth="1px"
+      borderColor="border.subtle"
+      overflowY="auto"
+    >
+      <HStack height="28px" px="10px">
         <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em">
           Posts
         </Text>
-        <Tooltip content="Close post list">
-          <IconButton aria-label="Close post list" variant="ghost" size="2xs" onClick={onClose}>
-            <PanelLeftClose size={14} />
-          </IconButton>
-        </Tooltip>
       </HStack>
       <TreeList
         sections={[
           {
             id: "posts",
-            nodes: BLOG_POSTS.map((post) => ({
+            nodes: VISIBLE_BLOG_POSTS.map((post) => ({
               id: post.id,
               label: post.title,
-              endContent: (
-                <Text fontFamily="mono" fontSize="10px" whiteSpace="nowrap">
-                  {post.date}
-                </Text>
-              ),
-              icon: <FileText size={14} />,
               isNavigable: true,
             })),
           },
@@ -70,8 +66,8 @@ const PostContent = (props: { page: (typeof BLOG_POSTS)[number]["page"] }) => {
 };
 
 export const BlogView = (props: BlogViewProps) => {
-  const { activePostId = BLOG_POSTS[0].id, postListOpen, onPostListOpenChange, onSelectPost } = props;
-  const activePost = BLOG_POSTS.find((post) => post.id === activePostId) ?? BLOG_POSTS[0];
+  const { activePostId = VISIBLE_BLOG_POSTS[0].id, postListOpen, onPostListOpenChange, onSelectPost } = props;
+  const activePost = BLOG_POSTS.find((post) => post.id === activePostId) ?? VISIBLE_BLOG_POSTS[0];
 
   return (
     <Box height="full">
@@ -85,13 +81,7 @@ export const BlogView = (props: BlogViewProps) => {
           resizeLabel="Resize post list"
           showResizeSeparator
           onCollapsedChange={(collapsed) => onPostListOpenChange(!collapsed)}
-          resizablePanel={
-            <PostList
-              activePostId={activePostId}
-              onClose={() => onPostListOpenChange(false)}
-              onSelectPost={onSelectPost}
-            />
-          }
+          resizablePanel={<PostList activePostId={activePostId} onSelectPost={onSelectPost} />}
           contentPanel={<PostContent page={activePost.page} />}
         />
       </Box>

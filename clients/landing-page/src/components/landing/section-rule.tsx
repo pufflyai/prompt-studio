@@ -13,7 +13,7 @@ export const SectionRule = (props: SectionRuleProps) => {
         fontFamily="mono"
         fontSize="11px"
         letterSpacing="1.8px"
-        color="fg.subtle"
+        color="fg.muted"
         whiteSpace="nowrap"
         transition="color 120ms ease"
         _groupHover={{ color: "fg" }}

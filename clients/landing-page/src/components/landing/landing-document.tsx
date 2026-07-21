@@ -3,6 +3,7 @@ import { AppleLogo, LinuxLogo, OpenAiLogo } from "@phosphor-icons/react";
 import { SquareTerminal } from "lucide-react";
 import { AnthropicLogo } from "./anthropic-logo";
 import { DashedTag } from "./dashed-tag";
+import type { DocPage } from "./doc-view";
 import { INSTALL_COMMANDS, type LandingView, SITE_LINKS } from "./landing-content";
 import { PromptToUiShowcase } from "./prompt-to-ui-showcase";
 import { SectionRule } from "./section-rule";
@@ -14,6 +15,27 @@ const FOOTER_LINKS: { label: string; view: LandingView; href: string }[] = [
 ];
 
 export const LANDING_DOCUMENT_TITLE = "A workbench that builds itself around your work.";
+export const LANDING_DOCUMENT_INTRO =
+  "A home for your bespoke tools, with the plumbing built in. Save tokens and focus on what matters.";
+
+export const LANDING_DOCUMENT_PAGE: DocPage = {
+  title: LANDING_DOCUMENT_TITLE,
+  intro: LANDING_DOCUMENT_INTRO,
+  blocks: [
+    { type: "heading", text: "Install Prompt Studio" },
+    { type: "code", code: INSTALL_COMMANDS.join("\n") },
+    { type: "heading", text: "Bring your own agent" },
+    {
+      type: "paragraph",
+      text: "Connect Claude Code, Codex, or OpenCode through harness extensions and use the agent you already trust.",
+    },
+    { type: "heading", text: "You build the tools. Prompt Studio handles everything around them." },
+    {
+      type: "paragraph",
+      text: "Describe the project-local command, panel, editor, automation, template, or skill you need and let your agent assemble it inside the workbench.",
+    },
+  ],
+};
 
 const CrossMark = () => (
   <Box position="relative" width="9px" height="9px" color="fg.subtle">
@@ -89,16 +111,15 @@ export const LandingDocument = (props: LandingDocumentProps) => {
         {LANDING_DOCUMENT_TITLE}
       </Text>
       <Text fontFamily="body" fontSize="15px" lineHeight="1.45" color="fg.muted" maxWidth="660px">
-        The tools you wish existed are one prompt away: your agent builds it, and the workbench grows around how your
-        team actually works.
+        {LANDING_DOCUMENT_INTRO}
       </Text>
 
-      <Stack className="group" gap="12px" pt="10px">
+      <Stack className="group" gap="12px" pt="28px">
         <SectionRule label="01 / install Prompt Studio" />
         <TerminalBlock commands={INSTALL_COMMANDS} />
       </Stack>
 
-      <Stack gap="26px" pt="10px">
+      <Stack gap="44px" pt="28px">
         <Stack className="group" gap="14px">
           <SectionRule label="02 / bring your own agent" />
           <Flex gap={{ base: "24px", md: "56px" }} flexWrap="wrap">

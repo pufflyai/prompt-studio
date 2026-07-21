@@ -3,6 +3,7 @@ import type { LandingView, ProjectTabId } from "./landing-content";
 
 const LANDING_VIEW_PATHS: Record<LandingView, string> = {
   start: "/",
+  "why-prompt-studio": "/explore/why-prompt-studio",
   gallery: "/extensions",
   concepts: "/docs/concepts",
   "guide-getting-started": "/guides/getting-started",
@@ -31,15 +32,8 @@ const LANDING_VIEW_PATHS: Record<LandingView, string> = {
   terms: "/terms",
 };
 
-const PROJECT_TAB_PATHS: Record<ProjectTabId, string> = {
-  docs: "/",
-  "agentic-kanban": "/use-cases/agentic-kanban",
-  "agentic-design": "/use-cases/agentic-design",
-  "agentic-data-analysis": "/use-cases/agentic-data-analysis",
-  "workflow-builder": "/use-cases/workflow-builder",
-};
-
 export interface LandingLocation {
+  // a single "docs" project today; kept for the workbench chrome that renders the project tab
   activeTab: ProjectTabId;
   activeView: LandingView;
   blogPostId?: string;
@@ -52,20 +46,12 @@ const normalizePath = (path: string) => {
 };
 
 export const landingPathForLocation = (location: LandingLocation) => {
-  if (location.activeTab !== "docs") return PROJECT_TAB_PATHS[location.activeTab];
   if (location.activeView === "blog" && location.blogPostId) return `/blog/${location.blogPostId}`;
   return LANDING_VIEW_PATHS[location.activeView];
 };
 
 export const landingLocationFromPath = (path: string): LandingLocation => {
   const pathname = normalizePath(path);
-  const projectTab = Object.entries(PROJECT_TAB_PATHS).find(
-    ([id, candidate]) => id !== "docs" && candidate === pathname,
-  );
-  if (projectTab) {
-    return { activeTab: projectTab[0] as ProjectTabId, activeView: "start" };
-  }
-
   const blogPost = BLOG_POSTS.find((post) => `/blog/${post.id}` === pathname);
   if (blogPost) {
     return { activeTab: "docs", activeView: "blog", blogPostId: blogPost.id };
@@ -78,9 +64,5 @@ export const landingLocationFromPath = (path: string): LandingLocation => {
 };
 
 export const ALL_LANDING_PATHS = [
-  ...new Set([
-    ...Object.values(LANDING_VIEW_PATHS),
-    ...Object.values(PROJECT_TAB_PATHS),
-    ...BLOG_POSTS.map((post) => `/blog/${post.id}`),
-  ]),
+  ...new Set([...Object.values(LANDING_VIEW_PATHS), ...BLOG_POSTS.map((post) => `/blog/${post.id}`)]),
 ];

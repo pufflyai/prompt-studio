@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Asterisk, Columns3, FileChartColumn, GraduationCap, Palette, SquareTerminal } from "lucide-react";
+import type { DocBlock, DocPage } from "../doc-view";
 
 export type ExtensionCategory = "Workflows" | "Agent harnesses" | "Developer tools" | "Themes";
 
@@ -73,3 +74,18 @@ export const EXTENSIONS: ExtensionEntry[] = [
     icon: SquareTerminal,
   },
 ];
+
+export const extensionsPage: DocPage = {
+  title: "Extensions",
+  intro:
+    "Add tools, agent harnesses, themes, and workflows without leaving the workbench. Here are some extensions we already created.",
+  blocks: EXTENSION_CATEGORIES.flatMap((category): DocBlock[] => [
+    { type: "heading", text: category },
+    {
+      type: "list",
+      items: EXTENSIONS.filter((extension) => extension.category === category).map(
+        (extension) => `**${extension.name}** — ${extension.description}`,
+      ),
+    },
+  ]),
+};
