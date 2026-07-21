@@ -481,6 +481,39 @@ describe("createLayoutModel persistence", () => {
     expect(layout.getLayout().regions.sidebar.size).toBe(360);
   });
 
+  test("keeps pinned workbench chrome mounted when the persistence scope changes", () => {
+    const saved = new Map<string, WorkbenchLayout>();
+    const persistence = {
+      getLayout: (scope?: string) => saved.get(scope ?? "__global__"),
+      setLayout: (layoutState: WorkbenchLayout, scope?: string) => {
+        saved.set(scope ?? "__global__", structuredClone(layoutState));
+      },
+    };
+    const layout = createLayoutModel({ persistence });
+    registerTestWidget(layout, {
+      id: "dashboard.sidebar-header",
+      title: "Project selector",
+      region: "sidebar-header",
+    });
+    registerTestWidget(layout, {
+      id: "dashboard.project-content",
+      title: "Project content",
+      region: "sidebar",
+    });
+
+    layout.openWidget("dashboard.sidebar-header", { pinned: true });
+    layout.openWidget("dashboard.project-content");
+    layout.setPersistenceScope("project:a");
+
+    expect(layout.getLayout().regions["sidebar-header"].widgets).toEqual([
+      expect.objectContaining({ contributionId: "dashboard.sidebar-header", pinned: true }),
+    ]);
+    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+
+    layout.setPersistenceScope("project:b");
+    expect(layout.getLayout().regions["sidebar-header"].widgets).toHaveLength(1);
+  });
+
   test("scope === undefined falls back to global behavior", () => {
     const saved = new Map<string, WorkbenchLayout>();
     const persistence = {

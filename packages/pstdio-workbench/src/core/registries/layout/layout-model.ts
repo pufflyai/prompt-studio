@@ -193,6 +193,28 @@ const createContributionLists = (input: CreateContributionListsInput) => {
   };
 };
 
+const carryPinnedWorkbenchChrome = (current: WorkbenchLayout, incoming: WorkbenchLayout): WorkbenchLayout => {
+  const regions = { ...incoming.regions };
+
+  for (const region of Object.values(current.regions)) {
+    const pinned = region.widgets.filter((placement) => placement.pinned && placement.role === "content");
+    if (pinned.length === 0) continue;
+
+    const contributionIds = new Set(pinned.map((placement) => placement.contributionId));
+    const incomingRegion = incoming.regions[region.id];
+    regions[region.id] = {
+      ...incomingRegion,
+      widgets: [
+        ...pinned,
+        ...incomingRegion.widgets.filter((placement) => !contributionIds.has(placement.contributionId)),
+      ],
+      activeWidgetId: incomingRegion.activeWidgetId ?? pinned[0]?.widgetId,
+    };
+  }
+
+  return { ...incoming, regions };
+};
+
 const createContributionRegistrations = (input: CreateContributionRegistrationsInput) => {
   const { store, getPlaceholders, getWidgets, persistLayout } = input;
 
@@ -655,7 +677,10 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       currentScope = nextScope;
       for (const listener of scopeListeners) listener(currentScope);
       const incoming = input.persistence?.getLayout(currentScope);
-      const nextLayout = incoming ? mergeWithDefaultRegions(incoming) : createDefaultWorkbenchLayout();
+      const scopedLayout = incoming ? mergeWithDefaultRegions(incoming) : createDefaultWorkbenchLayout();
+      // Module-owned chrome is global workbench structure. Project scopes replace
+      // Location workspaces, but must not unmount pinned navigation and headers.
+      const nextLayout = carryPinnedWorkbenchChrome(getLayout(), scopedLayout);
       const snapshot = store.getState();
       store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
     },

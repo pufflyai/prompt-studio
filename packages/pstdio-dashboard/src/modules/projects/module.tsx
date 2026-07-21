@@ -15,10 +15,8 @@ import {
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerSidebarHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
-import { ProjectSidebarHeader } from "./components/project-sidebar-header";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
 
 interface CreateProjectsModuleInput {
@@ -368,11 +366,6 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         selectedProjectContext,
         input.projectSelectionPersistence,
       );
-      registerSidebarHeaderContribution(ctx, {
-        id: "dashboard.projects.sidebar-header",
-        render: (renderInput) => <ProjectSidebarHeader input={renderInput} />,
-        canRender: () => true,
-      });
 
       return [
         ...(persistedProjectSelection ? [persistedProjectSelection] : []),

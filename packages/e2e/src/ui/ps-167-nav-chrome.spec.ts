@@ -70,17 +70,18 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   const back = nav.getByRole("button", { name: "Navigate back" });
   const forward = nav.getByRole("button", { name: "Navigate forward" });
   const secondary = nav.getByRole("button", { name: "Hide Secondary Panel" });
+  const side = nav.getByRole("button", { name: "Show Side Panel" });
 
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
   await expect(nav.locator("[data-workbench-breadcrumb-action-slot]")).toBeVisible();
   await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
-  await expect(nav.getByRole("button", { name: /Side Panel/ })).toHaveCount(0);
+  await expect(side).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
   const selectedBackground = await backgroundColor(secondary);
-  await orderedCenters([back, forward, secondary]);
+  await orderedCenters([back, forward, secondary, side]);
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(0);
@@ -113,7 +114,6 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await forward.click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
   await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
-  const side = nav.getByRole("button", { name: "Show Side Panel" });
   await expect(side).toHaveAttribute("aria-pressed", "false");
   expect(await backgroundColor(side)).not.toBe(selectedBackground);
 

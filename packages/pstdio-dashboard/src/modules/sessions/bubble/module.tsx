@@ -82,7 +82,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
       closable: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
-      eligibleLocations: { resourceKinds: ["ticket", "workspace"] },
+      eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
       icon: "MessageCircle",
       tab: {
         contentRendererId: sessionTabRendererId,

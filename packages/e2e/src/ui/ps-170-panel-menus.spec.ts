@@ -7,6 +7,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const locationSwitchStoryId = "pstdio-workbench-onboarding--location-switch";
 const allPanelsStoryId = "pstdio-workbench-onboarding--all-three-panels";
+const widgetVariantsStoryId = "pstdio-workbench-onboarding--widget-variants";
 
 interface MenuCase {
   panel: "Main" | "Secondary" | "Side";
@@ -58,6 +59,21 @@ test("PS-170 preserves Forward history when refreshing after Back", async ({ pag
   await expect(forward).toBeEnabled();
   await forward.click();
   await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+});
+
+test("PS-170 keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Project Chrome" } });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, project.id);
+
+  await page.goto(`/projects/${project.id}/`);
+
+  await expect(page.getByRole("button", { name: "Switch project" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
 });
 
 test.describe("PS-170 Panel-owned menus", () => {
@@ -176,5 +192,23 @@ test.describe("PS-170 Panel-owned menus", () => {
     await expect(attach).toBeDisabled();
     await attach.hover();
     await expect(page.getByRole("tooltip").getByText("Panel is too narrow to attach this menu")).toBeVisible();
+  });
+
+  test("documents widget variants as one Location Panel with tabbed Sub Panels", async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto(storyUrl(baseUrl, widgetVariantsStoryId));
+
+    const tabs = page.getByRole("tablist");
+    await expect(tabs.getByRole("tab", { name: /^Widget variants/ })).toBeVisible({ timeout: 30_000 });
+    await expect(tabs.getByRole("tab", { name: /^Closable singleton/ })).toBeVisible();
+    await expect(tabs.getByRole("tab", { name: /^Alpha note/ })).toBeVisible();
+    await expect(tabs.getByRole("tab", { name: /^Beta note/ })).toBeVisible();
+    await expect(tabs.getByRole("tab", { name: /^Scratch 1/ })).toBeVisible();
+    await expect(
+      tabs.getByRole("tab", { name: /^Widget variants/ }).getByRole("button", { name: /Close/ }),
+    ).toHaveCount(0);
+
+    await page.getByRole("button", { name: "New scratch Sub Panel" }).click();
+    await expect(tabs.getByRole("tab", { name: /^Scratch 2/ })).toBeVisible();
   });
 });

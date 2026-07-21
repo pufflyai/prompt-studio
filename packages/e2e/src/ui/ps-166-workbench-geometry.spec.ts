@@ -120,7 +120,7 @@ test("PS-166 aligns an attached Side Panel with the active Location Panel", asyn
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
 
-  await expectCanonicalFrame(page, { sidebar: "hidden", statusBar: "hidden" });
+  await expectCanonicalFrame(page, { sidebar: "visible", statusBar: "hidden" });
 });
 
 test("PS-166 keeps the Main Panel Header visible while the right menu is open", async ({ page, request }) => {

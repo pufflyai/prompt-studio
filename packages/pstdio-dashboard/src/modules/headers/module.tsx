@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { renderSidebarHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
+import { ProjectSidebarHeader } from "../projects/components/project-sidebar-header";
 
 const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
@@ -14,7 +14,7 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
 
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sidebarHeader,
-    render: renderSidebarHeaderContribution,
+    render: (input) => <ProjectSidebarHeader input={input} />,
   });
 
   ctx.layout.openWidget(dashboardWidgetIds.sidebarHeader, { pinned: true });

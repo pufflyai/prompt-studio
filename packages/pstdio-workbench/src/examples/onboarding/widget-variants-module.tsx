@@ -4,13 +4,14 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
-const VARIANT_RESOURCE_KIND = "onboarding.widget-variants.note";
+const LOCATION_RESOURCE_KIND = "onboarding.widget-variants.location";
+const NOTE_RESOURCE_KIND = "onboarding.widget-variants.note";
 const CONTROLS_WIDGET_ID = "onboarding.widget-variants.controls";
 const CONTROLS_RENDERER_ID = "onboarding.widget-variants.controls.renderer";
-const DEFAULT_SINGLETON_WIDGET_ID = "onboarding.widget-variants.singleton";
-const CLOSABLE_SINGLETON_WIDGET_ID = "onboarding.widget-variants.closable-singleton";
-const RESOURCE_WIDGET_ID = "onboarding.widget-variants.resource";
-const SCRATCH_WIDGET_ID = "onboarding.widget-variants.scratch";
+const LOCATION_PANEL_ID = "onboarding.widget-variants.location";
+const SINGLETON_SUB_PANEL_ID = "onboarding.widget-variants.singleton-sub-panel";
+const RESOURCE_SUB_PANEL_ID = "onboarding.widget-variants.resource-sub-panel";
+const SCRATCH_SUB_PANEL_ID = "onboarding.widget-variants.scratch-sub-panel";
 const VARIANT_RENDERER_ID = "onboarding.widget-variants.renderer";
 
 interface VariantConfig {
@@ -34,12 +35,20 @@ const variantNotes = {
 
 type VariantNoteId = keyof typeof variantNotes;
 
+const locationResource = {
+  kind: LOCATION_RESOURCE_KIND,
+  uri: `${LOCATION_RESOURCE_KIND}:overview`,
+  id: "overview",
+  label: "Widget variants",
+  icon: "PanelsTopLeft",
+};
+
 const noteResource = (id: VariantNoteId) => {
   const note = variantNotes[id];
 
   return {
-    kind: VARIANT_RESOURCE_KIND,
-    uri: `${VARIANT_RESOURCE_KIND}:${note.id}`,
+    kind: NOTE_RESOURCE_KIND,
+    uri: `${NOTE_RESOURCE_KIND}:${note.id}`,
     id: note.id,
     label: note.label,
     icon: "FileText",
@@ -80,11 +89,11 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const mainRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main);
   const placements = mainRegion.widgets;
-  const scratchCount = countPlacements(placements, SCRATCH_WIDGET_ID);
+  const scratchCount = countPlacements(placements, SCRATCH_SUB_PANEL_ID);
 
   const openResource = (id: VariantNoteId) => {
     const resource = noteResource(id);
-    workbench.layout.openWidget(RESOURCE_WIDGET_ID, { resource, title: resource.label });
+    workbench.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label });
   };
 
   return (
@@ -95,33 +104,30 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
       contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}
     >
       <Stack gap="xs">
-        <Text textStyle="title/S/semibold">Widget variants</Text>
+        <Text textStyle="title/S/semibold">Panel variants</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Open each contribution more than once and compare the tabs in the main region.
+          The fixed Location Panel owns each tabbed Sub Panel in the main region.
         </Text>
       </Stack>
 
-      <ControlSection title="Singleton panels">
+      <ControlSection title="Location Panel">
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
+          Widget variants is the current Location and cannot be closed.
+        </Text>
+      </ControlSection>
+
+      <ControlSection title="Singleton Sub Panel">
         <Button
           size="sm"
           justifyContent="flex-start"
-          onClick={() => workbench.layout.openWidget(DEFAULT_SINGLETON_WIDGET_ID)}
-        >
-          <WorkbenchIcon name="Pin" />
-          Default singleton
-        </Button>
-        <Button
-          size="sm"
-          variant="subtle"
-          justifyContent="flex-start"
-          onClick={() => workbench.layout.openWidget(CLOSABLE_SINGLETON_WIDGET_ID)}
+          onClick={() => workbench.layout.openWidget(SINGLETON_SUB_PANEL_ID)}
         >
           <WorkbenchIcon name="X" />
           Closable singleton
         </Button>
       </ControlSection>
 
-      <ControlSection title="Resource tabs">
+      <ControlSection title="Resource Sub Panels">
         <Button size="sm" variant="outline" justifyContent="flex-start" onClick={() => openResource("alpha")}>
           <WorkbenchIcon name="FileText" />
           Open Alpha
@@ -132,28 +138,28 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
         </Button>
       </ControlSection>
 
-      <ControlSection title="Duplicate tabs">
+      <ControlSection title="Duplicate Sub Panels">
         <Button
           size="sm"
           variant="outline"
           justifyContent="flex-start"
           onClick={() =>
-            workbench.layout.openWidget(SCRATCH_WIDGET_ID, {
+            workbench.layout.openWidget(SCRATCH_SUB_PANEL_ID, {
               title: `Scratch ${scratchCount + 1}`,
             })
           }
         >
           <WorkbenchIcon name="CopyPlus" />
-          New scratch tab
+          New scratch Sub Panel
         </Button>
       </ControlSection>
 
       <Box borderTopWidth="1px" borderColor="border.subtle" pt="md">
         <Stack gap="xs">
-          <VariantCount label="default singleton" count={countPlacements(placements, DEFAULT_SINGLETON_WIDGET_ID)} />
-          <VariantCount label="closable singleton" count={countPlacements(placements, CLOSABLE_SINGLETON_WIDGET_ID)} />
-          <VariantCount label="resource tabs" count={countPlacements(placements, RESOURCE_WIDGET_ID)} />
-          <VariantCount label="scratch tabs" count={scratchCount} />
+          <VariantCount label="Location Panel" count={countPlacements(placements, LOCATION_PANEL_ID)} />
+          <VariantCount label="singleton Sub Panel" count={countPlacements(placements, SINGLETON_SUB_PANEL_ID)} />
+          <VariantCount label="resource Sub Panels" count={countPlacements(placements, RESOURCE_SUB_PANEL_ID)} />
+          <VariantCount label="scratch Sub Panels" count={scratchCount} />
         </Stack>
       </Box>
     </ScrollArea>
@@ -178,7 +184,6 @@ const VariantFact = (props: { label: string; children: ReactNode }) => {
 const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const config = input.widget.config as VariantConfig;
-  const singleton = "singleton" in input.widget ? input.widget.singleton : false;
   const reuse = "reuse" in input.widget ? input.widget.reuse : "resource";
   const resourceBody = input.placement.resource?.metadata?.body;
 
@@ -191,7 +196,7 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
     >
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette={config.colorPalette} variant="subtle">
-          {singleton ? "singleton" : "tabbed"}
+          {"role" in input.widget && input.widget.role === "location" ? "Location Panel" : "Sub Panel"}
         </Badge>
         <Badge colorPalette={input.placement.closable ? "green" : "gray"} variant="subtle">
           {input.placement.closable ? "closable" : "not closable"}
@@ -231,11 +236,12 @@ const variantConfig = (config: VariantConfig) => config;
 export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.widget-variants",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: VARIANT_RESOURCE_KIND, label: "Variant note", icon: "FileText" });
+    ctx.resources.registerKind({ kind: LOCATION_RESOURCE_KIND, label: "Widget variants", icon: "PanelsTopLeft" });
+    ctx.resources.registerKind({ kind: NOTE_RESOURCE_KIND, label: "Variant note", icon: "FileText" });
     ctx.resources.registerOpener({
       id: "onboarding.widget-variants.note-opener",
-      canOpen: (resource) => resource.kind === VARIANT_RESOURCE_KIND,
-      open: (resource) => ctx.layout.openWidget(RESOURCE_WIDGET_ID, { resource, title: resource.label }),
+      canOpen: (resource) => resource.kind === NOTE_RESOURCE_KIND,
+      open: (resource) => ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label }),
     });
 
     ctx.layout.registerWidget({
@@ -250,52 +256,55 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       render: ({ workbench }) => <WidgetVariantControls workbench={workbench} />,
     });
 
-    ctx.layout.registerWidget({
-      id: DEFAULT_SINGLETON_WIDGET_ID,
-      title: "Default singleton",
+    ctx.layout.registerLocation({
+      id: LOCATION_PANEL_ID,
+      title: "Widget variants",
       region: "main",
+      resourceKinds: [LOCATION_RESOURCE_KIND],
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
-        label: "Default singleton",
-        summary: "The workbench reuses one placement and keeps it non-closable unless you opt in.",
+        label: "Widget variants",
+        summary: "The Location Panel is the fixed subject. It appears as an uncloseable tab while Sub Panels are open.",
         colorPalette: "blue",
       }),
     });
-    ctx.layout.registerWidget({
-      id: CLOSABLE_SINGLETON_WIDGET_ID,
+    ctx.layout.registerSubPanel({
+      id: SINGLETON_SUB_PANEL_ID,
       title: "Closable singleton",
       region: "main",
-      closable: true,
+      eligibleLocations: { resourceKinds: [LOCATION_RESOURCE_KIND] },
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
         label: "Closable singleton",
-        summary: "Use a closable singleton for durable tools the user can dismiss and reopen later.",
+        summary: "A singleton Sub Panel has one placement per Location and can be closed and reopened.",
         colorPalette: "green",
       }),
     });
-    ctx.layout.registerWidget({
-      id: RESOURCE_WIDGET_ID,
-      title: "Resource tab",
+    ctx.layout.registerSubPanel({
+      id: RESOURCE_SUB_PANEL_ID,
+      title: "Resource Sub Panel",
       region: "main",
       singleton: false,
-      resourceKinds: [VARIANT_RESOURCE_KIND],
+      resourceKinds: [NOTE_RESOURCE_KIND],
+      eligibleLocations: { resourceKinds: [LOCATION_RESOURCE_KIND] },
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
-        label: "Resource tab",
-        summary: "Non-singleton widgets reuse by resource URI, so the same note does not duplicate.",
+        label: "Resource Sub Panel",
+        summary: "Resource Sub Panels reuse by resource URI, so reopening the same note selects its existing tab.",
         colorPalette: "purple",
       }),
     });
-    ctx.layout.registerWidget({
-      id: SCRATCH_WIDGET_ID,
+    ctx.layout.registerSubPanel({
+      id: SCRATCH_SUB_PANEL_ID,
       title: "Scratch",
       region: "main",
       singleton: false,
       reuse: "none",
+      eligibleLocations: { resourceKinds: [LOCATION_RESOURCE_KIND] },
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
         label: "Scratch",
-        summary: "Scratch views disable reuse, so every open call creates another closable tab.",
+        summary: "Scratch Sub Panels disable reuse, so every open call creates another closable tab.",
         colorPalette: "yellow",
       }),
     });
@@ -305,10 +314,13 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.openWidget(CONTROLS_WIDGET_ID, { pinned: true });
-    ctx.layout.openWidget(DEFAULT_SINGLETON_WIDGET_ID);
-    ctx.layout.openWidget(CLOSABLE_SINGLETON_WIDGET_ID);
-    ctx.layout.openWidget(RESOURCE_WIDGET_ID, { resource: noteResource("alpha"), title: variantNotes.alpha.label });
-    ctx.layout.openWidget(RESOURCE_WIDGET_ID, { resource: noteResource("beta"), title: variantNotes.beta.label });
-    ctx.layout.openWidget(SCRATCH_WIDGET_ID, { title: "Scratch 1" });
+    ctx.breadcrumbs.setItems([
+      { title: locationResource.label, icon: locationResource.icon, resource: locationResource },
+    ]);
+    ctx.layout.openWidget(LOCATION_PANEL_ID, { resource: locationResource });
+    ctx.layout.openWidget(SINGLETON_SUB_PANEL_ID);
+    ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource: noteResource("alpha"), title: variantNotes.alpha.label });
+    ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource: noteResource("beta"), title: variantNotes.beta.label });
+    ctx.layout.openWidget(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
   },
 });

@@ -10,7 +10,7 @@ import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule", () => {
-  test("registers session Sub Panel eligibility without opening a rogue tab", () => {
+  test("registers the Session Panel for project home without opening a rogue tab", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
@@ -21,7 +21,7 @@ describe("createSessionBubbleModule", () => {
     expect(layout.regions["side-header"].widgets).toEqual([]);
     expect(workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)).toMatchObject({
       role: "sub-panel",
-      eligibleLocations: { resourceKinds: ["ticket", "workspace"] },
+      eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
       tab: {
         contentRendererId: "dashboard-workbench.session-tab",

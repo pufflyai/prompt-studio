@@ -7,25 +7,25 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="12. Widget variants" parameters={{ layout: "padded" }} />
 
-# 12. Choose Widget Behavior For Plugin Panels
+# 12. Choose Sub Panel Placement Behavior
 
-Plugin modules usually differ less by renderer code than by the placement
-behavior they ask the workbench for. This story opens the same renderer through
-four widget variants: a default singleton, a closable singleton, resource-backed
-tabs, and duplicate scratch tabs.
+A Location Panel is the fixed subject of a workbench location. Optional views
+inside it are registered as Sub Panels, which is what makes them appear as tabs.
+This story opens the same renderer through three Sub Panel placement policies.
 
 <Canvas of={OnboardingStories.WidgetVariants} sourceState="shown" />
 
-Use the **Variants** panel to open each contribution repeatedly:
+Use the **Variants** sidebar to open each contribution repeatedly:
 
-- **Default singleton** omits `singleton`, so it gets one placement and is not
-  closable by default.
-- **Closable singleton** keeps one placement but opts into `closable: true`.
-- **Resource tabs** set `singleton: false`; the default `reuse: "resource"`
-  gives each resource URI one tab.
-- **Scratch tabs** set `singleton: false` and `reuse: "none"`, so every open
-  call creates a new closable placement.
+- **Widget variants** is the Location Panel. It appears as the first,
+  uncloseable tab while any Sub Panel is open.
+- **Closable singleton** is the default Sub Panel policy: one closable placement
+  per Location.
+- **Resource Sub Panels** set `singleton: false`; the default
+  `reuse: "resource"` gives each resource URI one tab.
+- **Scratch Sub Panels** set `singleton: false` and `reuse: "none"`, so every
+  open call creates a new closable placement.
 
-The main panel shows the active placement id, contribution id, resource URI,
-and resolved tab behavior. Reopen Alpha to see resource reuse activate the
-existing tab; create scratch tabs to see duplicate placements appear.
+The Main Panel shows the active placement id, contribution id, resource URI,
+and resolved role. Reopen Alpha to select its existing tab; create Scratch Sub
+Panels to see duplicate placements appear.
