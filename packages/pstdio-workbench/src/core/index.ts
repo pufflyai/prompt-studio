@@ -140,6 +140,7 @@ export {
   headerTrailingMenuPath,
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
+  workbenchRegionTabAddMenuPath,
   workbenchRegionTabLeadingMenuPath,
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,

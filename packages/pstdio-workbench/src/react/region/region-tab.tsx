@@ -1,5 +1,5 @@
 import { CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
-import type { ReactNode } from "react";
+import { type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -37,24 +37,26 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     widget?.icon;
   const contentRendererId = placement.tab?.contentRendererId;
   const contextMenuRendererId = placement.tab?.contextMenuRendererId;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const openContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!contextMenuRendererId) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    setMenuOpen(true);
+  };
   const trigger = (
     <Tabs.Trigger
       value={placement.widgetId}
-      h="1.5rem"
       maxW="12rem"
       minW="0"
       flexShrink={0}
-      gap="2xs"
-      px="xs"
-      py="0"
-      borderRadius="xs"
-      borderWidth="1px"
-      borderColor="border.subtle"
-      textStyle="label/XS/medium"
       title={label}
       className="group"
-      _selected={{ color: "fg", borderColor: "border.subtle" }}
-      _hover={isActive ? undefined : { bg: "bg.hover", borderColor: "border.subtle", color: "fg" }}
+      onContextMenu={contextMenuRendererId ? openContextMenu : undefined}
     >
       {contentRendererId ? (
         <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contentRendererId} />
@@ -99,15 +101,21 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   if (!contextMenuRendererId) return trigger;
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-start" }}>
-      <Menu.ContextTrigger asChild>{trigger}</Menu.ContextTrigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content aria-label={`${label} actions`} minW="18.75rem" bg="bg">
-            <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contextMenuRendererId} />
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <>
+      {trigger}
+      <Menu.Root
+        open={menuOpen}
+        onOpenChange={(details) => setMenuOpen(details.open)}
+        positioning={{ placement: "bottom-start", getAnchorRect: () => anchor }}
+      >
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content aria-label={`${label} actions`} minW="18.75rem" bg="bg">
+              <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contextMenuRendererId} />
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
+    </>
   );
 };

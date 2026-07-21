@@ -3,6 +3,8 @@ import {
   buildTabVisibilityMenuActions,
   filterVisibleTabs,
   ListRow,
+  PANEL_HEADER_CONTROL_SIZE,
+  PANEL_HEADER_TAB_SIZE,
   ScrollArea,
   Tooltip,
   useTabVisibilityStore,
@@ -78,7 +80,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const visiblePlacements = filterVisibleTabs(placements, tabOverrides, getKey);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0 });
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const resolvePlacementIcon = (placement: WorkbenchWidgetPlacement) => {
     const iconName =
@@ -117,7 +119,9 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     if (!hasVisibilityMenu) return;
 
     event.preventDefault();
-    setAnchor({ x: event.clientX, y: event.clientY });
+    const target = event.target instanceof Element ? event.target.closest('[role="tab"]') : undefined;
+    const rect = (target ?? event.currentTarget).getBoundingClientRect();
+    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
     setMenuOpen(true);
   };
 
@@ -155,7 +159,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       variant="subtle"
       colorPalette="gray"
       justify="start"
-      size="sm"
+      size={PANEL_HEADER_TAB_SIZE}
       alignSelf="stretch"
       flex="1 1 auto"
       maxW="full"
@@ -193,7 +197,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
           {leadingItems.map((item) => (
             <Tooltip key={item.id} content={item.label}>
               <IconButton
-                size="2xs"
+                size={PANEL_HEADER_CONTROL_SIZE}
                 variant="ghost"
                 aria-label={item.label}
                 disabled={item.disabled}
@@ -216,7 +220,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
           onOpenChange={(details) => setMenuOpen(details.open)}
           positioning={{
             placement: "bottom-start",
-            getAnchorRect: () => ({ x: anchor.x, y: anchor.y, width: 0, height: 0 }),
+            getAnchorRect: () => anchor,
           }}
         >
           <Portal>

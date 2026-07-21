@@ -55,9 +55,11 @@ test("PS-169 opens one Panel tab within the interaction budget", async ({ page, 
   await throttleChromiumCpu(page);
   await page.goto(`/projects/${project.id}/tickets`);
 
-  const addSecondary = page.getByRole("button", { name: "Add Panel to Secondary" });
+  const addSecondary = page
+    .locator('[data-workbench-panel-header="secondary"]')
+    .getByRole("button", { name: "Add panel" });
   await addSecondary.click();
-  const terminalItem = page.getByRole("menu", { name: "Add Panel to Secondary" }).getByRole("menuitem", {
+  const terminalItem = page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", {
     name: "Terminal",
   });
   await terminalItem.evaluate((element) => {

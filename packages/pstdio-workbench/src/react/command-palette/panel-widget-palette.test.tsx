@@ -11,12 +11,14 @@ describe("createWorkbenchPanelWidgetPaletteEntries", () => {
       icon: "Folder",
       region: "main",
       fallbackRegion: "side",
+      panelAddable: true,
       rendererId: "files.renderer",
     });
     workbench.layout.registerWidget({
       id: "preview",
       title: "Preview",
       region: "main",
+      panelAddable: false,
       rendererId: "preview.renderer",
     });
     workbench.layout.openWidget("preview");

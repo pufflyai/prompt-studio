@@ -1,12 +1,12 @@
 import { IconButton, Menu, Portal } from "@chakra-ui/react";
-import { ListRow, Tooltip } from "@pstdio/ui";
+import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
-import { listEligiblePanelWidgets, workbenchRegionTabLeadingMenuPath } from "../../core";
+import { listEligiblePanelWidgets, workbenchRegionTabAddMenuPath } from "../../core";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { getPanelLabel, openPanelWidget } from "./panel-widget-open";
+import { openPanelWidget } from "./panel-widget-open";
 
 interface WorkbenchPanelAddMenuProps {
   workbench: WorkbenchCore;
@@ -29,8 +29,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const resource = workbench.getPrimaryResource();
-  const panelLabel = getPanelLabel(region);
-  const label = `Add Panel to ${panelLabel}`;
+  const label = "Add panel";
   const widgets = listEligiblePanelWidgets({
     widgets: Object.values(layoutState.widgets),
     layout: layoutState.layout,
@@ -39,7 +38,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   });
   const commandItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
-    workbenchRegionTabLeadingMenuPath(region),
+    workbenchRegionTabAddMenuPath(region),
     { resource },
   ).filter((item) => !widgets.some((widget) => widget.openCommandId === item.commandId));
 
@@ -47,7 +46,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
     <Menu.Root positioning={{ placement: "bottom-start" }}>
       <Tooltip content={label}>
         <Menu.Trigger asChild>
-          <IconButton size="xs" variant="ghost" aria-label={label} flexShrink={0}>
+          <IconButton size={PANEL_HEADER_CONTROL_SIZE} variant="ghost" aria-label={label} flexShrink={0}>
             <WorkbenchIcon name="plus" size={13} />
           </IconButton>
         </Menu.Trigger>

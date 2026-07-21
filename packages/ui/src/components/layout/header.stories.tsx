@@ -1,8 +1,9 @@
-import { Box, Button, Icon, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Icon, IconButton, Input, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { Header, type HeaderVariant } from "@/components/layout/header";
+import { PANEL_HEADER_CONTROL_SIZE, PANEL_HEADER_TAB_SIZE } from "@/components/layout/panel-header.constants";
 
 const meta = {
   title: "Components/Navigation/Header",
@@ -52,6 +53,21 @@ export const SearchInput: Story = {
   render: () => (
     <Header variant="input" background="bg.muted">
       <Input placeholder="Filter results" size="sm" />
+    </Header>
+  ),
+};
+
+export const PanelControls: Story = {
+  render: () => (
+    <Header variant="narrow" background="bg.muted">
+      <Tabs.Root defaultValue="workspaces" size={PANEL_HEADER_TAB_SIZE} variant="subtle">
+        <Tabs.List>
+          <Tabs.Trigger value="workspaces">Workspaces</Tabs.Trigger>
+          <IconButton size={PANEL_HEADER_CONTROL_SIZE} variant="ghost" aria-label="Add panel">
+            <Icon as={Plus} boxSize="14px" />
+          </IconButton>
+        </Tabs.List>
+      </Tabs.Root>
     </Header>
   ),
 };

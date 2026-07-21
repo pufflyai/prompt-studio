@@ -136,7 +136,11 @@ const modalOverlayConfig = {
   trapFocus: true,
 } as const;
 
-const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadata: DashboardExtensionMetadata) => {
+const registerExtensionViews = (
+  ctx: WorkbenchModuleContributionContext,
+  metadata: DashboardExtensionMetadata,
+  projectId: string,
+) => {
   const disposables: Disposable[] = [];
 
   for (const view of metadata.views) {
@@ -148,7 +152,8 @@ const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadat
         title: resolveLocalizableString(view.title, view.extensionId),
         region: isModal ? "overlay" : extensionViewRegionForPlacement(view.target),
         rendererId: dashboardWidgetIds.extensionView,
-        ...(isModal ? { closable: true, config: modalOverlayConfig } : {}),
+        config: { ...(isModal ? modalOverlayConfig : {}), projectId },
+        ...(isModal ? { closable: true } : { panelAddable: true }),
       }),
     );
   }
@@ -190,4 +195,4 @@ export const registerExtensionModeContributions = (
   ctx: WorkbenchModuleContributionContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
-) => [...registerExtensionViews(ctx, metadata), ...registerExtensionModes(ctx, metadata, projectId)];
+) => [...registerExtensionViews(ctx, metadata, projectId), ...registerExtensionModes(ctx, metadata, projectId)];

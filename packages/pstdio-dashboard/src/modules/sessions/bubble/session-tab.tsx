@@ -1,4 +1,4 @@
-import { Box, Button, Icon, Menu, Portal, Text } from "@chakra-ui/react";
+import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
 import {
   ListRow,
   resolveSessionIndicatorColor,
@@ -95,54 +95,6 @@ export const SessionTabContent = (props: { input: WorkbenchWidgetRenderInput }) 
         {state.selectedLabel}
       </Text>
     </Box>
-  );
-};
-
-export const SessionPanelActions = (props: { input: WorkbenchWidgetRenderInput }) => {
-  const { input } = props;
-  const state = useSessionTabState(input);
-
-  return (
-    <Menu.Root>
-      <Menu.Trigger asChild>
-        <Button variant="ghost" size="xs" minW="0" maxW="11rem" aria-label="Select session">
-          <SessionIndicator status={state.selectedStatus} boxSize="12px" />
-          <Text as="span" minW="0" truncate>
-            {state.selectedLabel}
-          </Text>
-        </Button>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content minW="13.75rem" bg="bg">
-            {state.sessions.map((session) => (
-              <SessionMenuRow
-                key={session.id}
-                session={session}
-                isSelected={session.id === state.view.sessionId}
-                onSelect={() => {
-                  void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-                    resource: session.resource,
-                  });
-                }}
-              />
-            ))}
-            <Menu.Separator />
-            <Menu.Item
-              value="new-session"
-              onClick={() => {
-                void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
-                  ...(state.workspace ? { workspace: state.workspace } : {}),
-                });
-              }}
-            >
-              <PenBox size={14} />
-              New session
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
   );
 };
 

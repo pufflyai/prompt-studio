@@ -103,8 +103,9 @@ test.describe("Ticket sidebar sessions", () => {
     // stays in its own sidebar — we did not navigate away to sessions mode).
     await sessionRow.click();
     const floatingPanel = page.getByRole("dialog", { name: "Session" });
-    const selectedSession = floatingPanel.getByRole("button", { name: "Select session" });
-    await expect(selectedSession.getByText(`Refine ticket: ${ticket.shorthand}`)).toBeVisible();
+    await expect(
+      floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
+    ).toHaveAttribute("aria-selected", "true");
     await expect(sidebar.getByRole("option", { name: `${ticket.shorthand} Sidebar session proof` })).toBeVisible();
   });
 });

@@ -84,8 +84,6 @@ test("dashboard opens the start page for a selected project without a saved loca
 
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
   await expect(
-    page.getByTestId("workbench-session-bubble").getByRole("button", { name: "Select session" }).filter({
-      hasText: session.title,
-    }),
-  ).toBeVisible();
+    page.getByTestId("workbench-session-bubble").getByRole("tab", { name: new RegExp(session.title) }),
+  ).toHaveAttribute("aria-selected", "true");
 });

@@ -1,5 +1,6 @@
 ---
 "@pstdio/workbench": minor
+"@pstdio/ui": minor
 "pstdio": minor
 ---
 

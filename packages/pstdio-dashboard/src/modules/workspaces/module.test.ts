@@ -111,7 +111,7 @@ describe("createWorkspacesModule", () => {
 
     const floatingSession = workbench.layout
       .getLayout()
-      .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+      .regions.side.widgets.find((widget) => widget.resource?.uri === "dashboard-workbench://session/session-older");
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");

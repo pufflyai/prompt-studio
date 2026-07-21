@@ -11,6 +11,8 @@ export const workbenchRegionTabLeadingMenuPath = (region: string): MenuPath => [
   "leading",
 ];
 
+export const workbenchRegionTabAddMenuPath = (region: string): MenuPath => ["workbench", "regionTabs", region, "add"];
+
 export const workbenchCommandPaletteMenuPath = ["workbench", "commandPalette"] as const satisfies MenuPath;
 
 export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("nav");

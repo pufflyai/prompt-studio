@@ -60,6 +60,8 @@ export interface WidgetContribution {
   priority?: number;
   rendererId: string;
   openCommandId?: string;
+  // Only explicitly addable widgets appear in panel add menus and palette entries.
+  panelAddable?: boolean;
   tab?: WorkbenchWidgetTab;
   config?: unknown;
   canOpen?(resource: ResourceRef): boolean;

@@ -61,8 +61,10 @@ test.describe("PS-169 Panel tabs", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
 
-    for (const panel of ["Main", "Secondary", "Side"]) {
-      await expect(page.getByRole("button", { name: `Add Panel to ${panel}` })).toBeVisible({ timeout: 30_000 });
+    for (const panel of ["main", "secondary", "side"]) {
+      await expect(
+        page.locator(`[data-workbench-panel-header="${panel}"]`).getByRole("button", { name: "Add panel" }),
+      ).toBeVisible({ timeout: 30_000 });
     }
 
     const activityTab = page.getByRole("tab", { name: /Activity Live/ });
@@ -70,10 +72,13 @@ test.describe("PS-169 Panel tabs", () => {
     await expect(
       page.getByRole("menu", { name: "Activity actions" }).getByRole("menuitem", { name: "Live context" }),
     ).toBeVisible();
+    await page.keyboard.press("Escape");
 
-    const addSidePanel = page.getByRole("button", { name: "Add Panel to Side" });
+    const addSidePanel = page
+      .locator('[data-workbench-panel-header="side"]')
+      .getByRole("button", { name: "Add panel" });
     await addSidePanel.click();
-    const addMenu = page.getByRole("menu", { name: "Add Panel to Side" });
+    const addMenu = page.getByRole("menu", { name: "Add panel" });
     await expect(addMenu).toBeVisible();
     await expect(addMenu.getByRole("menuitem", { name: "Inspector" })).toHaveCount(0);
     await addMenu.getByRole("menuitem", { name: "Files" }).click();
@@ -84,7 +89,7 @@ test.describe("PS-169 Panel tabs", () => {
 
     await addSidePanel.click();
     await expect(
-      page.getByRole("menu", { name: "Add Panel to Side" }).getByRole("menuitem", { name: "No panels available" }),
+      page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "No panels available" }),
     ).toBeVisible();
   });
 });

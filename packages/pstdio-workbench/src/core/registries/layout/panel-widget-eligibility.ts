@@ -31,6 +31,7 @@ const hasOpenSingleton = (widget: RegisteredWidgetContribution, layout: Workbenc
   );
 
 export const isWidgetEligibleForPanel = (input: PanelWidgetEligibilityInput) =>
+  input.widget.panelAddable === true &&
   supportsPanelRegion(input.widget, input.region) &&
   supportsResource(input.widget, input.resource) &&
   !hasOpenSingleton(input.widget, input.layout);

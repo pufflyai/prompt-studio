@@ -405,6 +405,7 @@ export const registerWorkbenchExtensionDataRenderers = (
         id: record.id,
         title: localize(record.title, record.id),
         region: "main",
+        panelAddable: true,
         rendererId: record.id,
         singleton: true,
         resourceKinds: record.resourceKind ? [record.resourceKind] : undefined,

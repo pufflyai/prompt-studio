@@ -346,6 +346,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       title: "Preview",
       icon: "Eye",
       region: "main",
+      panelAddable: true,
       resourceKinds: [ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
     });
@@ -354,6 +355,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       title: "Problems",
       icon: "CircleAlert",
       region: "secondary",
+      panelAddable: true,
       rendererId: ACTIVITY_RENDERER_ID,
     });
     ctx.layout.registerWidget({
@@ -361,6 +363,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       title: "Files",
       icon: "Folder",
       region: "side",
+      panelAddable: true,
       rendererId: CONTEXT_RENDERER_ID,
     });
 

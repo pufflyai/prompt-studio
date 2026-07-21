@@ -3,7 +3,7 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
-import { workbenchRegionTabLeadingMenuPath } from "@pstdio/workbench/core";
+import { workbenchRegionTabAddMenuPath } from "@pstdio/workbench/core";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,
@@ -17,7 +17,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerModeChromeContribution } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import { openSessionBubbleWidgets } from "./session-bubble";
-import { SessionPanelActions, SessionTabContent, SessionTabContextMenu } from "./session-tab";
+import { SessionTabContent, SessionTabContextMenu } from "./session-tab";
 
 const sessionTabRendererId = "dashboard-workbench.session-tab";
 const sessionTabContextMenuRendererId = "dashboard-workbench.session-tab-context-menu";
@@ -53,7 +53,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
   const workspaceBranch = metadataString(workspace, "workspaceBranch");
   const workspaceTitle = workspace?.label ?? workspaceShorthand;
-  const id = workspaceId ? `new-${workspaceId}` : "new";
+  const id = `${workspaceId ? `new-${workspaceId}` : "new"}-${globalThis.crypto.randomUUID()}`;
 
   return {
     kind: "session-draft",
@@ -81,26 +81,11 @@ const selectSidebarSessionNode = (ctx: WorkbenchModuleContributionContext, resou
 const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
     {
-      id: dashboardWidgetIds.sessionBubbleHeader,
-      title: "Session actions",
-      region: "side-header",
-      singleton: true,
-      rendererId: dashboardWidgetIds.sessionBubbleHeader,
-      priority: 30,
-    },
-    { priority: 30 },
-  );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.sessionBubbleHeader,
-    render: (input) => <SessionPanelActions input={input} />,
-  });
-
-  ctx.layout.registerWidget(
-    {
       id: dashboardWidgetIds.sessionBubble,
       title: "Session bubble",
       region: "side",
-      singleton: true,
+      singleton: false,
+      closable: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       icon: "MessageCircle",
       tab: {
@@ -194,7 +179,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
       },
     },
   );
-  ctx.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath("side"), {
+  ctx.layout.registerMenuItem(workbenchRegionTabAddMenuPath("side"), {
     commandId: dashboardCommandIds.createSession,
     label: "New session",
     icon: "PenBox",

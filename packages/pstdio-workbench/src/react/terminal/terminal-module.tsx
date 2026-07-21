@@ -106,6 +106,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         reuse: "none",
         closable: true,
         mountStrategy: "keep-mounted",
+        panelAddable: true,
         rendererId: RENDERER_ID,
         openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
         regionSize: TERMINAL_PANEL_SIZE,

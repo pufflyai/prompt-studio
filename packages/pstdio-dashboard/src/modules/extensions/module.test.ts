@@ -9,7 +9,6 @@ import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createExtensionsModule } from "./module";
@@ -245,7 +244,7 @@ describe("createExtensionsModule command results and refresh", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .regions.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .regions.side.widgets.find((widget) => widget.resource?.kind === "session");
 
       expect(workbench.sessionPanel.getMode()).toBe("bubble");
       expect(placement?.resource).toMatchObject({

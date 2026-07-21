@@ -13,6 +13,7 @@ const widget = (overrides: Partial<RegisteredWidgetContribution>): RegisteredWid
   title: "Files",
   region: "main",
   rendererId: "files.renderer",
+  panelAddable: true,
   singleton: true,
   reuse: "resource",
   source: "module",
@@ -35,6 +36,7 @@ describe("listEligiblePanelWidgets", () => {
       widget({ id: "preview", singleton: true }),
       widget({ id: "terminal", region: "secondary", singleton: false, reuse: "none" }),
       widget({ id: "unavailable", canOpen: () => false }),
+      widget({ id: "settings", panelAddable: false }),
     ];
 
     expect(listEligiblePanelWidgets({ widgets, layout, region: "main", resource }).map((item) => item.id)).toEqual([
@@ -46,5 +48,15 @@ describe("listEligiblePanelWidgets", () => {
     expect(listEligiblePanelWidgets({ widgets, layout, region: "secondary", resource }).map((item) => item.id)).toEqual(
       ["terminal"],
     );
+  });
+
+  test("requires widgets to opt into the Add panel menu", () => {
+    const widgets = [widget({ id: "workspaces" }), widget({ id: "settings", panelAddable: false })];
+
+    expect(
+      listEligiblePanelWidgets({ widgets, layout: createDefaultWorkbenchLayout(), region: "main" }).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["workspaces"]);
   });
 });

@@ -199,7 +199,7 @@ describe("createSessionsModule", () => {
 
     const layout = workbench.layout.getLayout();
     const bubblePlacement = layout.regions.side.widgets.find(
-      (widget) => widget.contributionId === dashboardWidgetIds.sessionBubble,
+      (widget) => widget.resource?.uri === "dashboard-workbench://session/session-1",
     );
 
     expect(workbench.sessionPanel.getMode()).toBe("bubble");
