@@ -12,6 +12,7 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
+  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   listEligibleSubPanels,
   matchesWorkbenchLocationEligibility,
@@ -90,6 +91,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource);
+  const activeLocationPanel = getActiveWorkbenchLocationPanel(layoutState.layout);
   const openSubPanels = layoutState.layout.regions[region].widgets.filter(
     (placement) => isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement),
   );
@@ -106,7 +108,10 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
       layoutState.layout.regions[menuRegion].widgets.some(
         (placement) =>
           isOwnedByCurrentLocation(workbench, placement) &&
-          matchesWorkbenchPanelMenuOwner(layoutState.widgets[placement.contributionId], activeSubPanel),
+          matchesWorkbenchPanelMenuOwner(layoutState.widgets[placement.contributionId], {
+            locationPanel: activeLocationPanel,
+            subPanel: activeSubPanel,
+          }),
       ) || Boolean(workbench.layout.getPlaceholder(menuRegion)),
   );
   const hasHeaderActions =

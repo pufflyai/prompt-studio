@@ -8,6 +8,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../core";
 import {
+  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   getWorkbenchPanelForMenuRegion,
   matchesWorkbenchLocationEligibility,
@@ -105,13 +106,17 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         locationResource,
       )
     : undefined;
+  const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
   const regionState = {
     ...currentRegionState,
     widgets: currentRegionState.widgets.filter((placement) => {
       const contribution = registeredWidgets[placement.contributionId];
       return contribution
         ? matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement) &&
-            matchesWorkbenchPanelMenuOwner(contribution, activeSubPanel)
+            matchesWorkbenchPanelMenuOwner(contribution, {
+              locationPanel: activeLocationPanel,
+              subPanel: activeSubPanel,
+            })
         : false;
     }),
   };

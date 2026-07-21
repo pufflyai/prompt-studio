@@ -43,6 +43,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "./layout-types";
+import { createPanelRegistrations } from "./panel-registration";
 
 export type {
   OpenWidgetInput,
@@ -57,6 +58,7 @@ export type {
   WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
   WorkbenchPanelMenuContribution,
+  WorkbenchPanelMenuDefinition,
   WorkbenchPanelMenuOwner,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,
@@ -401,13 +403,19 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const replacement = replacementIndex >= 0 ? region.widgets[replacementIndex] : undefined;
 
     const existing = findReusablePlacement(widget, layout, openInput);
-    if (existing) return reuseExistingPlacement(widget, existing, regionId, replacementIndex, openInput);
-
-    if (replacement?.contributionId === widget.id) {
-      return replaceActive(widget, regionId, replacementIndex, replacement, openInput);
+    let placement: WorkbenchWidgetPlacement;
+    if (existing) placement = reuseExistingPlacement(widget, existing, regionId, replacementIndex, openInput);
+    else if (replacement?.contributionId === widget.id) {
+      placement = replaceActive(widget, regionId, replacementIndex, replacement, openInput);
+    } else {
+      placement = insertWidget(widget, regionId, replacementIndex, openInput);
     }
 
-    return insertWidget(widget, regionId, replacementIndex, openInput);
+    for (const panelMenuId of widget.ownedPanelMenuIds ?? []) {
+      openWidget(panelMenuId, { pinned: true });
+    }
+
+    return applyAndActivate(getLayout(), regionId, placement);
   };
 
   return { openWidget };
@@ -470,6 +478,9 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     getWidgets,
     persistLayout,
   });
+  const panelRegistrations = createPanelRegistrations({
+    registerWidget: contributionRegistrations.registerWidget,
+  });
   const widgetOpeners = createWidgetOpeners({ getLayout, requireWidget, applyAndActivate });
 
   return {
@@ -479,17 +490,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
     registerWidget: contributionRegistrations.registerWidget,
 
-    registerLocation(location, metadata) {
-      return contributionRegistrations.registerWidget({ ...location, role: "location" }, metadata);
-    },
-
-    registerSubPanel(subPanel, metadata) {
-      return contributionRegistrations.registerWidget({ ...subPanel, role: "sub-panel", closable: true }, metadata);
-    },
-
-    registerPanelMenu(panelMenu, metadata) {
-      return contributionRegistrations.registerWidget({ ...panelMenu, role: "panel-menu" }, metadata);
-    },
+    ...panelRegistrations,
 
     unregisterWidget(id, options = {}) {
       const current = store.getState();

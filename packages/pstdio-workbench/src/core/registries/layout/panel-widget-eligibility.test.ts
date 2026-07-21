@@ -90,14 +90,27 @@ describe("matchesWorkbenchPanelMenuOwner", () => {
     widget({ id: "inspector", role: "panel-menu", region: "main-right-menu", panelMenuOwner: owner });
 
   test("keeps Panel-owned menus visible across Sub Panel selection", () => {
-    expect(matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), undefined)).toBe(true);
+    expect(matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), {})).toBe(true);
     expect(
       matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), {
-        widgetId: "notes",
-        contributionId: "notes",
-        role: "sub-panel",
+        subPanel: { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
       }),
     ).toBe(true);
+  });
+
+  test("shows a menu declared by a Location Panel only with that Location Panel type", () => {
+    const contribution = panelMenu({ level: "panel", contributionId: "notes.location" });
+
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        locationPanel: { widgetId: "notes", contributionId: "notes.location", role: "location" },
+      }),
+    ).toBe(true);
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        locationPanel: { widgetId: "tickets", contributionId: "tickets.location", role: "location" },
+      }),
+    ).toBe(false);
   });
 
   test("shows Sub-Panel-owned menus only with their owning Sub Panel", () => {
@@ -105,18 +118,14 @@ describe("matchesWorkbenchPanelMenuOwner", () => {
 
     expect(
       matchesWorkbenchPanelMenuOwner(contribution, {
-        widgetId: "notes",
-        contributionId: "notes",
-        role: "sub-panel",
+        subPanel: { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
       }),
     ).toBe(true);
     expect(
       matchesWorkbenchPanelMenuOwner(contribution, {
-        widgetId: "reports",
-        contributionId: "reports",
-        role: "sub-panel",
+        subPanel: { widgetId: "reports", contributionId: "reports", role: "sub-panel" },
       }),
     ).toBe(false);
-    expect(matchesWorkbenchPanelMenuOwner(contribution, undefined)).toBe(false);
+    expect(matchesWorkbenchPanelMenuOwner(contribution, {})).toBe(false);
   });
 });

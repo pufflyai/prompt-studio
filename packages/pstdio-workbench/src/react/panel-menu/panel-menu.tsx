@@ -1,7 +1,8 @@
-import { Box, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
-import { AttachedMenu, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
+import { Box, HStack, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
+import { AttachedMenu, Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
+  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   matchesWorkbenchLocationEligibility,
   matchesWorkbenchPanelMenuOwner,
@@ -42,6 +43,7 @@ interface WorkbenchPanelMenuView {
   region: WorkbenchPanelMenuRegion;
   side: WorkbenchPanelMenuSide;
   label: string;
+  title: string;
   icon: string;
   has: boolean;
   collapsed: boolean;
@@ -63,13 +65,17 @@ const useWorkbenchPanelMenu = (
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const currentRegionState = layout.regions[region];
   const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource);
+  const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
   const regionState = {
     ...currentRegionState,
     widgets: currentRegionState.widgets.filter((placement) => {
       const contribution = registeredWidgets[placement.contributionId];
       return contribution
         ? matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement) &&
-            matchesWorkbenchPanelMenuOwner(contribution, activeSubPanel)
+            matchesWorkbenchPanelMenuOwner(contribution, {
+              locationPanel: activeLocationPanel,
+              subPanel: activeSubPanel,
+            })
         : false;
     }),
   };
@@ -85,6 +91,7 @@ const useWorkbenchPanelMenu = (
     region,
     side,
     label: getWorkbenchPanelMenuLabel(panel, side),
+    title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),
     has: regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region)),
     collapsed: !open && collapsible,
@@ -169,20 +176,23 @@ const WorkbenchPanelMenuOpener = (props: { view: WorkbenchPanelMenuView; workben
             boxShadow="none"
             display="flex"
             flexDirection="column"
-            h="72"
-            maxW="72"
-            minW="72"
+            h="64"
+            maxW="64"
+            minW="64"
             overflow="hidden"
             p="0"
-            w="72"
+            w="64"
           >
-            <HStack flexShrink={0} justify="flex-end" minH={PANEL_HEADER_CONTROL_SIZE} px="2xs">
+            <Header variant="narrow" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0} gap="xs">
+              <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
+                {view.title}
+              </Text>
               <Tooltip content={`Attach ${view.label}`}>
                 <IconButton variant="ghost" size="xs" aria-label={`Attach ${view.label}`} onClick={view.onOpen}>
-                  <WorkbenchIcon name={view.icon} size={14} />
+                  <WorkbenchIcon name={view.side === "left" ? "PanelLeft" : "PanelRight"} size={14} />
                 </IconButton>
               </Tooltip>
-            </HStack>
+            </Header>
             <Box flex="1" minH="0" minW="0">
               <WorkbenchRegion workbench={workbench} region={view.region} title={view.label} transparent />
             </Box>

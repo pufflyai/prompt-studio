@@ -4,7 +4,7 @@ import { getAnchorResource, type ResourceRef, type WorkbenchCore, type Workbench
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 import { findSidePanelItem, SIDE_PANEL_ITEM_KIND, sidePanelItemResource, sidePanelItems } from "./side-panels-data";
 import { ResourceInspector } from "./side-panels-inspector";
-import { registerSidePanelMenuExamples } from "./side-panels-menus";
+import { registerSidePanelMenuExamples, sidePanelMenuDefinitions } from "./side-panels-menus";
 import { ResourceActivityPanel } from "./side-panels-secondary";
 
 const RESOURCE_PICKER_WIDGET_ID = "onboarding.side-panels.resources";
@@ -210,15 +210,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       singleton: true,
       rendererId: RESOURCE_PICKER_RENDERER_ID,
     });
-    ctx.layout.registerPanelMenu({
-      id: CONTEXT_WIDGET_ID,
-      title: "Context",
-      icon: "ListTree",
-      region: "main-left-menu",
-      regionSize: { defaultPx: 240, minPx: 200 },
-      singleton: true,
-      rendererId: CONTEXT_RENDERER_ID,
-    });
+    registerSidePanelMenuExamples(ctx);
     ctx.layout.registerLocation({
       id: DETAIL_WIDGET_ID,
       title: "Resource",
@@ -226,6 +218,18 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       singleton: false,
       resourceKinds: [SIDE_PANEL_ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
+      panelMenus: [
+        {
+          id: CONTEXT_WIDGET_ID,
+          title: "Context",
+          icon: "ListTree",
+          side: "left",
+          regionSize: { defaultPx: 240, minPx: 200 },
+          singleton: true,
+          rendererId: CONTEXT_RENDERER_ID,
+        },
+        ...sidePanelMenuDefinitions.location,
+      ],
     });
     ctx.layout.registerSubPanel({
       id: INSPECTOR_WIDGET_ID,
@@ -234,6 +238,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       regionSize: { defaultPx: 420, minPx: 320 },
       singleton: true,
       rendererId: INSPECTOR_RENDERER_ID,
+      panelMenus: sidePanelMenuDefinitions.inspector,
     });
     ctx.layout.registerSubPanel({
       id: ACTIVITY_WIDGET_ID,
@@ -242,6 +247,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       regionSize: { defaultPx: 180, minPx: 128, maxPx: 320 },
       singleton: true,
       rendererId: ACTIVITY_RENDERER_ID,
+      panelMenus: sidePanelMenuDefinitions.activity,
       tab: {
         contentRendererId: ACTIVITY_TAB_RENDERER_ID,
         contextMenuRendererId: ACTIVITY_TAB_MENU_RENDERER_ID,
@@ -270,14 +276,10 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       rendererId: CONTEXT_RENDERER_ID,
     });
 
-    const panelMenuWidgetIds = registerSidePanelMenuExamples(ctx);
-
     // Context demonstrates a Main Panel menu while Inspector demonstrates the independent
     // Side Panel. Their logical identities do not depend on their rendered edges.
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     void ctx.resources.openResource(sidePanelItemResource(sidePanelItems[0])).then(() => {
-      ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
-      for (const widgetId of panelMenuWidgetIds) ctx.layout.openWidget(widgetId, { pinned: true });
       ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
       ctx.layout.openWidget(ACTIVITY_WIDGET_ID, { pinned: true });
     });

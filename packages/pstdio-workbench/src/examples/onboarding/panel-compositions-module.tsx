@@ -6,7 +6,7 @@ import type {
   WorkbenchHistoryPersistence,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
-  WorkbenchPanelMenuRegion,
+  WorkbenchPanelMenuDefinition,
 } from "../../core";
 import { createWorkbenchCore } from "../../core";
 
@@ -83,33 +83,37 @@ const PanelMenuContent = (props: { title: string }) => {
   );
 };
 
-const menuRegions: WorkbenchPanelMenuRegion[] = ["main-right-menu", "secondary-left-menu", "side-right-menu"];
+const locationMenuId = "onboarding.panel-composition.location.tools";
 
-const panelMenuDefinitions = (kind: CompositionKind) =>
-  kind === "location-switch"
-    ? [
-        {
-          id: "onboarding.panel-composition.menu.location-tools",
-          title: "Location tools",
-          region: "main-left-menu" as const,
-          panelMenuOwner: { level: "panel" as const },
-        },
-        {
-          id: "onboarding.panel-composition.menu.notes-tools",
-          title: "Notes tools",
-          region: "main-right-menu" as const,
-          panelMenuOwner: {
-            level: "sub-panel" as const,
-            contributionId: "onboarding.panel-composition.main.notes",
-          },
-        },
-      ]
-    : menuRegions.map((region) => ({
-        id: `onboarding.panel-composition.menu.${region}`,
-        title: "Inspector",
-        region,
-        panelMenuOwner: { level: "panel" as const },
-      }));
+const locationPanelMenus = (kind: CompositionKind): WorkbenchPanelMenuDefinition[] => {
+  if (!compositionFlags(kind).hasMenus) return [];
+  return [
+    {
+      id: locationMenuId,
+      title: kind === "location-switch" ? "Location tools" : "Location inspector",
+      icon: kind === "location-switch" ? "ListTree" : "SlidersHorizontal",
+      side: "left",
+      rendererId: RENDERER_ID,
+    },
+  ];
+};
+
+const subPanelMenus = (
+  kind: CompositionKind,
+  region: (typeof panelRegions)[number],
+  name: string,
+): WorkbenchPanelMenuDefinition[] => {
+  if (!compositionFlags(kind).hasMenus || name !== "Notes") return [];
+  return [
+    {
+      id: `onboarding.panel-composition.${region}.notes.tools`,
+      title: "Notes tools",
+      icon: kind === "location-switch" ? "FileText" : "SlidersHorizontal",
+      side: "right",
+      rendererId: RENDERER_ID,
+    },
+  ];
+};
 
 const compositionFlags = (kind: CompositionKind) => ({
   hasEligible: kind !== "location-only" && kind !== "menu-only" && kind !== "collapsed-menu",
@@ -134,21 +138,25 @@ const openPanelCompositionScenario = (
   if (kind === "cross-panel-history") {
     for (const region of panelRegions) workbench.layout.openWidget(`onboarding.panel-composition.${region}.reports`);
   }
-  const openedMenus = flags.hasMenus
-    ? panelMenuDefinitions(kind).map((menu) => workbench.layout.openWidget(menu.id, { pinned: true }))
-    : [];
   if (kind === "collapsed-menu") {
-    const menu = openedMenus[0];
+    const menu = workbench.layout
+      .getLayout()
+      .regions["main-left-menu"].widgets.find((placement) => placement.contributionId === locationMenuId);
     if (menu) workbench.panels.setOpen(`panel-menu:${menu.widgetId}`, false);
   }
   if (kind === "location-switch") {
-    const locationMenu = openedMenus.find(
-      (placement) => placement.contributionId === "onboarding.panel-composition.menu.location-tools",
-    );
+    const locationMenu = workbench.layout
+      .getLayout()
+      .regions["main-left-menu"].widgets.find((placement) => placement.contributionId === locationMenuId);
     if (locationMenu) workbench.panels.setOpen(`panel-menu:${locationMenu.widgetId}`, false);
+    const notesMenu = workbench.layout
+      .getLayout()
+      .regions["main-right-menu"].widgets.find(
+        (placement) => placement.contributionId === "onboarding.panel-composition.main.notes.tools",
+      );
+    if (notesMenu) workbench.panels.setOpen(`panel-menu:${notesMenu.widgetId}`, false);
     void workbench.resources.openResource(resources[1], { replaceActive: true });
     workbench.layout.openWidget("onboarding.panel-composition.main.reports");
-    for (const menu of panelMenuDefinitions(kind)) workbench.layout.openWidget(menu.id, { pinned: true });
     workbench.history.goBack();
     workbench.history.goBack();
   }
@@ -184,10 +192,11 @@ const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: 
     singleton: false,
     resourceKinds: [LOCATION_KIND],
     rendererId: RENDERER_ID,
+    panelMenus: locationPanelMenus(kind),
   });
 };
 
-const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext) => {
+const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
   for (const region of panelRegions) {
     for (const name of ["Notes", "Reports"]) {
       ctx.layout.registerSubPanel({
@@ -197,21 +206,9 @@ const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext) => {
         region,
         singleton: true,
         rendererId: RENDERER_ID,
+        panelMenus: subPanelMenus(kind, region, name),
       });
     }
-  }
-};
-
-const registerPanelMenuFixtures = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
-  for (const menu of panelMenuDefinitions(kind)) {
-    ctx.layout.registerPanelMenu({
-      id: menu.id,
-      title: menu.title,
-      icon: "SlidersHorizontal",
-      region: menu.region,
-      rendererId: RENDERER_ID,
-      panelMenuOwner: menu.panelMenuOwner,
-    });
   }
 };
 
@@ -220,8 +217,7 @@ const createPanelCompositionModule = (kind: CompositionKind, openInitial = true)
   activate(ctx) {
     const flags = compositionFlags(kind);
     registerLocationFixture(ctx, kind);
-    if (flags.hasEligible) registerSubPanelFixtures(ctx);
-    if (flags.hasMenus) registerPanelMenuFixtures(ctx, kind);
+    if (flags.hasEligible) registerSubPanelFixtures(ctx, kind);
 
     if (openInitial) openPanelCompositionScenario(ctx, kind);
   },

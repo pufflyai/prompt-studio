@@ -118,6 +118,7 @@ export type {
   WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
   WorkbenchPanelMenuContribution,
+  WorkbenchPanelMenuDefinition,
   WorkbenchPanelMenuOwner,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,
@@ -139,6 +140,7 @@ export {
   workbenchRegions,
 } from "./registries/layout/layout-model";
 export {
+  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   isSubPanelEligible,
   listEligibleSubPanels,

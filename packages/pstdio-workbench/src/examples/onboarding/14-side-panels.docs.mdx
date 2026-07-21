@@ -27,6 +27,44 @@ A **Location Panel** is the navigated subject represented by the breadcrumb. It 
 removable tabbed content inside that Location Panel. A **Panel Menu** is supporting content attached to either the
 Location Panel or one specific Sub Panel; it never becomes a tab or an Add-panel entry.
 
+## Registration and ownership
+
+Native Workbench modules declare menus on the Panel that owns them. The registration derives the left/right region,
+records the exact owner contribution, opens the menus with the Panel, and disposes them with the Panel. A reusable
+Panel factory therefore carries its menus everywhere that Panel is registered; there is no separate owner ID to keep
+in sync.
+
+```ts
+const notesMenus = (prefix: string) => [
+  {
+    id: `${prefix}.tools`,
+    title: "Notes tools",
+    icon: "FileText",
+    side: "right" as const,
+    rendererId: "notes.tools.renderer",
+  },
+];
+
+ctx.layout.registerLocation({
+  id: "notes.location",
+  title: "Notes",
+  region: "main",
+  rendererId: "notes.renderer",
+  panelMenus: notesMenus("notes.location"),
+});
+
+ctx.layout.registerSubPanel({
+  id: "notes.secondary",
+  title: "Notes",
+  region: "secondary",
+  rendererId: "notes.renderer",
+  panelMenus: notesMenus("notes.secondary"),
+});
+```
+
+`registerPanelMenu` is the lower-level integration seam used by the extension adapter for independently declared
+`panel-menu` roles. Native modules should prefer ownership through `panelMenus`.
+
 ## Header and ownership rules
 
 The Panel Header is shown when the Panel has at least one open Sub Panel, one eligible closed Sub Panel, one attached
@@ -34,10 +72,11 @@ or collapsed Panel Menu, or a header action. Tabs render only for open Sub Panel
 eligible closed Sub Panel exists. Therefore a Location with no subordinate UI has no header, while a Panel containing
 only a Panel Menu retains its header without emitting an empty ARIA tab list.
 
-Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. A Panel-owned menu
-remains available while tabs change. A Sub-Panel-owned menu appears only while its owner tab is selected. Each menu
-placement retains its own attached or collapsed state. Clicking a collapsed menu icon opens the menu's live content in
-a portal-positioned dropdown; the dropdown also offers the action that attaches it again.
+Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. A Location-Panel-
+owned menu remains available while tabs change. A Sub-Panel-owned menu appears only while its owner tab is selected.
+Each menu placement retains its own attached or collapsed state. Clicking a collapsed menu's distinct icon opens the
+menu's live content in a contained, portal-positioned dropdown. Its header identifies the menu and contains the action
+that attaches it to the correct side again.
 
 Each Location owns its open Sub Panel placements and selection. Switching Locations does not close those tabs:
 returning by a Location action, Back, or Forward restores that Location's previous open tabs and active selection.

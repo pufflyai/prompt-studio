@@ -1,4 +1,5 @@
 import type { ResourceRef } from "../resources/resource-registry";
+import { getActiveLocationPlacement } from "./layout-operations";
 import type {
   RegisteredWidgetContribution,
   WorkbenchLayout,
@@ -45,6 +46,8 @@ export const getActiveWorkbenchSubPanel = (
   );
 };
 
+export const getActiveWorkbenchLocationPanel = (layout: WorkbenchLayout) => getActiveLocationPlacement(layout);
+
 export const matchesWorkbenchLocationEligibility = (
   widget: RegisteredWidgetContribution,
   resource: ResourceRef | undefined,
@@ -71,10 +74,16 @@ export const matchesWorkbenchLocationEligibility = (
 
 export const matchesWorkbenchPanelMenuOwner = (
   widget: RegisteredWidgetContribution,
-  activeSubPanel: WorkbenchWidgetPlacement | undefined,
+  context: {
+    locationPanel?: WorkbenchWidgetPlacement;
+    subPanel?: WorkbenchWidgetPlacement;
+  },
 ) => {
   const owner = widget.panelMenuOwner ?? { level: "panel" };
-  return owner.level === "panel" || activeSubPanel?.contributionId === owner.contributionId;
+  if (owner.level === "panel") {
+    return !owner.contributionId || context.locationPanel?.contributionId === owner.contributionId;
+  }
+  return context.subPanel?.contributionId === owner.contributionId;
 };
 
 const hasOpenSingleton = (

@@ -68,7 +68,9 @@ export interface WorkbenchLocationEligibility {
   resourceIds?: string[];
 }
 
-export type WorkbenchPanelMenuOwner = { level: "panel" } | { level: "sub-panel"; contributionId: string };
+export type WorkbenchPanelMenuOwner =
+  | { level: "panel"; contributionId?: string }
+  | { level: "sub-panel"; contributionId: string };
 
 export interface WorkbenchWidgetTab {
   contentRendererId?: string;
@@ -103,12 +105,23 @@ export interface WidgetContribution {
   canOpen?(resource: ResourceRef): boolean;
 }
 
-export type WorkbenchLocationContribution = Omit<WidgetContribution, "role">;
+export type WorkbenchPanelMenuDefinition = Omit<
+  WidgetContribution,
+  "fallbackRegion" | "panelMenuOwner" | "region" | "role"
+> & {
+  side: WorkbenchPanelMenuSide;
+};
+
+interface WorkbenchPanelContribution {
+  panelMenus?: readonly WorkbenchPanelMenuDefinition[];
+}
+
+export type WorkbenchLocationContribution = Omit<WidgetContribution, "role"> & WorkbenchPanelContribution;
 
 export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
   region: WorkbenchPanelRegion;
   fallbackRegion?: WorkbenchPanelRegion;
-};
+} & WorkbenchPanelContribution;
 
 export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
   region: WorkbenchPanelMenuRegion;
@@ -116,6 +129,7 @@ export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" |
 };
 
 export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" | "singleton" | "reuse"> & {
+  ownedPanelMenuIds?: readonly string[];
   singleton: boolean;
   reuse: WidgetReusePolicy;
   role: WorkbenchWidgetRole;
