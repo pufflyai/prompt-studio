@@ -13,11 +13,15 @@ export const regionLabels = {
   main: "Main editor region",
   "main-right-menu": "Main right menu",
   "secondary-header": "Secondary header",
+  "secondary-left-menu": "Secondary left menu",
   secondary: "Secondary panel",
+  "secondary-right-menu": "Secondary right menu",
   status: "Status bar",
   overlay: "Overlay layer",
   "side-header": "Side Panel header",
+  "side-left-menu": "Side left menu",
   side: "Side Panel",
+  "side-right-menu": "Side right menu",
 } as const satisfies Record<WorkbenchRegion, string>;
 
 interface RegionResourceInput {

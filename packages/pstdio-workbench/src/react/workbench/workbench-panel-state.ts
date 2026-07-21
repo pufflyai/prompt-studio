@@ -1,7 +1,7 @@
-import type { WorkbenchCore, WorkbenchRegion } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelMenuRegion, WorkbenchRegion } from "../../core";
 
 // Panel regions the workbench chrome can collapse and reveal.
-export type WorkbenchPanelRegionId = "sidebar" | "main-left-menu" | "main-right-menu" | "secondary";
+export type WorkbenchPanelRegionId = "sidebar" | "secondary" | WorkbenchPanelMenuRegion;
 
 export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...regions: WorkbenchRegion[]) =>
   regions.every((region) => workbench.layout.getRegionCollapsible(region));

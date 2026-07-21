@@ -2,9 +2,11 @@ import { Badge, Button, Code, HStack, Menu, Stack, Text } from "@chakra-ui/react
 import { ListRow, ScrollArea } from "@pstdio/ui";
 import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
+import { findSidePanelItem, SIDE_PANEL_ITEM_KIND, sidePanelItemResource, sidePanelItems } from "./side-panels-data";
+import { ResourceInspector } from "./side-panels-inspector";
+import { registerSidePanelMenuExamples } from "./side-panels-menus";
 import { ResourceActivityPanel } from "./side-panels-secondary";
 
-const ITEM_KIND = "onboarding.side-panels.item";
 const RESOURCE_PICKER_WIDGET_ID = "onboarding.side-panels.resources";
 const RESOURCE_PICKER_RENDERER_ID = "onboarding.side-panels.resources.renderer";
 const CONTEXT_WIDGET_ID = "onboarding.side-panels.context";
@@ -20,57 +22,6 @@ const ACTIVITY_TAB_MENU_RENDERER_ID = "onboarding.side-panels.activity.tab-menu"
 const PREVIEW_WIDGET_ID = "onboarding.side-panels.preview";
 const PROBLEMS_WIDGET_ID = "onboarding.side-panels.problems";
 const FILES_WIDGET_ID = "onboarding.side-panels.files";
-
-interface SidePanelItem {
-  id: string;
-  label: string;
-  status: string;
-  owner: string;
-  summary: string;
-  files: string[];
-  activity: string[];
-}
-
-const items: SidePanelItem[] = [
-  {
-    id: "design-brief",
-    label: "Design brief",
-    status: "Draft",
-    owner: "Product",
-    summary: "Define the first-pass layout and panel responsibilities for the onboarding shell.",
-    files: ["brief.md", "wireframes/workbench-panels.fig", "src/onboarding/outline.ts"],
-    activity: ["Left outline refreshed", "Inspector picked up Product owner", "Primary resource changed"],
-  },
-  {
-    id: "api-audit",
-    label: "API audit",
-    status: "Review",
-    owner: "Platform",
-    summary: "Check which extension APIs should read primary resource state instead of global active state.",
-    files: ["api.md", "surface-map.ts", "workbench-core.test.ts"],
-    activity: ["Resource tree selection moved", "Inspector updated status", "Breadcrumbs were replaced"],
-  },
-  {
-    id: "release-notes",
-    label: "Release notes",
-    status: "Ready",
-    owner: "Docs",
-    summary: "Document side-panel sync behavior for resource-backed workbench views.",
-    files: ["release-notes.md", "onboarding/14-side-panels.docs.mdx"],
-    activity: ["Docs owner assigned", "Related files re-scoped", "Primary resource changed"],
-  },
-];
-
-const itemResource = (item: SidePanelItem): ResourceRef => ({
-  kind: ITEM_KIND,
-  uri: `${ITEM_KIND}:${item.id}`,
-  id: item.id,
-  label: item.label,
-  icon: "FileText",
-  metadata: { status: item.status, owner: item.owner },
-});
-
-const findItem = (resource: ResourceRef | undefined) => items.find((item) => item.id === resource?.id) ?? items[0];
 
 const usePrimaryResource = (workbench: WorkbenchCore) =>
   useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
@@ -101,8 +52,8 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
         Resources
       </Text>
       <Stack gap="2xs">
-        {items.map((item) => {
-          const resource = itemResource(item);
+        {sidePanelItems.map((item) => {
+          const resource = sidePanelItemResource(item);
           const selected = resource.uri === primaryResource?.uri;
 
           return (
@@ -123,7 +74,7 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
 
 const ResourceDetail = (props: { workbench: WorkbenchCore; resource: ResourceRef | undefined }) => {
   const { workbench, resource } = props;
-  const item = findItem(resource);
+  const item = findSidePanelItem(resource);
 
   return (
     <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}>
@@ -144,8 +95,8 @@ const ResourceDetail = (props: { workbench: WorkbenchCore; resource: ResourceRef
       <Stack gap="sm" maxW="640px">
         <Text textStyle="label/S/semibold">Open another resource</Text>
         <HStack gap="sm" wrap="wrap">
-          {items.map((candidate) => {
-            const resourceRef = itemResource(candidate);
+          {sidePanelItems.map((candidate) => {
+            const resourceRef = sidePanelItemResource(candidate);
             return (
               <Button
                 key={candidate.id}
@@ -167,7 +118,7 @@ const ResourceDetail = (props: { workbench: WorkbenchCore; resource: ResourceRef
 const ResourceContextPanel = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const primaryResource = usePrimaryResource(workbench);
-  const item = findItem(primaryResource);
+  const item = findSidePanelItem(primaryResource);
 
   return (
     <ScrollArea h="full" bg="bg" contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}>
@@ -206,63 +157,18 @@ const ResourceContextPanel = (props: { workbench: WorkbenchCore }) => {
   );
 };
 
-const ResourceInspector = (props: { workbench: WorkbenchCore }) => {
-  const { workbench } = props;
-  const primaryResource = usePrimaryResource(workbench);
-  const item = findItem(primaryResource);
-  const mainPlacements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main.widgets);
-  const detailTabs = mainPlacements.filter((placement) => placement.contributionId === DETAIL_WIDGET_ID);
-
-  return (
-    <ScrollArea h="full" bg="bg.subtle" contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}>
-      <Stack gap="2xs">
-        <Text textStyle="label/S/semibold" color="fg.muted">
-          Inspector
-        </Text>
-        <Text textStyle="title/S/semibold">{item.label}</Text>
-        <Code colorPalette="gray" whiteSpace="normal">
-          {primaryResource?.uri}
-        </Code>
-      </Stack>
-
-      <Stack gap="xs">
-        <Text textStyle="label/S/semibold">Resource facts</Text>
-        <HStack justify="space-between" gap="sm">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Status
-          </Text>
-          <Badge colorPalette="blue">{item.status}</Badge>
-        </HStack>
-        <HStack justify="space-between" gap="sm">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Owner
-          </Text>
-          <Text textStyle="paragraph/S/semibold">{item.owner}</Text>
-        </HStack>
-      </Stack>
-
-      <Stack gap="xs">
-        <Text textStyle="label/S/semibold">Open detail tabs</Text>
-        {detailTabs.map((placement) => (
-          <HStack key={placement.widgetId} gap="xs" minW="0">
-            <WorkbenchIcon name="FileText" size={14} />
-            <Text textStyle="paragraph/S/regular" minW="0" truncate>
-              {placement.title ?? placement.resource?.label ?? placement.widgetId}
-            </Text>
-          </HStack>
-        ))}
-      </Stack>
-    </ScrollArea>
-  );
-};
-
 export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.side-panels",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: ITEM_KIND, label: "Onboarding item", icon: "FileText", surface: "primary" });
+    ctx.resources.registerKind({
+      kind: SIDE_PANEL_ITEM_KIND,
+      label: "Onboarding item",
+      icon: "FileText",
+      surface: "primary",
+    });
     ctx.resources.registerOpener({
       id: "onboarding.side-panels.item-opener",
-      canOpen: (resource) => resource.kind === ITEM_KIND,
+      canOpen: (resource) => resource.kind === SIDE_PANEL_ITEM_KIND,
       open: (resource, input) => {
         ctx.breadcrumbs.setItems([{ title: resource.label ?? "Resource", icon: resource.icon, resource }]);
         return ctx.layout.openWidget(DETAIL_WIDGET_ID, {
@@ -287,7 +193,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     });
     ctx.renderers.registerRenderer({
       id: INSPECTOR_RENDERER_ID,
-      render: ({ workbench }) => <ResourceInspector workbench={workbench} />,
+      render: ({ workbench }) => <ResourceInspector workbench={workbench} detailWidgetId={DETAIL_WIDGET_ID} />,
     });
     ctx.renderers.registerRenderer({
       id: ACTIVITY_RENDERER_ID,
@@ -318,7 +224,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       title: "Resource",
       region: "main",
       singleton: false,
-      resourceKinds: [ITEM_KIND],
+      resourceKinds: [SIDE_PANEL_ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
     });
     ctx.layout.registerWidget({
@@ -347,7 +253,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       icon: "Eye",
       region: "main",
       panelAddable: true,
-      resourceKinds: [ITEM_KIND],
+      resourceKinds: [SIDE_PANEL_ITEM_KIND],
       rendererId: DETAIL_RENDERER_ID,
     });
     ctx.layout.registerWidget({
@@ -367,12 +273,14 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       rendererId: CONTEXT_RENDERER_ID,
     });
 
+    registerSidePanelMenuExamples(ctx);
+
     // Context demonstrates a Main Panel menu while Inspector demonstrates the independent
     // Side Panel. Their logical identities do not depend on their rendered edges.
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(ACTIVITY_WIDGET_ID, { pinned: true });
-    void ctx.resources.openResource(itemResource(items[0]));
+    void ctx.resources.openResource(sidePanelItemResource(sidePanelItems[0]));
   },
 });

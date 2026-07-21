@@ -1,4 +1,4 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
@@ -94,86 +94,6 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
     >
       <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
     </WorkbenchFocusRegion>
-  );
-};
-
-export const WorkbenchMainRightMenu = (props: WorkbenchRegionPanelProps) => {
-  const { workbench } = props;
-  const menuWidgets = useWorkbenchStore(
-    workbench.layout.store,
-    (state) => state.layout.regions["main-right-menu"].widgets,
-  );
-  const showHeaderBar = shouldShowRegionTabs(menuWidgets);
-
-  return (
-    <Flex
-      data-workbench-region="main-right-menu"
-      as="aside"
-      direction="column"
-      h="full"
-      minH="0"
-      minW="0"
-      overflow="hidden"
-      w="full"
-    >
-      {showHeaderBar ? (
-        <Header
-          variant="main"
-          bg={workbenchBackgrounds.panel}
-          position="relative"
-          flexShrink={0}
-          gap="xs"
-          overflow="hidden"
-          overflowY="hidden"
-        >
-          <WorkbenchRegionTabs workbench={workbench} region="main-right-menu" />
-          <WorkbenchHeaderBorder workbench={workbench} region="main-right-menu" />
-        </Header>
-      ) : null}
-      <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchRegion workbench={workbench} region="main-right-menu" title="Main right" />
-      </Box>
-    </Flex>
-  );
-};
-
-export const WorkbenchMainLeftMenu = (props: WorkbenchRegionPanelProps) => {
-  const { workbench } = props;
-  const menuWidgets = useWorkbenchStore(
-    workbench.layout.store,
-    (state) => state.layout.regions["main-left-menu"].widgets,
-  );
-  const showHeaderBar = shouldShowRegionTabs(menuWidgets);
-
-  return (
-    <Flex
-      data-workbench-region="main-left-menu"
-      as="aside"
-      direction="column"
-      h="full"
-      minH="0"
-      minW="0"
-      overflow="hidden"
-      w="full"
-    >
-      {showHeaderBar ? (
-        <Header
-          variant="main"
-          bg={workbenchBackgrounds.panel}
-          position="relative"
-          flexShrink={0}
-          gap="xs"
-          overflow="hidden"
-          overflowY="hidden"
-        >
-          <WorkbenchRegionTabs workbench={workbench} region="main-left-menu" />
-          <WorkbenchHeaderBorder workbench={workbench} region="main-left-menu" />
-        </Header>
-      ) : null}
-      <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchRegion workbench={workbench} region="main-left-menu" title="Main left" />
-      </Box>
-    </Flex>
   );
 };
 

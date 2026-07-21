@@ -105,6 +105,8 @@ export type {
   WidgetReusePolicy,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
+  WorkbenchPanelMenuRegion,
+  WorkbenchPanelMenuSide,
   WorkbenchPanelRegion,
   WorkbenchRegion,
   WorkbenchRegionSize,
@@ -115,6 +117,7 @@ export type {
 export {
   createDefaultWorkbenchLayout,
   createLayoutModel,
+  workbenchPanelMenuRegions,
   workbenchPanelRegions,
   workbenchRegions,
 } from "./registries/layout/layout-model";

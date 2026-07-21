@@ -19,7 +19,7 @@ export type AnchorPersistence = "primary" | "derived" | "detached";
 export type AnchorCandidates = "global" | "scoped";
 
 // Which anchor(s) a projection renders.
-export type AnchorReadId = "primary" | "attached";
+export type AnchorReadId = AnchorId;
 
 export interface AnchorSurface {
   role: "anchor";
@@ -70,11 +70,15 @@ export const surfaceMap: Record<WorkbenchRegion, SurfaceDescriptor> = {
   main: anchor("primary", "primary", "global"),
   "main-right-menu": projection(["primary"]),
   "secondary-header": projection(["primary"]),
+  "secondary-left-menu": projection(["secondary"]),
   secondary: anchor("secondary", "derived", "scoped"),
+  "secondary-right-menu": projection(["secondary"]),
   status: projection(["primary", "attached"]),
   overlay: transient,
   "side-header": projection(["attached"]),
+  "side-left-menu": projection(["attached"]),
   side: anchor("attached", "detached", "scoped"),
+  "side-right-menu": projection(["attached"]),
 };
 
 export const getSurface = (region: WorkbenchRegion) => surfaceMap[region];

@@ -17,6 +17,7 @@ import { resolveWorkbenchHeaderActionGroups, resolveWorkbenchHeaderOverflowLabel
 interface WorkbenchHeaderActionsProps {
   workbench: WorkbenchCore;
   menuPath: MenuPath;
+  controlSize?: "2xs" | "xs";
 }
 
 const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
@@ -25,15 +26,16 @@ const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCo
 const WorkbenchInlineHeaderAction = (props: {
   item: WorkbenchMenuItem;
   onSelect: (item: WorkbenchMenuItem) => void;
+  controlSize: "2xs" | "xs";
 }) => {
-  const { item, onSelect } = props;
+  const { controlSize, item, onSelect } = props;
   const onClick = () => onSelect(item);
 
   if (item.group === "primary" || !item.icon) {
     return (
       <Button
         key={item.id}
-        size="xs"
+        size={controlSize}
         variant={item.group === "primary" ? "primary" : "subtle"}
         disabled={item.disabled}
         onClick={onClick}
@@ -46,7 +48,7 @@ const WorkbenchInlineHeaderAction = (props: {
 
   return (
     <Tooltip key={item.id} content={item.label}>
-      <IconButton size="xs" variant="ghost" aria-label={item.label} disabled={item.disabled} onClick={onClick}>
+      <IconButton size={controlSize} variant="ghost" aria-label={item.label} disabled={item.disabled} onClick={onClick}>
         <WorkbenchIcon name={item.icon} size={16} />
       </IconButton>
     </Tooltip>
@@ -54,7 +56,7 @@ const WorkbenchInlineHeaderAction = (props: {
 };
 
 export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
-  const { menuPath, workbench } = props;
+  const { controlSize = "xs", menuPath, workbench } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -81,12 +83,16 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {inlineItems.map((item) => (
-        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} />
+        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} controlSize={controlSize} />
       ))}
       {overflowItems.length > 0 ? (
         <Menu.Root>
           <Menu.Trigger asChild>
-            <IconButton size="xs" variant="ghost" aria-label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}>
+            <IconButton
+              size={controlSize}
+              variant="ghost"
+              aria-label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}
+            >
               <WorkbenchIcon name="MoreHorizontal" size={16} />
             </IconButton>
           </Menu.Trigger>

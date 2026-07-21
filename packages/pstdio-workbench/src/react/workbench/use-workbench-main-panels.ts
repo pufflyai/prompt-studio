@@ -7,22 +7,15 @@ import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "./workbench-pane
 export interface WorkbenchPanelView {
   has: boolean;
   hasHeader: boolean;
-  icon?: string;
   collapsible: boolean;
-  open: boolean;
   collapsed: boolean;
-  onOpen: () => void;
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
 export interface WorkbenchMainPanels {
   hasMainHeader: boolean;
-  mainLeftMenu: WorkbenchPanelView;
-  mainRightMenu: WorkbenchPanelView;
   secondaryPanel: WorkbenchPanelView;
 }
-
-type MainPanelRegionId = "main-left-menu" | "main-right-menu" | "secondary";
 
 const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) =>
   useWorkbenchStore(
@@ -30,61 +23,33 @@ const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) 
     (state) => state.layout.regions[region].widgets.length > 0 || Boolean(state.placeholders[region]),
   );
 
-const usePanelView = (
-  workbench: WorkbenchCore,
-  region: MainPanelRegionId,
-  options: { hasPrimary: boolean; headerRegion?: WorkbenchRegion; companionOfPrimary?: boolean },
-): WorkbenchPanelView => {
-  const hasContent = useHasRegionContent(workbench, region);
-  const hasHeader = useHasRegionContent(workbench, options.headerRegion ?? region);
-  const icon = useWorkbenchStore(workbench.layout.store, (state) => {
-    const regionState = state.layout.regions[region];
-    const activePlacement =
-      regionState.widgets.find((placement) => placement.widgetId === regionState.activeWidgetId) ??
-      regionState.widgets[0];
-    return activePlacement ? state.widgets[activePlacement.contributionId]?.icon : undefined;
-  });
+const useSecondaryPanelView = (workbench: WorkbenchCore) => {
+  const hasContent = useHasRegionContent(workbench, "secondary");
+  const hasHeader = useHasRegionContent(workbench, "secondary-header");
   const collapsible = useWorkbenchStore(workbench.layout.store, () =>
-    options.headerRegion
-      ? resolvePanelCollapsible(workbench, options.headerRegion, region)
-      : resolvePanelCollapsible(workbench, region),
+    resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
-  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId[region] ?? true);
-  const has =
-    (hasContent || (options.headerRegion ? hasHeader : false)) && (!options.companionOfPrimary || options.hasPrimary);
+  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId.secondary ?? true);
 
   return {
-    has,
-    hasHeader: options.headerRegion ? hasHeader : false,
-    icon,
+    has: hasContent || hasHeader,
+    hasHeader,
     collapsible,
-    open,
     collapsed: !open && collapsible,
-    onOpen: () => setWorkbenchPanelOpen(workbench, region, true),
-    onCollapsedChange: (collapsed) => {
-      if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, region, !collapsed);
+    onCollapsedChange: (collapsed: boolean) => {
+      if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, "secondary", !collapsed);
     },
   };
 };
 
 // Subscribe to derived panel facts rather than the whole layout. Replaying a
 // resource can replace the active main placement without rebuilding the shell.
-export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainPanels => {
+export const useWorkbenchMainPanels = (workbench: WorkbenchCore) => {
   const hasMainHeader = useHasRegionContent(workbench, "main-header");
-  const hasPrimary = useWorkbenchStore(workbench.layout.store, (state) => {
-    const region = state.layout.regions.main;
-    const active =
-      region.widgets.find((placement) => placement.widgetId === region.activeWidgetId) ?? region.widgets[0];
-    return Boolean(active?.resource);
-  });
-  const mainLeftMenu = usePanelView(workbench, "main-left-menu", { hasPrimary, companionOfPrimary: true });
-  const mainRightMenu = usePanelView(workbench, "main-right-menu", { hasPrimary, companionOfPrimary: true });
-  const secondaryPanel = usePanelView(workbench, "secondary", { hasPrimary, headerRegion: "secondary-header" });
+  const secondaryPanel = useSecondaryPanelView(workbench);
 
   return {
     hasMainHeader,
-    mainLeftMenu,
-    mainRightMenu,
     secondaryPanel,
   };
 };

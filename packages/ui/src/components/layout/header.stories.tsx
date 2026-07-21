@@ -1,6 +1,6 @@
 import { Box, Button, Icon, IconButton, Input, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Minus, MoreHorizontal, Plus, SquareArrowOutUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { Header, type HeaderVariant } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE, PANEL_HEADER_TAB_SIZE } from "@/components/layout/panel-header.constants";
@@ -68,6 +68,12 @@ export const PanelControls: Story = {
           </IconButton>
         </Tabs.List>
       </Tabs.Root>
+      <IconButton size={PANEL_HEADER_CONTROL_SIZE} variant="ghost" aria-label="Attach panel">
+        <Icon as={SquareArrowOutUpRight} boxSize="14px" />
+      </IconButton>
+      <IconButton size={PANEL_HEADER_CONTROL_SIZE} variant="ghost" aria-label="Minimize panel">
+        <Icon as={Minus} boxSize="14px" />
+      </IconButton>
     </Header>
   ),
 };

@@ -109,7 +109,7 @@ test.describe("PS-168 Side Panels Storybook contract", () => {
 
     const side = page.getByTestId("workbench-session-attached-panel");
     const sidebar = page.locator('[data-workbench-region="sidebar"]');
-    const main = page.locator('[data-workbench-region="main"]');
+    const main = page.locator('[data-workbench-panel="main"]');
     const separator = page.getByRole("separator", { name: "Resize Side Panel" });
     await expect(side).toBeVisible({ timeout: 30_000 });
     const [sideBox, sidebarBox, mainBox] = await Promise.all([

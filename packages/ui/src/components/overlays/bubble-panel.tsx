@@ -2,6 +2,7 @@ import { Box, chakra, Flex, HStack, type HTMLChakraProps, IconButton, Portal, Sp
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
+import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { Tooltip } from "@/components/primitives/tooltip";
 
 export interface BubblePanelProps {
@@ -70,14 +71,24 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
             <HStack gap="1">
               {onPopOut ? (
                 <Tooltip content={popOutLabel}>
-                  <IconButton size="xs" variant="ghost" aria-label={popOutLabel} onClick={onPopOut}>
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label={popOutLabel}
+                    onClick={onPopOut}
+                  >
                     <SquareArrowOutUpRight size={16} />
                   </IconButton>
                 </Tooltip>
               ) : null}
               {onClose ? (
                 <Tooltip content={closeLabel}>
-                  <IconButton size="xs" variant="ghost" aria-label={closeLabel} onClick={onClose}>
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label={closeLabel}
+                    onClick={onClose}
+                  >
                     <Minus size={16} />
                   </IconButton>
                 </Tooltip>

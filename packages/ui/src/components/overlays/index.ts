@@ -1,3 +1,5 @@
+export type { AttachedMenuProps } from "./attached-menu";
+export { AttachedMenu } from "./attached-menu";
 export { AttachedPanel } from "./attached-panel";
 export { BubbleButton } from "./bubble-button";
 export { BubblePanel } from "./bubble-panel";

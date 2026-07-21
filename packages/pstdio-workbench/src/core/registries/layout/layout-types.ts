@@ -12,9 +12,13 @@ export const workbenchRegions = [
   "main",
   "main-right-menu",
   "secondary-header",
+  "secondary-left-menu",
   "secondary",
+  "secondary-right-menu",
   "side-header",
+  "side-left-menu",
   "side",
+  "side-right-menu",
   "status",
   "overlay",
 ] as const;
@@ -24,6 +28,16 @@ export type WorkbenchRegion = (typeof workbenchRegions)[number];
 export const workbenchPanelRegions = ["main", "secondary", "side"] as const satisfies readonly WorkbenchRegion[];
 
 export type WorkbenchPanelRegion = (typeof workbenchPanelRegions)[number];
+
+export type WorkbenchPanelMenuSide = "left" | "right";
+
+export const workbenchPanelMenuRegions = {
+  main: { left: "main-left-menu", right: "main-right-menu" },
+  secondary: { left: "secondary-left-menu", right: "secondary-right-menu" },
+  side: { left: "side-left-menu", right: "side-right-menu" },
+} as const satisfies Record<WorkbenchPanelRegion, Record<WorkbenchPanelMenuSide, WorkbenchRegion>>;
+
+export type WorkbenchPanelMenuRegion = (typeof workbenchPanelMenuRegions)[WorkbenchPanelRegion][WorkbenchPanelMenuSide];
 
 export interface WorkbenchRegionSize {
   defaultPx?: number;
@@ -152,9 +166,13 @@ export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
     main: createRegionState("main"),
     "main-right-menu": createRegionState("main-right-menu"),
     "secondary-header": createRegionState("secondary-header"),
+    "secondary-left-menu": createRegionState("secondary-left-menu"),
     secondary: createRegionState("secondary"),
+    "secondary-right-menu": createRegionState("secondary-right-menu"),
     "side-header": createRegionState("side-header"),
+    "side-left-menu": createRegionState("side-left-menu"),
     side: createRegionState("side"),
+    "side-right-menu": createRegionState("side-right-menu"),
     status: createRegionState("status"),
     overlay: createRegionState("overlay"),
   },
