@@ -89,11 +89,21 @@ describe("matchesWorkbenchPanelMenuOwner", () => {
   const panelMenu = (owner: RegisteredWidgetContribution["panelMenuOwner"]): RegisteredWidgetContribution =>
     widget({ id: "inspector", role: "panel-menu", region: "main-right-menu", panelMenuOwner: owner });
 
-  test("keeps Panel-owned menus visible across Sub Panel selection", () => {
-    expect(matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), {})).toBe(true);
+  test("shows menus only for the selected Panel or Sub Panel", () => {
+    const location = { widgetId: "project", contributionId: "project.location", role: "location" as const };
+    const notes = { widgetId: "notes", contributionId: "notes", role: "sub-panel" as const };
+
+    expect(matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), { locationPanel: location })).toBe(true);
     expect(
       matchesWorkbenchPanelMenuOwner(panelMenu({ level: "panel" }), {
-        subPanel: { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
+        locationPanel: location,
+        subPanel: notes,
+      }),
+    ).toBe(false);
+    expect(
+      matchesWorkbenchPanelMenuOwner(panelMenu({ level: "sub-panel", contributionId: "notes" }), {
+        locationPanel: location,
+        subPanel: notes,
       }),
     ).toBe(true);
   });

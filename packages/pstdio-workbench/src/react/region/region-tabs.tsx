@@ -160,8 +160,9 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const regionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
+  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
+  const regionState = layoutState.layout.regions[region];
+  const registeredWidgets = layoutState.widgets;
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const placements = regionState.widgets.filter(
@@ -173,7 +174,12 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const tabStore = useTabVisibilityStore(visibilityKey, (state) => state);
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
-  const visiblePlacements = filterVisibleTabs(placements, tabOverrides, getKey);
+  const visibleSubPanels = filterVisibleTabs(placements, tabOverrides, getKey);
+  const activeLocationPanel = getActiveWorkbenchLocationPanel(workbench.layout.getLayout());
+  const visiblePlacements =
+    region === "main" && visibleSubPanels.length > 0 && activeLocationPanel
+      ? [activeLocationPanel, ...visibleSubPanels]
+      : visibleSubPanels;
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -206,15 +212,16 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     workbenchRegionTabLeadingMenuPath(region),
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
-  const hasAddAction = panelRegion
+  const eligibleSubPanels = panelRegion
     ? listEligibleSubPanels({
         widgets: Object.values(registeredWidgets),
-        layout: workbench.layout.getLayout(),
+        layout: layoutState.layout,
         region: panelRegion,
         resource,
         modeId,
-      }).length > 0
-    : false;
+      })
+    : [];
+  const hasAddAction = eligibleSubPanels.length > 0;
   const showTabs = shouldShowRegionTabs(visiblePlacements, {
     hasLeadingActions: leadingItems.length > 0,
     hasAddAction,
@@ -279,7 +286,14 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   if (visiblePlacements.length === 0) {
     return (
       <HStack flex="1 1 auto" h="full" minW="0" gap="2xs">
-        {panelRegion ? <WorkbenchPanelAddMenu workbench={workbench} region={panelRegion} /> : null}
+        {panelRegion ? (
+          <WorkbenchPanelAddMenu
+            workbench={workbench}
+            region={panelRegion}
+            resource={resource}
+            widgets={eligibleSubPanels}
+          />
+        ) : null}
         {leadingActions}
       </HStack>
     );
@@ -288,7 +302,14 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   return (
     <Tabs.Root
       value={activeWidgetId}
-      onValueChange={(details) => workbench.layout.activateWidget(details.value)}
+      onValueChange={(details) => {
+        const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
+        if (placement?.role === "location") {
+          workbench.layout.setRegionActiveWidget(region, placement.widgetId);
+          return;
+        }
+        workbench.layout.activateWidget(details.value);
+      }}
       variant="subtle"
       colorPalette="gray"
       justify="start"
@@ -326,7 +347,14 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
               activeWidgetId={activeWidgetId}
             />
           ))}
-          {panelRegion ? <WorkbenchPanelAddMenu workbench={workbench} region={panelRegion} /> : null}
+          {panelRegion ? (
+            <WorkbenchPanelAddMenu
+              workbench={workbench}
+              region={panelRegion}
+              resource={resource}
+              widgets={eligibleSubPanels}
+            />
+          ) : null}
           {leadingActions}
         </Tabs.List>
       </ScrollArea>

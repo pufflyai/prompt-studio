@@ -5,6 +5,8 @@ import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
+const locationSwitchStoryId = "pstdio-workbench-onboarding--location-switch";
+const allPanelsStoryId = "pstdio-workbench-onboarding--all-three-panels";
 
 interface MenuCase {
   panel: "Main" | "Secondary" | "Side";
@@ -125,5 +127,54 @@ test.describe("PS-170 Panel-owned menus", () => {
       await expect(trigger).toHaveCount(0);
       expect(await contentNode!.evaluate((element) => element.isConnected)).toBe(true);
     }
+  });
+
+  test("switches exclusively between Location and Sub Panel menus", async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto(storyUrl(baseUrl, locationSwitchStoryId));
+
+    const locationTab = page.getByRole("tab", { name: /^Alpha location/ });
+    const notesTab = page.getByRole("tab", { name: /Notes/ });
+    await expect(locationTab).toBeVisible();
+    await expect(locationTab.getByRole("button", { name: /Close/ })).toHaveCount(0);
+    await expect(notesTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: "Open Main left menu" })).toHaveCount(0);
+
+    const notesMenuTrigger = page.getByRole("button", { name: "Open Main right menu" });
+    await expect(notesMenuTrigger).toBeVisible();
+    await notesMenuTrigger.hover();
+    await expect(page.getByRole("tooltip").getByText("Notes tools")).toBeVisible();
+
+    await locationTab.click();
+    await expect(locationTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: "Open Main left menu" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open Main right menu" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(notesTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: "Open Main right menu" })).toBeVisible();
+    await page.getByRole("button", { name: "Navigate forward" }).click();
+    await expect(locationTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("gives every Notes Sub Panel the same menus", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(storyUrl(baseUrl, allPanelsStoryId));
+
+    for (const panel of ["main", "secondary", "side"]) {
+      await expect(page.locator(`[data-workbench-panel-menu="${panel}-right"]`)).toContainText("Notes tools");
+      await expect(page.locator(`[data-workbench-panel-menu="${panel}-left"]`)).toHaveCount(0);
+    }
+  });
+
+  test("disables Attach when the Panel is too narrow", async ({ page }) => {
+    await page.setViewportSize({ width: 250, height: 800 });
+    await page.goto(storyUrl(baseUrl, locationSwitchStoryId));
+
+    await page.getByRole("button", { name: "Open Main right menu" }).click();
+    const attach = page.getByRole("button", { name: "Attach Main right menu" });
+    await expect(attach).toBeDisabled();
+    await attach.hover();
+    await expect(page.getByRole("tooltip").getByText("Panel is too narrow to attach this menu")).toBeVisible();
   });
 });

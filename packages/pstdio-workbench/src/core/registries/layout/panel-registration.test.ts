@@ -37,6 +37,8 @@ describe("Panel registration", () => {
         ownerResourceUri: "pstdio://project/alpha",
       }),
     ]);
+    expect(layout.getWidget("project.notes")?.closable).toBe(false);
+    expect(notes.closable).toBe(false);
     expect(layout.getLayout().regions.main.activeWidgetId).toBe(notes.widgetId);
   });
 

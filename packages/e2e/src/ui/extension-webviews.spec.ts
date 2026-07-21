@@ -246,10 +246,6 @@ test.describe("Extension webviews", () => {
     const terminalTabs = terminalTabList.getByRole("tab");
     const addTerminal = async () => {
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
-      await page
-        .getByRole("menu", { name: "Add panel" })
-        .getByRole("menuitem", { name: "Terminal", exact: true })
-        .click();
     };
 
     await expect(terminalTabs).toHaveCount(1);

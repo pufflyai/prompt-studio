@@ -48,7 +48,6 @@ test("PS-169 gives the Session tab its own right-click menu", async ({ page, req
   const nav = page.locator('[data-workbench-region="nav"]');
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "New session" }).click();
   const sessionTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ });
   await expect(sessionTab).toBeVisible();
   await sessionTab.click({ button: "right" });
@@ -99,10 +98,7 @@ test.describe("PS-169 Panel tabs", () => {
       .locator('[data-workbench-panel-header="side"]')
       .getByRole("button", { name: "Add panel" });
     await addSidePanel.click();
-    const addMenu = page.getByRole("menu", { name: "Add panel" });
-    await expect(addMenu).toBeVisible();
-    await expect(addMenu.getByRole("menuitem", { name: "Inspector" })).toHaveCount(0);
-    await addMenu.getByRole("menuitem", { name: "Files" }).click();
+    await expect(page.getByRole("menu", { name: "Add panel" })).toHaveCount(0);
 
     const sideHeader = page.locator('[data-workbench-panel-header="side"]');
     await expect(sideHeader.getByRole("tab", { name: "Files" })).toBeVisible();

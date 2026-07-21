@@ -1,6 +1,7 @@
 import { Box, HStack, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
 import { AttachedMenu, Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
@@ -19,10 +20,13 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
+import {
+  canAttachWorkbenchPanelMenu,
+  PANEL_CONTENT_MIN_SIZE_PX,
+  PANEL_MENU_RESIZE_HANDLE_SIZE_PX,
+} from "./panel-menu-sizing";
 
 const PANEL_MENU_SIZE = { defaultPx: 180, minPx: 144, maxPx: 320 };
-const PANEL_CONTENT_MIN_SIZE_PX = 120;
-const PANEL_MENU_RESIZE_HANDLE_SIZE_PX = 4;
 
 const panelLabels: Record<WorkbenchPanelRegion, string> = {
   main: "Main",
@@ -158,16 +162,50 @@ export const WorkbenchPanelMenuLayout = (props: {
   return addPanelMenu({ content: withRight, view: left, workbench });
 };
 
-const WorkbenchPanelMenuOpener = (props: { view: WorkbenchPanelMenuView; workbench: WorkbenchCore }) => {
-  const { view, workbench } = props;
+const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const element = document.querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
+    if (!element) return;
+
+    const measure = () => setWidth(element.getBoundingClientRect().width);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [panel]);
+
+  return width;
+};
+
+interface WorkbenchPanelMenuOpenerProps {
+  view: WorkbenchPanelMenuView;
+  workbench: WorkbenchCore;
+  canAttach: boolean;
+}
+
+const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
+  const { canAttach, view, workbench } = props;
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-start", offset: { mainAxis: 0 } }}>
-      <Menu.Trigger asChild>
-        <IconButton variant="ghost" size={PANEL_HEADER_CONTROL_SIZE} aria-label={`Open ${view.label}`} flexShrink={0}>
-          <WorkbenchIcon name={view.icon} size={14} />
-        </IconButton>
-      </Menu.Trigger>
+    <Menu.Root
+      positioning={{ placement: "bottom-start", offset: { mainAxis: 0 }, getAnchorElement: () => triggerRef.current }}
+    >
+      <Tooltip content={view.title}>
+        <Menu.Trigger asChild>
+          <IconButton
+            ref={triggerRef}
+            variant="ghost"
+            size={PANEL_HEADER_CONTROL_SIZE}
+            aria-label={`Open ${view.label}`}
+            flexShrink={0}
+          >
+            <WorkbenchIcon name={view.icon} size={14} />
+          </IconButton>
+        </Menu.Trigger>
+      </Tooltip>
       <Portal>
         <Menu.Positioner>
           <Menu.Content
@@ -187,10 +225,18 @@ const WorkbenchPanelMenuOpener = (props: { view: WorkbenchPanelMenuView; workben
               <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
                 {view.title}
               </Text>
-              <Tooltip content={`Attach ${view.label}`}>
-                <IconButton variant="ghost" size="xs" aria-label={`Attach ${view.label}`} onClick={view.onOpen}>
-                  <WorkbenchIcon name={view.side === "left" ? "PanelLeft" : "PanelRight"} size={14} />
-                </IconButton>
+              <Tooltip content={canAttach ? `Attach ${view.label}` : "Panel is too narrow to attach this menu"}>
+                <Box as="span" display="inline-flex">
+                  <IconButton
+                    variant="ghost"
+                    size="xs"
+                    aria-label={`Attach ${view.label}`}
+                    disabled={!canAttach}
+                    onClick={view.onOpen}
+                  >
+                    <WorkbenchIcon name={view.side === "left" ? "PanelLeft" : "PanelRight"} size={14} />
+                  </IconButton>
+                </Box>
               </Tooltip>
             </Header>
             <Box flex="1" minH="0" minW="0">
@@ -207,15 +253,26 @@ export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; pan
   const { panel, workbench } = props;
   const left = useWorkbenchPanelMenu(workbench, panel, "left");
   const right = useWorkbenchPanelMenu(workbench, panel, "right");
+  const panelWidth = useWorkbenchPanelWidth(panel);
+  const views = [left, right];
   const closedMenus = [left, right].filter((view) => view.has && view.collapsed);
 
   if (closedMenus.length === 0) return null;
 
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
-      {closedMenus.map((view) => (
-        <WorkbenchPanelMenuOpener key={view.region} view={view} workbench={workbench} />
-      ))}
+      {closedMenus.map((view) => {
+        const attachedMenuMinSizes = views
+          .filter((candidate) => candidate.has && !candidate.collapsed)
+          .map((candidate) => candidate.size.minPx);
+        const canAttach = canAttachWorkbenchPanelMenu({
+          panelWidth,
+          targetMenuMinSize: view.size.minPx,
+          attachedMenuMinSizes,
+        });
+
+        return <WorkbenchPanelMenuOpener key={view.region} view={view} workbench={workbench} canAttach={canAttach} />;
+      })}
     </HStack>
   );
 };

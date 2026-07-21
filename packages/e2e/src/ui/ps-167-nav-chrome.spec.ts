@@ -123,7 +123,6 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect.poll(() => backgroundColor(openSide)).toBe(selectedBackground);
   await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "New session" }).click();
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ }),
   ).toBeVisible();
@@ -211,7 +210,7 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
     const ticketTab = page.getByRole("tab", { name: "PS-101" });
     const tabNames = async () => page.getByRole("tab").allTextContents();
     const initialTabNames = await tabNames();
-    expect(initialTabNames).toEqual(["PS-101"]);
+    expect(initialTabNames).toEqual(["Palette resources", "PS-101"]);
     await expect(ticketTab).toHaveAttribute("aria-selected", "true");
 
     await nav.getByRole("button", { name: "Navigate back" }).click();
@@ -250,10 +249,10 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
     }
 
     const mainTabList = page.locator('[data-workbench-panel-header="main"]').getByRole("tablist");
-    await expect(mainTabList.getByRole("tab")).toHaveCount(3);
+    await expect(mainTabList.getByRole("tab")).toHaveCount(4);
     for (let remaining = 3; remaining > 0; remaining -= 1) {
       const tabs = mainTabList.getByRole("tab");
-      await expect(tabs).toHaveCount(remaining);
+      await expect(tabs).toHaveCount(remaining + 1);
       const tab = tabs.last();
       await tab.click();
       await tab.getByRole("button", { name: /^Close PS-/ }).click();
@@ -269,8 +268,21 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
   test("renders code documents inside the workbench theme provider", async ({ page }) => {
     await page.goto(storyUrl(baseUrl, documentRendererStoryId));
 
+    await expect(page.getByRole("tab", { name: "Documents" })).toHaveCount(0);
     await page.getByRole("tab", { name: "example.ts" }).click();
 
     await expect(page.locator(".monaco-editor")).toBeVisible();
+
+    const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+    for (const name of ["notes.md", "example.ts", "logo.svg"]) {
+      const tab = mainHeader.getByRole("tab", { name });
+      await tab.click();
+      await tab.getByRole("button", { name: `Close ${name}` }).click();
+    }
+
+    const addPanel = mainHeader.getByRole("button", { name: "Add panel" });
+    await expect(addPanel).toBeVisible();
+    await addPanel.click();
+    await expect(page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem")).toHaveCount(3);
   });
 });

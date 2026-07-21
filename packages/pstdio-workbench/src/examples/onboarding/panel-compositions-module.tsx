@@ -98,22 +98,37 @@ const locationPanelMenus = (kind: CompositionKind): WorkbenchPanelMenuDefinition
   ];
 };
 
-const subPanelMenus = (
-  kind: CompositionKind,
-  region: (typeof panelRegions)[number],
-  name: string,
-): WorkbenchPanelMenuDefinition[] => {
-  if (!compositionFlags(kind).hasMenus || name !== "Notes") return [];
-  return [
-    {
-      id: `onboarding.panel-composition.${region}.notes.tools`,
-      title: "Notes tools",
-      icon: kind === "location-switch" ? "FileText" : "SlidersHorizontal",
-      side: "right",
-      rendererId: RENDERER_ID,
-    },
-  ];
-};
+interface SubPanelFixtureDefinition {
+  id: string;
+  title: string;
+  icon: string;
+  panelMenus: readonly (Omit<WorkbenchPanelMenuDefinition, "id"> & { key: string })[];
+}
+
+const subPanelDefinitions = (kind: CompositionKind): SubPanelFixtureDefinition[] => [
+  {
+    id: "notes",
+    title: "Notes",
+    icon: "FileText",
+    panelMenus: compositionFlags(kind).hasMenus
+      ? [
+          {
+            key: "tools",
+            title: "Notes tools",
+            icon: kind === "location-switch" ? "FileText" : "SlidersHorizontal",
+            side: "right",
+            rendererId: RENDERER_ID,
+          },
+        ]
+      : [],
+  },
+  {
+    id: "reports",
+    title: "Reports",
+    icon: "ChartNoAxesColumn",
+    panelMenus: [],
+  },
+];
 
 const compositionFlags = (kind: CompositionKind) => ({
   hasEligible: kind !== "location-only" && kind !== "menu-only" && kind !== "collapsed-menu",
@@ -198,15 +213,18 @@ const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: 
 
 const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
   for (const region of panelRegions) {
-    for (const name of ["Notes", "Reports"]) {
+    for (const definition of subPanelDefinitions(kind)) {
       ctx.layout.registerSubPanel({
-        id: `onboarding.panel-composition.${region}.${name.toLowerCase()}`,
-        title: name,
-        icon: name === "Notes" ? "FileText" : "ChartNoAxesColumn",
+        id: `onboarding.panel-composition.${region}.${definition.id}`,
+        title: definition.title,
+        icon: definition.icon,
         region,
         singleton: true,
         rendererId: RENDERER_ID,
-        panelMenus: subPanelMenus(kind, region, name),
+        panelMenus: definition.panelMenus.map(({ key, ...menu }) => ({
+          ...menu,
+          id: `onboarding.panel-composition.${region}.${definition.id}.${key}`,
+        })),
       });
     }
   }

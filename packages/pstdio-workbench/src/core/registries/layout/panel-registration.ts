@@ -57,7 +57,7 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
   try {
     const registeredPanel: WidgetContribution & { ownedPanelMenuIds: readonly string[] } = {
       ...panelContribution,
-      closable: role === "sub-panel" ? true : panelContribution.closable,
+      closable: role === "sub-panel",
       ownedPanelMenuIds: panelMenus.map((menu) => menu.id),
       role,
     };

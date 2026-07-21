@@ -12,6 +12,10 @@ export const parameters = {
 Use a **file renderer** when a module wants to load document-like content into
 the workbench shell and let the React layer choose the right editor or preview.
 
+This example has no selectable Location content of its own, so it registers a
+Main Panel placeholder rather than a null Location. Only the real document Sub
+Panels appear in the tab strip.
+
 <Canvas of={OnboardingStories.DocumentRenderer} sourceState="shown" />
 
 The renderer contribution provides:

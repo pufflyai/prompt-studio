@@ -23,9 +23,11 @@ Breadcrumb
         └── or owned by one Sub Panel
 ```
 
-A **Location Panel** is the navigated subject represented by the breadcrumb. It is not a tab. A **Sub Panel** is
-removable tabbed content inside that Location Panel. A **Panel Menu** is supporting content attached to either the
-Location Panel or one specific Sub Panel; it never becomes a tab or an Add-panel entry.
+A **Location Panel** is the navigated subject represented by the breadcrumb. Its content renders directly while no
+Sub Panels are open. Once a Sub Panel opens, the Location Panel becomes the first, uncloseable tab so the user can
+select its content again. A **Sub Panel** is removable tabbed content inside that Location Panel. A **Panel Menu** is
+supporting content attached to either the Location Panel or one specific Sub Panel; it never becomes a tab or an
+Add-panel entry.
 
 ## Registration and ownership
 
@@ -68,15 +70,17 @@ ctx.layout.registerSubPanel({
 ## Header and ownership rules
 
 The Panel Header is shown when the Panel has at least one open Sub Panel, one eligible closed Sub Panel, one attached
-or collapsed Panel Menu, or a header action. Tabs render only for open Sub Panels. `Add panel` renders only when an
-eligible closed Sub Panel exists. Therefore a Location with no subordinate UI has no header, while a Panel containing
-only a Panel Menu retains its header without emitting an empty ARIA tab list.
+or collapsed Panel Menu, or a header action. When Sub Panels are open, the tab strip begins with the uncloseable
+Location Panel and continues with the removable Sub Panels. `Add panel` renders only when an eligible closed Sub Panel
+exists. Therefore a Location with no subordinate UI has no header, while a Panel containing only a Panel Menu retains
+its header without emitting an empty ARIA tab list.
 
-Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. A Location-Panel-
-owned menu remains available while tabs change. A Sub-Panel-owned menu appears only while its owner tab is selected.
-Each menu placement retains its own attached or collapsed state. Clicking a collapsed menu's distinct icon opens the
-menu's live content in a contained, portal-positioned dropdown. Its header identifies the menu and contains the action
-that attaches it to the correct side again.
+Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. Menu ownership is
+exclusive to the selected tab: selecting the Location Panel shows only Location-owned menus, while selecting a Sub
+Panel shows only that Sub Panel's menus. Each menu placement retains its own attached or collapsed state. Clicking a
+collapsed menu's distinct, tooltipped icon opens the menu's live content in a contained, portal-positioned dropdown.
+Its header identifies the menu and contains the action that attaches it to the correct side again. Attach is disabled
+when the Panel cannot preserve the menu minimum, resize handles, existing attached menus, and minimum content width.
 
 Each Location owns its open Sub Panel placements and selection. Switching Locations does not close those tabs:
 returning by a Location action, Back, or Forward restores that Location's previous open tabs and active selection.
@@ -101,8 +105,9 @@ Every Sub Panel offered by `Add panel` is removable and becomes eligible again a
 
 ## Navigation and persistence
 
-Selecting a Sub Panel in Main, Secondary, or Side records one navigation entry. The entry snapshots the Location and
-the selected Sub Panel in every Panel. Back and Forward replay the complete snapshot without adding another entry;
+Selecting the Location Panel or a Sub Panel in Main, Secondary, or Side records one navigation entry. The entry
+snapshots the Location and the selected Sub Panel, if any, in every Panel. Back and Forward replay the complete
+snapshot without adding another entry;
 navigating after Back truncates Forward entries. Closing a Sub Panel removes its selection from older snapshots so
 history cannot recreate it implicitly.
 

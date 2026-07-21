@@ -533,6 +533,25 @@ const registerSnapshotFixtures = (workbench: ReturnType<typeof createWorkbenchCo
 };
 
 describe("createHistoryController Sub Panel snapshots", () => {
+  test("records the Location tab as the selected base Panel", () => {
+    const workbench = createWorkbenchCore();
+    registerSnapshotFixtures(workbench);
+    const location = workbench.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    workbench.layout.openWidget("snapshot.main.a");
+
+    workbench.layout.setRegionActiveWidget("main", location.widgetId);
+    const current = workbench.history.store.getState();
+    expect(current.entries[current.cursor]?.selectedSubPanels).toEqual({});
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(location.widgetId);
+
+    expect(workbench.history.goBack()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.a");
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.a");
+    expect(workbench.history.goForward()?.selectedSubPanels).toEqual({});
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(location.widgetId);
+  });
+
   test("records and restores tab selection in every Panel", () => {
     const workbench = createWorkbenchCore();
     registerSnapshotFixtures(workbench);

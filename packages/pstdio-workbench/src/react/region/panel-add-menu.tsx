@@ -1,48 +1,44 @@
 import { IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
-import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
-import { listEligibleSubPanels } from "../../core";
+import type { RegisteredWidgetContribution, ResourceRef, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
-import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { openPanelWidget } from "./panel-widget-open";
 
 interface WorkbenchPanelAddMenuProps {
   workbench: WorkbenchCore;
   region: WorkbenchPanelRegion;
+  resource?: ResourceRef;
+  widgets: RegisteredWidgetContribution[];
 }
 
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
-  const { region, workbench } = props;
+  const { region, resource, widgets, workbench } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
-  const resource = useWorkbenchLocationResource(workbench);
-  const modeId = useWorkbenchActiveModeId(workbench);
   const label = "Add panel";
-  const widgets = listEligibleSubPanels({
-    widgets: Object.values(layoutState.widgets),
-    layout: layoutState.layout,
-    region,
-    resource,
-    modeId,
-  });
   if (widgets.length === 0) return null;
+
+  const trigger = (
+    <IconButton
+      ref={widgets.length > 1 ? triggerRef : undefined}
+      size={PANEL_HEADER_CONTROL_SIZE}
+      variant="ghost"
+      aria-label={label}
+      flexShrink={0}
+      onClick={
+        widgets.length === 1 ? () => openPanelWidget({ workbench, widget: widgets[0], region, resource }) : undefined
+      }
+    >
+      <WorkbenchIcon name="plus" size={13} />
+    </IconButton>
+  );
+
+  if (widgets.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
     <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>
       <Tooltip content={label}>
-        <Menu.Trigger asChild>
-          <IconButton
-            ref={triggerRef}
-            size={PANEL_HEADER_CONTROL_SIZE}
-            variant="ghost"
-            aria-label={label}
-            flexShrink={0}
-          >
-            <WorkbenchIcon name="plus" size={13} />
-          </IconButton>
-        </Menu.Trigger>
+        <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       </Tooltip>
       <Portal>
         <Menu.Positioner>

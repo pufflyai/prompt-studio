@@ -61,7 +61,6 @@ test("PS-168 closes and keyboard-restores the same full-height Side Panel", asyn
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "New session" }).click();
   await expectDashboardAttachedBounds(page);
 
   const mainNode = await page.locator('[data-workbench-region="main"]').elementHandle();

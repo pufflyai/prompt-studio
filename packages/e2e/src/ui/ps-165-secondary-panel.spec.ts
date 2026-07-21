@@ -33,7 +33,6 @@ const getSecondaryHeader = (page: import("@playwright/test").Page) =>
 
 const addTerminal = async (page: import("@playwright/test").Page) => {
   await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal", exact: true }).click();
 };
 
 const dragPanelToRawSize = async (

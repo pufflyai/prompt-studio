@@ -23,8 +23,8 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       },
     });
 
-    ctx.layout.registerLocation({
-      id: "docs.documents",
+    ctx.layout.registerPlaceholder({
+      id: "docs.documents.placeholder",
       title: "Documents",
       region: "main",
       rendererId: "docs.documents",
@@ -37,7 +37,6 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       singleton: true,
     });
 
-    ctx.layout.openWidget("docs.documents");
     ctx.layout.openWidget("docs.notes");
   },
 });`;

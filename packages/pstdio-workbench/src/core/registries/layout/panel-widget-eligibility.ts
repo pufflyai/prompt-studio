@@ -80,10 +80,13 @@ export const matchesWorkbenchPanelMenuOwner = (
   },
 ) => {
   const owner = widget.panelMenuOwner ?? { level: "panel" };
+  if (context.subPanel) {
+    return owner.level === "sub-panel" && context.subPanel.contributionId === owner.contributionId;
+  }
   if (owner.level === "panel") {
     return !owner.contributionId || context.locationPanel?.contributionId === owner.contributionId;
   }
-  return context.subPanel?.contributionId === owner.contributionId;
+  return false;
 };
 
 const hasOpenSingleton = (
