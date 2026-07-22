@@ -149,7 +149,7 @@ export const metadataWithTickets = {
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.main.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
+        open: [{ target: "workbench.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
       },
     },
   ],
@@ -175,8 +175,7 @@ export const metadataWithTickets = {
     {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "workbench.main.left",
-      target: "workbench.main.left",
+      slotId: "unknown",
       title: "Files",
       role: "panel-menu",
       resourceKind: "ticket",

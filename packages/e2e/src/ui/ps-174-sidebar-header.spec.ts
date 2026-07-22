@@ -1,11 +1,13 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const projectModeStoryId = "dashboard-sidebar--project-mode";
 const workspacesViewStoryId = "dashboard-sidebar--workspaces-view";
+const ticketModeStoryId = "dashboard-sidebar--ticket-mode";
 const globalRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
@@ -95,6 +97,35 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
 });
 
+test("PS-174 renders the ticket tree inside the Sidebar resource section", async ({ page, request }) => {
+  test.setTimeout(45_000);
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+  const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
+  expect(defaultStatus).toBeTruthy();
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: "Sidebar resource ticket",
+    statusId: defaultStatus!.id,
+  });
+  await createPlannerTicketFile(request, apiBase, project.id, ticket.id, {
+    name: "research.md",
+    content: "# Research",
+  });
+  await prepareDashboard(page, project.id);
+  await page.goto("/");
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+
+  const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByText(ticket.title, { exact: true }).click();
+
+  const sidebar = page.locator('[data-workbench-region="sidebar"]');
+  await expectGlobalHeader(sidebar);
+  await expect(sidebar.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible();
+  await expect(sidebar.getByRole("option", { name: /research/ })).toBeVisible();
+});
+
 test.describe("PS-174 Dashboard Sidebar stories", () => {
   test.slow();
 
@@ -109,7 +140,7 @@ test.describe("PS-174 Dashboard Sidebar stories", () => {
     storybook?.kill();
   });
 
-  for (const storyId of [projectModeStoryId, workspacesViewStoryId]) {
+  for (const storyId of [projectModeStoryId, workspacesViewStoryId, ticketModeStoryId]) {
     test(`renders ${storyId} with one persistent global header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(storyUrl(baseUrl, storyId));
@@ -117,6 +148,9 @@ test.describe("PS-174 Dashboard Sidebar stories", () => {
       const sidebar = page.locator('[data-workbench-region="sidebar"]');
       await expect(sidebar.getByRole("button", { name: "Prompt Studio" })).toBeVisible({ timeout: 30_000 });
       await expectGlobalHeader(sidebar);
+      if (storyId === ticketModeStoryId) {
+        await expect(sidebar.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
+      }
     });
   }
 });

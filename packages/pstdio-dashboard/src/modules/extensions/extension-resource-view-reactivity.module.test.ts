@@ -148,34 +148,6 @@ describe("createExtensionsModule ticket reactivity", () => {
     }
   });
 
-  test("uses the active ticket title and icon for the ticket sidebar panel", async () => {
-    const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
-
-    try {
-      await flushMicrotasks();
-      await workbench.resources.openResource(ticketResource, { replaceActive: true });
-      await flushMicrotasks();
-
-      const leftPlacement = workbench.layout.getLayout().regions["main-left-menu"].widgets[0];
-      expect(leftPlacement).toMatchObject({
-        contributionId: "pstdio-core-tickets.ticketFiles",
-        title: "PS-10 Ticket",
-        resource: { icon: "component" },
-      });
-
-      publishExtensionCommandEvent({
-        commandId: "pstdio-core-tickets.update-ticket",
-        extensionId: "pstdio.pstdio-core-tickets",
-        outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
-      });
-
-      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.title).toBe("PS-10 Write a haiku");
-    } finally {
-      disposable.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
   test("refreshes ticket tree renderers when a workspace row changes over the live feed", async () => {
     const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
     const refreshed: string[] = [];

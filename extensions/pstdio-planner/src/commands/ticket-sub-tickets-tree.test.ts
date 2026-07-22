@@ -5,7 +5,7 @@ import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 describe("ticket files tree sub-ticket section", () => {
-  test("lists child tickets as sub-tickets in the main-left tree", async () => {
+  test("lists child tickets as sub-tickets in the ticket resource tree", async () => {
     const storage = createMemoryStorage();
     const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
     const child = await createTicketCommand.run(

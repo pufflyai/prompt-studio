@@ -29,22 +29,22 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getWidget(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
   });
 
-  test("renders the Sessions group in session and workspace modes but not the project mode", () => {
+  test("renders the Sessions group in session and workspace modes but not the project mode", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
 
-    const nodeIdsForMode = (mode: string) =>
-      getSidebarContributionSections(workbench, mode)
+    const nodeIdsForMode = async (mode: string) =>
+      (await getSidebarContributionSections(workbench, mode))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
-    expect(nodeIdsForMode("project")).not.toContain("sessions");
-    expect(nodeIdsForMode("sessions")).toContain("sessions");
-    expect(nodeIdsForMode("workspace")).toContain("sessions");
+    expect(await nodeIdsForMode("project")).not.toContain("sessions");
+    expect(await nodeIdsForMode("sessions")).toContain("sessions");
+    expect(await nodeIdsForMode("workspace")).toContain("sessions");
   });
 
-  test("adds sessions navigation to the persistent sidebar header", () => {
+  test("adds sessions navigation to the persistent sidebar header", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
@@ -57,7 +57,7 @@ describe("createSessionsModule", () => {
       target: { kind: "command", commandId: dashboardCommandIds.openSessions },
     });
     expect(
-      getSidebarContributionSections(workbench, "project")
+      (await getSidebarContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id),
     ).not.toContain(dashboardResources.sessions.uri);

@@ -100,6 +100,12 @@ const isResourceBoundModeEntry = (
   viewById: Map<string, DashboardExtensionView>,
 ) => Boolean(entry.view && mode.resourceKind && viewById.get(entry.view)?.resourceKind === mode.resourceKind);
 
+const ownsUnifiedSidebarResourceSection = (
+  entry: ModeLayoutOpenEntry,
+  mode: DashboardExtensionMode,
+  viewById: Map<string, DashboardExtensionView>,
+) => isResourceBoundModeEntry(entry, mode, viewById) && extensionModeLayoutRegion(entry.target) === "sidebar";
+
 export const activateExtensionModeLayout = (input: {
   ctx: WorkbenchModuleContributionContext;
   metadata: DashboardExtensionMetadata;
@@ -109,6 +115,7 @@ export const activateExtensionModeLayout = (input: {
   const { ctx, metadata, mode, projectId } = input;
   const viewById = new Map(metadata.views.map((view) => [view.id, view]));
   const entries = mode.layout?.open ?? [];
+  const preservesUnifiedSidebar = entries.some((entry) => ownsUnifiedSidebarResourceSection(entry, mode, viewById));
 
   for (const entry of entries) {
     if (entry.view && !viewById.has(entry.view)) throw new Error(`Extension mode view not found: ${entry.view}`);
@@ -117,7 +124,11 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
-  for (const target of resetTargets(mode.layout)) ctx.layout.clearRegion(extensionModeLayoutRegion(target));
+  for (const target of resetTargets(mode.layout)) {
+    const region = extensionModeLayoutRegion(target);
+    if (preservesUnifiedSidebar && region === "sidebar") continue;
+    ctx.layout.clearRegion(region);
+  }
   for (const entry of entries) {
     if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
     openModeEntry({ ctx, entry, projectId, viewById });

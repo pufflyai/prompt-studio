@@ -25,7 +25,11 @@ import { registerExtensionDataRenderers } from "./extension-data-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
-import { registerExtensionDataRendererSidebarContribution } from "./extension-sidebar-contributions";
+import {
+  isExtensionResourceSidebarView,
+  registerExtensionDataRendererSidebarContribution,
+  registerExtensionResourceSidebarContributions,
+} from "./extension-sidebar-contributions";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -40,6 +44,10 @@ export const registerExtensionContributions = (input: {
 }) => {
   const { ctx, executeCommand, metadata, projectId } = input;
   const disposables: Disposable[] = [];
+  const treeRendererMetadata = {
+    ...metadata,
+    views: metadata.views.filter((view) => !isExtensionResourceSidebarView(metadata, view)),
+  };
 
   for (const registration of buildDashboardExtensionMenuRegistrations(metadata)) {
     disposables.push(
@@ -106,11 +114,12 @@ export const registerExtensionContributions = (input: {
         const mode = ctx.modes.getActiveModeId();
         return mode ? getSidebarContributionFooterNodes(ctx, mode) : [];
       },
-      metadata,
+      metadata: treeRendererMetadata,
       projectId,
       workbench: ctx,
     }),
   );
+  disposables.push(registerExtensionResourceSidebarContributions(ctx, metadata));
   disposables.push(
     registerWorkbenchExtensionCommandPaletteResources(
       {

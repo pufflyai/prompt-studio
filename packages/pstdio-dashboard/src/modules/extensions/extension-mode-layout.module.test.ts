@@ -100,10 +100,10 @@ describe("createExtensionsModule mode layout", () => {
     try {
       await flushMicrotasks();
 
-      const projectNodeIds = getSidebarContributionSections(workbench, "project")
+      const projectNodeIds = (await getSidebarContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
-      const workspaceNodeIds = getSidebarContributionSections(workbench, "workspace")
+      const workspaceNodeIds = (await getSidebarContributionSections(workbench, "workspace"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
