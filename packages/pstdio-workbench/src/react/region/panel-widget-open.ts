@@ -17,7 +17,10 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
   const { region, resource, widget, workbench } = input;
 
   if (widget.openCommandId) {
-    void workbench.commands.executeCommand(widget.openCommandId, undefined, resource ? { resource } : undefined);
+    void workbench.commands.executeCommand(widget.openCommandId, undefined, {
+      source: "panel-add",
+      ...(resource ? { resource } : {}),
+    });
   } else {
     const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
     workbench.layout.openWidget(widget.id, { region, resource: widgetResource, closable: true });

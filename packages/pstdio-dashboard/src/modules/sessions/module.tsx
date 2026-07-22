@@ -187,11 +187,7 @@ export const createSessionsModule = () =>
       ctx.modes.registerMode({
         id: "sessions",
         label: "Sessions",
-        activate(modeCtx) {
-          modeCtx.layout.clearRegion("side");
-          modeCtx.layout.clearRegion("side-header");
-          return undefined;
-        },
+        activate: () => undefined,
       });
 
       ctx.resources.registerProvider({

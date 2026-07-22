@@ -57,8 +57,11 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     Object.values(layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId));
 
   const captureActivePlacements = (layout: WorkbenchLayout) => {
-    for (const widgetId of listPlacementIds(layout)) {
-      if (!activeBaselinePlacementIds.has(widgetId)) activePlacementIds.add(widgetId);
+    for (const placement of Object.values(layout.regions).flatMap((region) => region.widgets)) {
+      // Location-aware placements belong to their persisted workspace; modes only
+      // own anonymous content chrome created while the mode is active.
+      if (placement.role !== "content") continue;
+      if (!activeBaselinePlacementIds.has(placement.widgetId)) activePlacementIds.add(placement.widgetId);
     }
   };
 

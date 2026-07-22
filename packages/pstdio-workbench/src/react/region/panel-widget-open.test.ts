@@ -18,4 +18,25 @@ describe("openPanelWidget", () => {
       expect.objectContaining({ contributionId: "workspaces", closable: true }),
     ]);
   });
+
+  test("marks command-backed opens as Add Panel requests", async () => {
+    const workbench = createWorkbenchCore();
+    const contexts: unknown[] = [];
+    workbench.commands.registerCommand(
+      { id: "sessions.new", label: "New session" },
+      { execute: (_args, context) => contexts.push(context) },
+    );
+    workbench.layout.registerSubPanel({
+      id: "sessions",
+      title: "Sessions",
+      region: "side",
+      rendererId: "sessions.renderer",
+      openCommandId: "sessions.new",
+    });
+
+    openPanelWidget({ workbench, widget: workbench.layout.getWidget("sessions")!, region: "side" });
+    await Promise.resolve();
+
+    expect(contexts).toEqual([{ source: "panel-add" }]);
+  });
 });

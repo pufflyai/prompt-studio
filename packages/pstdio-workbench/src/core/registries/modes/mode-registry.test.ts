@@ -164,4 +164,25 @@ describe("createWorkbenchModeRegistry", () => {
     registry.setActiveMode("sessions");
     expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
+
+  test("preserves Location-owned Sub Panels when switching modes", () => {
+    const layout = createLayoutModel();
+    layout.registerWidget({
+      id: "sessions.chat",
+      title: "Session",
+      region: "side",
+      rendererId: "sessions.chat",
+      role: "sub-panel",
+    });
+
+    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    registry.registerMode({ id: "project", activate: () => undefined });
+    registry.registerMode({ id: "sessions", activate: () => undefined });
+
+    registry.setActiveMode("project");
+    layout.openWidget("sessions.chat");
+    registry.setActiveMode("sessions");
+
+    expect(layout.getLayout().regions.side.widgets).toHaveLength(1);
+  });
 });

@@ -200,6 +200,7 @@ export interface OpenWidgetInput {
   hiddenByDefault?: boolean;
   tab?: WorkbenchWidgetTab;
   replaceActive?: boolean;
+  replaceWidgetId?: string;
 }
 
 const createRegionState = (id: WorkbenchRegion): WorkbenchRegionState => ({

@@ -66,28 +66,81 @@ describe("createSessionBubbleModule", () => {
     expect(placement?.resource?.metadata?.workspaceShorthand).toBe("PS-307_A1");
   });
 
-  test("creates a new closable tab for every session draft", async () => {
+  test("reuses the selected Session Sub Panel for session changes and new drafts", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-307_A1",
     });
+    const firstSession = createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1");
+    const secondSession = createDashboardResource(
+      "session",
+      "session-2",
+      "Second session",
+      "MessageCircle",
+      "project-1",
+    );
 
     workbench.registerModule(createSessionBubbleModule());
 
-    await workbench.commands.executeCommand(dashboardCommandIds.createSession, { workspace });
+    const firstPlacement = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: firstSession,
+    });
+    const secondPlacement = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: secondSession,
+    });
     await workbench.commands.executeCommand(dashboardCommandIds.createSession, { workspace });
 
     const placements = workbench.layout
       .getLayout()
       .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
-    expect(placements).toHaveLength(2);
-    expect(placements.map((placement) => placement.resource?.uri)).toHaveLength(2);
-    expect(new Set(placements.map((placement) => placement.resource?.uri)).size).toBe(2);
-    expect(placements.every((placement) => placement.closable)).toBe(true);
+    expect(placements).toHaveLength(1);
+    expect((firstPlacement as { widgetId: string }).widgetId).toBe((secondPlacement as { widgetId: string }).widgetId);
+    expect(placements[0]?.widgetId).toBe((firstPlacement as { widgetId: string }).widgetId);
+    expect(placements[0]?.resource?.kind).toBe("session-draft");
+    expect(placements[0]?.closable).toBe(true);
   });
 
+  test("creates another Session Sub Panel only for an Add Panel request", async () => {
+    const workbench = createWorkbenchCore();
+    const firstSession = createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1");
+    const secondSession = createDashboardResource(
+      "session",
+      "session-2",
+      "Second session",
+      "MessageCircle",
+      "project-1",
+    );
+    workbench.registerModule(createSessionBubbleModule());
+
+    const firstPlacement = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: firstSession,
+    });
+    const addedPlacement = await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, {
+      source: "panel-add",
+    });
+    const selectedPlacement = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: secondSession,
+    });
+    const placements = workbench.layout
+      .getLayout()
+      .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+
+    expect(placements).toHaveLength(2);
+    expect((addedPlacement as { widgetId: string }).widgetId).not.toBe(
+      (firstPlacement as { widgetId: string }).widgetId,
+    );
+    expect((selectedPlacement as { widgetId: string }).widgetId).toBe(
+      (addedPlacement as { widgetId: string }).widgetId,
+    );
+    expect(
+      placements.find((placement) => placement.widgetId === (selectedPlacement as { widgetId: string }).widgetId),
+    ).toMatchObject({ resourceUri: secondSession.uri });
+  });
+});
+
+describe("createSessionBubbleModule workspace resolution", () => {
   test("contributes New session through explicit Sub Panel registration", () => {
     const workbench = createWorkbenchCore();
 

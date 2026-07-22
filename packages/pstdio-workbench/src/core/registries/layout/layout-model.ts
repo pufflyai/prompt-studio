@@ -302,6 +302,22 @@ const findReusablePlacement = (
   return findPlacement(layout, widget.id);
 };
 
+const findReplacementIndex = (
+  layout: WorkbenchLayout,
+  regionId: WorkbenchRegion,
+  widget: RegisteredWidgetContribution,
+  openInput: OpenWidgetInput,
+) => {
+  const region = layout.regions[regionId];
+  const activeWidgetId = widget.role === "location" ? layout.activeLocationWidgetId : region.activeWidgetId;
+
+  if (openInput.replaceWidgetId) {
+    return region.widgets.findIndex((placement) => placement.widgetId === openInput.replaceWidgetId);
+  }
+  if (!openInput.replaceActive) return -1;
+  return region.widgets.findIndex((placement) => placement.widgetId === activeWidgetId && !placement.pinned);
+};
+
 const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireWidget, applyAndActivate } = input;
 
@@ -418,13 +434,11 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const layout = getLayout();
     const regionId = openInput.region ?? widget.region ?? widget.fallbackRegion ?? "main";
     const region = layout.regions[regionId];
-    const replaceWidgetId = widget.role === "location" ? layout.activeLocationWidgetId : region.activeWidgetId;
-    const replacementIndex = openInput.replaceActive
-      ? region.widgets.findIndex((placement) => placement.widgetId === replaceWidgetId && !placement.pinned)
-      : -1;
+    const replacementIndex = findReplacementIndex(layout, regionId, widget, openInput);
     const replacement = replacementIndex >= 0 ? region.widgets[replacementIndex] : undefined;
 
-    const existing = findReusablePlacement(widget, layout, openInput);
+    const existing =
+      openInput.replaceWidgetId && replacement ? undefined : findReusablePlacement(widget, layout, openInput);
     let placement: WorkbenchWidgetPlacement;
     if (existing) placement = reuseExistingPlacement(widget, existing, regionId, replacementIndex, openInput);
     else if (replacement?.contributionId === widget.id) {

@@ -414,6 +414,49 @@ describe("createHistoryController mode-aware navigation", () => {
     expect(forward?.kind).toBe("mode");
     expect(workbench.modes.getActiveModeId()).toBe("settings");
   });
+
+  test("does not duplicate a retained Location while its next mode activates", async () => {
+    const workbench = createWorkbenchCore();
+    const root = { kind: TICKET_KIND, uri: `${TICKET_KIND}:root`, id: "root", label: "Tickets" };
+    const detail = { kind: TICKET_KIND, uri: `${TICKET_KIND}:detail`, id: "detail", label: "Ticket" };
+
+    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    workbench.layout.registerLocation({
+      id: "ticket-location",
+      title: "Tickets",
+      region: "main",
+      rendererId: "noop",
+    });
+    workbench.layout.registerWidget({
+      id: "ticket-sidebar",
+      title: "Ticket sidebar",
+      region: "sidebar",
+      rendererId: "noop",
+    });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "ticket",
+      activate: (ctx) => {
+        ctx.layout.openWidget("ticket-sidebar");
+      },
+    });
+    workbench.resources.registerOpener({
+      id: "ticket-location-opener",
+      canOpen: (resource) => resource.kind === TICKET_KIND,
+      open: (resource) => {
+        workbench.modes.setActiveMode(resource.id === root.id ? "project" : "ticket");
+        return workbench.layout.openWidget("ticket-location", { resource, replaceActive: true });
+      },
+    });
+
+    await workbench.resources.openResource(root);
+    await workbench.resources.openResource(detail);
+
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([
+      root.uri,
+      detail.uri,
+    ]);
+  });
 });
 
 describe("createHistoryController widget history", () => {

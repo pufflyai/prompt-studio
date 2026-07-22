@@ -26,6 +26,22 @@ const menuName = (entry: MenuCase) => `${entry.panel} ${entry.side} menu`;
 const menuRegion = (page: Page, entry: MenuCase) =>
   page.locator(`[data-workbench-panel-menu="${panelId(entry.panel)}-${entry.side}"]`);
 
+const createSession = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  title: string,
+) => {
+  const response = await request.post(`${apiBase}/v1/sessions`, {
+    data: {
+      project_id: projectId,
+      title,
+      prompt: title,
+      agent: "pstdio.extension-lab.fake",
+    },
+  });
+  expect(response.ok()).toBe(true);
+};
+
 const dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, side: MenuCase["side"]) => {
   const [menuBox, separatorBox] = await Promise.all([menu.boundingBox(), separator.boundingBox()]);
   expect(menuBox).not.toBeNull();
@@ -74,6 +90,80 @@ test("PS-170 keeps the project selector and Session Panel available on project h
 
   await expect(page.getByRole("button", { name: "Switch project" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
+});
+
+test("PS-170 reuses Session Sub Panels and restores them after viewing all sessions", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Session Sub Panels" } });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await createSession(request, project.id, "First context session");
+  await createSession(request, project.id, "Second context session");
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/tickets`);
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+
+  await page.getByRole("button", { name: "Show Side Panel" }).click();
+  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionTabs = sideHeader.getByRole("tab");
+  await expect(sessionTabs).toHaveCount(1);
+
+  await sessionTabs.first().click({ button: "right" });
+  const menu = page.getByRole("menu", { name: "New session actions" });
+  const newSession = menu.getByRole("menuitem", { name: "New session" });
+  await expect(newSession).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
+  const [separatorBox, newSessionBox] = await Promise.all([
+    menu.getByRole("separator").boundingBox(),
+    newSession.boundingBox(),
+  ]);
+  expect(separatorBox).not.toBeNull();
+  expect(newSessionBox).not.toBeNull();
+  expect(separatorBox!.y).toBeLessThan(newSessionBox!.y);
+
+  await menu.getByRole("menuitem", { name: "First context session" }).click();
+  await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
+  await expect(sessionTabs).toHaveCount(1);
+
+  await sessionTabs.first().click({ button: "right" });
+  await page
+    .getByRole("menu", { name: "First context session actions" })
+    .getByRole("menuitem", { name: "Second context session" })
+    .click();
+  await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
+  await expect(sessionTabs).toHaveCount(1);
+
+  await sessionTabs.first().click({ button: "right" });
+  await page
+    .getByRole("menu", { name: "Second context session actions" })
+    .getByRole("menuitem", { name: "New session" })
+    .click();
+  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toBeVisible();
+  await expect(sessionTabs).toHaveCount(1);
+
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await expect(sessionTabs).toHaveCount(2);
+
+  await sideHeader.locator('[role="tab"][aria-selected="true"]').click({ button: "right" });
+  await page
+    .getByRole("menu", { name: "New session actions" })
+    .last()
+    .getByRole("menuitem", {
+      name: "View all sessions",
+    })
+    .click();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Navigate back" }).click();
+
+  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(sessionTabs).toHaveCount(2);
+  await expect(page.getByRole("region", { name: "Session" })).toBeVisible();
 });
 
 test.describe("PS-170 Panel-owned menus", () => {

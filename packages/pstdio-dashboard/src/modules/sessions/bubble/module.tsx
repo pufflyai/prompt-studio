@@ -72,6 +72,21 @@ const selectSidebarSessionNode = (ctx: WorkbenchModuleContributionContext, resou
   }
 };
 
+const getReusableSessionPlacementId = (ctx: WorkbenchModuleContributionContext) => {
+  const region = ctx.layout.getLayout().regions.side;
+  const active = region.widgets.find(
+    (placement) =>
+      placement.widgetId === region.activeWidgetId && placement.contributionId === dashboardWidgetIds.sessionBubble,
+  );
+  if (active) return active.widgetId;
+
+  const locationUri = ctx.getPrimaryResource()?.uri;
+  return region.widgets.find(
+    (placement) =>
+      placement.contributionId === dashboardWidgetIds.sessionBubble && placement.ownerResourceUri === locationUri,
+  )?.widgetId;
+};
+
 const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerSubPanel(
     {
@@ -107,7 +122,10 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
   });
 };
 
-const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { workspace?: ResourceRef } = {}) => {
+const openNewSessionDraft = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { workspace?: ResourceRef; replaceWidgetId?: string } = {},
+) => {
   const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
@@ -121,6 +139,7 @@ const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { w
   const placement = openSessionBubbleWidgets(ctx, {
     resource: draftResource,
     title: draftResource.label,
+    replaceWidgetId: input.replaceWidgetId,
   });
   return placement.bubble;
 };
@@ -135,14 +154,23 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
     },
     {
       execute: async (args) => {
-        const { resource, selectWorkspaceSidebar = true } = (args ?? {}) as {
+        const {
+          resource,
+          replaceWidgetId,
+          selectWorkspaceSidebar = true,
+        } = (args ?? {}) as {
           resource?: ResourceRef;
+          replaceWidgetId?: string;
           selectWorkspaceSidebar?: boolean;
         };
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
         rememberDashboardSessionResource(ctx, resource);
-        const placement = openSessionBubbleWidgets(ctx, { resource, title: resource.label });
+        const placement = openSessionBubbleWidgets(ctx, {
+          resource,
+          title: resource.label,
+          replaceWidgetId: replaceWidgetId ?? getReusableSessionPlacementId(ctx),
+        });
         selectSidebarSessionNode(ctx, resource);
         if (
           selectWorkspaceSidebar &&
@@ -161,9 +189,13 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "PenBox" },
     {
-      execute: (args) => {
-        const { workspace } = (args ?? {}) as { workspace?: ResourceRef };
-        return openNewSessionDraft(ctx, { workspace });
+      execute: (args, context) => {
+        const { replaceWidgetId, workspace } = (args ?? {}) as { replaceWidgetId?: string; workspace?: ResourceRef };
+        return openNewSessionDraft(ctx, {
+          workspace,
+          replaceWidgetId:
+            context?.source === "panel-add" ? undefined : (replaceWidgetId ?? getReusableSessionPlacementId(ctx)),
+        });
       },
     },
   );

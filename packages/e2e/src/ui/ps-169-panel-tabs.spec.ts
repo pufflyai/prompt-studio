@@ -54,7 +54,8 @@ test("PS-169 gives the Session tab its own right-click menu", async ({ page, req
 
   const sessionMenu = page.getByRole("menu", { name: "New session actions" });
   await expect(sessionMenu).toBeVisible();
-  await expect(sessionMenu.getByRole("button", { name: "New session" })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "No sessions yet" })).toBeVisible();
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);

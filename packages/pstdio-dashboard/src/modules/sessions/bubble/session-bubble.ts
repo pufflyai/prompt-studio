@@ -7,6 +7,7 @@ type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "context" |
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
   title?: string;
+  replaceWidgetId?: string;
 }
 
 export const openSessionBubbleWidgets = (ctx: SessionBubbleContext, input: OpenSessionBubbleWidgetsInput = {}) => {
@@ -16,6 +17,7 @@ export const openSessionBubbleWidgets = (ctx: SessionBubbleContext, input: OpenS
     pinned: true,
     resource: input.resource,
     title: input.title ?? input.resource?.label,
+    replaceWidgetId: input.replaceWidgetId,
   });
 
   return { bubble };

@@ -19,6 +19,7 @@ export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExe
 
 export interface WorkbenchCommandExecutionContext {
   resource?: ResourceRef;
+  source?: "panel-add";
 }
 
 export interface CommandParamOption {

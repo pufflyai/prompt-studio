@@ -75,6 +75,20 @@ const DEFAULT_MAX_ENTRIES = 50;
 const RECENTLY_CLOSED_LIMIT = 20;
 const PERSISTENCE_DELAY_MS = 50;
 
+const suppressTransitionSnapshot = (
+  current: WorkbenchNavigationEntry | undefined,
+  entry: WorkbenchNavigationEntry | undefined,
+  fromLayoutChange: boolean,
+  transitioning: boolean,
+) => {
+  if (!transitioning) return false;
+  if (!fromLayoutChange) return entry?.kind !== "mode";
+  if (entry?.kind === "mode") return true;
+  return current?.location.resource?.uri === entry?.location.resource?.uri;
+};
+
+const currentNavigationEntry = (state: HistoryStoreState) => state.entries[state.cursor];
+
 const placementsByWidgetId = (layout: LayoutModel) => {
   const placements = new Map<string, { placement: WorkbenchWidgetPlacement; region: WorkbenchRegion }>();
   for (const region of Object.values(layout.getLayout().regions)) {
@@ -252,11 +266,12 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     setState({ ...snapshot, entries, cursor: entries.length - 1 }, "history.record");
   };
 
-  const recordSnapshot = (suppressModeOnly = false) => {
+  const recordSnapshot = (fromLayoutChange = false) => {
     if (navigating || awaitingRestore) return;
     counter += 1;
     const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
-    if (suppressModeOnly && input.modes?.isTransitioning() && entry?.kind === "mode") return;
+    const current = currentNavigationEntry(store.getState());
+    if (suppressTransitionSnapshot(current, entry, fromLayoutChange, input.modes?.isTransitioning() ?? false)) return;
     if (entry?.location.resource && replayingResourceUris.has(entry.location.resource.uri)) return;
     appendEntry(entry);
   };
