@@ -86,6 +86,22 @@ export const isExtensionResourceSidebarView = (
   view: DashboardExtensionMetadata["views"][number],
 ) => Boolean(view.resourceKind && view.treeRendererId && resourceSidebarModeId(metadata, view));
 
+const mirrorResourceTreeSelection = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { modeId: string; treeRendererId: string },
+) => {
+  const unsubscribe = ctx.renderers.treeStore.subscribeSelector(
+    (state) => state.statesByTreeId[input.treeRendererId]?.selectedNodeId,
+    (selectedNodeId) => {
+      if (ctx.modes.getActiveModeId() !== input.modeId) return;
+      if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) return;
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, selectedNodeId);
+    },
+  );
+
+  return { dispose: unsubscribe };
+};
+
 export const registerExtensionResourceSidebarContributions = (
   ctx: WorkbenchModuleContributionContext,
   metadata: DashboardExtensionMetadata,
@@ -100,6 +116,7 @@ export const registerExtensionResourceSidebarContributions = (
     if (!modeId) continue;
 
     sidebarTreeIds.add(treeRendererId);
+    disposables.push(mirrorResourceTreeSelection(ctx, { modeId, treeRendererId }));
     const tree = ctx.renderers.getTreeRenderer(treeRendererId);
     if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
       for (const sectionId of tree?.defaultExpandedSectionIds ?? []) {
