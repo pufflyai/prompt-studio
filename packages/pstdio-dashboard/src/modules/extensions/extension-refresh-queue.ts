@@ -14,6 +14,10 @@ interface CreateExtensionRefreshQueueInput<TValue> {
 
 export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefreshQueueInput<TValue>) => {
   let activeRequest: ExtensionRefreshRequest | undefined;
+  let hasSuccessfulValue = false;
+
+  const isCurrentRequest = (request: ExtensionRefreshRequest) =>
+    request.generation === input.getGeneration() && input.getProjectId() === request.projectId;
 
   const refresh = (projectId: string) => {
     const generation = input.getGeneration();
@@ -26,11 +30,17 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
     activeRequest = request;
     void input
       .load(projectId)
-      .catch(() => input.fallback)
-      .then((value) => {
-        if (request.generation !== input.getGeneration() || input.getProjectId() !== request.projectId) return;
-        input.apply(request.projectId, value);
-      })
+      .then(
+        (value) => {
+          if (!isCurrentRequest(request)) return;
+          hasSuccessfulValue = true;
+          input.apply(request.projectId, value);
+        },
+        () => {
+          if (!isCurrentRequest(request) || hasSuccessfulValue) return;
+          input.apply(request.projectId, input.fallback);
+        },
+      )
       .finally(() => {
         if (activeRequest !== request) return;
         activeRequest = undefined;
@@ -41,6 +51,7 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
   return {
     clear: () => {
       activeRequest = undefined;
+      hasSuccessfulValue = false;
     },
     refresh,
   };
