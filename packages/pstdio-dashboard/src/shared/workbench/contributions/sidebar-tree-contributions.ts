@@ -25,7 +25,10 @@ interface SidebarContribution {
   modes: SidebarModeId[];
   order?: number;
   region?: SidebarContributionRegion;
-  getSections?: (ctx: WorkbenchModuleContributionContext, input: SidebarContributionInput) => TreeViewSection[];
+  getSections?: (
+    ctx: WorkbenchModuleContributionContext,
+    input: SidebarContributionInput,
+  ) => Promise<TreeViewSection[]> | TreeViewSection[];
   getHeaderNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
   getFooterNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
 }
@@ -92,11 +95,17 @@ const matchingContributions = (ctx: SidebarTreeContext, mode: SidebarModeId, reg
     )
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
 
-export const getSidebarContributionSections = (
+export const getSidebarContributionSections = async (
   ctx: WorkbenchModuleContributionContext,
   mode: SidebarModeId,
   input: SidebarContributionInput = {},
-) => matchingContributions(ctx, mode, "body").flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
+) => {
+  const sections: TreeViewSection[] = [];
+  for (const contribution of matchingContributions(ctx, mode, "body")) {
+    sections.push(...((await contribution.getSections?.(ctx, input)) ?? []));
+  }
+  return sections;
+};
 
 export const getSidebarContributionHeaderNodes = (
   ctx: WorkbenchModuleContributionContext,

@@ -11,11 +11,11 @@ import {
 // The unified sidebar composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions/workspace) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
-const composeSidebarBody = (ctx: WorkbenchModuleContributionContext) => {
+const composeSidebarBody = async (ctx: WorkbenchModuleContributionContext) => {
   const mode = ctx.modes.getActiveModeId();
   const resource = getDashboardSelectedResource(ctx);
   if (!mode || !resource) return [];
-  return getSidebarContributionSections(ctx, mode, { resource });
+  return await getSidebarContributionSections(ctx, mode, { resource });
 };
 
 const composeSidebarFooter = (ctx: WorkbenchModuleContributionContext) => {

@@ -168,7 +168,7 @@ export default defineExtension({
       resourceKind: "ticket",
       layout: {
         reset: true,
-        open: [{ target: "workbench.main.left", view: "ticketFiles", pinned: true }],
+        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
       },
     },
   },
@@ -191,14 +191,13 @@ export default defineExtension({
       resourceKind: "ticket",
       fileRenderer: "ticketContent",
     },
-    // Files tree beside the editor. Selecting a node swaps the editor's document
-    // in place (it runs select-ticket-document); the tree never tears down.
+    // Files tree in the selected ticket's Sidebar resource section. Selecting a node
+    // swaps the editor's document in place (it runs select-ticket-document).
     ticketFiles: {
       title: l10n("views.ticketFiles.title", "Files"),
       role: "panel-menu",
       panelMenuOwner: { level: "panel" },
       resourceKind: "ticket",
-      target: "workbench.main.left",
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
     },

@@ -1,5 +1,6 @@
 ---
 "pstdio": minor
+"pstdio-planner": minor
 ---
 
-Keep the project selector and global collections persistent in the Sidebar header
+Keep global collections persistent and show selected-resource trees in the Sidebar

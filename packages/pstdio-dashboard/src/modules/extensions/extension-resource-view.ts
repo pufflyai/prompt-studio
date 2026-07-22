@@ -54,6 +54,9 @@ const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId
 const companionViewRegion = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
   modeEntry ? extensionModeLayoutRegion(modeEntry.target) : extensionViewRegion(view.target);
 
+const isResourceSidebarCompanion = (view: ExtensionViewRecord, resourceMode: ExtensionModeRecord | undefined) =>
+  Boolean(view.treeRendererId && companionViewRegion(view, resourceModeEntryForView(view, resourceMode)) === "sidebar");
+
 const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widgetId: string, resource: ResourceRef) =>
   Object.values(ctx.layout.getLayout().regions).some((region) =>
     region.widgets.some((placement) => placement.contributionId === widgetId && placement.resourceUri === resource.uri),
@@ -217,6 +220,7 @@ const openResourceCompanionViews = (
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
     const region = companionViewRegion(companion, modeEntry);
+    if (isResourceSidebarCompanion(companion, resourceMode)) continue;
     const widgetId = widgetIdFor(companion);
     const title = companionViewTitle(companion, resource, region);
     const updateInput = {
@@ -257,7 +261,9 @@ export const registerExtensionResourceView = (
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
           const resourceMode = resourceModeFor(input.metadata, kind);
-          const expectedCompanionWidgetIds = new Set(companions.map(widgetIdFor));
+          const expectedCompanionWidgetIds = new Set(
+            companions.filter((companion) => !isResourceSidebarCompanion(companion, resourceMode)).map(widgetIdFor),
+          );
           const selectedResource = withExtensionResourceContext(resource, {
             kind,
             metadata: input.metadata,
@@ -293,7 +299,14 @@ export const registerExtensionResourceView = (
       activeResource = group ? resource : undefined;
 
       if (managedCompanionWidgetIds.size > 0) {
-        const keepWidgetIds = group ? new Set(group.companions.map(widgetIdFor)) : undefined;
+        const resourceMode = resource ? resourceModeFor(input.metadata, resource.kind) : undefined;
+        const keepWidgetIds = group
+          ? new Set(
+              group.companions
+                .filter((companion) => !isResourceSidebarCompanion(companion, resourceMode))
+                .map(widgetIdFor),
+            )
+          : undefined;
         removeManagedCompanions(ctx, managedCompanionWidgetIds, keepWidgetIds);
       }
     }),
@@ -327,6 +340,7 @@ export const registerExtensionResourceView = (
 
       const resourceMode = resourceModeFor(input.metadata, activeResource.kind);
       for (const companion of group.companions) {
+        if (isResourceSidebarCompanion(companion, resourceMode)) continue;
         const modeEntry = resourceModeEntryForView(companion, resourceMode);
         const region = companionViewRegion(companion, modeEntry);
         updatePlacementForResource(ctx, {

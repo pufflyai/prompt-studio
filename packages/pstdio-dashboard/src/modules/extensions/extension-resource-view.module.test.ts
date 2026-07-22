@@ -70,7 +70,7 @@ describe("createExtensionsModule resource views", () => {
     }
   });
 
-  test("opens ticket detail with its attached Panel Menus", async () => {
+  test("opens ticket detail with its attached Properties Panel Menu", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const executeCommand = mock(async () => response);
@@ -108,22 +108,13 @@ describe("createExtensionsModule resource views", () => {
         title: "Files",
       });
       expect(
-        workbench.layout.getLayout().regions["main-left-menu"].widgets.map((widget) => widget.contributionId),
-      ).toEqual(["pstdio-core-tickets.ticketFiles"]);
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
-      expect(
         workbench.layout.getLayout().regions["main-right-menu"].widgets.map((widget) => widget.contributionId),
       ).toEqual(["dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties"]);
 
       await workbench.resources.openResource(ticketB, { replaceActive: true });
 
-      const leftMenu = workbench.layout.getLayout().regions["main-left-menu"];
       const rightMenu = workbench.layout.getLayout().regions["main-right-menu"];
 
-      expect(leftMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-10", "PS-11"]);
-      expect(leftMenu.widgets.find((widget) => widget.widgetId === leftMenu.activeWidgetId)?.resource?.id).toBe(
-        "PS-11",
-      );
       expect(rightMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-10", "PS-11"]);
       expect(rightMenu.widgets.find((widget) => widget.widgetId === rightMenu.activeWidgetId)?.resource?.id).toBe(
         "PS-11",
@@ -209,7 +200,7 @@ describe("createExtensionsModule resource views", () => {
     }
   });
 
-  test("clears ticket companion panels when returning to the tickets board", async () => {
+  test("clears the ticket Properties Panel Menu when returning to the tickets board", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const workbench = createWorkbenchCore();
@@ -236,15 +227,11 @@ describe("createExtensionsModule resource views", () => {
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
-      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toHaveLength(1);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("project");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
-      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
     } finally {
       disposable.dispose();

@@ -1,7 +1,6 @@
 import type {
   ResourceRef,
   TreeNode,
-  TreeViewSection,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
@@ -77,35 +76,6 @@ const helpFooterNode = (): TreeNode => ({
   menuPlacement: "top-start",
 });
 
-// Ticket mode is declared by the tickets extension (via extension-mode-layout), not the
-// dashboard. The dashboard only contributes the workspaces linked to the open ticket, resolved
-// in-dashboard from each workspace's metadata.ticketId — so the section is inert until that
-// extension mode is active.
-const ticketLinkedWorkspaceSections = (ctx: WorkbenchModuleContributionContext): TreeViewSection[] => {
-  const ticket = ctx.getPrimaryResource();
-  if (!ticket) return [];
-  const ticketId = ticket.id ?? metadataString(ticket, "ticketId");
-  if (!ticketId) return [];
-
-  const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).filter(
-    (workspace) => metadataString(workspace.resource, "ticketId") === ticketId,
-  );
-  if (workspaces.length === 0) return [];
-
-  return [
-    {
-      id: "ticket-linked-workspaces",
-      label: "Workspaces",
-      nodes: workspaces.map((workspace) => ({
-        id: workspace.resource.uri,
-        label: workspace.title,
-        icon: dashboardResources.workspaces.icon,
-        resource: workspace.resource,
-      })),
-    },
-  ];
-};
-
 const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
@@ -113,12 +83,6 @@ const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionC
     region: "header",
     order: 30,
     getHeaderNodes: () => [workspaceNavigationNode()],
-  });
-  registerSidebarContribution(ctx, {
-    id: "dashboard.workspaces.ticket-linked",
-    modes: ["ticket"],
-    order: 10,
-    getSections: () => ticketLinkedWorkspaceSections(ctx),
   });
   registerSidebarContribution(ctx, {
     id: "dashboard.workspaces.help-footer",

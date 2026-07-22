@@ -8,8 +8,10 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
@@ -30,10 +32,19 @@ const ticketsResource = {
   icon: "square-kanban",
   metadata: { collectionId: "tickets", projectId: PROJECT_ID },
 };
+const ticketResource = {
+  kind: "ticket",
+  uri: "dashboard-workbench://ticket/PS-164",
+  id: "PS-164",
+  label: "PS-164 Sidebar resource sections",
+  icon: "FileText",
+  metadata: { projectId: PROJECT_ID },
+};
 
 const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContributionContext) {
+    ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
     registerSidebarContribution(ctx, {
       id: "story.tickets-navigation",
       modes: ["*"],
@@ -48,6 +59,34 @@ const createTicketsNavigationModule = () => ({
         },
       ],
     });
+    registerSidebarContribution(ctx, {
+      id: "story.ticket-resource",
+      modes: ["pstdio-planner.ticket"],
+      getSections: (_workbench, input) =>
+        input.resource?.kind === "ticket"
+          ? [
+              {
+                id: "ticket",
+                nodes: [{ id: "ticket-body", label: ticketResource.label, icon: "FileText" }],
+              },
+              {
+                id: "files",
+                label: "Files",
+                collapsible: true,
+                nodes: [{ id: "research.md", label: "research.md", icon: "FileText" }],
+              },
+              {
+                id: "workspaces",
+                label: "Workspaces",
+                collapsible: true,
+                nodes: [{ id: "PS-164_A1", label: "PS-164_A1", icon: "GitBranch" }],
+              },
+            ]
+          : [],
+    });
+    for (const sectionId of ["files", "workspaces"]) {
+      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidebar, sectionId, true);
+    }
     return [];
   },
 });
@@ -196,6 +235,18 @@ export const WorkspacesViewHover: Story = {
       .querySelector('[data-tree-list-focus-id="dashboard-workbench://dashboard-view/workspaces"]')
       ?.setAttribute("data-hover", "");
   },
+};
+
+// F17: the ticket's former left Panel Menu is composed into the selected-resource region.
+export const TicketMode: Story = {
+  render: () => (
+    <SidebarStory
+      open={(workbench) => {
+        selectDashboardNavigationResource(workbench, ticketResource);
+        workbench.modes.setActiveMode("pstdio-planner.ticket");
+      }}
+    />
+  ),
 };
 
 // Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
