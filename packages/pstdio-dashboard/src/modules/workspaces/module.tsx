@@ -6,7 +6,6 @@ import type {
 } from "@pstdio/workbench/core";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -67,15 +66,6 @@ const workspaceNavigationNode = (): TreeNode => ({
   ],
 });
 
-const helpFooterNode = (): TreeNode => ({
-  id: "help",
-  label: "Help",
-  icon: "CircleHelp",
-  canHide: true,
-  menuPath: dashboardHelpMenuPath,
-  menuPlacement: "top-start",
-});
-
 const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
@@ -83,13 +73,6 @@ const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionC
     region: "header",
     order: 30,
     getHeaderNodes: () => [workspaceNavigationNode()],
-  });
-  registerSidebarContribution(ctx, {
-    id: "dashboard.workspaces.help-footer",
-    modes: ["project"],
-    order: 10,
-    region: "footer",
-    getFooterNodes: () => [helpFooterNode()],
   });
 };
 

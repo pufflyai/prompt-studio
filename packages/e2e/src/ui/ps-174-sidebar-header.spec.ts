@@ -8,12 +8,29 @@ const apiBase = `http://localhost:${apiPort}`;
 const projectModeStoryId = "dashboard-sidebar--project-mode";
 const workspacesViewStoryId = "dashboard-sidebar--workspaces-view";
 const ticketModeStoryId = "dashboard-sidebar--ticket-mode";
+const sessionModeStoryId = "dashboard-sidebar--session-mode";
 const globalRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-174 Sidebar" } });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
+};
+
+const createSession = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  title: string,
+) => {
+  const response = await request.post(`${apiBase}/v1/sessions`, {
+    data: {
+      project_id: projectId,
+      title,
+      prompt: title,
+      agent: "pstdio.extension-lab.fake",
+    },
+  });
+  expect(response.ok()).toBe(true);
 };
 
 const waitForTicketsExtension = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
@@ -41,8 +58,10 @@ const prepareDashboard = async (page: Page, projectId: string) => {
 
 const row = (sidebar: Locator, name: (typeof globalRowNames)[number]) =>
   name === "Workspaces" || name === "Notifications"
-    ? sidebar.getByRole("option", { name: new RegExp(`^${name}(?:\\s|$)`) })
-    : sidebar.getByRole("option", { name, exact: true });
+    ? sidebar.getByRole("region", { name: "Sidebar header" }).getByRole("option", {
+        name: new RegExp(`^${name}(?:\\s|$)`),
+      })
+    : sidebar.getByRole("region", { name: "Sidebar header" }).getByRole("option", { name, exact: true });
 
 const expectGlobalHeader = async (sidebar: Locator) => {
   const rows = globalRowNames.map((name) => row(sidebar, name));
@@ -64,6 +83,7 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
+  await createSession(request, project.id, "Existing sidebar session");
   await prepareDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
 
@@ -71,6 +91,7 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   const projectButton = sidebar.getByRole("button", { name: "PS-174 Sidebar" });
   await expect(projectButton).toBeVisible({ timeout: 30_000 });
   await expectGlobalHeader(sidebar);
+  await expect(sidebar.getByRole("option", { name: "Lab mode", exact: true })).toBeVisible();
 
   const stableElements = [await projectButton.elementHandle()];
   for (const name of globalRowNames) stableElements.push(await row(sidebar, name).elementHandle());
@@ -87,6 +108,10 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
   await expectGlobalHeader(sidebar);
+  await sidebar.getByRole("option", { name: "Sessions", exact: true }).last().click();
+  await expect(sidebar.getByRole("option", { name: "Existing sidebar session", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
 
   await row(sidebar, "Tickets").click();
   await expect(
@@ -140,7 +165,7 @@ test.describe("PS-174 Dashboard Sidebar stories", () => {
     storybook?.kill();
   });
 
-  for (const storyId of [projectModeStoryId, workspacesViewStoryId, ticketModeStoryId]) {
+  for (const storyId of [projectModeStoryId, workspacesViewStoryId, ticketModeStoryId, sessionModeStoryId]) {
     test(`renders ${storyId} with one persistent global header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(storyUrl(baseUrl, storyId));
@@ -150,6 +175,12 @@ test.describe("PS-174 Dashboard Sidebar stories", () => {
       await expectGlobalHeader(sidebar);
       if (storyId === ticketModeStoryId) {
         await expect(sidebar.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
+      }
+      if (storyId === sessionModeStoryId) {
+        await sidebar.getByRole("option", { name: "Sessions", exact: true }).last().click();
+        await expect(sidebar.getByRole("option", { name: "Refactor sidebar", exact: true })).toBeVisible();
+        await expect(sidebar.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+        await expect(sidebar.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
       }
     });
   }

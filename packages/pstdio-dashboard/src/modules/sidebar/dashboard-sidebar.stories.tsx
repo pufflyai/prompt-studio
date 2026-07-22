@@ -6,6 +6,7 @@ import {
 } from "@pstdio/workbench/core";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
@@ -15,15 +16,20 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
+import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
+import { createSettingsModule } from "../settings/module";
 import { createStartModule } from "../start/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSidebarModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 const ticketsResource = {
   kind: "dashboard-view",
   uri: `dashboard-workbench://project/${PROJECT_ID}/data-renderer/tickets`,
@@ -177,8 +183,10 @@ const bootstrapWorkbench = () => {
     createWorkspacesModule(),
     createProjectsModule(),
     createHeadersModule(),
+    createHelpModule(),
     createNotificationsModule(),
     createSessionsModule(),
+    createSettingsModule(),
     createStartModule(),
     createTicketsNavigationModule(),
   ]) {
@@ -201,6 +209,13 @@ const openInMode = (workbench: WorkbenchCore, resource: Parameters<WorkbenchCore
 const meta = {
   title: "Dashboard/Sidebar",
   parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
 } satisfies Meta;
 
 export default meta;

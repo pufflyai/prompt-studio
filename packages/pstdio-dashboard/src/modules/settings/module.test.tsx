@@ -5,6 +5,7 @@ import {
   SETTINGS_RESOURCE_KIND,
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
 } from "@pstdio/workbench/react";
+import { getSidebarContributionFooterNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSettingsModule } from "./module";
 
 const collectNodeLabels = (sections: Awaited<ReturnType<typeof buildSettingsTreeBody>>) => {
@@ -37,6 +38,14 @@ describe("createSettingsModule", () => {
     const sectionIds = workbench.settings.listSections().map((section) => section.id);
     expect(sectionIds).toContain("workbench");
     expect(sectionIds).toContain("project");
+  });
+
+  test("keeps Settings in the sessions sidebar footer", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule(createSettingsModule());
+
+    expect(getSidebarContributionFooterNodes(workbench, "sessions").map((node) => node.label)).toContain("Settings");
   });
 
   test("registers the runtime and templates panels with their scope and kind", () => {
