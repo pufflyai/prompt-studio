@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "../resources/resource-registry";
 import { createDefaultWorkbenchLayout, type RegisteredWidgetContribution } from "./layout-types";
-import { listEligibleSubPanels, matchesWorkbenchPanelMenuOwner } from "./panel-widget-eligibility";
+import {
+  allowsWorkbenchFloatingPanels,
+  listEligibleSubPanels,
+  matchesWorkbenchPanelMenuOwner,
+  matchesWorkbenchPanelPlacementLocation,
+} from "./panel-widget-eligibility";
 
 const resource: ResourceRef = {
   kind: "workspace",
@@ -82,6 +87,58 @@ describe("listEligibleSubPanels", () => {
     expect(listEligibleSubPanels({ widgets: [widget({})], layout, region: "main", resource })).toEqual([
       expect.objectContaining({ id: "files" }),
     ]);
+  });
+});
+
+describe("Location Panel presentation", () => {
+  test("does not count a placement that is ineligible for the active Location", () => {
+    const contribution = widget({
+      eligibleLocations: { canOpen: (candidate) => candidate.id !== "sessions" },
+    });
+    const placement = {
+      widgetId: "files",
+      contributionId: "files",
+      role: "sub-panel" as const,
+      ownerResourceUri: "dashboard:sessions",
+    };
+    const sessions = { kind: "dashboard-view", id: "sessions", uri: "dashboard:sessions" };
+
+    expect(matchesWorkbenchPanelPlacementLocation(contribution, sessions, "sessions", placement)).toBe(false);
+  });
+
+  test("validates a resource-backed Sub Panel against its own resource and its Location separately", () => {
+    const contribution = widget({
+      resourceKinds: ["note"],
+      eligibleLocations: { resourceKinds: ["workspace"] },
+    });
+    const placement = {
+      widgetId: "note:alpha",
+      contributionId: "files",
+      role: "sub-panel" as const,
+      ownerResourceUri: resource.uri,
+      resource: { kind: "note", uri: "note:alpha" },
+    };
+
+    expect(matchesWorkbenchPanelPlacementLocation(contribution, resource, "workspace", placement)).toBe(true);
+  });
+
+  test("lets the selected Location or Sub Panel keep floating panels off its content", () => {
+    const layout = createDefaultWorkbenchLayout();
+    layout.regions.main.widgets.push(
+      { widgetId: "location", contributionId: "location", role: "location" },
+      { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
+    );
+    layout.activeLocationWidgetId = "location";
+    layout.regions.main.activeWidgetId = "location";
+    const widgets = [
+      widget({ id: "location", role: "location", floatingPanels: "hidden" }),
+      widget({ id: "notes", role: "sub-panel" }),
+    ];
+
+    expect(allowsWorkbenchFloatingPanels(layout, widgets)).toBe(false);
+
+    layout.regions.main.activeWidgetId = "notes";
+    expect(allowsWorkbenchFloatingPanels(layout, widgets)).toBe(true);
   });
 });
 

@@ -8,6 +8,7 @@ const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const locationSwitchStoryId = "pstdio-workbench-onboarding--location-switch";
 const allPanelsStoryId = "pstdio-workbench-onboarding--all-three-panels";
 const widgetVariantsStoryId = "pstdio-workbench-onboarding--widget-variants";
+const bubbleFreeLocationStoryId = "pstdio-workbench-onboarding--bubble-free-location";
 
 interface MenuCase {
   panel: "Main" | "Secondary" | "Side";
@@ -112,24 +113,22 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click({ button: "right" });
+  await sessionTabs.first().click();
   const menu = page.getByRole("menu", { name: "New session actions" });
   const newSession = menu.getByRole("menuitem", { name: "New session" });
+  const viewAllSessions = menu.getByRole("menuitem", { name: "View all sessions" });
   await expect(newSession).toBeVisible();
-  await expect(menu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
-  const [separatorBox, newSessionBox] = await Promise.all([
-    menu.getByRole("separator").boundingBox(),
-    newSession.boundingBox(),
-  ]);
-  expect(separatorBox).not.toBeNull();
-  expect(newSessionBox).not.toBeNull();
-  expect(separatorBox!.y).toBeLessThan(newSessionBox!.y);
+  await expect(viewAllSessions).toBeVisible();
+  await expect(menu.getByRole("menuitem").first()).toContainText("New session");
+  await expect(menu.getByRole("menuitem").last()).toContainText("View all sessions");
+  await expect(menu.getByRole("separator")).toHaveCount(2);
+  await expect(viewAllSessions.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click({ button: "right" });
+  await sessionTabs.first().click();
   await page
     .getByRole("menu", { name: "First context session actions" })
     .getByRole("menuitem", { name: "Second context session" })
@@ -137,7 +136,7 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click({ button: "right" });
+  await sessionTabs.first().click();
   await page
     .getByRole("menu", { name: "Second context session actions" })
     .getByRole("menuitem", { name: "New session" })
@@ -148,7 +147,7 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await expect(sessionTabs).toHaveCount(2);
 
-  await sideHeader.locator('[role="tab"][aria-selected="true"]').click({ button: "right" });
+  await sideHeader.locator('[role="tab"][aria-selected="true"]').click();
   await page
     .getByRole("menu", { name: "New session actions" })
     .last()
@@ -192,6 +191,26 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   await expect(sessionTabs).toHaveCount(1);
   await expect(sessionTabs.first()).toContainText(prompt);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/tickets$`));
+});
+
+test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Empty Sessions" } });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, project.id);
+
+  await page.goto(`/projects/${project.id}/sessions`);
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show Side Panel" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
+  await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
 });
 
 test.describe("PS-170 Panel-owned menus", () => {
@@ -310,6 +329,18 @@ test.describe("PS-170 Panel-owned menus", () => {
     await expect(attach).toBeDisabled();
     await attach.hover();
     await expect(page.getByRole("tooltip").getByText("Panel is too narrow to attach this menu")).toBeVisible();
+  });
+
+  test("keeps a bubble-free Location clear while retaining attached Side Panel recovery", async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto(storyUrl(baseUrl, bubbleFreeLocationStoryId));
+
+    await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
+    await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Show Side Panel" }).click();
+    await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
   });
 
   test("documents widget variants as one Location Panel with tabbed Sub Panels", async ({ page }) => {

@@ -24,6 +24,7 @@ type CompositionKind =
   | "sub-panels-menu"
   | "all-panels"
   | "location-switch"
+  | "floating-panel-free"
   | "cross-panel-history";
 
 const resources = [
@@ -136,9 +137,11 @@ const compositionFlags = (kind: CompositionKind) => ({
   openRegions:
     kind === "all-panels" || kind === "cross-panel-history"
       ? panelRegions
-      : kind === "open" || kind === "sub-panels-menu" || kind === "location-switch"
-        ? (["main"] as const)
-        : [],
+      : kind === "floating-panel-free"
+        ? (["side"] as const)
+        : kind === "open" || kind === "sub-panels-menu" || kind === "location-switch"
+          ? (["main"] as const)
+          : [],
 });
 
 const openPanelCompositionScenario = (
@@ -207,6 +210,7 @@ const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: 
     singleton: false,
     resourceKinds: [LOCATION_KIND],
     rendererId: RENDERER_ID,
+    ...(kind === "floating-panel-free" ? { floatingPanels: "hidden" as const } : {}),
     panelMenus: locationPanelMenus(kind),
   });
 };
@@ -245,6 +249,7 @@ export const createPanelCompositionWorkbench = (kind: CompositionKind) => {
   const workbench = createWorkbenchCore();
   workbench.registerModule(createPanelCompositionModule(kind));
   if (kind === "all-panels" || kind === "cross-panel-history") workbench.sessionPanel.setMode("attached");
+  if (kind === "floating-panel-free") workbench.sessionPanel.setMode("bubble");
   return workbench;
 };
 

@@ -39,10 +39,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const contextMenuRendererId = placement.tab?.contextMenuRendererId;
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const openContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+  const openTabMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!contextMenuRendererId) return;
 
-    event.preventDefault();
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
     setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
@@ -56,7 +55,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       flexShrink={0}
       title={label}
       className="group"
-      onContextMenu={contextMenuRendererId ? openContextMenu : undefined}
+      aria-haspopup={contextMenuRendererId ? "menu" : undefined}
+      aria-expanded={contextMenuRendererId ? menuOpen : undefined}
+      onClick={contextMenuRendererId && isActive ? openTabMenu : undefined}
     >
       {contentRendererId ? (
         <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contentRendererId} />

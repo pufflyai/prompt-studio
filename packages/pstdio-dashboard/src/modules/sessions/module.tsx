@@ -30,6 +30,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
       region: "main",
       singleton: true,
       rendererId: dashboardWidgetIds.session,
+      floatingPanels: "hidden",
       priority: 40,
     },
     { priority: 40 },

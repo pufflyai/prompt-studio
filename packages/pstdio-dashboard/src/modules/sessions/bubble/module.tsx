@@ -7,7 +7,7 @@ import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import { forgetDashboardSession, rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import { openSessionBubbleWidgets } from "./session-bubble";
@@ -97,7 +97,10 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
       closable: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
-      eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
+      eligibleLocations: {
+        resourceKinds: ["dashboard-view", "ticket", "workspace"],
+        canOpen: (resource) => resource.kind !== "dashboard-view" || resource.id !== dashboardResources.sessions.id,
+      },
       icon: "MessageCircle",
       tab: {
         contentRendererId: sessionTabRendererId,

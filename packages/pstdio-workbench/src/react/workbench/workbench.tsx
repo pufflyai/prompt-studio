@@ -1,7 +1,7 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { WorkbenchCore, WorkbenchRegion } from "../../core";
+import { allowsWorkbenchFloatingPanels, type WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
@@ -22,6 +22,7 @@ import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
+import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelRegionId } from "./workbench-panel-state";
 import {
@@ -63,33 +64,28 @@ const createSessionPanelHost = () => {
 };
 
 const resolveActiveSessionSlot = (input: {
+  floatingPanelsAllowed: boolean;
   mounted: boolean;
   mode: "attached" | "bubble" | "closed";
   sessionAttachedSlot: HTMLDivElement | null;
   sessionBubbleSlot: HTMLDivElement | null;
 }) => {
   if (!input.mounted) return null;
-  if (input.mode === "bubble") return input.sessionBubbleSlot;
+  if (input.mode === "bubble") return input.floatingPanelsAllowed ? input.sessionBubbleSlot : null;
   return input.sessionAttachedSlot;
 };
 
-const useHasRegionContent = (workbench: WorkbenchCore, region: WorkbenchRegion) =>
-  useWorkbenchStore(
-    workbench.layout.store,
-    (state) => state.layout.regions[region].widgets.length > 0 || Boolean(state.placeholders[region]),
-  );
-
 const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   return {
-    hasNavWidgets: useHasRegionContent(workbench, "nav"),
-    hasActivityBarWidgets: useHasRegionContent(workbench, "activity"),
-    hasSidebarHeaderWidgets: useHasRegionContent(workbench, "sidebar-header"),
-    hasSidebarWidgets: useHasRegionContent(workbench, "sidebar"),
-    hasSecondaryHeaderWidgets: useHasRegionContent(workbench, "secondary-header"),
-    hasSecondaryWidgets: useHasRegionContent(workbench, "secondary"),
-    hasSideHeaderWidgets: useHasRegionContent(workbench, "side-header"),
-    hasSideWidgets: useHasRegionContent(workbench, "side"),
-    hasStatusWidgets: useHasRegionContent(workbench, "status"),
+    hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
+    hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
+    hasSidebarHeaderWidgets: useWorkbenchRegionContent(workbench, "sidebar-header"),
+    hasSidebarWidgets: useWorkbenchRegionContent(workbench, "sidebar"),
+    hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
+    hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
+    hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
+    hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
+    hasStatusWidgets: useWorkbenchRegionContent(workbench, "status"),
   };
 };
 
@@ -171,6 +167,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
   const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
+  const floatingPanelsAllowed = useWorkbenchStore(workbench.layout.store, (state) =>
+    allowsWorkbenchFloatingPanels(state.layout, Object.values(state.widgets)),
+  );
 
   const {
     hasActivityBarWidgets,
@@ -209,6 +208,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const sideHeader = <WorkbenchSessionRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
   const activeSessionSlot = resolveActiveSessionSlot({
+    floatingPanelsAllowed,
     mounted: mountSessionPanel,
     mode: sessionPanelMode,
     sessionAttachedSlot,
@@ -282,7 +282,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           />
         </Flex>
         {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
-        {hasSidePanel ? (
+        {hasSidePanel && floatingPanelsAllowed ? (
           <WorkbenchSessionBubbleContainer
             workbench={workbench}
             contentSlotRef={setSessionBubbleSlot}

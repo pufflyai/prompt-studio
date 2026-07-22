@@ -9,7 +9,7 @@ import {
 import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
-import { List, MessageCircle, PenBox } from "lucide-react";
+import { ArrowUpRight, MessageCircle, PenBox } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
@@ -140,6 +140,18 @@ export const SessionTabContextMenu = (props: { input: WorkbenchWidgetRenderInput
 
   return (
     <>
+      <SessionActionRow
+        id="new-session"
+        icon={PenBox}
+        label="New session"
+        onSelect={() => {
+          void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
+            ...(state.workspace ? { workspace: state.workspace } : {}),
+            replaceWidgetId: input.placement.widgetId,
+          });
+        }}
+      />
+      <Menu.Separator />
       {state.sessions.length > 0 ? (
         state.sessions.map((session) => (
           <SessionMenuRow
@@ -168,19 +180,8 @@ export const SessionTabContextMenu = (props: { input: WorkbenchWidgetRenderInput
       )}
       <Menu.Separator />
       <SessionActionRow
-        id="new-session"
-        icon={PenBox}
-        label="New session"
-        onSelect={() => {
-          void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
-            ...(state.workspace ? { workspace: state.workspace } : {}),
-            replaceWidgetId: input.placement.widgetId,
-          });
-        }}
-      />
-      <SessionActionRow
         id="view-all-sessions"
-        icon={List}
+        icon={ArrowUpRight}
         label="View all sessions"
         onSelect={() => {
           void input.workbench.commands.executeCommand(dashboardCommandIds.openSessions);

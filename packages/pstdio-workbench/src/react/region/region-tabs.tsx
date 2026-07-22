@@ -15,8 +15,8 @@ import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   listEligibleSubPanels,
-  matchesWorkbenchLocationEligibility,
   matchesWorkbenchPanelMenuOwner,
+  matchesWorkbenchPanelPlacementLocation,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
   type WorkbenchRegion as WorkbenchRegionId,
@@ -71,16 +71,14 @@ export const shouldShowPanelHeader = (input: WorkbenchPanelHeaderVisibility) =>
 const isSubPanelPlacement = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) =>
   (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "sub-panel";
 
-const isOwnedByCurrentLocation = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
+const isOwnedByCurrentLocation = (
+  workbench: WorkbenchCore,
+  placement: WorkbenchWidgetPlacement,
+  resource = workbench.getPrimaryResource(),
+  modeId = workbench.modes.getActiveModeId(),
+) => {
   const widget = workbench.layout.getWidget(placement.contributionId);
-  return widget
-    ? matchesWorkbenchLocationEligibility(
-        widget,
-        workbench.getPrimaryResource(),
-        workbench.modes.getActiveModeId(),
-        placement,
-      )
-    : false;
+  return widget ? matchesWorkbenchPanelPlacementLocation(widget, resource, modeId, placement) : false;
 };
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
@@ -93,7 +91,8 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
   const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource);
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layoutState.layout);
   const openSubPanels = layoutState.layout.regions[region].widgets.filter(
-    (placement) => isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement),
+    (placement) =>
+      isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement, resource, modeId),
   );
   const eligibleSubPanels = listEligibleSubPanels({
     widgets: Object.values(layoutState.widgets),
@@ -107,7 +106,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
     (menuRegion) =>
       layoutState.layout.regions[menuRegion].widgets.some(
         (placement) =>
-          isOwnedByCurrentLocation(workbench, placement) &&
+          isOwnedByCurrentLocation(workbench, placement, resource, modeId) &&
           matchesWorkbenchPanelMenuOwner(layoutState.widgets[placement.contributionId], {
             locationPanel: activeLocationPanel,
             subPanel: activeSubPanel,
@@ -134,7 +133,8 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const placements = layoutState.layout.regions[region].widgets.filter(
-    (placement) => isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement),
+    (placement) =>
+      isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement, resource, modeId),
   );
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
@@ -166,7 +166,8 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const placements = regionState.widgets.filter(
-    (placement) => isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement),
+    (placement) =>
+      isSubPanelPlacement(workbench, placement) && isOwnedByCurrentLocation(workbench, placement, resource, modeId),
   );
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the region id so persistence has a sensible default.

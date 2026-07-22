@@ -31,7 +31,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
-test("PS-169 gives the Session tab its own right-click menu", async ({ page, request }) => {
+test("PS-169 opens the selected Session tab's own menu", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((selectedProjectId: string) => {
@@ -50,7 +50,7 @@ test("PS-169 gives the Session tab its own right-click menu", async ({ page, req
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   const sessionTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ });
   await expect(sessionTab).toBeVisible();
-  await sessionTab.click({ button: "right" });
+  await sessionTab.click();
 
   const sessionMenu = page.getByRole("menu", { name: "New session actions" });
   await expect(sessionMenu).toBeVisible();
@@ -86,7 +86,7 @@ test.describe("PS-169 Panel tabs", () => {
     }
 
     const activityTab = page.getByRole("tab", { name: /Activity Live/ });
-    await activityTab.click({ button: "right" });
+    await activityTab.click();
     await expect(
       page.getByRole("menu", { name: "Activity actions" }).getByRole("menuitem", { name: "Live context" }),
     ).toBeVisible();

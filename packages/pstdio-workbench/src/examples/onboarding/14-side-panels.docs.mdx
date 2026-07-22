@@ -75,17 +75,23 @@ Location Panel and continues with the removable Sub Panels. `Add panel` renders 
 exists. Therefore a Location with no subordinate UI has no header, while a Panel containing only a Panel Menu retains
 its header without emitting an empty ARIA tab list.
 
-Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, or resource id. Menu ownership is
-exclusive to the selected tab: selecting the Location Panel shows only Location-owned menus, while selecting a Sub
-Panel shows only that Sub Panel's menus. Each menu placement retains its own attached or collapsed state. Clicking a
-collapsed menu's distinct, tooltipped icon opens the menu's live content in a contained, portal-positioned dropdown.
-Its header identifies the menu and contains the action that attaches it to the correct side again. Attach is disabled
-when the Panel cannot preserve the menu minimum, resize handles, existing attached menus, and minimum content width.
+Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, resource id, or an
+`eligibleLocations.canOpen` predicate. Resource-backed Sub Panels validate their own resource separately from this
+Location eligibility. Menu ownership is exclusive to the selected tab: selecting the Location Panel shows only
+Location-owned menus, while selecting a Sub Panel shows only that Sub Panel's menus. Each menu placement retains its
+own attached or collapsed state. Clicking a collapsed menu's distinct, tooltipped icon opens the menu's live content
+in a contained, portal-positioned dropdown. Its header identifies the menu and contains the action that attaches it to
+the correct side again. Attach is disabled when the Panel cannot preserve the menu minimum, resize handles, existing
+attached menus, and minimum content width.
 
 Each Location owns its open Sub Panel placements and selection. Switching Locations does not close those tabs:
 returning by a Location action, Back, or Forward restores that Location's previous open tabs and active selection.
 Contributions that are not eligible for the active Location remain out of its tabs, Add-panel menu, and menu layout.
 Every Sub Panel offered by `Add panel` is removable and becomes eligible again after closing.
+
+A Location or selected Sub Panel can set `floatingPanels: "hidden"` when floating Panel chrome would cover important
+content. This suppresses both the floating Panel and its recovery bubble without changing the saved Panel mode;
+attached recovery controls remain available when that Location still has eligible or open subordinate content.
 
 <Canvas of={OnboardingStories.LocationContentOnly} />
 
@@ -102,6 +108,8 @@ Every Sub Panel offered by `Add panel` is removable and becomes eligible again a
 <Canvas of={OnboardingStories.AllThreePanels} />
 
 <Canvas of={OnboardingStories.LocationSwitch} />
+
+<Canvas of={OnboardingStories.BubbleFreeLocation} />
 
 ## Navigation and persistence
 

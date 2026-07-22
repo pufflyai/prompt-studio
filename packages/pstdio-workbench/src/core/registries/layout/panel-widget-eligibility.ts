@@ -68,8 +68,30 @@ export const matchesWorkbenchLocationEligibility = (
   ) {
     return false;
   }
+  if (eligibleLocations?.canOpen && (!resource || !eligibleLocations.canOpen(resource))) return false;
   if (placement?.ownerResourceUri && placement.ownerResourceUri !== resource?.uri) return false;
   return true;
+};
+
+export const matchesWorkbenchPanelPlacementLocation = (
+  widget: RegisteredWidgetContribution,
+  resource: ResourceRef | undefined,
+  modeId: string | undefined,
+  placement: WorkbenchWidgetPlacement,
+) =>
+  supportsResource(widget, placement.resource ?? resource) &&
+  matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
+
+export const allowsWorkbenchFloatingPanels = (
+  layout: WorkbenchLayout,
+  widgets: readonly RegisteredWidgetContribution[],
+) => {
+  const activeMainPanel =
+    layout.regions.main.widgets.find((placement) => placement.widgetId === layout.regions.main.activeWidgetId) ??
+    getActiveLocationPlacement(layout);
+  if (!activeMainPanel) return true;
+
+  return widgets.find((widget) => widget.id === activeMainPanel.contributionId)?.floatingPanels !== "hidden";
 };
 
 export const matchesWorkbenchPanelMenuOwner = (

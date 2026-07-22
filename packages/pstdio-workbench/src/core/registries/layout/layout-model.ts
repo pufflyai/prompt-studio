@@ -53,6 +53,7 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
+  WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchLocationContribution,

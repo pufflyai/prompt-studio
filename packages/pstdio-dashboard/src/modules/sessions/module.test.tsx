@@ -22,6 +22,7 @@ describe("createSessionsModule", () => {
       label: "Session",
       icon: "MessageCircle",
     });
+    expect(workbench.layout.getWidget(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
   });
 
   test("renders the Sessions group in session and workspace modes but not the project mode", () => {

@@ -3,7 +3,7 @@ import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { createWorkspacesModule } from "../../workspaces/module";
@@ -19,7 +19,8 @@ describe("createSessionBubbleModule", () => {
 
     expect(layout.regions.side.widgets).toEqual([]);
     expect(layout.regions["side-header"].widgets).toEqual([]);
-    expect(workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)).toMatchObject({
+    const contribution = workbench.layout.getWidget(dashboardWidgetIds.sessionBubble);
+    expect(contribution).toMatchObject({
       role: "sub-panel",
       eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
@@ -28,6 +29,8 @@ describe("createSessionBubbleModule", () => {
         contextMenuRendererId: "dashboard-workbench.session-tab-context-menu",
       },
     });
+    expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.sessions)).toBe(false);
+    expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.start)).toBe(true);
   });
 
   test("does not synthesize a session tab when mode chrome reactivates", () => {

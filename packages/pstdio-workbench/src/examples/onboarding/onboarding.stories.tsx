@@ -104,6 +104,7 @@ const panelCompositionWorkbenches = {
   subPanelsMenu: createPanelCompositionWorkbench("sub-panels-menu"),
   allPanels: createPanelCompositionWorkbench("all-panels"),
   locationSwitch: createPanelCompositionWorkbench("location-switch"),
+  floatingPanelFree: createPanelCompositionWorkbench("floating-panel-free"),
   crossPanelHistory: createPanelCompositionWorkbench("cross-panel-history"),
   refreshEnd: createRestoredPanelCompositionWorkbench(false),
   refreshAfterBack: createRestoredPanelCompositionWorkbench(true),
@@ -248,22 +249,27 @@ export const LocationSwitch: Story = {
 };
 
 export const CrossPanelHistory: Story = {
-  name: "14.9 Cross-Panel history",
+  name: "14.10 Cross-Panel history",
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.crossPanelHistory} />,
 };
 
+export const BubbleFreeLocation: Story = {
+  name: "14.9 Bubble-free Location",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.floatingPanelFree} />,
+};
+
 export const RefreshAtTimelineEnd: Story = {
-  name: "14.10 Refresh at timeline end",
+  name: "14.11 Refresh at timeline end",
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.refreshEnd} />,
 };
 
 export const RefreshAfterBack: Story = {
-  name: "14.11 Refresh after Back",
+  name: "14.12 Refresh after Back",
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.refreshAfterBack} />,
 };
 
 export const ProjectHistoryIsolation: Story = {
-  name: "14.12 Project history isolation",
+  name: "14.13 Project history isolation",
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.projectIsolation} />,
 };
 

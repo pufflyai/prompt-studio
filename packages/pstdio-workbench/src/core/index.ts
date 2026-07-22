@@ -113,6 +113,7 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
+  WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchLocationContribution,
@@ -140,12 +141,14 @@ export {
   workbenchRegions,
 } from "./registries/layout/layout-model";
 export {
+  allowsWorkbenchFloatingPanels,
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   isSubPanelEligible,
   listEligibleSubPanels,
   matchesWorkbenchLocationEligibility,
   matchesWorkbenchPanelMenuOwner,
+  matchesWorkbenchPanelPlacementLocation,
 } from "./registries/layout/panel-widget-eligibility";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {

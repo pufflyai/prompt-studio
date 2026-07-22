@@ -60,12 +60,15 @@ export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
 
+export type WorkbenchFloatingPanelVisibility = "visible" | "hidden";
+
 export type WorkbenchWidgetRole = "content" | "location" | "sub-panel" | "panel-menu";
 
 export interface WorkbenchLocationEligibility {
   modeIds?: string[];
   resourceKinds?: string[];
   resourceIds?: string[];
+  canOpen?(resource: ResourceRef): boolean;
 }
 
 export type WorkbenchPanelMenuOwner =
@@ -93,6 +96,7 @@ export interface WidgetContribution {
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
+  floatingPanels?: WorkbenchFloatingPanelVisibility;
   resourceKinds?: string[];
   priority?: number;
   rendererId: string;
