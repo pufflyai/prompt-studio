@@ -27,7 +27,7 @@ const createSettingsFooterNode = () => ({
 const registerSettingsSidebars = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.settings.footer",
-    modes: ["project"],
+    modes: ["*"],
     order: 40,
     region: "footer",
     getFooterNodes: () => [createSettingsFooterNode()],

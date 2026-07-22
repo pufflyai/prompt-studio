@@ -4,6 +4,7 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { createSidebarModule } from "../sidebar/module";
 import { createExtensionsModule } from "./module";
 import {
   emptyAppearance,
@@ -109,6 +110,30 @@ describe("createExtensionsModule mode layout", () => {
 
       expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
       expect(workspaceNodeIds).not.toContain("dashboard-workbench://project/project-1/extensions/lab");
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("shows extension tree items before breadcrumb navigation selects a resource", async () => {
+    const loadMetadata = mock(async () => metadata);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.setActiveMode("project");
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.registerModule(createSidebarModule());
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const nodeIds = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar))
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id);
+
+      expect(nodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

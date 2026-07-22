@@ -14,8 +14,8 @@ import {
 const composeSidebarBody = async (ctx: WorkbenchModuleContributionContext) => {
   const mode = ctx.modes.getActiveModeId();
   const resource = getDashboardSelectedResource(ctx);
-  if (!mode || !resource) return [];
-  return await getSidebarContributionSections(ctx, mode, { resource });
+  if (!mode) return [];
+  return await getSidebarContributionSections(ctx, mode, resource ? { resource } : {});
 };
 
 const composeSidebarFooter = (ctx: WorkbenchModuleContributionContext) => {

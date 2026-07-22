@@ -7,20 +7,25 @@ import { registerSidebarContribution } from "./contributions/sidebar-tree-contri
 import { registerDashboardSidebar } from "./dashboard-sidebar";
 
 describe("registerDashboardSidebar", () => {
-  test("reads resource sections only while a concrete resource is selected", async () => {
+  test("reads mode sections without a concrete resource and passes one when selected", async () => {
     const workbench = createWorkbenchCore();
-    let resourceSectionReads = 0;
+    const resourceReads: Array<string | undefined> = [];
 
     workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
     registerSidebarContribution(workbench, {
       id: "test.resource-sections",
       modes: ["workspace"],
       getSections: (_ctx, input) => {
-        resourceSectionReads += 1;
+        resourceReads.push(input.resource?.uri);
         return [
           {
             id: "resource",
-            nodes: [{ id: input.resource!.uri, label: input.resource!.label ?? input.resource!.uri }],
+            nodes: [
+              {
+                id: input.resource?.uri ?? "aggregate",
+                label: input.resource?.label ?? "Aggregate",
+              },
+            ],
           },
         ];
       },
@@ -28,8 +33,10 @@ describe("registerDashboardSidebar", () => {
     registerDashboardSidebar(workbench);
     workbench.modes.setActiveMode("workspace");
 
-    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar)).toEqual([]);
-    expect(resourceSectionReads).toBe(0);
+    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar)).toEqual([
+      { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
+    ]);
+    expect(resourceReads).toEqual([undefined]);
 
     const workspace = {
       kind: "workspace",
@@ -42,11 +49,13 @@ describe("registerDashboardSidebar", () => {
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar)).toEqual([
       { id: "resource", nodes: [{ id: workspace.uri, label: workspace.label }] },
     ]);
-    expect(resourceSectionReads).toBe(1);
+    expect(resourceReads).toEqual([undefined, workspace.uri]);
 
     selectDashboardNavigationResource(workbench, dashboardResources.workspaces);
 
-    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar)).toEqual([]);
-    expect(resourceSectionReads).toBe(1);
+    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar)).toEqual([
+      { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
+    ]);
+    expect(resourceReads).toEqual([undefined, workspace.uri, undefined]);
   });
 });
