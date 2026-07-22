@@ -32,21 +32,55 @@ interface SidebarContribution {
 
 type SidebarTreeContext = Pick<WorkbenchModuleContributionContext, "context">;
 
+interface SidebarContributionsState {
+  contributions: SidebarContribution[];
+  listeners: Set<() => void>;
+  revision: number;
+}
+
 const contributionsByWorkbench = new WeakMap<
   WorkbenchModuleContributionContext["context"]["store"],
-  SidebarContribution[]
+  SidebarContributionsState
 >();
 
-const getContributions = (ctx: SidebarTreeContext) => {
+const getContributionState = (ctx: SidebarTreeContext) => {
   const existing = contributionsByWorkbench.get(ctx.context.store);
   if (existing) return existing;
-  const contributions: SidebarContribution[] = [];
-  contributionsByWorkbench.set(ctx.context.store, contributions);
-  return contributions;
+  const state: SidebarContributionsState = { contributions: [], listeners: new Set(), revision: 0 };
+  contributionsByWorkbench.set(ctx.context.store, state);
+  return state;
 };
 
+const getContributions = (ctx: SidebarTreeContext) => getContributionState(ctx).contributions;
+
 export const registerSidebarContribution = (ctx: SidebarTreeContext, contribution: SidebarContribution) => {
-  getContributions(ctx).push(contribution);
+  const contributions = getContributions(ctx);
+  contributions.push(contribution);
+  refreshSidebarContributions(ctx);
+  return {
+    dispose() {
+      const index = contributions.indexOf(contribution);
+      if (index < 0) return;
+      contributions.splice(index, 1);
+      refreshSidebarContributions(ctx);
+    },
+  };
+};
+
+const refreshSidebarContributions = (ctx: SidebarTreeContext) => {
+  const state = getContributionState(ctx);
+  state.revision += 1;
+  for (const listener of state.listeners) listener();
+};
+
+export const getSidebarContributionsRevision = (ctx: SidebarTreeContext) => getContributionState(ctx).revision;
+
+export const subscribeSidebarContributions = (ctx: SidebarTreeContext, listener: () => void) => {
+  const state = getContributionState(ctx);
+  state.listeners.add(listener);
+  return () => {
+    state.listeners.delete(listener);
+  };
 };
 
 const matchingContributions = (ctx: SidebarTreeContext, mode: SidebarModeId, region: SidebarContributionRegion) =>
@@ -64,8 +98,14 @@ export const getSidebarContributionSections = (
   input: SidebarContributionInput = {},
 ) => matchingContributions(ctx, mode, "body").flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
 
-export const getSidebarContributionHeaderNodes = (ctx: WorkbenchModuleContributionContext, mode: SidebarModeId) =>
-  matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);
+export const getSidebarContributionHeaderNodes = (
+  ctx: WorkbenchModuleContributionContext,
+  mode: SidebarModeId,
+  revision = getSidebarContributionsRevision(ctx),
+) => {
+  void revision;
+  return matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);
+};
 
 export const getSidebarContributionFooterNodes = (ctx: WorkbenchModuleContributionContext, mode: SidebarModeId) =>
   matchingContributions(ctx, mode, "footer").flatMap((contribution) => contribution.getFooterNodes?.(ctx) ?? []);

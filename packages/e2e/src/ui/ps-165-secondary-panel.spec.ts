@@ -78,7 +78,7 @@ test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async
   await bypassOnboarding(page, project.id);
 
   await page.goto(`/projects/${project.id}`);
-  await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+  await addTerminal(page);
 
   const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
   const terminal = page.locator(".xterm").first();
@@ -148,7 +148,7 @@ test("PS-165 restores terminal tabs and opens a unique tab after refresh", async
   await bypassOnboarding(page, project.id);
 
   await page.goto(`/projects/${project.id}`);
-  await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+  await addTerminal(page);
 
   const terminalTabList = getSecondaryHeader(page).getByRole("tablist");
   const terminalTabs = terminalTabList.getByRole("tab");
@@ -197,7 +197,7 @@ test("PS-165 accepts input after rapidly opening five terminal sessions", async 
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`/projects/${project.id}`);
-  await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+  await addTerminal(page);
 
   const terminalTabList = getSecondaryHeader(page).getByRole("tablist");
   for (let index = 0; index < 4; index += 1) await addTerminal(page);

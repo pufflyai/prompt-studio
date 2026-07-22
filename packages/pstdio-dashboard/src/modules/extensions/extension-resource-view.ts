@@ -4,6 +4,7 @@ import {
   type ResourceRef,
   type WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -263,6 +264,7 @@ export const registerExtensionResourceView = (
             projectId: input.projectId,
           });
           ctx.modes.setActiveMode(resourceMode?.modeId ?? "project");
+          selectDashboardNavigationResource(ctx, selectedResource);
           setExtensionResourceBreadcrumb(ctx, {
             kind,
             metadata: input.metadata,

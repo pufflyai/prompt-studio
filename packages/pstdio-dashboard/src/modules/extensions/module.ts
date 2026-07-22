@@ -11,6 +11,7 @@ import type {
 import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -29,6 +30,7 @@ import {
 import {
   buildDashboardExtensionRouteEntries,
   clearCachedDashboardExtensionMetadata,
+  createDashboardExtensionRouteResource,
   dashboardExtensionRouteKind,
   emptyDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
@@ -41,6 +43,7 @@ import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
 import { dashboardExtensionViewKind, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
@@ -55,6 +58,11 @@ interface CreateExtensionsModuleInput {
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
+
+const hasSameSerializedMetadata = (
+  current: ResolvedWorkbenchExtensionMetadata | undefined,
+  next: ResolvedWorkbenchExtensionMetadata,
+) => Boolean(current && JSON.stringify(current) === JSON.stringify(next));
 
 const resourceProjectId = (resource: ResourceRef | undefined) => {
   const projectId = resource?.metadata?.projectId;
@@ -86,7 +94,8 @@ const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId:
     (candidate) => candidate.path === routePath,
   );
   if (!route) throw new Error(`Extension route is not available: ${routePath}`);
-  return route;
+  if (!routeProjectId) throw new Error(`Extension route has no project: ${routePath}`);
+  return createDashboardExtensionRouteResource({ icon: resource.icon, projectId: routeProjectId, route });
 };
 
 // Extension metadata is fetched per project and re-applied whenever the active
@@ -102,7 +111,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let rawAppearance: ListExtensionAppearanceResponse | undefined;
       let rawMetadata: DashboardExtensionMetadata | undefined;
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
-      let requestId = 0;
+      let projectGeneration = 0;
       let appearanceDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
       let primaryResourceBeforeRefresh: ResourceRef | undefined;
@@ -124,14 +133,21 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
+        const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata);
+        const contributionsAreCurrent = hasSameSerializedMetadata(metadata, nextResolvedMetadata);
         const currentPrimaryResource = ctx.getPrimaryResource();
         if (resourceProjectId(currentPrimaryResource) === nextProjectId) {
           primaryResourceBeforeRefresh = currentPrimaryResource;
         }
 
         rawMetadata = nextMetadata;
-        metadata = localizeExtensionMetadata(nextMetadata);
+        metadata = nextResolvedMetadata;
         setCachedDashboardExtensionMetadata(nextProjectId, metadata);
+        if (contributionsAreCurrent) {
+          primaryResourceBeforeRefresh = undefined;
+          setDashboardExtensionsReadyProject(ctx, nextProjectId);
+          return;
+        }
         clearContributions();
         contributionDisposables = registerExtensionContributions({
           ctx,
@@ -151,6 +167,24 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         setDashboardExtensionsReadyProject(ctx, nextProjectId);
       };
 
+      const metadataRefresh = createExtensionRefreshQueue({
+        apply: applyMetadata,
+        fallback: emptyDashboardExtensionMetadata,
+        getGeneration: () => projectGeneration,
+        getProjectId: () => projectId,
+        load: loadMetadata,
+      });
+      const appearanceRefresh = createExtensionRefreshQueue({
+        apply: (nextProjectId, nextAppearance) => {
+          applyAppearance(nextAppearance);
+          if (rawMetadata) applyMetadata(nextProjectId, rawMetadata);
+        },
+        fallback: emptyDashboardExtensionAppearance,
+        getGeneration: () => projectGeneration,
+        getProjectId: () => projectId,
+        load: loadAppearance,
+      });
+
       const refreshProject = () => {
         const previousProjectId = projectId;
         projectId = getDashboardSelectedProjectId(ctx);
@@ -164,6 +198,9 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         // until fresh metadata arrives — applyMetadata swaps contributions
         // synchronously, so the sidebar never renders entries whose openers are gone.
         if (projectId !== previousProjectId || !projectId) {
+          projectGeneration += 1;
+          metadataRefresh.clear();
+          appearanceRefresh.clear();
           rawAppearance = undefined;
           rawMetadata = undefined;
           metadata = undefined;
@@ -175,23 +212,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         }
 
         if (!projectId) return;
-
-        requestId += 1;
-        const currentRequestId = requestId;
-        void loadMetadata(projectId)
-          .catch(() => emptyDashboardExtensionMetadata)
-          .then((nextMetadata) => {
-            if (currentRequestId !== requestId || !projectId) return;
-            applyMetadata(projectId, nextMetadata);
-          });
-
-        void loadAppearance(projectId)
-          .catch(() => emptyDashboardExtensionAppearance)
-          .then((nextAppearance) => {
-            if (currentRequestId !== requestId || !projectId) return;
-            applyAppearance(nextAppearance);
-            if (rawMetadata) applyMetadata(projectId, rawMetadata);
-          });
+        metadataRefresh.refresh(projectId);
+        appearanceRefresh.refresh(projectId);
       };
 
       const reapplyLocale = () => {
@@ -253,6 +275,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             (candidate) => candidate.id === resource.id,
           );
           if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
+          selectDashboardNavigationResource(ctx, resource);
           return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
             resource,
             region: extensionViewRegion(view.target),
@@ -266,15 +289,16 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         priority: 1000,
         canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
         open: (resource, openInput) => {
-          resolveAvailableRouteResource(resource, projectId);
+          const availableResource = resolveAvailableRouteResource(resource, projectId);
           ctx.modes.setActiveMode("project");
-          setResourceBreadcrumb(ctx, resource);
+          selectDashboardNavigationResource(ctx, availableResource);
+          setResourceBreadcrumb(ctx, availableResource);
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, resource.uri);
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, availableResource.uri);
           }
           return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
-            resource,
-            title: resource.label,
+            resource: availableResource,
+            title: availableResource.label,
             replaceActive: openInput.replaceActive,
           });
         },
@@ -296,7 +320,9 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       return {
         dispose() {
-          requestId += 1;
+          projectGeneration += 1;
+          metadataRefresh.clear();
+          appearanceRefresh.clear();
           activeResourceContext.dispose();
           clearCachedDashboardExtensionMetadata(projectId);
           clearDashboardExtensionsReadyProject(ctx);

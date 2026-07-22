@@ -7,7 +7,7 @@ import {
   type ResourceRef,
   resourceContextMenuPath,
   standardResourceIcons,
-  type TreeViewSection,
+  type TreeNode,
   type WorkbenchModuleContributionContext,
   type WorkbenchWidgetPlacement,
 } from "@pstdio/workbench/core";
@@ -306,27 +306,21 @@ export const registerExtensionDataRenderers = (
   return disposables;
 };
 
-export const buildExtensionDataRendererSidebarSections = (input: {
+export const buildExtensionDataRendererSidebarHeaderNodes = (input: {
   metadata?: DashboardExtensionMetadata;
   projectId?: string;
-}): TreeViewSection[] => {
+}): TreeNode[] => {
   const { metadata, projectId } = input;
   if (!projectId || !metadata?.dataRenderers?.length) return [];
 
-  return [
-    {
-      id: "extension-data-renderers",
-      nodes: metadata.dataRenderers.map((record) => {
-        const resource = createExtensionDataRendererResource(record, projectId);
-        return {
-          id: resource.uri,
-          label: resolveLocalizableString(record.title, record.extensionId),
-          icon: resource.icon,
-          // A board (e.g. Tickets) is a top-level nav entry — opt it into the sidebar's hide/show menu.
-          canHide: true,
-          resource,
-        };
-      }),
-    },
-  ];
+  return metadata.dataRenderers.map((record) => {
+    const resource = createExtensionDataRendererResource(record, projectId);
+    return {
+      id: resource.uri,
+      label: resolveLocalizableString(record.title, record.extensionId),
+      icon: resource.icon,
+      canHide: true,
+      resource,
+    };
+  });
 };

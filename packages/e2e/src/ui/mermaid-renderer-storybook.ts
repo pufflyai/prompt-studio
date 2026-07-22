@@ -50,7 +50,10 @@ const waitForStorybook = async (baseUrl: string, process: ChildProcessWithoutNul
   throw new Error("Timed out waiting for Storybook");
 };
 
-export const startStorybook = async (probeStoryId: string, packageName: "ui" | "pstdio-workbench" = "ui") => {
+export const startStorybook = async (
+  probeStoryId: string,
+  packageName: "ui" | "pstdio-dashboard" | "pstdio-workbench" = "ui",
+) => {
   const port = await getFreePort();
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
   const packageRoot = resolve(repoRoot, "packages", packageName);

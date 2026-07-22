@@ -10,12 +10,37 @@ const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
   agentId = "pstdio.extension-lab.fake",
+  initialRoute?: WorkbenchExtensionMetadata["routes"][number],
 ) => {
   await page.addInitScript(
-    ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
+    ({
+      currentProjectId,
+      currentAgentId,
+      currentInitialRoute,
+    }: {
+      currentProjectId: string;
+      currentAgentId: string;
+      currentInitialRoute?: WorkbenchExtensionMetadata["routes"][number];
+    }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", currentAgentId);
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      if (currentInitialRoute) {
+        localStorage.setItem(
+          `dashboard-wb:last-resource:${currentProjectId}`,
+          JSON.stringify({
+            kind: "extension-route",
+            uri: `dashboard-workbench://project/${currentProjectId}/extensions/${currentInitialRoute.path}`,
+            id: currentInitialRoute.path,
+            label: "Lab",
+            metadata: {
+              projectId: currentProjectId,
+              routePath: currentInitialRoute.path,
+              route: currentInitialRoute,
+            },
+          }),
+        );
+      }
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -31,7 +56,7 @@ const bypassOnboarding = async (
         }),
       );
     },
-    { currentProjectId: projectId, currentAgentId: agentId },
+    { currentProjectId: projectId, currentAgentId: agentId, currentInitialRoute: initialRoute },
   );
 };
 
@@ -103,7 +128,6 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole("option", { name: "Lab", exact: true }).click();
 };
 
 test.describe("Extension webviews", () => {
@@ -134,7 +158,7 @@ test.describe("Extension webviews", () => {
       })
       .toBe(200);
 
-    await bypassOnboarding(page, project.id);
+    await bypassOnboarding(page, project.id, undefined, labRoute);
     await page.setViewportSize({ width: 1280, height: 600 });
 
     await openExtensionLab(page, project.id);
@@ -188,7 +212,10 @@ test.describe("Extension webviews", () => {
       version: "0.1.0",
     });
 
-    await bypassOnboarding(page, project.id);
+    const metadata = await fetchMetadata(request, project.id);
+    const labRoute = metadata.routes.find((route) => route.path === "lab");
+    expect(labRoute).toBeDefined();
+    await bypassOnboarding(page, project.id, undefined, labRoute);
 
     await openExtensionLab(page, project.id);
     const labFrame = page.frameLocator('iframe[title="Lab"]');
@@ -206,7 +233,7 @@ test.describe("Extension webviews", () => {
     await expect(page.getByRole("banner").getByRole("button", { name: /notifications/i })).toHaveCount(0);
   });
 
-  test("opens host terminal tabs from the Extension Lab tree action", async ({ page, request }) => {
+  test("opens host terminal tabs from the Secondary Panel", async ({ page, request }) => {
     const project = await createProject(request);
     const visibleTerminalText = async () => {
       const rows = page.locator(".xterm-rows");
@@ -239,7 +266,6 @@ test.describe("Extension webviews", () => {
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);
-    await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
     const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');
     const terminalTabList = secondaryHeader.getByRole("tablist");
@@ -248,6 +274,7 @@ test.describe("Extension webviews", () => {
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
     };
 
+    await addTerminal();
     await expect(terminalTabs).toHaveCount(1);
     await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
     await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);

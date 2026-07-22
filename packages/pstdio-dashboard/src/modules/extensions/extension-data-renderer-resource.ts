@@ -25,5 +25,6 @@ export const createExtensionDataRendererResource = (record: ExtensionDataRendere
     projectId,
     {
       dataRendererId: record.id,
+      ...(record.resourceKind === "ticket" ? { collectionId: "tickets" } : {}),
     },
   );

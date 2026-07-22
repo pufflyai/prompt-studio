@@ -1,21 +1,56 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type WorkbenchCore } from "@pstdio/workbench/core";
+import {
+  createWorkbenchCore,
+  type WorkbenchCore,
+  type WorkbenchModuleContributionContext,
+} from "@pstdio/workbench/core";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
+import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
+import { createStartModule } from "../start/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSidebarModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
+const ticketsResource = {
+  kind: "dashboard-view",
+  uri: `dashboard-workbench://project/${PROJECT_ID}/data-renderer/tickets`,
+  id: "tickets",
+  label: "Tickets",
+  icon: "square-kanban",
+  metadata: { collectionId: "tickets", projectId: PROJECT_ID },
+};
+
+const createTicketsNavigationModule = () => ({
+  id: "story.tickets-navigation",
+  activate(ctx: WorkbenchModuleContributionContext) {
+    registerSidebarContribution(ctx, {
+      id: "story.tickets-navigation",
+      modes: ["*"],
+      region: "header",
+      order: 40,
+      getHeaderNodes: () => [
+        {
+          id: ticketsResource.uri,
+          label: ticketsResource.label,
+          icon: ticketsResource.icon,
+          resource: ticketsResource,
+        },
+      ],
+    });
+    return [];
+  },
+});
 
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
@@ -105,6 +140,8 @@ const bootstrapWorkbench = () => {
     createHeadersModule(),
     createNotificationsModule(),
     createSessionsModule(),
+    createStartModule(),
+    createTicketsNavigationModule(),
   ]) {
     workbench.registerModule(module);
   }
@@ -142,12 +179,12 @@ const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   );
 };
 
-// Project mode: project switcher, search, and notifications stay fixed above the nav links and footer.
+// F15: the project selector and global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
 };
 
-// Workspaces view: project, search, and notifications stay fixed above project navigation; create is on the Workspaces row.
+// Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
 };
