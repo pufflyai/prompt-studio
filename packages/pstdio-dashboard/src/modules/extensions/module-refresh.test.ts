@@ -49,6 +49,40 @@ test("coalesces same-project metadata churn without starving the first contribut
   }
 });
 
+test("preserves extension contributions when a same-project metadata refresh fails", async () => {
+  let shouldFail = false;
+  const loadMetadata = mock(async () => {
+    if (shouldFail) throw new Error("Temporary extension metadata failure");
+    return metadataWithTickets;
+  });
+  const workbench = createWorkbenchCore();
+
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  workbench.modes.setActiveMode("project");
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+  try {
+    await flushMicrotasks();
+
+    expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
+    expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
+    expect(getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+
+    shouldFail = true;
+    getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
+    await flushMicrotasks();
+
+    expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
+    expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
+    expect(getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+  } finally {
+    disposable.dispose();
+    getWriter("installed_extension_sources")?.truncateAndWrite([]);
+    clearCachedDashboardExtensionMetadata("project-1");
+  }
+});
+
 test("refreshes an open extension route when metadata changes", async () => {
   const routeWithModuleUrl = (moduleUrl: string) => ({
     ...metadata,
