@@ -166,6 +166,34 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await expect(page.getByRole("region", { name: "Session" })).toBeVisible();
 });
 
+test("PS-170 updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Draft Session" } });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/tickets`);
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+
+  await page.getByRole("button", { name: "Show Side Panel" }).click();
+  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionTabs = sideHeader.getByRole("tab");
+  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs.first()).toContainText("New session");
+
+  const prompt = "Continue in this session tab";
+  await page.locator("[data-testid='content-editable'][contenteditable='true']").last().fill(prompt);
+  await page.locator("[data-testid='send-message-button']").last().click();
+
+  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs.first()).toContainText(prompt);
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/tickets$`));
+});
+
 test.describe("PS-170 Panel-owned menus", () => {
   test.slow();
 

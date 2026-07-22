@@ -20,19 +20,22 @@ const draftResource: ResourceRef = {
 describe("openCreatedSessionFromDraft", () => {
   test("replaces the current draft placement with the created session", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerWidget({
-      id: dashboardWidgetIds.session,
+    workbench.layout.registerSubPanel({
+      id: dashboardWidgetIds.sessionBubble,
       title: "Session",
-      region: "main",
-      rendererId: dashboardWidgetIds.session,
+      region: "side",
+      singleton: false,
+      reuse: "none",
+      rendererId: dashboardWidgetIds.sessionBubble,
     });
-    const placement = workbench.layout.openWidget(dashboardWidgetIds.session, {
+    const placement = workbench.layout.openWidget(dashboardWidgetIds.sessionBubble, {
+      pinned: true,
       resource: draftResource,
       title: draftResource.label,
     });
     const input: WorkbenchWidgetRenderInput = {
       workbench,
-      widget: workbench.layout.getWidget(dashboardWidgetIds.session)!,
+      widget: workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)!,
       placement,
       refresh: () => undefined,
     };
@@ -44,8 +47,10 @@ describe("openCreatedSessionFromDraft", () => {
       projectId: "project-1",
     });
 
-    const opened = workbench.layout.getLayout().regions.main.widgets[0];
+    const opened = workbench.layout.getLayout().regions.side.widgets[0];
 
+    expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
+    expect(opened?.widgetId).toBe(placement.widgetId);
     expect(opened?.resourceUri).toBe("dashboard-workbench://session/session-created-from-draft");
     expect(opened?.resource?.kind).toBe("session");
     expect(opened?.title).toBe("Start the project plan");

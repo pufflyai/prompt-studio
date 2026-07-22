@@ -99,7 +99,7 @@ export const openCreatedSessionFromDraft = (args: {
   return args.input.workbench.layout.openWidget(args.input.placement.contributionId, {
     resource,
     title,
-    replaceActive: true,
+    replaceWidgetId: args.input.placement.widgetId,
   });
 };
 
