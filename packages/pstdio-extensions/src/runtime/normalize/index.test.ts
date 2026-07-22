@@ -828,17 +828,17 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
       commands: {
         "say-hello": {
           title: "Say hello",
-          menus: [{ slot: projectSlots.sidebar as never, label: "Wrong kind" }],
+          menus: [{ slot: projectSlots.sidenav as never, label: "Wrong kind" }],
           run: async () => undefined,
         },
       },
       views: {
-        sidebar: {
-          title: "Sidebar",
+        sidenav: {
+          title: "Sidenav",
           role: "location",
           slot: projectSlots.headerPrimary as never,
           webview: {
-            entry: packageAsset("./dist/sidebar.js", "file:///fake/extension.ts"),
+            entry: packageAsset("./dist/sidenav.js", "file:///fake/extension.ts"),
           },
         },
       },
@@ -855,7 +855,7 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
     const lab = defineExtension({
       navigation: {
         lab: {
-          slot: "project.sidebarNav",
+          slot: "project.sidenavNav",
           label: "Lab",
           route: "lab",
         },

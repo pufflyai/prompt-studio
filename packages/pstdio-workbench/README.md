@@ -32,7 +32,7 @@ Layout contributions are the glue between a region and a view. They declare wher
 Pin a renderer to a region as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare a `region`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
 
 - Register with `layout.registerWidget()`
-- Set `singleton: true` for one placement total, such as a tree, sidebar, or status view.
+- Set `singleton: true` for one placement total, such as a tree, sidenav, or status view.
 - Non-singleton widgets default to `reuse: "resource"`: one placement per resource URI, with no-resource opens reusing the widget placement.
 - Set `reuse: "none"` for scratch, untitled, or transient views where every open should create a new placement.
 
@@ -333,8 +333,8 @@ Panels with tabs are paired with a `<panel>-header` region that the workbench re
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- |
 | `nav`              | Nav Chrome across the resource-owned column  | Breadcrumbs, history, resource actions, region controls       |
 | `activity`         | Optional rail on the leading edge            | Top-level mode or workspace switching                         |
-| `sidebar-header`   | Header above `sidebar`                       | Project brand and primary navigation actions                  |
-| `sidebar`          | Leading Sidebar                              | Navigation trees, registries, outlines, resource lists        |
+| `sidenav-header`   | Header above `sidenav`                       | Project brand and primary navigation actions                  |
+| `sidenav`          | Leading Sidenav                              | Navigation trees, registries, outlines, resource lists        |
 | `main-header`      | Header above the Main Panel                  | Main Panel tabs and controls                                  |
 | `main-left-menu`   | Menu inside the Main Panel's leading edge    | Contextual navigation and document outlines                   |
 | `main`             | Central Main Panel                           | Editors, detail pages, dashboards, primary resource views     |
@@ -350,6 +350,6 @@ The command palette, toast notifications, and resize handles are workbench chrom
 
 ## Header Actions
 
-Each region header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(region)` and `headerTrailingMenuPath(region)`. Nav Chrome reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. It keeps history, the breadcrumb trail, the trailing breadcrumb-action slot, and Sidebar/Secondary/Side visibility controls mounted in that order. Workbench modules can register commands and add menu actions to those paths without moving navigation into a Panel Header.
+Each region header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(region)` and `headerTrailingMenuPath(region)`. Nav Chrome reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. It keeps history, the breadcrumb trail, the trailing breadcrumb-action slot, and Sidenav/Secondary/Side visibility controls mounted in that order. Workbench modules can register commands and add menu actions to those paths without moving navigation into a Panel Header.
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.

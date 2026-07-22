@@ -4,7 +4,7 @@ export const dashboardWidgetIds = {
   tickets: "dashboard-workbench.tickets",
   workspaces: "dashboard-workbench.workspaces",
   workspace: "dashboard-workbench.workspace",
-  ticketSidebar: "dashboard-workbench.ticket-sidebar",
+  ticketSidenav: "dashboard-workbench.ticket-sidenav",
   sessions: "dashboard-workbench.sessions",
   extensionRoute: "dashboard-workbench.extension-route",
   status: "dashboard-workbench.status",

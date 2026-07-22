@@ -8,7 +8,7 @@ import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 
 const PROJECT_ID = "demo-project";
 
-// Stub webview wiring — the story only exercises the sidebar icon path, the panel
+// Stub webview wiring — the story only exercises the sidenav icon path, the panel
 // body itself is not rendered.
 const stubWebview = (id: string) => ({
   entry: {
@@ -71,7 +71,7 @@ workbench.registerModule({
       projectId: PROJECT_ID,
     });
 
-    // Pop the settings overlay so the icon-bearing sidebar is the focus of the story.
+    // Pop the settings overlay so the icon-bearing sidenav is the focus of the story.
     void ctx.resources.openResource(
       settingsPanelResource({ id: "demo.ticketStatuses", title: "Ticket statuses", icon: "list-checks" }),
     );
@@ -89,7 +89,7 @@ export default meta;
 
 type Story = StoryObj;
 
-// Sidebar shows panels with declared icons (`list-checks`, `tag`) alongside one
+// Sidenav shows panels with declared icons (`list-checks`, `tag`) alongside one
 // that omits `icon` and falls back to `Sliders`.
 export const Default: Story = {
   render: () => (

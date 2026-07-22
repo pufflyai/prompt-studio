@@ -28,7 +28,7 @@ type DashboardProjectSelectionContext = {
 };
 
 const projectSelectionContentRegions = [
-  "sidebar",
+  "sidenav",
   "main-left-menu",
   "main",
   "main-right-menu",
@@ -180,8 +180,8 @@ const selectOnlySyncedProject = (
   resetProjectModeOnProjectChange(ctx, undefined, projects[0].id);
   selectDashboardProject(selectedProjectContext, projects[0], persistence);
   closeProjectSelectionOverlays(ctx);
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   }
   return true;
 };
@@ -286,8 +286,8 @@ const registerProjects = (
       resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
       selectDashboardProject(selectedProjectContext, project, persistence);
       closeProjectSelectionOverlays(ctx);
-      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-        ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+        ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
       }
       // The bootstrap module subscribes to selection changes and runs the
       // landing flow (restore the project's last view or fall back to start),

@@ -4,7 +4,7 @@ import { dashboardHelpMenuPath } from "./commands";
 
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
 
-// Builds the project navigation tree shown in the Sidebar while the
+// Builds the project navigation tree shown in the Sidenav while the
 // "project" mode is active.
 export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) => {
   ctx.renderers.registerTreeRenderer({
@@ -82,9 +82,9 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
   ctx.layout.registerWidget({
     id: dashboardNavigationTreeViewId,
     title: "Acme",
-    region: "sidebar",
+    region: "sidenav",
     rendererId: dashboardNavigationTreeViewId,
   });
-  ctx.layout.clearRegion("sidebar");
+  ctx.layout.clearRegion("sidenav");
   ctx.layout.openWidget(dashboardNavigationTreeViewId);
 };

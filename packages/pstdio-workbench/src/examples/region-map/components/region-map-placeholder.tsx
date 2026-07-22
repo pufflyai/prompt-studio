@@ -63,7 +63,7 @@ export const RegionMapPlaceholder = (props: RegionMapPlaceholderProps) => {
   const isHeaderRegion =
     region === "nav" ||
     region === "main-header" ||
-    region === "sidebar-header" ||
+    region === "sidenav-header" ||
     region === "secondary-header" ||
     region === "side-header";
 

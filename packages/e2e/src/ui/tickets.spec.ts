@@ -523,7 +523,7 @@ test.describe("Ticket list additional coverage", () => {
     await expect(page.getByText("No tags selected")).not.toBeVisible();
   });
 
-  test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {
+  test("toggles a tag on a ticket from the detail sidenav", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
 

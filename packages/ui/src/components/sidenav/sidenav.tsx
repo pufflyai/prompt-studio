@@ -1,11 +1,12 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { useEffect, useRef } from "react";
+import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "../tree-list/tree-list";
-import { useSidebarStore } from "./sidebar.store";
-import type { SidebarProps } from "./sidebar.types";
-import { SidebarFooter } from "./sidebar-footer";
-import { SidebarHeader } from "./sidebar-header";
+import { useSidenavStore } from "./sidenav.store";
+import type { SidenavProps } from "./sidenav.types";
+import { SidenavFooter } from "./sidenav-footer";
+import { SidenavHeader } from "./sidenav-header";
 
 const DEFAULT_WIDTH = 240;
 const DEFAULT_MIN_WIDTH = 200;
@@ -22,12 +23,12 @@ const resolveInitialWidth = (width?: string | number, defaultWidth = DEFAULT_WID
   return defaultWidth;
 };
 
-export const Sidebar = (props: SidebarProps) => {
+export const Sidenav = (props: SidenavProps) => {
   const {
     storageKey,
     sections,
     activeNodeId,
-    backgroundContextActions,
+    contextActions = [],
     header,
     footer,
     width,
@@ -52,12 +53,12 @@ export const Sidebar = (props: SidebarProps) => {
     width: initialWidth,
   };
 
-  const open = useSidebarStore(storageKey, (state) => state.open, initialState);
-  const persistedWidth = useSidebarStore(storageKey, (state) => state.width, initialState);
-  const expandedSections = useSidebarStore(storageKey, (state) => state.expandedSections, initialState);
-  const expandedNodes = useSidebarStore(storageKey, (state) => state.expandedNodes, initialState);
-  const toggleSection = useSidebarStore(storageKey, (state) => state.toggleSection, initialState);
-  const toggleNode = useSidebarStore(storageKey, (state) => state.toggleNode, initialState);
+  const open = useSidenavStore(storageKey, (state) => state.open, initialState);
+  const persistedWidth = useSidenavStore(storageKey, (state) => state.width, initialState);
+  const expandedSections = useSidenavStore(storageKey, (state) => state.expandedSections, initialState);
+  const expandedNodes = useSidenavStore(storageKey, (state) => state.expandedNodes, initialState);
+  const toggleSection = useSidenavStore(storageKey, (state) => state.toggleSection, initialState);
+  const toggleNode = useSidenavStore(storageKey, (state) => state.toggleNode, initialState);
 
   useEffect(() => {
     onOpenChange?.(open);
@@ -70,10 +71,10 @@ export const Sidebar = (props: SidebarProps) => {
 
   const widthCss = resizable ? `${effectiveWidth}px` : (width ?? `${initialWidth}px`);
 
-  return (
+  const content = (
     <Flex
       as="aside"
-      data-testid="sidebar"
+      data-testid="sidenav"
       direction="column"
       position="relative"
       h="100%"
@@ -85,7 +86,7 @@ export const Sidebar = (props: SidebarProps) => {
       borderRightColor="border.subtle"
       bg="bg"
     >
-      <SidebarHeader>{header}</SidebarHeader>
+      <SidenavHeader>{header}</SidenavHeader>
 
       <ScrollArea
         flex="1"
@@ -107,7 +108,6 @@ export const Sidebar = (props: SidebarProps) => {
               expandedSectionIds={expandedSections}
               expandedNodeIds={expandedNodes}
               activeNodeId={activeNodeId}
-              backgroundContextActions={backgroundContextActions}
               rowVariant="compact"
               sectionGap="md"
               nodeGap="1px"
@@ -122,7 +122,13 @@ export const Sidebar = (props: SidebarProps) => {
         </Box>
       </ScrollArea>
 
-      <SidebarFooter>{footer}</SidebarFooter>
+      <SidenavFooter>{footer}</SidenavFooter>
     </Flex>
+  );
+
+  return (
+    <ResourceContextMenu actions={contextActions} closeOnSelect={false}>
+      {content}
+    </ResourceContextMenu>
   );
 };

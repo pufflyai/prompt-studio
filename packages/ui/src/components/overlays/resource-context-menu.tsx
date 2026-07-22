@@ -22,6 +22,8 @@ interface ResourceContextMenuProps {
   positioning?: MenuRootProps["positioning"];
   /** Keep the menu open after selecting an item — useful for menus that toggle several entries in one pass. */
   closeOnSelect?: MenuRootProps["closeOnSelect"];
+  /** Preserve the trigger tree while actions load or change. */
+  keepMountedWhenEmpty?: boolean;
 }
 
 export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
@@ -32,37 +34,40 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     contentBackground = "bg",
     positioning = { placement: "bottom-start" },
     closeOnSelect,
+    keepMountedWhenEmpty = false,
   } = props;
 
-  if (actions.length === 0) {
+  if (actions.length === 0 && !keepMountedWhenEmpty) {
     return <>{children}</>;
   }
 
   return (
     <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect}>
       <Menu.ContextTrigger asChild>{children}</Menu.ContextTrigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content minW={contentMinWidth} bg={contentBackground}>
-            {actions.map((action) => (
-              <Fragment key={action.key}>
-                {action.separatorBefore ? <Menu.Separator /> : null}
-                <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
-                  <ListRow
-                    asChild
-                    variant="full-width"
-                    label={action.label}
-                    icon={action.icon}
-                    endContent={action.endContent}
-                    disabled={action.isDisabled}
-                    onActivate={action.onClick}
-                  />
-                </Menu.Item>
-              </Fragment>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
+      {actions.length > 0 ? (
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content minW={contentMinWidth} bg={contentBackground}>
+              {actions.map((action) => (
+                <Fragment key={action.key}>
+                  {action.separatorBefore ? <Menu.Separator /> : null}
+                  <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
+                    <ListRow
+                      asChild
+                      variant="full-width"
+                      label={action.label}
+                      icon={action.icon}
+                      endContent={action.endContent}
+                      disabled={action.isDisabled}
+                      onActivate={action.onClick}
+                    />
+                  </Menu.Item>
+                </Fragment>
+              ))}
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      ) : null}
     </Menu.Root>
   );
 };

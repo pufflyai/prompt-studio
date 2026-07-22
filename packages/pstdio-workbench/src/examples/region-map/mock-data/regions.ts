@@ -6,8 +6,8 @@ export const regionMapRendererId = "region-map.placeholder";
 export const regionLabels = {
   nav: "Nav (top chrome)",
   activity: "Activity bar",
-  "sidebar-header": "Sidebar header",
-  sidebar: "Sidebar",
+  "sidenav-header": "Sidenav header",
+  sidenav: "Sidenav",
   "main-header": "Main header region",
   "main-left-menu": "Main left menu",
   main: "Main editor region",

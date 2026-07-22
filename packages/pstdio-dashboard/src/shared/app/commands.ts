@@ -19,5 +19,5 @@ export const dashboardCommandIds = {
   openWorkspaceTerminal: "dashboard.openWorkspaceTerminal",
   openWorkspaces: "dashboard.openWorkspaces",
   productInfo: "dashboard.productInfo",
-  selectWorkspaceSidebarSession: "dashboard.selectWorkspaceSidebarSession",
+  selectWorkspaceSidenavSession: "dashboard.selectWorkspaceSidenavSession",
 } as const;

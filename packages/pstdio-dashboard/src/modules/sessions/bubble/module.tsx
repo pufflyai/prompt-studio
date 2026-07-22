@@ -64,11 +64,11 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
   };
 };
 
-const selectSidebarSessionNode = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef | undefined) => {
+const selectSidenavSessionNode = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef | undefined) => {
   const nodeId = resource?.kind === "session" ? resource.uri : undefined;
 
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, nodeId);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
   }
 };
 
@@ -132,7 +132,7 @@ const openNewSessionDraft = (
   const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
-  selectSidebarSessionNode(ctx, undefined);
+  selectSidenavSessionNode(ctx, undefined);
 
   if (ctx.modes.getActiveModeId() === "sessions" && ctx.layout.getWidget(dashboardWidgetIds.session)) {
     return ctx.resources.openResource(draftResource, { replaceActive: true });
@@ -160,11 +160,11 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
         const {
           resource,
           replaceWidgetId,
-          selectWorkspaceSidebar = true,
+          selectWorkspaceSidenav = true,
         } = (args ?? {}) as {
           resource?: ResourceRef;
           replaceWidgetId?: string;
-          selectWorkspaceSidebar?: boolean;
+          selectWorkspaceSidenav?: boolean;
         };
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
@@ -174,13 +174,13 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
           title: resource.label,
           replaceWidgetId: replaceWidgetId ?? getReusableSessionPlacementId(ctx),
         });
-        selectSidebarSessionNode(ctx, resource);
+        selectSidenavSessionNode(ctx, resource);
         if (
-          selectWorkspaceSidebar &&
+          selectWorkspaceSidenav &&
           ctx.modes.getActiveModeId() === "workspace" &&
-          ctx.commands.getCommand(dashboardCommandIds.selectWorkspaceSidebarSession)
+          ctx.commands.getCommand(dashboardCommandIds.selectWorkspaceSidenavSession)
         ) {
-          await ctx.commands.executeCommand(dashboardCommandIds.selectWorkspaceSidebarSession, {
+          await ctx.commands.executeCommand(dashboardCommandIds.selectWorkspaceSidenavSession, {
             resource,
           });
         }

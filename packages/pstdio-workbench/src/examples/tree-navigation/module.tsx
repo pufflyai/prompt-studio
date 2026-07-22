@@ -133,7 +133,7 @@ export const createTreeNavigationWorkbench = () => {
       ctx.layout.registerWidget({
         id: NAV_TREE_ID,
         title: "Tree navigation",
-        region: "sidebar",
+        region: "sidenav",
         rendererId: NAV_TREE_ID,
         regionSize: { defaultPx: 240, minPx: 200, maxPx: 320 },
       });

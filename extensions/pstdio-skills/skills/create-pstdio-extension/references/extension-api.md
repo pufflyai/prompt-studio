@@ -103,7 +103,7 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
 | `routes`, `views`, `treeItems`                    | Custom webview pages, view widgets, and route or command navigation entries.      |
-| `dataRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidebar entry.       |
+| `dataRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidenav entry.       |
 | `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
 | `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
 | `controlsRenderers`                               | Reusable inspector/property renderers (ParamEditor, command-backed), placed by a view. |
@@ -194,10 +194,10 @@ Load commands return `{ content }` for markdown/code text, `{ dataUrl }` for ima
 `treeRenderers` need `title` and a valid `bodyCommand`; `childrenCommand` and `footerCommand` are optional. Body
 commands return `TreeViewSection[]`. Children and footer commands return `TreeNode[]`.
 
-## Project Sidebar UI
+## Project Sidenav UI
 
 For a Planner-style native list or board, define a `dataRenderers` contribution with a query command. The dashboard
-creates the project-sidebar entry from the data renderer; do not add a `treeItems` contribution with
+creates the project-sidenav entry from the data renderer; do not add a `treeItems` contribution with
 `action.kind === "dataRenderer"` because the resource-first dashboard ignores those tree-item actions.
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with

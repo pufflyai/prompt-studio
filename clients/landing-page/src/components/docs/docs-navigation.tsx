@@ -3,10 +3,10 @@ import { ScrollArea, TreeList, type TreeListNavigateEvent, type TreeListNode, ty
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export interface DocsSidebarItem {
+export interface DocsSidenavItem {
   text: string;
   link?: string;
-  items?: DocsSidebarItem[];
+  items?: DocsSidenavItem[];
 }
 
 export interface DocsPaginationItem {
@@ -15,13 +15,13 @@ export interface DocsPaginationItem {
   description?: string;
 }
 
-interface DocsSidebarProps {
+interface DocsSidenavProps {
   title: string;
   emptyMessage?: string;
-  menuItems: DocsSidebarItem[];
+  menuItems: DocsSidenavItem[];
   activeLink: string;
   onSelectLink: (link: string) => void;
-  shouldStartOpen?: (item: DocsSidebarItem) => boolean;
+  shouldStartOpen?: (item: DocsSidenavItem) => boolean;
 }
 
 interface DocsPaginationProps {
@@ -36,10 +36,10 @@ interface DocsPaginationLinkProps {
 
 const DOCS_SECTION_ID = "docs-nav";
 
-const buildItemId = (item: DocsSidebarItem, parentId: string, index: number) =>
+const buildItemId = (item: DocsSidenavItem, parentId: string, index: number) =>
   item.link ?? `${parentId}/${item.text}-${index}`;
 
-const buildNodes = (items: DocsSidebarItem[], parentId: string): TreeListNode[] =>
+const buildNodes = (items: DocsSidenavItem[], parentId: string): TreeListNode[] =>
   items.map((item, index) => {
     const id = buildItemId(item, parentId, index);
     const childItems = item.items ?? [];
@@ -62,9 +62,9 @@ const buildNodes = (items: DocsSidebarItem[], parentId: string): TreeListNode[] 
   });
 
 const collectInitialExpandedIds = (
-  items: DocsSidebarItem[],
+  items: DocsSidenavItem[],
   parentId: string,
-  shouldStartOpen?: (item: DocsSidebarItem) => boolean,
+  shouldStartOpen?: (item: DocsSidenavItem) => boolean,
 ): string[] => {
   const result: string[] = [];
 
@@ -121,7 +121,7 @@ const DocsPaginationLink = (props: DocsPaginationLinkProps) => {
   );
 };
 
-export const DocsSidebar = (props: DocsSidebarProps) => {
+export const DocsSidenav = (props: DocsSidenavProps) => {
   const { title, emptyMessage, menuItems, activeLink, onSelectLink, shouldStartOpen } = props;
 
   const sections: TreeListSection[] = [

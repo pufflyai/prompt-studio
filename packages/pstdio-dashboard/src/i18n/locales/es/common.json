@@ -283,7 +283,7 @@
       "title": "Barra de contexto",
       "content": "La barra de contexto te permite cambiar entre paneles rápidamente. Arrástrala a donde mejor te funcione."
     },
-    "sidebar": {
+    "sidenav": {
       "title": "Barra lateral de espacios de trabajo",
       "content": "Ve el estado de todos tus espacios de trabajo de un vistazo. Las notificaciones resaltan cuáles necesitan atención. Archiva los espacios de trabajo fusionados para mantener tu barra lateral limpia."
     },

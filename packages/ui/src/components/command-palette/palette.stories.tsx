@@ -74,7 +74,7 @@ const baseEntries: PaletteEntry[] = [
   {
     id: "session:session-1",
     mode: "search",
-    label: "Plan project sidebar updates",
+    label: "Plan project sidenav updates",
     searchText: "session chat agent",
     icon: <MessageCircle size={14} />,
     onActivate: () => undefined,

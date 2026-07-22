@@ -283,7 +283,7 @@
       "title": "Barre de contexte",
       "content": "La barre de contexte vous permet de basculer rapidement entre les panneaux. Faites-la glisser là où cela vous convient le mieux."
     },
-    "sidebar": {
+    "sidenav": {
       "title": "Barre latérale des espaces de travail",
       "content": "Visualisez l'état de tous vos espaces de travail d'un coup d'œil. Les notifications mettent en évidence ceux qui nécessitent votre attention. Archivez les espaces de travail fusionnés pour garder votre barre latérale propre."
     },

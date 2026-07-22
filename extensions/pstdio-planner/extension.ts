@@ -191,7 +191,7 @@ export default defineExtension({
       resourceKind: "ticket",
       fileRenderer: "ticketContent",
     },
-    // Files tree in the selected ticket's Sidebar resource section. Selecting a node
+    // Files tree in the selected ticket's Sidenav resource section. Selecting a node
     // swaps the editor's document in place (it runs select-ticket-document).
     ticketFiles: {
       title: l10n("views.ticketFiles.title", "Files"),

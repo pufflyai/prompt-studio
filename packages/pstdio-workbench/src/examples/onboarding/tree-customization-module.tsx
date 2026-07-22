@@ -118,7 +118,7 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: TREE_ID,
       title: "Customizable tree",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: TREE_ID,
     });

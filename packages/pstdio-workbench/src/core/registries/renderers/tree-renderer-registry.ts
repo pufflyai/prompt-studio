@@ -57,6 +57,8 @@ export interface TreeNode {
   hiddenByDefault?: boolean;
   /** When true, the node (e.g. a header/footer row) opts in to the tree's hide/show customization menu. */
   canHide?: boolean;
+  /** When false, the node stays fixed within its Sidenav group. */
+  canReorder?: boolean;
 }
 
 export interface TreeSectionEmptyState {
@@ -75,6 +77,8 @@ export interface TreeViewSection {
   hiddenByDefault?: boolean;
   /** When true, the section (category) opts in to the tree's hide/show customization menu. */
   canHide?: boolean;
+  /** When false, the section stays fixed within the Sidenav main region. */
+  canReorder?: boolean;
 }
 
 export interface TreeRendererContribution {

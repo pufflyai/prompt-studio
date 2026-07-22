@@ -54,7 +54,7 @@ export const createWorkbenchSettingsModule = (
       ctx.layout.registerWidget({
         id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
         title: `${title} navigation`,
-        region: "sidebar",
+        region: "sidenav",
         singleton: true,
         rendererId: NAV_TREE_ID,
       });

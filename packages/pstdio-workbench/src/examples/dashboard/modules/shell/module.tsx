@@ -7,12 +7,12 @@ import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
-import { DashboardSidebarHeader } from "./components/dashboard-sidebar-header";
+import { DashboardSidenavHeader } from "./components/dashboard-sidenav-header";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { StatusWidget } from "./components/status-widget";
 import { registerProjectNavigation } from "./project-nav";
 
-const SIDEBAR_HEADER_WIDGET_ID = "dashboard.sidebarHeader";
+const SIDENAV_HEADER_WIDGET_ID = "dashboard.sidenavHeader";
 
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
@@ -24,15 +24,15 @@ const dashboardResourceKinds = [
 
 const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
-    id: SIDEBAR_HEADER_WIDGET_ID,
+    id: SIDENAV_HEADER_WIDGET_ID,
     title: "Project brand",
-    region: "sidebar-header",
+    region: "sidenav-header",
     singleton: true,
-    rendererId: SIDEBAR_HEADER_WIDGET_ID,
+    rendererId: SIDENAV_HEADER_WIDGET_ID,
   });
   ctx.renderers.registerRenderer({
-    id: SIDEBAR_HEADER_WIDGET_ID,
-    render: (input) => <DashboardSidebarHeader workbench={input.workbench} />,
+    id: SIDENAV_HEADER_WIDGET_ID,
+    render: (input) => <DashboardSidenavHeader workbench={input.workbench} />,
   });
 
   ctx.layout.registerWidget(
@@ -67,7 +67,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <ExtensionRouteWidget input={input} />,
   });
 
-  ctx.layout.openWidget(SIDEBAR_HEADER_WIDGET_ID, { pinned: true });
+  ctx.layout.openWidget(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
 };
 

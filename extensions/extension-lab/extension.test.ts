@@ -45,7 +45,7 @@ describe("extension-lab workbench attachments", () => {
       layout: {
         reset: true,
         open: [
-          { target: "workbench.left", view: "labSidebar", pinned: true },
+          { target: "workbench.left", view: "labSidenav", pinned: true },
           { target: "workbench.main", view: "labOverview" },
         ],
       },
@@ -55,7 +55,7 @@ describe("extension-lab workbench attachments", () => {
         reset: ["workbench.main"],
       },
     });
-    expect(extension.views?.labSidebar?.webview.entry.path).toBe("./src/views/lab-sidebar.tsx");
+    expect(extension.views?.labSidenav?.webview.entry.path).toBe("./src/views/lab-sidenav.tsx");
     expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
     expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");
     expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");

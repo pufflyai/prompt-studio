@@ -108,7 +108,7 @@ describe("createWorkbenchModeRegistry", () => {
       region: "status",
       rendererId: "workbench.status",
     });
-    layout.registerWidget({ id: "sessions.tree", title: "Sessions", region: "sidebar", rendererId: "sessions.tree" });
+    layout.registerWidget({ id: "sessions.tree", title: "Sessions", region: "sidenav", rendererId: "sessions.tree" });
     layout.registerWidget({ id: "sessions.chat", title: "Session", region: "main", rendererId: "sessions.chat" });
     layout.openWidget("workbench.status", { pinned: true });
 
@@ -129,13 +129,13 @@ describe("createWorkbenchModeRegistry", () => {
 
     registry.setActiveMode("sessions");
 
-    expect(layout.getLayout().regions.sidebar.widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.sidenav.widgets).toHaveLength(1);
     expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
 
     registry.setActiveMode("zen");
 
     expect(layout.getLayout().regions.status.widgets).toHaveLength(1);
-    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
     expect(layout.getLayout().regions.main.widgets).toEqual([]);
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
   });

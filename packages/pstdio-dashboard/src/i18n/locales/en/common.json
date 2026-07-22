@@ -283,9 +283,9 @@
       "title": "Context Bar",
       "content": "The context bar lets you switch between panes quickly. Drag it wherever works best for you."
     },
-    "sidebar": {
-      "title": "Workspace Sidebar",
-      "content": "See the status of all your workspaces at a glance. Notifications highlight which ones need attention. Archive merged workspaces to keep your sidebar clean."
+    "sidenav": {
+      "title": "Workspace Sidenav",
+      "content": "See the status of all your workspaces at a glance. Notifications highlight which ones need attention. Archive merged workspaces to keep your sidenav clean."
     },
     "multiRepo": {
       "title": "Multi-Repo Support",

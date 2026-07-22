@@ -71,7 +71,7 @@ A `default` workspace is auto-created on first use in local mode.
 
 ### Dashboard
 
-The dashboard sidebar shows a workspace picker. Click a workspace to switch, use the input field to create new ones.
+The dashboard sidenav shows a workspace picker. Click a workspace to switch, use the input field to create new ones.
 
 ## CLI
 

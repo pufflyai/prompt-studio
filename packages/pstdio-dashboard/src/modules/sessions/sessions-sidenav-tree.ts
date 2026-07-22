@@ -4,13 +4,13 @@ import { createDashboardSessions, type DashboardSession } from "./data/dashboard
 
 type SessionNodeTarget = "resource" | "side";
 
-interface BuildSessionsSidebarSectionsInput {
+interface BuildSessionsSidenavSectionsInput {
   sessions: DashboardSession[];
   workspace?: ResourceRef;
   nodeTarget?: SessionNodeTarget;
 }
 
-interface CreateSessionsSidebarSectionsInput extends Omit<BuildSessionsSidebarSectionsInput, "sessions"> {
+interface CreateSessionsSidenavSectionsInput extends Omit<BuildSessionsSidenavSectionsInput, "sessions"> {
   projectId?: string;
 }
 
@@ -103,7 +103,7 @@ const buildSessionGroupChildren = (sessions: DashboardSession[], target: Session
   return children;
 };
 
-export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSectionsInput): TreeViewSection[] => {
+export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSectionsInput): TreeViewSection[] => {
   const nodeTarget = input.nodeTarget ?? "resource";
   const workspaceId = getWorkspaceResourceId(input.workspace);
   const sessions = workspaceId
@@ -126,8 +126,8 @@ export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSections
   ];
 };
 
-export const createSessionsSidebarSections = (input: CreateSessionsSidebarSectionsInput): TreeViewSection[] =>
-  buildSessionsSidebarSections({
+export const createSessionsSidenavSections = (input: CreateSessionsSidenavSectionsInput): TreeViewSection[] =>
+  buildSessionsSidenavSections({
     ...input,
     sessions: createDashboardSessions(input.projectId),
   });

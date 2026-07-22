@@ -127,7 +127,7 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
               icon: "PanelLeft",
               children: [
                 { id: "regions.main", label: "main", icon: "PanelTop" },
-                { id: "regions.sidebar", label: "sidebar", icon: "PanelLeft" },
+                { id: "regions.sidenav", label: "sidenav", icon: "PanelLeft" },
                 { id: "regions.status", label: "status", icon: "PanelBottom" },
               ],
             },
@@ -168,7 +168,7 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.tree",
       title: "Docs",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: "docs.tree",
     });
@@ -259,7 +259,7 @@ export const createResourcesModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.tree",
       title: "Docs",
-      region: "sidebar",
+      region: "sidenav",
       rendererId: "docs.tree",
     });
     ctx.layout.openWidget("docs.tree");
@@ -286,7 +286,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
         modeCtx.layout.registerWidget({
           id: "docs.tree",
           title: "Docs",
-          region: "sidebar",
+          region: "sidenav",
           rendererId: "docs.tree",
         });
         modeCtx.layout.openWidget("docs.tree");

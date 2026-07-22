@@ -3,8 +3,8 @@ import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
-import { createSidebarModule } from "../sidebar/module";
+import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { createSidenavModule } from "../sidenav/module";
 import { createExtensionsModule } from "./module";
 import {
   emptyAppearance,
@@ -29,8 +29,8 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labSidebar",
+      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.extension-lab.labSidenav",
       ]);
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
@@ -83,7 +83,7 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio-core-tickets.ticket");
 
-      expect(workbench.layout.getLayout().regions.sidebar.widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
     } finally {
       disposable.dispose();
@@ -91,7 +91,7 @@ describe("createExtensionsModule mode layout", () => {
     }
   });
 
-  test("contributes extension tree items only to the project sidebar", async () => {
+  test("contributes extension tree items only to the project sidenav", async () => {
     const loadMetadata = mock(async () => metadata);
     const workbench = createWorkbenchCore();
 
@@ -101,10 +101,10 @@ describe("createExtensionsModule mode layout", () => {
     try {
       await flushMicrotasks();
 
-      const projectNodeIds = (await getSidebarContributionSections(workbench, "project"))
+      const projectNodeIds = (await getSidenavContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
-      const workspaceNodeIds = (await getSidebarContributionSections(workbench, "workspace"))
+      const workspaceNodeIds = (await getSidenavContributionSections(workbench, "workspace"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
@@ -123,13 +123,13 @@ describe("createExtensionsModule mode layout", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.modes.setActiveMode("project");
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSidenavModule());
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 
     try {
       await flushMicrotasks();
 
-      const nodeIds = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar))
+      const nodeIds = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 

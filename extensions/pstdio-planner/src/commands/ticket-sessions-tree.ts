@@ -1,6 +1,6 @@
 import type { ResourceAnchor, TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
 
-// The shape the host's `ctx.sessions.list()` returns; only the fields the sidebar needs.
+// The shape the host's `ctx.sessions.list()` returns; only the fields the sidenav needs.
 export interface TicketSession {
   id: string;
   title: string;
@@ -12,7 +12,7 @@ export interface TicketSession {
 }
 
 // Refine / Break into sub-tickets / Run attempt sessions anchor themselves to the ticket via a
-// `type: "ticket"` entry in their anchors, so the sidebar lists exactly the ticket's own sessions.
+// `type: "ticket"` entry in their anchors, so the sidenav lists exactly the ticket's own sessions.
 const isAnchoredToTicket = (session: TicketSession, ticketId: string) =>
   (session.anchors_json ?? []).some((anchor) => anchor.type === "ticket" && anchor.id === ticketId);
 

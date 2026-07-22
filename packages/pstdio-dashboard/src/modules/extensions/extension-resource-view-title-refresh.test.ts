@@ -92,7 +92,7 @@ describe("registerExtensionResourceView title refresh", () => {
     workbench.layout.registerWidget({
       id: "left.scratch",
       title: "Scratch",
-      region: "sidebar",
+      region: "sidenav",
       rendererId: "left.scratch",
       singleton: false,
     });
@@ -140,7 +140,7 @@ describe("registerExtensionResourceView title refresh", () => {
         companionBeforeSave?.resource,
       );
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().regions.sidebar.widgets[0]?.widgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().regions.sidenav.widgets[0]?.widgetId).toBe(scratch.widgetId);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {

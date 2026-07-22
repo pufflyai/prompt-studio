@@ -52,10 +52,10 @@ const metadata = {
   ],
   views: [
     {
-      id: "extension-lab.labSidebar",
+      id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
       slotId: "workbench.left",
-      title: "Lab sidebar",
+      title: "Lab sidenav",
       role: "location",
       webview,
     },
@@ -105,14 +105,14 @@ describe("refreshOpenWorkbenchExtensionWebviews", () => {
       rendererId: "webview:bridge",
     });
     workbench.layout.registerWidget({
-      id: "extension-lab.labSidebar",
-      title: "Old sidebar",
-      region: "sidebar",
+      id: "extension-lab.labSidenav",
+      title: "Old sidenav",
+      region: "sidenav",
       rendererId: "webview:bridge",
     });
 
     workbench.layout.openWidget("extension-lab.labPage", { title: "Old route" });
-    workbench.layout.openWidget("extension-lab.labSidebar", { title: "Old sidebar" });
+    workbench.layout.openWidget("extension-lab.labSidenav", { title: "Old sidenav" });
     workbench.layout.activateWidget("extension-lab.labPage");
 
     refreshOpenWorkbenchExtensionWebviews(workbench, metadata);
@@ -121,9 +121,9 @@ describe("refreshOpenWorkbenchExtensionWebviews", () => {
     expect(layout.activeWidgetId).toBe("extension-lab.labPage");
     expect(layout.regions.main.widgets).toHaveLength(1);
     expect(layout.regions.main.widgets[0]).toMatchObject({ contributionId: "extension-lab.labPage", title: "Lab" });
-    expect(layout.regions.sidebar.widgets[0]).toMatchObject({
-      contributionId: "extension-lab.labSidebar",
-      title: "Lab sidebar",
+    expect(layout.regions.sidenav.widgets[0]).toMatchObject({
+      contributionId: "extension-lab.labSidenav",
+      title: "Lab sidenav",
     });
   });
 });

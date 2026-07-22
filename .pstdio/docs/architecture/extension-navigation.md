@@ -19,7 +19,7 @@ Primary resource routes are registered through helpers instead of raw `registerO
 
 `packages/pstdio-dashboard/src/shared/workbench/route-helper.ts`
 
-A mode-aware primary route. On open it activates the route mode, runs `beforeOpen` side-effect hooks (breadcrumb, sidebar sync — these cannot change navigable identity), and opens the **domain** resource it was handed into the route surface with `replaceActive` forwarded. Because it always places the resource it receives, a root can never silently become a detail. A `requiresProject` guard (default true) sends a project-less open to project selection.
+A mode-aware primary route. On open it activates the route mode, runs `beforeOpen` side-effect hooks (breadcrumb, sidenav sync — these cannot change navigable identity), and opens the **domain** resource it was handed into the route surface with `replaceActive` forwarded. Because it always places the resource it receives, a root can never silently become a detail. A `requiresProject` guard (default true) sends a project-less open to project selection.
 
 Used by: sessions, workspaces (root in project mode, detail in workspace mode), and extension data-renderer **boards** (`dashboard-view` resources). Boards opt out of the project guard to preserve their prior behavior.
 
@@ -29,7 +29,7 @@ Used by: sessions, workspaces (root in project mode, detail in workspace mode), 
 
 For extension views that declare a `resourceKind` (e.g. the tickets editor). The opener keeps the **domain** resource (`ticket`, `session`, …) as the navigable identity, mounts the primary view widget in `main`, and mounts same-kind companion views (e.g. a properties panel in `main-right`) bound to the same resource. Primary + companions are resolved from the manifest via `groupResourceEditorViews`.
 
-If metadata includes a mode whose `resourceKind` matches the opened resource, the opener activates that mode instead of project mode. Resource-bound mode layout entries are placement declarations: when the mode layout opens a same-kind view, the opener binds that view to the active resource and places it in the declared target. `workbench.left` means the main left sidebar; `workbench.main.left` remains the main-left workbench area.
+If metadata includes a mode whose `resourceKind` matches the opened resource, the opener activates that mode instead of project mode. Resource-bound mode layout entries are placement declarations: when the mode layout opens a same-kind view, the opener binds that view to the active resource and places it in the declared target. `workbench.left` means the main left sidenav; `workbench.main.left` remains the main-left workbench area.
 
 History records the domain resource URI (e.g. `dashboard-workbench://ticket/PS-10`) — never an `extension-view` wrapper. Companion side panels live in a projection area, not the primary anchor, so they are never recorded as primary history entries.
 

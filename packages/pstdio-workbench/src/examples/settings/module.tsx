@@ -32,7 +32,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       preferences: [
         { name: "demo.appearance.theme", label: "Theme" },
         { name: "demo.appearance.density", label: "Density" },
-        { name: "demo.appearance.badges", label: "Sidebar badges" },
+        { name: "demo.appearance.badges", label: "Sidenav badges" },
       ],
     });
 

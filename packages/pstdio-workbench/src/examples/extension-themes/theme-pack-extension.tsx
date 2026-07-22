@@ -73,7 +73,7 @@ const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
         </HStack>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           This extension ships VS Code-compatible color themes. The workbench maps their tokens onto its chrome, so
-          picking one restyles the activity bar, sidebars, panels, and editor surface together.
+          picking one restyles the activity bar, sidenavs, panels, and editor surface together.
         </Text>
       </Stack>
 

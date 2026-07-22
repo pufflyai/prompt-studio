@@ -34,7 +34,7 @@ const allDocs: DocEntry[] = Object.values(docModules)
   }))
   .sort((a, b) => a.order - b.order);
 
-// Build sidebar menu grouped by section
+// Build sidenav menu grouped by section
 const sections = new Map<string, DocEntry[]>();
 for (const doc of allDocs) {
   const group = sections.get(doc.section) ?? [];

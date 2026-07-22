@@ -575,7 +575,7 @@ describe("checkExtensionSource legacy navigation", () => {
       `export default {
         navigation: {
           lab: {
-            slot: "project.sidebarNav",
+            slot: "project.sidenavNav",
             label: "Lab",
             route: "lab",
           },

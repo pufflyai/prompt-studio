@@ -189,7 +189,7 @@ export default defineExtension({
 });
 ```
 
-## Add A Route And Sidebar Link
+## Add A Route And Sidenav Link
 
 ```ts
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";

@@ -5,8 +5,8 @@ import { resolveUniqueWidgetId } from "./widget-id";
 export const workbenchRegions = [
   "nav",
   "activity",
-  "sidebar-header",
-  "sidebar",
+  "sidenav-header",
+  "sidenav",
   "main-header",
   "main-left-menu",
   "main",
@@ -222,8 +222,8 @@ export const createDefaultWorkbenchLayout = (
     regions: {
       nav: createRegion("nav"),
       activity: createRegion("activity"),
-      "sidebar-header": createRegion("sidebar-header"),
-      sidebar: createRegion("sidebar"),
+      "sidenav-header": createRegion("sidenav-header"),
+      sidenav: createRegion("sidenav"),
       "main-header": createRegion("main-header"),
       "main-left-menu": createRegion("main-left-menu"),
       main: createRegion("main"),

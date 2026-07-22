@@ -22,7 +22,7 @@ describe("installWorkbenchTreeRenderer", () => {
       widget: workbench.layout.registerWidget({
         id: "project.tree",
         title: "Project",
-        region: "sidebar",
+        region: "sidenav",
         rendererId: "project.tree",
       }) as never,
       placement: { widgetId: "project.tree", contributionId: "project.tree", title: "Project" },

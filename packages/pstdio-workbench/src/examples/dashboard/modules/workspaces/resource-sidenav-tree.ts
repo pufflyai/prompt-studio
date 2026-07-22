@@ -96,29 +96,29 @@ const createSessionsSection = (ticket: (typeof dashboardTickets)[number]): TreeV
   })),
 });
 
-const createResourceSidebarSections = (resource: ResourceRef | undefined) => {
+const createResourceSidenavSections = (resource: ResourceRef | undefined) => {
   const ticket = resolveTicketForResource(resource);
 
   return [createResourceSection(ticket), createFilesSection(ticket), createSessionsSection(ticket)];
 };
 
-export const registerResourceSidebarTree = (ctx: WorkbenchModuleContributionContext) => {
+export const registerResourceSidenavTree = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
-    id: dashboardWidgetIds.ticketSidebar,
-    title: "Resource sidebar",
+    id: dashboardWidgetIds.ticketSidenav,
+    title: "Resource sidenav",
     // Body reflects the PRIMARY (main) resource, read at call time — it intentionally
     // ignores the tree's own placement resource. The module's onDidChangePrimaryResource
     // subscription calls refresh() after the detail widget lands in main, which is the
     // mechanism that re-derives this body for the new primary (and sets the selection).
-    getBody: () => createResourceSidebarSections(getAnchorResource(ctx.layout.getLayout(), "primary")),
+    getBody: () => createResourceSidenavSections(getAnchorResource(ctx.layout.getLayout(), "primary")),
     getChildren: () => [],
   });
   ctx.layout.registerWidget(
     {
-      id: dashboardWidgetIds.ticketSidebar,
-      title: "Resource sidebar",
-      region: "sidebar",
-      rendererId: dashboardWidgetIds.ticketSidebar,
+      id: dashboardWidgetIds.ticketSidenav,
+      title: "Resource sidenav",
+      region: "sidenav",
+      rendererId: dashboardWidgetIds.ticketSidenav,
       singleton: true,
     },
     { priority: 75 },

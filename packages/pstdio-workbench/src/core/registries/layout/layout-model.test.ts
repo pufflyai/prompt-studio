@@ -7,7 +7,7 @@ describe("updateWidgetPlacement", () => {
     const layout = createLayoutModel();
 
     registerTestWidget(layout, { id: "tickets.editor", title: "Ticket", region: "main" });
-    registerTestWidget(layout, { id: "left.scratch", title: "Scratch", region: "sidebar" });
+    registerTestWidget(layout, { id: "left.scratch", title: "Scratch", region: "sidenav" });
 
     layout.openWidget("tickets.editor", {
       resource: { kind: "ticket", uri: "pstdio://ticket/1", label: "Old title" },
@@ -21,7 +21,7 @@ describe("updateWidgetPlacement", () => {
     expect(updated.title).toBe("New title");
     expect(layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
     expect(layout.getLayout().regions.main.activeWidgetId).toBe("tickets.editor");
-    expect(layout.getLayout().regions.sidebar.activeWidgetId).toBe(scratch.widgetId);
+    expect(layout.getLayout().regions.sidenav.activeWidgetId).toBe(scratch.widgetId);
   });
 });
 
@@ -408,10 +408,10 @@ describe("createLayoutModel persistence", () => {
 
     const layout = createLayoutModel({ persistence });
 
-    expect(layout.getLayout().regions["sidebar-header"]).toBeDefined();
+    expect(layout.getLayout().regions["sidenav-header"]).toBeDefined();
     expect(layout.getLayout().regions["secondary-header"]).toBeDefined();
     expect(layout.getLayout().regions["side-header"]).toBeDefined();
-    expect(layout.getLayout().regions["sidebar-header"].widgets).toEqual([]);
+    expect(layout.getLayout().regions["sidenav-header"].widgets).toEqual([]);
     expect(layout.getLayout().regions["side-header"].widgets).toEqual([]);
   });
 
@@ -501,19 +501,19 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
 
     layout.setPersistenceScope("project:a");
-    layout.setRegionVisible("sidebar", false);
-    layout.setRegionSize("sidebar", 200);
+    layout.setRegionVisible("sidenav", false);
+    layout.setRegionSize("sidenav", 200);
 
     layout.setPersistenceScope("project:b");
-    layout.setRegionSize("sidebar", 360);
+    layout.setRegionSize("sidenav", 360);
 
     layout.setPersistenceScope("project:a");
-    expect(layout.getLayout().regions.sidebar.visible).toBe(false);
-    expect(layout.getLayout().regions.sidebar.size).toBe(200);
+    expect(layout.getLayout().regions.sidenav.visible).toBe(false);
+    expect(layout.getLayout().regions.sidenav.size).toBe(200);
 
     layout.setPersistenceScope("project:b");
-    expect(layout.getLayout().regions.sidebar.visible).toBe(true);
-    expect(layout.getLayout().regions.sidebar.size).toBe(360);
+    expect(layout.getLayout().regions.sidenav.visible).toBe(true);
+    expect(layout.getLayout().regions.sidenav.size).toBe(360);
   });
 
   test("keeps pinned workbench chrome mounted when the persistence scope changes", () => {
@@ -526,27 +526,27 @@ describe("createLayoutModel persistence", () => {
     };
     const layout = createLayoutModel({ persistence });
     registerTestWidget(layout, {
-      id: "dashboard.sidebar-header",
+      id: "dashboard.sidenav-header",
       title: "Project selector",
-      region: "sidebar-header",
+      region: "sidenav-header",
     });
     registerTestWidget(layout, {
       id: "dashboard.project-content",
       title: "Project content",
-      region: "sidebar",
+      region: "sidenav",
     });
 
-    layout.openWidget("dashboard.sidebar-header", { pinned: true });
+    layout.openWidget("dashboard.sidenav-header", { pinned: true });
     layout.openWidget("dashboard.project-content");
     layout.setPersistenceScope("project:a");
 
-    expect(layout.getLayout().regions["sidebar-header"].widgets).toEqual([
-      expect.objectContaining({ contributionId: "dashboard.sidebar-header", pinned: true }),
+    expect(layout.getLayout().regions["sidenav-header"].widgets).toEqual([
+      expect.objectContaining({ contributionId: "dashboard.sidenav-header", pinned: true }),
     ]);
-    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
 
     layout.setPersistenceScope("project:b");
-    expect(layout.getLayout().regions["sidebar-header"].widgets).toHaveLength(1);
+    expect(layout.getLayout().regions["sidenav-header"].widgets).toHaveLength(1);
   });
 
   test("scope === undefined falls back to global behavior", () => {
@@ -560,8 +560,8 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
 
     expect(layout.getPersistenceScope()).toBeUndefined();
-    layout.setRegionSize("sidebar", 280);
-    expect(saved.get("__global__")?.regions.sidebar.size).toBe(280);
+    layout.setRegionSize("sidenav", 280);
+    expect(saved.get("__global__")?.regions.sidenav.size).toBe(280);
   });
 
   test("persists region visibility and resize state through the layout model", () => {
@@ -574,15 +574,15 @@ describe("createLayoutModel persistence", () => {
     };
     const layout = createLayoutModel({ persistence });
 
-    layout.setRegionVisible("sidebar", false);
-    layout.setRegionSize("sidebar", 312);
+    layout.setRegionVisible("sidenav", false);
+    layout.setRegionSize("sidenav", 312);
     layout.setRegionSize("secondary", 280);
 
     const rehydrated = createLayoutModel({ persistence });
 
-    expect(rehydrated.getLayout().regions.sidebar.visible).toBe(false);
-    expect(rehydrated.getLayout().regions.sidebar.size).toBe(312);
-    expect(rehydrated.getRegionSize("sidebar")?.defaultPx).toBe(312);
+    expect(rehydrated.getLayout().regions.sidenav.visible).toBe(false);
+    expect(rehydrated.getLayout().regions.sidenav.size).toBe(312);
+    expect(rehydrated.getRegionSize("sidenav")?.defaultPx).toBe(312);
     expect(rehydrated.getLayout().regions.secondary.size).toBe(280);
   });
 });

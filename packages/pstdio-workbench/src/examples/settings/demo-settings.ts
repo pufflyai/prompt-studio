@@ -22,7 +22,7 @@ export const demoPreferenceSchema = {
       type: "boolean",
       default: true,
       scope: "user",
-      description: "Show count badges on sidebar entries.",
+      description: "Show count badges on sidenav entries.",
     },
     "demo.editor.fontSize": {
       type: "number",

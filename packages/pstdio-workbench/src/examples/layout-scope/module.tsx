@@ -12,8 +12,8 @@ import { useWorkbenchStore } from "../../react";
 
 const PANEL_WIDGET_ID = "layout-scope.example.panel";
 const PANEL_RENDERER_ID = "layout-scope.example.renderer";
-const SIDEBAR_WIDGET_ID = "layout-scope.example.sidebar";
-const SIDEBAR_RENDERER_ID = "layout-scope.example.sidebar-renderer";
+const SIDENAV_WIDGET_ID = "layout-scope.example.sidenav";
+const SIDENAV_RENDERER_ID = "layout-scope.example.sidenav-renderer";
 
 const SCOPES: Array<{ id: LayoutScope | undefined; label: string }> = [
   { id: undefined, label: "global" },
@@ -38,8 +38,8 @@ interface SwitcherPanelProps {
 
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
-  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidebar.size);
-  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidebar.visible);
+  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
+  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
@@ -53,8 +53,8 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
     <Stack p="lg" gap="md">
       <Text textStyle="title/S/semibold">Scoped layout persistence</Text>
       <Text textStyle="paragraph/M/regular">
-        The three scopes are pre-seeded with different sidebar sizes — switch to see each one round-trip. Resize or
-        toggle the sidebar to mutate the active scope; the change persists for that scope only.
+        The three scopes are pre-seeded with different sidenav sizes — switch to see each one round-trip. Resize or
+        toggle the sidenav to mutate the active scope; the change persists for that scope only.
       </Text>
       <HStack gap="sm" wrap="wrap">
         {SCOPES.map((scope) => (
@@ -69,17 +69,17 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
         ))}
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => workbench.layout.setRegionSize("sidebar", (leftSize ?? 240) + 40)}>
-          Sidebar +40
+        <Button size="sm" onClick={() => workbench.layout.setRegionSize("sidenav", (leftSize ?? 240) + 40)}>
+          Sidenav +40
         </Button>
         <Button
           size="sm"
-          onClick={() => workbench.layout.setRegionSize("sidebar", Math.max(160, (leftSize ?? 240) - 40))}
+          onClick={() => workbench.layout.setRegionSize("sidenav", Math.max(160, (leftSize ?? 240) - 40))}
         >
-          Sidebar -40
+          Sidenav -40
         </Button>
         <Button size="sm" onClick={() => workbench.commands.executeCommand("workbench.toggleSideBar")}>
-          Toggle sidebar
+          Toggle sidenav
         </Button>
       </HStack>
       <Box>
@@ -87,7 +87,7 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
         <Code colorPalette="gray">{activeScope ?? "global"}</Code>
       </Box>
       <Box>
-        <Text textStyle="label/S/semibold">Sidebar state</Text>
+        <Text textStyle="label/S/semibold">Sidenav state</Text>
         <Text textStyle="paragraph/S/regular">
           visible = {String(leftVisible)} | size = {String(leftSize ?? "default")}
         </Text>
@@ -96,9 +96,9 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
   );
 };
 
-const SidebarPanel = () => (
+const SidenavPanel = () => (
   <Stack p="md" gap="xs">
-    <Text textStyle="label/S/semibold">Sidebar</Text>
+    <Text textStyle="label/S/semibold">Sidenav</Text>
     <Text textStyle="paragraph/S/regular">Resize me — each scope persists the value independently.</Text>
   </Stack>
 );
@@ -112,8 +112,8 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
 
     ctx.renderers.registerRenderer({
-      id: SIDEBAR_RENDERER_ID,
-      render: () => <SidebarPanel />,
+      id: SIDENAV_RENDERER_ID,
+      render: () => <SidenavPanel />,
     });
 
     ctx.layout.registerWidget({
@@ -125,11 +125,11 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
 
     ctx.layout.registerWidget({
-      id: SIDEBAR_WIDGET_ID,
-      title: "Sidebar",
-      region: "sidebar",
+      id: SIDENAV_WIDGET_ID,
+      title: "Sidenav",
+      region: "sidenav",
       singleton: true,
-      rendererId: SIDEBAR_RENDERER_ID,
+      rendererId: SIDENAV_RENDERER_ID,
     });
   },
 });
@@ -139,14 +139,14 @@ export const createLayoutScopeExampleWorkbench = () => {
   workbench.registerModule(createLayoutScopeExampleModule());
 
   // Open the demo widgets in every scope and pre-seed each scope with a
-  // different sidebar size so switching between them shows real per-scope
+  // different sidenav size so switching between them shows real per-scope
   // state. `setPersistenceScope` replaces the whole layout with the persisted
   // snapshot for that scope, so the widgets must exist in each one.
   const seedScope = (scope: LayoutScope | undefined, leftSize: number) => {
     workbench.layout.setPersistenceScope(scope);
     workbench.layout.openWidget(PANEL_WIDGET_ID);
-    workbench.layout.openWidget(SIDEBAR_WIDGET_ID, { pinned: true });
-    workbench.layout.setRegionSize("sidebar", leftSize);
+    workbench.layout.openWidget(SIDENAV_WIDGET_ID, { pinned: true });
+    workbench.layout.setRegionSize("sidenav", leftSize);
   };
 
   seedScope("project:a", 200);

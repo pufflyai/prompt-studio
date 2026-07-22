@@ -77,7 +77,7 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
   await expect(nav.locator("[data-workbench-breadcrumb-action-slot]")).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
+  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   const closedPanelBackground = await backgroundColor(showSecondary);
   await showSecondary.click();
@@ -91,15 +91,15 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(0);
-  await expect(mainHeader.getByRole("button", { name: /Secondary Panel|Side Panel|Sidebar/ })).toHaveCount(0);
+  await expect(mainHeader.getByRole("button", { name: /Secondary Panel|Side Panel|Sidenav/ })).toHaveCount(0);
 
-  const sidebarSeparator = page.getByRole("separator", { name: "Resize sidebar" });
-  await expect(sidebarSeparator).toBeVisible();
-  await sidebarSeparator.press("Home");
-  const closedSidebar = nav.getByRole("button", { name: "Show Sidebar" });
-  await expect(closedSidebar).toHaveAttribute("aria-pressed", "false");
-  await expect.poll(() => backgroundColor(closedSidebar)).toBe(closedPanelBackground);
-  await orderedCenters([closedSidebar, back, forward, secondary]);
+  const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });
+  await expect(sidenavSeparator).toBeVisible();
+  await sidenavSeparator.press("Home");
+  const closedSidenav = nav.getByRole("button", { name: "Show Sidenav" });
+  await expect(closedSidenav).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => backgroundColor(closedSidenav)).toBe(closedPanelBackground);
+  await orderedCenters([closedSidenav, back, forward, secondary]);
 
   await page.getByText("Own navigation chrome", { exact: true }).click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
@@ -108,17 +108,17 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await back.click();
   await expect(page.getByText("Own navigation chrome", { exact: true })).toBeVisible();
   await expect(forward).toBeEnabled();
-  await expect(closedSidebar).toBeVisible();
+  await expect(closedSidenav).toBeVisible();
 
-  await closedSidebar.focus();
-  await expect(closedSidebar).toBeFocused();
-  await closedSidebar.press("Enter");
-  await expect(sidebarSeparator).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
+  await closedSidenav.focus();
+  await expect(closedSidenav).toBeFocused();
+  await closedSidenav.press("Enter");
+  await expect(sidenavSeparator).toBeVisible();
+  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
 
   await forward.click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
+  await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
   await expect(side).toHaveAttribute("aria-pressed", "false");
   expect(await backgroundColor(side)).toBe(closedPanelBackground);
 
@@ -204,7 +204,7 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
 
     const nav = page.locator('[data-workbench-region="nav"]');
     await expect(nav).toBeVisible({ timeout: 30_000 });
-    await expect(nav.getByRole("button", { name: /Sidebar/ })).toHaveCount(0);
+    await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
     await expect(nav.getByRole("button", { name: /Secondary Panel/ })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Search PS" }).click();

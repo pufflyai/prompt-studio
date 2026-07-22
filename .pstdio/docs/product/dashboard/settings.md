@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-The dashboard ships a global settings surface plus project creation with agent selection. Global settings uses a sidebar + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
+The dashboard ships a global settings surface plus project creation with agent selection. Global settings uses a sidenav + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
 
 ## Problem
 
@@ -16,7 +16,7 @@ The old settings PRD described richer settings behavior than the current dashboa
 ## Goals
 
 - Document the current project creation and global settings flows.
-- Document the global settings sidebar/panel information architecture.
+- Document the global settings sidenav/panel information architecture.
 - Document manual agent add behavior and executable-path constraints.
 - Document runtime concurrency settings for queued sessions.
 - Document the project settings information architecture including the repositories panel.
@@ -34,7 +34,7 @@ Current settings routes:
 - `/settings`
 - `/projects/:projectId/settings`
 
-Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidebar with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
+Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidenav with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
 
 ## Requirements
 
@@ -95,7 +95,7 @@ Project creation includes a second step for selecting agents, with all installed
 
 | Route | Purpose |
 | ----- | ------- |
-| `/settings` | Global settings shell with sidebar + `Agents` panel. |
+| `/settings` | Global settings shell with sidenav + `Agents` panel. |
 | `/projects/:projectId/settings` | Project settings with tags, repositories, hooks, skills, templates, and danger zone panels. |
 
 ### Current Actions

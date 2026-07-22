@@ -130,7 +130,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: PICKER_ID,
       title: "Resources",
-      region: "sidebar",
+      region: "sidenav",
       rendererId: PICKER_RENDERER_ID,
     });
     ctx.layout.registerLocation({

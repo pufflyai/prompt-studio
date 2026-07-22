@@ -22,7 +22,7 @@ Extension identity is package metadata, not code metadata. `package.json` provid
 - Middleware that runs before commands and can continue, patch params, replace invocation data, or reject.
 - Hooks that observe product events and command lifecycle events after they happen.
 - Cron schedules that invoke extension or host commands.
-- Dashboard routes, sidebar navigation, views, settings panels, and renderers.
+- Dashboard routes, sidenav navigation, views, settings panels, and renderers.
 - Templates, skills, themes, file icon themes, and custom template types.
 - Artifact mounts for safe repo-local files under `.pstdio/<package-name>/`.
 - Workspace type and Harness providers for deeper runtime integrations.

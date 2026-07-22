@@ -12,7 +12,7 @@ import { SkillViewer } from "./components/skill-viewer";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
 import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
 
-// The default settings entry opened by the command/sidebar. It is global, so it
+// The default settings entry opened by the command/sidenav. It is global, so it
 // stays reachable even when no project is selected.
 export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", icon: standardResourceIcons.settings };
 

@@ -23,6 +23,8 @@ export type TreeListNode = ListRowItem & {
   hiddenByDefault?: boolean;
   /** Opt in to the tree-customization (hide/show) menu. Items are non-hideable unless this is true. */
   canHide?: boolean;
+  /** Opt out of reordering while keeping the node visible in its group. */
+  canReorder?: boolean;
 };
 
 /** Top-level tree section with optional header, actions, empty state, and child nodes. */
@@ -36,6 +38,8 @@ export interface TreeListSection {
   hiddenByDefault?: boolean;
   /** Opt in to the tree-customization (hide/show) menu. Sections are non-hideable unless this is true. */
   canHide?: boolean;
+  /** Opt out of reordering while keeping the section visible in its group. */
+  canReorder?: boolean;
 }
 
 /** Navigation payload emitted when a navigable tree node is activated. */

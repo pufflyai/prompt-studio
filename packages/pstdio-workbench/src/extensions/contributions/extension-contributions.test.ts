@@ -24,7 +24,7 @@ const metadata = {
     {
       id: "extension-lab.labPage",
       extensionId: "pstdio.extension-lab",
-      slotId: "legacy.projectSidebarNav",
+      slotId: "legacy.projectSidenavNav",
       group: "Lab",
       label: "Lab",
       route: "lab",

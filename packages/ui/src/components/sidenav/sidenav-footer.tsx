@@ -1,11 +1,11 @@
 import { Box } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-interface SidebarFooterProps {
+interface SidenavFooterProps {
   children?: ReactNode;
 }
 
-export const SidebarFooter = (props: SidebarFooterProps) => {
+export const SidenavFooter = (props: SidenavFooterProps) => {
   const { children } = props;
 
   if (!children) {

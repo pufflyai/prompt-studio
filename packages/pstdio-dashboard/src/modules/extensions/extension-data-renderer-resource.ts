@@ -15,7 +15,7 @@ export const dataRendererResourceKindIcon = (record: ExtensionDataRendererRecord
   record.resourceKind === "ticket" ? ticketResourceIcon : standardResourceIcons.dataRenderer;
 
 // Each extension data renderer is browsable like a built-in dashboard view, so it
-// shows up in the project sidebar and opens its widget through the shared opener.
+// shows up in the project sidenav and opens its widget through the shared opener.
 export const createExtensionDataRendererResource = (record: ExtensionDataRendererRecord, projectId: string) =>
   createDashboardResource(
     "dashboard-view",

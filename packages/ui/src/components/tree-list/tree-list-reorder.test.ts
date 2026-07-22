@@ -45,4 +45,23 @@ describe("computeReorderResult", () => {
     expect(computeReorderResult(sections, "ghost", "a.1")).toBeNull();
     expect(computeReorderResult(sections, toSectionDragId("ghost"), toSectionDragId("alpha"))).toBeNull();
   });
+
+  test("keeps explicitly locked sections and nodes in place", () => {
+    const constrainedSections: TreeListSection[] = [
+      {
+        id: "header",
+        canReorder: false,
+        nodes: [
+          { id: "project", label: "Project", canReorder: false },
+          { id: "search", label: "Search" },
+        ],
+      },
+      { id: "main", nodes: [{ id: "tickets", label: "Tickets" }] },
+    ];
+
+    expect(computeReorderResult(constrainedSections, toSectionDragId("header"), toSectionDragId("main"))).toBeNull();
+    expect(computeReorderResult(constrainedSections, toSectionDragId("main"), toSectionDragId("header"))).toBeNull();
+    expect(computeReorderResult(constrainedSections, "project", "search")).toBeNull();
+    expect(computeReorderResult(constrainedSections, "search", "project")).toBeNull();
+  });
 });

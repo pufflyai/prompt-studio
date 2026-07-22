@@ -43,7 +43,7 @@ describe("workbench extension metadata targets", () => {
           layout: {
             reset: true,
             open: [
-              { target: "workbench.left", view: "lab.sidebar", pinned: true },
+              { target: "workbench.left", view: "lab.sidenav", pinned: true },
               { target: "workbench.main", view: "lab.overview" },
             ],
           },
@@ -104,7 +104,7 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.modes[0]?.layout).toEqual({
       reset: true,
       open: [
-        { target: "workbench.left", view: "lab.sidebar", pinned: true },
+        { target: "workbench.left", view: "lab.sidenav", pinned: true },
         { target: "workbench.main", view: "lab.overview" },
       ],
     });

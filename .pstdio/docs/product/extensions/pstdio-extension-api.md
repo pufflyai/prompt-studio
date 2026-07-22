@@ -150,7 +150,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
 | `routes`                                          | Dashboard pages backed by extension webviews.                                                     |
-| `treeItems`                                       | Sidebar or area-tree navigation entries attached to host targets.                                 |
+| `treeItems`                                       | Sidenav or area-tree navigation entries attached to host targets.                                 |
 | `treeRenderers`                                   | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
 | `views`                                           | Workbench panels backed by extension webviews or tree renderers.                                  |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |

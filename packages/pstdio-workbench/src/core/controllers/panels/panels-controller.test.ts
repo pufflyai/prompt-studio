@@ -5,7 +5,7 @@ describe("createWorkbenchPanelsController", () => {
   test("defaults isOpen to true for any unseen region", () => {
     const panels = createWorkbenchPanelsController();
 
-    expect(panels.isOpen("sidebar")).toBe(true);
+    expect(panels.isOpen("sidenav")).toBe(true);
     expect(panels.isOpen("main-right-menu")).toBe(true);
     expect(panels.store.getState()).toEqual({ openByRegionId: {} });
   });
@@ -15,16 +15,16 @@ describe("createWorkbenchPanelsController", () => {
     const events: boolean[] = [];
 
     const unsubscribe = panels.store.subscribeSelector(
-      (state) => state.openByRegionId.sidebar,
+      (state) => state.openByRegionId.sidenav,
       (value) => events.push(value ?? true),
     );
 
-    panels.setOpen("sidebar", true);
-    panels.setOpen("sidebar", false);
-    panels.setOpen("sidebar", false);
-    panels.setOpen("sidebar", true);
+    panels.setOpen("sidenav", true);
+    panels.setOpen("sidenav", false);
+    panels.setOpen("sidenav", false);
+    panels.setOpen("sidenav", true);
 
-    expect(panels.isOpen("sidebar")).toBe(true);
+    expect(panels.isOpen("sidenav")).toBe(true);
     expect(events).toEqual([false, true]);
 
     unsubscribe();
@@ -41,7 +41,7 @@ describe("createWorkbenchPanelsController", () => {
   });
 
   test("hydrates from persistence and writes back through the adapter", () => {
-    const stored: PersistedWorkbenchPanels[] = [{ openByRegionId: { sidebar: false, "main-right-menu": false } }];
+    const stored: PersistedWorkbenchPanels[] = [{ openByRegionId: { sidenav: false, "main-right-menu": false } }];
     const persistence = {
       getPanelStates: () => stored.at(-1),
       setPanelStates: (next: PersistedWorkbenchPanels) => {
@@ -51,12 +51,12 @@ describe("createWorkbenchPanelsController", () => {
 
     const panels = createWorkbenchPanelsController({ persistence });
 
-    expect(panels.isOpen("sidebar")).toBe(false);
+    expect(panels.isOpen("sidenav")).toBe(false);
     expect(panels.isOpen("main-right-menu")).toBe(false);
 
-    panels.setOpen("sidebar", true);
+    panels.setOpen("sidenav", true);
 
-    expect(stored.at(-1)?.openByRegionId).toEqual({ sidebar: true, "main-right-menu": false });
+    expect(stored.at(-1)?.openByRegionId).toEqual({ sidenav: true, "main-right-menu": false });
   });
 
   test("persists independent open state per project scope", () => {
@@ -121,13 +121,13 @@ describe("createWorkbenchPanelsController", () => {
       events.push(JSON.stringify(state.openByRegionId));
     });
 
-    panels.setOpen("sidebar", false);
+    panels.setOpen("sidenav", false);
     panels.setOpen("secondary", false);
 
-    expect(events).toEqual([JSON.stringify({ sidebar: false }), JSON.stringify({ sidebar: false, secondary: false })]);
+    expect(events).toEqual([JSON.stringify({ sidenav: false }), JSON.stringify({ sidenav: false, secondary: false })]);
 
     disposable.dispose();
-    panels.setOpen("sidebar", true);
+    panels.setOpen("sidenav", true);
     expect(events).toHaveLength(2);
   });
 });

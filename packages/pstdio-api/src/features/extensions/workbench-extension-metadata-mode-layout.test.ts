@@ -30,17 +30,17 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               layout: {
                 reset: true,
                 open: [
-                  { target: "workbench.left", view: "sidebar", pinned: true },
+                  { target: "workbench.left", view: "sidenav", pinned: true },
                   { target: "workbench.main", view: "overview" },
                 ],
               },
             },
           },
           views: {
-            sidebar: {
-              title: "Lab sidebar",
+            sidenav: {
+              title: "Lab sidenav",
               role: "location",
-              webview: { entry: asset("./src/sidebar.tsx") },
+              webview: { entry: asset("./src/sidenav.tsx") },
             },
             overview: {
               title: "Lab overview",
@@ -59,14 +59,14 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
     });
 
     expect(metadata.diagnostics).toEqual([]);
-    expect(metadata.views.map((view) => view.id)).toEqual(["lab.sidebar", "lab.overview"]);
+    expect(metadata.views.map((view) => view.id)).toEqual(["lab.sidenav", "lab.overview"]);
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.mode",
       resourceKind: "ticket",
       layout: {
         reset: true,
         open: [
-          { target: "workbench.left", view: "lab.sidebar", pinned: true },
+          { target: "workbench.left", view: "lab.sidenav", pinned: true },
           { target: "workbench.main", view: "lab.overview" },
         ],
       },

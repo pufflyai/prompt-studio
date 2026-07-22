@@ -247,7 +247,7 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CONTROLS_WIDGET_ID,
       title: "Variants",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: CONTROLS_RENDERER_ID,
     });

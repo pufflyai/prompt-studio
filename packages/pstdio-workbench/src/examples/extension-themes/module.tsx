@@ -119,7 +119,7 @@ const EmptyMainPanel = () => (
       No extension views
     </Text>
     <Text textStyle="paragraph/XS/regular" color="fg.subtle" textAlign="center">
-      Enable an extension from the Extensions sidebar to see what it contributes.
+      Enable an extension from the Extensions sidenav to see what it contributes.
     </Text>
   </Stack>
 );
@@ -132,7 +132,7 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
     ctx.layout.registerWidget({
       id: MANAGER_WIDGET_ID,
       title: "Extensions",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: MANAGER_RENDERER_ID,
     });

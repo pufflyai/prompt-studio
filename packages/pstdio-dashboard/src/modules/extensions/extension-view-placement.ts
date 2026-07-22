@@ -9,7 +9,7 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layou
 export const dashboardExtensionViewKind = "extension-view";
 
 const targetRegion = {
-  "workbench.left": "sidebar",
+  "workbench.left": "sidenav",
   "workbench.main.left": "main-left-menu",
   "workbench.main": "main",
   "workbench.main.right": "main-right-menu",

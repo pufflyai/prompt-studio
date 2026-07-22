@@ -51,7 +51,7 @@ Without meaningful page titles, browser tabs all display the same generic label,
 1. The title must update on every route change, including search param changes (`?panel=`, `?doc=`).
 2. Most project-scoped routes include the project name as a prefix separated by `>`. Workspace and doc-detail routes skip the project prefix for brevity.
 3. When a session is selected, the title must show the session's display title, not the session ID.
-4. When a document is selected, the title must show the document's sidebar label, not the full path.
+4. When a document is selected, the title must show the document's sidenav label, not the full path.
 5. Settings sub-panels must map to human-readable names (e.g., `startup-script` → `Startup Script`). Template settings show the template name directly.
 6. Ticket routes must show the ticket shorthand (e.g., `PS-41`). Workspace routes show `ticket > attempt` without the project prefix, stripping the ticket prefix from the workspace shorthand (e.g., `PS-41_A1` becomes `PS-41 > A1`).
 7. Titles should be concise — only one level after the project name, no redundant labels or deep nesting.

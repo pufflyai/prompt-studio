@@ -4,7 +4,7 @@ import { ContentImageLightbox } from "../content-image-lightbox";
 import Footer from "../footer";
 import Header from "../header";
 import { RootProvider } from "../root-provider";
-import { DocsPagination, type DocsPaginationItem, DocsSidebar, type DocsSidebarItem } from "./docs-navigation";
+import { DocsPagination, type DocsPaginationItem, DocsSidenav, type DocsSidenavItem } from "./docs-navigation";
 import { DocsOutline } from "./docs-outline";
 
 export interface DocsPageMeta {
@@ -18,7 +18,7 @@ interface DocsPageShellProps {
   title: string;
   description?: string;
   markdown: string;
-  menuItems: DocsSidebarItem[];
+  menuItems: DocsSidenavItem[];
   activeLink: string;
   previous?: DocsPaginationItem;
   next?: DocsPaginationItem;
@@ -32,7 +32,7 @@ const DocsPageShellContent = (props: DocsPageShellProps) => {
     window.location.href = link;
   };
 
-  const shouldStartOpen = (item: DocsSidebarItem) => {
+  const shouldStartOpen = (item: DocsSidenavItem) => {
     return hasActiveLink(item, activeLink);
   };
 
@@ -44,7 +44,7 @@ const DocsPageShellContent = (props: DocsPageShellProps) => {
           <Flex gap="8" py={["2rem", "2rem", "3rem"]}>
             <Box hideBelow="lg" width="16rem" flexShrink={0}>
               <Box position="sticky" top="6">
-                <DocsSidebar
+                <DocsSidenav
                   title="Documentation"
                   menuItems={menuItems}
                   activeLink={activeLink}
@@ -97,7 +97,7 @@ export const DocsPageShell = (props: DocsPageShellProps) => {
   );
 };
 
-function hasActiveLink(item: DocsSidebarItem, activeLink: string): boolean {
+function hasActiveLink(item: DocsSidenavItem, activeLink: string): boolean {
   if (item.link === activeLink) return true;
   return item.items?.some((child) => hasActiveLink(child, activeLink)) ?? false;
 }

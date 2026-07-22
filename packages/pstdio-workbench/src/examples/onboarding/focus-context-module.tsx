@@ -11,7 +11,7 @@ import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
 const FOCUS_CONTEXT_RENDERER_ID = "onboarding.focus-context.renderer";
 const FOCUS_CONTEXT_MAIN_WIDGET_ID = "onboarding.focus-context.main";
-const FOCUS_CONTEXT_SIDEBAR_WIDGET_ID = "onboarding.focus-context.sidebar";
+const FOCUS_CONTEXT_SIDENAV_WIDGET_ID = "onboarding.focus-context.sidenav";
 const FOCUS_CONTEXT_PANEL_WIDGET_ID = "onboarding.focus-context.panel";
 const FOCUS_CONTEXT_STATUS_WIDGET_ID = "onboarding.focus-context.status";
 const MARK_SELECTED_COMMAND_ID = "onboarding.focus-context.mark-selected";
@@ -47,7 +47,7 @@ const ActionAvailability = (props: ActionAvailabilityProps) => {
   const { selectedKind, markCommandAvailable } = props;
   const guideSelected = selectedKind === SELECTED_GUIDE_CONTEXT_VALUE;
   const actions = [
-    { label: "Focus main, sidebar, or panel", context: "always", available: true },
+    { label: "Focus main, sidenav, or panel", context: "always", available: true },
     {
       label: "Select guide",
       context: `${SELECTED_KIND_CONTEXT_KEY} != ${SELECTED_GUIDE_CONTEXT_VALUE}`,
@@ -86,9 +86,9 @@ const ActionAvailability = (props: ActionAvailabilityProps) => {
 const FocusContextPanel = (props: FocusContextPanelProps) => {
   const { input, context } = props;
   const values = useWorkbenchStore(input.workbench.context.store, (state) => state.values);
-  const sidebarVisible = useWorkbenchStore(
+  const sidenavVisible = useWorkbenchStore(
     input.workbench.layout.store,
-    (state) => state.layout.regions.sidebar.visible,
+    (state) => state.layout.regions.sidenav.visible,
   );
   const secondaryPanelVisible = useWorkbenchStore(
     input.workbench.layout.store,
@@ -115,7 +115,7 @@ const FocusContextPanel = (props: FocusContextPanelProps) => {
       <Stack gap="sm" maxW="720px">
         <Text textStyle="paragraph/M/regular">
           Focus updates context keys such as <Code colorPalette="gray">mainFocus</Code>,{" "}
-          <Code colorPalette="gray">sidebarFocus</Code>, <Code colorPalette="gray">secondaryFocus</Code>, and{" "}
+          <Code colorPalette="gray">sidenavFocus</Code>, <Code colorPalette="gray">secondaryFocus</Code>, and{" "}
           <Code colorPalette="gray">sideFocus</Code>.
         </Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -131,9 +131,9 @@ const FocusContextPanel = (props: FocusContextPanelProps) => {
           <WorkbenchIcon name="PanelTop" />
           Focus main
         </Button>
-        <Button size="sm" disabled={!sidebarVisible} onClick={() => input.workbench.focus.setActiveRegion("sidebar")}>
+        <Button size="sm" disabled={!sidenavVisible} onClick={() => input.workbench.focus.setActiveRegion("sidenav")}>
           <WorkbenchIcon name="PanelLeft" />
-          Focus sidebar
+          Focus sidenav
         </Button>
         <Button
           size="sm"
@@ -195,14 +195,14 @@ const ContextSnapshot = (props: ContextStatusProps) => {
   );
 };
 
-const FocusContextSidebar = (props: ContextStatusProps) => {
+const FocusContextSidenav = (props: ContextStatusProps) => {
   const { workbench } = props;
   const activeRegion = useWorkbenchStore(workbench.focus.store, (state) => state.activeRegion) ?? "none";
 
   return (
     <Stack h="full" p="md" gap="sm" bg="bg.subtle">
       <Text textStyle="label/S/semibold">Focus regions</Text>
-      {["sideBar", "main", "panel"].map((region) => (
+      {["sidenav", "main", "panel"].map((region) => (
         <HStack key={region} gap="xs">
           <Badge colorPalette={activeRegion === region ? "green" : "gray"}>
             {activeRegion === region ? "active" : "idle"}
@@ -225,9 +225,9 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerWidget({
-      id: FOCUS_CONTEXT_SIDEBAR_WIDGET_ID,
+      id: FOCUS_CONTEXT_SIDENAV_WIDGET_ID,
       title: "Focus",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 250, minPx: 220 },
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
@@ -248,8 +248,8 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.renderers.registerRenderer({
       id: FOCUS_CONTEXT_RENDERER_ID,
       render: (input) => {
-        if (input.widget.id === FOCUS_CONTEXT_SIDEBAR_WIDGET_ID)
-          return <FocusContextSidebar workbench={input.workbench} />;
+        if (input.widget.id === FOCUS_CONTEXT_SIDENAV_WIDGET_ID)
+          return <FocusContextSidenav workbench={input.workbench} />;
         if (input.widget.id === FOCUS_CONTEXT_PANEL_WIDGET_ID) return <ContextSnapshot workbench={input.workbench} />;
         if (input.widget.id === FOCUS_CONTEXT_STATUS_WIDGET_ID) return <ContextStatus workbench={input.workbench} />;
         return <FocusContextPanel input={input} context={ctx.context} />;
@@ -274,7 +274,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.context.set(REVIEW_READY_CONTEXT_KEY, false);
-    ctx.layout.openWidget(FOCUS_CONTEXT_SIDEBAR_WIDGET_ID, { pinned: true });
+    ctx.layout.openWidget(FOCUS_CONTEXT_SIDENAV_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(FOCUS_CONTEXT_MAIN_WIDGET_ID);
     ctx.layout.openWidget(FOCUS_CONTEXT_PANEL_WIDGET_ID);
     ctx.layout.openWidget(FOCUS_CONTEXT_STATUS_WIDGET_ID, { pinned: true });

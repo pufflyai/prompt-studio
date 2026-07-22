@@ -48,7 +48,7 @@ const waitForTicketsExtension = async (request: import("@playwright/test").APIRe
 
 const collectionRow = (page: import("@playwright/test").Page, collection: Collection) =>
   page
-    .locator('[data-workbench-region="sidebar"]')
+    .locator('[data-workbench-region="sidenav"]')
     .getByRole("option", collection === "Workspaces" ? { name: /^Workspaces/ } : { name: collection, exact: true });
 
 const observeNavigationReady = async (page: import("@playwright/test").Page, collection: Collection) => {

@@ -8,7 +8,7 @@ export const labModes = {
     layout: {
       reset: true,
       open: [
-        { target: "workbench.left", view: "labSidebar", pinned: true },
+        { target: "workbench.left", view: "labSidenav", pinned: true },
         { target: "workbench.main", view: "labOverview" },
       ],
     },
@@ -26,10 +26,10 @@ export const labModes = {
 
 export const createLabViews = (baseUrl: string) =>
   ({
-    labSidebar: {
-      title: l10n("views.labSidebar.title", "Lab"),
+    labSidenav: {
+      title: l10n("views.labSidenav.title", "Lab"),
       role: "location",
-      webview: { entry: packageAsset("./src/views/lab-sidebar.tsx", baseUrl) },
+      webview: { entry: packageAsset("./src/views/lab-sidenav.tsx", baseUrl) },
     },
     labOverview: {
       title: l10n("views.labOverview.title", "Lab overview"),

@@ -10,7 +10,7 @@ describe("workbench theme backgrounds", () => {
     expect(getWorkbenchRegionBackground("activity")).toBe(
       "var(--chakra-colors-vscode-activityBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-muted)))",
     );
-    expect(getWorkbenchRegionBackground("sidebar")).toBe(
+    expect(getWorkbenchRegionBackground("sidenav")).toBe(
       "var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle))",
     );
     expect(getWorkbenchRegionBackground("main")).toBe(

@@ -371,7 +371,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: BREADCRUMB_TREE_ID,
       title: "Docs",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 240, minPx: 200 },
       rendererId: BREADCRUMB_TREE_ID,
     });

@@ -13,7 +13,7 @@ import { selectDashboardNavigationResource } from "@/shared/app/navigation-state
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
@@ -23,7 +23,7 @@ import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
 import { createStartModule } from "../start/module";
 import { createWorkspacesModule } from "../workspaces/module";
-import { createSidebarModule } from "./module";
+import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
@@ -42,7 +42,7 @@ const ticketResource = {
   kind: "ticket",
   uri: "dashboard-workbench://ticket/PS-164",
   id: "PS-164",
-  label: "PS-164 Sidebar resource sections",
+  label: "PS-164 Sidenav resource sections",
   icon: "FileText",
   metadata: { projectId: PROJECT_ID },
 };
@@ -51,7 +51,7 @@ const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContributionContext) {
     ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
-    registerSidebarContribution(ctx, {
+    registerSidenavContribution(ctx, {
       id: "story.tickets-navigation",
       modes: ["*"],
       region: "header",
@@ -65,7 +65,7 @@ const createTicketsNavigationModule = () => ({
         },
       ],
     });
-    registerSidebarContribution(ctx, {
+    registerSidenavContribution(ctx, {
       id: "story.ticket-resource",
       modes: ["pstdio-planner.ticket"],
       getSections: (_workbench, input) =>
@@ -91,7 +91,7 @@ const createTicketsNavigationModule = () => ({
           : [],
     });
     for (const sectionId of ["files", "workspaces"]) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidebar, sectionId, true);
+      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
     }
     return [];
   },
@@ -99,7 +99,7 @@ const createTicketsNavigationModule = () => ({
 
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
-    sessionRow("session-today-1", "Refactor sidebar", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
+    sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
     sessionRow("session-today-2", "Investigate flaky test", "failed", "2026-06-24T08:00:00Z"),
     sessionRow("session-yesterday", "Wire up board", "completed", "2026-06-23T15:00:00Z", "workspace-1"),
   ]);
@@ -107,7 +107,7 @@ const seedSessions = () => {
     {
       id: "workspace-1",
       project_id: PROJECT_ID,
-      name: "Mode-driven sidebar",
+      name: "Mode-driven sidenav",
       branch: "feature/PS-107",
       worktree_path: "/repo/.pstdio/workspaces/PS-107",
       archived: false,
@@ -178,7 +178,7 @@ const bootstrapWorkbench = () => {
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
 
   for (const module of [
-    createSidebarModule(),
+    createSidenavModule(),
     createCommandPaletteModule(),
     createWorkspacesModule(),
     createProjectsModule(),
@@ -207,7 +207,7 @@ const openInMode = (workbench: WorkbenchCore, resource: Parameters<WorkbenchCore
 };
 
 const meta = {
-  title: "Dashboard/Sidebar",
+  title: "Dashboard/Sidenav",
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (
@@ -222,7 +222,7 @@ export default meta;
 
 type Story = StoryObj;
 
-const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
+const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   const workbench = bootstrapWorkbench();
   props.open(workbench);
 
@@ -235,16 +235,16 @@ const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 
 // F15: the project selector and global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
-  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
 };
 
 // Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
-  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
 };
 
 export const WorkspacesViewHover: Story = {
-  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
   play: async ({ canvasElement }) => {
     canvasElement
       .querySelector('[data-tree-list-focus-id="dashboard-workbench://dashboard-view/workspaces"]')
@@ -256,7 +256,7 @@ export const WorkspacesViewHover: Story = {
 export const TicketMode: Story = {
   name: "Ticket resource separator",
   render: () => (
-    <SidebarStory
+    <SidenavStory
       open={(workbench) => {
         selectDashboardNavigationResource(workbench, ticketResource);
         workbench.modes.setActiveMode("pstdio-planner.ticket");
@@ -267,13 +267,13 @@ export const TicketMode: Story = {
 
 // Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
 export const SessionMode: Story = {
-  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
 };
 
 // Workspace mode: fixed project/search/new-session header above the workspace-scoped Sessions group.
 export const WorkspaceMode: Story = {
   render: () => (
-    <SidebarStory
+    <SidenavStory
       open={(workbench) => {
         const workspace = workbench.resources
           .listResources("")
