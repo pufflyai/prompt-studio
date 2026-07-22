@@ -25,6 +25,9 @@ export const computeReorderResult = (
   if (activeId === overId) return null;
 
   if (isSectionDragId(activeId) && isSectionDragId(overId)) {
+    const activeSection = sections.find((section) => section.id === fromSectionDragId(activeId));
+    const overSection = sections.find((section) => section.id === fromSectionDragId(overId));
+    if (activeSection?.canReorder === false || overSection?.canReorder === false) return null;
     const orderedIds = sections.map((section) => section.id);
     const oldIndex = orderedIds.indexOf(fromSectionDragId(activeId));
     const newIndex = orderedIds.indexOf(fromSectionDragId(overId));
@@ -37,6 +40,7 @@ export const computeReorderResult = (
     const oldIndex = nodeIds.indexOf(activeId);
     const newIndex = nodeIds.indexOf(overId);
     if (oldIndex < 0 || newIndex < 0) continue;
+    if (section.nodes[oldIndex]?.canReorder === false || section.nodes[newIndex]?.canReorder === false) return null;
     if (oldIndex === newIndex) return null;
     return {
       kind: "node",

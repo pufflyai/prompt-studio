@@ -31,7 +31,7 @@ export interface AnchorSurface {
 export interface ProjectionSurface {
   role: "projection";
   reads: AnchorReadId[];
-  // The sidebar navigator both reads primary (highlight) and selects it (the picker).
+  // The sidenav navigator both reads primary (highlight) and selects it (the picker).
   navigator?: boolean;
 }
 
@@ -63,8 +63,8 @@ export const surfaceMap: Record<WorkbenchRegion, SurfaceDescriptor> = {
   // reads both anchors — it is a projection, not inert chrome.
   nav: projection(["primary", "attached"]),
   activity: chrome,
-  "sidebar-header": projection(["primary"]),
-  sidebar: projection(["primary"], true),
+  "sidenav-header": projection(["primary"]),
+  sidenav: projection(["primary"], true),
   "main-header": projection(["primary"]),
   "main-left-menu": projection(["primary"]),
   main: anchor("primary", "primary", "global"),

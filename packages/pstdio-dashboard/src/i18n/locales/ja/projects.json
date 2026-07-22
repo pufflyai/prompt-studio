@@ -202,7 +202,7 @@
       "missingProjectId": "試行を作成するにはプロジェクトIDが必要です。"
     }
   },
-  "sidebar": {
+  "sidenav": {
     "search": "検索",
     "tickets": "チケット",
     "projectChangelog": "プロジェクト変更履歴",

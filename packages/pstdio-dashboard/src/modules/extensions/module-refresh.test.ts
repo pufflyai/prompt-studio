@@ -4,7 +4,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidebarContributionHeaderNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { getSidenavContributionHeaderNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
 import { createExtensionsModule } from "./module";
@@ -36,7 +36,7 @@ test("coalesces same-project metadata churn without starving the first contribut
     resolvers[0]?.(metadataWithTickets);
     await flushMicrotasks();
 
-    expect(getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
     expect(loadMetadata).toHaveBeenCalledTimes(2);
 
     resolvers[1]?.(metadataWithTickets);
@@ -67,7 +67,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
     expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
-    expect(getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
 
     shouldFail = true;
     getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
@@ -75,7 +75,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
     expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
-    expect(getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
   } finally {
     disposable.dispose();
     getWriter("installed_extension_sources")?.truncateAndWrite([]);

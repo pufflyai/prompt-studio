@@ -61,7 +61,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.layout.registerWidget({
       id: "workbench-modes.project.navigation",
       title: workbenchModes.project.label,
-      region: "sidebar",
+      region: "sidenav",
       rendererId: "workbench-modes.project.navigation",
     }),
     ctx.resources.registerOpener({

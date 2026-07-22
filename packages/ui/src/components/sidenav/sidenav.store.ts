@@ -3,17 +3,17 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import { createBrowserStorage } from "../../utils/browser-storage";
 
-interface SidebarSnapshot {
+interface SidenavSnapshot {
   open: boolean;
   expandedSections: string[];
   expandedNodes: string[];
   width: number | null;
 }
 
-interface SidebarState extends SidebarSnapshot {
-  openSidebar: () => void;
-  closeSidebar: () => void;
-  toggleSidebar: () => void;
+interface SidenavState extends SidenavSnapshot {
+  openSidenav: () => void;
+  closeSidenav: () => void;
+  toggleSidenav: () => void;
   toggleSection: (sectionId: string) => void;
   toggleNode: (nodeId: string) => void;
   setSectionExpanded: (sectionId: string, expanded: boolean) => void;
@@ -22,9 +22,9 @@ interface SidebarState extends SidebarSnapshot {
   reset: () => void;
 }
 
-interface CreateSidebarStoreOptions {
+interface CreateSidenavStoreOptions {
   storageKey: string;
-  initialState?: Partial<SidebarSnapshot>;
+  initialState?: Partial<SidenavSnapshot>;
 }
 
 const DEFAULT_SNAPSHOT = {
@@ -32,11 +32,11 @@ const DEFAULT_SNAPSHOT = {
   expandedSections: [],
   expandedNodes: [],
   width: null,
-} satisfies SidebarSnapshot;
+} satisfies SidenavSnapshot;
 
-const SIDEBAR_STORE_NAMESPACE = "pstdio/ui/sidebar";
+const SIDENAV_STORE_NAMESPACE = "pstdio/ui/sidenav";
 
-const toStorageName = (storageKey: string) => `${SIDEBAR_STORE_NAMESPACE}/${storageKey}`;
+const toStorageName = (storageKey: string) => `${SIDENAV_STORE_NAMESPACE}/${storageKey}`;
 
 const toggleId = (values: string[], id: string) =>
   values.includes(id) ? values.filter((value) => value !== id) : [...values, id];
@@ -49,24 +49,24 @@ const setExpanded = (values: string[], id: string, expanded: boolean) => {
   return values.filter((value) => value !== id);
 };
 
-const getPersistedSnapshot = (state: SidebarState) => ({
+const getPersistedSnapshot = (state: SidenavState) => ({
   open: state.open,
   expandedSections: state.expandedSections,
   expandedNodes: state.expandedNodes,
   width: state.width,
 });
 
-export const createSidebarStore = (options: CreateSidebarStoreOptions) => {
+export const createSidenavStore = (options: CreateSidenavStoreOptions) => {
   const { storageKey, initialState } = options;
   const snapshot = { ...DEFAULT_SNAPSHOT, ...initialState };
 
-  return createStore<SidebarState>()(
+  return createStore<SidenavState>()(
     persist(
       (set) => ({
         ...snapshot,
-        openSidebar: () => set((state) => ({ ...state, open: true })),
-        closeSidebar: () => set((state) => ({ ...state, open: false })),
-        toggleSidebar: () => set((state) => ({ ...state, open: !state.open })),
+        openSidenav: () => set((state) => ({ ...state, open: true })),
+        closeSidenav: () => set((state) => ({ ...state, open: false })),
+        toggleSidenav: () => set((state) => ({ ...state, open: !state.open })),
         toggleSection: (sectionId) =>
           set((state) => ({
             ...state,
@@ -99,26 +99,26 @@ export const createSidebarStore = (options: CreateSidebarStoreOptions) => {
   );
 };
 
-const sidebarStoreRegistry = new Map<string, ReturnType<typeof createSidebarStore>>();
+const sidenavStoreRegistry = new Map<string, ReturnType<typeof createSidenavStore>>();
 
-export const getSidebarStore = (storageKey: string, initialState?: Partial<SidebarSnapshot>) => {
-  const existingStore = sidebarStoreRegistry.get(storageKey);
+export const getSidenavStore = (storageKey: string, initialState?: Partial<SidenavSnapshot>) => {
+  const existingStore = sidenavStoreRegistry.get(storageKey);
 
   if (existingStore) {
     return existingStore;
   }
 
-  const store = createSidebarStore({ storageKey, initialState });
-  sidebarStoreRegistry.set(storageKey, store);
+  const store = createSidenavStore({ storageKey, initialState });
+  sidenavStoreRegistry.set(storageKey, store);
 
   return store;
 };
 
-export const useSidebarStore = <T>(
+export const useSidenavStore = <T>(
   storageKey: string,
-  selector: (state: SidebarState) => T,
-  initialState?: Partial<SidebarSnapshot>,
+  selector: (state: SidenavState) => T,
+  initialState?: Partial<SidenavSnapshot>,
 ) => {
-  const store = getSidebarStore(storageKey, initialState);
+  const store = getSidenavStore(storageKey, initialState);
   return useStore(store, selector);
 };

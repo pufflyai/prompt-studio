@@ -14,7 +14,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       },
     });
 
-    // Ordered sidebar sections (headerless when titleless).
+    // Ordered sidenav sections (headerless when titleless).
     ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
     ctx.settings.registerSection({ id: "extensions", title: "Extensions", order: 20 });
 

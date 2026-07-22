@@ -15,7 +15,7 @@ export const workbenchModes: Record<WorkbenchModeId, WorkbenchModeMeta> = {
   project: {
     id: "project",
     label: "Project",
-    description: "Sidebar tree + overview + activity feed",
+    description: "Sidenav tree + overview + activity feed",
     icon: standardResourceIcons.project,
   },
   workspace: {

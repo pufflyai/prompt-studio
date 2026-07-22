@@ -156,7 +156,7 @@ const registerDocsTree = (ctx: WorkbenchModuleContributionContext, options: { re
   ctx.layout.registerWidget({
     id: DOCS_TREE_ID,
     title: "Docs",
-    region: "sidebar",
+    region: "sidenav",
     regionSize: { defaultPx: 260, minPx: 220 },
     rendererId: DOCS_TREE_ID,
   });
@@ -215,7 +215,7 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: DOCS_TREE_ID,
       title: "Docs",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: DOCS_TREE_ID,
     });

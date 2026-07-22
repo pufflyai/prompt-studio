@@ -6,11 +6,11 @@ import {
 } from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
-import { setResourceBreadcrumb, syncResourceSidebar } from "../../shared/resource-sync";
+import { setResourceBreadcrumb, syncResourceSidenav } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
 import { WorkspaceWidget } from "./components/workspace-widget";
-import { registerResourceSidebarTree } from "./resource-sidebar-tree";
+import { registerResourceSidenavTree } from "./resource-sidenav-tree";
 
 const resolveTicket = (resource: ResourceRef) =>
   dashboardTickets.find((ticket) => ticket.id === resource.id) ?? dashboardTickets[0];
@@ -64,22 +64,22 @@ const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContributionContext) 
 };
 
 // The workspaces slice: the workspaces board, the per-attempt workspace detail
-// view, and the resource sidebar that ticket/workspace resources open into.
+// view, and the resource sidenav that ticket/workspace resources open into.
 export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.workspaces",
   activate(ctx) {
     registerWorkspaceDataRenderer(ctx);
     registerWorkspaceDetailWidget(ctx);
-    registerResourceSidebarTree(ctx);
+    registerResourceSidenavTree(ctx);
 
-    // The resource sidebar follows the primary (main) resource: when a ticket/workspace
+    // The resource sidenav follows the primary (main) resource: when a ticket/workspace
     // becomes primary, re-derive its body and select the matching node. Fires after the
-    // detail widget lands in main, so the sidebar always reflects the current primary.
+    // detail widget lands in main, so the sidenav always reflects the current primary.
     // The context-wrapped subscription is tracked with the module, so we don't return it.
     ctx.onDidChangePrimaryResource((resource) => {
       if (resource?.kind !== "ticket" && resource?.kind !== "workspace") return;
-      ctx.renderers.setSelectedNode(dashboardWidgetIds.ticketSidebar, resource.uri);
-      ctx.renderers.refresh(dashboardWidgetIds.ticketSidebar);
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.ticketSidenav, resource.uri);
+      ctx.renderers.refresh(dashboardWidgetIds.ticketSidenav);
     });
 
     ctx.resources.registerProvider({
@@ -108,7 +108,7 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
         }
 
         ctx.modes.setActiveMode(undefined);
-        syncResourceSidebar(ctx, resource);
+        syncResourceSidenav(ctx, resource);
         setDetailBreadcrumbs(ctx, resource);
         return ctx.layout.openWidget(dashboardWidgetIds.workspace, {
           resource,

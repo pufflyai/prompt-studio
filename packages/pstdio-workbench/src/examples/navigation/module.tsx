@@ -142,7 +142,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
     ctx.layout.registerWidget({
       id: TREE_WIDGET_ID,
       title: "Workspace tree",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 240, minPx: 200 },
       singleton: true,
       rendererId: TREE_RENDERER_ID,

@@ -139,7 +139,7 @@ const treeSections: TreeListSection[] = [
             icon: <Folder size={14} />,
             isContainer: true,
             children: [
-              { id: "sidebar", label: "sidebar.tsx", icon: <FileText size={14} />, endContent: <Badge>tsx</Badge> },
+              { id: "sidenav", label: "sidenav.tsx", icon: <FileText size={14} />, endContent: <Badge>tsx</Badge> },
               {
                 id: "tree-list",
                 label: "tree-list.tsx",

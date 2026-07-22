@@ -13,9 +13,9 @@ type TreeListRowVariant = "compact" | "tree";
 
 interface SortableHostProps {
   id: string;
+  disabled?: boolean;
   children: (input: {
     setNodeRef: (element: HTMLElement | null) => void;
-    attributes: ReturnType<typeof useSortable>["attributes"];
     listeners: ReturnType<typeof useSortable>["listeners"];
     style: { transform?: string; transition?: string; opacity?: number };
   }) => React.ReactNode;
@@ -26,7 +26,7 @@ interface SortableHostProps {
 // header is itself the drag handle. Clicks pass through because the pointer
 // sensor activates only after the cursor moves 4px (configured below).
 const SortableHost = (props: SortableHostProps) => {
-  const sortable = useSortable({ id: props.id });
+  const sortable = useSortable({ id: props.id, disabled: props.disabled });
   const style = {
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
@@ -36,7 +36,6 @@ const SortableHost = (props: SortableHostProps) => {
     <>
       {props.children({
         setNodeRef: sortable.setNodeRef,
-        attributes: sortable.attributes,
         listeners: sortable.listeners,
         style,
       })}
@@ -80,14 +79,14 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     .map((row) => (row.kind === "node" ? row.node.id : ""));
 
   return (
-    <SortableHost id={toSectionDragId(section.id)}>
-      {({ setNodeRef, attributes, listeners, style }) => (
+    <SortableHost id={toSectionDragId(section.id)} disabled={section.canReorder === false}>
+      {({ setNodeRef, listeners, style }) => (
         <Box ref={setNodeRef} style={style} w="full" minW="0">
           {headerRow && headerRow.kind === "section-header" ? (
             // Drag listeners live on the header so dragging the section moves
             // it, while click-to-collapse still works via the activation
             // distance on the pointer sensor.
-            <Box {...attributes} {...listeners}>
+            <Box onPointerDownCapture={(event) => listeners?.onPointerDown?.(event)}>
               <TreeListSectionHeader
                 section={headerRow.section}
                 collapsible={headerRow.collapsible}
@@ -171,9 +170,15 @@ const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
     return renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest });
   }
   return (
-    <SortableHost id={row.node.id}>
-      {({ setNodeRef, attributes, listeners, style }) => (
-        <Box ref={setNodeRef} style={style} w="full" minW="0" {...attributes} {...listeners}>
+    <SortableHost id={row.node.id} disabled={row.node.canReorder === false}>
+      {({ setNodeRef, listeners, style }) => (
+        <Box
+          ref={setNodeRef}
+          style={style}
+          w="full"
+          minW="0"
+          onPointerDownCapture={(event) => listeners?.onPointerDown?.(event)}
+        >
           {renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest })}
         </Box>
       )}

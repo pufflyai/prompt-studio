@@ -1,6 +1,6 @@
 // Image attachments drive the read-only preview path instead of the editor. The
 // uploaded mime type is authoritative; the extension fallback only covers uploads
-// that arrived without a usable type. File-kind-aware sidebar icons are out of scope.
+// that arrived without a usable type. File-kind-aware sidenav icons are out of scope.
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
 interface ImageAttachmentInput {

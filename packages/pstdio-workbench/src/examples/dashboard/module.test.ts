@@ -14,10 +14,10 @@ const createDashboardWorkbench = () => {
 };
 
 // After the unification, trees are placed via widgets. The "active" tree is the
-// active widget in the Sidebar whose rendererId matches a registered tree
+// active widget in the Sidenav whose rendererId matches a registered tree
 // renderer.
 const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
-  const leftWidgets = workbench.layout.getLayout().regions.sidebar.widgets;
+  const leftWidgets = workbench.layout.getLayout().regions.sidenav.widgets;
   return leftWidgets
     .map((placement) => workbench.layout.getWidget(placement.contributionId))
     .filter((widget): widget is NonNullable<typeof widget> => Boolean(widget))
@@ -67,7 +67,7 @@ describe("dashboard workbench navigation", () => {
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });
 
-  test("opens workspaces from a data view into the resource sidebar", async () => {
+  test("opens workspaces from a data view into the resource sidenav", async () => {
     const workbench = createDashboardWorkbench();
 
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
@@ -78,9 +78,9 @@ describe("dashboard workbench navigation", () => {
 
     await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
 
-    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
-    await expect(workbench.renderers.getBody(dashboardWidgetIds.ticketSidebar)).resolves.toEqual(
+    expect(resolveRegionPlacementIds(workbench, "sidenav")).toEqual([dashboardWidgetIds.ticketSidenav]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidenav]);
+    await expect(workbench.renderers.getBody(dashboardWidgetIds.ticketSidenav)).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "resource",
@@ -91,7 +91,7 @@ describe("dashboard workbench navigation", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.workspace);
   });
 
-  test("opens tickets into the resource sidebar with workspace links", async () => {
+  test("opens tickets into the resource sidenav with workspace links", async () => {
     const workbench = createDashboardWorkbench();
     const ticketRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.tickets);
     const [ticketRow] = await Promise.resolve(
@@ -110,24 +110,24 @@ describe("dashboard workbench navigation", () => {
     expect(ticketRow).toBeDefined();
     ticketRenderer?.onRowClick?.(ticketRow);
 
-    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveRegionPlacementIds(workbench, "sidenav")).toEqual([dashboardWidgetIds.ticketSidenav]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidenav]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].resource.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidenav).selectedNodeId).toBe(
       dashboardTickets[0].resource.uri,
     );
 
     await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
 
-    expect(resolveRegionPlacementIds(workbench, "sidebar")).toEqual([dashboardWidgetIds.ticketSidebar]);
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveRegionPlacementIds(workbench, "sidenav")).toEqual([dashboardWidgetIds.ticketSidenav]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidenav]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].workspaceResource.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidenav).selectedNodeId).toBe(
       dashboardTickets[0].workspaceResource.uri,
     );
   });
 
-  test("re-derives the sidebar body and selection when the primary switches to a different ticket", async () => {
+  test("re-derives the sidenav body and selection when the primary switches to a different ticket", async () => {
     const workbench = createDashboardWorkbench();
     // A non-index-0 ticket: resolveTicketForResource only falls back to dashboardTickets[0],
     // so targeting a different ticket proves the body actually follows the primary resource.
@@ -136,12 +136,12 @@ describe("dashboard workbench navigation", () => {
     await workbench.resources.openResource(dashboardTickets[0].resource, { replaceActive: true });
     await workbench.resources.openResource(other.resource, { replaceActive: true });
 
-    const body = await workbench.renderers.getBody(dashboardWidgetIds.ticketSidebar);
+    const body = await workbench.renderers.getBody(dashboardWidgetIds.ticketSidenav);
     const resourceSection = body.find((section) => section.id === "resource");
     const nodeIds = resourceSection?.nodes.map((node) => node.id) ?? [];
 
     expect(nodeIds).toContain(other.resource.uri);
     expect(nodeIds).not.toContain(dashboardTickets[0].resource.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(other.resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidenav).selectedNodeId).toBe(other.resource.uri);
   });
 });

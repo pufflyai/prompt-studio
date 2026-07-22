@@ -39,19 +39,19 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
   }, projectId);
 };
 
-test.describe("Ticket sidebar sessions", () => {
+test.describe("Ticket sidenav sessions", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Ticket Sidebar Sessions Project");
+    const project = await createProjectViaApi(request, "Ticket Sidenav Sessions Project");
     projectId = project.id;
   });
 
-  test("lists a Refine ticket session in the open ticket's Sessions sidebar", async ({ page, request }) => {
+  test("lists a Refine ticket session in the open ticket's Sessions sidenav", async ({ page, request }) => {
     const statuses = await getPlannerTicketStatuses(request, apiBase, projectId);
     const ticket = await createPlannerTicket(request, apiBase, projectId, {
-      content: "Sidebar session proof",
+      content: "Sidenav session proof",
       statusId: statuses[0]?.id,
     });
 
@@ -67,13 +67,13 @@ test.describe("Ticket sidebar sessions", () => {
 
     // Open the tickets board, then the ticket card — this reliably enters ticket mode.
     await ticketsNav.click();
-    const card = page.getByTestId("renderer-card").filter({ hasText: "Sidebar session proof" }).first();
+    const card = page.getByTestId("renderer-card").filter({ hasText: "Sidenav session proof" }).first();
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();
 
-    // Ticket mode renders the open ticket as a selected row in its own left sidebar.
-    const sidebar = page.getByRole("complementary");
-    await expect(sidebar.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible({ timeout: 15_000 });
+    // Ticket mode renders the open ticket as a selected row in its own left sidenav.
+    const sidenav = page.getByRole("complementary");
+    await expect(sidenav.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible({ timeout: 15_000 });
 
     // Create the ticket-anchored refine session while the ticket is open.
     const session = await executePlannerCommand<{ id: string }>(
@@ -94,18 +94,18 @@ test.describe("Ticket sidebar sessions", () => {
     );
     expect(session.id).toBeTruthy();
 
-    // The session must appear in the ticket-mode left sidebar (scoped so we don't false-match the
+    // The session must appear in the ticket-mode left sidenav (scoped so we don't false-match the
     // floating session panel or any "recent sessions" list elsewhere on the page).
-    const sessionRow = sidebar.getByText(`Refine ticket: ${ticket.shorthand}`);
+    const sessionRow = sidenav.getByText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sessionRow).toBeVisible();
 
     // Clicking it opens the session in the floating panel and keeps the ticket in view (the ticket
-    // stays in its own sidebar — we did not navigate away to sessions mode).
+    // stays in its own sidenav — we did not navigate away to sessions mode).
     await sessionRow.click();
     const floatingPanel = page.getByRole("dialog", { name: "Session" });
     await expect(
       floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(sidebar.getByRole("option", { name: `${ticket.shorthand} Sidebar session proof` })).toBeVisible();
+    await expect(sidenav.getByRole("option", { name: `${ticket.shorthand} Sidenav session proof` })).toBeVisible();
   });
 });

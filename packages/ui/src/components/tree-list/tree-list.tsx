@@ -13,7 +13,7 @@ export { buildVirtualRows } from "./tree-list-model";
 
 type TreeListRowVariant = "compact" | "tree";
 
-/** Sectioned hierarchical list for files, resources, navigation, and customizable sidebars. */
+/** Sectioned hierarchical list for files, resources, navigation, and customizable sidenavs. */
 interface TreeListProps {
   /** Ordered sections to render, each containing nested tree nodes. */
   sections: TreeListSection[];
@@ -328,7 +328,7 @@ export const TreeList = (props: TreeListProps) => {
     <StackTreeList {...props} />
   );
   const paddedContent = (
-    <Box px="xs" w="full" minW="0" maxW="full">
+    <Box p="xs" w="full" minW="0" maxW="full">
       {content}
     </Box>
   );

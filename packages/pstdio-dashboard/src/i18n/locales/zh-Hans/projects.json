@@ -202,7 +202,7 @@
       "missingProjectId": "创建尝试需要项目 ID。"
     }
   },
-  "sidebar": {
+  "sidenav": {
     "search": "搜索",
     "tickets": "工单",
     "projectChangelog": "项目变更日志",

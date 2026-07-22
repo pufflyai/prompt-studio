@@ -5,7 +5,7 @@ import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collecti
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
 
@@ -14,7 +14,7 @@ export const DASHBOARD_NOTIFICATIONS_KEYBINDING = "Alt+Shift+N";
 const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNode => {
   const count = countPendingNotifications(getDashboardSelectedProjectId(ctx));
   return {
-    id: "dashboard.notifications.sidebar",
+    id: "dashboard.notifications.sidenav",
     label: "Notifications",
     icon: "Inbox",
     endContent:
@@ -27,9 +27,9 @@ const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNo
   };
 };
 
-const registerNotificationSidebar = (ctx: WorkbenchModuleContributionContext) => {
-  registerSidebarContribution(ctx, {
-    id: "dashboard.notifications.sidebar-nav",
+const registerNotificationSidenav = (ctx: WorkbenchModuleContributionContext) => {
+  registerSidenavContribution(ctx, {
+    id: "dashboard.notifications.sidenav-nav",
     modes: ["*"],
     region: "header",
     order: 10,
@@ -37,9 +37,9 @@ const registerNotificationSidebar = (ctx: WorkbenchModuleContributionContext) =>
   });
 };
 
-const refreshSidebars = (ctx: WorkbenchModuleContributionContext) => {
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+const refreshSidenavs = (ctx: WorkbenchModuleContributionContext) => {
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   }
 };
 
@@ -69,7 +69,7 @@ export const createNotificationsModule = () =>
     id: "dashboard.notifications",
     activate(ctx) {
       registerNotificationWidget(ctx);
-      registerNotificationSidebar(ctx);
+      registerNotificationSidenav(ctx);
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openNotifications,
@@ -97,9 +97,9 @@ export const createNotificationsModule = () =>
 
       const unsubscribeNotifications = subscribeCollections((change) => {
         if (change && change.table !== "notifications") return;
-        refreshSidebars(ctx);
+        refreshSidenavs(ctx);
       });
-      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => refreshSidebars(ctx));
+      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => refreshSidenavs(ctx));
       getCollectionsVersion();
 
       return [{ dispose: unsubscribeNotifications }, { dispose: unsubscribeProject }];

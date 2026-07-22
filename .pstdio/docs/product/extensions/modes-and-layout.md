@@ -39,10 +39,10 @@ A resource-owned mode is for detail pages, not boards. The dashboard activates t
 
 - the primary resource view opens in `workbench.main`
 - a same-kind view listed in `layout.open` is bound to the active resource and placed in its declared target
-- `workbench.left` opens the main left sidebar, while `workbench.main.left` still opens the main-left workbench area
+- `workbench.left` opens the main left sidenav, while `workbench.main.left` still opens the main-left workbench area
 - a `workbench.main.right` companion stays in `main-right` when it is not overridden by mode layout
 
-This keeps a board in project mode while letting a detail page own its sidebar chrome.
+This keeps a board in project mode while letting a detail page own its sidenav chrome.
 
 ## Relationship To UI Contributions
 

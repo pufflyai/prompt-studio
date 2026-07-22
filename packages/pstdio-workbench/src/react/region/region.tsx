@@ -32,7 +32,7 @@ interface WorkbenchRegionProps {
 // scroll on the X axis; every other region scrolls vertically.
 const horizontalScrollRegions = new Set<WorkbenchRegionId>([
   "nav",
-  "sidebar-header",
+  "sidenav-header",
   "main-header",
   "secondary-header",
   "side-header",

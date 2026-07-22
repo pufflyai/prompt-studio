@@ -140,21 +140,32 @@ export const buildTreeVisibilityMenuActions = (
   options: BuildMenuOptions,
 ): ResourceContextAction[] => {
   const result: ResourceContextAction[] = [];
+  const appendGroup = (group: ResourceContextAction[]) => {
+    if (group.length === 0) return;
+    if (result.length > 0) group[0] = { ...group[0], separatorBefore: true };
+    result.push(...group);
+  };
 
-  for (const node of items.headerNodes ?? []) {
-    if (isCustomizable(node)) result.push(buildNodeAction(node, nodeOverrides, actions, options));
-  }
+  appendGroup(
+    (items.headerNodes ?? [])
+      .filter(isCustomizable)
+      .map((node) => buildNodeAction(node, nodeOverrides, actions, options)),
+  );
+  const mainActions: ResourceContextAction[] = [];
   for (const section of items.sections) {
-    if (isCustomizable(section)) result.push(buildSectionAction(section, sectionOverrides, actions, options));
+    if (isCustomizable(section)) mainActions.push(buildSectionAction(section, sectionOverrides, actions, options));
     // Top-level rows that opt in (e.g. a "Tickets" nav entry) are hideable too; their leaf
     // children are not visited, so files/sessions inside a category stay non-hideable.
     for (const node of section.nodes) {
-      if (isCustomizable(node)) result.push(buildNodeAction(node, nodeOverrides, actions, options));
+      if (isCustomizable(node)) mainActions.push(buildNodeAction(node, nodeOverrides, actions, options));
     }
   }
-  for (const node of items.footerNodes ?? []) {
-    if (isCustomizable(node)) result.push(buildNodeAction(node, nodeOverrides, actions, options));
-  }
+  appendGroup(mainActions);
+  appendGroup(
+    (items.footerNodes ?? [])
+      .filter(isCustomizable)
+      .map((node) => buildNodeAction(node, nodeOverrides, actions, options)),
+  );
 
   if (result.length === 0) return result;
 

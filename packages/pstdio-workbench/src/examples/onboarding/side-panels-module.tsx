@@ -205,7 +205,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
       title: "Resources",
-      region: "sidebar",
+      region: "sidenav",
       regionSize: { defaultPx: 220, minPx: 180 },
       singleton: true,
       rendererId: RESOURCE_PICKER_RENDERER_ID,

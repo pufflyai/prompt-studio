@@ -1,7 +1,7 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { setDashboardSidebarSelection } from "@/shared/workbench/dashboard-sidebar";
+import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
@@ -36,7 +36,7 @@ export const createStartModule = () =>
         widgetId: dashboardWidgetIds.start,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
-          setDashboardSidebarSelection(ctx, undefined);
+          setDashboardSidenavSelection(ctx, undefined);
         },
       });
     },

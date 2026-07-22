@@ -88,9 +88,9 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
         <Badge colorPalette="purple">theme {themePreference}</Badge>
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("sidebar")}>
+        <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("sidenav")}>
           <WorkbenchIcon name="PanelLeft" />
-          Focus sidebar
+          Focus sidenav
         </Button>
         <Button size="sm" onClick={() => input.workbench.focus.setActiveRegion("secondary")}>
           <WorkbenchIcon name="PanelBottom" />
@@ -164,9 +164,9 @@ const registerWidgets = (workbench: WorkbenchCore) => {
     config: "Blocks",
   });
   workbench.layout.registerWidget({
-    id: "foundation.sidebar",
-    title: "Sidebar",
-    region: "sidebar",
+    id: "foundation.sidenav",
+    title: "Sidenav",
+    region: "sidenav",
     rendererId: foundationRendererId,
     config: "PanelLeft",
   });
@@ -204,10 +204,10 @@ export const createFoundationWorkbench = () => {
 
   registerWidgets(workbench);
   workbench.context.set("foundation.host", true);
-  workbench.layout.setRegionSize("sidebar", 280);
+  workbench.layout.setRegionSize("sidenav", 280);
   workbench.layout.setRegionSize("secondary", 260);
   workbench.layout.openWidget("foundation.activity", { pinned: true });
-  workbench.layout.openWidget("foundation.sidebar", { pinned: true });
+  workbench.layout.openWidget("foundation.sidenav", { pinned: true });
   workbench.layout.openWidget("foundation.status", { pinned: true });
   workbench.layout.openWidget("foundation.main", { closable: true });
   workbench.layout.openWidget("foundation.panel", { closable: true });

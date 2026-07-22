@@ -2,7 +2,7 @@ import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContribution
 import { readRuntimeConfig } from "@/lib/api";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
@@ -37,8 +37,8 @@ const helpFooterNode = (): TreeNode => ({
   menuPlacement: "top-start",
 });
 
-const registerHelpSidebar = (ctx: WorkbenchModuleContributionContext) =>
-  registerSidebarContribution(ctx, {
+const registerHelpSidenav = (ctx: WorkbenchModuleContributionContext) =>
+  registerSidenavContribution(ctx, {
     id: "dashboard.help.footer",
     modes: ["*"],
     order: 10,
@@ -50,7 +50,7 @@ export const createHelpModule = () =>
   ({
     id: "dashboard.help",
     activate(ctx) {
-      registerHelpSidebar(ctx);
+      registerHelpSidenav(ctx);
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openDocs, label: "Documentation", category: "Help", icon: "BookOpen" },
         { execute: () => openHelpLink(GITHUB_DOCS_URL) },

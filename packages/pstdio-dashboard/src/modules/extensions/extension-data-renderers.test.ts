@@ -10,7 +10,7 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionContributions } from "./extension-contribution-registration";
 import {
-  buildExtensionDataRendererSidebarHeaderNodes,
+  buildExtensionDataRendererSidenavHeaderNodes,
   registerExtensionDataRenderers,
 } from "./extension-data-renderers";
 import { createExtensionsModule } from "./module";
@@ -235,7 +235,7 @@ describe("registerExtensionDataRenderers", () => {
     try {
       await flushMicrotasks();
 
-      const ticketsResource = buildExtensionDataRendererSidebarHeaderNodes({ metadata, projectId: "project-1" })[0]
+      const ticketsResource = buildExtensionDataRendererSidenavHeaderNodes({ metadata, projectId: "project-1" })[0]
         ?.resource;
 
       await workbench.resources.openResource(ticketsResource!);
@@ -293,9 +293,9 @@ describe("registerExtensionDataRenderers adapter hooks", () => {
   });
 });
 
-describe("buildExtensionDataRendererSidebarHeaderNodes", () => {
+describe("buildExtensionDataRendererSidenavHeaderNodes", () => {
   test("lists a nav node per data renderer", () => {
-    const nodes = buildExtensionDataRendererSidebarHeaderNodes({ metadata, projectId: "proj-1" });
+    const nodes = buildExtensionDataRendererSidenavHeaderNodes({ metadata, projectId: "proj-1" });
 
     expect(nodes).toHaveLength(1);
     expect(nodes[0]).toMatchObject({ label: "Tickets" });
@@ -307,16 +307,16 @@ describe("buildExtensionDataRendererSidebarHeaderNodes", () => {
   });
 
   test("uses the ticket board icon for ticket data renderers", () => {
-    const node = buildExtensionDataRendererSidebarHeaderNodes({ metadata, projectId: "proj-1" })[0];
+    const node = buildExtensionDataRendererSidenavHeaderNodes({ metadata, projectId: "proj-1" })[0];
 
     expect(node?.icon).toBe("square-kanban");
     expect(node?.resource?.icon).toBe("square-kanban");
   });
 
   test("returns nothing without a project or data renderers", () => {
-    expect(buildExtensionDataRendererSidebarHeaderNodes({ metadata, projectId: undefined })).toEqual([]);
+    expect(buildExtensionDataRendererSidenavHeaderNodes({ metadata, projectId: undefined })).toEqual([]);
     expect(
-      buildExtensionDataRendererSidebarHeaderNodes({
+      buildExtensionDataRendererSidenavHeaderNodes({
         metadata: emptyDashboardExtensionMetadata,
         projectId: "proj-1",
       }),

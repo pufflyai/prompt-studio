@@ -113,20 +113,20 @@ test.describe("PS-168 Side Panels Storybook contract", () => {
     await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
 
     const side = page.getByTestId("workbench-session-attached-panel");
-    const sidebar = page.locator('[data-workbench-region="sidebar"]');
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const main = page.locator('[data-workbench-panel="main"]');
     const separator = page.getByRole("separator", { name: "Resize Side Panel" });
     await expect(side).toBeVisible({ timeout: 30_000 });
-    const [sideBox, sidebarBox, mainBox] = await Promise.all([
+    const [sideBox, sidenavBox, mainBox] = await Promise.all([
       side.boundingBox(),
-      sidebar.boundingBox(),
+      sidenav.boundingBox(),
       main.boundingBox(),
     ]);
     expect(sideBox).not.toBeNull();
-    expect(sidebarBox).not.toBeNull();
+    expect(sidenavBox).not.toBeNull();
     expect(mainBox).not.toBeNull();
-    expectNear(sideBox!.y, sidebarBox!.y);
-    expectNear(sideBox!.height, sidebarBox!.height);
+    expectNear(sideBox!.y, sidenavBox!.y);
+    expectNear(sideBox!.height, sidenavBox!.height);
     expectNear(sideBox!.width, 420);
     expectNear(mainBox!.x + mainBox!.width, sideBox!.x);
 

@@ -207,7 +207,7 @@
       "missingProjectId": "Se requiere el ID del proyecto para crear un intento."
     }
   },
-  "sidebar": {
+  "sidenav": {
     "search": "Buscar",
     "tickets": "Tareas",
     "projectChangelog": "Registro del proyecto",

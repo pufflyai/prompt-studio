@@ -12,8 +12,8 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
-import { setDashboardSidebarSelection, showDashboardSidebar } from "@/shared/workbench/dashboard-sidebar";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
@@ -35,12 +35,12 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
   return ctx.layout.openWidget(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
 };
 
-// The unified sidebar is mode-reactive (it opens and recomposes itself on mode change), so the
+// The unified sidenav is mode-reactive (it opens and recomposes itself on mode change), so the
 // dashboard modes only activate their own chrome (e.g. the session bubble) here.
-const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) =>
+const setupProjectSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
   activateModeChromeContributions(modeCtx, "project");
 
-const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
+const setupWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) => {
   modeCtx.layout.clearRegion("side");
   modeCtx.layout.clearRegion("side-header");
   // The workspace detail owns the Main right menu; clearing on mode entry (rather than
@@ -66,8 +66,8 @@ const workspaceNavigationNode = (): TreeNode => ({
   ],
 });
 
-const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionContext) => {
-  registerSidebarContribution(ctx, {
+const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContributionContext) => {
+  registerSidenavContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
     modes: ["*"],
     region: "header",
@@ -214,17 +214,17 @@ export const createWorkspacesModule = () =>
         order: 10,
       });
 
-      registerWorkspaceSidebarContributions(ctx);
+      registerWorkspaceSidenavContributions(ctx);
 
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
-        activate: setupProjectSidebarChrome,
+        activate: setupProjectSidenavChrome,
       });
       ctx.modes.registerMode({
         id: "workspace",
         label: "Workspace",
-        activate: setupWorkspaceSidebarChrome,
+        activate: setupWorkspaceSidenavChrome,
       });
 
       ctx.commands.registerCommand(
@@ -254,7 +254,7 @@ export const createWorkspacesModule = () =>
         widgetId: dashboardWidgetIds.workspaces,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
-          setDashboardSidebarSelection(ctx, resource.uri);
+          setDashboardSidenavSelection(ctx, resource.uri);
         },
       });
       registerResourceRoute(ctx, {
@@ -265,7 +265,7 @@ export const createWorkspacesModule = () =>
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
           setWorkspaceBreadcrumb(ctx, resource);
-          showDashboardSidebar(ctx, { selectedNode: null });
+          showDashboardSidenav(ctx, { selectedNode: null });
           openFirstWorkspaceSession(ctx, resource);
         },
         afterOpen: ({ resource }) => {

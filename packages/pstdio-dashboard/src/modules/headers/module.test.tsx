@@ -4,15 +4,15 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the dashboard sidebar header", () => {
+  test("pins the dashboard sidenav header", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createHeadersModule());
 
     const layout = workbench.layout.getLayout();
-    expect(layout.regions["sidebar-header"].widgets).toContainEqual(
+    expect(layout.regions["sidenav-header"].widgets).toContainEqual(
       expect.objectContaining({
-        contributionId: dashboardWidgetIds.sidebarHeader,
+        contributionId: dashboardWidgetIds.sidenavHeader,
         pinned: true,
       }),
     );

@@ -51,7 +51,7 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: explorerTreeId,
       title: "Explorer",
-      region: "sidebar",
+      region: "sidenav",
       rendererId: explorerTreeId,
     });
     ctx.layout.openWidget(explorerTreeId);

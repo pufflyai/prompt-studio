@@ -5,23 +5,23 @@ import {
   type DashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
-import { buildExtensionDataRendererSidebarHeaderNodes } from "./extension-data-renderers";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { buildExtensionDataRendererSidenavHeaderNodes } from "./extension-data-renderers";
 
-interface ExtensionSidebarContributionState {
+interface ExtensionSidenavContributionState {
   metadata: DashboardExtensionMetadata | undefined;
   projectId: string | undefined;
 }
 
-const extensionNavigationMetadata = (state: ExtensionSidebarContributionState) =>
+const extensionNavigationMetadata = (state: ExtensionSidenavContributionState) =>
   getCachedDashboardExtensionMetadata(state.projectId) ?? state.metadata;
 
-export const registerExtensionSidebarContributions = (
+export const registerExtensionSidenavContributions = (
   ctx: WorkbenchModuleContributionContext,
-  getState: () => ExtensionSidebarContributionState,
+  getState: () => ExtensionSidenavContributionState,
 ) => {
-  registerSidebarContribution(ctx, {
-    id: "dashboard.extensions.project-sidebar.first",
+  registerSidenavContribution(ctx, {
+    id: "dashboard.extensions.project-sidenav.first",
     modes: ["project"],
     order: 10,
     getSections: () => {
@@ -39,8 +39,8 @@ export const registerExtensionSidebarContributions = (
         : [];
     },
   });
-  registerSidebarContribution(ctx, {
-    id: "dashboard.extensions.project-sidebar.default",
+  registerSidenavContribution(ctx, {
+    id: "dashboard.extensions.project-sidenav.default",
     modes: ["project"],
     order: 40,
     getSections: () => {
@@ -60,19 +60,19 @@ export const registerExtensionSidebarContributions = (
   });
 };
 
-export const registerExtensionDataRendererSidebarContribution = (
+export const registerExtensionDataRendererSidenavContribution = (
   ctx: WorkbenchModuleContributionContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ) =>
-  registerSidebarContribution(ctx, {
+  registerSidenavContribution(ctx, {
     id: "dashboard.extensions.data-renderers",
     modes: ["*"],
     region: "header",
     order: 40,
-    getHeaderNodes: () => buildExtensionDataRendererSidebarHeaderNodes(input),
+    getHeaderNodes: () => buildExtensionDataRendererSidenavHeaderNodes(input),
   });
 
-const resourceSidebarModeId = (
+const resourceSidenavModeId = (
   metadata: DashboardExtensionMetadata,
   view: DashboardExtensionMetadata["views"][number],
 ) => {
@@ -81,10 +81,10 @@ const resourceSidebarModeId = (
   return (modeTarget ?? view.target) === "workbench.left" ? (mode?.modeId ?? "project") : undefined;
 };
 
-export const isExtensionResourceSidebarView = (
+export const isExtensionResourceSidenavView = (
   metadata: DashboardExtensionMetadata,
   view: DashboardExtensionMetadata["views"][number],
-) => Boolean(view.resourceKind && view.treeRendererId && resourceSidebarModeId(metadata, view));
+) => Boolean(view.resourceKind && view.treeRendererId && resourceSidenavModeId(metadata, view));
 
 const mirrorResourceTreeSelection = (
   ctx: WorkbenchModuleContributionContext,
@@ -94,39 +94,39 @@ const mirrorResourceTreeSelection = (
     (state) => state.statesByTreeId[input.treeRendererId]?.selectedNodeId,
     (selectedNodeId) => {
       if (ctx.modes.getActiveModeId() !== input.modeId) return;
-      if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) return;
-      ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, selectedNodeId);
+      if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, selectedNodeId);
     },
   );
 
   return { dispose: unsubscribe };
 };
 
-export const registerExtensionResourceSidebarContributions = (
+export const registerExtensionResourceSidenavContributions = (
   ctx: WorkbenchModuleContributionContext,
   metadata: DashboardExtensionMetadata,
 ) => {
   const disposables: Disposable[] = [];
-  const sidebarTreeIds = new Set<string>();
+  const sidenavTreeIds = new Set<string>();
 
   for (const [index, view] of metadata.views.entries()) {
-    if (!isExtensionResourceSidebarView(metadata, view) || !view.resourceKind || !view.treeRendererId) continue;
+    if (!isExtensionResourceSidenavView(metadata, view) || !view.resourceKind || !view.treeRendererId) continue;
     const treeRendererId = view.treeRendererId;
-    const modeId = resourceSidebarModeId(metadata, view);
+    const modeId = resourceSidenavModeId(metadata, view);
     if (!modeId) continue;
 
-    sidebarTreeIds.add(treeRendererId);
+    sidenavTreeIds.add(treeRendererId);
     disposables.push(mirrorResourceTreeSelection(ctx, { modeId, treeRendererId }));
     const tree = ctx.renderers.getTreeRenderer(treeRendererId);
-    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
       for (const sectionId of tree?.defaultExpandedSectionIds ?? []) {
-        ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidebar, sectionId, true);
+        ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
       }
     }
 
     disposables.push(
-      registerSidebarContribution(ctx, {
-        id: `dashboard.extensions.resource-sidebar.${view.id}`,
+      registerSidenavContribution(ctx, {
+        id: `dashboard.extensions.resource-sidenav.${view.id}`,
         modes: [modeId],
         order: index,
         getSections: async (_workbench, input) => {
@@ -136,8 +136,8 @@ export const registerExtensionResourceSidebarContributions = (
             viewId: view.id,
           });
           const selectedNodeId = ctx.renderers.getTreeState(treeRendererId).selectedNodeId;
-          if (selectedNodeId && ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, selectedNodeId);
+          if (selectedNodeId && ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, selectedNodeId);
           }
           return sections;
         },
@@ -146,9 +146,9 @@ export const registerExtensionResourceSidebarContributions = (
   }
 
   const refreshSubscription = ctx.renderers.onDidRefresh((event) => {
-    if (!sidebarTreeIds.has(event.treeId)) return;
-    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-      ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+    if (!sidenavTreeIds.has(event.treeId)) return;
+    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+      ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
     }
   });
 

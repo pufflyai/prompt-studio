@@ -93,7 +93,7 @@ They often look related, but they are not interchangeable. One owner can contrib
 
 ```ts
 ownerId: "dashboard.project", contributionId: "project.settings"
-ownerId: "dashboard.project", contributionId: "project.sidebar"
+ownerId: "dashboard.project", contributionId: "project.sidenav"
 ownerId: "dashboard.project", contributionId: "project.header"
 ```
 

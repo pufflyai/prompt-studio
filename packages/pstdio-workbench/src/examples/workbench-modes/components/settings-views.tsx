@@ -40,7 +40,7 @@ export const SettingsPage = () => (
           Workspace preferences
         </Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
-          A focus layout — no sidebars, no bottom panel — just a centered settings page with tabs above and a status bar
+          A focus layout — no sidenavs, no bottom panel — just a centered settings page with tabs above and a status bar
           below.
         </Text>
       </Stack>

@@ -1,7 +1,7 @@
 import { Badge, Box, Container, Heading, Stack, Text } from "@chakra-ui/react";
 import { createLabView } from "../renderers/lab-view-shell";
 
-const LabSidebar = () => (
+const LabSidenav = () => (
   <Container as="aside" h="full" maxW="sm" paddingX="md" paddingY="md">
     <Stack gap="md">
       <Stack gap="xs">
@@ -25,4 +25,4 @@ const LabSidebar = () => (
   </Container>
 );
 
-export default createLabView(() => <LabSidebar />);
+export default createLabView(() => <LabSidenav />);

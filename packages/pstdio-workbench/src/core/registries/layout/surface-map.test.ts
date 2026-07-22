@@ -56,8 +56,8 @@ describe("surfaceMap", () => {
     expect(getSurface("nav")).toMatchObject({ role: "projection", reads: ["primary", "attached"] });
   });
 
-  test("Sidebar is a navigator projection that selects primary", () => {
-    expect(getSurface("sidebar")).toMatchObject({ role: "projection", reads: ["primary"], navigator: true });
+  test("Sidenav is a navigator projection that selects primary", () => {
+    expect(getSurface("sidenav")).toMatchObject({ role: "projection", reads: ["primary"], navigator: true });
   });
 
   test("overlay is the transient layer", () => {

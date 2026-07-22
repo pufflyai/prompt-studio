@@ -114,7 +114,7 @@ describe("Panel registration", () => {
       layout.registerLocation({
         id: "project.navigator",
         title: "Navigator",
-        region: "sidebar",
+        region: "sidenav",
         rendererId: "navigator.renderer",
         panelMenus: [
           {

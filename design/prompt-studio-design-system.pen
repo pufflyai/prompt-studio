@@ -11511,7 +11511,6 @@
                           "strokeAlignment": "inner",
                           "layout": "vertical",
                           "gap": 2,
-                          "padding": 6,
                           "children": [
                             {
                               "type": "frame",
@@ -11748,7 +11747,6 @@
                           "strokeAlignment": "inner",
                           "layout": "vertical",
                           "gap": 2,
-                          "padding": 6,
                           "children": [
                             {
                               "id": "XyVIv",
@@ -12107,7 +12105,6 @@
                           "strokeAlignment": "inner",
                           "layout": "vertical",
                           "gap": 2,
-                          "padding": 6,
                           "children": [
                             {
                               "id": "jT1yG",
@@ -15786,7 +15783,6 @@
                       "strokeAlignment": "inner",
                       "layout": "vertical",
                       "gap": 1,
-                      "padding": 6,
                       "children": [
                         {
                           "type": "frame",
@@ -75975,7 +75971,12 @@
                           "id": "EKlSu",
                           "name": "Header / Resource Region Divider",
                           "width": "fill_container",
-                          "height": 12
+                          "height": 12,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner"
                         },
                         {
                           "type": "frame",
@@ -76189,7 +76190,12 @@
                           "id": "npiF8",
                           "name": "Header / Resource Region Divider",
                           "width": "fill_container",
-                          "height": 12
+                          "height": 12,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner"
                         },
                         {
                           "type": "frame",
@@ -76483,7 +76489,12 @@
                           "id": "cqAz5",
                           "name": "Header / Resource Region Divider",
                           "width": "fill_container",
-                          "height": 12
+                          "height": 12,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner"
                         },
                         {
                           "type": "frame",

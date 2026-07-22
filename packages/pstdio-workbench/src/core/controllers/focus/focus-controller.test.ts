@@ -7,12 +7,12 @@ describe("createWorkbenchFocusController", () => {
     const context = createContextKeyService();
     const focus = createWorkbenchFocusController({ context });
 
-    focus.setActiveRegion("sidebar");
+    focus.setActiveRegion("sidenav");
 
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: true,
-      activeWorkbenchFocusRegion: "sidebar",
-      sidebarFocus: true,
+      activeWorkbenchFocusRegion: "sidenav",
+      sidenavFocus: true,
       mainFocus: false,
       secondaryFocus: false,
       sideFocus: false,
@@ -23,7 +23,7 @@ describe("createWorkbenchFocusController", () => {
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: true,
       activeWorkbenchFocusRegion: "main",
-      sidebarFocus: false,
+      sidenavFocus: false,
       mainFocus: true,
       secondaryFocus: false,
       sideFocus: false,
@@ -33,7 +33,7 @@ describe("createWorkbenchFocusController", () => {
 
     expect(context.snapshot()).toMatchObject({
       workbenchFocus: false,
-      sidebarFocus: false,
+      sidenavFocus: false,
       mainFocus: false,
       secondaryFocus: false,
       sideFocus: false,

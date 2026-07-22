@@ -91,8 +91,8 @@ const toSessionCommandResult = (value: unknown): SessionCommandResult | undefine
 };
 
 const refreshSessionTrees = (ctx: WorkbenchModuleContributionContext) => {
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   }
 };
 

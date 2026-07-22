@@ -16,16 +16,17 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
 } from "@/components/primitives/session-indicator";
 import type { TreeListSection } from "../tree-list/tree-list.types";
-import { Sidebar } from "./sidebar";
-import { useSidebarStore } from "./sidebar.store";
+import { Sidenav } from "./sidenav";
+import { useSidenavStore } from "./sidenav.store";
 
-const sidebarSections: TreeListSection[] = [
+const sidenavSections: TreeListSection[] = [
   {
     id: "top-level",
     nodes: [
@@ -165,17 +166,24 @@ const coloredSessionSections: TreeListSection[] = [
   },
 ];
 
-const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[]; header?: ReactNode }) => {
-  const { storageKey, sections = sidebarSections, header } = props;
+interface SidenavShellProps {
+  storageKey: string;
+  sections?: TreeListSection[];
+  header?: ReactNode;
+  contextActions?: ResourceContextAction[];
+}
+
+const SidenavShell = (props: SidenavShellProps) => {
+  const { storageKey, sections = sidenavSections, header, contextActions } = props;
   const [activeNodeId, setActiveNodeId] = useState<string | null>("overview");
   const [navigationOutput, setNavigationOutput] = useState("No navigation yet");
   const [openState, setOpenState] = useState(true);
 
-  const openSidebar = useSidebarStore(storageKey, (state) => state.openSidebar);
-  const closeSidebar = useSidebarStore(storageKey, (state) => state.closeSidebar);
-  const setSidebarOpen = (open: boolean) => {
-    if (open) openSidebar();
-    else closeSidebar();
+  const openSidenav = useSidenavStore(storageKey, (state) => state.openSidenav);
+  const closeSidenav = useSidenavStore(storageKey, (state) => state.closeSidenav);
+  const setSidenavOpen = (open: boolean) => {
+    if (open) openSidenav();
+    else closeSidenav();
   };
 
   return (
@@ -189,13 +197,14 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[];
         minSizePx={200}
         maxSizePx={480}
         contentMinSizePx={320}
-        resizeLabel="Resize sidebar"
+        resizeLabel="Resize sidenav"
         showResizeSeparator={false}
-        onCollapsedChange={(collapsed) => setSidebarOpen(!collapsed)}
+        onCollapsedChange={(collapsed) => setSidenavOpen(!collapsed)}
         resizablePanel={
-          <Sidebar
+          <Sidenav
             storageKey={storageKey}
             sections={sections}
+            contextActions={contextActions}
             activeNodeId={activeNodeId}
             resizable={false}
             width="full"
@@ -227,8 +236,8 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[];
         contentPanel={
           <Stack flex="1" p="4" gap="3" minW="0">
             <HStack gap="2" flexWrap="wrap">
-              <Button size="sm" onClick={openSidebar}>
-                Reopen Sidebar
+              <Button size="sm" onClick={openSidenav}>
+                Reopen Sidenav
               </Button>
               <Badge colorPalette={openState ? "green" : "orange"}>{openState ? "Open" : "Hidden"}</Badge>
             </HStack>
@@ -242,7 +251,7 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[];
 
             <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" p="3" flex="1">
               <Text textStyle="paragraph/S/regular" color="fg.muted">
-                Content area reclaims width when sidebar is hidden.
+                Content area reclaims width when sidenav is hidden.
               </Text>
             </Box>
           </Stack>
@@ -252,9 +261,9 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[];
   );
 };
 
-const meta: Meta<typeof Sidebar> = {
-  title: "Components/Navigation/Sidebar",
-  component: Sidebar,
+const meta: Meta<typeof Sidenav> = {
+  title: "Components/Navigation/Sidenav",
+  component: Sidenav,
   parameters: {
     layout: "fullscreen",
   },
@@ -262,33 +271,64 @@ const meta: Meta<typeof Sidebar> = {
 
 export default meta;
 
-type Story = StoryObj<typeof Sidebar>;
+type Story = StoryObj<typeof Sidenav>;
 
 export const DefaultDocsTree: Story = {
-  render: () => <SidebarShell storageKey="storybook-sidebar-default" />,
+  render: () => <SidenavShell storageKey="storybook-sidenav-default" />,
 };
 
 export const HeaderAndFooterLayout: Story = {
-  render: () => <SidebarShell storageKey="storybook-sidebar-layout" />,
+  render: () => <SidenavShell storageKey="storybook-sidenav-layout" />,
 };
 
 export const HiddenWithExternalReopen: Story = {
-  render: () => <SidebarShell storageKey="storybook-sidebar-reopen" />,
+  render: () => <SidenavShell storageKey="storybook-sidenav-reopen" />,
   parameters: {
     docs: {
       description: {
-        story: "Hide the sidebar by dragging past the collapse threshold and reopen from the external button.",
+        story: "Hide the sidenav by dragging past the collapse threshold and reopen from the external button.",
       },
     },
   },
 };
 
 export const PersistenceRestore: Story = {
-  render: () => <SidebarShell storageKey="storybook-sidebar-persist" />,
+  render: () => <SidenavShell storageKey="storybook-sidenav-persist" />,
   parameters: {
     docs: {
       description: {
-        story: "Expand or collapse nodes, hide the sidebar, then refresh Storybook to verify persisted state restore.",
+        story: "Expand or collapse nodes, hide the sidenav, then refresh Storybook to verify persisted state restore.",
+      },
+    },
+  },
+};
+
+const WholeSidenavContextMenuStory = () => {
+  const [notificationsVisible, setNotificationsVisible] = useState(true);
+  const sections = sidenavSections.map((section) => ({
+    ...section,
+    nodes: section.nodes.filter((node) => node.id !== "notifications" || notificationsVisible),
+  }));
+  const contextActions: ResourceContextAction[] = [
+    {
+      key: "notifications",
+      label: notificationsVisible ? "Hide Notifications" : "Show Notifications",
+      icon: notificationsVisible ? <Bell size={14} /> : <Plus size={14} />,
+      onClick: () => setNotificationsVisible((visible) => !visible),
+    },
+  ];
+
+  return (
+    <SidenavShell storageKey="storybook-sidenav-context-menu" sections={sections} contextActions={contextActions} />
+  );
+};
+
+export const WholeSidenavContextMenu: Story = {
+  render: () => <WholeSidenavContextMenuStory />,
+  parameters: {
+    docs: {
+      description: {
+        story: "Right-click the header, navigation tree, empty space, or footer to customize Sidenav items.",
       },
     },
   },
@@ -300,15 +340,15 @@ export const NamespaceIsolation: Story = {
       <Stack direction={{ base: "column", lg: "row" }} gap="4" p="4">
         <Box flex="1" minW="0">
           <Text mb="2" textStyle="paragraph/S/medium">
-            Sidebar A
+            Sidenav A
           </Text>
-          <SidebarShell storageKey="storybook-sidebar-namespace-a" sections={sidebarSections} />
+          <SidenavShell storageKey="storybook-sidenav-namespace-a" sections={sidenavSections} />
         </Box>
         <Box flex="1" minW="0">
           <Text mb="2" textStyle="paragraph/S/medium">
-            Sidebar B
+            Sidenav B
           </Text>
-          <SidebarShell storageKey="storybook-sidebar-namespace-b" sections={sidebarSections} />
+          <SidenavShell storageKey="storybook-sidenav-namespace-b" sections={sidenavSections} />
         </Box>
       </Stack>
     );
@@ -316,11 +356,11 @@ export const NamespaceIsolation: Story = {
 };
 
 export const ColoredSessionIcons: Story = {
-  render: () => <SidebarShell storageKey="storybook-sidebar-colored-icons" sections={coloredSessionSections} />,
+  render: () => <SidenavShell storageKey="storybook-sidenav-colored-icons" sections={coloredSessionSections} />,
   parameters: {
     docs: {
       description: {
-        story: "Sidebar nodes can provide iconColor so status-driven icons keep their semantic colors.",
+        story: "Sidenav nodes can provide iconColor so status-driven icons keep their semantic colors.",
       },
     },
   },

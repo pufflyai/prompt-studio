@@ -6,11 +6,11 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
-  getSidebarContributionHeaderNodes,
-  getSidebarContributionSections,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+  getSidenavContributionHeaderNodes,
+  getSidenavContributionSections,
+} from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
-import { createSidebarModule } from "../sidebar/module";
+import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule", () => {
@@ -21,34 +21,34 @@ describe("createWorkspacesModule", () => {
       workspaceShorthand: "PS-307_A1",
     });
 
-    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().regions.sidebar.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.dashboardSidebar,
+    expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
+      dashboardWidgetIds.dashboardSidenav,
     ]);
     expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBeUndefined();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
 
-    const sidebarNodeIds = (
-      await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, { resource: workspace })
+    const sidenavNodeIds = (
+      await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, { resource: workspace })
     )
       .flatMap((section) => section.nodes)
       .map((node) => node.id);
-    expect(sidebarNodeIds).not.toContain(workspace.uri);
-    expect(sidebarNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
+    expect(sidenavNodeIds).not.toContain(workspace.uri);
+    expect(sidenavNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
   test("opens the last active linked session in the Side Panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
-    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSidenavModule());
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -116,7 +116,7 @@ describe("createWorkspacesModule", () => {
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBe(
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );
   });
@@ -180,11 +180,11 @@ describe("createWorkspacesModule navigation", () => {
   test("places workspace creation on the Workspaces navigation row", async () => {
     const workbench = createWorkbenchCore();
 
-    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
 
-    const headerNodeIds = getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.id);
-    const workspacesNode = getSidebarContributionHeaderNodes(workbench, "project").find(
+    const headerNodeIds = getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.id);
+    const workspacesNode = getSidenavContributionHeaderNodes(workbench, "project").find(
       (node) => node.id === dashboardResources.workspaces.uri,
     );
 
@@ -200,31 +200,31 @@ describe("createWorkspacesModule navigation", () => {
       ],
     });
     expect(
-      (await getSidebarContributionSections(workbench, "project"))
+      (await getSidenavContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id),
     ).not.toContain(dashboardResources.workspaces.uri);
   });
 });
 
-describe("createWorkspacesModule sidebar state", () => {
-  test("keeps the sidebar collapsed when workspace navigation changes the active mode", async () => {
+describe("createWorkspacesModule sidenav state", () => {
+  test("keeps the sidenav collapsed when workspace navigation changes the active mode", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-307_A1",
     });
 
-    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.panels.setOpen("sidebar", false);
-    workbench.layout.setRegionVisible("sidebar", false);
+    workbench.panels.setOpen("sidenav", false);
+    workbench.layout.setRegionVisible("sidenav", false);
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    expect(workbench.panels.isOpen("sidebar")).toBe(false);
-    expect(workbench.layout.getLayout().regions.sidebar.visible).toBe(false);
+    expect(workbench.panels.isOpen("sidenav")).toBe(false);
+    expect(workbench.layout.getLayout().regions.sidenav.visible).toBe(false);
   });
 });
 

@@ -4,7 +4,7 @@ import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { registerDashboardSidebar } from "@/shared/workbench/dashboard-sidebar";
+import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
@@ -35,7 +35,7 @@ const ticketTreeResponse = {
   },
 } satisfies CommandExecuteResponse;
 
-test("renders a ticket's left tree and mirrors its file selection in the Sidebar", async () => {
+test("renders a ticket's left tree and mirrors its file selection in the Sidenav", async () => {
   const executeCommand = mock(async (_projectId: string, commandId: string) =>
     commandId === ticketTreeResponse.commandId ? ticketTreeResponse : response,
   );
@@ -44,7 +44,7 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidebar
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  const sidebarDisposable = registerDashboardSidebar(workbench);
+  const sidenavDisposable = registerDashboardSidenav(workbench);
   const extensionsDisposable = workbench.registerModule(
     createExtensionsModule({ executeCommand, loadMetadata: mock(async () => metadataWithTickets) }),
   );
@@ -60,11 +60,11 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidebar
     } satisfies ResourceRef;
 
     await workbench.resources.openResource(ticket, { replaceActive: true });
-    const sidebarSections = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar);
+    const sidenavSections = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav);
 
-    expect(sidebarSections.map((section) => section.id)).toEqual(["ticket", "files"]);
-    expect(workbench.layout.getLayout().regions.sidebar.widgets.map((placement) => placement.contributionId)).toEqual([
-      dashboardWidgetIds.dashboardSidebar,
+    expect(sidenavSections.map((section) => section.id)).toEqual(["ticket", "files"]);
+    expect(workbench.layout.getLayout().regions.sidenav.widgets.map((placement) => placement.contributionId)).toEqual([
+      dashboardWidgetIds.dashboardSidenav,
     ]);
     expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);
     expect(executeCommand).toHaveBeenCalledWith(
@@ -73,15 +73,15 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidebar
       expect.objectContaining({ resource: expect.objectContaining({ id: "PS-10", type: "ticket" }) }),
     );
 
-    const fileTarget = sidebarSections.find((section) => section.id === "files")?.nodes[0]?.target;
+    const fileTarget = sidenavSections.find((section) => section.id === "files")?.nodes[0]?.target;
     expect(fileTarget).toBeDefined();
     await workbench.navigation.openTarget(fileTarget!);
 
     expect(workbench.renderers.getTreeState("pstdio-core-tickets.ticketFiles").selectedNodeId).toBe("research.md");
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBe("research.md");
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("research.md");
   } finally {
     extensionsDisposable.dispose();
-    sidebarDisposable.dispose();
+    sidenavDisposable.dispose();
     clearCachedDashboardExtensionMetadata("project-1");
   }
 });

@@ -45,7 +45,7 @@ import type { ExecuteDashboardExtensionCommand } from "./extension-command-handl
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
-import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
+import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
 import { dashboardExtensionViewKind, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
@@ -155,8 +155,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           metadata,
           projectId: nextProjectId,
         });
-        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-          ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+          ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }
         refreshOpenExtensionRoutes(ctx, metadata, nextProjectId);
         restorePrimaryResourceIfRefreshClearedIt(ctx, {
@@ -196,7 +196,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         // if the new fetch never resolves. Same-project refreshes (extension installs
         // and webview builds emit collection churn for seconds) keep everything live
         // until fresh metadata arrives — applyMetadata swaps contributions
-        // synchronously, so the sidebar never renders entries whose openers are gone.
+        // synchronously, so the sidenav never renders entries whose openers are gone.
         if (projectId !== previousProjectId || !projectId) {
           projectGeneration += 1;
           metadataRefresh.clear();
@@ -234,7 +234,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
       ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
-      registerExtensionSidebarContributions(ctx, () => ({ metadata, projectId }));
+      registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
       ctx.layout.registerLocation(
         {
           id: dashboardWidgetIds.extensionRoute,
@@ -293,8 +293,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.modes.setActiveMode("project");
           selectDashboardNavigationResource(ctx, availableResource);
           setResourceBreadcrumb(ctx, availableResource);
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, availableResource.uri);
+          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
           }
           return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
             resource: availableResource,

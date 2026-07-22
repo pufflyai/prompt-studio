@@ -238,7 +238,7 @@ export default defineExtension({
 });
 ```
 
-`dataRenderers` are automatically listed in the project sidebar. Do not add a `treeItems` entry with
+`dataRenderers` are automatically listed in the project sidenav. Do not add a `treeItems` entry with
 `action.kind === "dataRenderer"`.
 
 ## Native Resource Detail Mode

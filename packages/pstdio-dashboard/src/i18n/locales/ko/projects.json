@@ -202,7 +202,7 @@
       "missingProjectId": "시도를 만들려면 프로젝트 ID가 필요합니다."
     }
   },
-  "sidebar": {
+  "sidenav": {
     "search": "검색",
     "tickets": "티켓",
     "projectChangelog": "프로젝트 변경 로그",

@@ -208,7 +208,7 @@
       "missingProjectId": "Project id is required to create an attempt."
     }
   },
-  "sidebar": {
+  "sidenav": {
     "search": "Search",
     "tickets": "Tickets",
     "projectChangelog": "Project changelog",
@@ -222,7 +222,7 @@
     "loadingProject": "Loading project...",
     "notFound": "Project not found",
     "notFoundDescription": "Choose a project from the list to continue.",
-    "showSidebar": "Show sidebar"
+    "showSidenav": "Show sidenav"
   },
   "projectSettings": {
     "title": "Project Settings",
@@ -303,7 +303,7 @@
     "noSearchResults": "No sessions match your search.",
     "nextBuildTitle": "What should we build next?",
     "noSessionSelected": "No session selected",
-    "selectSession": "Select a session from the sidebar or start a new one.",
+    "selectSession": "Select a session from the sidenav or start a new one.",
     "followUpPlaceholder": "Send a follow-up message...",
     "queuedStatus": {
       "title": "Session queued",

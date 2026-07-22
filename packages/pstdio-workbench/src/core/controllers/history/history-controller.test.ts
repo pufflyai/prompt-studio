@@ -26,9 +26,9 @@ const setupWorkbench = () => {
     rendererId: "noop",
   });
   workbench.layout.registerWidget({
-    id: "sidebar",
-    title: "Sidebar",
-    region: "sidebar",
+    id: "sidenav",
+    title: "Sidenav",
+    region: "sidenav",
     rendererId: "noop",
   });
 
@@ -428,16 +428,16 @@ describe("createHistoryController mode-aware navigation", () => {
       rendererId: "noop",
     });
     workbench.layout.registerWidget({
-      id: "ticket-sidebar",
-      title: "Ticket sidebar",
-      region: "sidebar",
+      id: "ticket-sidenav",
+      title: "Ticket sidenav",
+      region: "sidenav",
       rendererId: "noop",
     });
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     workbench.modes.registerMode({
       id: "ticket",
       activate: (ctx) => {
-        ctx.layout.openWidget("ticket-sidebar");
+        ctx.layout.openWidget("ticket-sidenav");
       },
     });
     workbench.resources.registerOpener({
@@ -489,7 +489,7 @@ describe("createHistoryController widget history", () => {
 
     // Activating a left-region widget must not push a back/forward entry — history is
     // scoped to the main (primary) region's active placement.
-    workbench.layout.openWidget("sidebar");
+    workbench.layout.openWidget("sidenav");
 
     const snapshot = workbench.history.store.getState();
     expect(snapshot.entries.map((entry) => entry.resource?.id ?? entry.widgetId)).toEqual(["PS-1"]);
@@ -498,9 +498,9 @@ describe("createHistoryController widget history", () => {
   test("does not record pinned chrome widgets", async () => {
     const workbench = setupWorkbench();
 
-    workbench.layout.openWidget("sidebar", { pinned: true });
+    workbench.layout.openWidget("sidenav", { pinned: true });
     await openTicket(workbench, "PS-1");
-    workbench.layout.openWidget("sidebar", { pinned: true });
+    workbench.layout.openWidget("sidenav", { pinned: true });
 
     const snapshot = workbench.history.store.getState();
     expect(snapshot.entries.map((entry) => entry.resource?.id ?? entry.widgetId)).toEqual(["PS-1"]);

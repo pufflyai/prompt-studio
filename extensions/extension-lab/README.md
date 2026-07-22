@@ -74,7 +74,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 - `modes.lab` registers `pstdio.extension-lab.lab` with `layout.reset: true`.
 - `modes.labFocus` registers `pstdio.extension-lab.focus` with a main-area-only reset.
-- `views.labSidebar` and `views.labOverview` are opened by those mode layouts.
+- `views.labSidenav` and `views.labOverview` are opened by those mode layouts.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
 - `treeItems.openLabMode` switches to the lab mode through `workbench.action.switchMode`.
 - `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon.
@@ -112,7 +112,7 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a wa
 ## Trying it from the dashboard
 
 - The workbench top actions show **Lab: Say hello** on the lab route and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
-- The project sidebar shows lab entries for the mode, route, and host terminal. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`; the terminal entry opens a workbench terminal tab.
+- The project sidenav shows lab entries for the mode, route, and host terminal. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`; the terminal entry opens a workbench terminal tab.
 
 ## Layout
 

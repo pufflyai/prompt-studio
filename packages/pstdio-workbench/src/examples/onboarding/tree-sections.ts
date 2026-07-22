@@ -12,7 +12,7 @@ export const onboardingTreeSections = [
         icon: "PanelLeft",
         children: [
           { id: "regions.main", label: "main", description: "Primary work region.", icon: "PanelTop" },
-          { id: "regions.sidebar", label: "sidebar", description: "Tree-hosting sidebar.", icon: "PanelLeft" },
+          { id: "regions.sidenav", label: "sidenav", description: "Tree-hosting sidenav.", icon: "PanelLeft" },
           { id: "regions.status", label: "status", description: "Persistent bottom strip.", icon: "PanelBottom" },
         ],
       },

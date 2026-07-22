@@ -55,13 +55,13 @@ const emptyFilesSection = (): TreeViewSection => ({
   nodes: [emptyFilesNode()],
 });
 
-// Prefer the (renamable) workspace name so the sidebar reflects renames; the immutable
+// Prefer the (renamable) workspace name so the sidenav reflects renames; the immutable
 // shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
 // label updates as soon as a rename streams back.
 const workspaceLabel = (workspace: ExtensionWorkspace) =>
   workspace.name ?? workspace.workspace_shorthand ?? workspace.id;
 
-// Identifies the ticket a sidebar workspace belongs to so the dashboard can nest
+// Identifies the ticket a sidenav workspace belongs to so the dashboard can nest
 // its breadcrumb under the ticket instead of the standalone workspaces board.
 type WorkspaceTicketMeta = {
   ticketId: string;
@@ -302,7 +302,7 @@ export const listTicketFilesTreeCommand = defineCommand({
       nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
     };
 
-    // Linked workspaces open as native workspace tabs from the same sidebar.
+    // Linked workspaces open as native workspace tabs from the same sidenav.
     const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
       isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
     );

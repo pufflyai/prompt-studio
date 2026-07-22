@@ -3,7 +3,7 @@ import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
-const SIDEBAR_PANEL_ID = "sidebar";
+const SIDENAV_PANEL_ID = "sidenav";
 
 const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchRegion, open: boolean) => {
   workbench.panels.setOpen(panelId, open);
@@ -68,10 +68,10 @@ const builtinCommands: BuiltinCommand[] = [
   },
   {
     id: "workbench.toggleSideBar",
-    label: "Toggle Sidebar",
+    label: "Toggle Sidenav",
     icon: "PanelLeft",
     keybinding: "Mod+B",
-    execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDEBAR_PANEL_ID),
+    execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDENAV_PANEL_ID),
   },
 ];
 

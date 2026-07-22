@@ -42,17 +42,17 @@ const expectNear = (actual: number, expected: number) => {
 
 const expectCanonicalFrame = async (
   page: import("@playwright/test").Page,
-  options: { sidebar: "hidden" | "visible"; statusBar: "hidden" | "visible" },
+  options: { sidenav: "hidden" | "visible"; statusBar: "hidden" | "visible" },
 ) => {
-  const sidebar = page.locator('[data-workbench-region="sidebar"]');
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const navChrome = page.locator('[data-workbench-region="nav"]');
   const sidePanel = page.locator('[data-workbench-region="side"]');
   const statusBar = page.locator('[data-workbench-region="status"]');
 
-  if (options.sidebar === "visible") {
-    await expect(sidebar).toBeVisible({ timeout: 45_000 });
+  if (options.sidenav === "visible") {
+    await expect(sidenav).toBeVisible({ timeout: 45_000 });
   } else {
-    await expect(sidebar).toHaveCount(0);
+    await expect(sidenav).toHaveCount(0);
   }
   await expect(navChrome).toBeVisible();
   await expect(sidePanel).toBeVisible();
@@ -63,8 +63,8 @@ const expectCanonicalFrame = async (
   }
   await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
 
-  const [sidebarBox, navBox, sideBox] = await Promise.all([
-    options.sidebar === "visible" ? sidebar.boundingBox() : Promise.resolve(null),
+  const [sidenavBox, navBox, sideBox] = await Promise.all([
+    options.sidenav === "visible" ? sidenav.boundingBox() : Promise.resolve(null),
     navChrome.boundingBox(),
     sidePanel.boundingBox(),
   ]);
@@ -72,18 +72,18 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
-  const sidebarWidth = options.sidebar === "visible" ? 250 : 0;
+  const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
 
-  if (sidebarBox) {
-    expectNear(sidebarBox.x, 0);
-    expectNear(sidebarBox.y, 0);
-    expectNear(sidebarBox.width, sidebarWidth);
-    expectNear(sidebarBox.height, contentHeight);
+  if (sidenavBox) {
+    expectNear(sidenavBox.x, 0);
+    expectNear(sidenavBox.y, 0);
+    expectNear(sidenavBox.width, sidenavWidth);
+    expectNear(sidenavBox.height, contentHeight);
   }
 
-  expectNear(navBox!.x, sidebarWidth);
+  expectNear(navBox!.x, sidenavWidth);
   expectNear(navBox!.y, 0);
-  expectNear(navBox!.width, 860 - sidebarWidth);
+  expectNear(navBox!.width, 860 - sidenavWidth);
   expectNear(navBox!.height, 40);
 
   expectNear(sideBox!.x, 860);
@@ -120,7 +120,7 @@ test("PS-166 aligns an attached Side Panel with the active Location Panel", asyn
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
 
-  await expectCanonicalFrame(page, { sidebar: "visible", statusBar: "hidden" });
+  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
 });
 
 test("PS-166 keeps the Main Panel Header visible while the right menu is open", async ({ page, request }) => {
@@ -165,7 +165,7 @@ test.describe("PS-166 canonical workbench Storybook frame", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, dashboardWorkbenchStoryId));
 
-    await expectCanonicalFrame(page, { sidebar: "visible", statusBar: "visible" });
+    await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
 
     const headerBoxes = await Promise.all(
       ["main", "secondary", "side"].map(async (panel) => {

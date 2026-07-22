@@ -2,7 +2,7 @@ import type { WorkbenchRegion } from "../../core";
 
 const chakraBackgrounds = {
   activityBar: "var(--chakra-colors-bg-muted)",
-  sideBar: "var(--chakra-colors-bg-subtle)",
+  sidenav: "var(--chakra-colors-bg-subtle)",
   main: "var(--chakra-colors-bg)",
   panel: "var(--chakra-colors-bg-panel)",
   statusBar: "var(--chakra-colors-bg-subtle)",
@@ -13,7 +13,7 @@ const vscodeColor = (token: string, fallback: string) =>
 
 export const workbenchBackgrounds = {
   activityBar: vscodeColor("activityBar.background", vscodeColor("sideBar.background", chakraBackgrounds.activityBar)),
-  sideBar: vscodeColor("sideBar.background", chakraBackgrounds.sideBar),
+  sidenav: vscodeColor("sideBar.background", chakraBackgrounds.sidenav),
   main: vscodeColor("editor.background", chakraBackgrounds.main),
   panel: vscodeColor("panel.background", chakraBackgrounds.panel),
   statusBar: vscodeColor("statusBar.background", vscodeColor("sideBar.background", chakraBackgrounds.statusBar)),
@@ -23,8 +23,8 @@ export const workbenchBackgrounds = {
 const workbenchRegionBackgrounds = {
   nav: workbenchBackgrounds.main,
   activity: workbenchBackgrounds.activityBar,
-  "sidebar-header": workbenchBackgrounds.sideBar,
-  sidebar: workbenchBackgrounds.sideBar,
+  "sidenav-header": workbenchBackgrounds.sidenav,
+  sidenav: workbenchBackgrounds.sidenav,
   "main-header": workbenchBackgrounds.main,
   "main-left-menu": workbenchBackgrounds.panel,
   main: workbenchBackgrounds.main,

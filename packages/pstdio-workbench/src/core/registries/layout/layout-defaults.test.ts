@@ -16,7 +16,7 @@ describe("mergeWithDefaultRegions", () => {
     const merged = mergeWithDefaultRegions(persisted);
 
     expect(merged.regions.main.widgets).toEqual([widget]);
-    expect(merged.regions.sidebar.id).toBe("sidebar");
+    expect(merged.regions.sidenav.id).toBe("sidenav");
     expect(merged.regions.side.id).toBe("side");
   });
 });

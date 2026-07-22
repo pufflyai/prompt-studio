@@ -8,13 +8,13 @@ const viewTargetRegions: Record<string, WorkbenchRegion> = {
 };
 
 const treeTargetRegions: Record<string, WorkbenchRegion> = {
-  "workbench.left.tree": "sidebar",
+  "workbench.left.tree": "sidenav",
   "workbench.main.left.tree": "main-left-menu",
   "workbench.main.right.tree": "main-right-menu",
 };
 
 const modeTargetRegions: Record<string, WorkbenchRegion> = {
-  "workbench.left": "sidebar",
+  "workbench.left": "sidenav",
   "workbench.main.left": "main-left-menu",
   "workbench.main": "main",
   "workbench.main.right": "main-right-menu",
@@ -25,7 +25,7 @@ export const resolveWorkbenchViewRegion = (target: string | undefined): Workbenc
   target ? (viewTargetRegions[target] ?? "main") : "main";
 
 export const resolveWorkbenchTreeRegion = (target: string | undefined): WorkbenchRegion =>
-  target ? (treeTargetRegions[target] ?? "sidebar") : "sidebar";
+  target ? (treeTargetRegions[target] ?? "sidenav") : "sidenav";
 
 export const resolveWorkbenchModeRegion = (target: string | undefined): WorkbenchRegion =>
   target ? (modeTargetRegions[target] ?? "main") : "main";

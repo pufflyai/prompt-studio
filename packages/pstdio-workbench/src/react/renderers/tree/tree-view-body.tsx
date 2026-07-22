@@ -18,12 +18,16 @@ interface TreeViewBodyProps {
   moduleLoading?: boolean;
   sections: TreeListSection[];
   backgroundContextActions?: ResourceContextAction[];
+  draggable?: boolean;
+  customizationAvailable?: boolean;
   activeNodeId: string | string[] | undefined;
   expandedNodeIds: string[];
   expandedSectionIds: string[];
   scrollRef: RefObject<HTMLDivElement | null>;
   onToggleSection: (sectionId: string) => void;
   onToggleNode: (nodeId: string) => void;
+  onReorderSections?: (nextSectionIds: string[]) => void;
+  onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
   onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
 }
 
@@ -33,12 +37,16 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     moduleLoading,
     sections,
     backgroundContextActions,
+    draggable,
+    customizationAvailable,
     activeNodeId,
     expandedNodeIds,
     expandedSectionIds,
     scrollRef,
     onToggleSection,
     onToggleNode,
+    onReorderSections,
+    onReorderNodes,
     onNavigate,
   } = props;
 
@@ -47,7 +55,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
   // can still be restored from the back-of-tree menu.
-  if (sections.length === 0 && (backgroundContextActions?.length ?? 0) === 0) {
+  if (sections.length === 0 && (backgroundContextActions?.length ?? 0) === 0 && !customizationAvailable) {
     return <EmptyState minH="12rem" title="No tree items" />;
   }
 
@@ -55,6 +63,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     <TreeList
       sections={sections}
       backgroundContextActions={backgroundContextActions}
+      draggable={draggable}
       expandedNodeIds={expandedNodeIds}
       expandedSectionIds={expandedSectionIds}
       activeNodeId={activeNodeId}
@@ -65,6 +74,8 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       scrollRef={scrollRef}
       onToggleSection={onToggleSection}
       onToggleNode={onToggleNode}
+      onReorderSections={onReorderSections}
+      onReorderNodes={onReorderNodes}
       onNavigate={onNavigate}
     />
   );

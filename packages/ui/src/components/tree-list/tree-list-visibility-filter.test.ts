@@ -128,6 +128,8 @@ describe("buildTreeVisibilityMenuActions", () => {
       "node:help",
       "__reset-visibility",
     ]);
+    expect(actions.find((action) => action.key === "section:alpha")?.separatorBefore).toBe(true);
+    expect(actions.find((action) => action.key === "node:help")?.separatorBefore).toBe(true);
   });
 
   test("omits items that do not opt in — leaf sub-items are never hideable", () => {

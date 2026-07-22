@@ -11,7 +11,7 @@ export const createPreviewStorage = (): BenchStorageSeed => {
     blobs: {
       "preview-image": { name: "diagram.png", mimeType: "image/png", base64: previewImageBase64 },
     },
-    // Linked to PS-16 so ticket mode renders a Workspaces section in the sidebar.
+    // Linked to PS-16 so ticket mode renders a Workspaces section in the sidenav.
     workspaces: [
       {
         id: "ws-preview-1",

@@ -15,7 +15,7 @@ export interface SettingsAction {
   run(): void | Promise<void>;
 }
 
-/** An ordered sidebar container. Headerless when `title` is omitted. */
+/** An ordered sidenav container. Headerless when `title` is omitted. */
 export interface SettingsSectionContribution {
   id: string;
   title?: string;

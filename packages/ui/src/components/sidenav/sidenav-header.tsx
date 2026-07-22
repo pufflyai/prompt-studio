@@ -2,16 +2,16 @@ import { HStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { PANEL_HEADER_HEIGHT } from "@/components/layout/panel-header.constants";
 
-interface SidebarHeaderProps {
+interface SidenavHeaderProps {
   children?: ReactNode;
 }
 
-export const SidebarHeader = (props: SidebarHeaderProps) => {
+export const SidenavHeader = (props: SidenavHeaderProps) => {
   const { children } = props;
 
   return (
     <HStack
-      data-testid="sidebar-header"
+      data-testid="sidenav-header"
       justify="space-between"
       align="center"
       minH={PANEL_HEADER_HEIGHT}

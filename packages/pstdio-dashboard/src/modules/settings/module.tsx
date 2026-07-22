@@ -10,7 +10,7 @@ import {
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
 } from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { toDisposables } from "@/shared/workbench/disposable";
 import { dashboardSettingsDefaultPanel, registerDashboardSettingsContributions } from "./settings-contributions";
 
@@ -24,8 +24,8 @@ const createSettingsFooterNode = () => ({
   resource: settingsRootResource,
 });
 
-const registerSettingsSidebars = (ctx: WorkbenchModuleContributionContext) => {
-  registerSidebarContribution(ctx, {
+const registerSettingsSidenavs = (ctx: WorkbenchModuleContributionContext) => {
+  registerSidenavContribution(ctx, {
     id: "dashboard.settings.footer",
     modes: ["*"],
     order: 40,
@@ -37,7 +37,7 @@ const registerSettingsSidebars = (ctx: WorkbenchModuleContributionContext) => {
 // The settings slice registers the dashboard's settings entries against the
 // shared workbench settings surface. The surface owns the full-window overlay,
 // its navigation, and the opener — the dashboard only adds project scope, the
-// sidebar entry points, and a command to open it.
+// sidenav entry points, and a command to open it.
 export const createSettingsModule = () =>
   ({
     id: "dashboard.settings",
@@ -48,7 +48,7 @@ export const createSettingsModule = () =>
         resolveScopeId: (scope) => (scope === "project" ? getDashboardSelectedProjectId(ctx) : undefined),
       }).activate(ctx);
 
-      registerSettingsSidebars(ctx);
+      registerSettingsSidenavs(ctx);
 
       // The surface registers the "Open settings" command itself; just surface it
       // in the dashboard's command palette menu.

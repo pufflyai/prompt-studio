@@ -10,7 +10,7 @@ import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderActions } from "./header-actions";
 
 export interface WorkbenchNavRegionControl {
-  id: "sidebar" | "secondary" | "side";
+  id: "sidenav" | "secondary" | "side";
   label: string;
   icon: "PanelLeft" | "PanelBottom" | "PanelRight";
   open: boolean;
@@ -97,8 +97,8 @@ const WorkbenchRegionControls = (props: { controls: WorkbenchNavRegionControl[] 
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav, regionControls } = props;
-  const sidebarControls = regionControls.filter((control) => control.id === "sidebar");
-  const trailingRegionControls = regionControls.filter((control) => control.id !== "sidebar");
+  const sidenavControls = regionControls.filter((control) => control.id === "sidenav");
+  const trailingRegionControls = regionControls.filter((control) => control.id !== "sidenav");
 
   return (
     <Header
@@ -112,7 +112,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
       overflowY="hidden"
     >
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-      <WorkbenchNavigationControls workbench={workbench} regionControls={sidebarControls} />
+      <WorkbenchNavigationControls workbench={workbench} regionControls={sidenavControls} />
       <Box h="full" minW="0" maxW="60%" overflow="hidden">
         {hasNav ? (
           <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />

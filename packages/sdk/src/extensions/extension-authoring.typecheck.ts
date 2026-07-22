@@ -78,7 +78,7 @@ const extension = defineExtension({
       layout: {
         reset: true,
         open: [
-          { target: "workbench.left", view: "labSidebar", pinned: true },
+          { target: "workbench.left", view: "labSidenav", pinned: true },
           { target: "workbench.main", view: "labOverview" },
         ],
       },
@@ -108,10 +108,10 @@ const extension = defineExtension({
     },
   },
   views: {
-    labSidebar: {
-      title: "Lab sidebar",
+    labSidenav: {
+      title: "Lab sidenav",
       role: "location",
-      webview: { entry: packageAsset("./lab-sidebar.tsx", import.meta.url) },
+      webview: { entry: packageAsset("./lab-sidenav.tsx", import.meta.url) },
     },
     labOverview: {
       title: "Lab overview",
@@ -127,7 +127,7 @@ const unsupportedNavigation = defineExtension({
   // @ts-expect-error legacy navigation contributions are no longer supported
   navigation: {
     lab: {
-      slot: "project.sidebarNav",
+      slot: "project.sidenavNav",
       label: "Lab",
       route: "lab",
     },
@@ -160,7 +160,7 @@ const invalidSettingDeclarations = defineExtension({
 void invalidSettingDeclarations;
 
 // @ts-expect-error legacy navigation slots are no longer exposed
-void projectSlots.sidebarNav;
+void projectSlots.sidenavNav;
 
 // @ts-expect-error command palette contributions use command.palette
 void projectSlots.commandPanel;

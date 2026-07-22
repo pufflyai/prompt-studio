@@ -38,7 +38,7 @@ It loads the discovered docs index for the selected project, derives the active 
 
 ### Functional Requirements
 
-1. The sidebar must render from deterministic folder/file discovery under `.pstdio/docs/`.
+1. The sidenav must render from deterministic folder/file discovery under `.pstdio/docs/`.
 2. The active doc must be reflected in the `doc` search parameter.
 3. Internal markdown links must resolve to other docs in the same tree without a full page reload.
 4. Missing docs and load failures must resolve to clear empty or error states.

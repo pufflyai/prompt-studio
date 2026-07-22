@@ -1,4 +1,5 @@
 import {
+  applyTreeListOrder,
   buildTreeVisibilityMenuActions,
   filterVisibleNodes,
   filterVisibleSections,
@@ -7,6 +8,7 @@ import {
   type TreeListActionMenuItem,
   type TreeListNode,
   type TreeListSection,
+  useTreeListOrderStore,
   useTreeListVisibilityStore,
   type VisibilityOverride,
 } from "@pstdio/ui";
@@ -27,6 +29,11 @@ interface TreeViewCustomization {
   visibleFooterNodes: TreeListNode[];
   // Back-of-tree right-click menu: header rows, body categories, and footer rows that opt in.
   backgroundContextActions: ResourceContextAction[];
+  customizationRevision: string;
+  onReorderHeaderNodes: (nextNodeIds: string[]) => void;
+  onReorderSections: (nextSectionIds: string[]) => void;
+  onReorderNodes: (sectionId: string, nextNodeIds: string[]) => void;
+  onReorderFooterNodes: (nextNodeIds: string[]) => void;
 }
 
 interface VisibilityToggleIcons {
@@ -38,6 +45,13 @@ interface VisibilityToggleIcons {
 interface NodeVisibilityActions {
   onToggleNode: (id: string, hiddenByDefault: boolean) => void;
 }
+
+interface TreeViewCustomizationOptions {
+  suppressNodeContextMenus?: boolean;
+}
+
+const HEADER_SECTION_ID = "__header__";
+const FOOTER_SECTION_ID = "__footer__";
 
 const toStringLabel = (label: ReactNode, fallback: string) => (typeof label === "string" ? label : fallback);
 
@@ -73,7 +87,9 @@ export const addRegionNodeVisibilityContextMenuItems = (
   nodeOverrides: Record<string, VisibilityOverride>,
   actions: NodeVisibilityActions,
   icons: VisibilityToggleIcons,
+  enabled = true,
 ) => {
+  if (!enabled) return nodes;
   let changed = false;
   const next = nodes.map((node) => {
     const item = buildNodeVisibilityContextMenuItem(node, nodeOverrides, actions, icons);
@@ -94,36 +110,88 @@ export const useTreeViewCustomization = (
   storageKey: string,
   regions: TreeViewRegions,
   icons: VisibilityToggleIcons,
+  options: TreeViewCustomizationOptions = {},
 ): TreeViewCustomization => {
   const sectionOverrides = useTreeListVisibilityStore(storageKey, (state) => state.sectionOverrides);
   const nodeOverrides = useTreeListVisibilityStore(storageKey, (state) => state.nodeOverrides);
   const toggleSection = useTreeListVisibilityStore(storageKey, (state) => state.toggleSection);
   const toggleNode = useTreeListVisibilityStore(storageKey, (state) => state.toggleNode);
   const reset = useTreeListVisibilityStore(storageKey, (state) => state.reset);
-  const visibilityActions = { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset };
+  const sectionOrder = useTreeListOrderStore(storageKey, (state) => state.sectionOrder);
+  const nodeOrderBySection = useTreeListOrderStore(storageKey, (state) => state.nodeOrderBySection);
+  const setSectionOrder = useTreeListOrderStore(storageKey, (state) => state.setSectionOrder);
+  const setNodeOrder = useTreeListOrderStore(storageKey, (state) => state.setNodeOrder);
+  const resetOrder = useTreeListOrderStore(storageKey, (state) => state.reset);
+  const visibilityActions = {
+    onToggleSection: toggleSection,
+    onToggleNode: toggleNode,
+    onResetAll: reset,
+    onResetOrder: resetOrder,
+  };
+
+  const orderedSections = applyTreeListOrder(regions.sections, sectionOrder, nodeOrderBySection);
+  const orderedHeaderNodes =
+    applyTreeListOrder(
+      [{ id: HEADER_SECTION_ID, canReorder: false, nodes: regions.headerNodes }],
+      [],
+      nodeOrderBySection,
+    )[0]?.nodes ?? [];
+  const orderedFooterNodes =
+    applyTreeListOrder(
+      [{ id: FOOTER_SECTION_ID, canReorder: false, nodes: regions.footerNodes }],
+      [],
+      nodeOrderBySection,
+    )[0]?.nodes ?? [];
+  const includeNodeContextMenus = options.suppressNodeContextMenus !== true;
 
   const headerNodes = addRegionNodeVisibilityContextMenuItems(
-    regions.headerNodes,
+    orderedHeaderNodes,
     nodeOverrides,
     visibilityActions,
     icons,
+    includeNodeContextMenus,
   );
   const footerNodes = addRegionNodeVisibilityContextMenuItems(
-    regions.footerNodes,
+    orderedFooterNodes,
     nodeOverrides,
     visibilityActions,
     icons,
+    includeNodeContextMenus,
   );
   const visibleHeaderNodes = filterVisibleNodes(headerNodes, nodeOverrides);
-  const visibleSections = filterVisibleSections(regions.sections, sectionOverrides, nodeOverrides);
+  const visibleSections = filterVisibleSections(orderedSections, sectionOverrides, nodeOverrides);
   const visibleFooterNodes = filterVisibleNodes(footerNodes, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
-    { headerNodes: regions.headerNodes, sections: regions.sections, footerNodes: regions.footerNodes },
+    { headerNodes: orderedHeaderNodes, sections: orderedSections, footerNodes: orderedFooterNodes },
     sectionOverrides,
     nodeOverrides,
     visibilityActions,
     icons,
   );
 
-  return { visibleHeaderNodes, visibleSections, visibleFooterNodes, backgroundContextActions };
+  const customizationRevision = JSON.stringify({
+    header: orderedHeaderNodes.map((node) => [node.id, toStringLabel(node.label, node.id)]),
+    main: orderedSections.map((section) => [
+      section.id,
+      toStringLabel(section.label, section.id),
+      section.nodes.map((node) => [node.id, toStringLabel(node.label, node.id)]),
+    ]),
+    footer: orderedFooterNodes.map((node) => [node.id, toStringLabel(node.label, node.id)]),
+    sectionOverrides,
+    nodeOverrides,
+    sectionOrder,
+    nodeOrderBySection,
+  });
+
+  return {
+    visibleHeaderNodes,
+    visibleSections,
+    visibleFooterNodes,
+    backgroundContextActions,
+    customizationRevision,
+    onReorderHeaderNodes: (nextNodeIds) => setNodeOrder(HEADER_SECTION_ID, nextNodeIds),
+    onReorderSections: setSectionOrder,
+    onReorderNodes: setNodeOrder,
+    onReorderFooterNodes: (nextNodeIds) => setNodeOrder(FOOTER_SECTION_ID, nextNodeIds),
+  };
 };

@@ -201,14 +201,14 @@ describe("createLayoutModel placement lifecycle", () => {
     registerTestWidget(layout, {
       id: "ticket.files",
       title: "Files",
-      region: "sidebar",
+      region: "sidenav",
     });
 
     const placement = layout.openWidget("ticket.files", { title: "Ticket files" });
     const moved = layout.openWidget("ticket.files", { region: "main-right-menu", title: "Ticket files" });
 
     expect(moved.widgetId).toBe(placement.widgetId);
-    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
     expect(layout.getLayout().regions["main-right-menu"].widgets).toEqual([moved]);
     expect(layout.getLayout().regions["main-right-menu"].activeWidgetId).toBe(moved.widgetId);
     expect(layout.getLayout().activeWidgetId).toBe(moved.widgetId);
@@ -275,7 +275,7 @@ describe("createLayoutModel placement lifecycle", () => {
     registerTestWidget(layout, {
       id: "sessions.tree",
       title: "Sessions",
-      region: "sidebar",
+      region: "sidenav",
     });
     registerTestWidget(layout, {
       id: "sessions.chat",
@@ -292,7 +292,7 @@ describe("createLayoutModel placement lifecycle", () => {
     layout.resetRegions();
 
     expect(layout.getLayout().regions.activity.widgets).toEqual([]);
-    expect(layout.getLayout().regions.sidebar.widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
     expect(layout.getLayout().regions.main.widgets).toEqual([]);
     expect(layout.getLayout().regions.main.activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
@@ -305,14 +305,14 @@ describe("createLayoutModel placement lifecycle", () => {
     registerTestWidget(layout, {
       id: "sessions.tree",
       title: "Sessions",
-      region: "sidebar",
+      region: "sidenav",
     });
     layout.openWidget("sessions.tree");
 
-    const before = layout.getLayout().regions.sidebar.visible;
+    const before = layout.getLayout().regions.sidenav.visible;
     layout.resetRegions();
 
-    expect(layout.getLayout().regions.sidebar.visible).toBe(before);
+    expect(layout.getLayout().regions.sidenav.visible).toBe(before);
   });
 
   test("clears an region and active workbench selection", () => {

@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
+import { ResizableSplitLayout, type ResourceContextAction, Toaster } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import { allowsWorkbenchFloatingPanels, type WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -28,7 +28,7 @@ import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelRegi
 import {
   WORKBENCH_STATUS_BAR_HEIGHT,
   WorkbenchActivityBar,
-  WorkbenchSidebar,
+  WorkbenchSidenav,
   WorkbenchStatusBar,
 } from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
@@ -39,18 +39,18 @@ interface WorkbenchProps {
   renderParamField?: CommandParamFieldRenderer;
 }
 
-const SIDEBAR_PANEL_ID = "sidebar";
+const SIDENAV_PANEL_ID = "sidenav";
 
-const SIDEBAR_DEFAULT_SIZE_PX = 250;
-const SIDEBAR_MIN_SIZE_PX = 200;
+const SIDENAV_DEFAULT_SIZE_PX = 250;
+const SIDENAV_MIN_SIZE_PX = 200;
 const CONTENT_MIN_SIZE_PX = 320;
 
-const resolveSidebarSize = (workbench: WorkbenchCore) => {
-  const regionSize = workbench.layout.getRegionSize("sidebar");
+const resolveSidenavSize = (workbench: WorkbenchCore) => {
+  const regionSize = workbench.layout.getRegionSize("sidenav");
 
   return {
-    defaultPx: regionSize?.defaultPx ?? SIDEBAR_DEFAULT_SIZE_PX,
-    minPx: regionSize?.minPx ?? SIDEBAR_MIN_SIZE_PX,
+    defaultPx: regionSize?.defaultPx ?? SIDENAV_DEFAULT_SIZE_PX,
+    minPx: regionSize?.minPx ?? SIDENAV_MIN_SIZE_PX,
     maxPx: regionSize?.maxPx,
   };
 };
@@ -79,8 +79,8 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
-    hasSidebarHeaderWidgets: useWorkbenchRegionContent(workbench, "sidebar-header"),
-    hasSidebarWidgets: useWorkbenchRegionContent(workbench, "sidebar"),
+    hasSidenavHeaderWidgets: useWorkbenchRegionContent(workbench, "sidenav-header"),
+    hasSidenavWidgets: useWorkbenchRegionContent(workbench, "sidenav"),
     hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
     hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
@@ -91,9 +91,9 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
 
 interface WorkbenchRegionControlsInput {
   workbench: WorkbenchCore;
-  showSidebar: boolean;
-  sidebarCollapsible: boolean;
-  sidebarOpen: boolean;
+  showSidenav: boolean;
+  sidenavCollapsible: boolean;
+  sidenavOpen: boolean;
   showSecondaryPanel: boolean;
   secondaryPanelCollapsible: boolean;
   secondaryPanelOpen: boolean;
@@ -105,13 +105,13 @@ interface WorkbenchRegionControlsInput {
 const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
   const controls: WorkbenchNavRegionControl[] = [];
 
-  if (input.showSidebar && input.sidebarCollapsible && !input.sidebarOpen) {
+  if (input.showSidenav && input.sidenavCollapsible && !input.sidenavOpen) {
     controls.push({
-      id: "sidebar",
-      label: "Show Sidebar",
+      id: "sidenav",
+      label: "Show Sidenav",
       icon: "PanelLeft",
       open: false,
-      onToggle: () => input.setPanelOpen(SIDEBAR_PANEL_ID, true),
+      onToggle: () => input.setPanelOpen(SIDENAV_PANEL_ID, true),
     });
   }
 
@@ -141,7 +141,11 @@ const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
 
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField } = props;
-  installWorkbenchTreeRenderer(workbench, { renderParamField });
+  const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
+  installWorkbenchTreeRenderer(workbench, {
+    renderParamField,
+    onSidenavContextActionsChange: setSidenavContextActions,
+  });
   installWorkbenchDataRenderer(workbench);
   installWorkbenchDataTableRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
@@ -154,9 +158,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
-  const sidebarOpen = useWorkbenchStore(
+  const sidenavOpen = useWorkbenchStore(
     workbench.panels.store,
-    (state) => state.openByRegionId[SIDEBAR_PANEL_ID] ?? true,
+    (state) => state.openByRegionId[SIDENAV_PANEL_ID] ?? true,
   );
   const secondaryPanelOpen = useWorkbenchStore(
     workbench.panels.store,
@@ -176,17 +180,17 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasNavWidgets,
     hasSideHeaderWidgets,
     hasSideWidgets,
-    hasSidebarHeaderWidgets,
-    hasSidebarWidgets,
+    hasSidenavHeaderWidgets,
+    hasSidenavWidgets,
     hasSecondaryHeaderWidgets,
     hasSecondaryWidgets,
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
   const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader;
-  const showSidebar = hasSidebarWidgets || hasSidebarHeaderWidgets;
-  const sidebarCollapsible = resolvePanelCollapsible(workbench, "sidebar-header", "sidebar");
+  const showSidenav = hasSidenavWidgets || hasSidenavHeaderWidgets;
+  const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav-header", "sidenav");
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
-  const sidebarSize = resolveSidebarSize(workbench);
+  const sidenavSize = resolveSidenavSize(workbench);
   const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
@@ -195,9 +199,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     setWorkbenchPanelOpen(workbench, region, open);
   const regionControls = createWorkbenchRegionControls({
     workbench,
-    showSidebar,
-    sidebarCollapsible,
-    sidebarOpen,
+    showSidenav,
+    sidenavCollapsible,
+    sidenavOpen,
     showSecondaryPanel,
     secondaryPanelCollapsible,
     secondaryPanelOpen,
@@ -234,24 +238,30 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     </Flex>
   );
 
-  const contentWithSidebar = showSidebar ? (
+  const contentWithSidenav = showSidenav ? (
     <ResizableSplitLayout
       flex="1"
       minH="0"
       minW="0"
-      resizablePanel={<WorkbenchSidebar workbench={workbench} hasHeader={hasSidebarHeaderWidgets} />}
+      resizablePanel={
+        <WorkbenchSidenav
+          workbench={workbench}
+          hasHeader={hasSidenavHeaderWidgets}
+          contextActions={sidenavContextActions}
+        />
+      }
       contentPanel={contentWithHeader}
-      collapsed={!sidebarOpen && sidebarCollapsible}
-      collapsible={sidebarCollapsible}
-      defaultSizePx={sidebarSize.defaultPx}
-      minSizePx={sidebarSize.minPx}
-      maxSizePx={sidebarSize.maxPx}
+      collapsed={!sidenavOpen && sidenavCollapsible}
+      collapsible={sidenavCollapsible}
+      defaultSizePx={sidenavSize.defaultPx}
+      minSizePx={sidenavSize.minPx}
+      maxSizePx={sidenavSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
-      resizeLabel="Resize sidebar"
+      resizeLabel="Resize sidenav"
       showResizeSeparator
-      onSizeChange={(width) => workbench.layout.setRegionSize("sidebar", width)}
+      onSizeChange={(width) => workbench.layout.setRegionSize("sidenav", width)}
       onCollapsedChange={(collapsed) => {
-        if (!collapsed || sidebarCollapsible) setPanelOpen(SIDEBAR_PANEL_ID, !collapsed);
+        if (!collapsed || sidenavCollapsible) setPanelOpen(SIDENAV_PANEL_ID, !collapsed);
       }}
     />
   ) : (
@@ -262,7 +272,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <Flex position="relative" h="full" minH="0" minW="0" w="full" bg={workbenchBackgrounds.main} color="fg">
       {hasActivityBarWidgets ? <WorkbenchActivityBar workbench={workbench} /> : null}
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
-        {contentWithSidebar}
+        {contentWithSidenav}
       </Flex>
       <WorkbenchOverlayLayer workbench={workbench} />
     </Flex>

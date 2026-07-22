@@ -37,7 +37,7 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<ExtensionModeRecord["layout"]
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
 
 const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef, region: string) =>
-  region === "sidebar" || region === "main-left-menu" ? (resource.label ?? view.title) : view.title;
+  region === "sidenav" || region === "main-left-menu" ? (resource.label ?? view.title) : view.title;
 
 const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
   metadata.modes.find((mode) => mode.resourceKind === kind);
@@ -54,8 +54,8 @@ const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId
 const companionViewRegion = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
   modeEntry ? extensionModeLayoutRegion(modeEntry.target) : extensionViewRegion(view.target);
 
-const isResourceSidebarCompanion = (view: ExtensionViewRecord, resourceMode: ExtensionModeRecord | undefined) =>
-  Boolean(view.treeRendererId && companionViewRegion(view, resourceModeEntryForView(view, resourceMode)) === "sidebar");
+const isResourceSidenavCompanion = (view: ExtensionViewRecord, resourceMode: ExtensionModeRecord | undefined) =>
+  Boolean(view.treeRendererId && companionViewRegion(view, resourceModeEntryForView(view, resourceMode)) === "sidenav");
 
 const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widgetId: string, resource: ResourceRef) =>
   Object.values(ctx.layout.getLayout().regions).some((region) =>
@@ -220,7 +220,7 @@ const openResourceCompanionViews = (
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
     const region = companionViewRegion(companion, modeEntry);
-    if (isResourceSidebarCompanion(companion, resourceMode)) continue;
+    if (isResourceSidenavCompanion(companion, resourceMode)) continue;
     const widgetId = widgetIdFor(companion);
     const title = companionViewTitle(companion, resource, region);
     const updateInput = {
@@ -262,7 +262,7 @@ export const registerExtensionResourceView = (
         open: (resource, openInput) => {
           const resourceMode = resourceModeFor(input.metadata, kind);
           const expectedCompanionWidgetIds = new Set(
-            companions.filter((companion) => !isResourceSidebarCompanion(companion, resourceMode)).map(widgetIdFor),
+            companions.filter((companion) => !isResourceSidenavCompanion(companion, resourceMode)).map(widgetIdFor),
           );
           const selectedResource = withExtensionResourceContext(resource, {
             kind,
@@ -303,7 +303,7 @@ export const registerExtensionResourceView = (
         const keepWidgetIds = group
           ? new Set(
               group.companions
-                .filter((companion) => !isResourceSidebarCompanion(companion, resourceMode))
+                .filter((companion) => !isResourceSidenavCompanion(companion, resourceMode))
                 .map(widgetIdFor),
             )
           : undefined;
@@ -340,7 +340,7 @@ export const registerExtensionResourceView = (
 
       const resourceMode = resourceModeFor(input.metadata, activeResource.kind);
       for (const companion of group.companions) {
-        if (isResourceSidebarCompanion(companion, resourceMode)) continue;
+        if (isResourceSidenavCompanion(companion, resourceMode)) continue;
         const modeEntry = resourceModeEntryForView(companion, resourceMode);
         const region = companionViewRegion(companion, modeEntry);
         updatePlacementForResource(ctx, {

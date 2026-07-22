@@ -83,7 +83,7 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   if (!panel) {
     return (
       <Centered>
-        <EmptyState title="Select a settings entry" description="Pick an item from the settings sidebar." />
+        <EmptyState title="Select a settings entry" description="Pick an item from the settings sidenav." />
       </Centered>
     );
   }

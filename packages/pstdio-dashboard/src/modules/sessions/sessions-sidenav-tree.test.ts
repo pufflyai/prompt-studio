@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DashboardSession } from "./data/dashboard-sessions";
-import { buildSessionsSidebarSections } from "./sessions-sidebar-tree";
+import { buildSessionsSidenavSections } from "./sessions-sidenav-tree";
 
 const sessionResource = (id: string) =>
   ({
@@ -37,13 +37,13 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
   };
 };
 
-const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidebarSections>) =>
+const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidenavSections>) =>
   sections.find((section) => section.id === "sessions-wrap")?.nodes.find((node) => node.id === "sessions")?.children ??
   [];
 
-describe("buildSessionsSidebarSections", () => {
+describe("buildSessionsSidenavSections", () => {
   test("models the list as a single collapsible Sessions group", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
@@ -57,7 +57,7 @@ describe("buildSessionsSidebarSections", () => {
   });
 
   test("keeps the sessions-mode Sessions group out of the hide menu", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "resource",
       sessions: [session({ id: "session-1" })],
     });
@@ -67,7 +67,7 @@ describe("buildSessionsSidebarSections", () => {
   });
 
   test("keeps the workspace embedded Sessions group hideable", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
@@ -76,7 +76,7 @@ describe("buildSessionsSidebarSections", () => {
   });
 
   test("uses command targets for embedded session rows", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
@@ -90,7 +90,7 @@ describe("buildSessionsSidebarSections", () => {
   });
 
   test("filters embedded session rows to the current workspace", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1", workspaceId: "workspace-1" }), session({ id: "session-2" })],
       workspace: workspaceResource("workspace-1"),
@@ -103,7 +103,7 @@ describe("buildSessionsSidebarSections", () => {
   });
 
   test("shows an empty placeholder when a workspace has no sessions", () => {
-    const sections = buildSessionsSidebarSections({
+    const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
       workspace: workspaceResource("workspace-1"),

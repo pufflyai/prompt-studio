@@ -255,7 +255,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: NAVIGATION_TREE_ID,
       title: "Navigation",
-      region: "sidebar",
+      region: "sidenav",
       singleton: true,
       regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: NAVIGATION_TREE_ID,
