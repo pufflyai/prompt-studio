@@ -3,6 +3,7 @@ import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
 import type { RegisteredWidgetContribution, ResourceRef, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { openPanelWidget } from "./panel-widget-open";
 
 interface WorkbenchPanelAddMenuProps {
@@ -14,6 +15,7 @@ interface WorkbenchPanelAddMenuProps {
 
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   const { region, resource, widgets, workbench } = props;
+  const hydrating = useWorkbenchStore(workbench.history.store, (state) => state.hydrating);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const label = "Add panel";
   if (widgets.length === 0) return null;
@@ -24,6 +26,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
       size={PANEL_HEADER_CONTROL_SIZE}
       variant="ghost"
       aria-label={label}
+      disabled={hydrating}
       flexShrink={0}
       onClick={
         widgets.length === 1 ? () => openPanelWidget({ workbench, widget: widgets[0], region, resource }) : undefined
@@ -44,12 +47,13 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
         <Menu.Positioner>
           <Menu.Content aria-label={label} minW="17.5rem" bg="bg">
             {widgets.map((widget) => (
-              <Menu.Item key={widget.id} value={`widget:${widget.id}`} asChild>
+              <Menu.Item key={widget.id} value={`widget:${widget.id}`} disabled={hydrating} asChild>
                 <ListRow
                   asChild
                   variant="full-width"
                   label={widget.title}
                   icon={widget.icon ? <WorkbenchIcon name={widget.icon} size={14} /> : undefined}
+                  disabled={hydrating}
                   onActivate={() => openPanelWidget({ workbench, widget, region, resource })}
                 />
               </Menu.Item>

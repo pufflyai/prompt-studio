@@ -686,6 +686,117 @@ describe("createHistoryController Sub Panel snapshots", () => {
   });
 });
 
+describe("createHistoryController history hydration", () => {
+  test("queues cursor movement during async hydration and replays the requested entry after it settles", async () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const layouts = new Map<string, import("../../registries/layout/layout-model").WorkbenchLayout>();
+    const historyPersistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => histories.get(scope ?? "global"),
+      setHistory: (state, scope) => histories.set(scope ?? "global", state),
+    };
+    const layoutPersistence: import("../../registries/layout/layout-model").LayoutPersistenceAdapter = {
+      getLayout: (scope) => layouts.get(scope ?? "global"),
+      setLayout: (layout, scope) => layouts.set(scope ?? "global", layout),
+    };
+    const first = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.layout.openWidget("snapshot.main.a");
+    first.layout.openWidget("snapshot.main.b");
+    first.history.goBack();
+    first.history.flush();
+
+    let finishReplay: () => void = () => undefined;
+    const replayGate = new Promise<void>((resolve) => {
+      finishReplay = resolve;
+    });
+    const second = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(second);
+    second.resources.registerOpener({
+      id: "snapshot.location.opener",
+      canOpen: (resource) => resource.kind === "snapshot.location",
+      open: async (resource) => {
+        second.layout.openWidget("snapshot.location", { resource, replaceActive: true });
+        await replayGate;
+      },
+    });
+    second.history.setPersistenceScope("project-one");
+    second.layout.setPersistenceScope("project-one");
+
+    expect(second.history.store.getState().hydrating).toBe(true);
+    second.history.restore();
+    expect(second.history.store.getState().hydrating).toBe(true);
+    expect(second.history.goForward()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.b");
+    expect(second.history.store.getState().cursor).toBe(2);
+
+    finishReplay();
+    await replayGate;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(second.history.store.getState().hydrating).toBe(false);
+    expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
+  });
+
+  test("does not finish a new scope's hydration when the previous scope replay settles", async () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const layouts = new Map<string, import("../../registries/layout/layout-model").WorkbenchLayout>();
+    const historyPersistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => histories.get(scope ?? "global"),
+      setHistory: (state, scope) => histories.set(scope ?? "global", state),
+    };
+    const layoutPersistence: import("../../registries/layout/layout-model").LayoutPersistenceAdapter = {
+      getLayout: (scope) => layouts.get(scope ?? "global"),
+      setLayout: (layout, scope) => layouts.set(scope ?? "global", layout),
+    };
+    const first = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(first);
+    for (const scope of ["project-one", "project-two"]) {
+      first.layout.setPersistenceScope(scope);
+      first.history.setPersistenceScope(scope);
+      first.layout.openWidget("snapshot.location", {
+        resource: { kind: "snapshot.location", uri: `snapshot.location:${scope}`, label: scope },
+      });
+      first.layout.openWidget("snapshot.main.a");
+      if (scope === "project-two") first.layout.openWidget("snapshot.main.b");
+      first.history.flush();
+    }
+
+    let finishFirstReplay: () => void = () => undefined;
+    const firstReplayGate = new Promise<void>((resolve) => {
+      finishFirstReplay = resolve;
+    });
+    const second = createWorkbenchCore({ historyPersistence, layoutPersistence });
+    registerSnapshotFixtures(second);
+    second.resources.registerOpener({
+      id: "snapshot.location.opener",
+      canOpen: (resource) => resource.kind === "snapshot.location",
+      open: async (resource) => {
+        second.layout.openWidget("snapshot.location", { resource, replaceActive: true });
+        await firstReplayGate;
+      },
+    });
+
+    second.layout.setPersistenceScope("project-one");
+    second.history.setPersistenceScope("project-one");
+    second.history.restore();
+    second.history.setPersistenceScope("project-two");
+    second.layout.setPersistenceScope("project-two");
+    expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
+
+    finishFirstReplay();
+    await firstReplayGate;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(second.history.getPersistenceScope()).toBe("project-two");
+    expect(second.history.store.getState().hydrating).toBe(true);
+    expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
+  });
+});
+
 describe("createHistoryController persisted Sub Panel snapshots", () => {
   test("persists entries and cursor per project scope", () => {
     const states = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
@@ -710,6 +821,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
 
     expect(second.history.store.getState().entries).toHaveLength(3);
     expect(second.history.store.getState().cursor).toBe(1);
+    second.history.restore();
     expect(second.history.goForward()?.selectedSubPanels.main?.contributionId).toBe("snapshot.main.b");
   });
 

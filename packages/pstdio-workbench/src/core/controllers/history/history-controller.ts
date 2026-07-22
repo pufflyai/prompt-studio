@@ -75,6 +75,31 @@ const DEFAULT_MAX_ENTRIES = 50;
 const RECENTLY_CLOSED_LIMIT = 20;
 const PERSISTENCE_DELAY_MS = 50;
 
+interface HistoryPersistenceSchedulerInput {
+  persistence?: WorkbenchHistoryPersistence;
+  store: WorkbenchStore<HistoryStoreState>;
+  getScope(): string | undefined;
+}
+
+const createHistoryPersistenceScheduler = (input: HistoryPersistenceSchedulerInput) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const flush = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    if (!input.persistence) return;
+    const { hydrating: _hydrating, ...state } = input.store.getState();
+    input.persistence.setHistory({ ...state, version: WORKBENCH_HISTORY_VERSION }, input.getScope());
+  };
+
+  return {
+    flush,
+    schedule() {
+      if (!input.persistence || timer) return;
+      timer = setTimeout(flush, PERSISTENCE_DELAY_MS);
+    },
+  };
+};
+
 const suppressTransitionSnapshot = (
   current: WorkbenchNavigationEntry | undefined,
   entry: WorkbenchNavigationEntry | undefined,
@@ -137,7 +162,7 @@ interface CreateHistoryControllerApiInput {
     entry: WorkbenchNavigationEntry,
     options?: { replayCurrentLocation?: boolean },
   ): Promise<unknown> | undefined;
-  finishRestore(): void;
+  finishRestore(scope?: string, restoredEntryId?: string): void;
   flush(): void;
   getPersistenceScope(): string | undefined;
   moveCursor(delta: number): WorkbenchNavigationEntry | undefined;
@@ -166,6 +191,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     goForward: () => moveCursor(1),
     goPrevious() {
       const snapshot = store.getState();
+      if (snapshot.hydrating) return undefined;
       const current = snapshot.entries[snapshot.cursor];
       for (let index = snapshot.entries.length - 1; index >= 0; index -= 1) {
         const candidate = snapshot.entries[index];
@@ -179,6 +205,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     recentlyClosed: () => store.getState().recentlyClosed,
     reopenLastClosed() {
       const snapshot = store.getState();
+      if (snapshot.hydrating) return undefined;
       const last = snapshot.recentlyClosed.at(-1);
       if (!last) return undefined;
       setState({ ...snapshot, recentlyClosed: snapshot.recentlyClosed.slice(0, -1) }, "history.reopenClosed");
@@ -209,8 +236,20 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
       });
       setState(snapshot, "history.reconcile");
       const entry = snapshot.entries[snapshot.cursor];
-      if (entry) runSilent(() => activateEntry(entry, { replayCurrentLocation: true }));
-      finishRestore();
+      const scope = getPersistenceScope();
+      let pending: Promise<unknown> | undefined;
+      if (entry) {
+        runSilent(() => {
+          const result = activateEntry(entry, { replayCurrentLocation: true });
+          if (result instanceof Promise) pending = result;
+        });
+      }
+      if (pending)
+        void pending.then(
+          () => finishRestore(scope, entry?.entryId),
+          () => finishRestore(scope, entry?.entryId),
+        );
+      else finishRestore(scope, entry?.entryId);
       return entry;
     },
     flush,
@@ -221,8 +260,62 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
   };
 };
 
+interface HistoryRestoreFinisherInput {
+  store: WorkbenchStore<HistoryStoreState>;
+  activateEntry(entry: WorkbenchNavigationEntry): Promise<unknown> | undefined;
+  getScope(): string | undefined;
+  onFinish(): void;
+  runSilent(action: () => unknown): void;
+  setState(state: HistoryStoreState, action: string, persist?: boolean): void;
+}
+
+const createHistoryRestoreFinisher = (input: HistoryRestoreFinisherInput) => {
+  const finish = (scope: string | undefined, restoredEntryId?: string) => {
+    if (scope !== undefined && scope !== input.getScope()) return;
+    const snapshot = input.store.getState();
+    const requestedEntry = snapshot.entries[snapshot.cursor];
+    if (restoredEntryId && requestedEntry && requestedEntry.entryId !== restoredEntryId) {
+      let pending: Promise<unknown> | undefined;
+      input.runSilent(() => {
+        const result = input.activateEntry(requestedEntry);
+        if (result instanceof Promise) pending = result;
+      });
+      if (pending) {
+        void pending.then(
+          () => finish(scope, requestedEntry.entryId),
+          () => finish(scope, requestedEntry.entryId),
+        );
+      } else finish(scope, requestedEntry.entryId);
+      return;
+    }
+    input.onFinish();
+    if (snapshot.hydrating) {
+      input.setState({ ...snapshot, hydrating: false }, "history.finishRestore", false);
+    }
+  };
+  return finish;
+};
+
+interface HistoryCursorMoverInput {
+  store: WorkbenchStore<HistoryStoreState>;
+  activateEntry(entry: WorkbenchNavigationEntry): Promise<unknown> | undefined;
+  flush(): void;
+  runSilent(action: () => unknown): void;
+  setState(state: HistoryStoreState, action: string): void;
+}
+
+const createHistoryCursorMover = (input: HistoryCursorMoverInput) => (delta: number) => {
+  const snapshot = input.store.getState();
+  const cursor = snapshot.cursor + delta;
+  const entry = snapshot.entries[cursor];
+  if (!entry) return undefined;
+  input.setState({ ...snapshot, cursor }, delta < 0 ? "history.goBack" : "history.goForward");
+  input.flush();
+  if (!snapshot.hydrating) input.runSilent(() => input.activateEntry(entry));
+  return entry;
+};
+
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
-  const maxEntries = input.maxEntries ?? DEFAULT_MAX_ENTRIES;
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
     initialState: emptyHistoryState(),
@@ -231,20 +324,12 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   let navigating = false;
   let awaitingRestore = false;
   let currentScope: string | undefined;
-  let persistTimer: ReturnType<typeof setTimeout> | undefined;
   const replayingResourceUris = new Set<string>();
-
-  const flush = () => {
-    if (persistTimer) clearTimeout(persistTimer);
-    persistTimer = undefined;
-    if (!input.persistence) return;
-    input.persistence.setHistory({ ...store.getState(), version: WORKBENCH_HISTORY_VERSION }, currentScope);
-  };
-
-  const schedulePersist = () => {
-    if (!input.persistence || persistTimer) return;
-    persistTimer = setTimeout(flush, PERSISTENCE_DELAY_MS);
-  };
+  const { flush, schedule: schedulePersist } = createHistoryPersistenceScheduler({
+    persistence: input.persistence,
+    store,
+    getScope: () => currentScope,
+  });
 
   const setState = (state: HistoryStoreState, action: string, persist = true) => {
     store.setState(state, false, action);
@@ -262,7 +347,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     const appended = compactNavigationEntries(
       replacesCurrentMode ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate],
     );
-    const entries = appended.slice(Math.max(0, appended.length - maxEntries));
+    const entries = appended.slice(Math.max(0, appended.length - (input.maxEntries ?? DEFAULT_MAX_ENTRIES)));
     setState({ ...snapshot, entries, cursor: entries.length - 1 }, "history.record");
   };
 
@@ -373,16 +458,17 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     if (input.modes && input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
   };
 
-  const replayResource = (entry: WorkbenchNavigationEntry) => {
+  const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined) => {
     const resource = entry.resource!;
     replayingResourceUris.add(resource.uri);
     return input.resources.openResource(resource).finally(() => {
-      restoreSelections(entry);
+      if (scope === currentScope) restoreSelections(entry);
       replayingResourceUris.delete(resource.uri);
     });
   };
 
   const activateEntry = (entry: WorkbenchNavigationEntry, options: { replayCurrentLocation?: boolean } = {}) => {
+    const replayScope = currentScope;
     restoreMode(entry);
     if (entry.kind === "mode") {
       restoreSelections(entry);
@@ -399,7 +485,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         layout: input.layout,
         resources: input.resources,
         replayCurrentLocation: options.replayCurrentLocation,
-        replayResource,
+        replayResource: (candidate) => replayResource(candidate, replayScope),
         restoreSelections,
       });
     }
@@ -420,15 +506,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     }
   };
 
-  const moveCursor = (delta: number) => {
-    const snapshot = store.getState();
-    const cursor = snapshot.cursor + delta;
-    const entry = snapshot.entries[cursor];
-    if (!entry) return undefined;
-    setState({ ...snapshot, cursor }, delta < 0 ? "history.goBack" : "history.goForward");
-    runSilent(() => activateEntry(entry));
-    return entry;
-  };
+  const moveCursor = createHistoryCursorMover({ store, activateEntry, flush, runSilent, setState });
 
   const setPersistenceScope = (scope: string | undefined) => {
     if (scope === currentScope) return;
@@ -436,19 +514,28 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     currentScope = scope;
     const hydrated = hydrateHistoryState(input.persistence?.getHistory(scope));
     awaitingRestore = hydrated.entries.length > 0;
-    setState(hydrated, "history.setPersistenceScope", false);
+    setState({ ...hydrated, hydrating: awaitingRestore }, "history.setPersistenceScope", false);
   };
 
   input.layout.onDidChangePersistenceScope(setPersistenceScope);
 
   if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
 
+  const finishRestore = createHistoryRestoreFinisher({
+    store,
+    activateEntry,
+    getScope: () => currentScope,
+    onFinish: () => {
+      awaitingRestore = false;
+    },
+    runSilent,
+    setState,
+  });
+
   return createHistoryControllerApi({
     controllerInput: input,
     store,
-    finishRestore: () => {
-      awaitingRestore = false;
-    },
+    finishRestore,
     setPersistenceScope,
     getPersistenceScope: () => currentScope,
     activateEntry,

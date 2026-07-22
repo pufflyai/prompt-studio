@@ -71,9 +71,10 @@ export interface HistoryStoreState {
   entries: readonly WorkbenchNavigationEntry[];
   cursor: number;
   recentlyClosed: readonly WorkbenchNavigationEntry[];
+  hydrating: boolean;
 }
 
-export interface PersistedWorkbenchHistory extends HistoryStoreState {
+export interface PersistedWorkbenchHistory extends Omit<HistoryStoreState, "hydrating"> {
   version: 1;
 }
 

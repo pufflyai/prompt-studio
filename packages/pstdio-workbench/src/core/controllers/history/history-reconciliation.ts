@@ -7,7 +7,12 @@ import type { HistoryStoreState, PersistedWorkbenchHistory, WorkbenchNavigationE
 export const WORKBENCH_HISTORY_VERSION = 1 as const;
 const RECENTLY_CLOSED_LIMIT = 20;
 
-export const emptyHistoryState = (): HistoryStoreState => ({ entries: [], cursor: -1, recentlyClosed: [] });
+export const emptyHistoryState = (): HistoryStoreState => ({
+  entries: [],
+  cursor: -1,
+  recentlyClosed: [],
+  hydrating: false,
+});
 
 export const hydrateHistoryState = (persisted: PersistedWorkbenchHistory | undefined): HistoryStoreState => {
   if (persisted?.version !== WORKBENCH_HISTORY_VERSION) return emptyHistoryState();
@@ -16,6 +21,7 @@ export const hydrateHistoryState = (persisted: PersistedWorkbenchHistory | undef
     entries,
     cursor: Math.min(Math.max(persisted.cursor, entries.length > 0 ? 0 : -1), entries.length - 1),
     recentlyClosed: persisted.recentlyClosed.slice(-RECENTLY_CLOSED_LIMIT),
+    hydrating: false,
   };
 };
 
@@ -66,5 +72,5 @@ export const reconcileHistoryState = (input: {
   const recentlyClosed = state.recentlyClosed
     .map((entry) => reconcileEntry({ ...input, entry }))
     .filter((entry): entry is WorkbenchNavigationEntry => Boolean(entry));
-  return { entries, cursor, recentlyClosed };
+  return { ...state, entries, cursor, recentlyClosed };
 };
