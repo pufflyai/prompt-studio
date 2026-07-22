@@ -2,31 +2,49 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.addInitScript((currentProjectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
-    localStorage.setItem(
-      `pstdio-project-settings/projects/${currentProjectId}/values`,
-      JSON.stringify({
-        state: {
-          lastSelectedAgent: "pstdio.extension-lab.fake",
-          lastSelectedBranches: [],
-          lastSelectedModels: [],
-          lastSelectedRepo: "",
-          selectedSessionId: null,
-          sessionModalState: "closed",
-        },
-        version: 0,
-      }),
-    );
-  }, projectId);
+const bypassOnboarding = async (
+  page: import("@playwright/test").Page,
+  projectId: string,
+  route: WorkbenchExtensionMetadata["routes"][number],
+) => {
+  await page.addInitScript(
+    ({ currentProjectId, currentRoute }) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      localStorage.setItem(
+        `dashboard-wb:last-resource:${currentProjectId}`,
+        JSON.stringify({
+          kind: "extension-route",
+          uri: `dashboard-workbench://project/${currentProjectId}/extensions/${currentRoute.path}`,
+          id: currentRoute.path,
+          label: "Lab",
+          metadata: { projectId: currentProjectId, routePath: currentRoute.path, route: currentRoute },
+        }),
+      );
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${currentProjectId}/values`,
+        JSON.stringify({
+          state: {
+            lastSelectedAgent: "pstdio.extension-lab.fake",
+            lastSelectedBranches: [],
+            lastSelectedModels: [],
+            lastSelectedRepo: "",
+            selectedSessionId: null,
+            sessionModalState: "closed",
+          },
+          version: 0,
+        }),
+      );
+    },
+    { currentProjectId: projectId, currentRoute: route },
+  );
 };
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -95,10 +113,14 @@ test.describe("Extension webview live reload", () => {
       const project = await createProject(request);
       await disableDefaultExtensionLab(request, project.id);
       await enableExtension(request, project.id, extensionRoot);
-      await bypassOnboarding(page, project.id);
+      const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
+      expect(metadataResponse.ok()).toBe(true);
+      const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
+      const labRoute = metadata.routes.find((route) => route.path === "lab");
+      expect(labRoute).toBeDefined();
+      await bypassOnboarding(page, project.id, labRoute!);
 
-      await page.goto(`/projects/${project.id}/extensions/lab`);
-      await page.getByRole("option", { name: "Lab", exact: true }).click();
+      await page.goto(`/projects/${project.id}`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 

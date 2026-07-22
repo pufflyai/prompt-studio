@@ -3,10 +3,14 @@ import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import {
+  getSidebarContributionHeaderNodes,
+  getSidebarContributionSections,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSidebarModule } from "../sidebar/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
@@ -40,17 +44,23 @@ describe("createSessionsModule", () => {
     expect(nodeIdsForMode("workspace")).toContain("sessions");
   });
 
-  test("adds sessions navigation to the project sidebar", () => {
+  test("adds sessions navigation to the persistent sidebar header", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
 
-    const projectNodes = getSidebarContributionSections(workbench, "project").flatMap((section) => section.nodes);
-    const sessionsNode = projectNodes.find((node) => node.id === dashboardResources.sessions.uri);
+    const sessionsNode = getSidebarContributionHeaderNodes(workbench, "project").find(
+      (node) => node.id === dashboardResources.sessions.uri,
+    );
 
     expect(sessionsNode).toMatchObject({
       target: { kind: "command", commandId: dashboardCommandIds.openSessions },
     });
+    expect(
+      getSidebarContributionSections(workbench, "project")
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id),
+    ).not.toContain(dashboardResources.sessions.uri);
   });
 
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
@@ -144,7 +154,7 @@ describe("createSessionsModule", () => {
     ]);
   });
 
-  test("opens the latest session when navigating sessions without a remembered session", async () => {
+  test("opens the project-owned sessions aggregate from global navigation", async () => {
     seedContractSessions();
     const workbench = createWorkbenchCore();
 
@@ -154,32 +164,9 @@ describe("createSessionsModule", () => {
 
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
 
-    expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://session/session-2");
-  });
-
-  test("opens the current Side Panel session when navigating sessions", async () => {
-    seedContractSessions();
-    const workbench = createWorkbenchCore();
-    const currentSession = createDashboardResource(
-      "session",
-      "session-1",
-      "First session",
-      "MessageCircle",
-      "project-1",
-      {
-        status: "completed",
-      },
-    );
-
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.registerModule(createSessionBubbleModule());
-    workbench.registerModule(createSessionsModule());
-
-    await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: currentSession });
-    await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
-
-    expect(workbench.layout.getLayout().activeResourceUri).toBe(currentSession.uri);
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.resource?.uri).toBe(dashboardResources.sessions.uri);
+    expect(getDashboardActiveCollection(workbench)).toBe("sessions");
+    expect(getDashboardSelectedResource(workbench)).toBeUndefined();
   });
 
   test("opens command palette session resources in the floating bubble", async () => {

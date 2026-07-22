@@ -175,30 +175,6 @@ describe("createWorkspacesModule", () => {
     expect(workbench.layout.getLayout().regions.overlay.activeWidgetId).toBe(dashboardWidgetIds.createWorkspace);
   });
 
-  test("places workspace creation on the Workspaces navigation row", () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.registerModule(createSidebarModule());
-    workbench.registerModule(createWorkspacesModule());
-
-    const headerNodeIds = getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.id);
-    const workspacesNode = getSidebarContributionSections(workbench, "project")
-      .flatMap((section) => section.nodes)
-      .find((node) => node.id === dashboardResources.workspaces.uri);
-
-    expect(headerNodeIds).not.toContain("new-workspace");
-    expect(workspacesNode).toMatchObject({
-      commandId: dashboardCommandIds.openWorkspaces,
-      actions: [
-        expect.objectContaining({
-          id: "new-workspace",
-          commandId: dashboardCommandIds.createWorkspace,
-          icon: "Plus",
-        }),
-      ],
-    });
-  });
-
   test("keeps ticket-linked workspaces fixed in the ticket sidebar", () => {
     const workbench = createWorkbenchCore();
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "FileText", "project-1");
@@ -243,6 +219,37 @@ describe("createWorkspacesModule", () => {
       }),
     ]);
     expect(getSidebarContributionSections(workbench, "ticket")[0]).not.toHaveProperty("canHide");
+  });
+});
+
+describe("createWorkspacesModule navigation", () => {
+  test("places workspace creation on the Workspaces navigation row", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createWorkspacesModule());
+
+    const headerNodeIds = getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.id);
+    const workspacesNode = getSidebarContributionHeaderNodes(workbench, "project").find(
+      (node) => node.id === dashboardResources.workspaces.uri,
+    );
+
+    expect(headerNodeIds).not.toContain("new-workspace");
+    expect(workspacesNode).toMatchObject({
+      commandId: dashboardCommandIds.openWorkspaces,
+      actions: [
+        expect.objectContaining({
+          id: "new-workspace",
+          commandId: dashboardCommandIds.createWorkspace,
+          icon: "Plus",
+        }),
+      ],
+    });
+    expect(
+      getSidebarContributionSections(workbench, "project")
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id),
+    ).not.toContain(dashboardResources.workspaces.uri);
   });
 });
 

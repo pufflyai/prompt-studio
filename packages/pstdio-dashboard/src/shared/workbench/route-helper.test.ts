@@ -1,12 +1,14 @@
+import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { describeResourceRouteContract, type RouteContractHarness } from "@pstdio/workbench/testing";
+import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { registerResourceRoute } from "./route-helper";
 
 const ROOT = {
   kind: "dashboard-view",
   uri: "dashboard-workbench://route-test",
-  id: "route-test",
+  id: "workspaces",
   label: "Route test",
 };
 const DETAIL_KIND = "route-test-detail";
@@ -67,4 +69,21 @@ describeResourceRouteContract({
   detailB: { kind: DETAIL_KIND, uri: "route-test://detail/2", id: "2", label: "Detail 2" },
   rootDetailHistory: "retained",
   expectedMode: MODE,
+});
+
+describe("registerResourceRoute navigation state", () => {
+  test("keeps aggregate collections separate from selected resources", async () => {
+    const { workbench } = setup();
+    const detail = { kind: DETAIL_KIND, uri: "route-test://detail/1", id: "1", label: "Detail 1" };
+
+    await workbench.resources.openResource(ROOT);
+
+    expect(getDashboardActiveCollection(workbench)).toBe("workspaces");
+    expect(getDashboardSelectedResource(workbench)).toBeUndefined();
+
+    await workbench.resources.openResource(detail, { replaceActive: true });
+
+    expect(getDashboardActiveCollection(workbench)).toBeUndefined();
+    expect(getDashboardSelectedResource(workbench)).toEqual(detail);
+  });
 });

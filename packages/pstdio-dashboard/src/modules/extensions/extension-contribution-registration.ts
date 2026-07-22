@@ -25,6 +25,7 @@ import { registerExtensionDataRenderers } from "./extension-data-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
+import { registerExtensionDataRendererSidebarContribution } from "./extension-sidebar-contributions";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -76,6 +77,7 @@ export const registerExtensionContributions = (input: {
   }
 
   disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));
+  disposables.push(registerExtensionDataRendererSidebarContribution(ctx, { metadata, projectId }));
   disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
   disposables.push(
     registerWorkbenchExtensionFileRenderers({

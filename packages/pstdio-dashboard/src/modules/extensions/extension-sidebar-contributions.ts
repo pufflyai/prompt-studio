@@ -5,7 +5,7 @@ import {
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
-import { buildExtensionDataRendererSidebarSections } from "./extension-data-renderers";
+import { buildExtensionDataRendererSidebarHeaderNodes } from "./extension-data-renderers";
 
 interface ExtensionSidebarContributionState {
   metadata: DashboardExtensionMetadata | undefined;
@@ -39,18 +39,6 @@ export const registerExtensionSidebarContributions = (
     },
   });
   registerSidebarContribution(ctx, {
-    id: "dashboard.extensions.data-renderers",
-    modes: ["project"],
-    order: 30,
-    getSections: () => {
-      const state = getState();
-      return buildExtensionDataRendererSidebarSections({
-        metadata: extensionNavigationMetadata(state),
-        projectId: state.projectId,
-      });
-    },
-  });
-  registerSidebarContribution(ctx, {
     id: "dashboard.extensions.project-sidebar.default",
     modes: ["project"],
     order: 40,
@@ -70,3 +58,15 @@ export const registerExtensionSidebarContributions = (
     },
   });
 };
+
+export const registerExtensionDataRendererSidebarContribution = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { metadata: DashboardExtensionMetadata; projectId: string },
+) =>
+  registerSidebarContribution(ctx, {
+    id: "dashboard.extensions.data-renderers",
+    modes: ["*"],
+    region: "header",
+    order: 40,
+    getHeaderNodes: () => buildExtensionDataRendererSidebarHeaderNodes(input),
+  });

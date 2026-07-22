@@ -5,6 +5,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "@pstdio/workbench/core";
 import { resolveAnchorRegion } from "@pstdio/workbench/core";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
 export interface RegisterResourceRouteInput {
@@ -46,6 +47,7 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
       }
 
       ctx.modes.setActiveMode(input.mode);
+      selectDashboardNavigationResource(ctx, resource);
       input.beforeOpen?.({ resource });
 
       const placement = ctx.layout.openWidget(input.widgetId, {
