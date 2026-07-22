@@ -4261,6 +4261,12 @@
               "_active": {
                 "bg": "bg.active"
               },
+              "&[aria-pressed=true]": {
+                "bg": "bg.active",
+                "_hover": {
+                  "bg": "bg.active"
+                }
+              },
               "_disabled": {
                 "bg": "transparent",
                 "_hover": {
