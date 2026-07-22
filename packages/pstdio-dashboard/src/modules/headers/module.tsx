@@ -9,7 +9,6 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     region: "sidebar-header",
     singleton: true,
     rendererId: dashboardWidgetIds.sidebarHeader,
-    headerBorderBottom: false,
   });
 
   ctx.renderers.registerRenderer({

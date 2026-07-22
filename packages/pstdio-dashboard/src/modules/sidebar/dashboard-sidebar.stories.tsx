@@ -237,8 +237,9 @@ export const WorkspacesViewHover: Story = {
   },
 };
 
-// F17: the ticket's former left Panel Menu is composed into the selected-resource region.
+// F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
+  name: "Ticket resource separator",
   render: () => (
     <SidebarStory
       open={(workbench) => {
