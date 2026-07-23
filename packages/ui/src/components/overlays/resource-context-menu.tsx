@@ -7,6 +7,7 @@ type MenuRootProps = ComponentProps<typeof Menu.Root>;
 export interface ResourceContextAction {
   key: string;
   label: string;
+  commandId?: string;
   onClick: () => Promise<void> | void;
   isDisabled?: boolean;
   icon?: ReactNode;

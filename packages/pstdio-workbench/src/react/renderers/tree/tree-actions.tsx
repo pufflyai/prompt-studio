@@ -194,6 +194,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
     const item = {
       id: `${action.commandId}:${index}`,
       label,
+      commandId: record.command.id,
       description: action.description ?? record.command.description,
       icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
       endContent: createMenuEndContent({ external: action.external, binding }),
@@ -260,6 +261,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
     items.push({
       id: action.id,
       label,
+      commandId: record?.command.id ?? action.commandId,
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
       endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
       disabled,

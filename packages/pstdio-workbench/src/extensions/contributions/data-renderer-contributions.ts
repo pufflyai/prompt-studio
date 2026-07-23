@@ -389,6 +389,7 @@ export const registerWorkbenchExtensionDataRenderers = (
                 return {
                   key: action.id,
                   label: localize(action.label, action.id),
+                  commandId: action.commandId,
                   icon: createRowActionIcon(action.icon),
                   onClick: () =>
                     adapter.executeRowAction

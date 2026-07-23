@@ -76,7 +76,14 @@ export const mergeDataViewRowActions = (
   contributionActions: ResourceContextAction[],
 ) => {
   const resourceActionKeys = new Set(resourceActions.map((action) => action.key));
-  return [...resourceActions, ...contributionActions.filter((action) => !resourceActionKeys.has(action.key))];
+  const resourceCommandIds = new Set(resourceActions.flatMap((action) => (action.commandId ? [action.commandId] : [])));
+  return [
+    ...resourceActions,
+    ...contributionActions.filter(
+      (action) =>
+        !resourceActionKeys.has(action.key) && (!action.commandId || !resourceCommandIds.has(action.commandId)),
+    ),
+  ];
 };
 
 export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {

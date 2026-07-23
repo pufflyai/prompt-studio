@@ -23,6 +23,7 @@ export interface ListRowActionContext {
 export interface ListRowActionMenuItem {
   id: string;
   label: string;
+  commandId?: string;
   description?: string;
   icon?: ReactNode | ComponentType<{ size?: number | string }>;
   disabled?: boolean;
