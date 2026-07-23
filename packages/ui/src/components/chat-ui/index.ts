@@ -14,6 +14,7 @@ export { ChatInput, type ChatInputProps } from "./components/chat-input";
 export type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./components/chat-input-question-prompt";
 export { ChatPanel } from "./components/chat-panel";
 export { ChatSkeleton } from "./components/chat-skeleton";
+export { ConversationBrowse, type ConversationBrowseItem } from "./components/conversation-browse";
 export type {
   AlertPart,
   ChatMessagePart,

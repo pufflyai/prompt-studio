@@ -1,5 +1,5 @@
 import { IconButton, type IconButtonProps, Kbd, Portal, Tooltip } from "@chakra-ui/react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Pause } from "lucide-react";
 
 export interface SendButtonProps extends IconButtonProps {
   shortcut?: string;
@@ -12,7 +12,7 @@ export const SendButton = (props: SendButtonProps) => {
   const ariaLabel = rest["aria-label"] ?? title;
 
   const icon = canInterrupt ? (
-    <Square size={16} strokeWidth={2} fill="currentColor" />
+    <Pause size={16} strokeWidth={2} fill="currentColor" />
   ) : (
     <ArrowUp size={16} strokeWidth={2} />
   );
@@ -20,9 +20,8 @@ export const SendButton = (props: SendButtonProps) => {
   const button = (
     <IconButton
       data-testid="send-message-button"
-      size="sm"
+      size="xs"
       variant="primary"
-      borderRadius="full"
       aria-label={ariaLabel}
       title={title}
       {...rest}

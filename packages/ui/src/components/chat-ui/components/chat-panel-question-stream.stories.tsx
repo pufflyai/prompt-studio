@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useRef, useState } from "react";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
@@ -252,16 +252,6 @@ function QuestionInterruptedStreamRenderer() {
           </Button>
           <Button size="xs" variant="subtle">
             Question stream
-          </Button>
-        </HStack>
-      }
-      repoMenu={
-        <HStack gap="2">
-          <Text textStyle="label/S/medium" color="fg.muted">
-            mono
-          </Text>
-          <Button size="xs" variant="ghost">
-            main
           </Button>
         </HStack>
       }

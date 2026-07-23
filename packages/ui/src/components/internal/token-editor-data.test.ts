@@ -26,11 +26,11 @@ describe("tokenEditorPresets", () => {
 
     expect(values).toMatchObject({
       "colors.bg": "#07090E",
-      "colors.bg.muted": "#0D1017",
-      "colors.bg.subtle": "#0A0C12",
-      "colors.bg.hover": "#141821",
-      "colors.bg.active": "#191E28",
-      "colors.bg.code": "#0D1017",
+      "colors.bg.muted": "#171A22",
+      "colors.bg.subtle": "#0E1016",
+      "colors.bg.hover": "#1E212A",
+      "colors.bg.active": "#252932",
+      "colors.bg.code": "#10131A",
       "colors.bg.emphasized": "#1D242E",
     });
 
@@ -39,8 +39,8 @@ describe("tokenEditorPresets", () => {
         Object.entries(values).filter(([id]) => id === "colors.border" || id === "colors.border.subtle"),
       ),
     ).toEqual({
-      "colors.border": "#2C313D",
-      "colors.border.subtle": "#13161F",
+      "colors.border": "#2E333F",
+      "colors.border.subtle": "#1A1E26",
     });
   });
 });

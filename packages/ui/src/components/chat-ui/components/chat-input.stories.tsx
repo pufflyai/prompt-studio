@@ -66,6 +66,20 @@ export const Default: Story = {
   },
 };
 
+export const Streaming: Story = {
+  render: (args) => (
+    <Box w="32rem">
+      <ChatInput {...args} />
+    </Box>
+  ),
+  args: {
+    defaultState: initialState,
+    placeholder: "Generating response...",
+    streaming: true,
+    onInterrupt: () => console.log("Interrupted"),
+  },
+};
+
 export const Selected: Story = {
   render: (args) => (
     <Box w="32rem">

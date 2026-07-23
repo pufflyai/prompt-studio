@@ -9,12 +9,15 @@ type HarnessParamDescriptor = HarnessParamsInfo[string];
 type SelectHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "select" }>;
 type BooleanHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "boolean" }>;
 
+type ControlSize = "2xs" | "xs" | "sm";
+
 interface HarnessParamControlsProps {
   schema: HarnessParamsInfo | undefined;
   defaults?: HarnessParamValues;
   overrides: HarnessParamValues;
   onOverridesChange: (next: HarnessParamValues) => void;
   disabled?: boolean;
+  size?: ControlSize;
 }
 
 // Harness param labels are Localizable; resolve before rendering so an l10n
@@ -43,10 +46,11 @@ interface TriggerProps extends HTMLChakraProps<"button"> {
   startIcon?: ReactNode;
   tone: "neutral" | "accent";
   showChevron?: boolean;
+  size?: ControlSize;
 }
 
 const Trigger = forwardRef<HTMLButtonElement, TriggerProps>((props, ref) => {
-  const { displayLabel, ariaLabel, startIcon, tone, showChevron = false, ...rest } = props;
+  const { displayLabel, ariaLabel, startIcon, tone, showChevron = false, size = "sm", ...rest } = props;
   const accentProps =
     tone === "accent" ? { color: "var(--schub-foreground-accent)", bg: "var(--schub-accent-subtle)" } : {};
 
@@ -54,7 +58,7 @@ const Trigger = forwardRef<HTMLButtonElement, TriggerProps>((props, ref) => {
     <Button
       ref={ref}
       variant="ghost"
-      size="sm"
+      size={size}
       px="2"
       minW="0"
       flexShrink="0"
@@ -78,12 +82,13 @@ interface ParamControlProps {
   overrides: HarnessParamValues;
   onOverridesChange: (next: HarnessParamValues) => void;
   disabled: boolean;
+  size: ControlSize;
 }
 
 const BooleanParamControl = (
   props: ParamControlProps & { descriptor: BooleanHarnessParamDescriptor; value: string | boolean | undefined },
 ) => {
-  const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value } = props;
+  const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value, size } = props;
   const label = labelFor(paramKey, descriptor.label);
   const booleanValue = value === true;
 
@@ -92,6 +97,7 @@ const BooleanParamControl = (
       displayLabel={`${label}: ${booleanValue ? "on" : "off"}`}
       ariaLabel={`${label}: ${booleanValue ? "on" : "off"}`}
       disabled={disabled}
+      size={size}
       tone={Object.hasOwn(overrides, paramKey) ? "accent" : "neutral"}
       startIcon={
         <Circle size={10} fill={booleanValue ? "currentColor" : "transparent"} strokeWidth={booleanValue ? 0 : 2} />
@@ -104,7 +110,7 @@ const BooleanParamControl = (
 const SelectParamControl = (
   props: ParamControlProps & { descriptor: SelectHarnessParamDescriptor; value: string | boolean | undefined },
 ) => {
-  const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value } = props;
+  const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value, size } = props;
   const label = labelFor(paramKey, descriptor.label);
   const selectedValue = typeof value === "string" ? value : descriptor.options[0]?.value;
   const selectedOption = descriptor.options.find((option) => option.value === selectedValue);
@@ -118,6 +124,7 @@ const SelectParamControl = (
           displayLabel={selectedLabel}
           ariaLabel={`${label}: ${selectedLabel}`}
           disabled={disabled}
+          size={size}
           tone={isOverride ? "accent" : "neutral"}
           startIcon={selectedOption?.icon ? <WorkbenchIcon name={selectedOption.icon} size={14} /> : undefined}
           showChevron
@@ -184,7 +191,7 @@ const ParamControl = (props: ParamControlProps) => {
 };
 
 export const HarnessParamControls = (props: HarnessParamControlsProps) => {
-  const { schema, defaults, overrides, onOverridesChange, disabled = false } = props;
+  const { schema, defaults, overrides, onOverridesChange, disabled = false, size = "sm" } = props;
   const entries = Object.entries(schema ?? {});
   if (entries.length === 0) return null;
 
@@ -199,6 +206,7 @@ export const HarnessParamControls = (props: HarnessParamControlsProps) => {
           overrides={overrides}
           onOverridesChange={onOverridesChange}
           disabled={disabled}
+          size={size}
         />
       ))}
     </Flex>

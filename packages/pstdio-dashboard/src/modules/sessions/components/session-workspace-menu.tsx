@@ -1,4 +1,4 @@
-import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Menu, Text } from "@chakra-ui/react";
 import { ListRow, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
 import { ChevronDown, GitBranch } from "lucide-react";
 import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
@@ -27,16 +27,20 @@ const buildWorkspaceItems = (
     }),
   );
 
+// The changeable and read-only identities share one icon size and control height so the hub
+// header does not shift between a draft (dropdown) and an existing session (static label).
+const WorkspaceIdentityIcon = () => <Icon as={GitBranch} boxSize="14px" color="fg" />;
+
 const WorkspaceMenuButton = (props: { label: string; disabled?: boolean }) => {
   const { label, disabled = false } = props;
 
   return (
-    <Button variant="ghost" size="sm" px="2" minW="0" aria-label="Select workspace" disabled={disabled}>
-      <GitBranch size={14} />
+    <Button variant="ghost" size="xs" px="2xs" minW="0" aria-label="Select workspace" disabled={disabled}>
+      <WorkspaceIdentityIcon />
       <Text textStyle="label/XS/medium" color="fg" ml="2xs" truncate>
         {label}
       </Text>
-      {!disabled ? <ChevronDown size={14} /> : null}
+      {!disabled ? <Icon as={ChevronDown} boxSize="14px" color="fg.muted" /> : null}
     </Button>
   );
 };
@@ -45,12 +49,12 @@ const WorkspaceStaticLabel = (props: { label: string }) => {
   const { label } = props;
 
   return (
-    <Box display="flex" alignItems="center" gap="2xs" minW="0" px="2" h="8">
-      <GitBranch size={14} />
+    <Flex align="center" gap="2xs" minW="0" px="2xs" h="7">
+      <WorkspaceIdentityIcon />
       <Text textStyle="label/XS/medium" color="fg" truncate>
         {label}
       </Text>
-    </Box>
+    </Flex>
   );
 };
 

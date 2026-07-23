@@ -2,21 +2,21 @@ export const fg = {
   DEFAULT: {
     value: {
       _light: "{colors.blacks.800}",
-      _dark: "{colors.blacks.200}",
+      _dark: "#F7F8F8",
     },
   },
 
   muted: {
     value: {
       _light: "{colors.blacks.450}",
-      _dark: "{colors.blacks.500}",
+      _dark: "#8B9099",
     },
   },
 
   subtle: {
     value: {
       _light: "{colors.blacks.400}",
-      _dark: "{colors.blacks.600}",
+      _dark: "#646973",
     },
   },
 
@@ -120,28 +120,28 @@ export const bg = {
   muted: {
     value: {
       _light: "#F0F5F1",
-      _dark: "#0D1017",
+      _dark: "#171A22",
     },
   },
 
   subtle: {
     value: {
       _light: "#F9FBFA",
-      _dark: "#0A0C12",
+      _dark: "#0E1016",
     },
   },
 
   hover: {
     value: {
       _light: "#EDF2EE",
-      _dark: "#141821",
+      _dark: "#1E212A",
     },
   },
 
   active: {
     value: {
       _light: "#E7EEE9",
-      _dark: "#191E28",
+      _dark: "#252932",
     },
   },
 
@@ -176,7 +176,7 @@ export const bg = {
   code: {
     value: {
       _light: "{colors.blacks.50}",
-      _dark: "#0D1017",
+      _dark: "#10131A",
     },
   },
 
@@ -184,6 +184,13 @@ export const bg = {
     value: {
       _light: "{colors.bg.active}",
       _dark: "#1D242E",
+    },
+  },
+
+  elevated: {
+    value: {
+      _light: "{colors.blacks.50}",
+      _dark: "#1B1E26",
     },
   },
 
@@ -218,22 +225,13 @@ export const bg = {
   button: {
     primary: {
       default: {
-        value: {
-          _light: "{colors.bg.accent-primary.default}",
-          _dark: "{colors.bg.accent-primary.dark}",
-        },
+        value: "{colors.bg.accent-primary.default}",
       },
       hover: {
-        value: {
-          _light: "{colors.bg.accent-primary.hover}",
-          _dark: "{colors.bg.accent-primary.medium}",
-        },
+        value: "{colors.bg.accent-primary.hover}",
       },
       pressed: {
-        value: {
-          _light: "{colors.bg.accent-primary.pressed}",
-          _dark: "{colors.bg.accent-primary.medium}",
-        },
+        value: "{colors.bg.accent-primary.pressed}",
       },
       disabled: {
         value: "{colors.bg.muted}",
@@ -396,14 +394,14 @@ export const border = {
   DEFAULT: {
     value: {
       _light: "#EAF0EB",
-      _dark: "#2C313D",
+      _dark: "#2E333F",
     },
   },
 
   subtle: {
     value: {
       _light: "#EDF2EE",
-      _dark: "#13161F",
+      _dark: "#1A1E26",
     },
   },
 
@@ -431,21 +429,21 @@ export const border = {
   info: {
     value: {
       _light: "{colors.blue.100}",
-      _dark: "{colors.blue.800}",
+      _dark: "#113A7C",
     },
   },
 
   warning: {
     value: {
       _light: "{colors.orange.100}",
-      _dark: "{colors.orange.800}",
+      _dark: "#7C3A0E",
     },
   },
 
   success: {
     value: {
       _light: "{colors.green.100}",
-      _dark: "{colors.green.800}",
+      _dark: "#0A5B24",
     },
   },
 

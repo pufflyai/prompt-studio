@@ -1,4 +1,5 @@
-import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ChatPanel, ChatWorkspaceHub, type SessionMessage } from "@/components/chat-ui";
 import { RichMessage } from "@/components/rich-text";
 import { GalleryCard } from "../gallery-frame";
@@ -83,24 +84,23 @@ const chatActions = (
   </HStack>
 );
 
-const repoMenu = (
-  <HStack gap="xs">
-    <Text textStyle="label/XS" color="fg.muted">
-      ui
-    </Text>
-    <Badge colorPalette="gray">main</Badge>
-  </HStack>
-);
-
 const workspaceHub = (
   <ChatWorkspaceHub
-    changesLabel="workspace diff"
+    workspaceControl={
+      <Button size="xs" variant="ghost" px="2xs">
+        <GitBranch size={14} />
+        <Text textStyle="label/XS/medium" color="fg" ml="2xs">
+          main
+        </Text>
+        <ChevronDown size={14} />
+      </Button>
+    }
     additions={12}
     deletions={3}
     action={
-      <Button size="xs" variant="ghost">
-        Open
-      </Button>
+      <IconButton size="xs" variant="ghost" aria-label="Open workspace">
+        <ArrowUpRight size={14} />
+      </IconButton>
     }
   />
 );
@@ -136,7 +136,6 @@ export const CompositeChatSection = () => {
             chatInputPlaceholder="Ask about this release..."
             chatInputDefaultValue="Summarize the remaining risks"
             actions={chatActions}
-            repoMenu={repoMenu}
             workspaceHub={workspaceHub}
             attachedResources={["packages/ui/src/theme/recipes/tabs.ts"]}
             onSubmitMessage={() => undefined}

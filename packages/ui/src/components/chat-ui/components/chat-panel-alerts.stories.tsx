@@ -1,6 +1,6 @@
-import { Box, Button, Icon } from "@chakra-ui/react";
+import { Box, Button, Icon, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -32,6 +32,16 @@ const baseArgs = {
   emptyStateDescription: "",
   chatInputPlaceholder: "Type a message...",
 };
+
+const workspaceControl = (
+  <Button size="xs" variant="ghost" px="2xs">
+    <GitBranch size={14} />
+    <Text textStyle="label/XS/medium" color="fg" ml="2xs">
+      main
+    </Text>
+    <ChevronDown size={14} />
+  </Button>
+);
 
 const alertVariantsMessages: SessionMessage[] = [
   {
@@ -117,7 +127,7 @@ export const WorkspaceInitializing: Story = {
     workspaceInitializing: true,
     workspaceHub: (
       <ChatWorkspaceHub
-        changesLabel=""
+        workspaceControl={workspaceControl}
         additions={0}
         deletions={0}
         status="loading"
@@ -156,7 +166,7 @@ export const WorkspaceReady: Story = {
     messages: workspaceReadyMessages,
     workspaceHub: (
       <ChatWorkspaceHub
-        changesLabel="0 files changed"
+        workspaceControl={workspaceControl}
         additions={0}
         deletions={0}
         action={
@@ -190,7 +200,7 @@ export const WorkspaceSetupFailed: Story = {
     inputDisabled: true,
     workspaceHub: (
       <ChatWorkspaceHub
-        changesLabel=""
+        workspaceControl={workspaceControl}
         additions={0}
         deletions={0}
         status="error"
