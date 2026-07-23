@@ -19,6 +19,7 @@ import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
+import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
 import { createStartModule } from "../start/module";
@@ -185,6 +186,7 @@ const bootstrapWorkbench = () => {
     createHeadersModule(),
     createHelpModule(),
     createNotificationsModule(),
+    createSessionBubbleModule(),
     createSessionsModule(),
     createSettingsModule(),
     createStartModule(),
