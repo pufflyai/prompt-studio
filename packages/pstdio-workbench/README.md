@@ -331,9 +331,9 @@ Panels with tabs are paired with a `<panel>-header` region that the workbench re
 
 | Region             | Workbench location                           | Typical use                                                   |
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- |
-| `nav`              | Nav Chrome across the resource-owned column  | Breadcrumbs, history, resource actions, region controls       |
+| `nav`              | Nav Chrome across the resource-owned column  | Project selector, breadcrumbs, history, resource actions, region controls |
 | `activity`         | Optional rail on the leading edge            | Top-level mode or workspace switching                         |
-| `sidenav-header`   | Header above `sidenav`                       | Project brand and primary navigation actions                  |
+| `sidenav-header`   | Optional header above `sidenav`              | Sidenav-local controls that must sit above its scrolling content |
 | `sidenav`          | Leading Sidenav                              | Navigation trees, registries, outlines, resource lists        |
 | `main-header`      | Header above the Main Panel                  | Main Panel tabs and controls                                  |
 | `main-left-menu`   | Menu inside the Main Panel's leading edge    | Contextual navigation and document outlines                   |

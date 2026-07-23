@@ -9360,7 +9360,7 @@
                               "id": "U9hFv",
                               "type": "ref",
                               "ref": "TwCXd",
-                              "name": "Refactor sidebar layout",
+                              "name": "Refactor sidenav layout",
                               "theme": {
                                 "size": "xs",
                                 "tab": "active",
@@ -9373,7 +9373,7 @@
                                   "height": 12
                                 },
                                 "k9XlqC": {
-                                  "content": "Refactor sidebar layout"
+                                  "content": "Refactor sidenav layout"
                                 },
                                 "g1LJJh": {
                                   "enabled": false
@@ -13224,7 +13224,7 @@
                           "id": "kUCSG",
                           "type": "ref",
                           "ref": "nvvgg",
-                          "name": "Sidebar control",
+                          "name": "Sidenav control",
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
@@ -15530,7 +15530,7 @@
                           "fill": "$tree-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "sidebar.tsx",
+                          "content": "sidenav.tsx",
                           "fontFamily": "$font-body",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -15858,7 +15858,7 @@
                               "id": "fMvFF",
                               "type": "ref",
                               "ref": "sgbRV",
-                              "name": "Sidebar shortcuts",
+                              "name": "Sidenav shortcuts",
                               "width": "fill_container",
                               "theme": {
                                 "menu": "hover"
@@ -15868,7 +15868,7 @@
                                   "icon": "git-branch"
                                 },
                                 "UTbhN": {
-                                  "content": "Sidebar shortcuts"
+                                  "content": "Sidenav shortcuts"
                                 }
                               }
                             },
@@ -20505,7 +20505,7 @@
                             {
                               "type": "frame",
                               "id": "ANUkn",
-                              "name": "sidebar.tsx",
+                              "name": "sidenav.tsx",
                               "width": "fill_container",
                               "height": 30,
                               "cornerRadius": 4,
@@ -20535,7 +20535,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "sidebar.tsx",
+                                  "content": "sidenav.tsx",
                                   "fontFamily": "$font-body",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -34210,7 +34210,7 @@
                             {
                               "type": "frame",
                               "id": "b8eO6e",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": "fill_container",
                               "fill": "$ds-bg",
                               "gap": 1,
@@ -34923,7 +34923,7 @@
                             {
                               "type": "frame",
                               "id": "MdfkY",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 158,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -37818,7 +37818,7 @@
                             {
                               "type": "frame",
                               "id": "FdUrw",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 110,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -37837,7 +37837,7 @@
                                   "id": "gFuvX",
                                   "name": "T",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "sidebar",
+                                  "content": "sidenav",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
                                   "fontWeight": "600"
@@ -40430,7 +40430,7 @@
                         {
                           "type": "frame",
                           "id": "fhUmA",
-                          "name": "Sidebar control",
+                          "name": "Sidenav control",
                           "height": 22,
                           "fill": "$ds-bg-active",
                           "cornerRadius": 4,
@@ -40830,7 +40830,7 @@
                             {
                               "type": "frame",
                               "id": "KqUHV",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 140,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -40848,7 +40848,7 @@
                                   "id": "WgCv7",
                                   "name": "T",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "sidebar",
+                                  "content": "sidenav",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -41966,7 +41966,7 @@
                             {
                               "type": "frame",
                               "id": "bEkG2",
-                              "name": "Sidebar · Activity Rail",
+                              "name": "Sidenav · Activity Rail",
                               "width": "fill_container",
                               "fill": "$ds-surface",
                               "cornerRadius": 6,
@@ -42522,7 +42522,7 @@
                             {
                               "type": "frame",
                               "id": "zqIvO",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 140,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -42540,7 +42540,7 @@
                                   "id": "NipW3",
                                   "name": "T",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "sidebar",
+                                  "content": "sidenav",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -42883,7 +42883,7 @@
                                 {
                                   "type": "frame",
                                   "id": "o96SY",
-                                  "name": "Go to  fix-sidebar-shortcuts",
+                                  "name": "Go to  fix-sidenav-shortcuts",
                                   "width": "fill_container",
                                   "height": 26,
                                   "fill": "$ds-bg-active",
@@ -42910,7 +42910,7 @@
                                       "id": "K1Uotl",
                                       "name": "L",
                                       "fill": "$ds-fg",
-                                      "content": "Go to  fix-sidebar-shortcuts",
+                                      "content": "Go to  fix-sidenav-shortcuts",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
@@ -42937,7 +42937,7 @@
                                 {
                                   "type": "frame",
                                   "id": "fZseS",
-                                  "name": "Go to  PS-122 · show sidebar shortcuts",
+                                  "name": "Go to  PS-122 · show sidenav shortcuts",
                                   "width": "fill_container",
                                   "height": 26,
                                   "fill": "#00000000",
@@ -42964,7 +42964,7 @@
                                       "id": "B9AJBA",
                                       "name": "L",
                                       "fill": "$ds-fg-muted",
-                                      "content": "Go to  PS-122 · show sidebar shortcuts",
+                                      "content": "Go to  PS-122 · show sidenav shortcuts",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
@@ -43888,7 +43888,7 @@
                                 {
                                   "type": "frame",
                                   "id": "dcZcE",
-                                  "name": "Go to fix-sidebar",
+                                  "name": "Go to fix-sidenav",
                                   "width": "fill_container",
                                   "height": 20,
                                   "fill": "$ds-bg-active",
@@ -43915,7 +43915,7 @@
                                       "id": "Rnm8C",
                                       "name": "L",
                                       "fill": "$ds-fg",
-                                      "content": "Go to fix-sidebar",
+                                      "content": "Go to fix-sidenav",
                                       "fontFamily": "$font-body",
                                       "fontSize": 9,
                                       "fontWeight": "normal"
@@ -45696,7 +45696,7 @@
                             {
                               "type": "frame",
                               "id": "u63c8",
-                              "name": "Group · PS-122 · Show sidebar shortcuts",
+                              "name": "Group · PS-122 · Show sidenav shortcuts",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 1,
@@ -47812,7 +47812,7 @@
                     {
                       "type": "frame",
                       "id": "caY1B",
-                      "name": "Sidebar",
+                      "name": "Sidenav",
                       "width": 250,
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -49215,7 +49215,7 @@
                             {
                               "type": "frame",
                               "id": "zUgfa",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 112,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -49234,7 +49234,7 @@
                                   "id": "doU8O",
                                   "name": "T",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "sidebar",
+                                  "content": "sidenav",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
                                   "fontWeight": "600"
@@ -50287,7 +50287,7 @@
                             {
                               "type": "frame",
                               "id": "dwAvn",
-                              "name": "Sidebar",
+                              "name": "Sidenav",
                               "width": 112,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -50306,7 +50306,7 @@
                                   "id": "s4lZf",
                                   "name": "T",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "sidebar",
+                                  "content": "sidenav",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
                                   "fontWeight": "600"
@@ -50382,7 +50382,7 @@
                                           "id": "XdNof",
                                           "type": "ref",
                                           "ref": "N3VfvY",
-                                          "name": "fix-sidebar",
+                                          "name": "fix-sidenav",
                                           "theme": {
                                             "crumb": "current",
                                             "size": "2xs"
@@ -50395,7 +50395,7 @@
                                               "icon": "git-branch"
                                             },
                                             "g7l5u": {
-                                              "content": "fix-sidebar"
+                                              "content": "fix-sidenav"
                                             }
                                           }
                                         }
@@ -51396,7 +51396,7 @@
                     {
                       "type": "frame",
                       "id": "VrCGR",
-                      "name": "Sidebar",
+                      "name": "Sidenav",
                       "width": 250,
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -51414,7 +51414,7 @@
                           "id": "Ghv9J",
                           "name": "T",
                           "fill": "$ds-fg-subtle",
-                          "content": "sidebar",
+                          "content": "sidenav",
                           "fontFamily": "JetBrains Mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -55611,7 +55611,7 @@
                 {
                   "type": "frame",
                   "id": "kb1CA",
-                  "name": "Sidebar",
+                  "name": "Sidenav",
                   "width": 240,
                   "height": "fill_container",
                   "fill": "$ds-bg-subtle",
@@ -58776,7 +58776,7 @@
                 {
                   "type": "frame",
                   "id": "gv28n",
-                  "name": "Sidebar",
+                  "name": "Sidenav",
                   "width": 250,
                   "height": "fill_container",
                   "fill": "$ds-bg-subtle",
@@ -58794,7 +58794,7 @@
                       "id": "LswHF",
                       "name": "T",
                       "fill": "$ds-fg-subtle",
-                      "content": "sidebar",
+                      "content": "sidenav",
                       "fontFamily": "JetBrains Mono",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -66627,7 +66627,7 @@
                     {
                       "type": "frame",
                       "id": "icXRc",
-                      "name": "Sidebar · Workspace selected",
+                      "name": "Sidenav · Workspace selected",
                       "width": 250,
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -66641,7 +66641,7 @@
                         {
                           "type": "frame",
                           "id": "ZAr5u",
-                          "name": "Sidebar Content",
+                          "name": "Sidenav Content",
                           "width": "fill_container",
                           "height": "fill_container",
                           "layout": "vertical",
@@ -75714,7 +75714,7 @@
       "id": "enh0U",
       "x": 20379,
       "y": 5091,
-      "name": "Workbench Production Frames · Sidebar and Resource Journeys",
+      "name": "Workbench Production Frames · Sidenav and Resource Journeys",
       "theme": {
         "mode": "dark"
       },
@@ -75738,7 +75738,7 @@
               "id": "j4uXt",
               "name": "Kicker",
               "fill": "$ds-fg-subtle",
-              "content": "WORKBENCH · SIDEBAR + RESOURCE JOURNEYS",
+              "content": "WORKBENCH · SIDENAV + RESOURCE JOURNEYS",
               "fontFamily": "$font-heading",
               "fontSize": 12,
               "fontWeight": "600",
@@ -75761,7 +75761,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1550,
-              "content": "The Sidebar header always contains the project selector, Search, Notifications, Sessions, Workspaces, and Tickets. The resource region below appears only for the selected resource and contains that resource's children. Aggregate pages live in Main Panel and never duplicate their collection inside Side Panel.",
+              "content": "The global header owns the project selector alongside history and breadcrumbs, matching the Nav Chrome component. The Sidenav starts with Search, Notifications, Sessions, Workspaces, and Tickets. Its resource region appears only for the selected resource and contains that resource's children. Aggregate pages live in Main Panel and never duplicate their collection inside Side Panel.",
               "lineHeight": 1.45,
               "fontFamily": "$font-body",
               "fontSize": 16,
@@ -75772,7 +75772,7 @@
         {
           "type": "frame",
           "id": "PS9nd",
-          "name": "F15–F17 · Sidebar states",
+          "name": "F15–F17 · Sidenav states",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 12,
@@ -75782,7 +75782,7 @@
               "id": "ZlLGv",
               "name": "Section Label",
               "fill": "$ds-info",
-              "content": "F15–F17 · SIDEBAR HEADER + SELECTED-RESOURCE REGION",
+              "content": "F15–F17 · SIDENAV HEADER + SELECTED-RESOURCE REGION",
               "fontFamily": "$font-heading",
               "fontSize": 12,
               "fontWeight": "600",
@@ -75791,7 +75791,7 @@
             {
               "type": "frame",
               "id": "W0TjVL",
-              "name": "Sidebar State Row",
+              "name": "Sidenav State Row",
               "width": "fill_container",
               "height": 520,
               "gap": 18,
@@ -75824,7 +75824,7 @@
                     {
                       "type": "frame",
                       "id": "NnInd",
-                      "name": "Sidebar",
+                      "name": "Sidenav",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -75840,22 +75840,6 @@
                         10
                       ],
                       "children": [
-                        {
-                          "id": "MpULb",
-                          "type": "ref",
-                          "ref": "mO4LW",
-                          "name": "Project Button",
-                          "width": "fill_container",
-                          "height": 28,
-                          "descendants": {
-                            "IEFRb": {
-                              "fill": "$ds-fg"
-                            },
-                            "Jq4g3/k7mgm": {
-                              "fill": "$ds-fg"
-                            }
-                          }
-                        },
                         {
                           "id": "I4VxK",
                           "type": "ref",
@@ -76041,25 +76025,9 @@
                       "fontWeight": "600"
                     },
                     {
-                      "id": "uQs4d",
-                      "type": "ref",
-                      "ref": "mO4LW",
-                      "name": "Project Button",
-                      "width": "fill_container",
-                      "height": 28,
-                      "descendants": {
-                        "IEFRb": {
-                          "fill": "$ds-fg"
-                        },
-                        "Jq4g3/k7mgm": {
-                          "fill": "$ds-fg"
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
                       "id": "a8IA7i",
-                      "name": "Sidebar",
+                      "name": "Sidenav",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -76199,8 +76167,8 @@
                         },
                         {
                           "type": "frame",
-                          "id": "H4RcAN",
-                          "name": "Selected Workspace",
+                          "id": "S6AlcQ",
+                          "name": "Selected Ticket",
                           "width": "fill_container",
                           "gap": 7,
                           "padding": [
@@ -76213,19 +76181,19 @@
                           "children": [
                             {
                               "type": "icon",
-                              "id": "gq8YY",
-                              "name": "Workspace Icon",
+                              "id": "N3OOKK",
+                              "name": "Ticket Icon",
                               "width": 12,
                               "height": 12,
-                              "icon": "git-branch",
+                              "icon": "file-text",
                               "library": "lucide",
-                              "fill": "$ds-info"
+                              "fill": "$ds-review"
                             },
                             {
                               "type": "text",
-                              "id": "S8RYA0",
-                              "name": "Workspace Kind",
-                              "fill": "$ds-info",
+                              "id": "I06hB",
+                              "name": "Ticket Kind",
+                              "fill": "$ds-review",
                               "content": "WORKSPACE",
                               "fontFamily": "$font-heading",
                               "fontSize": 9,
@@ -76234,10 +76202,10 @@
                             },
                             {
                               "type": "text",
-                              "id": "pnDrr",
-                              "name": "Workspace Name",
+                              "id": "AtPO7",
+                              "name": "Ticket Name",
                               "fill": "$ds-fg",
-                              "content": "fix-sidebar",
+                              "content": "A1",
                               "fontFamily": "$font-body",
                               "fontSize": 10,
                               "fontWeight": "600"
@@ -76245,67 +76213,85 @@
                           ]
                         },
                         {
-                          "id": "j4fKP",
+                          "type": "frame",
+                          "id": "H28rW",
+                          "name": "Today session bucket",
+                          "width": "fill_container",
+                          "height": 24,
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SknkI",
+                              "name": "Today label",
+                              "fill": "$ds-fg-subtle",
+                              "content": "TODAY",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            },
+                            {
+                              "type": "text",
+                              "id": "uIAyb",
+                              "name": "Today count",
+                              "fill": "$ds-fg-subtle",
+                              "content": "2",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "Pil1s",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Files",
+                          "name": "Refactor Sidenav session",
                           "theme": {
-                            "depth": "0",
+                            "depth": "1",
                             "tree": "default"
                           },
+                          "width": "fill_container",
                           "descendants": {
                             "w2TSr": {
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "folder"
+                              "icon": "circle-check",
+                              "fill": "$ds-success"
                             },
                             "ROY2j": {
-                              "content": "Files",
+                              "content": "Refactor Sidenav",
                               "fill": "$tree-fg"
                             }
                           }
                         },
                         {
-                          "id": "ZLPjm",
+                          "id": "kQSgn",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Diff · 6 changed",
+                          "name": "Wire up board session",
                           "theme": {
-                            "depth": "0",
-                            "tree": "active"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "icon": "git-compare"
-                            },
-                            "ROY2j": {
-                              "content": "Diff · 6 changed",
-                              "fill": "$tree-fg"
-                            }
-                          }
-                        },
-                        {
-                          "id": "zAoc2",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Sessions · 2",
-                          "theme": {
-                            "depth": "0",
+                            "depth": "1",
                             "tree": "default"
                           },
+                          "width": "fill_container",
                           "descendants": {
                             "w2TSr": {
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "message-square"
+                              "icon": "circle-check",
+                              "fill": "$ds-success"
                             },
                             "ROY2j": {
-                              "content": "Sessions · 2",
+                              "content": "Wire up board",
                               "fill": "$tree-fg"
                             }
                           }
@@ -76342,7 +76328,7 @@
                     {
                       "type": "frame",
                       "id": "qnFWx",
-                      "name": "Sidebar",
+                      "name": "Sidenav",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg-subtle",
@@ -76358,22 +76344,6 @@
                         10
                       ],
                       "children": [
-                        {
-                          "id": "CEz9z",
-                          "type": "ref",
-                          "ref": "mO4LW",
-                          "name": "Project Button",
-                          "width": "fill_container",
-                          "height": 28,
-                          "descendants": {
-                            "IEFRb": {
-                              "fill": "$ds-fg"
-                            },
-                            "Jq4g3/k7mgm": {
-                              "fill": "$ds-fg"
-                            }
-                          }
-                        },
                         {
                           "id": "whTVd",
                           "type": "ref",
@@ -77105,7 +77075,7 @@
                             {
                               "type": "frame",
                               "id": "OvRkd",
-                              "name": "Sidebar Header",
+                              "name": "Sidenav Header",
                               "width": 150,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -77705,7 +77675,7 @@
                             {
                               "type": "frame",
                               "id": "fp7MX",
-                              "name": "Sidebar Header",
+                              "name": "Sidenav Header",
                               "width": 150,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
@@ -78262,7 +78232,7 @@
                     {
                       "type": "frame",
                       "id": "u3c4kD",
-                      "name": "Step 1 · Workspace A",
+                      "name": "Step 1 · Workspace A sessions",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg",
@@ -78450,7 +78420,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Workspace A",
+                                  "content": "Sessions · 2",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -78488,7 +78458,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "A layout captured",
+                                  "content": "A session list scoped",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
@@ -78525,7 +78495,7 @@
                     {
                       "type": "frame",
                       "id": "h4AdIZ",
-                      "name": "Step 2 · A · Diff",
+                      "name": "Step 2 · A · Session",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg",
@@ -78626,7 +78596,7 @@
                             "U8yd35": {
                               "enabled": true,
                               "theme": {
-                                "crumb": "default",
+                                "crumb": "current",
                                 "size": "xs"
                               }
                             },
@@ -78651,7 +78621,7 @@
                               "fontSize": 8
                             },
                             "R8Q6C": {
-                              "enabled": true,
+                              "enabled": false,
                               "theme": {
                                 "crumb": "current",
                                 "size": "xs"
@@ -78737,7 +78707,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "A · Diff",
+                                  "content": "Sessions · 2\nSession selected",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -78762,7 +78732,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Diff content",
+                                  "content": "Diff + session panel",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -78775,7 +78745,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "same resource layout",
+                                  "content": "workspace stays active",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
@@ -78812,7 +78782,7 @@
                     {
                       "type": "frame",
                       "id": "v8urw",
-                      "name": "Step 3 · Workspace B",
+                      "name": "Step 3 · Workspace B sessions",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg",
@@ -79000,7 +78970,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Workspace B",
+                                  "content": "Sessions · 0",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -79025,7 +78995,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Files only",
+                                  "content": "Diff",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -79038,7 +79008,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "B layout independent",
+                                  "content": "B session list scoped",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
@@ -79075,7 +79045,7 @@
                     {
                       "type": "frame",
                       "id": "zFk8q",
-                      "name": "Step 4 · Workspace A",
+                      "name": "Step 4 · Workspace A restored",
                       "width": "fill_container",
                       "height": "fill_container",
                       "fill": "$ds-bg",
@@ -79263,7 +79233,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Workspace A",
+                                  "content": "Sessions · 2",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -79301,7 +79271,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "A layout restored",
+                                  "content": "A session list restored",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
@@ -80621,7 +80591,7 @@
                         {
                           "type": "frame",
                           "id": "xFC1l",
-                          "name": "Sidebar · Workspace selected",
+                          "name": "Sidenav · Workspace selected",
                           "width": 250,
                           "height": "fill_container",
                           "fill": "$ds-bg-subtle",
@@ -82105,7 +82075,7 @@
                           "id": "cfP4e",
                           "x": 44,
                           "y": 0,
-                          "name": "Sidebar · Workspace selected",
+                          "name": "Sidenav · Workspace selected",
                           "enabled": false,
                           "width": 250,
                           "height": 608,
@@ -83906,7 +83876,7 @@
                         {
                           "type": "frame",
                           "id": "o8taL",
-                          "name": "Sidebar · Workspace selected",
+                          "name": "Sidenav · Workspace selected",
                           "width": 250,
                           "height": "fill_container",
                           "fill": "$ds-bg-subtle",
@@ -84299,134 +84269,6 @@
                                       "children": [
                                         {
                                           "type": "frame",
-                                          "id": "KdhiB",
-                                          "name": "Left Menu · Changed files",
-                                          "width": 150,
-                                          "height": "fill_container",
-                                          "fill": "$ds-bg-subtle",
-                                          "cornerRadius": "$btn-px",
-                                          "stroke": "$ds-border",
-                                          "strokeWidth": 1,
-                                          "strokeAlignment": "inner",
-                                          "layout": "vertical",
-                                          "gap": 7,
-                                          "padding": 10,
-                                          "children": [
-                                            {
-                                              "type": "frame",
-                                              "id": "r89c6",
-                                              "name": "Primary",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "$ds-surface",
-                                              "cornerRadius": 4,
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "VqCLb",
-                                                  "name": "Primary Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "file",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "LHZZE",
-                                                  "name": "Primary Label",
-                                                  "fill": "$ds-fg",
-                                                  "content": "Primary",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "z7uY3",
-                                              "name": "Details",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "#00000000",
-                                              "cornerRadius": 4,
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "m9ZnH",
-                                                  "name": "Details Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "sliders-horizontal",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "bov4a",
-                                                  "name": "Details Label",
-                                                  "fill": "$ds-fg-muted",
-                                                  "content": "Details",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "uTo9r",
-                                              "name": "Actions",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "#00000000",
-                                              "cornerRadius": "$menu-row-radius",
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "X13qVc",
-                                                  "name": "Actions Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "file",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "RyotB",
-                                                  "name": "Actions Label",
-                                                  "fill": "$ds-fg-muted",
-                                                  "content": "Actions",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
                                           "id": "hkMES",
                                           "name": "Main Panel Content",
                                           "width": "fill_container",
@@ -84456,135 +84298,6 @@
                                               "fontFamily": "$font-body",
                                               "fontSize": 11,
                                               "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "YNzP3",
-                                          "name": "Right Menu · Inspector",
-                                          "width": 150,
-                                          "height": "fill_container",
-                                          "fill": "$ds-bg-subtle",
-                                          "stroke": "$ds-border",
-                                          "strokeWidth": {
-                                            "left": 1
-                                          },
-                                          "strokeAlignment": "inner",
-                                          "layout": "vertical",
-                                          "gap": 7,
-                                          "padding": 10,
-                                          "children": [
-                                            {
-                                              "type": "frame",
-                                              "id": "OU8xO",
-                                              "name": "Primary",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "$ds-surface",
-                                              "cornerRadius": 4,
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "I9jI9E",
-                                                  "name": "Primary Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "file",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "kh6ID",
-                                                  "name": "Primary Label",
-                                                  "fill": "$ds-fg",
-                                                  "content": "Primary",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "m2VJaA",
-                                              "name": "Details",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "#00000000",
-                                              "cornerRadius": 4,
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "XRKo6",
-                                                  "name": "Details Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "sliders-horizontal",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "jjnaR",
-                                                  "name": "Details Label",
-                                                  "fill": "$ds-fg-muted",
-                                                  "content": "Details",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "NqfHw",
-                                              "name": "Actions",
-                                              "width": "fill_container",
-                                              "height": 26,
-                                              "fill": "#00000000",
-                                              "cornerRadius": "$menu-row-radius",
-                                              "gap": 7,
-                                              "padding": [
-                                                0,
-                                                6
-                                              ],
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "icon",
-                                                  "id": "nZJzG",
-                                                  "name": "Actions Icon",
-                                                  "width": 11,
-                                                  "height": 11,
-                                                  "icon": "file",
-                                                  "library": "lucide",
-                                                  "fill": "$ds-fg-subtle"
-                                                },
-                                                {
-                                                  "type": "text",
-                                                  "id": "b1n3rg",
-                                                  "name": "Actions Label",
-                                                  "fill": "$ds-fg-muted",
-                                                  "content": "Actions",
-                                                  "fontFamily": "$font-body",
-                                                  "fontSize": 10,
-                                                  "fontWeight": "normal"
-                                                }
-                                              ]
                                             }
                                           ]
                                         }
@@ -85498,7 +85211,7 @@
                           "id": "h5lh74",
                           "x": 44,
                           "y": 0,
-                          "name": "Sidebar · Workspace selected",
+                          "name": "Sidenav · Workspace selected",
                           "enabled": false,
                           "width": 250,
                           "height": 608,
@@ -88173,7 +87886,8 @@
                 {
                   "type": "frame",
                   "id": "i2sDEm",
-                  "name": "Sidebar · Workspace selected",
+                  "name": "Sidenav · Workspace selected",
+                  "context": "Dashboard sidenav session history drawn with the TreeList composite. The list is flat; the renderer buckets sessions by local calendar day, newest day first. Day headers are SecHead groups (uppercase day label, collapse chevron, per-day session count); sessions render through cmp/TreeRow at depth 0 with the chevron hidden and the leading icon showing session status: queued circle, running loader-circle $ds-info, awaiting input circle-alert $ds-warning, completed circle-check $ds-success, failed circle-x $ds-error. The open session is tree:active; hover reveals end-slot actions; titles truncate at the row edge.",
                   "width": 287,
                   "height": "fill_container",
                   "fill": "#0E1016",
@@ -90140,7 +89854,7 @@
       "x": 8052,
       "y": 7187,
       "name": "Tree Navigation · Component",
-      "context": "TreeList (packages/ui/src/components/tree-list) — sectioned, keyboard-navigable tree used for sidebars, file trees and changed-file lists. Data: sections[{id,label?,collapsible?,actions?,emptyState?,nodes}] with nodes = ListRowItem + children. Rows render through cmp/TreeRow (ListRow variant tree|compact): h 30, radius 4, px 8, gap 7, indent $tree-pl (8/26/44) per depth. Row states via the tree theme axis default|active|hover; depth axis 0|1|2. Controlled props: expandedSectionIds / expandedNodeIds / activeNodeId + onToggleSection / onToggleNode / onNavigate. Virtualizes long trees (32px row estimate); draggable reorders sections and top-level rows (dnd-kit, 4px activation, dragged row at 50% opacity); right-clicking the empty background opens the customize menu (visibility + order, persisted per tree id). File icons resolve icon-font theme glyph first, then the Lucide extension map, then file/folder defaults.",
+      "context": "TreeList (packages/ui/src/components/tree-list) — sectioned, keyboard-navigable tree used for sidenavs, file trees and changed-file lists. Data: sections[{id,label?,collapsible?,actions?,emptyState?,nodes}] with nodes = ListRowItem + children. The composite has 8px padding on both axes. Rows render through cmp/TreeRow (ListRow variant tree|compact): h 30, radius 4, px 8, gap 7, indent $tree-pl (8/26/44) per depth. Row states use the tree theme axis default|active|hover; depth uses 0|1|2. Controlled props: expandedSectionIds / expandedNodeIds / activeNodeId + onToggleSection / onToggleNode / onNavigate. Virtualizes long trees (32px row estimate). In the Sidenav, right-clicking anywhere opens one customize menu for hideable header, main, and footer items. Drag ordering persists per tree id and stays inside the item's region and group; canReorder=false locks exceptions. Visibility and order reset independently.",
       "theme": {
         "mode": "dark"
       },
@@ -90191,7 +89905,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "The sidebar's spine: a sectioned, keyboard-navigable tree that renders workspaces, file trees, saved views and changed-file lists from one row primitive. Groups collapse, rows nest on a fixed indent scale, file icons resolve per type, actions stay hidden until a row is hovered or focused, and every move the pointer can make has a key. This frame is the visual contract for cmp/TreeRow and the TreeList composite.",
+              "content": "The sidenav's spine: a sectioned, keyboard-navigable tree that renders workspaces, file trees, saved views and changed-file lists from one row primitive. Groups collapse, rows nest on a fixed indent scale, file icons resolve per type, actions stay hidden until a row is hovered or focused, and every move the pointer can make has a key. This frame is the visual contract for cmp/TreeRow and the TreeList composite.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 16,
@@ -90671,7 +90385,7 @@
                           "id": "xgca3",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "sidebar.tsx",
+                          "name": "sidenav.tsx",
                           "width": "fill_container",
                           "theme": {
                             "depth": "2",
@@ -90685,7 +90399,7 @@
                               "icon": "file-code"
                             },
                             "ROY2j": {
-                              "content": "sidebar.tsx"
+                              "content": "sidenav.tsx"
                             },
                             "uFz3m": {
                               "type": "frame",
@@ -92762,7 +92476,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "A row can carry inline actions, a left-click menu, and a right-click context menu — and the tree background has a menu of its own. Nothing renders until the pointer or focus arrives, so the resting tree stays quiet.",
+                  "content": "A row can carry inline actions and a left-click menu. Inside the Sidenav, right-click is reserved for one customize menu across header, main, and footer, so the same hide/show and ordering model is available from every point in the navigation region.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -93209,7 +92923,7 @@
                 {
                   "type": "frame",
                   "id": "iz6dN",
-                  "name": "Background",
+                  "name": "Sidenav customize menu",
                   "width": "fill_container",
                   "fill": "$ds-bg-subtle",
                   "cornerRadius": 12,
@@ -93225,7 +92939,7 @@
                       "id": "YJzqf",
                       "name": "Card Title",
                       "fill": "$ds-fg",
-                      "content": "Tree background menu",
+                      "content": "Sidenav customize menu",
                       "fontFamily": "$font-heading",
                       "fontSize": 13,
                       "fontWeight": "600"
@@ -93264,7 +92978,93 @@
                           ],
                           "children": [
                             {
+                              "type": "frame",
+                              "id": "K8PWbu",
+                              "name": "Header Group",
+                              "width": "fill_container",
+                              "padding": [
+                                6,
+                                12,
+                                3,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i4Kk4i",
+                                  "name": "Header Group Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "HEADER",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                }
+                              ]
+                            },
+                            {
                               "id": "bAiag",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Menu Search",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "eye"
+                                },
+                                "UTbhN": {
+                                  "content": "Search"
+                                }
+                              }
+                            },
+                            {
+                              "id": "AMU7e",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Menu Notifications",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "eye"
+                                },
+                                "UTbhN": {
+                                  "content": "Notifications"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VRhDL",
+                              "name": "Main Group",
+                              "width": "fill_container",
+                              "padding": [
+                                6,
+                                12,
+                                3,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "G5nwTA",
+                                  "name": "Main Group Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "MAIN",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                }
+                              ]
+                            },
+                            {
+                              "id": "bV4Y9",
                               "type": "ref",
                               "ref": "sgbRV",
                               "name": "Menu Workspaces",
@@ -93282,38 +93082,72 @@
                               }
                             },
                             {
-                              "id": "AMU7e",
+                              "id": "n8C9Ir",
                               "type": "ref",
                               "ref": "sgbRV",
-                              "name": "Menu Pinned",
+                              "name": "Menu Tickets",
                               "width": "fill_container",
-                              "theme": {
-                                "menu": "default"
-                              },
-                              "descendants": {
-                                "UEgTp": {
-                                  "icon": "eye-off"
-                                },
-                                "UTbhN": {
-                                  "content": "Pinned"
-                                }
-                              }
-                            },
-                            {
-                              "id": "bV4Y9",
-                              "type": "ref",
-                              "ref": "sgbRV",
-                              "name": "Menu Recent files",
-                              "width": "fill_container",
-                              "theme": {
-                                "menu": "default"
-                              },
                               "descendants": {
                                 "UEgTp": {
                                   "icon": "eye"
                                 },
                                 "UTbhN": {
-                                  "content": "Recent files"
+                                  "content": "Tickets"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bR8ys",
+                              "name": "Footer Group",
+                              "width": "fill_container",
+                              "padding": [
+                                6,
+                                12,
+                                3,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jY2xp",
+                                  "name": "Footer Group Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "FOOTER",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Lnxyi",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Menu Help",
+                              "width": "fill_container",
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "eye"
+                                },
+                                "UTbhN": {
+                                  "content": "Help"
+                                }
+                              }
+                            },
+                            {
+                              "id": "hYbed",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Menu Settings",
+                              "width": "fill_container",
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "eye-off"
+                                },
+                                "UTbhN": {
+                                  "content": "Settings"
                                 }
                               }
                             },
@@ -93372,7 +93206,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Right-clicking the empty canvas below the rows opens the customize menu: eye / eye-off toggles for every hideable section and row (sections, headers, footers — leaf files are never hideable), plus reset rows for visibility and manual order. The menu stays open while toggling, and both stores persist per tree id.",
+                      "content": "Right-clicking anywhere in the Sidenav opens this customize menu. Hide/show entries are grouped in Header, Main, and Footer order; the menu remains open while toggling. Dragging reorders items only inside their region and, for Main, inside their current group. Structural items such as the project selector and any contribution with canReorder=false stay locked. Visibility and manual order persist per Sidenav tree id and reset independently.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -95730,7 +95564,7 @@
             {
               "type": "frame",
               "id": "GulDG",
-              "name": "Sidebar",
+              "name": "Sidenav",
               "width": 252,
               "layout": "vertical",
               "gap": 16,
@@ -95744,7 +95578,7 @@
                 {
                   "type": "text",
                   "id": "B2KRFE",
-                  "name": "Sidebar Title",
+                  "name": "Sidenav Title",
                   "fill": "$ds-fg-muted",
                   "content": "Documentation",
                   "fontFamily": "$font-body",
@@ -95856,7 +95690,7 @@
             {
               "type": "rectangle",
               "id": "lj95Q",
-              "name": "Sidebar Divider",
+              "name": "Sidenav Divider",
               "fill": "$ds-border",
               "width": 1,
               "height": "fill_container"
@@ -112679,7 +112513,7 @@
             {
               "type": "frame",
               "id": "m8tZJX",
-              "name": "Resource Sidebar",
+              "name": "Resource Sidenav",
               "width": 220,
               "height": "fill_container",
               "fill": "$ds-bg-subtle",
@@ -112692,7 +112526,7 @@
                 {
                   "type": "frame",
                   "id": "Pguxu",
-                  "name": "Sidebar Header Actions",
+                  "name": "Sidenav Header Actions",
                   "width": "fill_container",
                   "stroke": "$ds-border",
                   "strokeWidth": {
@@ -113063,7 +112897,7 @@
                     {
                       "type": "frame",
                       "id": "J1bYlT",
-                      "name": "Sidebar Gap",
+                      "name": "Sidenav Gap",
                       "width": "fill_container",
                       "height": 8
                     }
@@ -119871,7 +119705,7 @@
             {
               "type": "frame",
               "id": "eg2Eb",
-              "name": "Project Sidebar",
+              "name": "Project Sidenav",
               "width": 224,
               "height": "fill_container",
               "fill": "#F3F1E9",
@@ -120379,7 +120213,7 @@
                 {
                   "type": "frame",
                   "id": "J9HrOc",
-                  "name": "Sidebar Spacer",
+                  "name": "Sidenav Spacer",
                   "width": "fill_container",
                   "height": "fill_container"
                 },
@@ -120677,7 +120511,7 @@
                     {
                       "type": "frame",
                       "id": "OhqTL",
-                      "name": "Toggle Sidebar",
+                      "name": "Toggle Sidenav",
                       "width": 24,
                       "height": 24,
                       "justifyContent": "center",
@@ -120686,7 +120520,7 @@
                         {
                           "type": "icon",
                           "id": "JdvTI",
-                          "name": "Toggle Sidebar Icon",
+                          "name": "Toggle Sidenav Icon",
                           "width": 13,
                           "height": 13,
                           "icon": "panel-left",
@@ -125253,10 +125087,10 @@
                   "id": "dqVyP",
                   "type": "ref",
                   "ref": "Tboo4",
-                  "name": "Chip dashboard sessions sidebar",
+                  "name": "Chip dashboard sessions sidenav",
                   "descendants": {
                     "L109Bg": {
-                      "content": "dashboard sessions sidebar",
+                      "content": "dashboard sessions sidenav",
                       "fontFamily": "$font-mono"
                     }
                   }
