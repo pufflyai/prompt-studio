@@ -14,7 +14,7 @@ import { registerDashboardViewContribution } from "@/shared/workbench/contributi
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
+import { appendResourceBreadcrumb, setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
@@ -24,6 +24,14 @@ import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import { setWorkspaceBreadcrumb } from "./workspace-breadcrumb";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import {
+  createWorkspaceChildResource,
+  createWorkspaceHierarchyProvider,
+  createWorkspaceSidenavSections,
+  isWorkspaceChildResource,
+  workspaceChildDefinitions,
+  workspaceChildKinds,
+} from "./workspace-resource-hierarchy";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
@@ -74,6 +82,12 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContributionC
     order: 30,
     getHeaderNodes: () => [workspaceNavigationNode()],
   });
+  registerSidenavContribution(ctx, {
+    id: "dashboard.workspaces.resource-children",
+    modes: ["workspace"],
+    order: 10,
+    getSections: (workbench, input) => createWorkspaceSidenavSections(workbench, input.resource),
+  });
 };
 
 const metadataString = (resource: ResourceRef, key: string) => {
@@ -96,7 +110,10 @@ const openFirstWorkspaceSession = (ctx: WorkbenchModuleContributionContext, reso
   const session = findFirstWorkspaceSessionResource(ctx, resource);
   if (!session) return;
 
-  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: session });
+  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+    resource: session,
+    selectWorkspaceSidenav: false,
+  });
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -169,13 +186,23 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
       region: "main",
       rendererId: dashboardWidgetIds.workspace,
       singleton: true,
-      resourceKinds: ["workspace"],
+      resourceKinds: ["workspace", ...workspaceChildKinds],
     },
     { priority: 70 },
   );
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.workspace,
-    render: (input) => <WorkspaceWidget input={input} />,
+    render: (input) => (
+      <WorkspaceWidget
+        input={input}
+        onOpenSession={(resource) =>
+          void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+            resource,
+            selectWorkspaceSidenav: false,
+          })
+        }
+      />
+    ),
   });
 };
 
@@ -191,6 +218,10 @@ export const createWorkspacesModule = () =>
         icon: "GitBranch",
         paletteOpenInput: { replaceActive: true },
       });
+      for (const kind of workspaceChildKinds) {
+        const definition = workspaceChildDefinitions[kind];
+        ctx.resources.registerKind({ kind, label: definition.label, icon: definition.icon });
+      }
 
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
@@ -202,6 +233,12 @@ export const createWorkspacesModule = () =>
             group: "Workspaces",
           })),
       });
+      ctx.resources.registerHierarchyProvider(
+        createWorkspaceHierarchyProvider({
+          listWorkspaces: () => createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)),
+          listSessions: () => createDashboardSessions(getDashboardSelectedProjectId(ctx)),
+        }),
+      );
 
       registerWorkspaceResourceActions(ctx);
       registerWorkspaceDataRenderer(ctx);
@@ -265,11 +302,35 @@ export const createWorkspacesModule = () =>
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
           setWorkspaceBreadcrumb(ctx, resource);
-          showDashboardSidenav(ctx, { selectedNode: null });
+          const diff = createWorkspaceChildResource(
+            resource,
+            "workspace-diff",
+            createDashboardSessions(getDashboardSelectedProjectId(ctx)),
+          );
+          showDashboardSidenav(ctx, { selectedNode: diff.uri, refresh: false });
           openFirstWorkspaceSession(ctx, resource);
         },
         afterOpen: ({ resource }) => {
           ensureWorkspaceTerminalResource(ctx, resource);
+        },
+      });
+      registerResourceRoute(ctx, {
+        id: "dashboard.workspace-child.opener",
+        match: isWorkspaceChildResource,
+        mode: "workspace",
+        widgetId: dashboardWidgetIds.workspace,
+        title: (resource) => resource.label ?? "Workspace",
+        beforeOpen: ({ resource }) => {
+          const workspace = ctx.resources.getParent(resource);
+          if (workspace) {
+            setWorkspaceBreadcrumb(ctx, workspace);
+            appendResourceBreadcrumb(ctx, resource);
+          }
+          showDashboardSidenav(ctx, { selectedNode: resource.uri, refresh: false });
+        },
+        afterOpen: ({ resource }) => {
+          const workspace = ctx.resources.getParent(resource);
+          if (workspace) ensureWorkspaceTerminalResource(ctx, workspace);
         },
       });
     },

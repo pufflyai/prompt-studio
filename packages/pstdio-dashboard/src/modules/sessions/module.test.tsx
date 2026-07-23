@@ -29,7 +29,7 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getWidget(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
   });
 
-  test("renders the Sessions group in session and workspace modes but not the project mode", async () => {
+  test("renders the Sessions group in sessions mode but not the project mode", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
@@ -41,7 +41,6 @@ describe("createSessionsModule", () => {
 
     expect(await nodeIdsForMode("project")).not.toContain("sessions");
     expect(await nodeIdsForMode("sessions")).toContain("sessions");
-    expect(await nodeIdsForMode("workspace")).toContain("sessions");
   });
 
   test("adds sessions navigation to the persistent sidenav header", async () => {
@@ -199,8 +198,8 @@ describe("createSessionsModule", () => {
   });
 });
 
-describe("createSessionsModule workspace session scoping", () => {
-  test("scopes the workspace-mode session list to the open workspace", async () => {
+describe("workspace session hierarchy", () => {
+  test("shows a canonical Sessions child with the selected workspace's session count", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
@@ -258,17 +257,18 @@ describe("createSessionsModule workspace session scoping", () => {
       .find((entry) => entry.resource.kind === "workspace")?.resource;
     await workbench.resources.openResource(workspace!, { replaceActive: true });
 
-    const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {}))
+    const sessionsChild = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {}))
       .flatMap((section) => section.nodes)
-      .find((node) => node.id === "sessions");
-    const sessionRowIds = (sessionsGroup?.children ?? [])
-      .filter((node) => node.resource || node.target)
-      .map((node) => node.id);
+      .find((node) => node.resource?.kind === "workspace-sessions");
 
-    expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
+    expect(sessionsChild).toMatchObject({
+      id: "dashboard-workbench://workspace/workspace-1/sessions",
+      label: "Sessions · 1",
+      resource: { kind: "workspace-sessions" },
+    });
   });
 
-  test("rescopes the session list when switching between workspaces", async () => {
+  test("rebuilds the Sessions child for the newly selected workspace", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
@@ -348,10 +348,8 @@ describe("createSessionsModule workspace session scoping", () => {
     await renderSidenav();
 
     const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
-    const displayedSessionRowIds = () =>
-      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "sessions")?.children ?? [])
-        .filter((node) => node.resource || node.target)
-        .map((node) => node.id);
+    const displayedSessionsChildId = () =>
+      displayed.flatMap((section) => section.nodes).find((node) => node.resource?.kind === "workspace-sessions")?.id;
     const workspaceResource = (id: string) =>
       workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
 
@@ -360,11 +358,11 @@ describe("createSessionsModule workspace session scoping", () => {
     // workspace scopes correctly; simulate that settled state before the pure switch.
     workbench.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
     await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-one"]);
+    expect(displayedSessionsChildId()).toBe("dashboard-workbench://workspace/workspace-1/sessions");
 
     await workbench.resources.openResource(workspaceResource("workspace-2")!, { replaceActive: true });
     await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-two"]);
+    expect(displayedSessionsChildId()).toBe("dashboard-workbench://workspace/workspace-2/sessions");
 
     refreshSubscription.dispose();
   });

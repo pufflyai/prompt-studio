@@ -36,7 +36,7 @@ const composeSidenavFooter = (ctx: WorkbenchModuleContributionContext) => {
 // itself, so the sidenav stays hidden there.
 export const showDashboardSidenav = (
   ctx: WorkbenchModuleContributionContext,
-  options: { selectedNode?: string | null } = {},
+  options: { selectedNode?: string | null; refresh?: boolean } = {},
 ) => {
   if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
 
@@ -44,7 +44,7 @@ export const showDashboardSidenav = (
   if ("selectedNode" in options) {
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
-  ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
+  if (options.refresh ?? true) ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   // Route and mode changes own sidenav content, not the user's open/collapsed
   // preference. Keep layout visibility aligned with the persisted panel state.
   if (ctx.panels.isOpen("sidenav")) ctx.layout.setRegionVisible("sidenav", true);

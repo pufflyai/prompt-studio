@@ -1,16 +1,11 @@
-import type { ResourceRef, TreeNode, TreeViewSection } from "@pstdio/workbench/core";
-import { dashboardCommandIds } from "@/shared/app/commands";
+import type { TreeNode, TreeViewSection } from "@pstdio/workbench/core";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
-
-type SessionNodeTarget = "resource" | "side";
 
 interface BuildSessionsSidenavSectionsInput {
   sessions: DashboardSession[];
-  workspace?: ResourceRef;
-  nodeTarget?: SessionNodeTarget;
 }
 
-interface CreateSessionsSidenavSectionsInput extends Omit<BuildSessionsSidenavSectionsInput, "sessions"> {
+interface CreateSessionsSidenavSectionsInput {
   projectId?: string;
 }
 
@@ -50,37 +45,18 @@ const getSessionDateLabel = (date: Date) => {
   });
 };
 
-const metadataString = (resource: ResourceRef | undefined, key: string) => {
-  const value = resource?.metadata?.[key];
-  return typeof value === "string" ? value : undefined;
-};
-
-const getWorkspaceResourceId = (resource: ResourceRef | undefined) => {
-  if (!resource) return undefined;
-  if (resource.kind === "workspace") return resource.id ?? metadataString(resource, "workspaceId");
-  return metadataString(resource, "workspaceId");
-};
-
-const createSessionNode = (session: DashboardSession, target: SessionNodeTarget): TreeNode => ({
+const createSessionNode = (session: DashboardSession): TreeNode => ({
   id: session.resource.uri,
   label: session.title,
   icon: sessionStatusIcon(session.status),
   iconColor: sessionStatusColor(session.status),
-  ...(target === "resource"
-    ? { resource: session.resource }
-    : {
-        target: {
-          kind: "command",
-          commandId: dashboardCommandIds.openSessionPanel,
-          args: { resource: session.resource },
-        } as const,
-      }),
+  resource: session.resource,
 });
 
 // Sessions render as the children of a single "Sessions" group node. Date labels are
 // inline, non-interactive rows inside the group rather than separate labeled sections, so
 // the customize menu shows exactly one "Sessions" toggle and no per-session/per-date entries.
-const buildSessionGroupChildren = (sessions: DashboardSession[], target: SessionNodeTarget): TreeNode[] => {
+const buildSessionGroupChildren = (sessions: DashboardSession[]): TreeNode[] => {
   if (sessions.length === 0) {
     return [{ id: "sessions-empty", label: "No sessions yet", disabled: true }];
   }
@@ -97,19 +73,13 @@ const buildSessionGroupChildren = (sessions: DashboardSession[], target: Session
       children.push({ id: `sessions-date-${dateKey}`, label: getSessionDateLabel(lastActivityAt), disabled: true });
     }
 
-    children.push(createSessionNode(session, target));
+    children.push(createSessionNode(session));
   }
 
   return children;
 };
 
 export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSectionsInput): TreeViewSection[] => {
-  const nodeTarget = input.nodeTarget ?? "resource";
-  const workspaceId = getWorkspaceResourceId(input.workspace);
-  const sessions = workspaceId
-    ? input.sessions.filter((session) => session.workspaceId === workspaceId)
-    : input.sessions;
-
   return [
     {
       id: "sessions-wrap",
@@ -117,9 +87,8 @@ export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSections
         {
           id: "sessions",
           label: "Sessions",
-          ...(nodeTarget === "side" ? { canHide: true } : {}),
           collapsible: true,
-          children: buildSessionGroupChildren(sessions, nodeTarget),
+          children: buildSessionGroupChildren(input.sessions),
         },
       ],
     },
@@ -128,6 +97,5 @@ export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSections
 
 export const createSessionsSidenavSections = (input: CreateSessionsSidenavSectionsInput): TreeViewSection[] =>
   buildSessionsSidenavSections({
-    ...input,
     sessions: createDashboardSessions(input.projectId),
   });

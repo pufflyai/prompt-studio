@@ -4,6 +4,7 @@ import { type Diff, DiffViewer } from "@pstdio/ui/diff";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { WorkspaceChildWidget } from "./workspace-child-widget";
 import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
 
 interface WorkspaceDiffResponseFile extends Diff {
@@ -83,8 +84,16 @@ const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const WorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
-  const { input } = props;
+export const WorkspaceWidget = (props: {
+  input: WorkbenchWidgetRenderInput;
+  onOpenSession: (resource: NonNullable<WorkbenchWidgetRenderInput["placement"]["resource"]>) => void;
+}) => {
+  const { input, onOpenSession } = props;
+  const resource = input.placement.resource;
+
+  if (resource?.kind === "workspace-files" || resource?.kind === "workspace-sessions") {
+    return <WorkspaceChildWidget resource={resource} onOpenSession={onOpenSession} />;
+  }
 
   return (
     <Flex direction="column" h="full" minH="0" minW="0" bg="bg">

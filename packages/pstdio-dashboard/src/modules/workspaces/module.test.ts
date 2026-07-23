@@ -13,38 +13,7 @@ import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
 
-describe("createWorkspacesModule", () => {
-  test("opens workspace resources in workspace mode", async () => {
-    const workbench = createWorkbenchCore();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceShorthand: "PS-307_A1",
-    });
-
-    workbench.registerModule(createSidenavModule());
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-    await workbench.resources.openResource(workspace, { replaceActive: true });
-
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.dashboardSidenav,
-    ]);
-    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
-    expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
-    expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
-
-    const sidenavNodeIds = (
-      await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, { resource: workspace })
-    )
-      .flatMap((section) => section.nodes)
-      .map((node) => node.id);
-    expect(sidenavNodeIds).not.toContain(workspace.uri);
-    expect(sidenavNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
-  });
-
+describe("createWorkspacesModule session panel", () => {
   test("opens the last active linked session in the Side Panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
@@ -117,10 +86,12 @@ describe("createWorkspacesModule", () => {
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
-      "dashboard-workbench://session/session-older",
+      "dashboard-workbench://workspace/workspace-1/diff",
     );
   });
+});
 
+describe("createWorkspacesModule", () => {
   test("lists workspaces of the selected project as command panel resources", () => {
     const workbench = createWorkbenchCore();
 

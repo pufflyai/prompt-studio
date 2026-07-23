@@ -103,20 +103,11 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContributionContext) => {
     order: 20,
     getHeaderNodes: () => [createSessionsNavigationNode()],
   });
-  // Session and workspace modes share one body contribution; only workspace mode scopes the
-  // list to the open workspace (via the primary resource) and opens rows in the Side Panel.
   registerSidenavContribution(ctx, {
     id: "dashboard.sessions.list",
-    modes: ["sessions", "workspace"],
+    modes: ["sessions"],
     order: 20,
-    getSections: () => {
-      const isWorkspaceMode = ctx.modes.getActiveModeId() === "workspace";
-      return createSessionsSidenavSections({
-        projectId: getDashboardSelectedProjectId(ctx),
-        workspace: isWorkspaceMode ? ctx.getPrimaryResource() : undefined,
-        nodeTarget: isWorkspaceMode ? "side" : "resource",
-      });
-    },
+    getSections: () => createSessionsSidenavSections({ projectId: getDashboardSelectedProjectId(ctx) }),
   });
 };
 

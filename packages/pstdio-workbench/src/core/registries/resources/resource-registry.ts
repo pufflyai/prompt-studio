@@ -102,10 +102,18 @@ export interface ResourceProvider {
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
 
+export interface ResourceHierarchyProvider {
+  id: string;
+  getResource(uri: string): ResourceRef | undefined;
+  getParent(resource: ResourceRef): ResourceRef | undefined;
+  listChildren(resource: ResourceRef): readonly ResourceRef[];
+}
+
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
   openers: Record<string, ResolvedResourceOpener>;
   providers: Record<string, ResourceProvider>;
+  hierarchyProviders: Record<string, ResourceHierarchyProvider>;
 }
 
 export interface ResourceRegistry {
@@ -120,6 +128,10 @@ export interface ResourceRegistry {
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
+  registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
+  getResource(uri: string): ResourceRef | undefined;
+  getParent(resource: ResourceRef): ResourceRef | undefined;
+  listChildren(resource: ResourceRef): readonly ResourceRef[];
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
 }
@@ -136,7 +148,7 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
   const openListeners = new Set<(resource: ResourceRef) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
-    initialState: { kinds: {}, openers: {}, providers: {} },
+    initialState: { kinds: {}, openers: {}, providers: {}, hierarchyProviders: {} },
   });
 
   return {
@@ -221,6 +233,50 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         entries.push(...provider.list(query, context));
       }
       return entries;
+    },
+
+    registerHierarchyProvider(provider) {
+      const snapshot = store.getState();
+      if (snapshot.hierarchyProviders[provider.id]) {
+        throw new Error(`Resource hierarchy provider already registered: ${provider.id}`);
+      }
+
+      store.setState(
+        { ...snapshot, hierarchyProviders: { ...snapshot.hierarchyProviders, [provider.id]: provider } },
+        false,
+        "registerHierarchyProvider",
+      );
+
+      return createDisposable(() => {
+        const current = store.getState();
+        if (current.hierarchyProviders[provider.id] !== provider) return;
+        const { [provider.id]: _removed, ...rest } = current.hierarchyProviders;
+        store.setState({ ...current, hierarchyProviders: rest }, false, "unregisterHierarchyProvider");
+      });
+    },
+
+    getResource(uri) {
+      for (const provider of Object.values(store.getState().hierarchyProviders)) {
+        const resource = provider.getResource(uri);
+        if (resource) return resource;
+      }
+      return undefined;
+    },
+
+    getParent(resource) {
+      for (const provider of Object.values(store.getState().hierarchyProviders)) {
+        const parent = provider.getParent(resource);
+        if (parent) return parent;
+      }
+      return undefined;
+    },
+
+    listChildren(resource) {
+      const children = new Map<string, ResourceRef>();
+      for (const provider of Object.values(store.getState().hierarchyProviders)) {
+        for (const child of provider.listChildren(resource)) children.set(child.uri, child);
+      }
+      return [...children.values()];
     },
 
     async openResource(resource, input = {}) {

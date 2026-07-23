@@ -59,6 +59,7 @@ describe("dashboard workspaces", () => {
         id: "workspace-1",
         metadata: {
           diffOverview: "+83 -9",
+          "workbench.selectionResourceUri": "dashboard-workbench://workspace/workspace-1/diff",
           workspaceId: "workspace-1",
           workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
           workspaceShorthand: "PS-307_A1",

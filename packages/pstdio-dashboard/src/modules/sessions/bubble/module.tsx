@@ -174,7 +174,9 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
           title: resource.label,
           replaceWidgetId: replaceWidgetId ?? getReusableSessionPlacementId(ctx),
         });
-        selectSidenavSessionNode(ctx, resource);
+        if (ctx.modes.getActiveModeId() !== "workspace" || selectWorkspaceSidenav) {
+          selectSidenavSessionNode(ctx, resource);
+        }
         if (
           selectWorkspaceSidenav &&
           ctx.modes.getActiveModeId() === "workspace" &&

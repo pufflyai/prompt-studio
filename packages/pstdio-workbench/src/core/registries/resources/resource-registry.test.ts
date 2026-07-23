@@ -40,6 +40,64 @@ describe("createResourceRegistry surface routing", () => {
 });
 
 describe("createResourceRegistry", () => {
+  test("resolves canonical resources and their parent-child hierarchy", () => {
+    const resources = createResourceRegistry();
+    const workspace = { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" };
+    const files = { kind: "workspace-files", uri: "pstdio://workspace/a/files", label: "Files" };
+    const diff = { kind: "workspace-diff", uri: "pstdio://workspace/a/diff", label: "Diff" };
+
+    resources.registerHierarchyProvider({
+      id: "workspace-children",
+      getResource: (uri) => [workspace, files, diff].find((resource) => resource.uri === uri),
+      getParent: (resource) => (resource.uri === files.uri || resource.uri === diff.uri ? workspace : undefined),
+      listChildren: (resource) => (resource.uri === workspace.uri ? [files, diff] : []),
+    });
+
+    expect(resources.getResource(diff.uri)).toEqual(diff);
+    expect(resources.getParent(diff)).toEqual(workspace);
+    expect(resources.listChildren(workspace)).toEqual([files, diff]);
+  });
+
+  test("composes hierarchy providers without duplicate canonical URIs", () => {
+    const resources = createResourceRegistry();
+    const workspace = { kind: "workspace", uri: "pstdio://workspace/a" };
+    const files = { kind: "workspace-files", uri: "pstdio://workspace/a/files", label: "Files" };
+    const sessions = { kind: "workspace-sessions", uri: "pstdio://workspace/a/sessions", label: "Sessions" };
+
+    resources.registerHierarchyProvider({
+      id: "workspace-core",
+      getResource: () => undefined,
+      getParent: () => undefined,
+      listChildren: () => [files],
+    });
+    resources.registerHierarchyProvider({
+      id: "workspace-sessions",
+      getResource: () => undefined,
+      getParent: () => undefined,
+      listChildren: () => [files, sessions],
+    });
+
+    expect(resources.listChildren(workspace)).toEqual([files, sessions]);
+  });
+
+  test("disposes hierarchy providers with their resources", () => {
+    const resources = createResourceRegistry();
+    const workspace = { kind: "workspace", uri: "pstdio://workspace/a" };
+    const files = { kind: "workspace-files", uri: "pstdio://workspace/a/files" };
+    const provider = resources.registerHierarchyProvider({
+      id: "workspace-children",
+      getResource: (uri) => (uri === files.uri ? files : undefined),
+      getParent: () => workspace,
+      listChildren: () => [files],
+    });
+
+    provider.dispose();
+
+    expect(resources.getResource(files.uri)).toBeUndefined();
+    expect(resources.getParent(files)).toBeUndefined();
+    expect(resources.listChildren(workspace)).toEqual([]);
+  });
+
   test("registers resource kinds with contribution metadata", () => {
     const resources = createResourceRegistry();
 

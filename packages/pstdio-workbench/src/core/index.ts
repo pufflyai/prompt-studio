@@ -320,6 +320,7 @@ export type {
   OpenResourceInput,
   RegisteredResourceKind,
   ResourceBrowseEntry,
+  ResourceHierarchyProvider,
   ResourceKindContribution,
   ResourceListContext,
   ResourceOpener,

@@ -270,7 +270,7 @@ export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
 };
 
-// Workspace mode: fixed project/search/new-session header above the workspace-scoped Sessions group.
+// F16: the persistent header stays mounted above one workspace heading and its Files, Diff, and Sessions children.
 export const WorkspaceMode: Story = {
   render: () => (
     <SidenavStory

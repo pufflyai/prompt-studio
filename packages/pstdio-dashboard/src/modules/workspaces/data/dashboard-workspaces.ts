@@ -1,5 +1,5 @@
 import type { DataRendererRow } from "@pstdio/ui/data-renderer";
-import type { ResourceRef } from "@pstdio/workbench/core";
+import { createWorkbenchSelectionResourceMetadata, type ResourceRef } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import {
@@ -119,6 +119,9 @@ const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?
   const workspacePath = input.workspace.worktree_path as string | null;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
+    ...createWorkbenchSelectionResourceMetadata({
+      uri: `dashboard-workbench://workspace/${input.workspace.id}/diff`,
+    }),
     ...(workspacePath ? { workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: workspacePath ? "worktree" : "current_branch",
