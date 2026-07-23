@@ -57,7 +57,77 @@ describe("createHistoryController", () => {
     expect(snapshot.entries.map((entry) => entry.resource?.id)).toEqual(["PS-1", "PS-2", "PS-3"]);
     expect(snapshot.cursor).toBe(snapshot.entries.length - 1);
   });
+});
 
+describe("createHistoryController resource transactions", () => {
+  test("commits synchronous resource opens before their returned promises settle", () => {
+    const workbench = setupWorkbench();
+
+    void openTicket(workbench, "PS-1");
+    void openTicket(workbench, "PS-2");
+
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.id)).toEqual(["PS-1", "PS-2"]);
+  });
+
+  test("records companion panels opened with a resource as one navigation step", async () => {
+    const workbench = createWorkbenchCore();
+    const ticket = { kind: "history.test.ticket", uri: "history.test.ticket:one", id: "one", label: "Ticket" };
+    const workspace = {
+      kind: "history.test.workspace",
+      uri: "history.test.workspace:one",
+      id: "workspace-one",
+      label: "Workspace",
+    };
+
+    workbench.resources.registerKind({ kind: ticket.kind, label: "Ticket" });
+    workbench.resources.registerKind({ kind: workspace.kind, label: "Workspace" });
+    workbench.layout.registerLocation({
+      id: "history.test.ticket-location",
+      title: "Ticket",
+      region: "main",
+      rendererId: "noop",
+      resourceKinds: [ticket.kind],
+    });
+    workbench.layout.registerLocation({
+      id: "history.test.workspace-location",
+      title: "Workspace",
+      region: "main",
+      rendererId: "noop",
+      resourceKinds: [workspace.kind],
+    });
+    workbench.layout.registerSubPanel({
+      id: "history.test.workspace-companion",
+      title: "Workspace companion",
+      region: "secondary",
+      rendererId: "noop",
+      resourceKinds: [workspace.kind],
+    });
+    workbench.resources.registerOpener({
+      id: "history.test.ticket-opener",
+      canOpen: (resource) => resource.kind === ticket.kind,
+      open: (resource) => workbench.layout.openWidget("history.test.ticket-location", { resource }),
+    });
+    workbench.resources.registerOpener({
+      id: "history.test.workspace-opener",
+      canOpen: (resource) => resource.kind === workspace.kind,
+      open: (resource) => {
+        workbench.layout.openWidget("history.test.workspace-location", { resource });
+        workbench.layout.openWidget("history.test.workspace-companion", { resource });
+      },
+    });
+
+    await workbench.resources.openResource(ticket);
+    await workbench.resources.openResource(workspace);
+
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([
+      ticket.uri,
+      workspace.uri,
+    ]);
+    expect(workbench.history.goBack()?.resource?.uri).toBe(ticket.uri);
+  });
+});
+
+describe("createHistoryController navigation", () => {
   test("goBack moves the cursor without recording a new entry", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");

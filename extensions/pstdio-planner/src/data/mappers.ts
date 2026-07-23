@@ -8,15 +8,16 @@ import type {
 import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import {
+  linkedResourceParentMetadata,
   type TicketParentLookup,
-  ticketBreadcrumbResourceMetadata,
+  type TicketResourceReference,
   ticketDisplayTitle,
-  ticketParentResourceMetadata,
-} from "./ticket-breadcrumb";
+  ticketResourceHierarchyMetadata,
+} from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
 
-export { ticketDisplayTitle, ticketParentResourceMetadata } from "./ticket-breadcrumb";
+export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
 
 export const TICKET_RESOURCE_KIND = "ticket";
 export const TICKET_RESOURCE_ICON = "component";
@@ -38,10 +39,7 @@ export type TicketWorkspaceBadgeItem = {
   shorthand?: string;
   type: "worktree" | "current_branch";
   createdAt?: string;
-  ticketId?: string;
-  ticketLabel?: string;
-  ticketShorthand?: string;
-  ticketBreadcrumb?: Array<{ id: string; label: string; shorthand: string }>;
+  resourceParent?: TicketResourceReference;
 };
 export type TicketWorkspaceLookup = Map<string, TicketWorkspaceBadgeItem[]>;
 
@@ -114,18 +112,12 @@ const ticketWorkspaceValues = (
   workspaceLookup: TicketWorkspaceLookup,
   parentLookup: TicketParentLookup,
 ) => {
-  const ticketMetadata = ticketBreadcrumbResourceMetadata(ticket, parentLookup);
-  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({ ...item, ...ticketMetadata }));
+  const parentMetadata = linkedResourceParentMetadata(ticket, parentLookup);
+  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({ ...item, ...parentMetadata }));
   return {
     [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
     [TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID]: items,
   };
-};
-
-const ticketParentMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup) => {
-  if (!ticket.parentId) return undefined;
-  const parent = parentLookup.get(ticket.parentId);
-  return parent ? ticketParentResourceMetadata(parent) : undefined;
 };
 
 const ticketToRowWithTags = (
@@ -135,8 +127,6 @@ const ticketToRowWithTags = (
   workspaceLookup: TicketWorkspaceLookup,
   parentLookup: TicketParentLookup,
 ) => {
-  const parentMetadata = ticketParentMetadata(ticket, parentLookup);
-
   return {
     id: ticket.id,
     // Card/list rows show the bare title; the shorthand stays available as the "id"
@@ -148,7 +138,7 @@ const ticketToRowWithTags = (
       projectId,
       label: ticketDisplayTitle(ticket),
       icon: TICKET_RESOURCE_ICON,
-      ...(parentMetadata ? { metadata: parentMetadata } : {}),
+      metadata: ticketResourceHierarchyMetadata(ticket, parentLookup),
     },
     attributes: {
       status: ticket.statusId ?? "",

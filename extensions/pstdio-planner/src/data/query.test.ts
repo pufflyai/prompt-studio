@@ -169,10 +169,12 @@ describe("runTicketsQuery", () => {
         shorthand: "T-1_A2",
         type: "current_branch",
         createdAt: "2026-01-03T00:00:00.000Z",
-        ticketId: "ticket-1",
-        ticketLabel: "T-1 Has workspaces",
-        ticketShorthand: "T-1",
-        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-1",
+          label: "T-1 Has workspaces",
+          metadata: { shorthand: "T-1" },
+        },
       },
       {
         id: "workspace-1",
@@ -180,15 +182,17 @@ describe("runTicketsQuery", () => {
         shorthand: "T-1_A1",
         type: "worktree",
         createdAt: "2026-01-02T00:00:00.000Z",
-        ticketId: "ticket-1",
-        ticketLabel: "T-1 Has workspaces",
-        ticketShorthand: "T-1",
-        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-1",
+          label: "T-1 Has workspaces",
+          metadata: { shorthand: "T-1" },
+        },
       },
     ]);
   });
 
-  test("adds ticket ancestry to linked workspace badge payloads", async () => {
+  test("adds canonical ticket parent edges to linked workspace badge payloads", async () => {
     const storage = createMemoryStorage();
     const parent = makeTicket({ id: "ticket-parent", shorthand: "T-1", title: "Parent" });
     const child = makeTicket({
@@ -220,13 +224,20 @@ describe("runTicketsQuery", () => {
     expect(childRow?.attributes.workspaceItems).toEqual([
       expect.objectContaining({
         id: "workspace-1",
-        ticketId: child.id,
-        ticketLabel: "T-2 Child",
-        ticketShorthand: "T-2",
-        ticketBreadcrumb: [
-          { id: parent.id, label: "T-1 Parent", shorthand: "T-1" },
-          { id: child.id, label: "T-2 Child", shorthand: "T-2" },
-        ],
+        resourceParent: {
+          type: "ticket",
+          id: child.id,
+          label: "T-2 Child",
+          metadata: {
+            shorthand: "T-2",
+            resourceParent: {
+              type: "ticket",
+              id: parent.id,
+              label: "T-1 Parent",
+              metadata: { shorthand: "T-1" },
+            },
+          },
+        },
       }),
     ]);
   });

@@ -1,12 +1,11 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import type {
-  ResourceRef,
-  ResourceRegistry,
-  TreeNode,
-  WorkbenchBreadcrumbItem,
-  WorkbenchCore,
-  WorkbenchModuleContribution,
+import {
+  createResourceBreadcrumbItems,
+  type ResourceRef,
+  type TreeNode,
+  type WorkbenchCore,
+  type WorkbenchModuleContribution,
 } from "../../core";
 import { WorkbenchIcon } from "../../react/shared/icon";
 
@@ -125,6 +124,12 @@ const pageTreeNode = (section: OnboardingSection, page: OnboardingPage): TreeNod
     icon: "MessageCircle",
     resource,
   };
+};
+
+const breadcrumbItemsFor = (resources: Parameters<typeof createResourceBreadcrumbItems>[0], resource: ResourceRef) => {
+  const items = createResourceBreadcrumbItems(resources, resource);
+  if (resource.kind === PAGE_KIND) items[items.length - 1]!.indicator = "session-status";
+  return items;
 };
 
 const sectionTreeNode = (section: OnboardingSection): TreeNode => ({
@@ -264,27 +269,21 @@ const PageWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef | u
   );
 };
 
-// Each breadcrumb level resolves through the resource controller so the matching
-// opener re-runs and keeps the trail authoritative. The current entry stays
-// inert — clicking it would just re-open the active widget.
-const breadcrumbItemForResource = (
-  resources: ResourceRegistry,
-  resource: ResourceRef,
-  options: { current?: boolean } = {},
-): WorkbenchBreadcrumbItem => ({
-  title: resource.label ?? "Untitled",
-  icon: resource.icon,
-  indicator: resource.kind === PAGE_KIND ? "session-status" : undefined,
-  resource,
-  onClick: options.current ? undefined : () => void resources.openResource(resource),
-});
-
 export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.breadcrumb",
   activate(ctx) {
     ctx.resources.registerKind({ kind: DOCS_KIND, label: "Docs", icon: "Library" });
     ctx.resources.registerKind({ kind: SECTION_KIND, label: "Section", icon: "BookOpen" });
     ctx.resources.registerKind({ kind: PAGE_KIND, label: "Session", icon: "MessageCircle" });
+    ctx.resources.registerHierarchyProvider({
+      id: "onboarding.breadcrumb.hierarchy",
+      canResolve: (resource) => resource.kind === SECTION_KIND || resource.kind === PAGE_KIND,
+      getParent: (resource) => {
+        if (resource.kind === SECTION_KIND) return docsResource;
+        const match = findPageBySectionPath(resource.id);
+        return match ? sectionResource(match.section) : undefined;
+      },
+    });
 
     // Each opener swaps content into the active main tab via replaceActive so
     // walking up and down the trail does not accumulate one tab per category.
@@ -292,7 +291,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       id: "onboarding.breadcrumb.docs-opener",
       canOpen: (resource) => resource.kind === DOCS_KIND,
       open: (resource, input) => {
-        ctx.breadcrumbs.setItems([breadcrumbItemForResource(ctx.resources, docsResource, { current: true })]);
+        ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         ctx.layout.openWidget(DOCS_HOME_WIDGET_ID, {
           resource,
           title: resource.label,
@@ -307,10 +306,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       open: (resource, input) => {
         const section = findSection(typeof resource.id === "string" ? resource.id : undefined);
         if (!section) return;
-        ctx.breadcrumbs.setItems([
-          breadcrumbItemForResource(ctx.resources, docsResource),
-          breadcrumbItemForResource(ctx.resources, sectionResource(section), { current: true }),
-        ]);
+        ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         ctx.layout.openWidget(SECTION_WIDGET_ID, {
           resource,
           title: resource.label,
@@ -325,11 +321,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       open: (resource, input) => {
         const match = findPageBySectionPath(typeof resource.id === "string" ? resource.id : undefined);
         if (!match) return;
-        ctx.breadcrumbs.setItems([
-          breadcrumbItemForResource(ctx.resources, docsResource),
-          breadcrumbItemForResource(ctx.resources, sectionResource(match.section)),
-          breadcrumbItemForResource(ctx.resources, pageResource(match.section, match.page), { current: true }),
-        ]);
+        ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         ctx.layout.openWidget(PAGE_WIDGET_ID, {
           resource,
           title: resource.label,

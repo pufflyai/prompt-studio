@@ -7,6 +7,7 @@ import {
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { expect, userEvent, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
@@ -14,6 +15,8 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
@@ -28,6 +31,7 @@ import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
+const STORY_TICKET_WIDGET_ID = "story.ticket-location";
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -39,18 +43,84 @@ const ticketsResource = {
   icon: "square-kanban",
   metadata: { collectionId: "tickets", projectId: PROJECT_ID },
 };
+const parentTicketResource = {
+  kind: "ticket",
+  uri: "dashboard-workbench://ticket/PS-163",
+  id: "PS-163",
+  label: "PS-163 Workbench navigation",
+  icon: "FileText",
+  metadata: { projectId: PROJECT_ID },
+};
 const ticketResource = {
   kind: "ticket",
   uri: "dashboard-workbench://ticket/PS-164",
   id: "PS-164",
   label: "PS-164 Sidenav resource sections",
   icon: "FileText",
-  metadata: { projectId: PROJECT_ID },
+  metadata: {
+    projectId: PROJECT_ID,
+    resourceParent: {
+      type: "ticket",
+      id: parentTicketResource.id,
+      label: parentTicketResource.label,
+      metadata: { shorthand: parentTicketResource.id },
+    },
+  },
+};
+const linkedWorkspaceResource = {
+  kind: "workspace",
+  uri: "dashboard-workbench://workspace/PS-164_A1",
+  id: "PS-164_A1",
+  label: "PS-164_A1",
+  icon: "GitBranch",
+  metadata: {
+    projectId: PROJECT_ID,
+    workspaceId: "PS-164_A1",
+    workspaceShorthand: "PS-164_A1",
+    resourceParent: {
+      type: "ticket",
+      id: ticketResource.id,
+      label: ticketResource.label,
+      metadata: ticketResource.metadata,
+    },
+  },
 };
 
 const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContributionContext) {
+    ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "FileText" });
+    ctx.layout.registerLocation({
+      id: STORY_TICKET_WIDGET_ID,
+      title: "Ticket",
+      region: "main",
+      rendererId: STORY_TICKET_WIDGET_ID,
+      singleton: true,
+      resourceKinds: ["ticket"],
+    });
+    ctx.renderers.registerRenderer({
+      id: STORY_TICKET_WIDGET_ID,
+      render: (input) => <Box p="lg">{input.placement.resource?.label}</Box>,
+    });
+    ctx.resources.registerHierarchyProvider({
+      id: "story.ticket-hierarchy",
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: (resource) => dashboardResourceParent(ctx, resource, PROJECT_ID) ?? ticketsResource,
+    });
+    ctx.resources.registerOpener({
+      id: "story.ticket-opener",
+      canOpen: (resource) => resource.kind === "ticket",
+      open: (resource, openInput) => {
+        ctx.modes.setActiveMode("pstdio-planner.ticket");
+        selectDashboardNavigationResource(ctx, resource);
+        setResourceBreadcrumb(ctx, resource);
+        return ctx.layout.openWidget(STORY_TICKET_WIDGET_ID, {
+          resource,
+          title: resource.label,
+          replaceActive: openInput.replaceActive,
+        });
+      },
+    });
     ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
     registerSidenavContribution(ctx, {
       id: "story.tickets-navigation",
@@ -86,7 +156,14 @@ const createTicketsNavigationModule = () => ({
                 id: "workspaces",
                 label: "Workspaces",
                 collapsible: true,
-                nodes: [{ id: "PS-164_A1", label: "PS-164_A1", icon: "GitBranch" }],
+                nodes: [
+                  {
+                    id: linkedWorkspaceResource.uri,
+                    label: linkedWorkspaceResource.label,
+                    icon: "GitBranch",
+                    resource: linkedWorkspaceResource,
+                  },
+                ],
               },
             ]
           : [],
@@ -257,14 +334,23 @@ export const WorkspacesViewHover: Story = {
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
   name: "Ticket resource separator",
-  render: () => (
-    <SidenavStory
-      open={(workbench) => {
-        selectDashboardNavigationResource(workbench, ticketResource);
-        workbench.modes.setActiveMode("pstdio-planner.ticket");
-      }}
-    />
-  ),
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, ticketResource)} />,
+};
+
+// F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
+export const TicketWorkspaceBackJourney: Story = {
+  name: "Ticket linked workspace and back",
+  render: () => <SidenavStory open={(workbench) => openInMode(workbench, ticketResource)} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("option", { name: "PS-164_A1" }));
+    const breadcrumb = canvas.getByRole("navigation", { name: "breadcrumb" });
+    await expect(breadcrumb).toHaveTextContent("PS-163 Workbench navigation");
+    await expect(breadcrumb).toHaveTextContent("PS-164 Sidenav resource sections");
+    await expect(breadcrumb).toHaveTextContent("PS-164_A1");
+    await userEvent.click(canvas.getByRole("button", { name: "Navigate back" }));
+    await expect(breadcrumb).not.toHaveTextContent("PS-164_A1");
+  },
 };
 
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.

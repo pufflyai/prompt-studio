@@ -39,6 +39,80 @@ describe("createResourceRegistry surface routing", () => {
   });
 });
 
+describe("createResourceRegistry hierarchy", () => {
+  test("walks canonical parent edges into a root-to-leaf resource path", () => {
+    const resources = createResourceRegistry();
+    const tickets = { kind: "dashboard-view", uri: "pstdio://tickets", label: "Tickets" };
+    const parent = { kind: "ticket", uri: "pstdio://ticket/parent", label: "PS-1 Parent" };
+    const child = { kind: "ticket", uri: "pstdio://ticket/child", label: "PS-2 Child" };
+    const parents = new Map([
+      [parent.uri, tickets],
+      [child.uri, parent],
+    ]);
+
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: (resource) => parents.get(resource.uri),
+    });
+
+    expect(resources.walkHierarchy(child)).toEqual([tickets, parent, child]);
+  });
+
+  test("does not resolve hierarchy providers for a null selection", () => {
+    const resources = createResourceRegistry();
+    let reads = 0;
+
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: () => true,
+      getParent: () => {
+        reads += 1;
+        return undefined;
+      },
+    });
+
+    expect(resources.walkHierarchy(undefined)).toEqual([]);
+    expect(reads).toBe(0);
+  });
+
+  test("stops at a repeated resource edge", () => {
+    const resources = createResourceRegistry();
+    const parent = { kind: "ticket", uri: "pstdio://ticket/parent" };
+    const child = { kind: "ticket", uri: "pstdio://ticket/child" };
+
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: () => true,
+      getParent: (resource) => (resource.uri === child.uri ? parent : child),
+    });
+
+    expect(resources.walkHierarchy(child)).toEqual([parent, child]);
+  });
+
+  test("uses the highest priority hierarchy provider that can resolve a resource", () => {
+    const resources = createResourceRegistry();
+    const ticket = { kind: "ticket", uri: "pstdio://ticket/child" };
+    const fallback = { kind: "dashboard-view", uri: "pstdio://fallback" };
+    const tickets = { kind: "dashboard-view", uri: "pstdio://tickets" };
+
+    resources.registerHierarchyProvider({
+      id: "fallback",
+      priority: 1,
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: () => fallback,
+    });
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      priority: 100,
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: () => tickets,
+    });
+
+    expect(resources.walkHierarchy(ticket)).toEqual([tickets, ticket]);
+  });
+});
+
 describe("createResourceRegistry", () => {
   test("registers resource kinds with contribution metadata", () => {
     const resources = createResourceRegistry();

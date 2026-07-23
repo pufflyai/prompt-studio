@@ -3,7 +3,10 @@ export type {
   WorkbenchBreadcrumbController,
   WorkbenchBreadcrumbItem,
 } from "./controllers/breadcrumbs/breadcrumb-registry";
-export { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
+export {
+  createResourceBreadcrumbItems,
+  createWorkbenchBreadcrumbController,
+} from "./controllers/breadcrumbs/breadcrumb-registry";
 export type {
   CreateWorkbenchCommandPaletteControllerInput,
   WorkbenchCommandPaletteChangeListener,
@@ -319,7 +322,9 @@ export type {
   CreateResourceRegistryInput,
   OpenResourceInput,
   RegisteredResourceKind,
+  ResolvedResourceHierarchyProvider,
   ResourceBrowseEntry,
+  ResourceHierarchyProvider,
   ResourceKindContribution,
   ResourceListContext,
   ResourceOpener,

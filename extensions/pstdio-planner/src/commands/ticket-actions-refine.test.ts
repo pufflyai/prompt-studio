@@ -92,7 +92,6 @@ describe("refineTicketCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
             },
           },
         ],

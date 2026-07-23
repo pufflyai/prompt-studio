@@ -9,9 +9,25 @@ import {
   getSidenavContributionHeaderNodes,
   getSidenavContributionSections,
 } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
+
+const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbenchCore>) => {
+  workbench.resources.registerKind({
+    kind: "ticket",
+    label: "Ticket",
+    icon: "component",
+  });
+  const tickets = createDashboardResource("dashboard-view", "tickets", "Tickets", "square-kanban", "project-1");
+
+  workbench.resources.registerHierarchyProvider({
+    id: "test.ticket-hierarchy",
+    canResolve: (resource) => resource.kind === "ticket",
+    getParent: (resource) => dashboardResourceParent(workbench, resource, "project-1") ?? tickets,
+  });
+};
 
 describe("createWorkspacesModule", () => {
   test("opens workspace resources in workspace mode", async () => {
@@ -234,12 +250,16 @@ describe("createWorkspacesModule breadcrumbs", () => {
     const workspace = createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-direct",
       workspaceShorthand: "PS-307_A1",
-      ticketId: "ticket-1",
-      ticketLabel: "PS-307 Dashboard workbench datalayer",
-      ticketShorthand: "PS-307",
+      resourceParent: {
+        type: "ticket",
+        id: "ticket-1",
+        label: "PS-307 Dashboard workbench datalayer",
+        metadata: { shorthand: "PS-307" },
+      },
     });
 
     workbench.registerModule(createWorkspacesModule());
+    registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
@@ -261,16 +281,24 @@ describe("createWorkspacesModule breadcrumbs", () => {
     const workspace = createDashboardResource("workspace", "workspace-child", "PS-308_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-child",
       workspaceShorthand: "PS-308_A1",
-      ticketId: "ticket-child",
-      ticketLabel: "PS-308 Child",
-      ticketShorthand: "PS-308",
-      ticketBreadcrumb: [
-        { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
-        { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
-      ],
+      resourceParent: {
+        type: "ticket",
+        id: "ticket-child",
+        label: "PS-308 Child",
+        metadata: {
+          shorthand: "PS-308",
+          resourceParent: {
+            type: "ticket",
+            id: "ticket-parent",
+            label: "PS-307 Parent",
+            metadata: { shorthand: "PS-307" },
+          },
+        },
+      },
     });
 
     workbench.registerModule(createWorkspacesModule());
+    registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
@@ -287,6 +315,7 @@ describe("createWorkspacesModule breadcrumbs", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createWorkspacesModule());
+    registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     getWriter("workspaces")?.truncateAndWrite([

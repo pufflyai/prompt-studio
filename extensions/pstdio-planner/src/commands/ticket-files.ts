@@ -10,7 +10,7 @@ import { statusesCollection, ticketsCollection } from "../data/collections";
 import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { ticketBreadcrumbResourceMetadata } from "../data/ticket-breadcrumb";
+import { linkedResourceParentMetadata, type TicketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
@@ -61,16 +61,12 @@ const emptyFilesSection = (): TreeViewSection => ({
 const workspaceLabel = (workspace: ExtensionWorkspace) =>
   workspace.name ?? workspace.workspace_shorthand ?? workspace.id;
 
-// Identifies the ticket a sidenav workspace belongs to so the dashboard can nest
-// its breadcrumb under the ticket instead of the standalone workspaces board.
-type WorkspaceTicketMeta = {
-  ticketId: string;
-  ticketShorthand: string;
-  ticketLabel: string;
-  ticketBreadcrumb: Array<{ id: string; label: string; shorthand: string }>;
+// Canonical edge from a linked workspace to the ticket resource that owns it.
+type LinkedWorkspaceMetadata = {
+  resourceParent: TicketResourceReference;
 };
 
-const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMeta): TreeNode => {
+const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMetadata): TreeNode => {
   const label = workspaceLabel(workspace);
   const workspaceMetadata = {
     workspaceId: workspace.id,
@@ -84,8 +80,8 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMet
     label,
     icon: "GitBranch",
     // Native resource target so the host opens a normal workspace tab instead of
-    // running extension-owned navigation. The ticket metadata travels along so the
-    // dashboard renders a Tickets / Ticket / Workspace breadcrumb.
+    // running extension-owned navigation. Its canonical parent edge keeps the workspace
+    // nested beneath the owning ticket in Nav Chrome.
     target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata } },
   };
 };
@@ -108,7 +104,7 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
   },
 ];
 
-const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta) =>
+const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: LinkedWorkspaceMetadata) =>
   [...workspaces]
     .sort((a, b) => {
       const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
@@ -124,11 +120,15 @@ const emptyWorkspacesNode = (): TreeNode => ({
   rowVariant: "empty-state",
 });
 
-const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
+const workspacesSection = (
+  workspaces: ExtensionWorkspace[],
+  ticketId: string,
+  ticket: LinkedWorkspaceMetadata,
+): TreeViewSection => ({
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
-  actions: workspaceSectionActions(ticket.ticketId),
+  actions: workspaceSectionActions(ticketId),
   nodes: workspaceNodes(workspaces, ticket).concat(workspaces.length === 0 ? [emptyWorkspacesNode()] : []),
 });
 
@@ -241,9 +241,8 @@ export const listTicketFilesTreeCommand = defineCommand({
     const selectedDocument = getSelectedDocument(ticket.id);
     const tickets = await ticketsCollection(ctx.storage).list();
 
-    // Travels in each file/attachment resource so the dashboard nests the
-    // breadcrumb under the owning ticket.
-    const ticketMeta: WorkspaceTicketMeta = ticketBreadcrumbResourceMetadata(ticket, createTicketParentLookup(tickets));
+    const parentLookup = createTicketParentLookup(tickets);
+    const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
 
     // The ticket body is its own header-less entry above Files; it is the default
     // document. Selecting a node runs select-ticket-document, which swaps the single
@@ -313,7 +312,7 @@ export const listTicketFilesTreeCommand = defineCommand({
       parentTicketId: ticket.id,
       statusesById,
     });
-    const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticketMeta);
+    const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
 
     // Refine / Break into sub-tickets / Run attempt sessions anchor themselves to the ticket, so
     // they surface here alongside the ticket's files and workspaces.

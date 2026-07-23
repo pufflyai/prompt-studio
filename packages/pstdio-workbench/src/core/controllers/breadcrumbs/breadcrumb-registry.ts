@@ -1,4 +1,4 @@
-import type { ResourceRef } from "../../registries/resources/resource-registry";
+import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -24,6 +24,20 @@ export interface WorkbenchBreadcrumbController {
   getItems(): WorkbenchBreadcrumbItem[] | undefined;
   onDidChange(listener: WorkbenchBreadcrumbChangeListener): Disposable;
 }
+
+export const createResourceBreadcrumbItems = (
+  resources: ResourceRegistry,
+  resource: ResourceRef | undefined,
+): WorkbenchBreadcrumbItem[] => {
+  const path = resources.walkHierarchy(resource);
+
+  return path.map((entry, index) => ({
+    title: entry.label ?? entry.id ?? resources.getKind(entry.kind)?.label ?? entry.kind,
+    icon: entry.icon ?? resources.getKind(entry.kind)?.icon,
+    resource: entry,
+    ...(index < path.length - 1 ? { onClick: () => void resources.openResource(entry, { replaceActive: true }) } : {}),
+  }));
+};
 
 export const createWorkbenchBreadcrumbController = (): WorkbenchBreadcrumbController => {
   const store = createWorkbenchStore<WorkbenchBreadcrumbState>({

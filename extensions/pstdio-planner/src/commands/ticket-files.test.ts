@@ -237,19 +237,18 @@ describe("ticket files tree workspace commands", () => {
           icon: "GitBranch",
           target: {
             kind: "resource",
-            // Ticket metadata travels with the workspace so the dashboard nests its
-            // breadcrumb under the ticket (Tickets / Ticket / Workspace).
+            // The canonical parent edge nests this workspace beneath the ticket.
             resource: {
               type: "workspace",
               id: "ws-1",
               label: "WS-1",
               metadata: {
-                ticketId: ticket.id,
-                ticketShorthand: ticket.shorthand,
-                ticketLabel: `${ticket.shorthand} ${ticket.title}`,
-                ticketBreadcrumb: [
-                  { id: ticket.id, label: `${ticket.shorthand} ${ticket.title}`, shorthand: ticket.shorthand },
-                ],
+                resourceParent: {
+                  type: "ticket",
+                  id: ticket.id,
+                  label: `${ticket.shorthand} ${ticket.title}`,
+                  metadata: { shorthand: ticket.shorthand },
+                },
                 workspaceId: "ws-1",
                 workspaceShorthand: "WS-1",
                 workspaceType: "worktree",

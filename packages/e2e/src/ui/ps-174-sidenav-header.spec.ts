@@ -8,6 +8,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const projectModeStoryId = "dashboard-sidenav--project-mode";
 const workspacesViewStoryId = "dashboard-sidenav--workspaces-view";
 const ticketModeStoryId = "dashboard-sidenav--ticket-mode";
+const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
 const globalRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 
@@ -233,7 +234,13 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
     storybook?.kill();
   });
 
-  for (const storyId of [projectModeStoryId, workspacesViewStoryId, ticketModeStoryId, sessionModeStoryId]) {
+  for (const storyId of [
+    projectModeStoryId,
+    workspacesViewStoryId,
+    ticketModeStoryId,
+    ticketWorkspaceBackStoryId,
+    sessionModeStoryId,
+  ]) {
     test(`renders ${storyId} with one persistent global header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(storyUrl(baseUrl, storyId));
@@ -245,6 +252,12 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
       await expectGlobalHeader(sidenav);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
+      }
+      if (storyId === ticketWorkspaceBackStoryId) {
+        const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+        await expect(page.getByRole("button", { name: "Navigate forward" })).toBeEnabled();
+        await expect(breadcrumb).toContainText("PS-164 Sidenav resource sections");
+        await expect(breadcrumb).not.toContainText("PS-164_A1");
       }
       if (storyId === sessionModeStoryId) {
         await sidenav.getByRole("option", { name: "Sessions", exact: true }).last().click();

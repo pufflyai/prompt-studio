@@ -21,7 +21,14 @@ const response = {
                 type: "workspace",
                 id: "ws-1",
                 label: "WS-1",
-                metadata: { ticketId: "ticket-1" },
+                metadata: {
+                  resourceParent: {
+                    type: "ticket",
+                    id: "ticket-1",
+                    label: "PS-1 Ticket",
+                    metadata: { shorthand: "PS-1" },
+                  },
+                },
               },
             },
           },
@@ -47,7 +54,12 @@ describe("withWorkspaceDiffMetadata", () => {
             target: {
               resource: {
                 metadata: {
-                  ticketId: "ticket-1",
+                  resourceParent: {
+                    type: "ticket",
+                    id: "ticket-1",
+                    label: "PS-1 Ticket",
+                    metadata: { shorthand: "PS-1" },
+                  },
                   diffOverview: "+7 -2",
                   diffAdditions: 7,
                   diffDeletions: 2,

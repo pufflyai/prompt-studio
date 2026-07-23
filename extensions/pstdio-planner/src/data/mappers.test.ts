@@ -45,6 +45,7 @@ describe("ticketToRow", () => {
       projectId: "proj-1",
       label: "T-1 Fix the thing",
       icon: "component",
+      metadata: { shorthand: "T-1" },
     });
     expect(row.attributes).toEqual({
       status: "s-todo",
@@ -61,14 +62,18 @@ describe("ticketToRow", () => {
     expect(row.title).toBe("T-1");
   });
 
-  test("adds parent ticket metadata to child ticket resources", () => {
+  test("adds a canonical parent resource edge to child ticket resources", () => {
     const child = { ...ticket, id: "t2", shorthand: "T-2", title: "Child", parentId: ticket.id };
     const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, child]));
 
     expect(row.resource.metadata).toEqual({
-      parentTicketId: "t1",
-      parentTicketLabel: "T-1 Fix the thing",
-      parentTicketShorthand: "T-1",
+      shorthand: "T-2",
+      resourceParent: {
+        type: "ticket",
+        id: "t1",
+        label: "T-1 Fix the thing",
+        metadata: { shorthand: "T-1" },
+      },
     });
   });
 

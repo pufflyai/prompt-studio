@@ -23,6 +23,7 @@ import {
 import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
 import { registerExtensionDataRenderers } from "./extension-data-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
+import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 import {
@@ -131,6 +132,7 @@ export const registerExtensionContributions = (input: {
     ),
   );
   disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
+  disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
   disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
   disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
   return disposables;

@@ -88,36 +88,6 @@ const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMe
   return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
 };
 
-const resourceMetadataString = (resource: ResourceRef, key: string) => {
-  const value = resource.metadata?.[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-};
-
-const resourceIconFor = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) =>
-  resource.icon ?? ctx.resources.getKind(resource.kind)?.icon;
-
-const parentTicketResourceFor = (
-  ctx: WorkbenchModuleContributionContext,
-  input: { kind: string; projectId: string; resource: ResourceRef },
-): ResourceRef | undefined => {
-  const id = resourceMetadataString(input.resource, "parentTicketId");
-  if (!id) return undefined;
-
-  const label =
-    resourceMetadataString(input.resource, "parentTicketLabel") ??
-    resourceMetadataString(input.resource, "parentTicketShorthand") ??
-    id;
-
-  return {
-    kind: input.kind,
-    uri: `dashboard-workbench://${input.kind}/${encodeURIComponent(id)}`,
-    id,
-    label,
-    icon: ctx.resources.getKind(input.kind)?.icon,
-    metadata: { projectId: input.projectId },
-  };
-};
-
 const withExtensionResourceContext = (
   resource: ResourceRef,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
@@ -132,43 +102,6 @@ const withExtensionResourceContext = (
       ...(parentResource ? createWorkbenchSelectionResourceMetadata(parentResource) : {}),
     },
   };
-};
-
-const setExtensionResourceBreadcrumb = (
-  ctx: WorkbenchModuleContributionContext,
-  input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string; resource: ResourceRef },
-) => {
-  const parentResource = parentResourceFor(input);
-  if (!parentResource) {
-    setResourceBreadcrumb(ctx, input.resource);
-    return;
-  }
-
-  const parentTicketResource = parentTicketResourceFor(ctx, input);
-
-  ctx.breadcrumbs.setItems([
-    {
-      title: parentResource.label,
-      icon: parentResource.icon,
-      resource: parentResource,
-      onClick: () => void ctx.resources.openResource(parentResource, { replaceActive: true }),
-    },
-    ...(parentTicketResource
-      ? [
-          {
-            title: parentTicketResource.label ?? parentTicketResource.id ?? input.kind,
-            icon: resourceIconFor(ctx, parentTicketResource),
-            resource: parentTicketResource,
-            onClick: () => void ctx.resources.openResource(parentTicketResource, { replaceActive: true }),
-          },
-        ]
-      : []),
-    {
-      title: input.resource.label ?? input.resource.id ?? input.kind,
-      icon: resourceIconFor(ctx, input.resource),
-      resource: input.resource,
-    },
-  ]);
 };
 
 const removeManagedCompanions = (
@@ -271,12 +204,7 @@ export const registerExtensionResourceView = (
           });
           ctx.modes.setActiveMode(resourceMode?.modeId ?? "project");
           selectDashboardNavigationResource(ctx, selectedResource);
-          setExtensionResourceBreadcrumb(ctx, {
-            kind,
-            metadata: input.metadata,
-            projectId: input.projectId,
-            resource: selectedResource,
-          });
+          setResourceBreadcrumb(ctx, selectedResource);
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {
             group: { kind, primary, companions },
@@ -326,12 +254,7 @@ export const registerExtensionResourceView = (
       if (!label || label === activeResource.label) return;
 
       activeResource.label = label;
-      setExtensionResourceBreadcrumb(ctx, {
-        kind: activeResource.kind,
-        metadata: input.metadata,
-        projectId: input.projectId,
-        resource: activeResource,
-      });
+      setResourceBreadcrumb(ctx, activeResource);
       updatePlacementForResource(ctx, {
         widgetId: widgetIdFor(group.primary),
         resource: activeResource,

@@ -8,4 +8,5 @@ test("coexists with a host session resource kind", () => {
 
   expect(() => workbench.registerModule(createBreadcrumbModule())).not.toThrow();
   expect(workbench.resources.getKind("session")?.label).toBe("Host session");
+  expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Docs", "Concepts", "Regions"]);
 });

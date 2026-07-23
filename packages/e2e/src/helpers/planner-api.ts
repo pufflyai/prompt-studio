@@ -14,6 +14,7 @@ export interface PlannerTicket {
   title: string;
   content: string;
   statusId: string | null;
+  parentId?: string | null;
   tagIds?: string[];
   files?: PlannerTicketFile[];
   archived: boolean;
@@ -126,12 +127,13 @@ export const createPlannerTicket = (
   request: APIRequestContext,
   apiBase: string,
   projectId: string,
-  input: { content: string; statusId?: string; tagIds?: string[] },
+  input: { content: string; statusId?: string; tagIds?: string[]; parentId?: string },
 ) =>
   executePlannerCommand<PlannerTicket>(request, apiBase, projectId, "create-ticket", {
     content: input.content,
     ...(input.statusId !== undefined ? { statusId: input.statusId } : {}),
     ...(input.tagIds !== undefined ? { tagIds: input.tagIds } : {}),
+    ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
   });
 
 export const getPlannerTicket = (request: APIRequestContext, apiBase: string, projectId: string, id: string) =>

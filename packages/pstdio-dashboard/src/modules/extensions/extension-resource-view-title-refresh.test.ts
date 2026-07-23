@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 
 const metadata = {
@@ -98,7 +99,10 @@ describe("registerExtensionResourceView title refresh", () => {
     });
     const disposable = workbench.registerModule({
       id: "test.extension-resource-view",
-      activate: (ctx) => registerExtensionResourceView(ctx, { metadata, projectId: "project-1" }),
+      activate: (ctx) => [
+        registerExtensionResourceHierarchy(ctx, { metadata, projectId: "project-1" }),
+        ...registerExtensionResourceView(ctx, { metadata, projectId: "project-1" }),
+      ],
     });
 
     try {

@@ -75,42 +75,17 @@ const ticketAnchorFromWorkspace = (workspace: SyncedRow) => {
   return anchors.find((anchor) => isWorkspaceResourceAnchor(anchor) && anchor.type === "ticket");
 };
 
-const ticketShorthandFromAnchor = (anchor: WorkspaceResourceAnchor) => {
-  const shorthand = anchor.metadata?.shorthand;
-  return typeof shorthand === "string" ? shorthand : anchor.label;
-};
-
-const textValue = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
-
-const ticketBreadcrumbFromAnchor = (anchor: WorkspaceResourceAnchor) => {
-  const breadcrumb = anchor.metadata?.ticketBreadcrumb;
-  if (!Array.isArray(breadcrumb)) return undefined;
-
-  const items = breadcrumb.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const id = textValue(item.id);
-    if (!id) return [];
-    const shorthand = textValue(item.shorthand);
-    const label = textValue(item.label) ?? shorthand ?? id;
-    return [{ id, label, ...(shorthand ? { shorthand } : {}) }];
-  });
-
-  return items.length > 0 ? items : undefined;
-};
-
 const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
   const anchor = ticketAnchorFromWorkspace(workspace);
   if (!anchor) return {};
 
-  const ticketShorthand = ticketShorthandFromAnchor(anchor);
-  const ticketLabel = anchor.label ?? ticketShorthand;
-  const ticketBreadcrumb = ticketBreadcrumbFromAnchor(anchor);
-
   return {
-    ticketId: anchor.id,
-    ...(ticketShorthand ? { ticketShorthand } : {}),
-    ...(ticketLabel ? { ticketLabel } : {}),
-    ...(ticketBreadcrumb ? { ticketBreadcrumb } : {}),
+    resourceParent: {
+      type: anchor.type,
+      id: anchor.id,
+      ...(anchor.label ? { label: anchor.label } : {}),
+      ...(anchor.metadata ? { metadata: anchor.metadata } : {}),
+    },
   };
 };
 

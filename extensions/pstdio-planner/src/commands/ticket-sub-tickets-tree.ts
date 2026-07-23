@@ -1,5 +1,6 @@
 import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
-import { ticketDisplayTitle, ticketParentResourceMetadata } from "../data/mappers";
+import { ticketDisplayTitle } from "../data/mappers";
+import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredStatus, StoredTicket } from "../data/types";
 
 const ticketShorthandSort = (left: StoredTicket, right: StoredTicket) =>
@@ -13,11 +14,10 @@ const subTicketStatus = (ticket: StoredTicket, statusesById: Map<string, StoredS
 const subTicketNode = (
   ticket: StoredTicket,
   statusesById: Map<string, StoredStatus>,
-  parentTicket?: StoredTicket,
+  ticketsById: Map<string, StoredTicket>,
 ): TreeNode => {
   const status = subTicketStatus(ticket, statusesById);
   const label = ticketDisplayTitle(ticket);
-  const metadata = parentTicket ? ticketParentResourceMetadata(parentTicket) : undefined;
 
   return {
     id: `ticket-${ticket.id}`,
@@ -27,7 +27,12 @@ const subTicketNode = (
     iconTooltip: status?.name,
     target: {
       kind: "resource",
-      resource: { type: "ticket", id: ticket.id, label, ...(metadata ? { metadata } : {}) },
+      resource: {
+        type: "ticket",
+        id: ticket.id,
+        label,
+        metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
+      },
     },
   };
 };
@@ -37,11 +42,11 @@ export const buildSubTicketsSection = (input: {
   parentTicketId: string;
   statusesById: Map<string, StoredStatus>;
 }): TreeViewSection | undefined => {
-  const parentTicket = input.tickets.find((ticket) => ticket.id === input.parentTicketId);
+  const ticketsById = new Map(input.tickets.map((ticket) => [ticket.id, ticket]));
   const nodes = input.tickets
     .filter((ticket) => !ticket.archived && ticket.parentId === input.parentTicketId)
     .sort(ticketShorthandSort)
-    .map((ticket) => subTicketNode(ticket, input.statusesById, parentTicket));
+    .map((ticket) => subTicketNode(ticket, input.statusesById, ticketsById));
 
   if (nodes.length === 0) return undefined;
 

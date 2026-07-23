@@ -79,7 +79,6 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
             },
           },
         ],
@@ -100,7 +99,6 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
             },
           },
         ],
@@ -217,7 +215,6 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
             },
           },
         ],
@@ -279,7 +276,6 @@ describe("createWorkspaceCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
             },
           },
         ],
@@ -321,10 +317,12 @@ describe("createWorkspaceCommand", () => {
             id: child.id,
             metadata: {
               shorthand: child.shorthand,
-              ticketBreadcrumb: [
-                { id: parent.id, label: `${parent.shorthand} Parent`, shorthand: parent.shorthand },
-                { id: child.id, label: `${child.shorthand} Child`, shorthand: child.shorthand },
-              ],
+              resourceParent: {
+                type: "ticket",
+                id: parent.id,
+                label: `${parent.shorthand} Parent`,
+                metadata: { shorthand: parent.shorthand },
+              },
             },
           }),
         ],

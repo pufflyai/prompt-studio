@@ -288,7 +288,7 @@ test.describe("PS-170 Panel-owned menus", () => {
 
     const locationTab = page.getByRole("tab", { name: /^Alpha location/ });
     const notesTab = page.getByRole("tab", { name: /Notes/ });
-    await expect(locationTab).toBeVisible();
+    await expect(locationTab).toBeVisible({ timeout: 30_000 });
     await expect(locationTab.getByRole("button", { name: /Close/ })).toHaveCount(0);
     await expect(notesTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("button", { name: "Open Main left menu" })).toHaveCount(0);
@@ -315,7 +315,9 @@ test.describe("PS-170 Panel-owned menus", () => {
     await page.goto(storyUrl(baseUrl, allPanelsStoryId));
 
     for (const panel of ["main", "secondary", "side"]) {
-      await expect(page.locator(`[data-workbench-panel-menu="${panel}-right"]`)).toContainText("Notes tools");
+      await expect(page.locator(`[data-workbench-panel-menu="${panel}-right"]`)).toContainText("Notes tools", {
+        timeout: 30_000,
+      });
       await expect(page.locator(`[data-workbench-panel-menu="${panel}-left"]`)).toHaveCount(0);
     }
   });

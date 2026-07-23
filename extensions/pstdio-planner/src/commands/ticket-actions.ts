@@ -2,7 +2,7 @@ import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor }
 import { ticketsCollection } from "../data/collections";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
-import { buildTicketBreadcrumbItems } from "../data/ticket-breadcrumb";
+import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 
@@ -55,14 +55,14 @@ const resolveTicketIdentity = async (
   return { id, shorthand, ticket: ticket ?? { id, shorthand } };
 };
 
-const ticketBreadcrumbItems = async (
+const ticketHierarchyMetadata = async (
   ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
   ticket: StoredTicket | undefined,
 ) => {
   if (!ticket) return undefined;
   const tickets = await ticketsCollection(ctx.storage).list();
   const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
-  return buildTicketBreadcrumbItems(ticket, parentLookup);
+  return ticketResourceHierarchyMetadata(ticket, parentLookup);
 };
 
 const resolveTicketAnchor = async (
@@ -71,7 +71,7 @@ const resolveTicketAnchor = async (
 ) => {
   const { id, shorthand, ticket } = await resolveTicketIdentity(ctx, ticketRef);
   const storedTicket = "title" in ticket ? ticket : undefined;
-  const ticketBreadcrumb = await ticketBreadcrumbItems(ctx, storedTicket);
+  const hierarchyMetadata = await ticketHierarchyMetadata(ctx, storedTicket);
 
   return {
     anchor: {
@@ -81,7 +81,7 @@ const resolveTicketAnchor = async (
       extensionId: ctx.extensionId,
       label: shorthand,
       role: "primary",
-      metadata: { shorthand, ...(ticketBreadcrumb ? { ticketBreadcrumb } : {}) },
+      metadata: hierarchyMetadata ?? { shorthand },
     } satisfies ResourceAnchor,
     shorthand,
     ticket,

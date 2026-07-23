@@ -7,9 +7,11 @@ import {
 } from "@pstdio/workbench/core";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { createDashboardResource } from "@/shared/app/resources";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { getSidenavContributionHeaderNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { createWorkspacesModule } from "../workspaces/module";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
@@ -241,7 +243,7 @@ describe("createExtensionsModule resource views", () => {
 });
 
 describe("createExtensionsModule ticket breadcrumbs", () => {
-  test("includes parent tickets in ticket editor breadcrumbs", async () => {
+  test("walks three-level ticket ancestry from canonical resource parent edges", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
@@ -260,26 +262,109 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
         label: "PS-11 Child",
         metadata: {
           projectId: "project-1",
-          parentTicketId: "PS-10",
-          parentTicketLabel: "PS-10 Parent",
-          parentTicketShorthand: "PS-10",
+          resourceParent: {
+            type: "ticket",
+            id: "PS-10",
+            label: "PS-10 Parent",
+            metadata: {
+              shorthand: "PS-10",
+              resourceParent: {
+                type: "ticket",
+                id: "PS-9",
+                label: "PS-9 Root",
+                metadata: { shorthand: "PS-9" },
+              },
+            },
+          },
         },
       } satisfies ResourceRef;
 
       await workbench.resources.openResource(childTicket, { replaceActive: true });
 
       const breadcrumbs = workbench.breadcrumbs.getItems();
-      expect(breadcrumbs?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Parent", "PS-11 Child"]);
-      expect(breadcrumbs?.[1]?.resource).toMatchObject({
+      expect(breadcrumbs?.map((item) => item.title)).toEqual(["Tickets", "PS-9 Root", "PS-10 Parent", "PS-11 Child"]);
+      expect(breadcrumbs?.[2]?.resource).toMatchObject({
         kind: "ticket",
         id: "PS-10",
         label: "PS-10 Parent",
         icon: "component",
       });
-      expect(breadcrumbs?.[1]?.icon).toBe("component");
+      expect(breadcrumbs?.[2]?.icon).toBe("component");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("navigates parent to child to linked workspace and back through resource history", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(
+      createExtensionsModule({ loadMetadata: mock(async () => metadataWithTickets) }),
+    );
+
+    try {
+      await flushMicrotasks();
+
+      const parent = {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/PS-10",
+        id: "PS-10",
+        label: "PS-10 Parent",
+        metadata: { projectId: "project-1" },
+      } satisfies ResourceRef;
+      const child = {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/PS-11",
+        id: "PS-11",
+        label: "PS-11 Child",
+        metadata: {
+          projectId: "project-1",
+          resourceParent: {
+            type: "ticket",
+            id: parent.id,
+            label: parent.label,
+            metadata: { shorthand: parent.id },
+          },
+        },
+      } satisfies ResourceRef;
+      const workspace = createDashboardResource("workspace", "workspace-ps173", "PS-11_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-ps173",
+        resourceParent: {
+          type: "ticket",
+          id: child.id,
+          label: child.label,
+          metadata: child.metadata,
+        },
+      });
+
+      await workbench.resources.openResource(parent, { replaceActive: true });
+      await workbench.resources.openResource(child, { replaceActive: true });
+      await workbench.resources.openResource(workspace, { replaceActive: true });
+
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+        "Tickets",
+        "PS-10 Parent",
+        "PS-11 Child",
+        "PS-11_A1",
+      ]);
+
+      workbench.history.goBack();
+      await flushMicrotasks();
+      expect(workbench.getPrimaryResource()?.id).toBe(child.id);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+        "Tickets",
+        "PS-10 Parent",
+        "PS-11 Child",
+      ]);
+
+      workbench.history.goBack();
+      await flushMicrotasks();
+      expect(workbench.getPrimaryResource()?.id).toBe(parent.id);
+    } finally {
+      disposable.dispose();
     }
   });
 });

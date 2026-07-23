@@ -112,13 +112,16 @@ describe("dashboard workspaces", () => {
     );
 
     expect(workspace.resource.metadata).toMatchObject({
-      ticketId: "ticket-1",
-      ticketLabel: "PS-307",
-      ticketShorthand: "PS-307",
+      resourceParent: {
+        type: "ticket",
+        id: "ticket-1",
+        label: "PS-307",
+        metadata: { shorthand: "PS-307" },
+      },
     });
   });
 
-  test("carries planner ticket breadcrumb anchors into workspace resource metadata", () => {
+  test("carries planner ticket parent edges into workspace resource metadata", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(
       {
         ...rows,
@@ -132,10 +135,12 @@ describe("dashboard workspaces", () => {
                 label: "PS-308",
                 metadata: {
                   shorthand: "PS-308",
-                  ticketBreadcrumb: [
-                    { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
-                    { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
-                  ],
+                  resourceParent: {
+                    type: "ticket",
+                    id: "ticket-parent",
+                    label: "PS-307 Parent",
+                    metadata: { shorthand: "PS-307" },
+                  },
                 },
               },
             ],
@@ -146,13 +151,20 @@ describe("dashboard workspaces", () => {
     );
 
     expect(workspace.resource.metadata).toMatchObject({
-      ticketId: "ticket-child",
-      ticketLabel: "PS-308",
-      ticketShorthand: "PS-308",
-      ticketBreadcrumb: [
-        { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
-        { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
-      ],
+      resourceParent: {
+        type: "ticket",
+        id: "ticket-child",
+        label: "PS-308",
+        metadata: {
+          shorthand: "PS-308",
+          resourceParent: {
+            type: "ticket",
+            id: "ticket-parent",
+            label: "PS-307 Parent",
+            metadata: { shorthand: "PS-307" },
+          },
+        },
+      },
     });
   });
 

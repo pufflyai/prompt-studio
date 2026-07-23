@@ -352,7 +352,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   };
 
   const recordSnapshot = (fromLayoutChange = false) => {
-    if (navigating || awaitingRestore) return;
+    if (navigating || awaitingRestore || input.resources.isOpeningResource()) return;
     counter += 1;
     const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
     const current = currentNavigationEntry(store.getState());
@@ -440,6 +440,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     },
   );
   input.modes?.onDidChangeActive(recordSnapshot);
+  input.resources.onDidOpenResource(() => recordSnapshot());
 
   const restoreSelections = (entry: WorkbenchNavigationEntry) => {
     for (const region of workbenchPanelRegions) {

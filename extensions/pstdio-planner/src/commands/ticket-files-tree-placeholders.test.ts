@@ -95,11 +95,20 @@ describe("ticket files tree workspace metadata", () => {
             workspaceId: "ws-1",
             workspaceShorthand: "WS-1",
             workspaceType: "worktree",
-            ticketId: ticket.id,
-            ticketBreadcrumb: [
-              { id: parent.id, label: `${parent.shorthand} Parent`, shorthand: parent.shorthand },
-              { id: ticket.id, label: `${ticket.shorthand} Child`, shorthand: ticket.shorthand },
-            ],
+            resourceParent: {
+              type: "ticket",
+              id: ticket.id,
+              label: `${ticket.shorthand} Child`,
+              metadata: {
+                shorthand: ticket.shorthand,
+                resourceParent: {
+                  type: "ticket",
+                  id: parent.id,
+                  label: `${parent.shorthand} Parent`,
+                  metadata: { shorthand: parent.shorthand },
+                },
+              },
+            },
           },
         },
       },

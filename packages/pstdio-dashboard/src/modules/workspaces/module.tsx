@@ -14,6 +14,7 @@ import { registerDashboardViewContribution } from "@/shared/workbench/contributi
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
@@ -22,7 +23,6 @@ import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
-import { setWorkspaceBreadcrumb } from "./workspace-breadcrumb";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
@@ -123,7 +123,7 @@ const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContributionContext) => {
     if (label === shownLabel) return;
 
     shownLabel = label;
-    setWorkspaceBreadcrumb(ctx, current.resource);
+    setResourceBreadcrumb(ctx, current.resource);
   };
 
   subscribeDashboardData(sync);
@@ -202,6 +202,16 @@ export const createWorkspacesModule = () =>
             group: "Workspaces",
           })),
       });
+      ctx.resources.registerHierarchyProvider({
+        id: "dashboard-workbench.workspace-hierarchy",
+        priority: 100,
+        canResolve: (resource) => resource.kind === "workspace",
+        getParent: (resource) => {
+          const projectId = metadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
+          if (!projectId) return dashboardResources.workspaces;
+          return dashboardResourceParent(ctx, resource, projectId) ?? dashboardResources.workspaces;
+        },
+      });
 
       registerWorkspaceResourceActions(ctx);
       registerWorkspaceDataRenderer(ctx);
@@ -264,7 +274,7 @@ export const createWorkspacesModule = () =>
         widgetId: dashboardWidgetIds.workspace,
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
-          setWorkspaceBreadcrumb(ctx, resource);
+          setResourceBreadcrumb(ctx, resource);
           showDashboardSidenav(ctx, { selectedNode: null });
           openFirstWorkspaceSession(ctx, resource);
         },

@@ -329,6 +329,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     resources: {
       ...core.resources,
       registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
+      registerHierarchyProvider: (provider) => track(core.resources.registerHierarchyProvider(provider)),
       registerOpener: (opener) => track(core.resources.registerOpener(opener)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
       onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),

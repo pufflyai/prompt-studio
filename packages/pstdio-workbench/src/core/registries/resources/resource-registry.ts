@@ -102,10 +102,20 @@ export interface ResourceProvider {
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
 
+export interface ResourceHierarchyProvider {
+  id: string;
+  priority?: number;
+  canResolve(resource: ResourceRef): boolean;
+  getParent(resource: ResourceRef): ResourceRef | undefined;
+}
+
+export type ResolvedResourceHierarchyProvider = Required<ResourceHierarchyProvider>;
+
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
   openers: Record<string, ResolvedResourceOpener>;
   providers: Record<string, ResourceProvider>;
+  hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
 }
 
 export interface ResourceRegistry {
@@ -120,12 +130,25 @@ export interface ResourceRegistry {
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
+  registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
+  listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
+  walkHierarchy(resource: ResourceRef | undefined): ResourceRef[];
+  isOpeningResource(): boolean;
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
 }
 
 const sortOpeners = (openers: ResolvedResourceOpener[]) =>
   [...openers].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
+
+const sortHierarchyProviders = (providers: ResolvedResourceHierarchyProvider[]) =>
+  [...providers].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
+
+const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
+  (typeof value === "object" || typeof value === "function") &&
+  value !== null &&
+  "then" in value &&
+  typeof value.then === "function";
 
 export interface CreateResourceRegistryInput {
   // Resolves the active primary resource so listResources can scope provider candidates.
@@ -134,9 +157,10 @@ export interface CreateResourceRegistryInput {
 
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const openListeners = new Set<(resource: ResourceRef) => void>();
+  let openingResourceDepth = 0;
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
-    initialState: { kinds: {}, openers: {}, providers: {} },
+    initialState: { kinds: {}, openers: {}, providers: {}, hierarchyProviders: {} },
   });
 
   return {
@@ -223,6 +247,59 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       return entries;
     },
 
+    registerHierarchyProvider(provider) {
+      const snapshot = store.getState();
+      if (snapshot.hierarchyProviders[provider.id]) {
+        throw new Error(`Resource hierarchy provider already registered: ${provider.id}`);
+      }
+
+      const record: ResolvedResourceHierarchyProvider = { ...provider, priority: provider.priority ?? 0 };
+      store.setState(
+        {
+          ...snapshot,
+          hierarchyProviders: { ...snapshot.hierarchyProviders, [provider.id]: record },
+        },
+        false,
+        "registerHierarchyProvider",
+      );
+
+      return createDisposable(() => {
+        const current = store.getState();
+        if (current.hierarchyProviders[provider.id] !== record) return;
+        const { [provider.id]: _removed, ...rest } = current.hierarchyProviders;
+        store.setState({ ...current, hierarchyProviders: rest }, false, "unregisterHierarchyProvider");
+      });
+    },
+
+    listHierarchyProviders() {
+      return sortHierarchyProviders(Object.values(store.getState().hierarchyProviders));
+    },
+
+    walkHierarchy(resource) {
+      if (!resource) return [];
+
+      const providers = sortHierarchyProviders(Object.values(store.getState().hierarchyProviders));
+      const path = [resource];
+      const visitedUris = new Set([resource.uri]);
+      let current = resource;
+
+      while (true) {
+        const provider = providers.find((candidate) => candidate.canResolve(current));
+        const parent = provider?.getParent(current);
+        if (!parent || visitedUris.has(parent.uri)) break;
+
+        path.unshift(parent);
+        visitedUris.add(parent.uri);
+        current = parent;
+      }
+
+      return path;
+    },
+
+    isOpeningResource() {
+      return openingResourceDepth > 0;
+    },
+
     async openResource(resource, input = {}) {
       const snapshot = store.getState();
       if (!snapshot.kinds[resource.kind]) throw new Error(`Unknown resource kind: ${resource.kind}`);
@@ -230,7 +307,14 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       const opener = sortOpeners(Object.values(snapshot.openers)).find((candidate) => candidate.canOpen(resource));
       if (!opener) throw new Error(`No opener registered for resource kind: ${resource.kind}`);
 
-      const result = await opener.open(resource, input);
+      openingResourceDepth += 1;
+      let result: unknown;
+      try {
+        result = opener.open(resource, input);
+        if (isPromiseLike(result)) result = await result;
+      } finally {
+        openingResourceDepth -= 1;
+      }
       for (const listener of openListeners) listener(resource);
       return result;
     },

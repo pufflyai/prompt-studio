@@ -15,17 +15,18 @@ default `Workbench` top header renders it for you.
 
 <Canvas of={OnboardingStories.Breadcrumbs} sourceState="shown" />
 
-A resource opener typically owns the trail for its resource. Each call to
-`ctx.breadcrumbs.setItems(...)` replaces the entire trail, so the opener
-decides exactly what shows up — there is no auto-derivation from the tree.
+A resource hierarchy provider owns the canonical parent edge for each resource.
+The opener passes the selected resource to
+`createResourceBreadcrumbItems(ctx.resources, resource)`, which walks those
+edges once and replaces the complete trail.
 
 Give every level its own widget so clicking back up the trail lands on a real
 page. This story registers three resource kinds (`docs.root`, `docs.section`,
 `docs.page`), each with its own opener and renderer: the root opens a docs
 home, sections open a category index, pages open the leaf widget. The
-breadcrumb `onClick` for every entry except the active one re-runs
-`ctx.resources.openResource(...)`, which keeps the controller as the single
-source of truth for both the trail and the active widget.
+The generated breadcrumb `onClick` for every entry except the active one
+re-runs `ctx.resources.openResource(...)`, which keeps resource navigation as
+the single source of truth for both the trail and the active widget.
 
 A breadcrumb item is:
 
