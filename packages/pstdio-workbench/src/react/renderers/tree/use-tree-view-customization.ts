@@ -116,7 +116,7 @@ export const useTreeViewCustomization = (
   const nodeOverrides = useTreeListVisibilityStore(storageKey, (state) => state.nodeOverrides);
   const toggleSection = useTreeListVisibilityStore(storageKey, (state) => state.toggleSection);
   const toggleNode = useTreeListVisibilityStore(storageKey, (state) => state.toggleNode);
-  const reset = useTreeListVisibilityStore(storageKey, (state) => state.reset);
+  const resetVisibility = useTreeListVisibilityStore(storageKey, (state) => state.reset);
   const sectionOrder = useTreeListOrderStore(storageKey, (state) => state.sectionOrder);
   const nodeOrderBySection = useTreeListOrderStore(storageKey, (state) => state.nodeOrderBySection);
   const setSectionOrder = useTreeListOrderStore(storageKey, (state) => state.setSectionOrder);
@@ -125,8 +125,10 @@ export const useTreeViewCustomization = (
   const visibilityActions = {
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
-    onResetAll: reset,
-    onResetOrder: resetOrder,
+    onResetAll: () => {
+      resetVisibility();
+      resetOrder();
+    },
   };
 
   const orderedSections = applyTreeListOrder(regions.sections, sectionOrder, nodeOrderBySection);

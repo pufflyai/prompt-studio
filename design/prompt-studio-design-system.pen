@@ -93436,24 +93436,6 @@
                                   "content": "Reset to default"
                                 }
                               }
-                            },
-                            {
-                              "id": "y4PE8z",
-                              "type": "ref",
-                              "ref": "sgbRV",
-                              "name": "Menu Reset order",
-                              "width": "fill_container",
-                              "theme": {
-                                "menu": "default"
-                              },
-                              "descendants": {
-                                "UEgTp": {
-                                  "icon": "arrow-up-down"
-                                },
-                                "UTbhN": {
-                                  "content": "Reset order"
-                                }
-                              }
                             }
                           ]
                         }
@@ -93466,7 +93448,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Right-clicking anywhere in the Sidenav opens this customize menu. Hide/show entries are grouped in Header, Main, and Footer order; the menu remains open while toggling. Dragging reorders items only inside their region and, for Main, inside their current group. Structural items such as the project selector and any contribution with canReorder=false stay locked. Visibility and manual order persist per Sidenav tree id and reset independently.",
+                      "content": "Right-clicking anywhere in the Sidenav opens this customize menu. Hide/show entries are grouped in Header, Main, and Footer order; the menu remains open while toggling. Dragging reorders items only inside their region and, for Main, inside their current group. Structural items such as the project selector and any contribution with canReorder=false stay locked. Visibility and manual order persist per Sidenav tree id; Reset to default restores both.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 12,

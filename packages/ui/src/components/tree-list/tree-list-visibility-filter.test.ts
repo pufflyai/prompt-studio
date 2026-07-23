@@ -207,17 +207,6 @@ describe("buildTreeVisibilityMenuActions", () => {
     expect(actions.map((action) => action.key)).toEqual(["node:tickets", "__reset-visibility"]);
   });
 
-  test("includes a 'Reset order' entry when onResetOrder is provided", () => {
-    const actions = buildTreeVisibilityMenuActions(
-      { sections },
-      {},
-      {},
-      { ...noopActions, onResetOrder: () => {} },
-      options,
-    );
-    expect(actions[actions.length - 1].key).toBe("__reset-order");
-  });
-
   test("shows the eye on visible entries and eye-off on hidden entries", () => {
     const actions = buildTreeVisibilityMenuActions({ sections }, {}, {}, noopActions, options);
     const findKey = (key: string) => actions.find((a) => a.key === key);

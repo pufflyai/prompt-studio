@@ -169,6 +169,24 @@ describe("createSessionsModule", () => {
     expect(getDashboardSelectedResource(workbench)).toBeUndefined();
   });
 
+  test("returns to the last opened session from global navigation", async () => {
+    seedContractSessions();
+    const workbench = createWorkbenchCore();
+    const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
+      status: "completed",
+    });
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createSessionsModule());
+
+    await workbench.resources.openResource(session);
+    await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
+
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(session.uri);
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "Second session"]);
+  });
+
   test("opens command palette session resources in the floating bubble", async () => {
     seedContractSessions();
     const workbench = createWorkbenchCore();

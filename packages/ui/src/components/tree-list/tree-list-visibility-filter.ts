@@ -75,7 +75,6 @@ export interface TreeVisibilityMenuActions {
   onToggleSection: (id: string, hiddenByDefault: boolean) => void;
   onToggleNode: (id: string, hiddenByDefault: boolean) => void;
   onResetAll: () => void;
-  onResetOrder?: () => void;
 }
 
 interface BuildMenuOptions {
@@ -177,9 +176,6 @@ export const buildTreeVisibilityMenuActions = (
     separatorBefore: true,
     onClick: actions.onResetAll,
   });
-  if (actions.onResetOrder) {
-    result.push({ key: "__reset-order", label: "Reset order", icon: options.resetIcon, onClick: actions.onResetOrder });
-  }
 
   return result;
 };

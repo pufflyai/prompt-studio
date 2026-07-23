@@ -5,7 +5,11 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench/core";
 import { SessionViewWidget } from "@/modules/sessions/components/session-widget";
-import { forgetDashboardSession, rememberDashboardSession } from "@/modules/sessions/state/session-selection";
+import {
+  forgetDashboardSession,
+  getDashboardSelectedSession,
+  rememberDashboardSession,
+} from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
@@ -66,8 +70,12 @@ const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource
   ]);
 };
 
-const openSessionsNavigation = (ctx: WorkbenchModuleContributionContext) =>
-  ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true });
+const openSessionsNavigation = (ctx: WorkbenchModuleContributionContext) => {
+  const lastOpenedSession = getDashboardSelectedSession(ctx);
+  return ctx.resources.openResource(lastOpenedSession?.resource ?? dashboardResources.sessions, {
+    replaceActive: true,
+  });
+};
 
 const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
   if (ctx.modes.getActiveModeId() !== "sessions") return;

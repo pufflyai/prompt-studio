@@ -177,6 +177,17 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
     [row(sidenav, "Notifications"), row(sidenav, "Search")].map(async (item) => (await item.boundingBox())!.y),
   );
   expect(persistedTopEdges[0]).toBeLessThan(persistedTopEdges[1]);
+
+  await row(sidenav, "Search").click({ button: "right" });
+  await searchToggle.click();
+  await expect(row(sidenav, "Search")).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
+  await expect(row(sidenav, "Search")).toBeVisible();
+
+  const resetTopEdges = await Promise.all(
+    [row(sidenav, "Search"), row(sidenav, "Notifications")].map(async (item) => (await item.boundingBox())!.y),
+  );
+  expect(resetTopEdges[0]).toBeLessThan(resetTopEdges[1]);
 });
 
 test("PS-174 renders the ticket tree inside the Sidenav resource section", async ({ page, request }) => {
