@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "@pstdio/workbench/core";
 import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -33,7 +33,7 @@ const mountTicketWorkbench = (metadata: DashboardExtensionMetadata) => {
 };
 
 describe("createExtensionsModule ticket reactivity", () => {
-  test("surfaces ticket header actions while a ticket is the active resource", async () => {
+  test("surfaces ticket actions beside a ticket resource", async () => {
     const metadataWithTicketActions = {
       ...metadataWithTickets,
       commands: [
@@ -58,15 +58,17 @@ describe("createExtensionsModule ticket reactivity", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
 
-      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
-      expect(headerActions.map((item) => item.label)).toContain("Run attempt");
+      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("ticket"), {
+        resource: ticketResource,
+      });
+      expect(resourceActions.map((item) => item.label)).toContain("Run attempt");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
 
-  test("keeps ticket header actions visible after resource-less header focus", async () => {
+  test("keeps ticket actions bound to their resource after resource-less header focus", async () => {
     const metadataWithTicketActions = {
       ...metadataWithTickets,
       commands: [
@@ -107,18 +109,18 @@ describe("createExtensionsModule ticket reactivity", () => {
       await flushMicrotasks();
 
       expect(workbench.context.get("workbench.resource.kind")).toBe("ticket");
-      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
-        resource: workbench.getPrimaryResource(),
+      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("ticket"), {
+        resource: ticketResource,
       });
-      expect(headerActions.map((item) => item.label)).toContain("Run attempt");
+      expect(resourceActions.map((item) => item.label)).toContain("Run attempt");
 
       workbench.layout.openWidget("test.dashboard-view", {
         resource: { kind: "dashboard-view", uri: "dashboard-workbench://project/project-1/tickets", id: "tickets" },
       });
-      const nonTicketHeaderActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
+      const nonTicketResourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("dashboard-view"), {
         resource: workbench.getPrimaryResource(),
       });
-      expect(nonTicketHeaderActions.map((item) => item.label)).not.toContain("Run attempt");
+      expect(nonTicketResourceActions.map((item) => item.label)).not.toContain("Run attempt");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

@@ -35,6 +35,14 @@ const ticketsRecord = {
     },
   ],
   defaultSettings: { viewMode: "board" as const, columnGrouping: "status" },
+  rowActions: [
+    {
+      id: "run-attempt",
+      label: "Run attempt",
+      icon: "play",
+      commandId: "story.run-attempt",
+    },
+  ],
 };
 
 const sampleRows = [
@@ -55,6 +63,23 @@ const queryResponse: CommandExecuteResponse = {
 
 const metadata: DashboardExtensionMetadata = {
   ...emptyDashboardExtensionMetadata,
+  commands: [
+    {
+      id: "story.run-attempt",
+      extensionId: ticketsRecord.extensionId,
+      title: "Run attempt",
+    },
+  ],
+  menuContributions: [
+    {
+      id: "story.run-attempt.ticket",
+      extensionId: ticketsRecord.extensionId,
+      commandId: "story.run-attempt",
+      slotId: "ticket.headerOverflow",
+      label: "Run attempt",
+      icon: "play",
+    },
+  ],
   dataRenderers: [ticketsRecord],
 };
 

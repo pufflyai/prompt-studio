@@ -63,9 +63,8 @@ export const registerExtensionContributions = (input: {
         }),
       ),
     );
-    disposables.push(ctx.layout.registerMenuItem(registration.menuPath, registration.menuItem));
-    for (const contextMenuItem of registration.contextMenuItems) {
-      disposables.push(ctx.layout.registerMenuItem(contextMenuItem.menuPath, contextMenuItem.menuItem));
+    for (const item of registration.menuItems) {
+      disposables.push(ctx.layout.registerMenuItem(item.menuPath, item.menuItem));
     }
   }
 

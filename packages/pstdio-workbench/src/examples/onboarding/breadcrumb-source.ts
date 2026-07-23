@@ -1,5 +1,6 @@
 export const breadcrumbSource = `import {
   createResourceBreadcrumbItems,
+  resourceContextMenuPath,
   type ResourceRef,
   type WorkbenchModuleContribution,
 } from "pstdio-workbench/core";
@@ -29,6 +30,13 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
     ctx.resources.registerKind({ kind: DOCS_KIND, label: "Docs", icon: "Library" });
     ctx.resources.registerKind({ kind: SECTION_KIND, label: "Section", icon: "BookOpen" });
     ctx.resources.registerKind({ kind: PAGE_KIND, label: "Page", icon: "FileText" });
+    ctx.commands.registerCommand(
+      { id: "docs.copy-link", label: "Copy resource link", icon: "Copy" },
+      { execute: (_args, context) => console.log(context?.resource?.uri) },
+    );
+    ctx.layout.registerMenuItem(resourceContextMenuPath(PAGE_KIND), {
+      commandId: "docs.copy-link",
+    });
 
     ctx.resources.registerHierarchyProvider({
       id: "docs.hierarchy",

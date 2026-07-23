@@ -1,9 +1,6 @@
-import { Icon } from "@chakra-ui/react";
-import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
 import type { AttributeDescriptor, DataRendererRow, DataRendererSettings } from "@pstdio/ui/data-renderer";
 import { DiffBubble } from "@pstdio/ui/diff";
-import { resourceContextMenuPath, type WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
-import { createTreeContextMenuItems } from "@pstdio/workbench/react";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { createElement } from "react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -83,29 +80,6 @@ const executeWorkspaceQuery = (ctx: WorkbenchModuleContributionContext) => {
   return workspaces.map(toWorkspaceRow);
 };
 
-const resolveMenuIcon = (icon: TreeListActionMenuItem["icon"]) =>
-  typeof icon === "function" ? createElement(Icon, { as: icon, boxSize: "16px" }) : icon;
-
-const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextAction => ({
-  key: item.id,
-  label: item.label,
-  icon: resolveMenuIcon(item.icon),
-  endContent: item.endContent,
-  isDisabled: item.disabled,
-  separatorBefore: item.separatorBefore,
-  onClick: () => item.onAction?.(),
-});
-
-const getWorkspaceRowContextMenuActions = (
-  ctx: WorkbenchModuleContributionContext,
-  row: DashboardWorkspaceRow,
-): ResourceContextAction[] =>
-  createTreeContextMenuItems({
-    menuPath: resourceContextMenuPath("workspace"),
-    workbench: ctx,
-    context: { resource: row.resource },
-  }).map(toResourceContextAction);
-
 export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerDataRenderer<DashboardWorkspaceRow>({
     id: dashboardWidgetIds.workspaces,
@@ -120,7 +94,6 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     onRowClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
-    getRowContextMenuActions: (row) => getWorkspaceRowContextMenuActions(ctx, row),
   });
   ctx.layout.registerLocation(
     {

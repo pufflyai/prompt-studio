@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Menu } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { Fragment, type ReactElement } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowAction } from "./list-row.types";
@@ -7,6 +7,7 @@ import { SearchableActionMenu } from "./searchable-action-menu";
 interface RowActionsProps {
   actions: ListRowAction[];
   context: { sectionId?: string; nodeId?: string };
+  alwaysVisible?: boolean;
 }
 
 const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
@@ -21,14 +22,14 @@ const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
 };
 
 export const RowActions = (props: RowActionsProps) => {
-  const { actions, context } = props;
+  const { actions, alwaysVisible = false, context } = props;
   if (actions.length === 0) return null;
 
   return (
     <HStack
       gap="0"
-      opacity="0"
-      pointerEvents="none"
+      opacity={alwaysVisible ? "1" : "0"}
+      pointerEvents={alwaysVisible ? "auto" : "none"}
       _groupHover={{ opacity: "1", pointerEvents: "auto" }}
       _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
       transition="opacity 120ms ease"
@@ -48,29 +49,34 @@ export const RowActions = (props: RowActionsProps) => {
                   {action.icon}
                 </IconButton>
               </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content minW="160px" bg="bg">
-                  {action.menuItems.map((item) => (
-                    <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
-                      <Menu.Item
-                        value={item.id}
-                        disabled={item.disabled || item.readOnly}
-                        onClick={() => {
-                          if (!item.readOnly) item.onAction?.();
-                        }}
-                      >
-                        <HStack gap="2" minW="0" w="full" justify="space-between">
-                          <HStack gap="2" minW="0">
-                            {item.icon ? <Box>{item.icon as never}</Box> : null}
-                            <Box minW="0">{item.label}</Box>
-                          </HStack>
-                          {item.endContent ? <Box flexShrink={0}>{item.endContent}</Box> : null}
-                        </HStack>
-                      </Menu.Item>
-                    </Tooltip>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content minW="160px" bg="bg">
+                    {action.menuItems.map((item) => (
+                      <Fragment key={item.id}>
+                        {item.separatorBefore ? <Menu.Separator /> : null}
+                        <Tooltip content={item.description} disabled={!item.description} openDelay={300}>
+                          <Menu.Item
+                            value={item.id}
+                            disabled={item.disabled || item.readOnly}
+                            onClick={() => {
+                              if (!item.readOnly) item.onAction?.();
+                            }}
+                          >
+                            <HStack gap="2" minW="0" w="full" justify="space-between">
+                              <HStack gap="2" minW="0">
+                                {item.icon ? <Box>{item.icon as never}</Box> : null}
+                                <Box minW="0">{item.label}</Box>
+                              </HStack>
+                              {item.endContent ? <Box flexShrink={0}>{item.endContent}</Box> : null}
+                            </HStack>
+                          </Menu.Item>
+                        </Tooltip>
+                      </Fragment>
+                    ))}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
             </Menu.Root>,
           );
         }

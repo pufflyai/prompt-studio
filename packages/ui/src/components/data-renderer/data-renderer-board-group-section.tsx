@@ -101,6 +101,7 @@ export const GroupSection = (props: GroupSectionProps) => {
               >
                 <DataRendererCard
                   {...item.cardProps}
+                  contextMenuActions={item.contextMenuActions}
                   isSelected={item.id === selectedItemId}
                   draggable={canDragOut}
                   onDragStart={canDragOut ? onDragStart(item.id) : undefined}

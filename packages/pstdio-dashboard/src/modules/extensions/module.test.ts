@@ -1,10 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import {
-  createWorkbenchCore,
-  workbenchCommandPaletteMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
-} from "@pstdio/workbench/core";
+import { createWorkbenchCore, resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
@@ -82,8 +78,10 @@ describe("createExtensionsModule", () => {
 
       await workbench.resources.openResource(labResource!);
 
-      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
-      expect(headerActions.map((item) => item.label)).toEqual(["Lab: Dire bonjour"]);
+      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
+        resource: labResource,
+      });
+      expect(resourceActions.map((item) => item.label)).toEqual(["Lab: Dire bonjour"]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -91,7 +89,7 @@ describe("createExtensionsModule", () => {
     }
   });
 
-  test("mounts extension-lab routes and route-scoped header actions", async () => {
+  test("mounts extension-lab routes and route-scoped resource actions", async () => {
     const loadMetadata = mock(async () => metadata);
     const executeCommand = mock(async () => response);
     const workbench = createWorkbenchCore();
@@ -112,10 +110,12 @@ describe("createExtensionsModule", () => {
 
       await workbench.resources.openResource(labResource!);
 
-      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
-      expect(headerActions.map((item) => item.label)).toEqual(["Lab: Say hello", "Bump lab counter"]);
+      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
+        resource: labResource,
+      });
+      expect(resourceActions.map((item) => item.label)).toEqual(["Lab: Say hello", "Bump lab counter"]);
 
-      await workbench.commands.executeCommand(headerActions[0]!.commandId);
+      await workbench.commands.executeCommand(resourceActions[0]!.commandId, undefined, { resource: labResource });
 
       expect(executeCommand).toHaveBeenCalledWith(
         "project-1",
@@ -239,8 +239,10 @@ describe("createExtensionsModule command results and refresh", () => {
       const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
       await workbench.resources.openResource(labResource!);
 
-      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
-      await workbench.commands.executeCommand(headerActions[0]!.commandId);
+      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
+        resource: labResource,
+      });
+      await workbench.commands.executeCommand(resourceActions[0]!.commandId, undefined, { resource: labResource });
 
       const placement = workbench.layout
         .getLayout()

@@ -23,6 +23,10 @@ export {
 } from "./keybindings/workbench-keybinding-dispatcher";
 export type { WorkbenchMenuItem } from "./menus/menu-items";
 export { listWorkbenchMenuItems } from "./menus/menu-items";
+export {
+  createWorkbenchResourceActions,
+  useWorkbenchResourceActionResolver,
+} from "./menus/resource-actions";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";
 export { WorkbenchRegion } from "./region/region";
 export { WorkbenchRegionTabs } from "./region/region-tabs";

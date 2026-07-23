@@ -22,7 +22,7 @@ const workspaceActionCommandIds = new Set<string>([
 ]);
 
 describe("registerWorkspaceResourceActions", () => {
-  test("keeps workspace header and context menu actions in the same kernel group", () => {
+  test("registers workspace actions only beside workspace resources", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule({
@@ -42,9 +42,7 @@ describe("registerWorkspaceResourceActions", () => {
 
     const expectedActions = [...workspaceActionCommandIds].map((commandId) => ({ commandId, group: "kernel" }));
 
-    expect(headerActions.map((action) => ({ commandId: action.commandId, group: action.group }))).toEqual(
-      expectedActions,
-    );
+    expect(headerActions).toEqual([]);
     expect(contextActions.map((action) => ({ commandId: action.commandId, group: action.group }))).toEqual(
       expectedActions,
     );
@@ -141,10 +139,10 @@ describe("registerWorkspaceResourceActions", () => {
       },
     });
 
-    const defaultLabels = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
+    const defaultLabels = listWorkbenchMenuItems(workbench, resourceContextMenuPath("workspace"), {
       resource: defaultWorkspace,
     }).map((item) => item.label);
-    const worktreeLabels = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
+    const worktreeLabels = listWorkbenchMenuItems(workbench, resourceContextMenuPath("workspace"), {
       resource: worktreeWorkspace,
     }).map((item) => item.label);
 

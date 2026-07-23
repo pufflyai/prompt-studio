@@ -168,7 +168,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   const hasChildren = (item.children?.length ?? 0) > 0 || item.isContainer === true;
   const hasMenuItems = (item.menuItems?.length ?? 0) > 0;
-  const hasActions = (item.actions?.length ?? 0) > 0;
+  const hasActions = (item.actions?.length ?? 0) > 0 || (item.contextMenuItems?.length ?? 0) > 0;
   const showChevron = showExpandToggle && hasChildren;
   const isDisabled = item.disabled === true;
 

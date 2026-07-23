@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import {
-  resourceContextMenuPath,
-  workbenchCommandPaletteMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
-} from "@pstdio/workbench/core";
+import { resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,
@@ -114,6 +110,8 @@ const labRouteWhenExpression = [
   'workbench.resource.metadata.routePath == "lab"',
 ].join(" && ");
 const workspaceResourceContextMenuPath = resourceContextMenuPath("workspace");
+const extensionRouteResourceContextMenuPath = resourceContextMenuPath("extension-route");
+const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
 
 describe("dashboard workbench extension tree contributions", () => {
   test("maps project tree item records into extension-defined groups", () => {
@@ -210,7 +208,7 @@ describe("dashboard workbench extension tree contributions", () => {
 });
 
 describe("dashboard workbench extension menu contributions", () => {
-  test("maps extension route header actions to the top header with route context", () => {
+  test("maps extension route actions beside the resource with route context", () => {
     const registrations = buildDashboardExtensionMenuRegistrations(metadata);
     const headerRegistrations = registrations.filter(
       (registration) =>
@@ -222,27 +220,37 @@ describe("dashboard workbench extension menu contributions", () => {
 
     expect(headerRegistrations).toEqual([
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          commandId: "dashboard.extension.menu.extension-lab.say-hello.header",
-          group: "primary",
-          when: labRouteWhenExpression,
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: extensionRouteResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              commandId: "dashboard.extension.menu.extension-lab.say-hello.header",
+              group: "primary",
+              when: labRouteWhenExpression,
+            }),
+          }),
+        ],
       }),
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          commandId: "dashboard.extension.menu.extension-lab.counter.bump.header",
-          group: "overflow",
-          overflowLabel: "Extension actions",
-          when: labRouteWhenExpression,
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: extensionRouteResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              commandId: "dashboard.extension.menu.extension-lab.counter.bump.header",
+              group: "overflow",
+              overflowLabel: "Extension actions",
+              when: labRouteWhenExpression,
+            }),
+          }),
+        ],
       }),
     ]);
-    expect(paletteRegistration).toEqual(expect.objectContaining({ menuPath: workbenchCommandPaletteMenuPath }));
+    expect(paletteRegistration?.menuItems).toEqual([
+      expect.objectContaining({ menuPath: workbenchCommandPaletteMenuPath }),
+    ]);
   });
 
-  test("maps modern workbench nav targets used by extension-lab", () => {
+  test("keeps resource-scoped modern targets beside their resource", () => {
     const registrations = buildDashboardExtensionMenuRegistrations({
       ...metadata,
       menuContributions: [
@@ -276,26 +284,34 @@ describe("dashboard workbench extension menu contributions", () => {
 
     expect(registrations).toEqual([
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          group: "primary",
-          label: "Lab: Say hello",
-          when: labRouteWhenExpression,
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: extensionRouteResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              group: "primary",
+              label: "Lab: Say hello",
+              when: labRouteWhenExpression,
+            }),
+          }),
+        ],
       }),
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          group: "overflow",
-          label: "Bump lab counter",
-          overflowLabel: "Extension actions",
-          when: labRouteWhenExpression,
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: extensionRouteResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              group: "overflow",
+              label: "Bump lab counter",
+              overflowLabel: "Extension actions",
+              when: labRouteWhenExpression,
+            }),
+          }),
+        ],
       }),
     ]);
   });
 
-  test("maps workspace header actions only when the active resource is a workspace", () => {
+  test("maps workspace actions only beside workspace resources", () => {
     const registrations = buildDashboardExtensionMenuRegistrations(metadata);
     const workspaceRegistration = registrations.find(
       (registration) => registration.contribution.id === "extension-lab.run-review.header",
@@ -303,17 +319,12 @@ describe("dashboard workbench extension menu contributions", () => {
 
     expect(workspaceRegistration).toEqual(
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          commandId: "dashboard.extension.menu.extension-lab.run-review.header",
-          group: "primary",
-          when: 'workbench.resource.kind == "workspace"',
-        }),
-        contextMenuItems: [
+        menuItems: [
           expect.objectContaining({
             menuPath: workspaceResourceContextMenuPath,
             menuItem: expect.objectContaining({
               commandId: "dashboard.extension.menu.extension-lab.run-review.header",
+              group: "primary",
               label: "Run review",
               when: 'workbench.resource.kind == "workspace"',
             }),
@@ -359,7 +370,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
     });
   });
 
-  test("maps ticket header actions only when the active resource is a ticket", () => {
+  test("maps ticket actions only beside ticket resources", () => {
     const registrations = buildDashboardExtensionMenuRegistrations({
       ...metadata,
       commands: [
@@ -391,22 +402,30 @@ describe("dashboard workbench extension ticket menu contributions", () => {
 
     expect(registrations).toEqual([
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          group: "overflow",
-          label: "Refine ticket",
-          overflowLabel: "Ticket actions",
-          when: 'workbench.resource.kind == "ticket"',
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: ticketResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              group: "overflow",
+              label: "Refine ticket",
+              overflowLabel: "Ticket actions",
+              when: 'workbench.resource.kind == "ticket"',
+            }),
+          }),
+        ],
       }),
       expect.objectContaining({
-        menuPath: workbenchTopHeaderTrailingMenuPath,
-        menuItem: expect.objectContaining({
-          group: "overflow",
-          label: "Break into sub-tickets",
-          overflowLabel: "Ticket actions",
-          when: 'workbench.resource.kind == "ticket"',
-        }),
+        menuItems: [
+          expect.objectContaining({
+            menuPath: ticketResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              group: "overflow",
+              label: "Break into sub-tickets",
+              overflowLabel: "Ticket actions",
+              when: 'workbench.resource.kind == "ticket"',
+            }),
+          }),
+        ],
       }),
     ]);
   });

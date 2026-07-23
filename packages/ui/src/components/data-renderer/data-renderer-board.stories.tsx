@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Archive } from "lucide-react";
+import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { DataRendererBoard, type DataRendererBoardColumn } from "./data-renderer-board";
@@ -24,6 +24,16 @@ const mockColumns: DataRendererBoardColumn[] = [
     items: [
       {
         id: "t1",
+        contextMenuActions: [
+          { key: "run", label: "Run attempt", icon: <Play size={14} />, onClick: () => undefined },
+          {
+            key: "delete",
+            label: "Delete",
+            icon: <Trash2 size={14} />,
+            separatorBefore: true,
+            onClick: () => undefined,
+          },
+        ],
         cardProps: {
           title: "Set up auth",
           badges: [

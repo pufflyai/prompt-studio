@@ -12,9 +12,11 @@ import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } fro
 import type {
   DataRendererQueryState,
   RegisteredDataRendererContribution,
+  ResourceRef,
   WorkbenchCore,
   WorkbenchWidgetPlacement,
 } from "../../../core";
+import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { createDataViewQuerySequencer } from "./data-view-query";
 import { resolveDataRendererStorageKey } from "./data-view-storage";
 
@@ -53,6 +55,14 @@ const WorkbenchDataViewFrame = (props: WorkbenchDataViewFrameProps) => {
 
 const noopSubscribe = () => () => {};
 
+const isResourceRef = (resource: unknown): resource is ResourceRef =>
+  Boolean(
+    resource &&
+      typeof resource === "object" &&
+      typeof (resource as { kind?: unknown }).kind === "string" &&
+      typeof (resource as { uri?: unknown }).uri === "string",
+  );
+
 const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | AttributesSource) => {
   const source = isAttributesSource(attributes) ? attributes : undefined;
   const fallback = source ? undefined : (attributes as AttributeDescriptor[]);
@@ -63,6 +73,7 @@ const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | A
 
 export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const { workbench, contribution, placement } = props;
+  const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
   const storageKey = resolveDataRendererStorageKey(contribution.id, placement);
   const initialState = { settings: contribution.defaultSettings, filters: contribution.defaultFilters };
@@ -112,6 +123,13 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
     }
   };
 
+  const getRowContextMenuActions = (row: DataRendererRow) => {
+    const resourceActions = isResourceRef(row.resource) ? resolveResourceActions(row.resource) : [];
+    const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
+    const resourceActionLabels = new Set(resourceActions.map((action) => action.label));
+    return [...resourceActions, ...contributionActions.filter((action) => !resourceActionLabels.has(action.label))];
+  };
+
   return (
     <WorkbenchDataViewFrame usesInternalScroll={settings.viewMode === "board"}>
       <DataRenderer
@@ -129,7 +147,7 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         onReorder={contribution.onReorder}
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
-        getRowContextMenuActions={contribution.getRowContextMenuActions}
+        getRowContextMenuActions={getRowContextMenuActions}
       />
     </WorkbenchDataViewFrame>
   );

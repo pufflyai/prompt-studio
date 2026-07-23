@@ -8,6 +8,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderActions } from "./header-actions";
+import { WorkbenchBreadcrumbResourceActions } from "./resource-actions";
 
 export interface WorkbenchNavRegionControl {
   id: "sidenav" | "secondary" | "side";
@@ -120,14 +121,9 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
           <WorkbenchBreadcrumbView workbench={workbench} />
         )}
       </Box>
-      <HStack
-        data-workbench-breadcrumb-action-slot=""
-        flexShrink={0}
-        gap="2xs"
-        h="6"
-        justifyContent="center"
-        minW="6"
-      />
+      <HStack data-workbench-breadcrumb-action-slot="" flexShrink={0} gap="2xs" h="6" justifyContent="center" minW="6">
+        <WorkbenchBreadcrumbResourceActions workbench={workbench} />
+      </HStack>
       <Box flex="1" minW="0" />
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
       <WorkbenchRegionControls controls={trailingRegionControls} />

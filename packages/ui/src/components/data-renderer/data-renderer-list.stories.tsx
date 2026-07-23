@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Signal } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Play, Signal } from "lucide-react";
 import { useState } from "react";
 
 import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
@@ -21,6 +21,7 @@ const mockItems: DataRendererListItem[] = [
     statusIcon: Signal,
     statusColor: "fg.muted",
     badges: [{ attributeId: "updated", label: "Jan 21" }],
+    contextMenuActions: [{ key: "run", label: "Run attempt", icon: <Play size={14} />, onClick: () => undefined }],
   },
   {
     id: "7",

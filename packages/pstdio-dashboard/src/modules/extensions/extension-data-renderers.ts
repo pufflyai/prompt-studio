@@ -102,7 +102,7 @@ const findRowActionMenuRegistration = (
   return registrations.find(
     (registration) =>
       registration.contribution.commandId === commandId &&
-      registration.contextMenuItems.some((item) => sameMenuPath(item.menuPath, path)),
+      registration.menuItems.some((item) => sameMenuPath(item.menuPath, path)),
   );
 };
 

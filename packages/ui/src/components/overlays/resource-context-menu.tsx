@@ -1,5 +1,5 @@
 import { Menu, Portal } from "@chakra-ui/react";
-import { type ComponentProps, Fragment, type ReactNode } from "react";
+import { type ComponentProps, Fragment, type ReactElement, type ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 
 type MenuRootProps = ComponentProps<typeof Menu.Root>;
@@ -26,6 +26,68 @@ interface ResourceContextMenuProps {
   keepMountedWhenEmpty?: boolean;
 }
 
+export interface ResourceActionMenuProps {
+  actions: ResourceContextAction[];
+  children: ReactElement;
+  contentMinWidth?: string;
+  contentBackground?: string;
+  positioning?: MenuRootProps["positioning"];
+  closeOnSelect?: MenuRootProps["closeOnSelect"];
+}
+
+const ResourceMenuContent = (props: {
+  actions: ResourceContextAction[];
+  contentMinWidth: string;
+  contentBackground: string;
+}) => {
+  const { actions, contentBackground, contentMinWidth } = props;
+
+  return (
+    <Portal>
+      <Menu.Positioner>
+        <Menu.Content minW={contentMinWidth} bg={contentBackground}>
+          {actions.map((action) => (
+            <Fragment key={action.key}>
+              {action.separatorBefore ? <Menu.Separator /> : null}
+              <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
+                <ListRow
+                  asChild
+                  variant="full-width"
+                  label={action.label}
+                  icon={action.icon}
+                  endContent={action.endContent}
+                  disabled={action.isDisabled}
+                  onActivate={action.onClick}
+                />
+              </Menu.Item>
+            </Fragment>
+          ))}
+        </Menu.Content>
+      </Menu.Positioner>
+    </Portal>
+  );
+};
+
+export const ResourceActionMenu = (props: ResourceActionMenuProps) => {
+  const {
+    actions,
+    children,
+    contentMinWidth = "220px",
+    contentBackground = "bg",
+    positioning = { placement: "bottom-start" },
+    closeOnSelect,
+  } = props;
+
+  if (actions.length === 0) return children;
+
+  return (
+    <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect}>
+      <Menu.Trigger asChild>{children}</Menu.Trigger>
+      <ResourceMenuContent actions={actions} contentMinWidth={contentMinWidth} contentBackground={contentBackground} />
+    </Menu.Root>
+  );
+};
+
 export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
   const {
     actions,
@@ -45,28 +107,11 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect}>
       <Menu.ContextTrigger asChild>{children}</Menu.ContextTrigger>
       {actions.length > 0 ? (
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content minW={contentMinWidth} bg={contentBackground}>
-              {actions.map((action) => (
-                <Fragment key={action.key}>
-                  {action.separatorBefore ? <Menu.Separator /> : null}
-                  <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
-                    <ListRow
-                      asChild
-                      variant="full-width"
-                      label={action.label}
-                      icon={action.icon}
-                      endContent={action.endContent}
-                      disabled={action.isDisabled}
-                      onActivate={action.onClick}
-                    />
-                  </Menu.Item>
-                </Fragment>
-              ))}
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
+        <ResourceMenuContent
+          actions={actions}
+          contentMinWidth={contentMinWidth}
+          contentBackground={contentBackground}
+        />
       ) : null}
     </Menu.Root>
   );

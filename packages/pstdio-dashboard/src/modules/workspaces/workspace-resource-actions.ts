@@ -4,7 +4,6 @@ import {
   type WorkbenchModuleContributionContext,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
-  workbenchTopHeaderTrailingMenuPath,
 } from "@pstdio/workbench/core";
 import {
   openWorkbenchTerminal,
@@ -31,8 +30,8 @@ const workspaceLabel = (resource: ResourceRef) => {
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
 };
 
-// The board, the workspace header overflow menu, and tree context menus all run the
-// same action, so a workspace behaves identically wherever it is surfaced. The board
+// The board, selected-resource breadcrumb, and tree resource menus all run the same
+// action, so a workspace behaves identically wherever it is surfaced. The board
 // listens to synced rows, so an archived/deleted workspace disappears once the write
 // streams back — the action just fires the call.
 export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
@@ -145,18 +144,6 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributio
   );
 
   for (const action of [workspaceTerminalAction, ...workspaceActions]) {
-    ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
-      commandId: action.commandId,
-      label: action.label,
-      icon: action.icon,
-      when:
-        action.commandId === dashboardCommandIds.openWorkspaceTerminal
-          ? workspaceTerminalActionWhen
-          : workspaceActionWhen,
-      group: workspaceActionGroup,
-      overflowLabel: "Workspace actions",
-      order: action.order,
-    });
     ctx.layout.registerMenuItem(resourceContextMenuPath("workspace"), {
       commandId: action.commandId,
       label: action.label,

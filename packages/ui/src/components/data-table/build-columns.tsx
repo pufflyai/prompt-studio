@@ -1,6 +1,6 @@
 import { Icon as ChakraIcon, chakra, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
 import type { CellContext, HeaderContext, RowSelectionState } from "@tanstack/react-table";
-import { Check, CircleHelp, EllipsisVertical, Minus } from "lucide-react";
+import { Check, ChevronDown, CircleHelp, Minus } from "lucide-react";
 import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from "react";
 
 import { Checkbox } from "@/components/primitives/checkbox";
@@ -93,7 +93,7 @@ const RowActionsCell = (props: CellContext<RowData, unknown> & { actions: DataTa
     <Menu.Root>
       <Menu.Trigger asChild>
         <IconButton aria-label="Row actions" size="2xs" variant="ghost" onClick={stopControlPropagation}>
-          <ChakraIcon as={EllipsisVertical} boxSize="14px" />
+          <ChakraIcon as={ChevronDown} boxSize="14px" />
         </IconButton>
       </Menu.Trigger>
       <Portal>

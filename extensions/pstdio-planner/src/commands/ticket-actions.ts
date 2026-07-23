@@ -153,11 +153,6 @@ export const runAttemptCommand = defineCommand({
   title: "Run attempt",
   menus: [
     {
-      slot: "ticket.headerPrimary",
-      label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
-      icon: "play",
-    },
-    {
       slot: "ticket.headerOverflow",
       label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
       icon: "play",

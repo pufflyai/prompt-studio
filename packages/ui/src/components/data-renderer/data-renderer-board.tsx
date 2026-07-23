@@ -198,6 +198,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
                     >
                       <DataRendererCard
                         {...item.cardProps}
+                        contextMenuActions={item.contextMenuActions}
                         isSelected={item.id === selectedItemId}
                         draggable={column.canDragOut}
                         onDragStart={column.canDragOut ? handleDragStart(item.id) : undefined}

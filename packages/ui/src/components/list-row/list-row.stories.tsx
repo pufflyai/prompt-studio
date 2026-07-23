@@ -309,7 +309,7 @@ export const Interactions: Story = {
         />
       </Stack>
       <Stack gap="2xs">
-        <SectionLabel>Context menu (right-click)</SectionLabel>
+        <SectionLabel>Resource actions (chevron or right-click)</SectionLabel>
         <ListRow
           {...{
             ...baseItem,

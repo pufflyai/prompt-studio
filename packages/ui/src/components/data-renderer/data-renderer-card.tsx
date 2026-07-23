@@ -1,5 +1,7 @@
-import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
+import { HStack, Icon, IconButton, Stack, Text, Wrap } from "@chakra-ui/react";
+import { ChevronDown } from "lucide-react";
 import type { DragEventHandler, MouseEvent, ReactNode } from "react";
+import { ResourceActionMenu, type ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { isDataRendererCardClickSuppressed } from "./card-interaction-guard";
@@ -11,6 +13,7 @@ export interface DataRendererCardProps {
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
   workspaceBadge?: WorkspaceBadgeProps;
+  contextMenuActions?: ResourceContextAction[];
   isSelected?: boolean;
   draggable?: boolean;
   onBadgeChange?: (attributeId: string, value: unknown) => void;
@@ -25,6 +28,7 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
     badges = [],
     customSlots = [],
     workspaceBadge,
+    contextMenuActions = [],
     isSelected = false,
     draggable,
     onBadgeChange,
@@ -66,6 +70,18 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
           {title}
         </Text>
         {workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
+        {contextMenuActions.length > 0 ? (
+          <ResourceActionMenu actions={contextMenuActions} positioning={{ placement: "bottom-end" }}>
+            <IconButton
+              variant="ghost"
+              size="2xs"
+              aria-label={`Actions for ${title}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Icon as={ChevronDown} boxSize="14px" />
+            </IconButton>
+          </ResourceActionMenu>
+        ) : null}
       </HStack>
 
       {hasBadges && (

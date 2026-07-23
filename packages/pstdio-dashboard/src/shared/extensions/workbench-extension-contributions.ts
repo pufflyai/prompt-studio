@@ -41,8 +41,9 @@ type ResourceScopedMenuContribution = {
   slotId: string;
   when?: { resourceType?: string[] };
 };
-type DashboardExtensionMenuRegistration = ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number] & {
-  contextMenuItems: { menuPath: MenuPath; menuItem: MenuItem }[];
+type BaseDashboardExtensionMenuRegistration = ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number];
+type DashboardExtensionMenuRegistration = Omit<BaseDashboardExtensionMenuRegistration, "menuPath" | "menuItem"> & {
+  menuItems: { menuPath: MenuPath; menuItem: MenuItem }[];
 };
 
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata as DashboardExtensionMetadata;
@@ -202,7 +203,7 @@ const contextMenuResourceKinds = (contribution: ResourceScopedMenuContribution) 
   return slotResourceKind ? [slotResourceKind] : [];
 };
 
-const contextMenuRegistrations = (registration: ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number]) =>
+const resourceMenuRegistrations = (registration: BaseDashboardExtensionMenuRegistration) =>
   contextMenuResourceKinds(registration.contribution).map((resourceKind) => ({
     menuPath: resourceContextMenuPath(resourceKind),
     menuItem: { ...registration.menuItem },
@@ -220,13 +221,15 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
       return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
     },
-  }).map(
-    (registration): DashboardExtensionMenuRegistration => ({
-      ...registration,
+  }).map((registration): DashboardExtensionMenuRegistration => {
+    const resourceMenuItems = resourceMenuRegistrations(registration);
+    const { menuItem, menuPath, ...rest } = registration;
+    return {
+      ...rest,
       command: { ...registration.command, params: stripResourceResolvedParams(registration.command.params) },
-      contextMenuItems: contextMenuRegistrations(registration),
-    }),
-  );
+      menuItems: resourceMenuItems.length > 0 ? resourceMenuItems : [{ menuPath, menuItem }],
+    };
+  });
 
 export const buildDashboardExtensionCommandPaletteRegistrations = (metadata: DashboardExtensionMetadata) =>
   buildWorkbenchExtensionCommandPaletteRegistrations({

@@ -1,17 +1,18 @@
-import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { resourceContextMenuPath, type WorkbenchModuleContribution } from "../../core";
 import {
-  createResourceBreadcrumbItems,
-  type ResourceRef,
-  type TreeNode,
-  type WorkbenchCore,
-  type WorkbenchModuleContribution,
-} from "../../core";
-import { WorkbenchIcon } from "../../react/shared/icon";
-
-const DOCS_KIND = "onboarding.breadcrumb.docs";
-const SECTION_KIND = "onboarding.breadcrumb.section";
-const PAGE_KIND = "onboarding.breadcrumb.session";
+  breadcrumbItemsFor,
+  DOCS_KIND,
+  docsResource,
+  findPageBySectionPath,
+  findSection,
+  PAGE_KIND,
+  pageResource,
+  SECTION_KIND,
+  sectionResource,
+  sections,
+  sectionTreeNode,
+} from "./breadcrumb-data";
+import { DocsHomeWidget, PageWidget, SectionWidget } from "./breadcrumb-widgets";
 
 const BREADCRUMB_TREE_ID = "onboarding.breadcrumb.tree";
 const DOCS_HOME_WIDGET_ID = "onboarding.breadcrumb.home";
@@ -20,254 +21,6 @@ const SECTION_WIDGET_ID = "onboarding.breadcrumb.section";
 const SECTION_RENDERER_ID = "onboarding.breadcrumb.section.renderer";
 const PAGE_WIDGET_ID = "onboarding.breadcrumb.page";
 const PAGE_RENDERER_ID = "onboarding.breadcrumb.page.renderer";
-
-interface OnboardingPage {
-  id: string;
-  label: string;
-  body: string;
-  status: "in_progress" | "completed";
-}
-
-interface OnboardingSection {
-  id: string;
-  label: string;
-  icon: string;
-  description: string;
-  pages: OnboardingPage[];
-}
-
-const sections: OnboardingSection[] = [
-  {
-    id: "concepts",
-    label: "Concepts",
-    icon: "BookOpen",
-    description: "The vocabulary the workbench shell is built on.",
-    pages: [
-      {
-        id: "regions",
-        label: "Regions",
-        body: "Named layout slots widgets pin themselves to.",
-        status: "in_progress",
-      },
-      {
-        id: "widgets",
-        label: "Widgets",
-        body: "Registrations that place a renderer into an region.",
-        status: "completed",
-      },
-    ],
-  },
-  {
-    id: "surfaces",
-    label: "Surfaces",
-    icon: "PanelsTopLeft",
-    description: "Where contributions show up in the running shell.",
-    pages: [
-      {
-        id: "menus",
-        label: "Menus",
-        body: "Command-backed actions on header and tree paths.",
-        status: "in_progress",
-      },
-      {
-        id: "commands",
-        label: "Commands",
-        body: "Executable actions wired to menus and shortcuts.",
-        status: "completed",
-      },
-    ],
-  },
-];
-
-const docsResource: ResourceRef = {
-  kind: DOCS_KIND,
-  uri: `${DOCS_KIND}:root`,
-  id: "root",
-  label: "Docs",
-  icon: "Library",
-};
-
-const sectionResource = (section: OnboardingSection): ResourceRef => ({
-  kind: SECTION_KIND,
-  uri: `${SECTION_KIND}:${section.id}`,
-  id: section.id,
-  label: section.label,
-  icon: section.icon,
-  metadata: { description: section.description },
-});
-
-const pageResource = (section: OnboardingSection, page: OnboardingPage): ResourceRef => ({
-  kind: PAGE_KIND,
-  uri: `${PAGE_KIND}:${section.id}/${page.id}`,
-  id: `${section.id}/${page.id}`,
-  label: page.label,
-  icon: "MessageCircle",
-  metadata: { sectionId: section.id, body: page.body, status: page.status },
-});
-
-const findSection = (sectionId: string | undefined) => sections.find((section) => section.id === sectionId);
-
-const findPageBySectionPath = (compositeId: string | undefined) => {
-  if (!compositeId) return undefined;
-  const [sectionId, pageId] = compositeId.split("/");
-  const section = findSection(sectionId);
-  const page = section?.pages.find((p) => p.id === pageId);
-  if (!section || !page) return undefined;
-  return { section, page };
-};
-
-const pageTreeNode = (section: OnboardingSection, page: OnboardingPage): TreeNode => {
-  const resource = pageResource(section, page);
-  return {
-    id: resource.uri,
-    label: page.label,
-    icon: "MessageCircle",
-    resource,
-  };
-};
-
-const breadcrumbItemsFor = (resources: Parameters<typeof createResourceBreadcrumbItems>[0], resource: ResourceRef) => {
-  const items = createResourceBreadcrumbItems(resources, resource);
-  if (resource.kind === PAGE_KIND) items[items.length - 1]!.indicator = "session-status";
-  return items;
-};
-
-const sectionTreeNode = (section: OnboardingSection): TreeNode => ({
-  id: sectionResource(section).uri,
-  label: section.label,
-  icon: section.icon,
-  resource: sectionResource(section),
-  children: section.pages.map((page) => pageTreeNode(section, page)),
-});
-
-const NavCard = (props: { icon?: string; title: string; description?: string; onClick: () => void }) => {
-  const { icon, title, description, onClick } = props;
-
-  return (
-    <Box
-      as="button"
-      onClick={onClick}
-      textAlign="left"
-      w="full"
-      p="md"
-      borderWidth="1px"
-      borderColor="border.subtle"
-      borderRadius="md"
-      bg="bg"
-      _hover={{ bg: "bg.subtle", borderColor: "border.emphasized" }}
-    >
-      <HStack gap="sm" align="flex-start">
-        {icon ? (
-          <Text as="span" color="fg.muted" mt="3xs">
-            <WorkbenchIcon name={icon} size={18} />
-          </Text>
-        ) : null}
-        <Stack gap="3xs" minW="0">
-          <Text textStyle="title/XS/semibold">{title}</Text>
-          {description ? (
-            <Text textStyle="paragraph/S/regular" color="fg.muted">
-              {description}
-            </Text>
-          ) : null}
-        </Stack>
-      </HStack>
-    </Box>
-  );
-};
-
-const DocsHomeWidget = (props: { workbench: WorkbenchCore }) => {
-  const { workbench } = props;
-
-  return (
-    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
-      <Stack gap="3xs">
-        <Text textStyle="title/S/semibold">Docs</Text>
-        <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Pick a category to drill in. The breadcrumb trail above mirrors the path.
-        </Text>
-      </Stack>
-      <Stack gap="sm">
-        {sections.map((section) => (
-          <NavCard
-            key={section.id}
-            icon={section.icon}
-            title={section.label}
-            description={section.description}
-            onClick={() => void workbench.resources.openResource(sectionResource(section))}
-          />
-        ))}
-      </Stack>
-    </ScrollArea>
-  );
-};
-
-const SectionWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef | undefined }) => {
-  const { workbench, resource } = props;
-  const section = findSection(typeof resource?.id === "string" ? resource.id : undefined);
-
-  if (!section) {
-    return (
-      <Stack h="full" p="lg" gap="sm" bg="bg">
-        <Text textStyle="title/S/semibold">Unknown section</Text>
-        <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Open a category from the docs tree.
-        </Text>
-      </Stack>
-    );
-  }
-
-  return (
-    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
-      <Stack gap="3xs">
-        <Text textStyle="title/S/semibold">{section.label}</Text>
-        <Text textStyle="paragraph/M/regular" color="fg.muted">
-          {section.description}
-        </Text>
-      </Stack>
-      <Stack gap="sm">
-        {section.pages.map((page) => (
-          <NavCard
-            key={page.id}
-            icon="FileText"
-            title={page.label}
-            description={page.body}
-            onClick={() => void workbench.resources.openResource(pageResource(section, page))}
-          />
-        ))}
-      </Stack>
-    </ScrollArea>
-  );
-};
-
-const PageWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef | undefined }) => {
-  const { workbench, resource } = props;
-  const match = findPageBySectionPath(typeof resource?.id === "string" ? resource.id : undefined);
-  const body = match?.page.body ?? "Open a page from the docs tree.";
-
-  return (
-    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
-      <Stack gap="3xs">
-        <Text textStyle="title/S/semibold">{resource?.label ?? "Docs"}</Text>
-        <Text textStyle="paragraph/M/regular">{body}</Text>
-        <Code colorPalette="gray">{resource?.uri ?? "no resource"}</Code>
-      </Stack>
-      {match ? (
-        <HStack gap="xs">
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => void workbench.resources.openResource(sectionResource(match.section))}
-          >
-            Back to {match.section.label}
-          </Button>
-          <Button size="xs" variant="ghost" onClick={() => void workbench.resources.openResource(docsResource)}>
-            Docs home
-          </Button>
-        </HStack>
-      ) : null}
-    </ScrollArea>
-  );
-};
 
 export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.breadcrumb",
@@ -284,6 +37,42 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
         return match ? sectionResource(match.section) : undefined;
       },
     });
+    ctx.commands.registerCommand(
+      { id: "onboarding.breadcrumb.copy-link", label: "Copy resource link", icon: "Copy" },
+      {
+        execute: (_args, context) => {
+          if (!context?.resource) return;
+          ctx.notifications.show({
+            level: "success",
+            title: "Resource link copied",
+            message: context.resource.uri,
+          });
+        },
+      },
+    );
+    ctx.commands.registerCommand(
+      { id: "onboarding.breadcrumb.open-side", label: "Open beside current resource", icon: "PanelRightOpen" },
+      {
+        execute: (_args, context) => {
+          if (!context?.resource) return;
+          ctx.notifications.show({
+            level: "info",
+            title: "Resource action",
+            message: `Opened ${context.resource.label ?? context.resource.kind} beside the current resource.`,
+          });
+        },
+      },
+    );
+    for (const kind of [SECTION_KIND, PAGE_KIND]) {
+      ctx.layout.registerMenuItem(resourceContextMenuPath(kind), {
+        commandId: "onboarding.breadcrumb.copy-link",
+        order: 10,
+      });
+      ctx.layout.registerMenuItem(resourceContextMenuPath(kind), {
+        commandId: "onboarding.breadcrumb.open-side",
+        order: 20,
+      });
+    }
 
     // Each opener swaps content into the active main tab via replaceActive so
     // walking up and down the trail does not accumulate one tab per category.

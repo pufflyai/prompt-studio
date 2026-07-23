@@ -1,0 +1,116 @@
+import { rmSync } from "node:fs";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+
+const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
+const apiBase = `http://localhost:${apiPort}`;
+
+const createProject = async (request: APIRequestContext) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: { name: "PS-179 Resource Actions" },
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
+};
+
+const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
+  await page.addInitScript(
+    ({ selectedProjectId, selectedRepoId }) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${selectedProjectId}/values`,
+        JSON.stringify({
+          state: {
+            lastSelectedAgent: "pstdio.extension-lab.fake",
+            lastSelectedModels: [],
+            lastSelectedRepo: selectedRepoId,
+            lastSelectedBranches: [],
+            sessionModalState: "closed",
+            selectedSessionId: null,
+          },
+          version: 0,
+        }),
+      );
+    },
+    { selectedProjectId: projectId, selectedRepoId: repoId },
+  );
+};
+
+const expectMenuItems = async (page: Page, labels: string[]) => {
+  for (const label of labels) {
+    await expect(page.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
+  }
+};
+
+test("PS-179 exposes the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  const repoRoot = createGitRepo("pstdio-ps-179-", "resource actions e2e");
+  const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-179-repo", repoRoot);
+
+  try {
+    const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+    const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;
+    const ticket = await createPlannerTicket(request, apiBase, project.id, {
+      content: "PS-179 keeps actions beside resources",
+      statusId,
+    });
+    const attempt = await createPlannerAttempt(request, apiBase, project.id, {
+      ticketId: ticket.id,
+      repoId: repo.id,
+      mode: "worktree",
+    });
+
+    await prepareDashboard(page, project.id, repo.id);
+    await page.goto(`/projects/${project.id}/tickets`);
+
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+    const ticketCard = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible({ timeout: 30_000 });
+    const ticketCardActions = ticketCard.getByRole("button", {
+      name: `Actions for ${ticket.title}`,
+      exact: true,
+    });
+    await ticketCardActions.click();
+    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
+    await ticketCardActions.click();
+    await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
+
+    await ticketCard.getByText(ticket.title, { exact: true }).click();
+    const breadcrumbAction = page.locator("[data-workbench-breadcrumb-resource-actions]");
+    await expect(breadcrumbAction).toBeVisible();
+    await breadcrumbAction.click();
+    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
+    await breadcrumbAction.click();
+    await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
+
+    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    await sidenav
+      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
+      .first()
+      .click();
+    const workspaceRow = page.getByRole("option").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
+    await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
+    const workspaceRowActions = workspaceRow.getByRole("button", { name: "Resource actions", exact: true });
+    await workspaceRowActions.click();
+    await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
+    await workspaceRowActions.click();
+
+    await workspaceRow.getByRole("paragraph").filter({ hasText: attempt.workspace.workspace_shorthand }).click();
+    await expect(breadcrumbAction).toBeVisible();
+    await breadcrumbAction.click();
+    await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
+    await breadcrumbAction.click();
+    await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
+
+    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Tickets");
+    await expect(breadcrumbAction).toHaveCount(0);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
