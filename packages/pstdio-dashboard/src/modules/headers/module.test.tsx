@@ -4,15 +4,15 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the dashboard sidenav header", () => {
+  test("pins the project selector in the global navigation header", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createHeadersModule());
 
     const layout = workbench.layout.getLayout();
-    expect(layout.regions["sidenav-header"].widgets).toContainEqual(
+    expect(layout.regions.nav.widgets).toContainEqual(
       expect.objectContaining({
-        contributionId: dashboardWidgetIds.sidenavHeader,
+        contributionId: dashboardWidgetIds.projectHeader,
         pinned: true,
       }),
     );

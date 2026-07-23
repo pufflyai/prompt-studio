@@ -46,8 +46,8 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
               flexShrink={0}
               gap="xs"
               overflowX="hidden"
-              // Full-bleed: sidenav-header content (e.g. the project switcher) owns its own padding and
-              // fills the header height, so the container adds none of its own horizontally.
+              // Full-bleed: sidenav-header content owns its own padding and fills the header height,
+              // so the container adds none of its own horizontally.
               px="0"
               // Size to content so a multi-row sidenav-header (e.g. a stacked action cluster) is not
               // clipped to the single-row height; single-row headers stay at the variant height.

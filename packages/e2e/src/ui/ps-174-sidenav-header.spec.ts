@@ -103,8 +103,14 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await page.goto(`/projects/${project.id}/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const projectButton = sidenav.getByRole("button", { name: /PS-174 Sidenav$/ });
+  const nav = page.locator('[data-workbench-region="nav"]');
+  const projectButton = nav.getByRole("button", { name: /PS-174 Sidenav$/ });
   await expect(projectButton).toBeVisible({ timeout: 30_000 });
+  const projectBox = await projectButton.boundingBox();
+  const breadcrumbBox = await nav.getByRole("navigation", { name: "breadcrumb" }).boundingBox();
+  expect(projectBox).not.toBeNull();
+  expect(breadcrumbBox).not.toBeNull();
+  expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
   await expectGlobalHeader(sidenav);
   await expect(sidenav.getByRole("option", { name: "Lab mode", exact: true })).toBeVisible();
 
@@ -145,11 +151,11 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
   await page.goto(`/projects/${project.id}/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const projectButton = sidenav.getByRole("button", { name: /PS-174 Sidenav$/ });
+  const projectButton = page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /PS-174 Sidenav$/ });
   await expect(projectButton).toBeVisible({ timeout: 30_000 });
   await expectGlobalHeader(sidenav);
 
-  await projectButton.click({ button: "right" });
+  await row(sidenav, "Search").click({ button: "right" });
   const searchToggle = page.getByRole("menuitem", { name: /Search/ });
   await expect(searchToggle).toBeVisible();
   await searchToggle.click();
@@ -222,7 +228,9 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
       await page.goto(storyUrl(baseUrl, storyId));
 
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
-      await expect(sidenav.getByRole("button", { name: /Prompt Studio$/ })).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
+      ).toBeVisible({ timeout: 30_000 });
       await expectGlobalHeader(sidenav);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
