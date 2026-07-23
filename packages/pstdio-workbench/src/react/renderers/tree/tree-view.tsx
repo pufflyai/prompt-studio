@@ -121,6 +121,46 @@ const navigateTreeNode = (
     .catch(context.onOpenResourceError);
 };
 
+const useTreeData = (workbench: WorkbenchCore, treeViewId: string, resource?: ResourceRef, viewId?: string) => {
+  const [header, setHeader] = useState<TreeNode[]>([]);
+  const [body, setBody] = useState<TreeViewSection[]>([]);
+  const [footer, setFooter] = useState<TreeNode[]>([]);
+  const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
+  const [loading, setLoading] = useState(true);
+  const loadedTreeIdRef = useRef<string | null>(null);
+  const loadRevisionRef = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    expandDefaultTreeSections(workbench.renderers, treeViewId);
+
+    const loadTree = () => {
+      const loadRevision = ++loadRevisionRef.current;
+      if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
+      void loadTreeData(workbench.renderers, treeViewId, { resource, viewId }).then((data) => {
+        if (cancelled || loadRevision !== loadRevisionRef.current) return;
+        loadedTreeIdRef.current = treeViewId;
+        setHeader(data?.header ?? []);
+        setBody(data?.body ?? []);
+        setFooter(data?.footer ?? []);
+        setChildrenByNodeId({});
+        setLoading(false);
+      });
+    };
+
+    loadTree();
+    const disposable = workbench.renderers.onDidRefresh((event) => {
+      if (event.treeId === treeViewId) loadTree();
+    });
+    return () => {
+      cancelled = true;
+      disposable.dispose();
+    };
+  }, [resource, viewId, workbench, treeViewId]);
+
+  return { body, childrenByNodeId, footer, header, loading, setChildrenByNodeId };
+};
+
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const {
     workbench,
@@ -137,51 +177,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const treeState =
     useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
-  const [header, setHeader] = useState<TreeNode[]>([]);
-  const [body, setBody] = useState<TreeViewSection[]>([]);
-  const [footer, setFooter] = useState<TreeNode[]>([]);
-  const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
-  const [loading, setLoading] = useState(true);
+  const { body, childrenByNodeId, footer, header, loading, setChildrenByNodeId } = useTreeData(
+    workbench,
+    treeViewId,
+    resource,
+    viewId,
+  );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
-  const loadedTreeIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    expandDefaultTreeSections(workbench.renderers, treeViewId);
-
-    const loadTree = () => {
-      // Reloads (selection or refresh) keep the current content visible so the
-      // tree never blanks between items; only the first load shows the spinner.
-      if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
-      void loadTreeData(workbench.renderers, treeViewId, { resource, viewId }).then((data) => {
-        if (cancelled) return;
-        loadedTreeIdRef.current = treeViewId;
-        if (!data) {
-          setHeader([]);
-          setBody([]);
-          setFooter([]);
-          setChildrenByNodeId({});
-          setLoading(false);
-          return;
-        }
-        setHeader(data.header);
-        setBody(data.body);
-        setFooter(data.footer);
-        setChildrenByNodeId({});
-        setLoading(false);
-      });
-    };
-
-    loadTree();
-    const disposable = workbench.renderers.onDidRefresh((event) => {
-      if (event.treeId === treeViewId) loadTree();
-    });
-
-    return () => {
-      cancelled = true;
-      disposable.dispose();
-    };
-  }, [resource, viewId, workbench, treeViewId]);
 
   const adapterContext = {
     workbench,

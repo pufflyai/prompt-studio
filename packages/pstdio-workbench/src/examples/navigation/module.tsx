@@ -10,16 +10,50 @@ const TREE_WIDGET_ID = "navigation.example.workspace-tree";
 const FOCUS_MAIN_COMMAND_ID = "navigation.example.focus-main";
 
 const TICKET_KIND = "navigation.example.ticket";
+const AGGREGATE_SCOPE = "project/demo/mode/tickets/aggregate/tickets";
 
-const TicketWidget = (props: { uri: string }) => (
-  <Stack p="lg" gap="sm">
-    <Text textStyle="title/S/semibold">Ticket viewer</Text>
-    <Text textStyle="paragraph/M/regular">
-      Opened via <Code colorPalette="gray">openResource</Code>.
-    </Text>
-    <Code colorPalette="gray">{props.uri}</Code>
-  </Stack>
-);
+const resourceScope = (uri: string) => `project/demo/mode/tickets/resource/${uri}`;
+
+const switchLayoutScope = (workbench: WorkbenchCore, scope: string) => {
+  workbench.panels.setPersistenceScope(scope);
+  workbench.layout.setPersistenceScope(scope, {
+    carryRegionState: ["sidenav"],
+  });
+};
+
+const navigateToTicket = (workbench: WorkbenchCore, id: string) =>
+  workbench.navigation.navigate(`nav://resource?id=${id}`).catch((error) => {
+    workbench.notifications.show({
+      level: "error",
+      title: "Navigation failed",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  });
+
+const TicketWidget = (props: { uri: string; workbench: WorkbenchCore }) => {
+  const { uri, workbench } = props;
+  return (
+    <Stack p="lg" gap="sm">
+      <Text textStyle="title/S/semibold">Ticket viewer</Text>
+      <Text textStyle="paragraph/M/regular">
+        Navigation selects the resource-owned layout and Panel scope before calling{" "}
+        <Code colorPalette="gray">openResource</Code>.
+      </Text>
+      <Code colorPalette="gray">{uri}</Code>
+      <HStack gap="sm" wrap="wrap">
+        <Button size="sm" onClick={() => navigateToTicket(workbench, "PS-100")}>
+          Open PS-100
+        </Button>
+        <Button size="sm" onClick={() => navigateToTicket(workbench, "PS-200")}>
+          Open PS-200
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => switchLayoutScope(workbench, AGGREGATE_SCOPE)}>
+          Return to tickets
+        </Button>
+      </HStack>
+    </Stack>
+  );
+};
 
 const TreeWidget = () => (
   <Stack p="md" gap="xs">
@@ -92,17 +126,33 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
   id: "navigation.example",
   activate(ctx) {
     ctx.commands.registerCommand(
-      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main region", category: "Navigation", icon: "Crosshair" },
+      {
+        id: FOCUS_MAIN_COMMAND_ID,
+        label: "Focus main region",
+        category: "Navigation",
+        icon: "Crosshair",
+      },
       { execute: () => ctx.focus.setActiveRegion("main") },
     );
 
-    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "component" });
+    ctx.resources.registerKind({
+      kind: TICKET_KIND,
+      label: "Ticket",
+      icon: "component",
+    });
 
     ctx.resources.registerOpener({
       id: "navigation.example.ticket-opener",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource) => {
-        ctx.layout.openWidget(TICKET_WIDGET_ID, { resource, title: resource.label ?? resource.uri });
+        ctx.panels.setPersistenceScope(resourceScope(resource.uri));
+        ctx.layout.setPersistenceScope(resourceScope(resource.uri), {
+          carryRegionState: ["sidenav"],
+        });
+        ctx.layout.openWidget(TICKET_WIDGET_ID, {
+          resource,
+          title: resource.label ?? resource.uri,
+        });
       },
     });
 
@@ -113,7 +163,9 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
 
     ctx.renderers.registerRenderer({
       id: TICKET_RENDERER_ID,
-      render: ({ placement }) => <TicketWidget uri={placement.resource?.uri ?? placement.widgetId} />,
+      render: ({ placement, workbench }) => (
+        <TicketWidget workbench={workbench} uri={placement.resource?.uri ?? placement.widgetId} />
+      ),
     });
 
     ctx.renderers.registerRenderer({
@@ -150,7 +202,9 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
 
     // Short view ids that callers use in URLs, mapped to the real widget id
     // registered above. Keeps demo URLs readable.
-    const viewIdByAlias: Record<string, string> = { "workspace-tree": TREE_WIDGET_ID };
+    const viewIdByAlias: Record<string, string> = {
+      "workspace-tree": TREE_WIDGET_ID,
+    };
     const resolveViewId = (alias: string) => viewIdByAlias[alias] ?? alias;
 
     ctx.navigation.registerParser({
@@ -196,7 +250,10 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
                   icon: "component",
                 },
               },
-              { kind: "view", widgetId: resolveViewId(viewParam ?? "workspace-tree") },
+              {
+                kind: "view",
+                widgetId: resolveViewId(viewParam ?? "workspace-tree"),
+              },
             ],
           };
         }
@@ -209,6 +266,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       group: "Navigation",
     });
 
+    ctx.panels.setPersistenceScope(AGGREGATE_SCOPE);
+    ctx.layout.setPersistenceScope(AGGREGATE_SCOPE);
     ctx.layout.openWidget(HOME_WIDGET_ID);
   },
 });

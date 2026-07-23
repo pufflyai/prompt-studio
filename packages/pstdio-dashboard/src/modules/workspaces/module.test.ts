@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -234,6 +235,7 @@ describe("createWorkspacesModule sidenav state", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    syncDashboardLayoutPersistenceScope(workbench);
     workbench.panels.setOpen("sidenav", false);
     workbench.layout.setRegionVisible("sidenav", false);
 

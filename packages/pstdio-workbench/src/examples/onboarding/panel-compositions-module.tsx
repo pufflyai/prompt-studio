@@ -7,6 +7,7 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
   WorkbenchPanelMenuDefinition,
+  WorkbenchRegion,
 } from "../../core";
 import { createWorkbenchCore } from "../../core";
 
@@ -27,15 +28,59 @@ type CompositionKind =
   | "floating-panel-free"
   | "cross-panel-history";
 
-const resources = [
-  { kind: LOCATION_KIND, uri: `${LOCATION_KIND}:alpha`, id: "alpha", label: "Alpha location", icon: "Folder" },
-  { kind: LOCATION_KIND, uri: `${LOCATION_KIND}:beta`, id: "beta", label: "Beta location", icon: "Folder" },
+export const resources = [
+  {
+    kind: LOCATION_KIND,
+    uri: `${LOCATION_KIND}:alpha`,
+    id: "alpha",
+    label: "Alpha location",
+    icon: "Folder",
+  },
+  {
+    kind: LOCATION_KIND,
+    uri: `${LOCATION_KIND}:beta`,
+    id: "beta",
+    label: "Beta location",
+    icon: "Folder",
+  },
 ];
+
+const RESOURCE_SCOPE_PREFIX = "project/demo/mode/locations/resource/";
+const projectOwnedRegions: WorkbenchRegion[] = [
+  "nav",
+  "sidenav-header",
+  "sidenav",
+  "side-header",
+  "side-left-menu",
+  "side",
+  "side-right-menu",
+  "status",
+];
+
+const openCompositionResource = (workbench: WorkbenchCore, resource: (typeof resources)[number]) => {
+  if (workbench.layout.getPersistenceScope()?.startsWith(RESOURCE_SCOPE_PREFIX)) {
+    const scope = `${RESOURCE_SCOPE_PREFIX}${resource.uri}`;
+    workbench.panels.setPersistenceScope(scope);
+    workbench.layout.setPersistenceScope(scope, {
+      carryRegionState: projectOwnedRegions,
+    });
+  }
+  void workbench.resources.openResource(resource, { replaceActive: true });
+};
 
 const CompositionContent = (props: { workbench: WorkbenchCore; title: string }) => {
   const { title, workbench } = props;
   return (
-    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
+    <ScrollArea
+      h="full"
+      bg="bg"
+      contentProps={{
+        p: "lg",
+        display: "flex",
+        flexDirection: "column",
+        gap: "md",
+      }}
+    >
       <Stack gap="xs">
         <Text textStyle="title/M/semibold">{title}</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -49,7 +94,7 @@ const CompositionContent = (props: { workbench: WorkbenchCore; title: string }) 
             key={resource.id}
             size="sm"
             variant={workbench.getPrimaryResource()?.id === resource.id ? "primary" : "outline"}
-            onClick={() => void workbench.resources.openResource(resource, { replaceActive: true })}
+            onClick={() => openCompositionResource(workbench, resource)}
           >
             {resource.label}
           </Button>
@@ -103,7 +148,9 @@ interface SubPanelFixtureDefinition {
   id: string;
   title: string;
   icon: string;
-  panelMenus: readonly (Omit<WorkbenchPanelMenuDefinition, "id"> & { key: string })[];
+  panelMenus: readonly (Omit<WorkbenchPanelMenuDefinition, "id"> & {
+    key: string;
+  })[];
 }
 
 const subPanelDefinitions = (kind: CompositionKind): SubPanelFixtureDefinition[] => [
@@ -173,7 +220,9 @@ const openPanelCompositionScenario = (
         (placement) => placement.contributionId === "onboarding.panel-composition.main.notes.tools",
       );
     if (notesMenu) workbench.panels.setOpen(`panel-menu:${notesMenu.widgetId}`, false);
-    void workbench.resources.openResource(resources[1], { replaceActive: true });
+    void workbench.resources.openResource(resources[1], {
+      replaceActive: true,
+    });
     workbench.layout.openWidget("onboarding.panel-composition.main.reports");
     workbench.history.goBack();
     workbench.history.goBack();
@@ -181,7 +230,12 @@ const openPanelCompositionScenario = (
 };
 
 const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
-  ctx.resources.registerKind({ kind: LOCATION_KIND, label: "Location", icon: "Folder", surface: "primary" });
+  ctx.resources.registerKind({
+    kind: LOCATION_KIND,
+    label: "Location",
+    icon: "Folder",
+    surface: "primary",
+  });
   ctx.resources.registerOpener({
     id: `onboarding.panel-composition.${kind}.opener`,
     canOpen: (resource) => resource.kind === LOCATION_KIND,
@@ -234,7 +288,10 @@ const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext, kind:
   }
 };
 
-const createPanelCompositionModule = (kind: CompositionKind, openInitial = true): WorkbenchModuleContribution => ({
+export const createPanelCompositionModule = (
+  kind: CompositionKind,
+  openInitial = true,
+): WorkbenchModuleContribution => ({
   id: `onboarding.panel-composition.${kind}`,
   activate(ctx) {
     const flags = compositionFlags(kind);
@@ -270,7 +327,10 @@ const createMemoryPersistence = () => {
 
 export const createRestoredPanelCompositionWorkbench = (afterBack: boolean) => {
   const persistence = createMemoryPersistence();
-  const first = createWorkbenchCore({ historyPersistence: persistence.history, layoutPersistence: persistence.layout });
+  const first = createWorkbenchCore({
+    historyPersistence: persistence.history,
+    layoutPersistence: persistence.layout,
+  });
   first.registerModule(createPanelCompositionModule("cross-panel-history", false));
   first.layout.setPersistenceScope("project:alpha");
   first.history.setPersistenceScope("project:alpha");
@@ -288,26 +348,4 @@ export const createRestoredPanelCompositionWorkbench = (afterBack: boolean) => {
   restored.history.restore();
   restored.sessionPanel.setMode("attached");
   return restored;
-};
-
-export const createProjectIsolatedPanelCompositionWorkbench = () => {
-  const persistence = createMemoryPersistence();
-  const workbench = createWorkbenchCore({
-    historyPersistence: persistence.history,
-    layoutPersistence: persistence.layout,
-  });
-  workbench.registerModule(createPanelCompositionModule("open", false));
-  workbench.layout.setPersistenceScope("project:alpha");
-  workbench.history.setPersistenceScope("project:alpha");
-  openPanelCompositionScenario(workbench, "open");
-  workbench.history.flush();
-  workbench.layout.setPersistenceScope("project:beta");
-  workbench.history.setPersistenceScope("project:beta");
-  void workbench.resources.openResource(resources[1]);
-  workbench.layout.openWidget("onboarding.panel-composition.main.reports");
-  workbench.history.flush();
-  workbench.layout.setPersistenceScope("project:alpha");
-  workbench.history.setPersistenceScope("project:alpha");
-  workbench.history.restore();
-  return workbench;
 };

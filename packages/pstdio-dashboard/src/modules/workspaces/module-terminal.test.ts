@@ -11,7 +11,7 @@ import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule terminal integration", () => {
   test("opening a workspace ensures a terminal without reopening a closed Secondary Panel", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbenchCore({ defaultPanelOpenByRegionId: { secondary: false } });
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",

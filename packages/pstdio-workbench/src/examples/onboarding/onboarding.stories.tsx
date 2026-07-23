@@ -31,11 +31,8 @@ import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
 import { createPaletteResourcesModule } from "./palette-resources-module";
 import { paletteResourcesSource } from "./palette-resources-source";
-import {
-  createPanelCompositionWorkbench,
-  createProjectIsolatedPanelCompositionWorkbench,
-  createRestoredPanelCompositionWorkbench,
-} from "./panel-compositions-module";
+import { createPanelCompositionWorkbench, createRestoredPanelCompositionWorkbench } from "./panel-compositions-module";
+import { createResourceIsolatedPanelCompositionWorkbench } from "./resource-panel-restore-workbench";
 import { settingsSource } from "./settings-source";
 import { createSidePanelsModule } from "./side-panels-module";
 import { sidePanelsSource } from "./side-panels-source";
@@ -108,7 +105,7 @@ const panelCompositionWorkbenches = {
   crossPanelHistory: createPanelCompositionWorkbench("cross-panel-history"),
   refreshEnd: createRestoredPanelCompositionWorkbench(false),
   refreshAfterBack: createRestoredPanelCompositionWorkbench(true),
-  projectIsolation: createProjectIsolatedPanelCompositionWorkbench(),
+  resourceIsolation: createResourceIsolatedPanelCompositionWorkbench(),
 };
 const settingsWorkbench = createWorkbench(createSettingsModule());
 const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
@@ -268,9 +265,9 @@ export const RefreshAfterBack: Story = {
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.refreshAfterBack} />,
 };
 
-export const ProjectHistoryIsolation: Story = {
-  name: "14.13 Project history isolation",
-  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.projectIsolation} />,
+export const ResourcePanelRestore: Story = {
+  name: "14.13 Resource Panel restore",
+  render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.resourceIsolation} />,
 };
 
 export const Settings: Story = {

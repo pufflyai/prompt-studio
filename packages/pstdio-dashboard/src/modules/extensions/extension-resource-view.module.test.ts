@@ -117,7 +117,7 @@ describe("createExtensionsModule resource views", () => {
 
       const rightMenu = workbench.layout.getLayout().regions["main-right-menu"];
 
-      expect(rightMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-10", "PS-11"]);
+      expect(rightMenu.widgets.map((widget) => widget.resource?.id)).toEqual(["PS-11"]);
       expect(rightMenu.widgets.find((widget) => widget.widgetId === rightMenu.activeWidgetId)?.resource?.id).toBe(
         "PS-11",
       );

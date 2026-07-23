@@ -17,7 +17,13 @@ export interface WorkbenchStorageLike {
   removeItem?(key: string): void;
 }
 
-export type WorkbenchStoragePersistenceKind = "history" | "layout" | "panels" | "tree" | "last-resource";
+export type WorkbenchStoragePersistenceKind =
+  | "history"
+  | "layout"
+  | "layout-resource-index"
+  | "panels"
+  | "tree"
+  | "last-resource";
 
 interface PersistedWorkbenchLayout {
   version: 1;
@@ -25,8 +31,20 @@ interface PersistedWorkbenchLayout {
 }
 
 const WORKBENCH_LAYOUT_VERSION = 1 as const;
+const WORKBENCH_LAYOUT_RESOURCE_INDEX_VERSION = 1 as const;
+const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
+
+interface PersistedWorkbenchLayoutResourceIndex {
+  version: 1;
+  scopes: string[];
+}
 
 interface CreateWorkbenchStoragePersistenceInput {
+  debounceMs?: number;
+  eventTarget?: {
+    addEventListener(type: "pagehide", listener: () => void): void;
+    removeEventListener(type: "pagehide", listener: () => void): void;
+  };
   namespace: string;
   storage?: WorkbenchStorageLike;
 }
@@ -82,17 +100,92 @@ export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
+  const pending = new Map<string, { raw: string; scope: string | undefined }>();
+  const debounceMs = input.debounceMs ?? 250;
+  const eventTarget =
+    input.eventTarget ??
+    (typeof window !== "undefined"
+      ? {
+          addEventListener: (type: "pagehide", listener: () => void) => window.addEventListener(type, listener),
+          removeEventListener: (type: "pagehide", listener: () => void) => window.removeEventListener(type, listener),
+        }
+      : undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const resourceProjectId = (scope: string | undefined) =>
+    scope?.match(/^project\/([^/]+)\/mode\/[^/]+\/resource\//)?.[1];
+
+  const touchResourceScope = (scope: string | undefined) => {
+    const projectId = resourceProjectId(scope);
+    if (!projectId || !scope) return;
+
+    const indexKey = workbenchStoragePersistenceKey(input.namespace, "layout-resource-index", projectId);
+    const persisted = readJson<unknown>(storage, indexKey);
+    const scopes =
+      typeof persisted === "object" &&
+      persisted !== null &&
+      "version" in persisted &&
+      persisted.version === WORKBENCH_LAYOUT_RESOURCE_INDEX_VERSION &&
+      "scopes" in persisted &&
+      Array.isArray(persisted.scopes)
+        ? persisted.scopes.filter(
+            (candidate): candidate is string =>
+              typeof candidate === "string" &&
+              candidate !== scope &&
+              storage.getItem(workbenchStoragePersistenceKey(input.namespace, "layout", candidate)) !== null,
+          )
+        : [];
+    scopes.push(scope);
+
+    for (const evictedScope of scopes.splice(0, Math.max(0, scopes.length - WORKBENCH_LAYOUT_RESOURCE_LIMIT))) {
+      storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "layout", evictedScope));
+      storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "panels", evictedScope));
+    }
+
+    const next: PersistedWorkbenchLayoutResourceIndex = {
+      version: WORKBENCH_LAYOUT_RESOURCE_INDEX_VERSION,
+      scopes,
+    };
+    storage.setItem(indexKey, JSON.stringify(next));
+  };
+
+  const flush = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    const writes = [...pending.values()];
+    pending.clear();
+    for (const write of writes) {
+      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", write.scope), write.raw);
+      touchResourceScope(write.scope);
+    }
+  };
+
+  const scheduleFlush = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(flush, debounceMs);
+  };
+
+  eventTarget?.addEventListener("pagehide", flush);
+
   return {
     getLayout: (scope) => {
-      const persisted = readJson<PersistedWorkbenchLayout>(
-        storage,
-        workbenchStoragePersistenceKey(input.namespace, "layout", scope),
-      );
+      const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
+      const persisted = pending.has(key)
+        ? (JSON.parse(pending.get(key)!.raw) as PersistedWorkbenchLayout)
+        : readJson<PersistedWorkbenchLayout>(storage, key);
       return persisted?.version === WORKBENCH_LAYOUT_VERSION ? persisted.layout : undefined;
     },
     setLayout: (layout, scope) => {
       const persisted: PersistedWorkbenchLayout = { version: WORKBENCH_LAYOUT_VERSION, layout };
-      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", scope), JSON.stringify(persisted));
+      const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
+      pending.delete(key);
+      pending.set(key, { raw: JSON.stringify(persisted), scope });
+      scheduleFlush();
+    },
+    flush,
+    dispose() {
+      flush();
+      eventTarget?.removeEventListener("pagehide", flush);
     },
   };
 };

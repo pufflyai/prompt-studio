@@ -86,6 +86,8 @@ export interface LayoutPersistenceAdapter {
   // `scope` undefined → global slot (current behavior).
   getLayout(scope?: LayoutScope): WorkbenchLayout | undefined;
   setLayout(layout: WorkbenchLayout, scope?: LayoutScope): void;
+  flush?(): void;
+  dispose?(): void;
 }
 
 export interface CreateLayoutModelInput {
@@ -120,7 +122,7 @@ export interface LayoutModel {
   resetRegions(): void;
   getLayout(): WorkbenchLayout;
   restoreLayout(layout: WorkbenchLayout): void;
-  setPersistenceScope(scope: LayoutScope | undefined): void;
+  setPersistenceScope(scope: LayoutScope | undefined, input?: { carryRegionState?: readonly WorkbenchRegion[] }): void;
   getPersistenceScope(): LayoutScope | undefined;
   onWillChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
   onDidChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
@@ -215,6 +217,17 @@ const carryPinnedWorkbenchChrome = (current: WorkbenchLayout, incoming: Workbenc
     };
   }
 
+  return { ...incoming, regions };
+};
+
+const carryWorkbenchRegionState = (
+  current: WorkbenchLayout,
+  incoming: WorkbenchLayout,
+  regionIds: readonly WorkbenchRegion[],
+) => {
+  if (regionIds.length === 0) return incoming;
+  const regions = { ...incoming.regions };
+  for (const regionId of regionIds) regions[regionId] = current.regions[regionId];
   return { ...incoming, regions };
 };
 
@@ -707,7 +720,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       persistLayout();
     },
 
-    setPersistenceScope(nextScope) {
+    setPersistenceScope(nextScope, scopeInput = {}) {
       if (currentScope === nextScope) return;
       input.persistence?.setLayout(getLayout(), currentScope);
       willChangeScope.notify(nextScope);
@@ -716,7 +729,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       const scopedLayout = resolveScopedLayout(input, incoming);
       // Module-owned chrome is global workbench structure. Project scopes replace
       // Location workspaces, but must not unmount pinned navigation and headers.
-      const nextLayout = carryPinnedWorkbenchChrome(getLayout(), scopedLayout);
+      const withPinnedChrome = carryPinnedWorkbenchChrome(getLayout(), scopedLayout);
+      const nextLayout = carryWorkbenchRegionState(getLayout(), withPinnedChrome, scopeInput.carryRegionState ?? []);
       const snapshot = store.getState();
       store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
       didChangeScope.notify(currentScope);

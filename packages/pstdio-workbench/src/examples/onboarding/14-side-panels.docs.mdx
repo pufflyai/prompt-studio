@@ -5,7 +5,11 @@ export const parameters = {
   layout: "padded",
 };
 
-<Meta of={OnboardingStories} name="14. Locations, Panels, and Sub Panels" parameters={{ layout: "padded" }} />
+<Meta
+  of={OnboardingStories}
+  name="14. Locations, Panels, and Sub Panels"
+  parameters={{ layout: "padded" }}
+/>
 
 # 14. Locations, Panels, Sub Panels, and Panel Menus
 
@@ -119,12 +123,10 @@ snapshot without adding another entry;
 navigating after Back truncates Forward entries. Closing a Sub Panel removes its selection from older snapshots so
 history cannot recreate it implicitly.
 
-The project-scoped persistence record contains the ordered entries, cursor, recently closed entries, and schema
-version. Layout persistence retains open Sub Panel placements, active Location, region visibility and sizes, and Panel
-Menu placement, collapsed state, and size. On reload, the host waits for native and extension contributions, removes
-missing Locations, clears unavailable Sub Panel selections, compacts adjacent equivalent entries, clamps the cursor,
-and restores the cursor entry atomically. Forward entries remain available when reload occurs from the middle of the
-timeline.
+History remains project-scoped, while each resource or aggregate page owns its Main/Secondary Panel persistence
+scope. Layout and Panel-open state rotate together before opening the next resource. The host carries project-owned
+Nav Chrome, Sidenav, Side Panel, and Status Bar state between those scopes, so unchanged chrome stays mounted.
+Returning to a resource restores its open Sub Panels, active Location, visibility, sizes, and Panel Menu state.
 
 <Canvas of={OnboardingStories.CrossPanelHistory} />
 
@@ -132,7 +134,7 @@ timeline.
 
 <Canvas of={OnboardingStories.RefreshAfterBack} />
 
-<Canvas of={OnboardingStories.ProjectHistoryIsolation} />
+<Canvas of={OnboardingStories.ResourcePanelRestore} />
 
 ## Extension roles
 

@@ -7,29 +7,53 @@ import {
   type WorkbenchCore,
   type WorkbenchLayout,
   type WorkbenchModuleContribution,
+  type WorkbenchPanelsPersistenceAdapter,
 } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
 const PANEL_WIDGET_ID = "layout-scope.example.panel";
 const PANEL_RENDERER_ID = "layout-scope.example.renderer";
+const SECONDARY_WIDGET_ID = "layout-scope.example.secondary";
 const SIDENAV_WIDGET_ID = "layout-scope.example.sidenav";
 const SIDENAV_RENDERER_ID = "layout-scope.example.sidenav-renderer";
 
-const SCOPES: Array<{ id: LayoutScope | undefined; label: string }> = [
-  { id: undefined, label: "global" },
-  { id: "project:a", label: "project:a" },
-  { id: "project:b", label: "project:b" },
+const SCOPES: Array<{ id: LayoutScope; label: string }> = [
+  {
+    id: "project/demo/mode/tickets/resource/ticket:PS-100",
+    label: "Ticket PS-100",
+  },
+  {
+    id: "project/demo/mode/tickets/resource/ticket:PS-200",
+    label: "Ticket PS-200",
+  },
+  {
+    id: "project/demo/mode/tickets/aggregate/tickets",
+    label: "Tickets aggregate",
+  },
 ];
 
+const setSecondaryOpen = (workbench: WorkbenchCore, open: boolean) => {
+  workbench.panels.setOpen("secondary", open);
+  workbench.layout.setRegionVisible("secondary", open);
+};
+
 const createInMemoryAdapter = () => {
-  const stored = new Map<string, WorkbenchLayout>();
-  const adapter: LayoutPersistenceAdapter = {
-    getLayout: (scope) => stored.get(scope ?? "__global__"),
-    setLayout: (layout, scope) => {
-      stored.set(scope ?? "__global__", structuredClone(layout));
-    },
+  const layouts = new Map<string, WorkbenchLayout>();
+  const panels = new Map<string, Parameters<WorkbenchPanelsPersistenceAdapter["setPanelStates"]>[0]>();
+  return {
+    layout: {
+      getLayout: (scope) => layouts.get(scope ?? "__global__"),
+      setLayout: (layout, scope) => {
+        layouts.set(scope ?? "__global__", structuredClone(layout));
+      },
+    } satisfies LayoutPersistenceAdapter,
+    panels: {
+      getPanelStates: (scope) => panels.get(scope ?? "__global__"),
+      setPanelStates: (state, scope) => {
+        panels.set(scope ?? "__global__", structuredClone(state));
+      },
+    } satisfies WorkbenchPanelsPersistenceAdapter,
   };
-  return adapter;
 };
 
 interface SwitcherPanelProps {
@@ -38,14 +62,17 @@ interface SwitcherPanelProps {
 
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
-  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
-  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
+  const secondarySize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
+  const secondaryOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId.secondary ?? true);
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
 
-  const switchTo = (scope: LayoutScope | undefined) => {
-    workbench.layout.setPersistenceScope(scope);
+  const switchTo = (scope: LayoutScope) => {
+    workbench.panels.setPersistenceScope(scope);
+    workbench.layout.setPersistenceScope(scope, {
+      carryRegionState: ["sidenav"],
+    });
     setActiveScope(scope);
   };
 
@@ -53,8 +80,8 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
     <Stack p="lg" gap="md">
       <Text textStyle="title/S/semibold">Scoped layout persistence</Text>
       <Text textStyle="paragraph/M/regular">
-        The three scopes are pre-seeded with different sidenav sizes — switch to see each one round-trip. Resize or
-        toggle the sidenav to mutate the active scope; the change persists for that scope only.
+        Ticket resources and the aggregate page keep independent Main/Secondary Panel state. The project-owned Sidenav
+        is carried across every switch without remounting.
       </Text>
       <HStack gap="sm" wrap="wrap">
         {SCOPES.map((scope) => (
@@ -69,17 +96,17 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
         ))}
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => workbench.layout.setRegionSize("sidenav", (leftSize ?? 240) + 40)}>
-          Sidenav +40
+        <Button size="sm" onClick={() => workbench.layout.setRegionSize("secondary", (secondarySize ?? 240) + 40)}>
+          Secondary +40
         </Button>
         <Button
           size="sm"
-          onClick={() => workbench.layout.setRegionSize("sidenav", Math.max(160, (leftSize ?? 240) - 40))}
+          onClick={() => workbench.layout.setRegionSize("secondary", Math.max(160, (secondarySize ?? 240) - 40))}
         >
-          Sidenav -40
+          Secondary -40
         </Button>
-        <Button size="sm" onClick={() => workbench.commands.executeCommand("workbench.toggleSideBar")}>
-          Toggle sidenav
+        <Button size="sm" onClick={() => setSecondaryOpen(workbench, !secondaryOpen)}>
+          Toggle secondary
         </Button>
       </HStack>
       <Box>
@@ -87,9 +114,9 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
         <Code colorPalette="gray">{activeScope ?? "global"}</Code>
       </Box>
       <Box>
-        <Text textStyle="label/S/semibold">Sidenav state</Text>
+        <Text textStyle="label/S/semibold">Resource-owned state</Text>
         <Text textStyle="paragraph/S/regular">
-          visible = {String(leftVisible)} | size = {String(leftSize ?? "default")}
+          secondary open = {String(secondaryOpen)} | size = {String(secondarySize ?? "default")}
         </Text>
       </Box>
     </Stack>
@@ -98,8 +125,8 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
 
 const SidenavPanel = () => (
   <Stack p="md" gap="xs">
-    <Text textStyle="label/S/semibold">Sidenav</Text>
-    <Text textStyle="paragraph/S/regular">Resize me — each scope persists the value independently.</Text>
+    <Text textStyle="label/S/semibold">Project Sidenav</Text>
+    <Text textStyle="paragraph/S/regular">This project-owned chrome stays mounted while resource scopes rotate.</Text>
   </Stack>
 );
 
@@ -126,8 +153,16 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
 
     ctx.layout.registerWidget({
       id: SIDENAV_WIDGET_ID,
-      title: "Sidenav",
+      title: "Project Sidenav",
       region: "sidenav",
+      singleton: true,
+      rendererId: SIDENAV_RENDERER_ID,
+    });
+
+    ctx.layout.registerWidget({
+      id: SECONDARY_WIDGET_ID,
+      title: "Resource details",
+      region: "secondary",
       singleton: true,
       rendererId: SIDENAV_RENDERER_ID,
     });
@@ -135,23 +170,26 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
 });
 
 export const createLayoutScopeExampleWorkbench = () => {
-  const workbench = createWorkbenchCore({ layoutPersistence: createInMemoryAdapter() });
+  const persistence = createInMemoryAdapter();
+  const workbench = createWorkbenchCore({
+    layoutPersistence: persistence.layout,
+    panelsPersistence: persistence.panels,
+  });
   workbench.registerModule(createLayoutScopeExampleModule());
 
-  // Open the demo widgets in every scope and pre-seed each scope with a
-  // different sidenav size so switching between them shows real per-scope
-  // state. `setPersistenceScope` replaces the whole layout with the persisted
-  // snapshot for that scope, so the widgets must exist in each one.
-  const seedScope = (scope: LayoutScope | undefined, leftSize: number) => {
+  const seedScope = (scope: LayoutScope, secondarySize: number, secondaryOpen: boolean) => {
+    workbench.panels.setPersistenceScope(scope);
     workbench.layout.setPersistenceScope(scope);
     workbench.layout.openWidget(PANEL_WIDGET_ID);
     workbench.layout.openWidget(SIDENAV_WIDGET_ID, { pinned: true });
-    workbench.layout.setRegionSize("sidenav", leftSize);
+    workbench.layout.openWidget(SECONDARY_WIDGET_ID);
+    workbench.layout.setRegionSize("secondary", secondarySize);
+    setSecondaryOpen(workbench, secondaryOpen);
   };
 
-  seedScope("project:a", 200);
-  seedScope("project:b", 360);
-  seedScope(undefined, 240);
+  seedScope(SCOPES[0]!.id, 220, true);
+  seedScope(SCOPES[1]!.id, 340, false);
+  seedScope(SCOPES[2]!.id, 280, false);
 
   return workbench;
 };

@@ -67,7 +67,7 @@ describeResourceRouteContract({
   root: ROOT,
   detail: { kind: DETAIL_KIND, uri: "route-test://detail/1", id: "1", label: "Detail 1" },
   detailB: { kind: DETAIL_KIND, uri: "route-test://detail/2", id: "2", label: "Detail 2" },
-  rootDetailHistory: "retained",
+  rootDetailHistory: "replaced",
   expectedMode: MODE,
 });
 
@@ -86,4 +86,92 @@ describe("registerResourceRoute navigation state", () => {
     expect(getDashboardActiveCollection(workbench)).toBeUndefined();
     expect(getDashboardSelectedResource(workbench)).toEqual(detail);
   });
+
+  test("switches resource layout scope before activating its mode", async () => {
+    const workbench = createWorkbenchCore();
+    const activationScopes: Array<string | undefined> = [];
+    selectDashboardProject(workbench, { id: "project-1", name: "Route test" });
+    workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
+    workbench.modes.registerMode({
+      id: MODE,
+      activate: () => {
+        activationScopes.push(workbench.layout.getPersistenceScope());
+        return undefined;
+      },
+    });
+    workbench.layout.registerWidget({
+      id: "route-test-detail",
+      title: "Detail",
+      region: "main",
+      rendererId: "noop",
+      resourceKinds: [DETAIL_KIND],
+    });
+    registerResourceRoute(workbench, {
+      id: "route-test.detail",
+      match: (resource) => resource.kind === DETAIL_KIND,
+      mode: MODE,
+      widgetId: "route-test-detail",
+    });
+
+    await workbench.resources.openResource({
+      kind: DETAIL_KIND,
+      uri: "route-test://detail/1",
+      id: "1",
+    });
+
+    expect(activationScopes).toEqual(["project/project-1/mode/route-test-mode/resource/route-test://detail/1"]);
+  });
+
+  test("restores independent resource layouts across A to B to A navigation", async () => {
+    const layouts = new Map<string | undefined, ReturnType<typeof workbenchLayout>>();
+    const panels = new Map<string | undefined, { openByRegionId: Record<string, boolean> }>();
+    const workbench = createWorkbenchCore({
+      layoutPersistence: {
+        getLayout: (scope) => layouts.get(scope),
+        setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+      },
+      panelsPersistence: {
+        getPanelStates: (scope) => panels.get(scope),
+        setPanelStates: (state, scope) => panels.set(scope, structuredClone(state)),
+      },
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Route test" });
+    workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
+    workbench.modes.registerMode({ id: MODE, activate: () => undefined });
+    workbench.layout.registerWidget({
+      id: "route-test-detail",
+      title: "Detail",
+      region: "main",
+      rendererId: "noop",
+      resourceKinds: [DETAIL_KIND],
+    });
+    registerResourceRoute(workbench, {
+      id: "route-test.detail",
+      match: (resource) => resource.kind === DETAIL_KIND,
+      mode: MODE,
+      widgetId: "route-test-detail",
+    });
+    const resourceA = { kind: DETAIL_KIND, uri: "route-test://detail/a", id: "a" };
+    const resourceB = { kind: DETAIL_KIND, uri: "route-test://detail/b", id: "b" };
+
+    await workbench.resources.openResource(resourceA);
+    workbench.layout.setRegionSize("main", 500);
+    workbench.layout.setRegionVisible("secondary", false);
+    workbench.panels.setOpen("secondary", false);
+
+    await workbench.resources.openResource(resourceB, { replaceActive: true });
+    expect(workbench.layout.getLayout().regions.main.size).toBeUndefined();
+    expect(workbench.layout.getLayout().regions.secondary.visible).toBe(true);
+    workbench.layout.setRegionSize("main", 700);
+
+    await workbench.resources.openResource(resourceA, { replaceActive: true });
+    expect(workbench.layout.getLayout().regions.main.size).toBe(500);
+    expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
+    expect(workbench.panels.isOpen("secondary")).toBe(false);
+
+    await workbench.resources.openResource(resourceB, { replaceActive: true });
+    expect(workbench.layout.getLayout().regions.main.size).toBe(700);
+  });
 });
+
+const workbenchLayout = () => createWorkbenchCore().layout.getLayout();

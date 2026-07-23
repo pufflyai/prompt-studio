@@ -20,9 +20,9 @@ describe("createProjectsModule", () => {
 
     expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
     expect(workbench.getPrimaryResource()).toBeUndefined();
-    expect(workbench.layout.getPersistenceScope()).toBe("project:project-1");
+    expect(workbench.layout.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
     expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
-    expect(workbench.panels.getPersistenceScope()).toBe("project:project-1");
+    expect(workbench.panels.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
   });
 
   test("clears the back-stack when the selected project is cleared", async () => {
@@ -77,7 +77,7 @@ describe("createProjectsModule", () => {
       setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
     } satisfies LayoutPersistenceAdapter;
     const seed = createWorkbenchCore({ layoutPersistence });
-    seed.layout.setPersistenceScope("project:project-1");
+    seed.layout.setPersistenceScope("project/project-1/mode/none/aggregate/empty");
     seed.layout.registerLocation({ id: "start", title: "Start", region: "main", rendererId: "noop" });
     seed.layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
     seed.layout.openWidget("start", {

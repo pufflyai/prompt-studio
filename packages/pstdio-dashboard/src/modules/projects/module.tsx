@@ -6,6 +6,7 @@ import {
 } from "@pstdio/workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { clearDashboardNavigationState, syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
 import {
   clearDashboardProjectSelection,
   getDashboardSelectedProjectId,
@@ -64,16 +65,27 @@ const resetProjectModeOnProjectChange = (
 };
 
 const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContributionContext) => {
+  let currentProjectId = getDashboardSelectedProjectId(ctx);
+
   const syncScope = () => {
     const projectId = getDashboardSelectedProjectId(ctx);
-    const scope = projectId ? `project:${projectId}` : undefined;
-    ctx.history.setPersistenceScope(scope);
-    ctx.panels.setPersistenceScope(scope);
-    ctx.layout.setPersistenceScope(scope);
+    if (projectId !== currentProjectId) {
+      clearDashboardNavigationState(ctx);
+      currentProjectId = projectId;
+    }
+    ctx.history.setPersistenceScope(projectId ? `project:${projectId}` : undefined);
+    syncDashboardLayoutPersistenceScope(ctx);
   };
 
   syncScope();
-  return { dispose: subscribeDashboardSelectedProject(ctx, syncScope) };
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, syncScope);
+  const modeSubscription = ctx.modes.onDidChangeActive(() => syncDashboardLayoutPersistenceScope(ctx));
+  return {
+    dispose: () => {
+      unsubscribeProject();
+      modeSubscription.dispose();
+    },
+  };
 };
 
 const clearSelectedProject = (

@@ -315,6 +315,17 @@ const createHistoryCursorMover = (input: HistoryCursorMoverInput) => (delta: num
   return entry;
 };
 
+const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]) => {
+  let rotating = false;
+  layout.onWillChangePersistenceScope(() => {
+    rotating = true;
+  });
+  layout.onDidChangePersistenceScope(() => {
+    rotating = false;
+  });
+  return () => rotating;
+};
+
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
@@ -323,6 +334,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   let counter = 0;
   let navigating = false;
   let awaitingRestore = false;
+  const isRotatingLayoutScope = trackLayoutScopeRotation(input.layout);
   let currentScope: string | undefined;
   const replayingResourceUris = new Set<string>();
   const { flush, schedule: schedulePersist } = createHistoryPersistenceScheduler({
@@ -352,7 +364,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   };
 
   const recordSnapshot = (fromLayoutChange = false, completedResourceOpen = false) => {
-    if (navigating || awaitingRestore || (!completedResourceOpen && input.resources.isOpeningResource())) return;
+    const paused = navigating || awaitingRestore || isRotatingLayoutScope();
+    if (paused || (!completedResourceOpen && input.resources.isOpeningResource())) return;
     counter += 1;
     const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
     const current = currentNavigationEntry(store.getState());
@@ -426,7 +439,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     (state) => state.layout,
     () => {
       const nextPlacements = placementsByWidgetId(input.layout);
-      if (awaitingRestore) {
+      if (awaitingRestore || isRotatingLayoutScope()) {
         lastPlacements = nextPlacements;
         return;
       }
@@ -520,8 +533,6 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     awaitingRestore = hydrated.entries.length > 0;
     setState({ ...hydrated, hydrating: awaitingRestore }, "history.setPersistenceScope", false);
   };
-
-  input.layout.onWillChangePersistenceScope(setPersistenceScope);
 
   if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
 
