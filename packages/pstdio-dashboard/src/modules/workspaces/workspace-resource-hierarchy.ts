@@ -91,14 +91,15 @@ export const createWorkspaceHierarchyProvider = (
   return {
     id: "dashboard.workspace-hierarchy",
     getResource(uri) {
-      const cached = canonicalResources.get(uri);
-      if (cached) return cached;
+      const workspaces = input.listWorkspaces();
+      const workspace = workspaces.find(({ resource }) => resource.uri === uri)?.resource;
+      if (workspace) {
+        canonicalResources.set(workspace.uri, workspace);
+        return workspace;
+      }
 
-      const workspace = findWorkspace(uri);
-      if (workspace) return workspace;
-
-      const parent = input.listWorkspaces().find(({ resource }) => uri.startsWith(`${resource.uri}/`))?.resource;
-      return parent ? childrenFor(parent).find((child) => child.uri === uri) : undefined;
+      const parent = workspaces.find(({ resource }) => uri.startsWith(`${resource.uri}/`))?.resource;
+      return parent ? childrenFor(parent).find((child) => child.uri === uri) : canonicalResources.get(uri);
     },
     getParent(resource) {
       if (!isWorkspaceChildResource(resource)) return undefined;
@@ -106,7 +107,8 @@ export const createWorkspaceHierarchyProvider = (
       return parentUri ? findWorkspace(parentUri) : undefined;
     },
     listChildren(resource) {
-      return resource.kind === "workspace" ? childrenFor(resource) : [];
+      if (resource.kind !== "workspace") return [];
+      return childrenFor(findWorkspace(resource.uri) ?? resource);
     },
   };
 };

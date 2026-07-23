@@ -6,15 +6,10 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardSessions } from "../../sessions/data/dashboard-sessions";
-
-interface DirectoryEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-}
+import { beginWorkspaceFileLoad, type WorkspaceFileEntry } from "./workspace-child-widget-state";
 
 interface DirectoryListResponse {
-  entries: DirectoryEntry[];
+  entries: WorkspaceFileEntry[];
 }
 
 const metadataString = (resource: ResourceRef, key: string) => {
@@ -27,25 +22,21 @@ const readWorkspaceSessions = (projectId: string | undefined, workspaceId: strin
 
 const useWorkspaceFiles = (resource: ResourceRef) => {
   const workspacePath = metadataString(resource, "workspacePath");
-  const [entries, setEntries] = useState<DirectoryEntry[]>([]);
-  const [loading, setLoading] = useState(Boolean(workspacePath));
-  const [failed, setFailed] = useState(false);
+  const [state, setState] = useState(() =>
+    beginWorkspaceFileLoad(workspacePath, { entries: [], failed: false, loading: false }),
+  );
 
   useEffect(() => {
+    setState((current) => beginWorkspaceFileLoad(workspacePath, current));
     if (!workspacePath) return;
     let disposed = false;
-    setLoading(true);
-    setFailed(false);
 
     void apiRequest<DirectoryListResponse>(`/v1/filesystem/list?path=${encodeURIComponent(workspacePath)}`)
       .then((response) => {
-        if (!disposed) setEntries(response.entries);
+        if (!disposed) setState({ entries: response.entries, failed: false, loading: false });
       })
       .catch(() => {
-        if (!disposed) setFailed(true);
-      })
-      .finally(() => {
-        if (!disposed) setLoading(false);
+        if (!disposed) setState({ entries: [], failed: true, loading: false });
       });
 
     return () => {
@@ -53,7 +44,7 @@ const useWorkspaceFiles = (resource: ResourceRef) => {
     };
   }, [workspacePath]);
 
-  return { entries, failed, loading };
+  return state;
 };
 
 const WorkspaceFilesWidget = (props: { resource: ResourceRef }) => {

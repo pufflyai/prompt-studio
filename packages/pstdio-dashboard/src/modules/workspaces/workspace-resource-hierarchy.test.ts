@@ -1,13 +1,58 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createSidenavModule } from "../sidenav/module";
+import type { DashboardWorkspace } from "./data/dashboard-workspaces";
 import { createWorkspacesModule } from "./module";
+import { createWorkspaceHierarchyProvider } from "./workspace-resource-hierarchy";
+
+const dashboardWorkspace = (resource: ResourceRef): DashboardWorkspace => ({
+  id: resource.id!,
+  title: resource.label!,
+  shorthand: "PS-172_A1",
+  type: "worktree",
+  additions: 0,
+  deletions: 0,
+  createdAt: "2026-07-23T00:00:00.000Z",
+  updatedAt: "2026-07-23T00:00:00.000Z",
+  branch: "feature/ps-172",
+  worktreePath: resource.metadata?.workspacePath as string,
+  isDefault: false,
+  setupError: null,
+  resource,
+});
 
 describe("createWorkspacesModule workspace hierarchy", () => {
+  test("refreshes canonical child resources from synchronized workspace state", () => {
+    const original = createDashboardResource("workspace", "ps172-refresh", "Before", "GitBranch", "project-1", {
+      workspaceId: "ps172-refresh",
+      workspacePath: "/before",
+      diffFileCount: 1,
+    });
+    let workspaces = [dashboardWorkspace(original)];
+    const provider = createWorkspaceHierarchyProvider({
+      listWorkspaces: () => workspaces,
+      listSessions: () => [],
+    });
+    const filesUri = `${original.uri}/files`;
+    const diffUri = `${original.uri}/diff`;
+
+    provider.listChildren(original);
+    const updated = createDashboardResource("workspace", "ps172-refresh", "After", "GitBranch", "project-1", {
+      workspaceId: "ps172-refresh",
+      workspacePath: "/after",
+      diffFileCount: 2,
+    });
+    workspaces = [dashboardWorkspace(updated)];
+
+    expect(provider.getResource(filesUri)?.metadata?.workspacePath).toBe("/after");
+    expect(provider.getResource(diffUri)?.label).toBe("Diff · 2 changed");
+    expect(provider.getParent(provider.getResource(filesUri)!)).toEqual(updated);
+  });
+
   test("projects one selected workspace heading and its canonical children into the resource region", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource(
