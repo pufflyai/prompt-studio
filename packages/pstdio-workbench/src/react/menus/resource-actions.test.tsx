@@ -31,6 +31,7 @@ describe("createWorkbenchResourceActions", () => {
     );
     workbench.layout.registerMenuItem(resourceContextMenuPath("ticket"), {
       commandId: "ticket.run",
+      sourceCommandId: "pstdio-planner.run-attempt",
       when: 'workbench.resource.kind == "ticket"',
     });
 
@@ -38,6 +39,7 @@ describe("createWorkbenchResourceActions", () => {
     const workspaceActions = createWorkbenchResourceActions(workbench, workspace);
 
     expect(ticketActions.map((action) => action.label)).toEqual(["Run attempt"]);
+    expect(ticketActions.map((action) => action.commandId)).toEqual(["pstdio-planner.run-attempt"]);
     expect(workspaceActions).toEqual([]);
 
     await ticketActions[0]?.onClick();

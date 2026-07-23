@@ -12,6 +12,7 @@ export type MenuPath = readonly string[];
 
 export interface MenuItem {
   commandId: string;
+  sourceCommandId?: string;
   label?: string;
   description?: string;
   icon?: string;

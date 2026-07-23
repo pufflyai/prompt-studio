@@ -77,6 +77,7 @@ describe("workbench extension contribution mapping", () => {
         menuItem: expect.objectContaining({
           group: "primary",
           icon: "flask-conical",
+          sourceCommandId: "extension-lab.say-hello",
           when: "activeResource.kind == extension-route",
         }),
       }),

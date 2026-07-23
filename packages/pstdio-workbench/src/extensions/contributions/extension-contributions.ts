@@ -90,6 +90,7 @@ const createMenuItem = (input: {
 
   return {
     commandId,
+    sourceCommandId: contribution.commandId,
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: slot.group ?? contribution.group,

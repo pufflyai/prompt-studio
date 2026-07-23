@@ -194,7 +194,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
     const item = {
       id: `${action.commandId}:${index}`,
       label,
-      commandId: record.command.id,
+      commandId: action.sourceCommandId ?? record.command.id,
       description: action.description ?? record.command.description,
       icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
       endContent: createMenuEndContent({ external: action.external, binding }),
