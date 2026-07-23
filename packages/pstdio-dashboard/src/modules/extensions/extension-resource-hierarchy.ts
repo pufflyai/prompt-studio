@@ -7,14 +7,17 @@ export const registerExtensionResourceHierarchy = (
   ctx: WorkbenchModuleContributionContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable => {
+  const hierarchyRenderers = input.metadata.dataRenderers?.filter((renderer) => renderer.resourceKind) ?? [];
   const rootsByKind = new Map(
-    input.metadata.dataRenderers
-      ?.filter((renderer) => renderer.resourceKind)
-      .map((renderer) => [renderer.resourceKind!, createExtensionDataRendererResource(renderer, input.projectId)]),
+    hierarchyRenderers.map((renderer) => [
+      renderer.resourceKind!,
+      createExtensionDataRendererResource(renderer, input.projectId),
+    ]),
   );
+  const ownerId = [...new Set(hierarchyRenderers.map((renderer) => renderer.extensionId))].sort().join("+") || "none";
 
   return ctx.resources.registerHierarchyProvider({
-    id: `dashboard.extensions.resource-hierarchy.${input.projectId}`,
+    id: `dashboard.extensions.resource-hierarchy.${input.projectId}.${ownerId}`,
     priority: 100,
     canResolve: (resource) => rootsByKind.has(resource.kind),
     getParent: (resource) => dashboardResourceParent(ctx, resource, input.projectId) ?? rootsByKind.get(resource.kind),

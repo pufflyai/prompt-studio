@@ -351,8 +351,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     setState({ ...snapshot, entries, cursor: entries.length - 1 }, "history.record");
   };
 
-  const recordSnapshot = (fromLayoutChange = false) => {
-    if (navigating || awaitingRestore || input.resources.isOpeningResource()) return;
+  const recordSnapshot = (fromLayoutChange = false, completedResourceOpen = false) => {
+    if (navigating || awaitingRestore || (!completedResourceOpen && input.resources.isOpeningResource())) return;
     counter += 1;
     const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
     const current = currentNavigationEntry(store.getState());
@@ -440,7 +440,10 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     },
   );
   input.modes?.onDidChangeActive(recordSnapshot);
-  input.resources.onDidOpenResource(() => recordSnapshot());
+  // A completed open owns a history commit even if another independent async
+  // open is still in flight. Layout listeners remain suppressed until their
+  // resource transaction completes, so each open still records one snapshot.
+  input.resources.onDidOpenResource(() => recordSnapshot(false, true));
 
   const restoreSelections = (entry: WorkbenchNavigationEntry) => {
     for (const region of workbenchPanelRegions) {

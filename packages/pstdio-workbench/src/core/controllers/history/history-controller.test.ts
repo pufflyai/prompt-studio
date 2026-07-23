@@ -125,6 +125,43 @@ describe("createHistoryController resource transactions", () => {
     ]);
     expect(workbench.history.goBack()?.resource?.uri).toBe(ticket.uri);
   });
+
+  test("records overlapping asynchronous opens in completion order", async () => {
+    const workbench = createWorkbenchCore();
+    const completions = new Map<string, () => void>();
+
+    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    workbench.layout.registerLocation({
+      id: "async-ticket-viewer",
+      title: "Ticket",
+      region: "main",
+      rendererId: "noop",
+      resourceKinds: [TICKET_KIND],
+    });
+    workbench.resources.registerOpener({
+      id: "async-ticket-opener",
+      canOpen: (resource) => resource.kind === TICKET_KIND,
+      open: (resource) =>
+        new Promise<void>((resolve) => {
+          completions.set(resource.id!, () => {
+            workbench.layout.openWidget("async-ticket-viewer", { resource, title: resource.label });
+            resolve();
+          });
+        }),
+    });
+
+    const first = openTicket(workbench, "PS-1");
+    const second = openTicket(workbench, "PS-2");
+
+    completions.get("PS-1")?.();
+    await first;
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.id)).toEqual(["PS-1"]);
+
+    completions.get("PS-2")?.();
+    await second;
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.id)).toEqual(["PS-1", "PS-2"]);
+    expect(workbench.history.goBack()?.resource?.id).toBe("PS-1");
+  });
 });
 
 describe("createHistoryController navigation", () => {
