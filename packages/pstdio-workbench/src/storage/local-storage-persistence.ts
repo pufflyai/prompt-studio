@@ -269,6 +269,8 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
       storage,
     }),
     layoutPersistence: createLocalStorageLayoutPersistence({
+      debounceMs: input.debounceMs,
+      eventTarget: input.eventTarget,
       namespace: input.namespace,
       storage,
     }),

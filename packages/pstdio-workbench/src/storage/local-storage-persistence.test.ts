@@ -259,3 +259,32 @@ describe("local storage workbench persistence", () => {
     expect(persistence.getLayout(secondScope)).toEqual(layout);
   });
 });
+
+describe("unified local storage persistence options", () => {
+  test("forwards layout scheduling options", async () => {
+    const storage = createStore();
+    const listeners = new Set<() => void>();
+    const eventTarget = {
+      addEventListener: (_event: "pagehide", listener: () => void) => listeners.add(listener),
+      removeEventListener: (_event: "pagehide", listener: () => void) => listeners.delete(listener),
+    };
+    const persistence = createLocalStorageWorkbenchPersistence({
+      debounceMs: 5,
+      eventTarget,
+      namespace: "demo",
+      storage,
+    });
+    const layout = createDefaultWorkbenchLayout();
+    const key = workbenchStoragePersistenceKey("demo", "layout", "project:one");
+
+    persistence.layoutPersistence.setLayout(layout, "project:one");
+
+    expect(listeners).toHaveLength(1);
+    expect(storage.getItem(key)).toBeNull();
+    await Bun.sleep(10);
+    expect(storage.getItem(key)).toBe(JSON.stringify({ version: 1, layout }));
+
+    persistence.layoutPersistence.dispose?.();
+    expect(listeners).toHaveLength(0);
+  });
+});
