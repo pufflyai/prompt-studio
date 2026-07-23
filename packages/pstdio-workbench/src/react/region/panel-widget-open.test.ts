@@ -39,4 +39,18 @@ describe("openPanelWidget", () => {
 
     expect(contexts).toEqual([{ source: "panel-add" }]);
   });
+
+  test("keeps a floating Side Panel detached when adding a tab", () => {
+    const workbench = createWorkbenchCore({ initialSessionPanelMode: "bubble" });
+    workbench.layout.registerSubPanel({
+      id: "sessions",
+      title: "Sessions",
+      region: "side",
+      rendererId: "sessions.renderer",
+    });
+
+    openPanelWidget({ workbench, widget: workbench.layout.getWidget("sessions")!, region: "side" });
+
+    expect(workbench.sessionPanel.getMode()).toBe("bubble");
+  });
 });

@@ -30,5 +30,7 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
     workbench.panels.setOpen("secondary", true);
     workbench.layout.setRegionVisible("secondary", true);
   }
-  if (region === "side") workbench.sessionPanel.setMode("attached");
+  if (region === "side" && workbench.sessionPanel.getMode() === "closed") {
+    workbench.sessionPanel.setMode("attached");
+  }
 };
