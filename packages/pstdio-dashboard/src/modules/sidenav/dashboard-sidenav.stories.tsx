@@ -267,12 +267,12 @@ export const TicketMode: Story = {
   ),
 };
 
-// Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
+// Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
 };
 
-// Workspace mode: fixed project/search/new-session header above the workspace-scoped Sessions group.
+// Workspace mode: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceMode: Story = {
   render: () => (
     <SidenavStory

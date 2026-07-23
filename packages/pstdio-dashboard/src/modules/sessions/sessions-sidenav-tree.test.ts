@@ -56,6 +56,41 @@ describe("buildSessionsSidenavSections", () => {
     expect(group).toMatchObject({ id: "sessions", label: "Sessions", collapsible: true });
   });
 
+  test("adds a create action to the Sessions group", () => {
+    const workspace = workspaceResource("workspace-1");
+    const sections = buildSessionsSidenavSections({
+      nodeTarget: "side",
+      sessions: [session({ id: "session-1", workspaceId: "workspace-1" })],
+      workspace,
+    });
+
+    expect(sections[0]?.nodes[0]?.actions).toEqual([
+      {
+        id: "sessions.create",
+        label: "New session",
+        icon: "Plus",
+        commandId: dashboardCommandIds.createSession,
+        args: { workspace },
+      },
+    ]);
+  });
+
+  test("creates an unscoped session from the sessions-mode group", () => {
+    const sections = buildSessionsSidenavSections({
+      nodeTarget: "resource",
+      sessions: [session({ id: "session-1" })],
+    });
+
+    expect(sections[0]?.nodes[0]?.actions).toEqual([
+      {
+        id: "sessions.create",
+        label: "New session",
+        icon: "Plus",
+        commandId: dashboardCommandIds.createSession,
+      },
+    ]);
+  });
+
   test("keeps the sessions-mode Sessions group out of the hide menu", () => {
     const sections = buildSessionsSidenavSections({
       nodeTarget: "resource",

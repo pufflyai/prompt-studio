@@ -7,6 +7,17 @@ import { registerSidenavContribution } from "./contributions/sidenav-tree-contri
 import { registerDashboardSidenav } from "./dashboard-sidenav";
 
 describe("registerDashboardSidenav", () => {
+  test("defaults the Sessions group to expanded", () => {
+    const workbench = createWorkbenchCore();
+
+    registerDashboardSidenav(workbench);
+
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
+      expandedNodeIds: ["sessions"],
+      expandedSectionIds: ["sessions"],
+    });
+  });
+
   test("reads mode sections without a concrete resource and passes one when selected", async () => {
     const workbench = createWorkbenchCore();
     const resourceReads: Array<string | undefined> = [];

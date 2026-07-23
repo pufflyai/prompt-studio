@@ -69,6 +69,8 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.dashboardSidenav,
     title: "Sidenav",
+    defaultExpandedNodeIds: ["sessions"],
+    defaultExpandedSectionIds: ["sessions"],
     getHeader: () => composeSidenavHeader(ctx),
     getBody: () => composeSidenavBody(ctx),
     getFooter: () => composeSidenavFooter(ctx),

@@ -103,6 +103,14 @@ const buildSessionGroupChildren = (sessions: DashboardSession[], target: Session
   return children;
 };
 
+const createSessionGroupAction = (workspace: ResourceRef | undefined) => ({
+  id: "sessions.create",
+  label: "New session",
+  icon: "Plus",
+  commandId: dashboardCommandIds.createSession,
+  ...(workspace ? { args: { workspace } } : {}),
+});
+
 export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSectionsInput): TreeViewSection[] => {
   const nodeTarget = input.nodeTarget ?? "resource";
   const workspaceId = getWorkspaceResourceId(input.workspace);
@@ -119,6 +127,7 @@ export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSections
           label: "Sessions",
           ...(nodeTarget === "side" ? { canHide: true } : {}),
           collapsible: true,
+          actions: [createSessionGroupAction(input.workspace)],
           children: buildSessionGroupChildren(sessions, nodeTarget),
         },
       ],

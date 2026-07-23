@@ -76326,6 +76326,50 @@
                           ]
                         },
                         {
+                          "id": "Uybxr",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Sessions section",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": true,
+                              "icon": "chevron-down"
+                            },
+                            "Mbu4C": {
+                              "icon": "message-circle"
+                            },
+                            "ROY2j": {
+                              "content": "Sessions"
+                            },
+                            "uFz3m": {
+                              "type": "frame",
+                              "id": "jHyYs",
+                              "name": "Add session action",
+                              "width": 20,
+                              "height": 20,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "y1iuu",
+                                  "name": "Add session",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "plus",
+                                  "library": "lucide",
+                                  "fill": "$tree-fg"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
                           "type": "frame",
                           "id": "H28rW",
                           "name": "Today session bucket",
@@ -76333,7 +76377,9 @@
                           "height": 24,
                           "padding": [
                             4,
-                            8
+                            8,
+                            4,
+                            31
                           ],
                           "justifyContent": "space_between",
                           "alignItems": "center",
@@ -76367,7 +76413,7 @@
                           "ref": "t5G2s8",
                           "name": "Refactor Sidenav session",
                           "theme": {
-                            "depth": "0",
+                            "depth": "1",
                             "tree": "default"
                           },
                           "width": "fill_container",
@@ -76391,7 +76437,7 @@
                           "ref": "t5G2s8",
                           "name": "Wire up board session",
                           "theme": {
-                            "depth": "0",
+                            "depth": "1",
                             "tree": "default"
                           },
                           "width": "fill_container",
@@ -76806,6 +76852,15 @@
                             },
                             "ROY2j": {
                               "content": "Sessions"
+                            },
+                            "uFz3m": {
+                              "type": "frame",
+                              "id": "rTmNj",
+                              "name": "End",
+                              "width": 0,
+                              "height": 20,
+                              "gap": 4,
+                              "alignItems": "center"
                             }
                           }
                         },
@@ -78673,7 +78728,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "TODAY · 2\nsession rows",
+                                  "content": "SESSIONS · +\nTODAY · 2 rows",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -78960,7 +79015,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "TODAY · 2\nselected in Side Panel",
+                                  "content": "SESSIONS · +\nTODAY · 2 selected",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -79223,7 +79278,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "No sessions yet",
+                                  "content": "SESSIONS · +\nNo sessions yet",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -79486,7 +79541,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "TODAY · 2\nsession rows restored",
+                                  "content": "SESSIONS · +\nTODAY · 2 restored",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
