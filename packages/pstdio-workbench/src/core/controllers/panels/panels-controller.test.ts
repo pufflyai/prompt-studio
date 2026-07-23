@@ -101,6 +101,18 @@ describe("createWorkbenchPanelsController", () => {
     expect(restored.isOpen("secondary")).toBe(true);
   });
 
+  test("accepts sparse host defaults without storing undefined entries", () => {
+    const defaults: Partial<Record<string, boolean>> = {
+      secondary: false,
+      sidenav: undefined,
+    };
+
+    const panels = createWorkbenchPanelsController({ defaultOpenByRegionId: defaults });
+
+    expect(panels.store.getState().openByRegionId).toEqual({ secondary: false });
+    expect(panels.isOpen("sidenav")).toBe(true);
+  });
+
   test("onDidChange fires for any state mutation", () => {
     const panels = createWorkbenchPanelsController();
     const events: string[] = [];

@@ -27,7 +27,7 @@ export interface WorkbenchPanelsController {
 }
 
 export interface CreateWorkbenchPanelsControllerInput {
-  defaultOpenByRegionId?: Record<string, boolean>;
+  defaultOpenByRegionId?: Partial<Record<string, boolean>>;
   persistence?: WorkbenchPanelsPersistenceAdapter;
 }
 
@@ -35,7 +35,11 @@ export const createWorkbenchPanelsController = (
   input: CreateWorkbenchPanelsControllerInput = {},
 ): WorkbenchPanelsController => {
   let currentScope: string | undefined;
-  const defaultOpenByRegionId = input.defaultOpenByRegionId ?? {};
+  const defaultOpenByRegionId = Object.fromEntries(
+    Object.entries(input.defaultOpenByRegionId ?? {}).filter(
+      (entry): entry is [string, boolean] => entry[1] !== undefined,
+    ),
+  );
   const persisted = input.persistence?.getPanelStates(currentScope);
   const resolveOpenByRegionId = (state: PersistedWorkbenchPanels | undefined) => ({
     ...defaultOpenByRegionId,
