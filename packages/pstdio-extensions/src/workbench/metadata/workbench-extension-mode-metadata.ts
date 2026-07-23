@@ -1,8 +1,9 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import {
   getWorkbenchModeLayoutTargetPanel,
+  normalizeWorkbenchModePanels,
   workbenchModeLayoutTargets,
-  workbenchModePanels,
+  type workbenchModePanels,
 } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "../../types/runtime";
 
@@ -154,14 +155,7 @@ const normalizeModeLayout = (
   if (layout === undefined) return { layout: undefined };
   if (!isRecord(layout)) return { diagnostic: createLayoutDiagnostic(mode, modeId, { invalidLayout: true }) };
 
-  const panels = Array.isArray(layout.panels)
-    ? layout.panels.filter((panel): panel is (typeof workbenchModePanels)[number] =>
-        (workbenchModePanels as readonly unknown[]).includes(panel),
-      )
-    : [...workbenchModePanels];
-  const invalidPanels =
-    layout.panels !== undefined &&
-    (!Array.isArray(layout.panels) || panels.length !== layout.panels.length || new Set(panels).size !== panels.length);
+  const { panels, invalid: invalidPanels } = normalizeWorkbenchModePanels(layout.panels);
   if (invalidPanels) return { diagnostic: createLayoutDiagnostic(mode, modeId, { invalidPanels: true }) };
 
   const validation = normalizeOpenEntries(layout.open, mode, viewIdsByLocalId, panels);

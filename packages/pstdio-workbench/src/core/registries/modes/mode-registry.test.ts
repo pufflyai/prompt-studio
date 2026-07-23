@@ -63,6 +63,36 @@ describe("createWorkbenchModeRegistry", () => {
     expect(log).toEqual(["change", "change"]);
   });
 
+  test("stops observing layout scope changes when disposed", () => {
+    const layout = createLayoutModel();
+    const subscribeToScopeChanges = layout.onDidChangePersistenceScope;
+    let scopeSubscriptionDisposed = false;
+    layout.onDidChangePersistenceScope = (listener) => {
+      const subscription = subscribeToScopeChanges(listener);
+      return createDisposable(() => {
+        scopeSubscriptionDisposed = true;
+        subscription.dispose();
+      });
+    };
+    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    let seeds = 0;
+    registry.registerMode({
+      id: "project",
+      panels: ["main"],
+      activate: () => undefined,
+      seed: () => {
+        seeds += 1;
+      },
+    });
+    registry.setActiveMode("project");
+
+    registry.dispose();
+    layout.setPersistenceScope("project/one");
+
+    expect(scopeSubscriptionDisposed).toBe(true);
+    expect(seeds).toBe(1);
+  });
+
   test("publishes active mode context keys", () => {
     const layout = createLayoutModel();
     const context = createContextKeyService();

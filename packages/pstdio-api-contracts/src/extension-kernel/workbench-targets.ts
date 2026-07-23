@@ -47,6 +47,17 @@ const workbenchModeLayoutTargetPanels = {
 export const getWorkbenchModeLayoutTargetPanel = (target: WorkbenchModeLayoutTarget) =>
   workbenchModeLayoutTargetPanels[target];
 
+export const normalizeWorkbenchModePanels = (input: unknown) => {
+  const panels = Array.isArray(input)
+    ? input.filter((panel): panel is WorkbenchModePanel => (workbenchModePanels as readonly unknown[]).includes(panel))
+    : [...workbenchModePanels];
+  const invalid =
+    input !== undefined &&
+    (!Array.isArray(input) || panels.length !== input.length || new Set(panels).size !== panels.length);
+
+  return { panels, invalid };
+};
+
 export type WorkbenchAttachmentTarget =
   | WorkbenchMenuTarget
   | WorkbenchTreeTarget

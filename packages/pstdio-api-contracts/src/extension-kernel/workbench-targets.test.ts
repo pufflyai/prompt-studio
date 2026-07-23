@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { getWorkbenchModeLayoutTargetPanel, getWorkbenchTargetDefinition, workbenchTargets } from "./workbench-targets";
+import {
+  getWorkbenchModeLayoutTargetPanel,
+  getWorkbenchTargetDefinition,
+  normalizeWorkbenchModePanels,
+  workbenchTargets,
+} from "./workbench-targets";
 
 const forbiddenTargetSegments = new Set(["button", "icon", "item", "widget"]);
 
@@ -38,5 +43,19 @@ describe("workbench attachment targets", () => {
     expect(getWorkbenchModeLayoutTargetPanel("workbench.main")).toBe("main");
     expect(getWorkbenchModeLayoutTargetPanel("workbench.main.right")).toBe("main");
     expect(getWorkbenchModeLayoutTargetPanel("workbench.secondary")).toBe("secondary");
+  });
+
+  test("normalizes mode panels through one shared contract", () => {
+    expect(normalizeWorkbenchModePanels(undefined)).toEqual({
+      panels: ["main", "secondary", "side"],
+      invalid: false,
+    });
+    expect(normalizeWorkbenchModePanels(["side", "main"])).toEqual({
+      panels: ["side", "main"],
+      invalid: false,
+    });
+    expect(normalizeWorkbenchModePanels(["main", "main"]).invalid).toBe(true);
+    expect(normalizeWorkbenchModePanels(["main", "unknown"]).invalid).toBe(true);
+    expect(normalizeWorkbenchModePanels("main").invalid).toBe(true);
   });
 });

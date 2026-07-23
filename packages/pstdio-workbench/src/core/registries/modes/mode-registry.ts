@@ -34,6 +34,7 @@ export interface WorkbenchModeStoreState {
 
 export interface WorkbenchModeRegistry {
   store: WorkbenchStore<WorkbenchModeStoreState>;
+  dispose(): void;
   registerMode(mode: WorkbenchModeContribution): Disposable;
   getMode(id: string): WorkbenchModeContribution | undefined;
   listModes(): WorkbenchModeContribution[];
@@ -247,15 +248,28 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     }
   };
 
-  input.resolveContext().layout.onDidChangePersistenceScope(() => {
+  const scopeSubscription = input.resolveContext().layout.onDidChangePersistenceScope(() => {
     const activeModeId = store.getState().activeModeId;
     if (activeModeId === deferredSeedModeId) return;
     const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
     if (mode) seedScope(mode);
   });
+  const registryDisposable = createDisposable(() => {
+    scopeSubscription.dispose();
+    disposeActive();
+    for (const disposables of initializedModes.values()) disposeReverse(disposables);
+    initializedModes.clear();
+    seededScopes.clear();
+    unscopedLayouts.clear();
+    store.setState({ modes: {}, activeModeId: undefined }, false, "disposeModes");
+  });
 
   return {
     store,
+
+    dispose() {
+      registryDisposable.dispose();
+    },
 
     registerMode(mode) {
       const snapshot = store.getState();

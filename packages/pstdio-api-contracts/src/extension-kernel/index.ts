@@ -42,6 +42,7 @@ export {
 export {
   getWorkbenchModeLayoutTargetPanel,
   getWorkbenchTargetDefinition,
+  normalizeWorkbenchModePanels,
   type WorkbenchAttachmentTarget,
   type WorkbenchContributionKind,
   type WorkbenchLayoutTarget,
