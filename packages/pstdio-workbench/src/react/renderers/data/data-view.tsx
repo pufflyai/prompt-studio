@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { type ResourceContextAction, ScrollArea } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
   type AttributesSource,
@@ -71,6 +71,14 @@ const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | A
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 };
 
+export const mergeDataViewRowActions = (
+  resourceActions: ResourceContextAction[],
+  contributionActions: ResourceContextAction[],
+) => {
+  const resourceActionKeys = new Set(resourceActions.map((action) => action.key));
+  return [...resourceActions, ...contributionActions.filter((action) => !resourceActionKeys.has(action.key))];
+};
+
 export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
@@ -126,8 +134,7 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const getRowContextMenuActions = (row: DataRendererRow) => {
     const resourceActions = isResourceRef(row.resource) ? resolveResourceActions(row.resource) : [];
     const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
-    const resourceActionLabels = new Set(resourceActions.map((action) => action.label));
-    return [...resourceActions, ...contributionActions.filter((action) => !resourceActionLabels.has(action.label))];
+    return mergeDataViewRowActions(resourceActions, contributionActions);
   };
 
   return (

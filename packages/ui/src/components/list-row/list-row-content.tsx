@@ -4,7 +4,7 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
 import { RowActions } from "./list-row-actions";
 
-const createResourceRowActions = (item: ListRowItem) => {
+export const createResourceRowActions = (item: ListRowItem) => {
   const contextMenuItems = item.contextMenuItems ?? [];
   if (contextMenuItems.length === 0) return item.actions ?? [];
 
@@ -22,9 +22,8 @@ const createResourceRowActions = (item: ListRowItem) => {
           ],
     ) ?? [];
   const inlineIds = new Set(inlineMenuItems.map((menuItem) => menuItem.id));
-  const inlineLabels = new Set(inlineMenuItems.map((menuItem) => menuItem.label));
   const resourceMenuItems = contextMenuItems
-    .filter((menuItem) => !inlineIds.has(menuItem.id) && !inlineLabels.has(menuItem.label))
+    .filter((menuItem) => !inlineIds.has(menuItem.id))
     .map((menuItem, index) => ({
       ...menuItem,
       separatorBefore: menuItem.separatorBefore || (index === 0 && inlineMenuItems.length > 0),
