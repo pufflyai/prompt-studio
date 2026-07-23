@@ -80,6 +80,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
 
   const workbench = createWorkbenchCore({
     initialSessionPanelMode: "closed",
+    defaultPanelOpenByRegionId: { secondary: false },
     ...createLocalStorageWorkbenchPersistence({
       namespace: dashboardWorkbenchStorageNamespace,
       storage,

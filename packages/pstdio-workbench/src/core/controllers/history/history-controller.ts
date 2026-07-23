@@ -517,7 +517,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     setState({ ...hydrated, hydrating: awaitingRestore }, "history.setPersistenceScope", false);
   };
 
-  input.layout.onDidChangePersistenceScope(setPersistenceScope);
+  input.layout.onWillChangePersistenceScope(setPersistenceScope);
 
   if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
 

@@ -97,12 +97,10 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
     });
   }
 
-  ctx.layout.setRegionVisible("secondary", true);
-  ctx.panels.setOpen("secondary", true);
   if (existing) return existing;
 
   autoOpenedUris.add(resource.uri);
-  return openWorkspaceTerminalResource(ctx, resource);
+  return openWorkbenchTerminal(ctx, { resource, reveal: false });
 };
 
 // The default workspace (root repo) is permanent: hide every action when the active or

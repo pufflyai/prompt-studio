@@ -10,7 +10,7 @@ import { createDashboardResource, dashboardResources } from "@/shared/app/resour
 import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule terminal integration", () => {
-  test("opening a workspace ensures a workspace terminal in the Secondary Panel", async () => {
+  test("opening a workspace ensures a terminal without reopening a closed Secondary Panel", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
@@ -43,7 +43,7 @@ describe("createWorkspacesModule terminal integration", () => {
         title: "Terminal 1",
       }),
     ]);
-    expect(workbench.panels.isOpen("secondary")).toBe(true);
+    expect(workbench.panels.isOpen("secondary")).toBe(false);
   });
 
   test("keeps the workspace terminal after navigating from the workspaces board", async () => {

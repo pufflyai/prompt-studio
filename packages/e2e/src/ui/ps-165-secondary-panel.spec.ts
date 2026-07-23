@@ -51,6 +51,27 @@ const dragPanelToRawSize = async (
   await page.mouse.up();
 };
 
+test("PS-165 starts the Secondary Panel closed and preserves that state after refresh", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const project = await createProject(request);
+  await bypassOnboarding(page, project.id);
+
+  await page.goto(`/projects/${project.id}`);
+
+  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  await expect(showSecondary).toBeVisible();
+
+  await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+  const hideSecondary = page.getByRole("button", { name: "Hide Secondary Panel" });
+  await expect(hideSecondary).toBeVisible();
+  await hideSecondary.click();
+
+  await page.reload();
+
+  await expect(showSecondary).toBeVisible();
+  await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();
+});
+
 test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);

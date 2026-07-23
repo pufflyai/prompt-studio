@@ -79,6 +79,28 @@ describe("createWorkbenchPanelsController", () => {
     expect(panels.getPersistenceScope()).toBe("project:one");
   });
 
+  test("uses host defaults until a project has persisted panel state", () => {
+    const stored = new Map<string, PersistedWorkbenchPanels>();
+    const createPanels = () =>
+      createWorkbenchPanelsController({
+        defaultOpenByRegionId: { secondary: false },
+        persistence: {
+          getPanelStates: (scope) => stored.get(scope ?? "global"),
+          setPanelStates: (state, scope) => stored.set(scope ?? "global", state),
+        },
+      });
+
+    const panels = createPanels();
+    panels.setPersistenceScope("project:one");
+    expect(panels.isOpen("secondary")).toBe(false);
+
+    panels.setOpen("secondary", true);
+
+    const restored = createPanels();
+    restored.setPersistenceScope("project:one");
+    expect(restored.isOpen("secondary")).toBe(true);
+  });
+
   test("onDidChange fires for any state mutation", () => {
     const panels = createWorkbenchPanelsController();
     const events: string[] = [];

@@ -27,6 +27,7 @@ export interface WorkbenchPanelsController {
 }
 
 export interface CreateWorkbenchPanelsControllerInput {
+  defaultOpenByRegionId?: Record<string, boolean>;
   persistence?: WorkbenchPanelsPersistenceAdapter;
 }
 
@@ -34,11 +35,16 @@ export const createWorkbenchPanelsController = (
   input: CreateWorkbenchPanelsControllerInput = {},
 ): WorkbenchPanelsController => {
   let currentScope: string | undefined;
+  const defaultOpenByRegionId = input.defaultOpenByRegionId ?? {};
   const persisted = input.persistence?.getPanelStates(currentScope);
+  const resolveOpenByRegionId = (state: PersistedWorkbenchPanels | undefined) => ({
+    ...defaultOpenByRegionId,
+    ...state?.openByRegionId,
+  });
 
   const store = createWorkbenchStore<WorkbenchPanelsState>({
     name: "workbench.panels",
-    initialState: { openByRegionId: persisted?.openByRegionId ?? {} },
+    initialState: { openByRegionId: resolveOpenByRegionId(persisted) },
   });
 
   const persistState = () => {
@@ -75,7 +81,7 @@ export const createWorkbenchPanelsController = (
       persistState();
       currentScope = scope;
       const incoming = input.persistence?.getPanelStates(currentScope);
-      store.setState({ openByRegionId: incoming?.openByRegionId ?? {} }, false, "setPersistenceScope");
+      store.setState({ openByRegionId: resolveOpenByRegionId(incoming) }, false, "setPersistenceScope");
     },
 
     getPersistenceScope: () => currentScope,

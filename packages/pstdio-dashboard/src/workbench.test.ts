@@ -9,6 +9,13 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.sessionPanel.getMode()).toBe("closed");
   });
 
+  test("starts the Secondary Panel closed", () => {
+    const workbench = createDashboardWorkbench();
+
+    expect(workbench.panels.isOpen("secondary")).toBe(false);
+    expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
+  });
+
   test("registers the host terminal surface and API session opener", () => {
     const workbench = createDashboardWorkbench();
 

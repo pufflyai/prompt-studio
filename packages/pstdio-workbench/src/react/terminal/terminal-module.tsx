@@ -13,7 +13,10 @@ const RENDERER_ID = "workbench.terminal.renderer";
 const LAUNCHER_RENDERER_ID = "workbench.terminal.launcher.renderer";
 const TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
 type OpenWorkbenchTerminalInput = NonNullable<Parameters<WorkbenchCoreContributionContext["layout"]["openWidget"]>[1]>;
-type TerminalResource = OpenWorkbenchTerminalInput["resource"];
+type OpenWorkbenchTerminalOptions = OpenWorkbenchTerminalInput & {
+  reveal?: boolean;
+};
+type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
 
 export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launcher";
 
@@ -68,17 +71,20 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
 // Opens a new terminal placement, revealing the bottom region if it is collapsed.
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
-  input: OpenWorkbenchTerminalInput = {},
+  input: OpenWorkbenchTerminalOptions = {},
 ) => {
-  const resource = getTerminalResource(ctx, input.resource);
+  const { reveal = true, ...openInput } = input;
+  const resource = getTerminalResource(ctx, openInput.resource);
   ensureTerminalLauncher(ctx);
   const placement = ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, {
-    ...input,
+    ...openInput,
     resource,
-    title: input.title ?? getNextTerminalTitle(ctx),
+    title: openInput.title ?? getNextTerminalTitle(ctx),
   });
-  ctx.layout.setRegionVisible("secondary", true);
-  ctx.panels.setOpen("secondary", true);
+  if (reveal) {
+    ctx.layout.setRegionVisible("secondary", true);
+    ctx.panels.setOpen("secondary", true);
+  }
   return placement;
 };
 

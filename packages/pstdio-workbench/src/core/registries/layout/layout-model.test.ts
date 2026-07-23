@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createLayoutModel, type WorkbenchLayout } from "./layout-model";
+import { createDefaultWorkbenchLayout, createLayoutModel, type WorkbenchLayout } from "./layout-model";
 import { registerTestWidget } from "./layout-model-test-utils";
 
 describe("updateWidgetPlacement", () => {
@@ -360,6 +360,41 @@ describe("createLayoutModel placeholders", () => {
 });
 
 describe("createLayoutModel persistence", () => {
+  test("uses host visibility defaults for every unpersisted scope", () => {
+    const layout = createLayoutModel({ defaultRegionVisibility: { secondary: false } });
+
+    expect(layout.getLayout().regions.secondary.visible).toBe(false);
+
+    layout.setRegionVisible("secondary", true);
+    layout.setPersistenceScope("project:one");
+
+    expect(layout.getLayout().regions.secondary.visible).toBe(false);
+  });
+
+  test("notifies scope listeners after the incoming layout is hydrated", () => {
+    const globalLayout = createDefaultWorkbenchLayout();
+    const projectLayout = createDefaultWorkbenchLayout();
+    projectLayout.regions.secondary.visible = false;
+    const layouts = new Map<string | undefined, WorkbenchLayout>([
+      [undefined, globalLayout],
+      ["project:one", projectLayout],
+    ]);
+    const layout = createLayoutModel({
+      persistence: {
+        getLayout: (scope) => layouts.get(scope),
+        setLayout: (state, scope) => layouts.set(scope, structuredClone(state)),
+      },
+    });
+    const observedVisibility: boolean[] = [];
+    layout.onDidChangePersistenceScope(() => {
+      observedVisibility.push(layout.getLayout().regions.secondary.visible);
+    });
+
+    layout.setPersistenceScope("project:one");
+
+    expect(observedVisibility).toEqual([false]);
+  });
+
   test("fills in missing regions when loading a layout persisted before new regions existed", () => {
     const partialLayout = {
       regions: {

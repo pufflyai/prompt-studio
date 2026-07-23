@@ -38,7 +38,12 @@ import {
 } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
-import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
+import {
+  createLayoutModel,
+  type LayoutModel,
+  type LayoutPersistenceAdapter,
+  type WorkbenchRegion,
+} from "./registries/layout/layout-model";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -151,6 +156,7 @@ export interface CreateWorkbenchCoreInput {
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
+  defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   lastResourcePersistence?: LastResourcePersistenceAdapter;
   initialSessionPanelMode?: WorkbenchSessionPanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
@@ -260,6 +266,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.layout.registerPanelMenu(panelMenu, withModuleMetadata(input, metadata))),
       registerMenuItem: (path, item, metadata) =>
         track(core.layout.registerMenuItem(path, item, withModuleMetadata(input, metadata))),
+      onWillChangePersistenceScope: (listener) => track(core.layout.onWillChangePersistenceScope(listener)),
       onDidChangePersistenceScope: (listener) => track(core.layout.onDidChangePersistenceScope(listener)),
     },
     modes: {
@@ -364,7 +371,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
   const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
   const layout = {
-    ...createLayoutModel({ persistence: input.layoutPersistence }),
+    ...createLayoutModel({
+      defaultRegionVisibility: input.defaultPanelOpenByRegionId,
+      persistence: input.layoutPersistence,
+    }),
     ...createMenuRegistry({ commands }),
   };
   const focus = createWorkbenchFocusController({
@@ -418,7 +428,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
       }),
     }),
-    panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
+    panels: createWorkbenchPanelsController({
+      defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
+      persistence: input.panelsPersistence,
+    }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: {
       ...rendererRegistry,

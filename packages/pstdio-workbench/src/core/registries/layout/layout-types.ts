@@ -207,34 +207,40 @@ export interface OpenWidgetInput {
   replaceWidgetId?: string;
 }
 
-const createRegionState = (id: WorkbenchRegion): WorkbenchRegionState => ({
+const createRegionState = (id: WorkbenchRegion, visible: boolean): WorkbenchRegionState => ({
   id,
-  visible: true,
+  visible,
   widgets: [],
 });
 
-export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
-  regions: {
-    nav: createRegionState("nav"),
-    activity: createRegionState("activity"),
-    "sidebar-header": createRegionState("sidebar-header"),
-    sidebar: createRegionState("sidebar"),
-    "main-header": createRegionState("main-header"),
-    "main-left-menu": createRegionState("main-left-menu"),
-    main: createRegionState("main"),
-    "main-right-menu": createRegionState("main-right-menu"),
-    "secondary-header": createRegionState("secondary-header"),
-    "secondary-left-menu": createRegionState("secondary-left-menu"),
-    secondary: createRegionState("secondary"),
-    "secondary-right-menu": createRegionState("secondary-right-menu"),
-    "side-header": createRegionState("side-header"),
-    "side-left-menu": createRegionState("side-left-menu"),
-    side: createRegionState("side"),
-    "side-right-menu": createRegionState("side-right-menu"),
-    status: createRegionState("status"),
-    overlay: createRegionState("overlay"),
-  },
-});
+export const createDefaultWorkbenchLayout = (
+  regionVisibility: Partial<Record<WorkbenchRegion, boolean>> = {},
+): WorkbenchLayout => {
+  const createRegion = (id: WorkbenchRegion) => createRegionState(id, regionVisibility[id] ?? true);
+
+  return {
+    regions: {
+      nav: createRegion("nav"),
+      activity: createRegion("activity"),
+      "sidebar-header": createRegion("sidebar-header"),
+      sidebar: createRegion("sidebar"),
+      "main-header": createRegion("main-header"),
+      "main-left-menu": createRegion("main-left-menu"),
+      main: createRegion("main"),
+      "main-right-menu": createRegion("main-right-menu"),
+      "secondary-header": createRegion("secondary-header"),
+      "secondary-left-menu": createRegion("secondary-left-menu"),
+      secondary: createRegion("secondary"),
+      "secondary-right-menu": createRegion("secondary-right-menu"),
+      "side-header": createRegion("side-header"),
+      "side-left-menu": createRegion("side-left-menu"),
+      side: createRegion("side"),
+      "side-right-menu": createRegion("side-right-menu"),
+      status: createRegion("status"),
+      overlay: createRegion("overlay"),
+    },
+  };
+};
 
 const findLastWidgetIndex = (widgets: WorkbenchWidgetPlacement[], widgetId: string) => {
   for (let index = widgets.length - 1; index >= 0; index -= 1) {
@@ -269,8 +275,11 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
   return { ...layout, regions, activeWidgetId, activeResourceUri };
 };
 
-export const mergeWithDefaultRegions = (persisted: WorkbenchLayout): WorkbenchLayout => {
-  const defaults = createDefaultWorkbenchLayout();
+export const mergeWithDefaultRegions = (
+  persisted: WorkbenchLayout,
+  regionVisibility: Partial<Record<WorkbenchRegion, boolean>> = {},
+): WorkbenchLayout => {
+  const defaults = createDefaultWorkbenchLayout(regionVisibility);
   return normalizeWidgetIds({
     ...persisted,
     regions: { ...defaults.regions, ...persisted.regions },

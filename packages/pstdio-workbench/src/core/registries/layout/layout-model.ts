@@ -89,6 +89,7 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
+  defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
 }
 
@@ -121,6 +122,7 @@ export interface LayoutModel {
   restoreLayout(layout: WorkbenchLayout): void;
   setPersistenceScope(scope: LayoutScope | undefined): void;
   getPersistenceScope(): LayoutScope | undefined;
+  onWillChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
   onDidChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
 }
 
@@ -458,11 +460,30 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   return { openWidget };
 };
 
+const resolveScopedLayout = (input: CreateLayoutModelInput, persisted: WorkbenchLayout | undefined) =>
+  persisted
+    ? mergeWithDefaultRegions(persisted, input.defaultRegionVisibility)
+    : createDefaultWorkbenchLayout(input.defaultRegionVisibility);
+
+const createScopeEvent = () => {
+  const listeners = new Set<(scope: LayoutScope | undefined) => void>();
+  return {
+    notify(scope: LayoutScope | undefined) {
+      for (const listener of listeners) listener(scope);
+    },
+    subscribe(listener: (scope: LayoutScope | undefined) => void) {
+      listeners.add(listener);
+      return createDisposable(() => listeners.delete(listener));
+    },
+  };
+};
+
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
   let currentScope: LayoutScope | undefined;
-  const scopeListeners = new Set<(scope: LayoutScope | undefined) => void>();
+  const willChangeScope = createScopeEvent();
+  const didChangeScope = createScopeEvent();
   const persisted = input.persistence?.getLayout(currentScope);
-  const initialLayout = persisted ? mergeWithDefaultRegions(persisted) : createDefaultWorkbenchLayout();
+  const initialLayout = resolveScopedLayout(input, persisted);
 
   const store = createWorkbenchStore<WorkbenchLayoutStoreState>({
     name: "workbench.layout",
@@ -682,29 +703,28 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     getLayout,
 
     restoreLayout(layout) {
-      setLayout(mergeWithDefaultRegions(layout));
+      setLayout(mergeWithDefaultRegions(layout, input.defaultRegionVisibility));
       persistLayout();
     },
 
     setPersistenceScope(nextScope) {
       if (currentScope === nextScope) return;
       input.persistence?.setLayout(getLayout(), currentScope);
+      willChangeScope.notify(nextScope);
       currentScope = nextScope;
-      for (const listener of scopeListeners) listener(currentScope);
       const incoming = input.persistence?.getLayout(currentScope);
-      const scopedLayout = incoming ? mergeWithDefaultRegions(incoming) : createDefaultWorkbenchLayout();
+      const scopedLayout = resolveScopedLayout(input, incoming);
       // Module-owned chrome is global workbench structure. Project scopes replace
       // Location workspaces, but must not unmount pinned navigation and headers.
       const nextLayout = carryPinnedWorkbenchChrome(getLayout(), scopedLayout);
       const snapshot = store.getState();
       store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
+      didChangeScope.notify(currentScope);
     },
 
     getPersistenceScope: () => currentScope,
 
-    onDidChangePersistenceScope(listener) {
-      scopeListeners.add(listener);
-      return createDisposable(() => scopeListeners.delete(listener));
-    },
+    onWillChangePersistenceScope: willChangeScope.subscribe,
+    onDidChangePersistenceScope: didChangeScope.subscribe,
   };
 };
