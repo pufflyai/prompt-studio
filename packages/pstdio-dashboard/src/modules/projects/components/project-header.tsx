@@ -37,6 +37,7 @@ export const ProjectHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
     getDashboardDataVersion,
     getDashboardDataVersion,
   );
+  const breadcrumbItems = useWorkbenchStore(input.workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const projectName = resolveProjectName(selectedProjectId, selectedProjectName, dashboardDataVersion);
 
   return (
@@ -80,6 +81,11 @@ export const ProjectHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
           </IconButton>
         </Tooltip>
       </HStack>
+      {breadcrumbItems.length > 0 ? (
+        <Text aria-hidden="true" color="fg.subtle" flexShrink={0}>
+          /
+        </Text>
+      ) : null}
       <WorkbenchBreadcrumbView workbench={input.workbench} />
     </HStack>
   );
