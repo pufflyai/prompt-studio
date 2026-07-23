@@ -3,8 +3,7 @@ import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchRegion } from "../region/region";
-import { shouldShowRegionTabs, WorkbenchRegionTabs } from "../region/region-tabs";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
@@ -16,8 +15,7 @@ interface WorkbenchSidenavProps {
 
 export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
   const { workbench, hasHeader, contextActions } = props;
-  const sidenavWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.widgets);
-  const hasContentTabs = shouldShowRegionTabs(sidenavWidgets);
+  const hasContentTabs = useWorkbenchRegionTabsVisible(workbench, "sidenav");
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
