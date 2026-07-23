@@ -23,6 +23,7 @@ test.describe("PS-172 workspace sessions", () => {
     await page.goto(storyUrl(baseUrl, workspaceModeStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await expect(sidenav).toBeVisible({ timeout: 15_000 });
     const workspaceSessions = sidenav.getByRole("option", { name: "Sessions", exact: true }).last();
     await expect(workspaceSessions).toBeVisible();
     await workspaceSessions.click();
