@@ -92,6 +92,8 @@ const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
 sidePanelsWorkbench.sessionPanel.setMode("attached");
+const responsivePanelMenusWorkbench = createWorkbench(createSidePanelsModule());
+responsivePanelMenusWorkbench.sessionPanel.setMode("attached");
 const panelCompositionWorkbenches = {
   locationOnly: createPanelCompositionWorkbench("location-only"),
   eligible: createPanelCompositionWorkbench("eligible"),
@@ -268,6 +270,12 @@ export const RefreshAfterBack: Story = {
 export const ResourcePanelRestore: Story = {
   name: "14.13 Resource Panel restore",
   render: () => <WorkbenchFrame workbench={panelCompositionWorkbenches.resourceIsolation} />,
+};
+
+export const ResponsivePanelMenus: Story = {
+  name: "14.14 Responsive Panel menus",
+  parameters: sourceParameters(sidePanelsSource),
+  render: () => <WorkbenchFrame workbench={responsivePanelMenusWorkbench} />,
 };
 
 export const Settings: Story = {

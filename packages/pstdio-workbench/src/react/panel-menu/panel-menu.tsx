@@ -25,6 +25,7 @@ import {
   canAttachWorkbenchPanelMenu,
   PANEL_CONTENT_MIN_SIZE_PX,
   PANEL_MENU_RESIZE_HANDLE_SIZE_PX,
+  shouldCollapseWorkbenchPanelMenus,
 } from "./panel-menu-sizing";
 
 const PANEL_MENU_SIZE = { defaultPx: 180, minPx: 144, maxPx: 320 };
@@ -52,6 +53,7 @@ interface WorkbenchPanelMenuView {
   icon: string;
   has: boolean;
   collapsed: boolean;
+  responsiveCollapsed: boolean;
   collapsible: boolean;
   size: ReturnType<typeof resolveRegionSize>;
   onOpen: () => void;
@@ -62,6 +64,7 @@ const useWorkbenchPanelMenu = (
   workbench: WorkbenchCore,
   panel: WorkbenchPanelRegion,
   side: WorkbenchPanelMenuSide,
+  responsiveCollapsed = false,
 ): WorkbenchPanelMenuView => {
   const region = workbenchPanelMenuRegions[panel][side];
   const locationResource = useWorkbenchLocationResource(workbench);
@@ -103,7 +106,8 @@ const useWorkbenchPanelMenu = (
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),
     has: regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region)),
-    collapsed: !open && collapsible,
+    collapsed: (!open || responsiveCollapsed) && collapsible,
+    responsiveCollapsed,
     collapsible,
     size: resolveRegionSize(workbench.layout.getRegionSize(region)),
     onOpen: () => workbench.panels.setOpen(panelStateKey, true),
@@ -161,8 +165,10 @@ export const WorkbenchPanelMenuLayout = (props: {
   children: ReactNode;
 }) => {
   const { children, panel, workbench } = props;
-  const left = useWorkbenchPanelMenu(workbench, panel, "left");
-  const right = useWorkbenchPanelMenu(workbench, panel, "right");
+  const panelWidth = useWorkbenchPanelWidth(panel);
+  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(panelWidth);
+  const left = useWorkbenchPanelMenu(workbench, panel, "left", responsiveCollapsed);
+  const right = useWorkbenchPanelMenu(workbench, panel, "right", responsiveCollapsed);
   const withRight = addPanelMenu({ content: children, view: right, workbench });
   return addPanelMenu({ content: withRight, view: left, workbench });
 };
@@ -174,7 +180,7 @@ const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
     const element = document.querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
     if (!element) return;
 
-    const measure = () => setWidth(element.getBoundingClientRect().width);
+    const measure = () => setWidth(element.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -197,6 +203,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
   return (
     <Menu.Root
       positioning={{ placement: "bottom-start", offset: { mainAxis: 0 }, getAnchorElement: () => triggerRef.current }}
+      onExitComplete={() => triggerRef.current?.focus()}
     >
       <Tooltip content={view.title}>
         <Menu.Trigger asChild>
@@ -227,6 +234,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
             w="64"
           >
             <Header variant="narrow" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0} gap="xs">
+              <WorkbenchIcon name={view.icon} size={14} />
               <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
                 {view.title}
               </Text>
@@ -256,9 +264,10 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
 
 export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; panel: WorkbenchPanelRegion }) => {
   const { panel, workbench } = props;
-  const left = useWorkbenchPanelMenu(workbench, panel, "left");
-  const right = useWorkbenchPanelMenu(workbench, panel, "right");
   const panelWidth = useWorkbenchPanelWidth(panel);
+  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(panelWidth);
+  const left = useWorkbenchPanelMenu(workbench, panel, "left", responsiveCollapsed);
+  const right = useWorkbenchPanelMenu(workbench, panel, "right", responsiveCollapsed);
   const views = [left, right];
   const closedMenus = [left, right].filter((view) => view.has && view.collapsed);
 
@@ -270,11 +279,13 @@ export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; pan
         const attachedMenuMinSizes = views
           .filter((candidate) => candidate.has && !candidate.collapsed)
           .map((candidate) => candidate.size.minPx);
-        const canAttach = canAttachWorkbenchPanelMenu({
-          panelWidth,
-          targetMenuMinSize: view.size.minPx,
-          attachedMenuMinSizes,
-        });
+        const canAttach =
+          !view.responsiveCollapsed &&
+          canAttachWorkbenchPanelMenu({
+            panelWidth,
+            targetMenuMinSize: view.size.minPx,
+            attachedMenuMinSizes,
+          });
 
         return <WorkbenchPanelMenuOpener key={view.region} view={view} workbench={workbench} canAttach={canAttach} />;
       })}

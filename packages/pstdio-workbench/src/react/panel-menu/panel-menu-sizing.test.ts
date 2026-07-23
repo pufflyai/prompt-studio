@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { canAttachWorkbenchPanelMenu } from "./panel-menu-sizing";
+import { canAttachWorkbenchPanelMenu, shouldCollapseWorkbenchPanelMenus } from "./panel-menu-sizing";
+
+describe("shouldCollapseWorkbenchPanelMenus", () => {
+  test("collapses at 480 px and restores immediately above the boundary", () => {
+    expect(shouldCollapseWorkbenchPanelMenus(0)).toBe(false);
+    expect(shouldCollapseWorkbenchPanelMenus(480)).toBe(true);
+    expect(shouldCollapseWorkbenchPanelMenus(481)).toBe(false);
+  });
+});
 
 describe("canAttachWorkbenchPanelMenu", () => {
   test("requires room for the menu, resize handle, and Panel content", () => {

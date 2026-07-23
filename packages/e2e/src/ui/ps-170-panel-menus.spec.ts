@@ -236,6 +236,20 @@ test.describe("PS-170 Panel-owned menus", () => {
   test("shows all six headerless menus and reattaches one menu for every Panel type", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
+    const sidePanel = page.locator('[data-workbench-panel="side"]');
+    const sideSeparator = page.getByRole("separator", { name: "Resize Side Panel" });
+    const [sideWidth, sideSeparatorBox] = await Promise.all([
+      sidePanel.evaluate((element) => element.clientWidth),
+      sideSeparator.boundingBox(),
+    ]);
+    expect(sideSeparatorBox).not.toBeNull();
+    const sideStartX = sideSeparatorBox!.x + sideSeparatorBox!.width / 2;
+    const sideY = sideSeparatorBox!.y + sideSeparatorBox!.height / 2;
+    await page.mouse.move(sideStartX, sideY);
+    await page.mouse.down();
+    await page.mouse.move(sideStartX - (520 - sideWidth), sideY);
+    await page.mouse.up();
+    await expect.poll(() => sidePanel.evaluate((element) => element.clientWidth)).toBe(520);
 
     for (const panel of ["main", "secondary", "side"]) {
       for (const side of ["left", "right"]) {
