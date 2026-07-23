@@ -48,6 +48,12 @@ helloWorldWorkbench.registerModule(createHelloWorldModule());
 const workbenchModesWorkbench = createWorkbenchCore();
 workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
 
+const workbenchModesWorkspaceWorkbench = createWorkbenchCore();
+workbenchModesWorkspaceWorkbench.registerModule(createWorkbenchModesExampleModule("workspace"));
+
+const workbenchModesSettingsWorkbench = createWorkbenchCore();
+workbenchModesSettingsWorkbench.registerModule(createWorkbenchModesExampleModule("settings"));
+
 const regionMapWorkbench = createWorkbenchCore();
 regionMapWorkbench.registerModule(createRegionMapModule());
 
@@ -162,6 +168,14 @@ export const HelloWorld: Story = {
 
 export const WorkbenchModes: Story = {
   render: () => <WorkbenchStory workbench={workbenchModesWorkbench} />,
+};
+
+export const WorkbenchModesWorkspace: Story = {
+  render: () => <WorkbenchStory workbench={workbenchModesWorkspaceWorkbench} />,
+};
+
+export const WorkbenchModesSettings: Story = {
+  render: () => <WorkbenchStory workbench={workbenchModesSettingsWorkbench} />,
 };
 
 export const RegionMap: Story = {

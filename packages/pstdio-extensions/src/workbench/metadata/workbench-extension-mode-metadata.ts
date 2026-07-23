@@ -1,4 +1,9 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import {
+  getWorkbenchModeLayoutTargetPanel,
+  workbenchModeLayoutTargets,
+  workbenchModePanels,
+} from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "../../types/runtime";
 
 type ExtensionDiagnostic = WorkbenchExtensionMetadata["diagnostics"][number];
@@ -10,17 +15,11 @@ interface ModeOpenEntriesValidation {
   invalidOpenEntry: boolean;
   missingViews: string[];
   open: ModeLayoutOpenEntry[];
+  unavailableOpenTargets: string[];
   unsafeOpenTargets: string[];
 }
 
 const reservedModeIds = new Set(["project-selection", "project", "workspace", "settings"]);
-const safeModeTargets = new Set([
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -66,12 +65,18 @@ const normalizeModeOpenEntry = (
   rawEntry: unknown,
   mode: ExtensionRuntime["modes"][number],
   viewIdsByLocalId: Map<string, string>,
+  panels: readonly (typeof workbenchModePanels)[number][],
 ) => {
-  if (!isRecord(rawEntry) || !safeModeTargets.has(String(rawEntry.target))) {
+  const target = isRecord(rawEntry) ? String(rawEntry.target) : String(rawEntry);
+  if (!isRecord(rawEntry) || !(workbenchModeLayoutTargets as readonly string[]).includes(target)) {
     return { unsafeTarget: isRecord(rawEntry) ? String(rawEntry.target) : String(rawEntry) };
   }
 
-  const entry: ModeLayoutOpenEntry = { target: rawEntry.target as ModeLayoutTarget };
+  const modeTarget = rawEntry.target as ModeLayoutTarget;
+  const targetPanel = getWorkbenchModeLayoutTargetPanel(modeTarget);
+  if (targetPanel && !panels.includes(targetPanel)) return { unavailableTarget: modeTarget };
+
+  const entry: ModeLayoutOpenEntry = { target: modeTarget };
   if (typeof rawEntry.title === "string") entry.title = rawEntry.title;
   if (typeof rawEntry.pinned === "boolean") entry.pinned = rawEntry.pinned;
   if (typeof rawEntry.widget === "string") entry.widget = rawEntry.widget;
@@ -85,29 +90,26 @@ const normalizeModeOpenEntry = (
   return { entry };
 };
 
-const normalizeResetTargets = (reset: unknown) => {
-  if (reset === undefined || typeof reset === "boolean") return [];
-  if (!Array.isArray(reset)) return [String(reset)];
-  return reset.filter((target) => !safeModeTargets.has(String(target))).map(String);
-};
-
 const normalizeOpenEntries = (
   rawOpen: unknown,
   mode: ExtensionRuntime["modes"][number],
   viewIdsByLocalId: Map<string, string>,
+  panels: readonly (typeof workbenchModePanels)[number][],
 ) => {
   const validation: ModeOpenEntriesValidation = {
     invalidOpenEntry: rawOpen !== undefined && !Array.isArray(rawOpen),
     missingViews: [],
     open: [],
+    unavailableOpenTargets: [],
     unsafeOpenTargets: [],
   };
 
   if (!Array.isArray(rawOpen)) return validation;
   for (const rawEntry of rawOpen) {
-    const result = normalizeModeOpenEntry(rawEntry, mode, viewIdsByLocalId);
+    const result = normalizeModeOpenEntry(rawEntry, mode, viewIdsByLocalId, panels);
     if (result.entry) validation.open.push(result.entry);
     if (result.unsafeTarget) validation.unsafeOpenTargets.push(result.unsafeTarget);
+    if (result.unavailableTarget) validation.unavailableOpenTargets.push(result.unavailableTarget);
     if (result.missingView) validation.missingViews.push(result.missingView);
     if (result.invalid) validation.invalidOpenEntry = true;
   }
@@ -117,12 +119,13 @@ const normalizeOpenEntries = (
 const createModeLayoutDiagnostic = (
   mode: ExtensionRuntime["modes"][number],
   modeId: string,
-  unsafeResetTargets: string[],
   validation: ModeOpenEntriesValidation,
 ) => {
   const metadata: Record<string, unknown> = {};
-  if (unsafeResetTargets.length) metadata.unsafeResetTargets = unsafeResetTargets;
   if (validation.unsafeOpenTargets.length) metadata.unsafeOpenTargets = validation.unsafeOpenTargets;
+  if (validation.unavailableOpenTargets.length) {
+    metadata.unavailableOpenTargets = validation.unavailableOpenTargets;
+  }
   if (validation.missingViews[0]) {
     metadata.missingView = validation.missingViews[0];
     metadata.missingViews = validation.missingViews;
@@ -133,8 +136,12 @@ const createModeLayoutDiagnostic = (
   return createLayoutDiagnostic(mode, modeId, metadata);
 };
 
-const buildModeLayout = (layout: Record<string, unknown>, open: ModeLayoutOpenEntry[]) => ({
-  ...(layout.reset !== undefined ? { reset: layout.reset as ModeLayoutContributionRecord["reset"] } : {}),
+const buildModeLayout = (
+  layout: Record<string, unknown>,
+  panels: NonNullable<ModeLayoutContributionRecord["panels"]>,
+  open: ModeLayoutOpenEntry[],
+) => ({
+  panels,
   ...(layout.open !== undefined ? { open } : {}),
 });
 
@@ -147,12 +154,21 @@ const normalizeModeLayout = (
   if (layout === undefined) return { layout: undefined };
   if (!isRecord(layout)) return { diagnostic: createLayoutDiagnostic(mode, modeId, { invalidLayout: true }) };
 
-  const unsafeResetTargets = normalizeResetTargets(layout.reset);
-  const validation = normalizeOpenEntries(layout.open, mode, viewIdsByLocalId);
-  const diagnostic = createModeLayoutDiagnostic(mode, modeId, unsafeResetTargets, validation);
+  const panels = Array.isArray(layout.panels)
+    ? layout.panels.filter((panel): panel is (typeof workbenchModePanels)[number] =>
+        (workbenchModePanels as readonly unknown[]).includes(panel),
+      )
+    : [...workbenchModePanels];
+  const invalidPanels =
+    layout.panels !== undefined &&
+    (!Array.isArray(layout.panels) || panels.length !== layout.panels.length || new Set(panels).size !== panels.length);
+  if (invalidPanels) return { diagnostic: createLayoutDiagnostic(mode, modeId, { invalidPanels: true }) };
+
+  const validation = normalizeOpenEntries(layout.open, mode, viewIdsByLocalId, panels);
+  const diagnostic = createModeLayoutDiagnostic(mode, modeId, validation);
   if (diagnostic) return { diagnostic };
 
-  return { layout: buildModeLayout(layout, validation.open) };
+  return { layout: buildModeLayout(layout, panels, validation.open) };
 };
 
 export const toWorkbenchExtensionModeRecords = (runtime: ExtensionRuntime) => {

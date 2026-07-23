@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("extension mode layout validation", () => {
-  test("reports unsafe reset targets and unknown mode layout views", async () => {
+  test("reports targets outside the declared frame", async () => {
     const root = createExtension(
       "bad-mode-layout",
       `export default {
@@ -46,8 +46,8 @@ describe("extension mode layout validation", () => {
             id: "pstdio.bad-mode-layout.lab",
             label: "Lab",
             layout: {
-              reset: ["workbench.nav"],
-              open: [{ target: "workbench.main", view: "missing" }],
+              panels: ["secondary"],
+              open: [{ target: "workbench.main", resource: "lab" }],
             },
           },
         },
@@ -63,8 +63,7 @@ describe("extension mode layout validation", () => {
       extensionId: "pstdio.bad-mode-layout",
       metadata: expect.objectContaining({
         modeId: "pstdio.bad-mode-layout.lab",
-        missingView: "missing",
-        unsafeResetTargets: ["workbench.nav"],
+        unavailableOpenTargets: ["workbench.main"],
       }),
     });
   });

@@ -45,11 +45,11 @@ const SIDENAV_DEFAULT_SIZE_PX = 250;
 const SIDENAV_MIN_SIZE_PX = 200;
 const CONTENT_MIN_SIZE_PX = 320;
 
-const resolveSidenavSize = (workbench: WorkbenchCore) => {
+const resolveSidenavSize = (workbench: WorkbenchCore, persistedSize: number | undefined) => {
   const regionSize = workbench.layout.getRegionSize("sidenav");
 
   return {
-    defaultPx: regionSize?.defaultPx ?? SIDENAV_DEFAULT_SIZE_PX,
+    defaultPx: persistedSize ?? regionSize?.defaultPx ?? SIDENAV_DEFAULT_SIZE_PX,
     minPx: regionSize?.minPx ?? SIDENAV_MIN_SIZE_PX,
     maxPx: regionSize?.maxPx,
   };
@@ -190,7 +190,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showSidenav = hasSidenavWidgets || hasSidenavHeaderWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav-header", "sidenav");
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
-  const sidenavSize = resolveSidenavSize(workbench);
+  const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
+  const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
   const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.

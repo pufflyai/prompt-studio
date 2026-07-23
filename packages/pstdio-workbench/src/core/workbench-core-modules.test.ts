@@ -186,10 +186,10 @@ describe("workbench modules", () => {
     expect(workbench.context.get("projectVisible")).toBeUndefined();
   });
 
-  it("uses module metadata for mode-scoped contributions and disposes them with the mode", () => {
+  it("uses module metadata for initialized mode contributions and disposes them with the module", () => {
     const workbench = createWorkbenchCore();
 
-    workbench.registerModule({
+    const moduleRegistration = workbench.registerModule({
       id: "dashboard.modes",
       activate(ctx) {
         ctx.modes.registerMode({
@@ -222,6 +222,11 @@ describe("workbench modules", () => {
     });
 
     workbench.modes.setActiveMode(undefined);
+
+    expect(workbench.commands.getCommand("project.refresh")).toBeDefined();
+    expect(workbench.renderers.getTreeRenderer("project.navigation")).toBeDefined();
+
+    moduleRegistration.dispose();
 
     expect(workbench.commands.getCommand("project.refresh")).toBeUndefined();
     expect(workbench.renderers.getTreeRenderer("project.navigation")).toBeUndefined();

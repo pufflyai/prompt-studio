@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workbenchModePanels } from "../extension-kernel/workbench-targets";
 import {
   extensionPlacementSchema,
   extensionWebviewContributionSchema,
@@ -118,7 +119,7 @@ const modeTargetContributionRecordSchema = z
   });
 
 export const modeLayoutContributionRecordSchema = z.object({
-  reset: z.union([z.boolean(), z.array(workbenchModeLayoutTargetSchema)]).optional(),
+  panels: z.array(z.enum(workbenchModePanels)).optional(),
   open: z.array(modeTargetContributionRecordSchema).optional(),
 });
 

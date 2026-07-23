@@ -29,9 +29,7 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labSidenav",
-      ]);
+      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);

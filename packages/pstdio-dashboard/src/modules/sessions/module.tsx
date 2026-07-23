@@ -157,6 +157,7 @@ export const createSessionsModule = () =>
       ctx.modes.registerMode({
         id: "sessions",
         label: "Sessions",
+        panels: ["main", "side"],
         activate: () => undefined,
       });
 

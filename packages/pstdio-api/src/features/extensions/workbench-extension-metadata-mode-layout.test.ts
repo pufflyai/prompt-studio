@@ -28,7 +28,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               label: "Lab",
               resourceKind: "ticket",
               layout: {
-                reset: true,
+                panels: ["main"],
                 open: [
                   { target: "workbench.left", view: "sidenav", pinned: true },
                   { target: "workbench.main", view: "overview" },
@@ -64,7 +64,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
       modeId: "pstdio.lab.mode",
       resourceKind: "ticket",
       layout: {
-        reset: true,
+        panels: ["main"],
         open: [
           { target: "workbench.left", view: "lab.sidenav", pinned: true },
           { target: "workbench.main", view: "lab.overview" },
@@ -135,8 +135,8 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               id: "pstdio.lab.bad",
               label: "Bad",
               layout: {
-                reset: ["workbench.nav" as never],
-                open: [{ target: "workbench.main", view: "missing" }],
+                panels: ["secondary"],
+                open: [{ target: "workbench.main", resource: "lab" }],
               },
             },
           },
@@ -155,7 +155,10 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
       expect.objectContaining({
         code: "extension_mode_layout_invalid",
         extensionId: "pstdio.lab",
-        metadata: expect.objectContaining({ modeId: "pstdio.lab.bad" }),
+        metadata: expect.objectContaining({
+          modeId: "pstdio.lab.bad",
+          unavailableOpenTargets: ["workbench.main"],
+        }),
       }),
     ]);
   });

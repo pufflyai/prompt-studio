@@ -318,19 +318,6 @@ type WorkbenchExtensionModeRecord = WorkbenchExtensionMetadata["modes"][number];
 type WorkbenchExtensionModeLayout = NonNullable<WorkbenchExtensionModeRecord["layout"]>;
 type WorkbenchExtensionModeOpenEntry = NonNullable<WorkbenchExtensionModeLayout["open"]>[number];
 
-const resetModeLayout = (
-  ctx: WorkbenchModeActivationContext,
-  reset: WorkbenchExtensionModeLayout["reset"] | undefined,
-) => {
-  if (reset === true) {
-    ctx.layout.resetRegions();
-    return;
-  }
-
-  if (!Array.isArray(reset)) return;
-  for (const target of reset) ctx.layout.clearRegion(resolveWorkbenchModeRegion(target));
-};
-
 const openModeView = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
   if (!entry.view) return;
   ctx.layout.openWidget(entry.view, {
@@ -358,7 +345,6 @@ const activateModeLayout = (
   ctx: WorkbenchModeActivationContext,
   mode: WorkbenchExtensionModeRecord,
 ) => {
-  resetModeLayout(ctx, mode.layout?.reset);
   for (const entry of mode.layout?.open ?? []) {
     openModeView(ctx, entry);
     openModeResource(input, ctx, entry);
@@ -370,9 +356,10 @@ const registerModes = (input: RegisterWorkbenchExtensionContributionsInput) =>
     input.workbench.modes.registerMode({
       id: mode.modeId,
       label: text(mode.label, mode.modeId),
-      activate: (ctx) => {
+      panels: mode.layout?.panels,
+      activate: () => undefined,
+      seed: (ctx) => {
         activateModeLayout(input, ctx, mode);
-        return undefined;
       },
     }),
   );

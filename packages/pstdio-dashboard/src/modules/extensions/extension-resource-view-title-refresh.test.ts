@@ -19,7 +19,7 @@ const metadata = {
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
+        panels: ["main", "secondary", "side"],
         open: [{ target: "workbench.main.left", view: "tickets.files", pinned: true }],
       },
     },

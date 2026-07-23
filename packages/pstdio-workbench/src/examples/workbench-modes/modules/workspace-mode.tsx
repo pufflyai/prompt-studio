@@ -68,6 +68,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.renderers.registerTreeRenderer({
       id: "workbench-modes.workspace.files",
       title: "Files",
+      defaultExpandedSectionIds: ["workspace.changed"],
       getBody: () => buildWorkspaceTreeSections(),
       getChildren: () => [],
     }),
@@ -89,6 +90,10 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     }),
   ];
 
+  return disposables;
+};
+
+const seedWorkspaceMode = (ctx: WorkbenchModeActivationContext) => {
   ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
   ctx.layout.openWidget(MAIN_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget("workbench-modes.workspace.files");
@@ -97,14 +102,14 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
   // createWorkbenchTerminalModule — workspace mode only opens it.
   ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(workspaceWidgetIds.editor, { resource: workspaceFileResource(workspaceFiles[0]) });
-
-  return disposables;
 };
 
 export const registerWorkspaceMode = (ctx: WorkbenchModuleContributionContext) => {
   ctx.modes.registerMode({
     id: workbenchModes.workspace.id,
     label: workbenchModes.workspace.label,
+    panels: ["main", "secondary"],
     activate: setupWorkspaceMode,
+    seed: seedWorkspaceMode,
   });
 };

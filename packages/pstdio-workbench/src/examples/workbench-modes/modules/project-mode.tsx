@@ -55,6 +55,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.renderers.registerTreeRenderer({
       id: "workbench-modes.project.navigation",
       title: workbenchModes.project.label,
+      defaultExpandedSectionIds: projectFolders.map((folder) => folder.id),
       getBody: () => buildProjectTreeSections(),
       getChildren: () => [],
     }),
@@ -76,18 +77,22 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     }),
   ];
 
+  return disposables;
+};
+
+const seedProjectMode = (ctx: WorkbenchModeActivationContext) => {
   ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
   ctx.layout.openWidget("workbench-modes.project.navigation");
   ctx.layout.openWidget(projectWidgetIds.feed, { pinned: true });
   ctx.layout.openWidget(projectWidgetIds.overview, { resource: projectItemResource(projectItems[0]) });
-
-  return disposables;
 };
 
 export const registerProjectMode = (ctx: WorkbenchModuleContributionContext) => {
   ctx.modes.registerMode({
     id: workbenchModes.project.id,
     label: workbenchModes.project.label,
+    panels: ["main", "secondary"],
     activate: setupProjectMode,
+    seed: seedProjectMode,
   });
 };

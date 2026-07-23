@@ -248,10 +248,11 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) =
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
-    activate(modeCtx) {
+    panels: [],
+    activate: () => undefined,
+    seed(modeCtx) {
       for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
       modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
-      return undefined;
     },
   });
 };

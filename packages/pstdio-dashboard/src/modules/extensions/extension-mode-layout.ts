@@ -18,14 +18,6 @@ type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
 type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
 type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layout"]>["open"]>[number];
 
-const defaultResetTargets = [
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-] as const satisfies readonly ModeLayoutOpenEntry["target"][];
-
 const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
 
 const createExtensionViewResource = (input: {
@@ -48,17 +40,11 @@ const createExtensionViewResource = (input: {
   },
 });
 
-const resetTargets = (layout: DashboardExtensionMode["layout"] | undefined) => {
-  if (!layout) return [];
-  if (layout.reset === true) return [...defaultResetTargets];
-  return Array.isArray(layout.reset) ? layout.reset : [];
-};
-
 const resolveResource = (ctx: WorkbenchModuleContributionContext, resource: string) =>
   ctx.resources.listResources("").find((entry) => entry.resource.uri === resource || entry.resource.id === resource)
     ?.resource;
 
-const openModeEntry = (input: {
+const seedModeEntry = (input: {
   ctx: WorkbenchModuleContributionContext;
   entry: ModeLayoutOpenEntry;
   projectId: string;
@@ -100,12 +86,6 @@ const isResourceBoundModeEntry = (
   viewById: Map<string, DashboardExtensionView>,
 ) => Boolean(entry.view && mode.resourceKind && viewById.get(entry.view)?.resourceKind === mode.resourceKind);
 
-const ownsUnifiedSidenavResourceSection = (
-  entry: ModeLayoutOpenEntry,
-  mode: DashboardExtensionMode,
-  viewById: Map<string, DashboardExtensionView>,
-) => isResourceBoundModeEntry(entry, mode, viewById) && extensionModeLayoutRegion(entry.target) === "sidenav";
-
 export const activateExtensionModeLayout = (input: {
   ctx: WorkbenchModuleContributionContext;
   metadata: DashboardExtensionMetadata;
@@ -115,7 +95,6 @@ export const activateExtensionModeLayout = (input: {
   const { ctx, metadata, mode, projectId } = input;
   const viewById = new Map(metadata.views.map((view) => [view.id, view]));
   const entries = mode.layout?.open ?? [];
-  const preservesUnifiedSidenav = entries.some((entry) => ownsUnifiedSidenavResourceSection(entry, mode, viewById));
 
   for (const entry of entries) {
     if (entry.view && !viewById.has(entry.view)) throw new Error(`Extension mode view not found: ${entry.view}`);
@@ -124,14 +103,9 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
-  for (const target of resetTargets(mode.layout)) {
-    const region = extensionModeLayoutRegion(target);
-    if (preservesUnifiedSidenav && region === "sidenav") continue;
-    ctx.layout.clearRegion(region);
-  }
   for (const entry of entries) {
     if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
-    openModeEntry({ ctx, entry, projectId, viewById });
+    seedModeEntry({ ctx, entry, projectId, viewById });
   }
 };
 
@@ -196,10 +170,12 @@ const registerExtensionModes = (
         ctx.modes.registerMode({
           id: mode.modeId,
           label: resolveLocalizableString(mode.label, mode.extensionId),
-          activate(modeCtx) {
+          panels: mode.layout?.panels,
+          activate: () => undefined,
+          seed(modeCtx) {
             activateExtensionModeLayout({ ctx: modeCtx, metadata, mode, projectId });
-            return activateModeChromeContributions(modeCtx, mode.modeId);
           },
+          enter: (modeCtx) => activateModeChromeContributions(modeCtx, mode.modeId),
         }),
       );
     }

@@ -26,6 +26,7 @@ export type {
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   EXTENSION_API_VERSION,
+  getWorkbenchModeLayoutTargetPanel,
   getWorkbenchTargetDefinition,
   gitEvents,
   isLocalizedString,
@@ -45,6 +46,7 @@ export {
   type WorkbenchLayoutTarget,
   type WorkbenchMenuTarget,
   type WorkbenchModeLayoutTarget,
+  type WorkbenchModePanel,
   type WorkbenchSettingsScope,
   type WorkbenchSettingsTarget,
   type WorkbenchTargetDefinition,
@@ -53,6 +55,7 @@ export {
   type WorkbenchViewTarget,
   workbenchMenuTargets,
   workbenchModeLayoutTargets,
+  workbenchModePanels,
   workbenchSettingsScopes,
   workbenchSettingsTargets,
   workbenchTargets,

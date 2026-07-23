@@ -290,8 +290,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
         open: (resource, openInput) => {
           const availableResource = resolveAvailableRouteResource(resource, projectId);
-          ctx.modes.setActiveMode("project");
-          selectDashboardNavigationResource(ctx, availableResource);
+          selectDashboardNavigationResource(ctx, availableResource, { modeId: "project" });
           setResourceBreadcrumb(ctx, availableResource);
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
             ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);

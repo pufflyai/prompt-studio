@@ -20,7 +20,7 @@ export const ProjectOverview = (props: { input: WorkbenchWidgetRenderInput }) =>
 
   return (
     <ScrollArea h="full" minH="0" contentProps={{ p: "lg" }}>
-      <Stack gap="lg" w="full" maxW="3xl">
+      <Stack data-ps175-mode="project" gap="lg" w="full" maxW="3xl">
         <Stack gap="xs">
           <HStack gap="xs">
             <WorkbenchIcon name={workbenchModes.project.icon} size={20} />

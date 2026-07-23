@@ -47,7 +47,6 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
       }
 
       selectDashboardNavigationResource(ctx, resource, { modeId: input.mode });
-      ctx.modes.setActiveMode(input.mode);
       input.beforeOpen?.({ resource });
 
       const placement = ctx.layout.openWidget(input.widgetId, {

@@ -60,7 +60,10 @@ const metadata = {
       extensionId: "pstdio.lab",
       modeId: "lab.review",
       label: "Review",
-      layout: { open: [{ target: "workbench.main", view: "lab.ticketPanel", pinned: true }] },
+      layout: {
+        panels: ["main"],
+        open: [{ target: "workbench.main", view: "lab.ticketPanel", pinned: true }],
+      },
     },
   ],
   navigation: [],

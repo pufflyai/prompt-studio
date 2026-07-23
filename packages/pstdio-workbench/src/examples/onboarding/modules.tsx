@@ -287,11 +287,13 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
     ctx.modes.registerMode({
       id: "docs",
       label: "Docs",
+      panels: ["main"],
       activate: createResourcesModule({ openFirst: true }).activate,
     });
     ctx.modes.registerMode({
       id: "review",
       label: "Review",
+      panels: ["main"],
       activate(modeCtx) {
         registerEmptyMain(modeCtx);
         modeCtx.layout.registerWidget({
@@ -306,8 +308,8 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
           render: () => (
             <LessonPanel title="Review mode">
               <Text textStyle="paragraph/M/regular">
-                Modes own temporary contributions. Switching back to Docs disposes this widget and restores the docs
-                tree.
+                Modes initialize their contributions once. Switching back to Docs restores its prior Main Panel without
+                rebuilding the project Sidenav.
               </Text>
             </LessonPanel>
           ),

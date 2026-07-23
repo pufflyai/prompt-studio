@@ -6,11 +6,8 @@ export const labModes = {
     label: l10n("modes.lab.label", "Lab"),
     icon: "flask-conical",
     layout: {
-      reset: true,
-      open: [
-        { target: "workbench.left", view: "labSidenav", pinned: true },
-        { target: "workbench.main", view: "labOverview" },
-      ],
+      panels: ["main"],
+      open: [{ target: "workbench.main", view: "labOverview" }],
     },
   },
   labFocus: {
@@ -18,7 +15,7 @@ export const labModes = {
     label: l10n("modes.labFocus.label", "Lab focus"),
     icon: "panel-top",
     layout: {
-      reset: ["workbench.main"],
+      panels: ["main"],
       open: [{ target: "workbench.main", view: "labOverview" }],
     },
   },
@@ -26,11 +23,6 @@ export const labModes = {
 
 export const createLabViews = (baseUrl: string) =>
   ({
-    labSidenav: {
-      title: l10n("views.labSidenav.title", "Lab"),
-      role: "location",
-      webview: { entry: packageAsset("./src/views/lab-sidenav.tsx", baseUrl) },
-    },
     labOverview: {
       title: l10n("views.labOverview.title", "Lab overview"),
       role: "location",

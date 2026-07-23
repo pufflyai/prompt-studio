@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getWorkbenchTargetDefinition, workbenchTargets } from "./workbench-targets";
+import { getWorkbenchModeLayoutTargetPanel, getWorkbenchTargetDefinition, workbenchTargets } from "./workbench-targets";
 
 const forbiddenTargetSegments = new Set(["button", "icon", "item", "widget"]);
 
@@ -30,5 +30,13 @@ describe("workbench attachment targets", () => {
       expect(segments.length).toBeLessThanOrEqual(4);
       expect(segments.some((segment) => forbiddenTargetSegments.has(segment))).toBe(false);
     }
+  });
+
+  test("maps mode targets to logical panels", () => {
+    expect(getWorkbenchModeLayoutTargetPanel("workbench.left")).toBeUndefined();
+    expect(getWorkbenchModeLayoutTargetPanel("workbench.main.left")).toBe("main");
+    expect(getWorkbenchModeLayoutTargetPanel("workbench.main")).toBe("main");
+    expect(getWorkbenchModeLayoutTargetPanel("workbench.main.right")).toBe("main");
+    expect(getWorkbenchModeLayoutTargetPanel("workbench.secondary")).toBe("secondary");
   });
 });

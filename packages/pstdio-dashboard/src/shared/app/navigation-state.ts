@@ -103,5 +103,7 @@ export const selectDashboardNavigationResource = (
     ctx.context.delete(dashboardSelectedResourceContextKey);
   }
 
+  if (input.modeId !== undefined) ctx.modes.setActiveMode(input.modeId, { deferSeed: true });
   syncDashboardLayoutPersistenceScope(ctx, input.modeId);
+  if (input.modeId !== undefined) ctx.modes.seedActiveMode();
 };

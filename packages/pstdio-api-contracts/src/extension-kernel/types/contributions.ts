@@ -2,6 +2,7 @@ import type { Localizable } from "../l10n";
 import type {
   WorkbenchMenuTarget,
   WorkbenchModeLayoutTarget,
+  WorkbenchModePanel,
   WorkbenchSettingsScope,
   WorkbenchSettingsTarget,
   WorkbenchTreeTarget,
@@ -89,7 +90,7 @@ export type ModeTargetContribution =
     };
 
 export interface ModeLayoutContribution {
-  reset?: boolean | WorkbenchLayoutTarget[];
+  panels?: WorkbenchModePanel[];
   open?: ModeTargetContribution[];
 }
 

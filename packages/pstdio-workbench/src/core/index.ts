@@ -185,7 +185,11 @@ export type {
   WorkbenchModeContribution,
   WorkbenchModeRegistry,
 } from "./registries/modes/mode-registry";
-export { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
+export {
+  createWorkbenchModeRegistry,
+  getWorkbenchModePanelForRegion,
+  isWorkbenchModePanelAvailable,
+} from "./registries/modes/mode-registry";
 export type {
   CreateNavigationRegistryInput,
   NavigationDispatcherContext,

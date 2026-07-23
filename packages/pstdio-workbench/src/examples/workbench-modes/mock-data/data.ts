@@ -27,7 +27,7 @@ export const workbenchModes: Record<WorkbenchModeId, WorkbenchModeMeta> = {
   settings: {
     id: "settings",
     label: "Settings",
-    description: "Focused single-column page with tabs and status bar",
+    description: "Focused single-column Main Panel",
     icon: standardResourceIcons.settings,
   },
 };
@@ -47,9 +47,7 @@ export const workspaceWidgetIds = {
 } as const;
 
 export const settingsWidgetIds = {
-  tabs: "workbench-modes.settings.tabs",
   page: "workbench-modes.settings.page",
-  status: "workbench-modes.settings.status",
 } as const;
 
 export interface ProjectFolder {
@@ -170,19 +168,6 @@ export const workspaceFiles: WorkspaceFile[] = [
       removed: [],
     },
   },
-];
-
-export interface SettingsTab {
-  id: string;
-  label: string;
-  icon: string;
-}
-
-export const settingsTabs: SettingsTab[] = [
-  { id: "general", label: "General", icon: "Settings2" },
-  { id: "appearance", label: "Appearance", icon: "Palette" },
-  { id: "shortcuts", label: "Shortcuts", icon: "Keyboard" },
-  { id: "extensions", label: "Extensions", icon: "Puzzle" },
 ];
 
 export interface SettingsField {

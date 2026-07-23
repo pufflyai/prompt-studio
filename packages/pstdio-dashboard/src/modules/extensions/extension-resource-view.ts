@@ -202,8 +202,9 @@ export const registerExtensionResourceView = (
             metadata: input.metadata,
             projectId: input.projectId,
           });
-          ctx.modes.setActiveMode(resourceMode?.modeId ?? "project");
-          selectDashboardNavigationResource(ctx, selectedResource);
+          selectDashboardNavigationResource(ctx, selectedResource, {
+            modeId: resourceMode?.modeId ?? "project",
+          });
           setResourceBreadcrumb(ctx, selectedResource);
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {

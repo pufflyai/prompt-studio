@@ -7,7 +7,7 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="6. Modes" parameters={{ layout: "padded" }} />
 
-# 6. Switch Between Workspaces
+# 6. Switch Between Modes
 
 A mode is a bundle of contributions that activate together. Use modes when
 parts of your app have completely different layouts — e.g. a Docs view with
@@ -15,12 +15,12 @@ its own tree, and a Review view with a single widget.
 
 <Canvas of={OnboardingStories.Modes} sourceState="shown" />
 
-Each mode has an `activate(ctx)` callback that registers its widgets, trees,
-and any open placements. Switching with `modes.setActiveMode(id)` disposes
-everything the previous mode registered before activating the new one, so you
-don't manage that yourself.
+Each mode declares its available logical Panels. Its `activate(ctx)` callback
+registers widgets and renderers once, while `seed(ctx)` can open defaults the
+first time a layout scope is visited. Switching with `modes.setActiveMode(id)`
+restores that mode's prior Panel layout without rebuilding project chrome.
 
 Use the activity bar (left rail) to switch between Docs and Review. Notice
-that the tree and tab disappear when leaving Docs.
+that the project Sidenav remains stable while the Main Panel changes.
 
 If your app has just one screen, you don't need modes — modules are enough.

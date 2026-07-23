@@ -70,7 +70,10 @@ const metadata = {
       extensionId: EXTENSION_ID,
       modeId: MODE_ID,
       label: "Lab review",
-      layout: { open: [{ target: "workbench.main.left", view: TREE_VIEW_ID, pinned: true }] },
+      layout: {
+        panels: ["main"],
+        open: [{ target: "workbench.main.left", view: TREE_VIEW_ID, pinned: true }],
+      },
     },
   ],
   navigation: [],

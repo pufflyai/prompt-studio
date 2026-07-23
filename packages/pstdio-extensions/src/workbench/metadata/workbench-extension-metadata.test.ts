@@ -40,7 +40,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               id: "pstdio.lab.review",
               label: "Review",
               resourceKind: "ticket",
-              layout: { open: [{ target: "workbench.main", view: "ticketPanel" }] },
+              layout: { panels: ["main"], open: [{ target: "workbench.main", view: "ticketPanel" }] },
             },
           },
           routes: {
@@ -145,7 +145,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.review",
       resourceKind: "ticket",
-      layout: { open: [{ target: "workbench.main", view: "lab.ticketPanel" }] },
+      layout: { panels: ["main"], open: [{ target: "workbench.main", view: "lab.ticketPanel" }] },
     });
   });
 

@@ -95,7 +95,7 @@ export const WorkspaceDiff = (props: { input: WorkbenchWidgetRenderInput }) => {
 };
 
 export const WorkspaceMainHeader = () => (
-  <HStack h="full" px="sm" gap="sm">
+  <HStack data-ps175-mode="workspace" h="full" px="sm" gap="sm">
     <WorkbenchIcon name={workbenchModes.workspace.icon} size={16} />
     <Text textStyle="label/S/medium" color="fg">
       Workspace mode

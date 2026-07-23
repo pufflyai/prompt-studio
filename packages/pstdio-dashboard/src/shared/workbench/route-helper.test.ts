@@ -87,16 +87,17 @@ describe("registerResourceRoute navigation state", () => {
     expect(getDashboardSelectedResource(workbench)).toEqual(detail);
   });
 
-  test("switches resource layout scope before activating its mode", async () => {
+  test("selects the resource before seeding its mode scope", async () => {
     const workbench = createWorkbenchCore();
     const activationScopes: Array<string | undefined> = [];
     selectDashboardProject(workbench, { id: "project-1", name: "Route test" });
     workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
     workbench.modes.registerMode({
       id: MODE,
-      activate: () => {
+      panels: ["main"],
+      activate: () => undefined,
+      seed: () => {
         activationScopes.push(workbench.layout.getPersistenceScope());
-        return undefined;
       },
     });
     workbench.layout.registerWidget({

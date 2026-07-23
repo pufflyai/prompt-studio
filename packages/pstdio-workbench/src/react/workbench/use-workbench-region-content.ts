@@ -1,4 +1,6 @@
 import {
+  getWorkbenchModePanelForRegion,
+  isWorkbenchModePanelAvailable,
   matchesWorkbenchLocationEligibility,
   matchesWorkbenchModeEligibility,
   type WorkbenchCore,
@@ -18,8 +20,12 @@ export const useWorkbenchRegionContent = (
 ) => {
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  const modePanel = getWorkbenchModePanelForRegion(region);
+  const panelAvailable =
+    !modePanel || isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel);
 
   return useWorkbenchStore(workbench.layout.store, (state) => {
+    if (!panelAvailable) return false;
     if (state.placeholders[region]) return true;
     if (!options.locationScoped) return state.layout.regions[region].widgets.length > 0;
 

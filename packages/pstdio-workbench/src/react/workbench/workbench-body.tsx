@@ -10,6 +10,7 @@ import {
   useWorkbenchRegionTabsVisible,
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
@@ -24,8 +25,12 @@ const SECONDARY_PANEL_CONTENT_MIN_SIZE_PX = 240;
 const SECONDARY_PANEL_RESIZE_HANDLE_SIZE_PX = 4;
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
-const resolveRegionSize = (regionSize: WorkbenchRegionSize | undefined, fallback: Required<WorkbenchRegionSize>) => ({
-  defaultPx: regionSize?.defaultPx ?? fallback.defaultPx,
+const resolveRegionSize = (
+  regionSize: WorkbenchRegionSize | undefined,
+  persistedSize: number | undefined,
+  fallback: Required<WorkbenchRegionSize>,
+) => ({
+  defaultPx: persistedSize ?? regionSize?.defaultPx ?? fallback.defaultPx,
   minPx: regionSize?.minPx ?? fallback.minPx,
   maxPx: regionSize ? regionSize.maxPx : fallback.maxPx,
 });
@@ -74,7 +79,15 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
   const panels = useWorkbenchMainPanels(workbench);
   const { hasMainHeader, secondaryPanel } = panels;
-  const secondaryPanelSize = resolveRegionSize(workbench.layout.getRegionSize("secondary"), SECONDARY_PANEL_SIZE);
+  const persistedSecondarySize = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.regions.secondary.size,
+  );
+  const secondaryPanelSize = resolveRegionSize(
+    workbench.layout.getRegionSize("secondary"),
+    persistedSecondarySize,
+    SECONDARY_PANEL_SIZE,
+  );
 
   const mainRegion = (
     <WorkbenchFocusRegion

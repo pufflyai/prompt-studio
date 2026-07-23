@@ -17,6 +17,8 @@ export const workbenchSettingsTargets = ["workbench.settings"] as const;
 
 export const workbenchSettingsScopes = ["project", "global"] as const;
 
+export const workbenchModePanels = ["main", "secondary", "side"] as const;
+
 export const workbenchModeLayoutTargets = [
   "workbench.left",
   "workbench.main.left",
@@ -30,8 +32,20 @@ export type WorkbenchTreeTarget = (typeof workbenchTreeTargets)[number];
 export type WorkbenchViewTarget = (typeof workbenchViewTargets)[number];
 export type WorkbenchSettingsTarget = (typeof workbenchSettingsTargets)[number];
 export type WorkbenchSettingsScope = (typeof workbenchSettingsScopes)[number];
+export type WorkbenchModePanel = (typeof workbenchModePanels)[number];
 export type WorkbenchModeLayoutTarget = (typeof workbenchModeLayoutTargets)[number];
 export type WorkbenchLayoutTarget = WorkbenchModeLayoutTarget;
+
+const workbenchModeLayoutTargetPanels = {
+  "workbench.left": undefined,
+  "workbench.main.left": "main",
+  "workbench.main": "main",
+  "workbench.main.right": "main",
+  "workbench.secondary": "secondary",
+} as const satisfies Record<WorkbenchModeLayoutTarget, WorkbenchModePanel | undefined>;
+
+export const getWorkbenchModeLayoutTargetPanel = (target: WorkbenchModeLayoutTarget) =>
+  workbenchModeLayoutTargetPanels[target];
 
 export type WorkbenchAttachmentTarget =
   | WorkbenchMenuTarget

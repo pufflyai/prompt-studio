@@ -470,14 +470,16 @@ describe("createHistoryController mode-aware navigation", () => {
     });
     workbench.modes.registerMode({
       id: "project",
-      activate: (ctx) => {
+      activate: () => undefined,
+      seed: (ctx) => {
         ctx.layout.clearRegion("main");
         ctx.layout.openWidget("project-viewer", { resource: projectItem, title: projectItem.label });
       },
     });
     workbench.modes.registerMode({
       id: "workspace",
-      activate: (ctx) => {
+      activate: () => undefined,
+      seed: (ctx) => {
         ctx.layout.clearRegion("main");
         ctx.layout.openWidget("workspace-viewer", { resource: workspaceFile, title: workspaceFile.label });
       },

@@ -76,7 +76,7 @@ const extension = defineExtension({
       id: "pstdio.typecheck.lab",
       label: "Lab",
       layout: {
-        reset: true,
+        panels: ["main"],
         open: [
           { target: "workbench.left", view: "labSidenav", pinned: true },
           { target: "workbench.main", view: "labOverview" },
@@ -86,16 +86,16 @@ const extension = defineExtension({
     focus: {
       label: "Lab focus",
       layout: {
-        reset: ["workbench.main"],
+        panels: ["main"],
         open: [{ target: "workbench.main", view: "labOverview" }],
       },
     },
     unsafe: {
       label: "Unsafe",
       layout: {
-        reset: [
-          // @ts-expect-error mode layout reset targets are limited to safe content areas
-          "workbench.nav",
+        panels: [
+          // @ts-expect-error mode panels are logical Main, Secondary, or Side roles
+          "overlay",
         ],
         open: [
           {

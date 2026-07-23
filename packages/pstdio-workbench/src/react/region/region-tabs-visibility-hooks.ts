@@ -1,6 +1,8 @@
 import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
+  getWorkbenchModePanelForRegion,
+  isWorkbenchModePanelAvailable,
   listEligibleSubPanels,
   matchesWorkbenchPanelMenuOwner,
   matchesWorkbenchPanelPlacementLocation,
@@ -68,6 +70,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  if (!isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, region)) return false;
   const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource, {
     ignoreOwnerResourceUri: region === "side",
   });
@@ -115,6 +118,10 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  const modePanel = getWorkbenchModePanelForRegion(region);
+  if (modePanel && !isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel)) {
+    return false;
+  }
   const placements = layoutState.layout.regions[region].widgets.filter(
     (placement) =>
       isSubPanelPlacement(workbench, placement) &&

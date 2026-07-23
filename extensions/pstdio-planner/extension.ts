@@ -167,7 +167,7 @@ export default defineExtension({
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
+        panels: ["main", "secondary", "side"],
         open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
       },
     },

@@ -37,15 +37,11 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
 
 // The unified sidenav is mode-reactive (it opens and recomposes itself on mode change), so the
 // dashboard modes only activate their own chrome (e.g. the session bubble) here.
-const setupProjectSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
+const enterProjectSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
   activateModeChromeContributions(modeCtx, "project");
 
-const setupWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) => {
-  // The workspace detail owns the Main right menu; clearing on mode entry (rather than
-  // per open) keeps it as mode chrome so history replay restores it via setActiveMode.
-  modeCtx.layout.clearRegion("main-right-menu");
-  return activateModeChromeContributions(modeCtx, "workspace");
-};
+const enterWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
+  activateModeChromeContributions(modeCtx, "workspace");
 
 const workspaceNavigationNode = (): TreeNode => ({
   id: dashboardResources.workspaces.uri,
@@ -232,12 +228,16 @@ export const createWorkspacesModule = () =>
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
-        activate: setupProjectSidenavChrome,
+        panels: ["main", "secondary", "side"],
+        activate: () => undefined,
+        enter: enterProjectSidenavChrome,
       });
       ctx.modes.registerMode({
         id: "workspace",
         label: "Workspace",
-        activate: setupWorkspaceSidenavChrome,
+        panels: ["main", "secondary", "side"],
+        activate: () => undefined,
+        enter: enterWorkspaceSidenavChrome,
       });
 
       ctx.commands.registerCommand(
