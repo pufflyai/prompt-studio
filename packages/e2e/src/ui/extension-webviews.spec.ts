@@ -271,6 +271,9 @@ test.describe("Extension webviews", () => {
     const terminalTabList = secondaryHeader.getByRole("tablist");
     const terminalTabs = terminalTabList.getByRole("tab");
     const addTerminal = async () => {
+      await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+      const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+      if (await showSecondary.isVisible()) await showSecondary.click();
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
     };
 

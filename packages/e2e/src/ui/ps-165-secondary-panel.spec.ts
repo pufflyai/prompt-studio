@@ -32,6 +32,9 @@ const getSecondaryHeader = (page: import("@playwright/test").Page) =>
   page.locator('[data-workbench-panel-header="secondary"]');
 
 const addTerminal = async (page: import("@playwright/test").Page) => {
+  await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  if (await showSecondary.isVisible()) await showSecondary.click();
   await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();
 };
 
