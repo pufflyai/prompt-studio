@@ -2,6 +2,8 @@ import type {
   ResourceRef,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
+  WorkbenchTabPosition,
+  WorkbenchTabRetention,
 } from "@pstdio/workbench/core";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import { forgetDashboardSession, rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
@@ -159,12 +161,18 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
       execute: async (args) => {
         const {
           resource,
+          preservePanelMode = false,
           replaceWidgetId,
           selectWorkspaceSidenav = true,
+          tabPosition,
+          tabRetention,
         } = (args ?? {}) as {
           resource?: ResourceRef;
+          preservePanelMode?: boolean;
           replaceWidgetId?: string;
           selectWorkspaceSidenav?: boolean;
+          tabPosition?: WorkbenchTabPosition;
+          tabRetention?: WorkbenchTabRetention;
         };
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
@@ -172,7 +180,10 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
         const placement = openSessionBubbleWidgets(ctx, {
           resource,
           title: resource.label,
-          replaceWidgetId: replaceWidgetId ?? getReusableSessionPlacementId(ctx),
+          replaceWidgetId:
+            replaceWidgetId ?? (tabRetention === "preview" ? undefined : getReusableSessionPlacementId(ctx)),
+          tabPosition,
+          tabRetention,
         });
         selectSidenavSessionNode(ctx, resource);
         if (
@@ -184,7 +195,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
             resource,
           });
         }
-        if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
+        if (!preservePanelMode && ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
         return placement.bubble;
       },
     },

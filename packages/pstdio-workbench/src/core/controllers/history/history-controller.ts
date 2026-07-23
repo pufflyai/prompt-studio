@@ -22,6 +22,7 @@ import {
   findSubPanelPlacement,
   isSameNavigationEntry,
   withoutSubPanelSelection,
+  workbenchNavigationPanelRegions,
   workbenchPlacementRole,
 } from "./history-snapshot";
 import type {
@@ -459,7 +460,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   input.resources.onDidOpenResource(() => recordSnapshot(false, true));
 
   const restoreSelections = (entry: WorkbenchNavigationEntry) => {
-    for (const region of workbenchPanelRegions) {
+    for (const region of workbenchNavigationPanelRegions) {
       const reference = entry.selectedSubPanels[region];
       const placement = reference ? findSubPanelPlacement(input.layout, reference) : undefined;
       if (placement) {

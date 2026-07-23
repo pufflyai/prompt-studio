@@ -203,7 +203,11 @@ export const createSessionsModule = () =>
         priority: 1100,
         canOpen: (resource) => resource.kind === "session" && resource.metadata?.sessionSurface === "side",
         open: (resource) => {
-          void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource });
+          void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+            resource,
+            tabPosition: "start",
+            tabRetention: "preview",
+          });
           return undefined;
         },
       });

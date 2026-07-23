@@ -72,7 +72,11 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
         target: {
           kind: "command",
           commandId: dashboardCommandIds.openSessionPanel,
-          args: { resource: session.resource },
+          args: {
+            resource: session.resource,
+            tabPosition: "start",
+            tabRetention: "preview",
+          },
         } as const,
       }),
 });

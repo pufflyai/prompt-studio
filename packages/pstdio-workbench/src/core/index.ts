@@ -131,6 +131,8 @@ export type {
   WorkbenchRegionSize,
   WorkbenchRegionState,
   WorkbenchSubPanelContribution,
+  WorkbenchTabPosition,
+  WorkbenchTabRetention,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRole,
   WorkbenchWidgetTab,
@@ -150,6 +152,7 @@ export {
   isSubPanelEligible,
   listEligibleSubPanels,
   matchesWorkbenchLocationEligibility,
+  matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
   matchesWorkbenchPanelPlacementLocation,
 } from "./registries/layout/panel-widget-eligibility";

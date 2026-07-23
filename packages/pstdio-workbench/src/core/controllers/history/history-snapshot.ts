@@ -6,6 +6,8 @@ import { matchesWorkbenchLocationEligibility } from "../../registries/layout/pan
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { WorkbenchLocationRef, WorkbenchNavigationEntry, WorkbenchSubPanelRef } from "./history-types";
 
+export const workbenchNavigationPanelRegions = ["main", "secondary"] as const;
+
 export const workbenchPlacementRole = (layout: LayoutModel, placement: WorkbenchWidgetPlacement) =>
   placement.role ?? layout.getWidget(placement.contributionId)?.role ?? "content";
 
@@ -38,9 +40,9 @@ const isSameSubPanel = (left: WorkbenchSubPanelRef | undefined, right: Workbench
   left?.instanceKey === right?.instanceKey;
 
 export const selectedSubPanelsFromLayout = (layout: LayoutModel, modeId: string | undefined) => {
-  const selected: Partial<Record<(typeof workbenchPanelRegions)[number], WorkbenchSubPanelRef>> = {};
+  const selected: Partial<Record<(typeof workbenchNavigationPanelRegions)[number], WorkbenchSubPanelRef>> = {};
   const location = getActiveLocationPlacement(layout.getLayout());
-  for (const regionId of workbenchPanelRegions) {
+  for (const regionId of workbenchNavigationPanelRegions) {
     const region = layout.getLayout().regions[regionId];
     const active = region.widgets.find((placement) => placement.widgetId === region.activeWidgetId);
     const widget = active ? layout.getWidget(active.contributionId) : undefined;
@@ -123,7 +125,7 @@ export const isSameNavigationEntry = (
   right: WorkbenchNavigationEntry | undefined,
 ) => {
   if (!left || !right || left.location.key !== right.location.key) return false;
-  return workbenchPanelRegions.every((region) =>
+  return workbenchNavigationPanelRegions.every((region) =>
     isSameSubPanel(left.selectedSubPanels[region], right.selectedSubPanels[region]),
   );
 };

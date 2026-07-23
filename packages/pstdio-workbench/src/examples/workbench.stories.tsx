@@ -16,6 +16,7 @@ import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
+import { createPreviewTabsExampleModule } from "./preview-tabs/module";
 import { createRandomExampleModule } from "./random/module";
 import { createRegionMapModule } from "./region-map/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
@@ -86,6 +87,9 @@ const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
 
 const preferenceSchemasWorkbench = createWorkbenchCore();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
+
+const previewTabsWorkbench = createWorkbenchCore({ initialSessionPanelMode: "attached" });
+previewTabsWorkbench.registerModule(createPreviewTabsExampleModule());
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
 const treeNavigationWorkbench = createTreeNavigationWorkbench();
@@ -220,6 +224,10 @@ export const LayoutScope: Story = {
 
 export const PreferenceSchemas: Story = {
   render: () => <WorkbenchStory workbench={preferenceSchemasWorkbench} />,
+};
+
+export const PreviewTabs: Story = {
+  render: () => <WorkbenchStory workbench={previewTabsWorkbench} />,
 };
 
 // The Theme Pack extension registers its color themes into `workbench.themes`;

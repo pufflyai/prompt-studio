@@ -34,6 +34,25 @@ const widgetIds = (layout: LayoutModel) =>
   layout.getLayout().regions.secondary.widgets.map((placement) => placement.widgetId);
 
 describe("createLayoutModel persisted widget ids", () => {
+  test("persists reordered tabs but excludes runtime preview tabs", () => {
+    const { persistence } = createPersistedLayout();
+    const firstLayout = createTerminalLayout(persistence);
+    const first = firstLayout.openWidget(terminalContribution.id);
+    const second = firstLayout.openWidget(terminalContribution.id);
+    firstLayout.openWidget(terminalContribution.id, {
+      tabRetention: "preview",
+      tabPosition: "start",
+    });
+    firstLayout.reorderWidget(second.widgetId, { beforeWidgetId: first.widgetId });
+
+    const restoredLayout = createTerminalLayout(persistence);
+
+    expect(widgetIds(restoredLayout)).toEqual([second.widgetId, first.widgetId]);
+    expect(
+      restoredLayout.getLayout().regions.secondary.widgets.some((placement) => placement.tabRetention === "preview"),
+    ).toBe(false);
+  });
+
   test("allocates a unique id after restoring non-singleton placements", () => {
     const { persistence } = createPersistedLayout();
     const firstLayout = createTerminalLayout(persistence);

@@ -122,6 +122,29 @@ describe("Location Panel presentation", () => {
     expect(matchesWorkbenchPanelPlacementLocation(contribution, resource, "workspace", placement)).toBe(true);
   });
 
+  test("can keep a Side Panel placement eligible independently of its Location resource", () => {
+    const contribution = widget({
+      eligibleLocations: {
+        resourceKinds: ["workspace"],
+        resourceIds: ["alpha"],
+        canOpen: (candidate) => candidate.id === "alpha",
+      },
+    });
+    const placement = {
+      widgetId: "files",
+      contributionId: "files",
+      role: "sub-panel" as const,
+      ownerResourceUri: "workspace:alpha",
+    };
+    const ticket = { kind: "ticket", id: "beta", uri: "ticket:beta" };
+
+    expect(
+      matchesWorkbenchPanelPlacementLocation(contribution, ticket, "workspace", placement, {
+        ignoreResourceLocation: true,
+      }),
+    ).toBe(true);
+  });
+
   test("lets the selected Location or Sub Panel keep floating panels off its content", () => {
     const layout = createDefaultWorkbenchLayout();
     layout.regions.main.widgets.push(

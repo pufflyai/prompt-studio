@@ -166,6 +166,145 @@ describe("createLayoutModel Location-owned placements", () => {
 });
 
 describe("createLayoutModel placement lifecycle", () => {
+  test("keeps the active Side Panel tab when the primary resource changes", () => {
+    const layout = createLayoutModel();
+    layout.registerLocation({
+      id: "project.workspace",
+      title: "Workspace",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    for (const id of ["project.files", "project.diff"]) {
+      layout.registerSubPanel({
+        id,
+        title: id,
+        region: "side",
+        rendererId: "test.renderer",
+      });
+    }
+
+    layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" },
+    });
+    layout.openWidget("project.files");
+    const diff = layout.openWidget("project.diff");
+    layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/b", label: "Workspace B" },
+      replaceActive: true,
+    });
+
+    expect(layout.getLayout().regions.side.activeWidgetId).toBe(diff.widgetId);
+  });
+
+  test("replaces the leftmost preview tab without disturbing persistent tabs", () => {
+    const layout = createLayoutModel();
+    const previewA = { kind: "session", uri: "pstdio://session/a", label: "Session A" };
+    const previewB = { kind: "session", uri: "pstdio://session/b", label: "Session B" };
+
+    layout.registerSubPanel({
+      id: "project.session",
+      title: "Session",
+      region: "side",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerSubPanel({
+      id: "project.files",
+      title: "Files",
+      region: "side",
+      rendererId: "test.renderer",
+    });
+
+    const files = layout.openWidget("project.files");
+    const firstPreview = layout.openWidget("project.session", {
+      resource: previewA,
+      tabRetention: "preview",
+      tabPosition: "start",
+    });
+    const secondPreview = layout.openWidget("project.session", {
+      resource: previewB,
+      tabRetention: "preview",
+      tabPosition: "start",
+    });
+
+    expect(secondPreview.widgetId).toBe(firstPreview.widgetId);
+    expect(layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({
+        widgetId: firstPreview.widgetId,
+        resourceUri: previewB.uri,
+        tabRetention: "preview",
+      }),
+      files,
+    ]);
+  });
+
+  test("opens and reorders persistent tabs by stable positions", () => {
+    const layout = createLayoutModel();
+
+    for (const id of ["project.files", "project.diff", "project.terminal"]) {
+      layout.registerSubPanel({
+        id,
+        title: id,
+        region: "side",
+        rendererId: "test.renderer",
+      });
+    }
+
+    const files = layout.openWidget("project.files");
+    const terminal = layout.openWidget("project.terminal");
+    const diff = layout.openWidget("project.diff", {
+      tabPosition: { beforeWidgetId: terminal.widgetId },
+    });
+    layout.reorderWidget(files.widgetId, { afterWidgetId: terminal.widgetId });
+
+    expect(layout.getLayout().regions.side.widgets.map((placement) => placement.widgetId)).toEqual([
+      diff.widgetId,
+      terminal.widgetId,
+      files.widgetId,
+    ]);
+  });
+
+  test("promotes a preview and expires only previews owned by another resource", () => {
+    const layout = createLayoutModel();
+    const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" };
+    const workspaceB = { kind: "workspace", uri: "pstdio://workspace/b", label: "Workspace B" };
+
+    layout.registerLocation({
+      id: "project.workspace",
+      title: "Workspace",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerSubPanel({
+      id: "project.session",
+      title: "Session",
+      region: "side",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+
+    layout.openWidget("project.workspace", { resource: workspaceA });
+    const carried = layout.openWidget("project.session", { tabRetention: "preview" });
+    layout.updateWidgetPlacement(carried.widgetId, { tabRetention: "persistent" });
+    const expiring = layout.openWidget("project.session", {
+      resource: { kind: "session", uri: "pstdio://session/b", label: "Session B" },
+      tabRetention: "preview",
+    });
+
+    layout.expirePreviewTabs(workspaceB.uri);
+
+    expect(layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({ widgetId: carried.widgetId, tabRetention: "persistent" }),
+    ]);
+    expect(layout.getLayout().regions.side.widgets).not.toContainEqual(
+      expect.objectContaining({ widgetId: expiring.widgetId }),
+    );
+  });
+});
+
+describe("createLayoutModel placement management", () => {
   test("replaces one explicit Sub Panel placement without creating another tab", () => {
     const layout = createLayoutModel();
     const sessionA = { kind: "session", uri: "pstdio://session/a", label: "Session A" };

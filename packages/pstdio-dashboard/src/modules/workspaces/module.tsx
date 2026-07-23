@@ -41,8 +41,6 @@ const setupProjectSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) 
   activateModeChromeContributions(modeCtx, "project");
 
 const setupWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) => {
-  modeCtx.layout.clearRegion("side");
-  modeCtx.layout.clearRegion("side-header");
   // The workspace detail owns the Main right menu; clearing on mode entry (rather than
   // per open) keeps it as mode chrome so history replay restores it via setActiveMode.
   modeCtx.layout.clearRegion("main-right-menu");
@@ -96,7 +94,12 @@ const openFirstWorkspaceSession = (ctx: WorkbenchModuleContributionContext, reso
   const session = findFirstWorkspaceSessionResource(ctx, resource);
   if (!session) return;
 
-  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: session });
+  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+    preservePanelMode: true,
+    resource: session,
+    tabPosition: "start",
+    tabRetention: "preview",
+  });
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -276,10 +279,11 @@ export const createWorkspacesModule = () =>
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
           showDashboardSidenav(ctx, { selectedNode: null });
-          openFirstWorkspaceSession(ctx, resource);
         },
-        afterOpen: ({ resource }) => {
+        afterOpen: ({ resource, placement }) => {
+          openFirstWorkspaceSession(ctx, resource);
           ensureWorkspaceTerminalResource(ctx, resource);
+          ctx.layout.activateWidget(placement.widgetId);
         },
       });
     },

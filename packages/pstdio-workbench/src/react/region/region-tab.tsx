@@ -1,5 +1,8 @@
 import { CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
-import { type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ListRow } from "@pstdio/ui";
+import { type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -9,6 +12,9 @@ interface WorkbenchRegionTabProps {
   placement: WorkbenchWidgetPlacement;
   activeWidgetId: string | undefined;
   disabled?: boolean;
+  nextWidgetId?: string;
+  previousWidgetId?: string;
+  sortable?: boolean;
 }
 
 const noopRefresh = () => undefined;
@@ -26,8 +32,97 @@ const WorkbenchTabRenderer = (props: {
   return renderer.render({ workbench, widget, placement, refresh: noopRefresh }) as ReactNode;
 };
 
+const useRegionTabBehavior = (input: WorkbenchRegionTabProps) => {
+  const { disabled = false, nextWidgetId, placement, previousWidgetId, sortable = false, workbench } = input;
+  const contextMenuRendererId = placement.tab?.contextMenuRendererId;
+  const isPreview = placement.tabRetention === "preview";
+  const hasContextMenu = isPreview || Boolean(contextMenuRendererId);
+  const sortableState = useSortable({ id: placement.widgetId, disabled: disabled || !sortable });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const openTabMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!hasContextMenu || disabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    setMenuOpen(true);
+  };
+  const reorderWithKeyboard = (event: KeyboardEvent<HTMLElement>) => {
+    if (!sortable || disabled || !event.altKey) return;
+    if (event.key === "ArrowLeft" && previousWidgetId) {
+      event.preventDefault();
+      workbench.layout.reorderWidget(placement.widgetId, { beforeWidgetId: previousWidgetId });
+    }
+    if (event.key === "ArrowRight" && nextWidgetId) {
+      event.preventDefault();
+      workbench.layout.reorderWidget(placement.widgetId, { afterWidgetId: nextWidgetId });
+    }
+  };
+  return {
+    anchor,
+    contextMenuRendererId,
+    hasContextMenu,
+    isPreview,
+    menuOpen,
+    openTabMenu,
+    reorderWithKeyboard,
+    setMenuOpen,
+    sortableState,
+  };
+};
+
+const WorkbenchRegionTabMenu = (props: {
+  anchor: { x: number; y: number; width: number; height: number };
+  contextMenuRendererId?: string;
+  isPreview: boolean;
+  label: string;
+  menuOpen: boolean;
+  placement: WorkbenchWidgetPlacement;
+  setMenuOpen(open: boolean): void;
+  workbench: WorkbenchCore;
+}) => {
+  const { anchor, contextMenuRendererId, isPreview, label, menuOpen, placement, setMenuOpen, workbench } = props;
+  return (
+    <Menu.Root
+      open={menuOpen}
+      onOpenChange={(details) => setMenuOpen(details.open)}
+      positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
+    >
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content aria-label={`${label} actions`} minW="18.75rem" bg="bg">
+            {isPreview ? (
+              <>
+                <Menu.Item value="keep-open" asChild>
+                  <ListRow
+                    asChild
+                    variant="full-width"
+                    id="keep-open"
+                    label="Keep Open"
+                    icon={<WorkbenchIcon name="pin" size={14} />}
+                    onActivate={() =>
+                      workbench.layout.updateWidgetPlacement(placement.widgetId, {
+                        tabRetention: "persistent",
+                      })
+                    }
+                  />
+                </Menu.Item>
+                {contextMenuRendererId ? <Menu.Separator /> : null}
+              </>
+            ) : null}
+            {contextMenuRendererId ? (
+              <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contextMenuRendererId} />
+            ) : null}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+};
+
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
-  const { activeWidgetId, disabled = false, placement, workbench } = props;
+  const { activeWidgetId, disabled = false, placement, sortable = false, workbench } = props;
   const closable = placement.closable === true;
   const isActive = placement.widgetId === activeWidgetId;
   const label = placement.title ?? placement.contributionId;
@@ -37,19 +132,11 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined) ??
     widget?.icon;
   const contentRendererId = placement.tab?.contentRendererId;
-  const contextMenuRendererId = placement.tab?.contextMenuRendererId;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const openTabMenu = (event: ReactMouseEvent<HTMLElement>) => {
-    if (!contextMenuRendererId || disabled) return;
-
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
-    setMenuOpen(true);
-  };
+  const behavior = useRegionTabBehavior(props);
+  const { isDragging, listeners, setNodeRef, transform, transition } = behavior.sortableState;
   const trigger = (
     <Tabs.Trigger
+      ref={setNodeRef}
       value={placement.widgetId}
       maxW="12rem"
       minW="0"
@@ -57,9 +144,17 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       title={label}
       disabled={disabled}
       className="group"
-      aria-haspopup={contextMenuRendererId ? "menu" : undefined}
-      aria-expanded={contextMenuRendererId ? menuOpen : undefined}
-      onClick={contextMenuRendererId && isActive && !disabled ? openTabMenu : undefined}
+      aria-haspopup={behavior.hasContextMenu ? "menu" : undefined}
+      aria-expanded={behavior.hasContextMenu ? behavior.menuOpen : undefined}
+      aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
+      fontStyle={behavior.isPreview ? "italic" : undefined}
+      opacity={isDragging ? "0.5" : undefined}
+      transform={CSS.Transform.toString(transform)}
+      transition={transition}
+      {...listeners}
+      onKeyDown={behavior.reorderWithKeyboard}
+      onContextMenu={behavior.hasContextMenu ? behavior.openTabMenu : undefined}
+      onClick={behavior.hasContextMenu && isActive && !disabled ? behavior.openTabMenu : undefined}
     >
       {contentRendererId ? (
         <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contentRendererId} />
@@ -103,24 +198,21 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     </Tabs.Trigger>
   );
 
-  if (!contextMenuRendererId) return trigger;
+  if (!behavior.hasContextMenu) return trigger;
 
   return (
     <>
       {trigger}
-      <Menu.Root
-        open={menuOpen}
-        onOpenChange={(details) => setMenuOpen(details.open)}
-        positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
-      >
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content aria-label={`${label} actions`} minW="18.75rem" bg="bg">
-              <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contextMenuRendererId} />
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
+      <WorkbenchRegionTabMenu
+        anchor={behavior.anchor}
+        contextMenuRendererId={behavior.contextMenuRendererId}
+        isPreview={behavior.isPreview}
+        label={label}
+        menuOpen={behavior.menuOpen}
+        placement={placement}
+        setMenuOpen={behavior.setMenuOpen}
+        workbench={workbench}
+      />
     </>
   );
 };

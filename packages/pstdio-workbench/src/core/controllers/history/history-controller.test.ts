@@ -702,7 +702,7 @@ describe("createHistoryController Sub Panel snapshots", () => {
     expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(location.widgetId);
   });
 
-  test("records and restores tab selection in every Panel", () => {
+  test("restores resource Panel selections without changing the Side Panel", () => {
     const workbench = createWorkbenchCore();
     registerSnapshotFixtures(workbench);
     workbench.layout.openWidget("snapshot.location", {
@@ -714,9 +714,9 @@ describe("createHistoryController Sub Panel snapshots", () => {
     }
 
     const entry = workbench.history.goBack();
-    expect(entry?.selectedSubPanels.side?.contributionId).toBe("snapshot.side.a");
-    expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe("snapshot.side.a");
-    expect(workbench.layout.getLayout().regions.secondary.activeWidgetId).toBe("snapshot.secondary.b");
+    expect(entry?.selectedSubPanels.side).toBeUndefined();
+    expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe("snapshot.side.b");
+    expect(workbench.layout.getLayout().regions.secondary.activeWidgetId).toBe("snapshot.secondary.a");
   });
 
   test("keeps Sub Panel selections subordinate to their Location", () => {
@@ -759,7 +759,6 @@ describe("createHistoryController Sub Panel snapshots", () => {
       selectedSubPanels: {
         main: { contributionId: "snapshot.main.owned" },
         secondary: { contributionId: "snapshot.secondary.owned" },
-        side: { contributionId: "snapshot.side.owned" },
       },
     });
     expect(workbench.layout.getLayout()).toMatchObject({
@@ -777,7 +776,7 @@ describe("createHistoryController Sub Panel snapshots", () => {
       regions: {
         main: { activeWidgetId: secondLocation.widgetId },
         secondary: { activeWidgetId: undefined },
-        side: { activeWidgetId: undefined },
+        side: { activeWidgetId: "snapshot.side.owned" },
       },
     });
 

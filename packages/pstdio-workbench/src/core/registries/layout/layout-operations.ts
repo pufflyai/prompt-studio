@@ -106,6 +106,7 @@ export const buildUpdatedPlacement = (
   if (update.closable !== undefined) next.closable = update.closable;
   if (update.mountStrategy !== undefined) next.mountStrategy = update.mountStrategy;
   if (update.hiddenByDefault !== undefined) next.hiddenByDefault = update.hiddenByDefault;
+  if (update.tabRetention !== undefined) next.tabRetention = update.tabRetention;
   if (update.tab !== undefined) next.tab = update.tab;
   if (update.ownerId !== undefined) next.ownerId = update.ownerId;
   if (update.source !== undefined) next.source = update.source;
@@ -130,6 +131,7 @@ export const createPlacement = (
   closable: spec.closable ?? widget.closable ?? !widget.singleton,
   mountStrategy: spec.mountStrategy ?? widget.mountStrategy,
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
+  tabRetention: spec.tabRetention,
   tab: spec.tab ?? widget.tab,
   role: widget.role,
 });
@@ -254,7 +256,11 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
     widgetId,
   );
 
-  if (closingEffectiveActive && workbenchPanelRegions.includes(found.regionId as WorkbenchPanelRegion)) {
+  if (
+    closingEffectiveActive &&
+    found.regionId !== "side" &&
+    workbenchPanelRegions.includes(found.regionId as WorkbenchPanelRegion)
+  ) {
     nextLayout = setLocationSubPanelSelection(
       nextLayout,
       getActiveLocationPlacement(nextLayout),
@@ -299,7 +305,10 @@ export const activateInLayout = (
       );
       regions[panelRegion] = {
         ...panel,
-        activeWidgetId: selected?.widgetId ?? (panelRegion === "main" ? placement.widgetId : undefined),
+        activeWidgetId:
+          panelRegion === "side"
+            ? panel.activeWidgetId
+            : (selected?.widgetId ?? (panelRegion === "main" ? placement.widgetId : undefined)),
       };
     }
     return {
@@ -312,7 +321,9 @@ export const activateInLayout = (
   }
 
   const withSelection =
-    placement.role === "sub-panel" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)
+    placement.role === "sub-panel" &&
+    regionId !== "side" &&
+    workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)
       ? setLocationSubPanelSelection(
           layout,
           getActiveLocationPlacement(layout),

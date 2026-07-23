@@ -71,6 +71,7 @@ export const syncDashboardLayoutPersistenceScope = (
 };
 
 export const clearDashboardNavigationState = (ctx: DashboardNavigationContext) => {
+  ctx.layout.expirePreviewTabs();
   activeCollectionByWorkbench.delete(ctx.context.store);
   selectedResourceByWorkbench.delete(ctx.context.store);
   ctx.context.delete(dashboardActiveCollectionContextKey);
@@ -82,6 +83,8 @@ export const selectDashboardNavigationResource = (
   resource: ResourceRef,
   input: { modeId?: string } = {},
 ) => {
+  ctx.layout.expirePreviewTabs(resource.kind === "dashboard-view" ? undefined : resource.uri);
+
   if (resource.kind !== "dashboard-view") {
     activeCollectionByWorkbench.delete(ctx.context.store);
     ctx.context.delete(dashboardActiveCollectionContextKey);

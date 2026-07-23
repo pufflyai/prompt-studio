@@ -12,6 +12,7 @@ import {
   getActiveWorkbenchSubPanel,
   getWorkbenchPanelForMenuRegion,
   matchesWorkbenchLocationEligibility,
+  matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
   workbenchPanelMenuRegions,
 } from "../../core";
@@ -42,6 +43,7 @@ const horizontalScrollRegions = new Set<WorkbenchRegionId>([
 const panelMenuRegionIds = new Set<WorkbenchRegionId>(
   Object.values(workbenchPanelMenuRegions).flatMap((regions) => Object.values(regions)),
 );
+const sidePanelRegionIds = new Set<WorkbenchRegionId>(["side", "side-header", "side-left-menu", "side-right-menu"]);
 
 // A flex column at least as tall as the viewport lets a widget fill the region
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
@@ -104,6 +106,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         layout,
         getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
         locationResource,
+        { ignoreOwnerResourceUri: sidePanelRegionIds.has(region) },
       )
     : undefined;
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
@@ -112,7 +115,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     widgets: currentRegionState.widgets.filter((placement) => {
       const contribution = registeredWidgets[placement.contributionId];
       return contribution
-        ? matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement) &&
+        ? (sidePanelRegionIds.has(region)
+            ? matchesWorkbenchModeEligibility(contribution, modeId)
+            : matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement)) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,

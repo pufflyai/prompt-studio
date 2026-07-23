@@ -69,6 +69,7 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.sessionPanel.setMode("closed");
 
     getWriter("workspaces")?.truncateAndWrite([
       {
@@ -133,6 +134,9 @@ describe("createWorkspacesModule", () => {
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
+    expect(floatingSession?.tabRetention).toBe("preview");
+    expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.widgetId);
+    expect(workbench.sessionPanel.getMode()).toBe("closed");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );
@@ -225,6 +229,32 @@ describe("createWorkspacesModule navigation", () => {
 });
 
 describe("createWorkspacesModule sidenav state", () => {
+  test("keeps persistent Side Panel tabs when workspace navigation changes the active mode", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceShorthand: "PS-307_A1",
+    });
+
+    workbench.registerModule(createSidenavModule());
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    syncDashboardLayoutPersistenceScope(workbench);
+    workbench.layout.registerSubPanel({
+      id: "test.files",
+      title: "Files",
+      region: "side",
+      rendererId: "test.files",
+    });
+    workbench.layout.openWidget("test.files", { tabRetention: "persistent" });
+
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+
+    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({ contributionId: "test.files", tabRetention: "persistent" }),
+    ]);
+  });
+
   test("keeps the sidenav collapsed when workspace navigation changes the active mode", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {

@@ -36,13 +36,14 @@ export const getActiveWorkbenchSubPanel = (
   layout: WorkbenchLayout,
   region: WorkbenchPanelRegion,
   resource: ResourceRef | undefined,
+  options: { ignoreOwnerResourceUri?: boolean } = {},
 ) => {
   const panel = layout.regions[region];
   return panel.widgets.find(
     (placement) =>
       placement.widgetId === panel.activeWidgetId &&
       placement.role === "sub-panel" &&
-      (!placement.ownerResourceUri || placement.ownerResourceUri === resource?.uri),
+      (options.ignoreOwnerResourceUri || !placement.ownerResourceUri || placement.ownerResourceUri === resource?.uri),
   );
 };
 
@@ -55,7 +56,7 @@ export const matchesWorkbenchLocationEligibility = (
   placement?: WorkbenchWidgetPlacement,
 ) => {
   const eligibleLocations = widget.eligibleLocations;
-  if (eligibleLocations?.modeIds?.length && (!modeId || !eligibleLocations.modeIds.includes(modeId))) return false;
+  if (!matchesWorkbenchModeEligibility(widget, modeId)) return false;
   if (
     eligibleLocations?.resourceKinds?.length &&
     (!resource || !eligibleLocations.resourceKinds.includes(resource.kind))
@@ -73,14 +74,22 @@ export const matchesWorkbenchLocationEligibility = (
   return true;
 };
 
+export const matchesWorkbenchModeEligibility = (widget: RegisteredWidgetContribution, modeId: string | undefined) => {
+  const eligibleModeIds = widget.eligibleLocations?.modeIds;
+  return !eligibleModeIds?.length || (modeId !== undefined && eligibleModeIds.includes(modeId));
+};
+
 export const matchesWorkbenchPanelPlacementLocation = (
   widget: RegisteredWidgetContribution,
   resource: ResourceRef | undefined,
   modeId: string | undefined,
   placement: WorkbenchWidgetPlacement,
-) =>
-  supportsResource(widget, placement.resource ?? resource) &&
-  matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
+  options: { ignoreResourceLocation?: boolean } = {},
+) => {
+  if (!supportsResource(widget, placement.resource ?? resource)) return false;
+  if (options.ignoreResourceLocation) return matchesWorkbenchModeEligibility(widget, modeId);
+  return matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
+};
 
 export const allowsWorkbenchFloatingPanels = (
   layout: WorkbenchLayout,

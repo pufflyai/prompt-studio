@@ -6,6 +6,7 @@ import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   matchesWorkbenchLocationEligibility,
+  matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
   type WorkbenchPanelMenuRegion,
@@ -68,14 +69,18 @@ const useWorkbenchPanelMenu = (
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const currentRegionState = layout.regions[region];
-  const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource);
+  const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
+    ignoreOwnerResourceUri: panel === "side",
+  });
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
   const regionState = {
     ...currentRegionState,
     widgets: currentRegionState.widgets.filter((placement) => {
       const contribution = registeredWidgets[placement.contributionId];
       return contribution
-        ? matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement) &&
+        ? (panel === "side"
+            ? matchesWorkbenchModeEligibility(contribution, modeId)
+            : matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement)) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,

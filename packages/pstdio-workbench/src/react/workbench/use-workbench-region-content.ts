@@ -1,4 +1,9 @@
-import { matchesWorkbenchPanelPlacementLocation, type WorkbenchCore, type WorkbenchRegion } from "../../core";
+import {
+  matchesWorkbenchLocationEligibility,
+  matchesWorkbenchModeEligibility,
+  type WorkbenchCore,
+  type WorkbenchRegion,
+} from "../../core";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -20,7 +25,10 @@ export const useWorkbenchRegionContent = (
 
     return state.layout.regions[region].widgets.some((placement) => {
       const widget = state.widgets[placement.contributionId];
-      return widget ? matchesWorkbenchPanelPlacementLocation(widget, resource, modeId, placement) : false;
+      if (!widget) return false;
+      return region === "side"
+        ? matchesWorkbenchModeEligibility(widget, modeId)
+        : matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
     });
   });
 };
