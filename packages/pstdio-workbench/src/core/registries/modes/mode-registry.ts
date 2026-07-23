@@ -334,7 +334,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
             restoreUnscopedModeLayout(context.layout.getLayout(), unscopedLayouts.get(id), panelsForMode(mode)),
           );
         }
-        if (id !== undefined) activate(id, { seed: deferredSeedModeId !== id });
+        activate(id, { seed: deferredSeedModeId !== id });
       } finally {
         transitioning = false;
       }
