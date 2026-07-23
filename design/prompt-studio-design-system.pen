@@ -39784,10 +39784,10 @@
                             {
                               "type": "frame",
                               "id": "hDntL",
-                              "name": "PS",
+                              "name": "Search",
                               "width": "fill_container",
                               "height": 20,
-                              "fill": "$ds-surface",
+                              "fill": "#00000000",
                               "cornerRadius": 3,
                               "gap": 6,
                               "padding": [
@@ -39802,33 +39802,26 @@
                                   "name": "i",
                                   "width": 9,
                                   "height": 9,
-                                  "icon": "box",
+                                  "icon": "search",
                                   "library": "lucide",
-                                  "fill": "$ds-accent"
+                                  "fill": "$ds-fg-subtle"
                                 },
                                 {
                                   "type": "text",
                                   "id": "jER6u",
                                   "name": "T",
-                                  "fill": "$ds-fg",
-                                  "content": "Prompt Studio",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Search",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
-                                  "fontWeight": "600"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "DEwm3",
-                              "name": "G",
-                              "width": "fill_container",
-                              "height": 5
-                            },
-                            {
-                              "type": "frame",
                               "id": "r9TEIa",
-                              "name": "Workspaces",
+                              "name": "Notifications",
                               "width": "fill_container",
                               "height": 19,
                               "gap": 7,
@@ -39844,7 +39837,7 @@
                                   "name": "i",
                                   "width": 10,
                                   "height": 10,
-                                  "icon": "layers",
+                                  "icon": "inbox",
                                   "library": "lucide",
                                   "fill": "$ds-fg-subtle"
                                 },
@@ -39853,7 +39846,7 @@
                                   "id": "S2tLO",
                                   "name": "L",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Workspaces",
+                                  "content": "Notifications",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -39863,7 +39856,7 @@
                             {
                               "type": "frame",
                               "id": "CR0Bf",
-                              "name": "Tickets",
+                              "name": "Sessions",
                               "width": "fill_container",
                               "height": 19,
                               "gap": 7,
@@ -39879,13 +39872,83 @@
                                   "name": "i",
                                   "width": 10,
                                   "height": 10,
-                                  "icon": "list-checks",
+                                  "icon": "message-circle",
                                   "library": "lucide",
                                   "fill": "$ds-fg-subtle"
                                 },
                                 {
                                   "type": "text",
                                   "id": "sekIa",
+                                  "name": "L",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Sessions",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "F5zrPQ",
+                              "name": "Workspaces",
+                              "width": "fill_container",
+                              "height": 19,
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                5
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "oNKEc",
+                                  "name": "i",
+                                  "width": 10,
+                                  "height": 10,
+                                  "icon": "computer",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BeWLn",
+                                  "name": "L",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Workspaces",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ukYVC",
+                              "name": "Tickets",
+                              "width": "fill_container",
+                              "height": 19,
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                5
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "efxFK",
+                                  "name": "i",
+                                  "width": 10,
+                                  "height": 10,
+                                  "icon": "square-kanban",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gE6oZ",
                                   "name": "L",
                                   "fill": "$ds-fg-muted",
                                   "content": "Tickets",
@@ -39898,9 +39961,14 @@
                             {
                               "type": "frame",
                               "id": "G9qfZc",
-                              "name": "Gap",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 8
+                              "height": 8,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
@@ -39930,7 +39998,7 @@
                                   "id": "DXh5u",
                                   "name": "T",
                                   "fill": "$ds-info",
-                                  "content": "WORKSPACE",
+                                  "content": "WORKSPACE · workspace A",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600",
@@ -39941,7 +40009,7 @@
                             {
                               "type": "frame",
                               "id": "Kvqf9",
-                              "name": "Files",
+                              "name": "Today session bucket",
                               "width": "fill_container",
                               "height": 19,
                               "fill": "#00000000",
@@ -39956,7 +40024,10 @@
                                 {
                                   "type": "icon",
                                   "id": "Ul2vK",
+                                  "x": 5,
+                                  "y": 4.5,
                                   "name": "i",
+                                  "enabled": false,
                                   "width": 10,
                                   "height": 10,
                                   "icon": "folder",
@@ -39968,20 +40039,21 @@
                                   "id": "OZVf8",
                                   "name": "L",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Files",
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 10,
-                                  "fontWeight": "normal"
+                                  "content": "TODAY · 2",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 8,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 }
                               ]
                             },
                             {
                               "type": "frame",
                               "id": "q96Wd",
-                              "name": "Diff · 6",
+                              "name": "Refactor Sidenav session",
                               "width": "fill_container",
                               "height": 19,
-                              "fill": "$ds-surface",
+                              "fill": "#00000000",
                               "cornerRadius": 3,
                               "gap": 7,
                               "padding": [
@@ -39996,16 +40068,16 @@
                                   "name": "i",
                                   "width": 10,
                                   "height": 10,
-                                  "icon": "git-compare",
+                                  "icon": "circle-check",
                                   "library": "lucide",
-                                  "fill": "$ds-fg"
+                                  "fill": "$ds-success"
                                 },
                                 {
                                   "type": "text",
                                   "id": "GYWOn",
                                   "name": "L",
-                                  "fill": "$ds-fg",
-                                  "content": "Diff · 6",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Refactor Sidenav",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -40015,7 +40087,7 @@
                             {
                               "type": "frame",
                               "id": "B5aUQF",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "width": "fill_container",
                               "height": 19,
                               "fill": "#00000000",
@@ -40033,16 +40105,16 @@
                                   "name": "i",
                                   "width": 10,
                                   "height": 10,
-                                  "icon": "message-square",
+                                  "icon": "circle-check",
                                   "library": "lucide",
-                                  "fill": "$ds-fg-subtle"
+                                  "fill": "$ds-success"
                                 },
                                 {
                                   "type": "text",
                                   "id": "jVkV5",
                                   "name": "L",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -40061,7 +40133,7 @@
                               "id": "tyPyf",
                               "name": "C",
                               "fill": "$ds-fg-subtle",
-                              "content": "selected: workspace A",
+                              "content": "sessions shown directly",
                               "fontFamily": "$font-body",
                               "fontSize": 9,
                               "fontWeight": "normal"
@@ -47831,7 +47903,7 @@
                       ],
                       "children": [
                         {
-                          "id": "Q8Ywg",
+                          "id": "WBUZh",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Search",
@@ -47853,7 +47925,7 @@
                           }
                         },
                         {
-                          "id": "E9LToN",
+                          "id": "AX6zz",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Notifications",
@@ -47866,7 +47938,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "bell"
+                              "icon": "inbox"
                             },
                             "ROY2j": {
                               "content": "Notifications",
@@ -47875,7 +47947,7 @@
                           }
                         },
                         {
-                          "id": "qXElc",
+                          "id": "fgAlW",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Sessions",
@@ -47888,16 +47960,16 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "message-square"
+                              "icon": "message-circle"
                             },
                             "ROY2j": {
                               "content": "Sessions",
-                              "fill": "#8B9099"
+                              "fill": "$tree-fg"
                             }
                           }
                         },
                         {
-                          "id": "PPMkM",
+                          "id": "tBgjZ",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Workspaces",
@@ -47907,11 +47979,10 @@
                           },
                           "descendants": {
                             "w2TSr": {
-                              "icon": "chevron-right",
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "layers"
+                              "icon": "computer"
                             },
                             "ROY2j": {
                               "content": "Workspaces",
@@ -47920,7 +47991,7 @@
                           }
                         },
                         {
-                          "id": "xD0W3",
+                          "id": "GzfRa",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Tickets",
@@ -47930,11 +48001,10 @@
                           },
                           "descendants": {
                             "w2TSr": {
-                              "icon": "chevron-right",
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "list-checks"
+                              "icon": "square-kanban"
                             },
                             "ROY2j": {
                               "content": "Tickets",
@@ -47944,121 +48014,143 @@
                         },
                         {
                           "type": "frame",
-                          "id": "CwRJA",
-                          "name": "Resource Region Gap",
+                          "id": "oDhFd",
+                          "name": "Header / Resource Region Divider",
                           "width": "fill_container",
-                          "height": 12
+                          "height": 12,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner"
                         },
                         {
                           "type": "frame",
-                          "id": "VZwmE",
-                          "name": "Selected Resource",
+                          "id": "g2mym",
+                          "name": "Selected Workspace",
                           "width": "fill_container",
                           "gap": 7,
                           "padding": [
-                            10,
+                            8,
+                            5,
                             4,
-                            4,
-                            4
+                            5
                           ],
                           "alignItems": "center",
                           "children": [
                             {
                               "type": "icon",
-                              "id": "q9AxCX",
-                              "name": "Icon",
-                              "width": 13,
-                              "height": 13,
-                              "icon": "git-branch",
+                              "id": "Z3wBF",
+                              "name": "Workspace Icon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "computer",
                               "library": "lucide",
-                              "fill": "$ds-info"
+                              "fill": "#81B4FE"
                             },
                             {
                               "type": "text",
-                              "id": "S0wyO",
-                              "name": "Kind",
-                              "fill": "$ds-fg-subtle",
-                              "content": "Workspace",
+                              "id": "S143D5",
+                              "name": "Workspace Kind",
+                              "fill": "#81B4FE",
+                              "content": "WORKSPACE",
                               "fontFamily": "$font-heading",
-                              "fontSize": 11,
-                              "fontWeight": "600"
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
                             },
                             {
                               "type": "text",
-                              "id": "th2Zv",
-                              "name": "Name",
+                              "id": "CkrNk",
+                              "name": "Workspace Name",
                               "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "fix-sidebar-shortcuts",
+                              "content": "Mode-driven sidenav",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 10,
                               "fontWeight": "600"
                             }
                           ]
                         },
                         {
-                          "id": "c1BUr",
+                          "type": "frame",
+                          "id": "QppS4",
+                          "name": "Today session bucket",
+                          "width": "fill_container",
+                          "height": 24,
+                          "padding": [
+                            4,
+                            8
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KpsaI",
+                              "name": "Today label",
+                              "fill": "$ds-fg-subtle",
+                              "content": "TODAY",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            },
+                            {
+                              "type": "text",
+                              "id": "wA1Nx",
+                              "name": "Today count",
+                              "fill": "$ds-fg-subtle",
+                              "content": "2",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "kGlEl",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Diff · 6 changed",
+                          "name": "Refactor Sidenav session",
                           "theme": {
                             "depth": "0",
-                            "tree": "active"
+                            "tree": "default"
                           },
+                          "width": "fill_container",
                           "descendants": {
                             "w2TSr": {
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "git-compare"
+                              "icon": "circle-check",
+                              "fill": "$ds-success"
                             },
                             "ROY2j": {
-                              "content": "Diff · 6 changed",
+                              "content": "Refactor Sidenav",
                               "fill": "$tree-fg"
                             }
                           }
                         },
                         {
-                          "id": "kULi8",
+                          "id": "pii5v",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Files",
+                          "name": "Wire up board session",
                           "theme": {
                             "depth": "0",
                             "tree": "default"
                           },
+                          "width": "fill_container",
                           "descendants": {
                             "w2TSr": {
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "folder"
+                              "icon": "circle-check",
+                              "fill": "$ds-success"
                             },
                             "ROY2j": {
-                              "content": "Files",
-                              "fill": "$tree-fg"
-                            }
-                          }
-                        },
-                        {
-                          "id": "au5Xk",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Sessions · 2",
-                          "theme": {
-                            "depth": "0",
-                            "tree": "default"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "icon": "message-square"
-                            },
-                            "ROY2j": {
-                              "content": "Sessions · 2",
+                              "content": "Wire up board",
                               "fill": "$tree-fg"
                             }
                           }
@@ -66654,7 +66746,7 @@
                           ],
                           "children": [
                             {
-                              "id": "vNhSg",
+                              "id": "K4VhV6",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Search",
@@ -66676,7 +66768,7 @@
                               }
                             },
                             {
-                              "id": "KtXwr",
+                              "id": "D4RWUF",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Notifications",
@@ -66689,7 +66781,7 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "bell"
+                                  "icon": "inbox"
                                 },
                                 "ROY2j": {
                                   "content": "Notifications",
@@ -66698,7 +66790,7 @@
                               }
                             },
                             {
-                              "id": "q8GOu",
+                              "id": "mbkfK",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Sessions",
@@ -66711,16 +66803,16 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "message-circle"
                                 },
                                 "ROY2j": {
                                   "content": "Sessions",
-                                  "fill": "#8B9099"
+                                  "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "H7BKt",
+                              "id": "zvhwh",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Workspaces",
@@ -66730,11 +66822,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "layers"
+                                  "icon": "computer"
                                 },
                                 "ROY2j": {
                                   "content": "Workspaces",
@@ -66743,7 +66834,7 @@
                               }
                             },
                             {
-                              "id": "lQUCb",
+                              "id": "I88zqm",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Tickets",
@@ -66753,11 +66844,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "list-checks"
+                                  "icon": "square-kanban"
                                 },
                                 "ROY2j": {
                                   "content": "Tickets",
@@ -66767,121 +66857,143 @@
                             },
                             {
                               "type": "frame",
-                              "id": "PE16M",
-                              "name": "Resource Region Gap",
+                              "id": "F6467I",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 12
+                              "height": 12,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
-                              "id": "U54jg",
-                              "name": "Selected Resource",
+                              "id": "Unrpz",
+                              "name": "Selected Workspace",
                               "width": "fill_container",
                               "gap": 7,
                               "padding": [
-                                10,
+                                8,
+                                5,
                                 4,
-                                4,
-                                4
+                                5
                               ],
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "icon",
-                                  "id": "minO4",
-                                  "name": "Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "git-branch",
+                                  "id": "gbCON",
+                                  "name": "Workspace Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "computer",
                                   "library": "lucide",
-                                  "fill": "$ds-info"
+                                  "fill": "#81B4FE"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "geKUr",
-                                  "name": "Kind",
-                                  "fill": "$ds-fg-subtle",
-                                  "content": "Workspace",
+                                  "id": "vViNN",
+                                  "name": "Workspace Kind",
+                                  "fill": "#81B4FE",
+                                  "content": "WORKSPACE",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 },
                                 {
                                   "type": "text",
-                                  "id": "qVxJk",
-                                  "name": "Name",
+                                  "id": "p1XUeF",
+                                  "name": "Workspace Name",
                                   "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "fix-sidebar-shortcuts",
+                                  "content": "Mode-driven sidenav",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 10,
                                   "fontWeight": "600"
                                 }
                               ]
                             },
                             {
-                              "id": "p3bEz",
+                              "type": "frame",
+                              "id": "J0YyJ",
+                              "name": "Today session bucket",
+                              "width": "fill_container",
+                              "height": 24,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "FCWAd",
+                                  "name": "Today label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J0MWo",
+                                  "name": "Today count",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "gClo5",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Files",
+                              "name": "Refactor Sidenav session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "folder"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Files",
+                                  "content": "Refactor Sidenav",
                                   "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "edkzN",
+                              "id": "uG0J7",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Diff · 6 changed",
-                              "theme": {
-                                "depth": "0",
-                                "tree": "active"
-                              },
-                              "descendants": {
-                                "w2TSr": {
-                                  "enabled": false
-                                },
-                                "Mbu4C": {
-                                  "icon": "git-compare"
-                                },
-                                "ROY2j": {
-                                  "content": "Diff · 6 changed",
-                                  "fill": "$tree-fg"
-                                }
-                              }
-                            },
-                            {
-                              "id": "Mimkh",
-                              "type": "ref",
-                              "ref": "t5G2s8",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -75720,6 +75832,7 @@
       },
       "clip": true,
       "width": 2200,
+      "height": 2290,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 30,
@@ -75793,7 +75906,7 @@
               "id": "W0TjVL",
               "name": "Sidenav State Row",
               "width": "fill_container",
-              "height": 520,
+              "height": 610,
               "gap": 18,
               "children": [
                 {
@@ -75876,7 +75989,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "bell"
+                              "icon": "inbox"
                             },
                             "ROY2j": {
                               "content": "Notifications",
@@ -75898,7 +76011,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "message-square"
+                              "icon": "message-circle"
                             },
                             "ROY2j": {
                               "content": "Sessions",
@@ -75920,7 +76033,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "layers"
+                              "icon": "computer"
                             },
                             "ROY2j": {
                               "content": "Workspaces",
@@ -75942,7 +76055,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "list-checks"
+                              "icon": "square-kanban"
                             },
                             "ROY2j": {
                               "content": "Tickets",
@@ -76079,7 +76192,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "bell"
+                              "icon": "inbox"
                             },
                             "ROY2j": {
                               "content": "Notifications",
@@ -76101,7 +76214,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "message-square"
+                              "icon": "message-circle"
                             },
                             "ROY2j": {
                               "content": "Sessions",
@@ -76123,7 +76236,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "layers"
+                              "icon": "computer"
                             },
                             "ROY2j": {
                               "content": "Workspaces",
@@ -76145,7 +76258,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "list-checks"
+                              "icon": "square-kanban"
                             },
                             "ROY2j": {
                               "content": "Tickets",
@@ -76168,7 +76281,7 @@
                         {
                           "type": "frame",
                           "id": "S6AlcQ",
-                          "name": "Selected Ticket",
+                          "name": "Selected Workspace",
                           "width": "fill_container",
                           "gap": 7,
                           "padding": [
@@ -76182,18 +76295,18 @@
                             {
                               "type": "icon",
                               "id": "N3OOKK",
-                              "name": "Ticket Icon",
+                              "name": "Workspace Icon",
                               "width": 12,
                               "height": 12,
-                              "icon": "file-text",
+                              "icon": "computer",
                               "library": "lucide",
-                              "fill": "$ds-review"
+                              "fill": "#81B4FE"
                             },
                             {
                               "type": "text",
                               "id": "I06hB",
-                              "name": "Ticket Kind",
-                              "fill": "$ds-review",
+                              "name": "Workspace Kind",
+                              "fill": "#81B4FE",
                               "content": "WORKSPACE",
                               "fontFamily": "$font-heading",
                               "fontSize": 9,
@@ -76203,9 +76316,9 @@
                             {
                               "type": "text",
                               "id": "AtPO7",
-                              "name": "Ticket Name",
+                              "name": "Workspace Name",
                               "fill": "$ds-fg",
-                              "content": "A1",
+                              "content": "Mode-driven sidenav",
                               "fontFamily": "$font-body",
                               "fontSize": 10,
                               "fontWeight": "600"
@@ -76254,7 +76367,7 @@
                           "ref": "t5G2s8",
                           "name": "Refactor Sidenav session",
                           "theme": {
-                            "depth": "1",
+                            "depth": "0",
                             "tree": "default"
                           },
                           "width": "fill_container",
@@ -76278,7 +76391,7 @@
                           "ref": "t5G2s8",
                           "name": "Wire up board session",
                           "theme": {
-                            "depth": "1",
+                            "depth": "0",
                             "tree": "default"
                           },
                           "width": "fill_container",
@@ -76380,7 +76493,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "bell"
+                              "icon": "inbox"
                             },
                             "ROY2j": {
                               "content": "Notifications",
@@ -76402,7 +76515,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "message-square"
+                              "icon": "message-circle"
                             },
                             "ROY2j": {
                               "content": "Sessions",
@@ -76424,7 +76537,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "layers"
+                              "icon": "computer"
                             },
                             "ROY2j": {
                               "content": "Workspaces",
@@ -76446,7 +76559,7 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "list-checks"
+                              "icon": "square-kanban"
                             },
                             "ROY2j": {
                               "content": "Tickets",
@@ -76486,7 +76599,7 @@
                               "name": "Ticket Icon",
                               "width": 12,
                               "height": 12,
-                              "icon": "file-text",
+                              "icon": "component",
                               "library": "lucide",
                               "fill": "$ds-review"
                             },
@@ -76514,10 +76627,11 @@
                           ]
                         },
                         {
-                          "id": "Uq9LU",
+                          "id": "lNyJP",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Ticket files",
+                          "name": "Ticket body",
+                          "width": "fill_container",
                           "theme": {
                             "depth": "0",
                             "tree": "active"
@@ -76527,21 +76641,46 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "folder"
+                              "icon": "component",
+                              "fill": "#A36DFF"
                             },
                             "ROY2j": {
-                              "content": "Ticket files",
-                              "fill": "$tree-fg"
+                              "content": "PS-164 Sidenav resource sections",
+                              "fill": "#F7F8F8"
                             }
                           }
                         },
                         {
-                          "id": "f2lnzE",
+                          "id": "pqnaX",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Files section",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": true,
+                              "icon": "chevron-down"
+                            },
+                            "Mbu4C": {
+                              "icon": "files"
+                            },
+                            "ROY2j": {
+                              "content": "Files"
+                            }
+                          }
+                        },
+                        {
+                          "id": "gCZms",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "research.md",
+                          "width": "fill_container",
                           "theme": {
-                            "depth": "0",
+                            "depth": "1",
                             "tree": "default"
                           },
                           "descendants": {
@@ -76549,21 +76688,90 @@
                               "enabled": false
                             },
                             "Mbu4C": {
-                              "icon": "file"
+                              "icon": "file-text"
                             },
                             "ROY2j": {
-                              "content": "research.md",
-                              "fill": "$tree-fg"
+                              "content": "research.md"
                             }
                           }
                         },
                         {
-                          "id": "aaDgT",
+                          "id": "SBzzD",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Linked workspaces · 2",
+                          "name": "Sub-tickets section",
+                          "width": "fill_container",
                           "theme": {
                             "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": true,
+                              "icon": "chevron-down"
+                            },
+                            "Mbu4C": {
+                              "icon": "list-tree"
+                            },
+                            "ROY2j": {
+                              "content": "Sub-tickets"
+                            }
+                          }
+                        },
+                        {
+                          "id": "WIl2A",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "PS-172 sub-ticket",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "1",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "component",
+                              "fill": "#81B4FE"
+                            },
+                            "ROY2j": {
+                              "content": "PS-172 Workspace sessions"
+                            }
+                          }
+                        },
+                        {
+                          "id": "ld0N1",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Workspaces section",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": true,
+                              "icon": "chevron-down"
+                            },
+                            "Mbu4C": {
+                              "icon": "computer"
+                            },
+                            "ROY2j": {
+                              "content": "Workspaces"
+                            }
+                          }
+                        },
+                        {
+                          "id": "OUvXy",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Mode-driven sidenav workspace",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "1",
                             "tree": "default"
                           },
                           "descendants": {
@@ -76574,8 +76782,53 @@
                               "icon": "git-branch"
                             },
                             "ROY2j": {
-                              "content": "Linked workspaces · 2",
-                              "fill": "$tree-fg"
+                              "content": "Mode-driven sidenav"
+                            }
+                          }
+                        },
+                        {
+                          "id": "j6yOXE",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Sessions section",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": true,
+                              "icon": "chevron-down"
+                            },
+                            "Mbu4C": {
+                              "icon": "message-circle"
+                            },
+                            "ROY2j": {
+                              "content": "Sessions"
+                            }
+                          }
+                        },
+                        {
+                          "id": "jT3zU",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Refine PS-164 session",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "1",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "circle-check",
+                              "fill": "#2DD665"
+                            },
+                            "ROY2j": {
+                              "content": "Refine PS-164"
                             }
                           }
                         }
@@ -76873,7 +77126,7 @@
                       "width": "fill_container",
                       "descendants": {
                         "t5jSf": {
-                          "enabled": false
+                          "enabled": true
                         },
                         "rKPgR": {
                           "enabled": true,
@@ -78420,7 +78673,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Sessions · 2",
+                                  "content": "TODAY · 2\nsession rows",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -78707,7 +78960,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Sessions · 2\nSession selected",
+                                  "content": "TODAY · 2\nselected in Side Panel",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -78970,7 +79223,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Sessions · 0",
+                                  "content": "No sessions yet",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -79233,7 +79486,7 @@
                                   "fill": "$ds-info",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Sessions · 2",
+                                  "content": "TODAY · 2\nsession rows restored",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 8,
                                   "fontWeight": "600"
@@ -80610,7 +80863,7 @@
                           ],
                           "children": [
                             {
-                              "id": "eear0",
+                              "id": "xTeHW",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Search",
@@ -80632,7 +80885,7 @@
                               }
                             },
                             {
-                              "id": "blMc7",
+                              "id": "Fqz3G",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Notifications",
@@ -80645,7 +80898,7 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "bell"
+                                  "icon": "inbox"
                                 },
                                 "ROY2j": {
                                   "content": "Notifications",
@@ -80654,7 +80907,7 @@
                               }
                             },
                             {
-                              "id": "DCVcc",
+                              "id": "bYLfS",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Sessions",
@@ -80667,16 +80920,16 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "message-circle"
                                 },
                                 "ROY2j": {
                                   "content": "Sessions",
-                                  "fill": "#8B9099"
+                                  "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "ySv9o",
+                              "id": "qGgHI",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Workspaces",
@@ -80686,11 +80939,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "layers"
+                                  "icon": "computer"
                                 },
                                 "ROY2j": {
                                   "content": "Workspaces",
@@ -80699,7 +80951,7 @@
                               }
                             },
                             {
-                              "id": "A8S9E",
+                              "id": "hblTF",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Tickets",
@@ -80709,11 +80961,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "list-checks"
+                                  "icon": "square-kanban"
                                 },
                                 "ROY2j": {
                                   "content": "Tickets",
@@ -80723,121 +80974,143 @@
                             },
                             {
                               "type": "frame",
-                              "id": "ko4sR",
-                              "name": "Resource Region Gap",
+                              "id": "ubIzG",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 12
+                              "height": 12,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
-                              "id": "FQOYf",
-                              "name": "Selected Resource",
+                              "id": "O3uxBc",
+                              "name": "Selected Workspace",
                               "width": "fill_container",
                               "gap": 7,
                               "padding": [
-                                10,
+                                8,
+                                5,
                                 4,
-                                4,
-                                4
+                                5
                               ],
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "icon",
-                                  "id": "C6cyuM",
-                                  "name": "Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "git-branch",
+                                  "id": "Zscd4",
+                                  "name": "Workspace Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "computer",
                                   "library": "lucide",
-                                  "fill": "$ds-info"
+                                  "fill": "#81B4FE"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "ynRhj",
-                                  "name": "Kind",
-                                  "fill": "$ds-fg-subtle",
-                                  "content": "Workspace",
+                                  "id": "hIRSk",
+                                  "name": "Workspace Kind",
+                                  "fill": "#81B4FE",
+                                  "content": "WORKSPACE",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 },
                                 {
                                   "type": "text",
-                                  "id": "cDXl6",
-                                  "name": "Name",
+                                  "id": "LFJPY",
+                                  "name": "Workspace Name",
                                   "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "fix-sidebar-shortcuts",
+                                  "content": "Mode-driven sidenav",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 10,
                                   "fontWeight": "600"
                                 }
                               ]
                             },
                             {
-                              "id": "yPdgk",
+                              "type": "frame",
+                              "id": "Nxluz",
+                              "name": "Today session bucket",
+                              "width": "fill_container",
+                              "height": 24,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "x54dQZ",
+                                  "name": "Today label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "guTT1",
+                                  "name": "Today count",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "zt3fT",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Files",
+                              "name": "Refactor Sidenav session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "folder"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Files",
+                                  "content": "Refactor Sidenav",
                                   "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "GNIz0",
+                              "id": "lAGKH",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Diff · 6 changed",
-                              "theme": {
-                                "depth": "0",
-                                "tree": "active"
-                              },
-                              "descendants": {
-                                "w2TSr": {
-                                  "enabled": false
-                                },
-                                "Mbu4C": {
-                                  "icon": "git-compare"
-                                },
-                                "ROY2j": {
-                                  "content": "Diff · 6 changed",
-                                  "fill": "$tree-fg"
-                                }
-                              }
-                            },
-                            {
-                              "id": "rl7oh",
-                              "type": "ref",
-                              "ref": "t5G2s8",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -82095,46 +82368,7 @@
                           ],
                           "children": [
                             {
-                              "id": "C1nQMd",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Project Switcher",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "theme": {
-                                "trig": "open"
-                              },
-                              "descendants": {
-                                "sjyF4": {
-                                  "enabled": true
-                                },
-                                "D5Gofn": {
-                                  "content": "P"
-                                },
-                                "xr1ec": {
-                                  "icon": "box",
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": [
-                                    0,
-                                    0,
-                                    0,
-                                    2
-                                  ],
-                                  "width": "fill_container"
-                                },
-                                "sefGB": {
-                                  "content": "Prompt Studio",
-                                  "fontSize": 13
-                                },
-                                "Tpujq": {
-                                  "icon": "chevrons-up-down"
-                                }
-                              }
-                            },
-                            {
-                              "id": "g3MZA",
+                              "id": "kq5Jg",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Search",
@@ -82156,7 +82390,7 @@
                               }
                             },
                             {
-                              "id": "LYJff",
+                              "id": "zADPi",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Notifications",
@@ -82169,7 +82403,7 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "bell"
+                                  "icon": "inbox"
                                 },
                                 "ROY2j": {
                                   "content": "Notifications",
@@ -82178,7 +82412,7 @@
                               }
                             },
                             {
-                              "id": "V1UcQ",
+                              "id": "FqiP5",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Sessions",
@@ -82191,16 +82425,16 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "message-circle"
                                 },
                                 "ROY2j": {
                                   "content": "Sessions",
-                                  "fill": "#8B9099"
+                                  "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "u1TkcK",
+                              "id": "MPfjB",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Workspaces",
@@ -82210,11 +82444,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "layers"
+                                  "icon": "computer"
                                 },
                                 "ROY2j": {
                                   "content": "Workspaces",
@@ -82223,7 +82456,7 @@
                               }
                             },
                             {
-                              "id": "M2lip",
+                              "id": "fVuCh",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Tickets",
@@ -82233,11 +82466,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "list-checks"
+                                  "icon": "square-kanban"
                                 },
                                 "ROY2j": {
                                   "content": "Tickets",
@@ -82247,121 +82479,143 @@
                             },
                             {
                               "type": "frame",
-                              "id": "QLtdm",
-                              "name": "Resource Region Gap",
+                              "id": "wC0XY",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 12
+                              "height": 12,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
-                              "id": "Ngg2D",
-                              "name": "Selected Resource",
+                              "id": "ID0kw",
+                              "name": "Selected Workspace",
                               "width": "fill_container",
                               "gap": 7,
                               "padding": [
-                                10,
+                                8,
+                                5,
                                 4,
-                                4,
-                                4
+                                5
                               ],
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "icon",
-                                  "id": "eYeEz",
-                                  "name": "Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "git-branch",
+                                  "id": "H00CkI",
+                                  "name": "Workspace Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "computer",
                                   "library": "lucide",
-                                  "fill": "$ds-info"
+                                  "fill": "#81B4FE"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "dFjX7",
-                                  "name": "Kind",
-                                  "fill": "$ds-fg-subtle",
-                                  "content": "Workspace",
+                                  "id": "JhJqr",
+                                  "name": "Workspace Kind",
+                                  "fill": "#81B4FE",
+                                  "content": "WORKSPACE",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 },
                                 {
                                   "type": "text",
-                                  "id": "qUJkZ",
-                                  "name": "Name",
+                                  "id": "SolSa",
+                                  "name": "Workspace Name",
                                   "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "fix-sidebar-shortcuts",
+                                  "content": "Mode-driven sidenav",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 10,
                                   "fontWeight": "600"
                                 }
                               ]
                             },
                             {
-                              "id": "P5Cyi8",
+                              "type": "frame",
+                              "id": "DGKZg",
+                              "name": "Today session bucket",
+                              "width": "fill_container",
+                              "height": 24,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WuayR",
+                                  "name": "Today label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IQwFL",
+                                  "name": "Today count",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "FGK5F",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Files",
+                              "name": "Refactor Sidenav session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "folder"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Files",
+                                  "content": "Refactor Sidenav",
                                   "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "XtxNq",
+                              "id": "A5EM2T",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Diff · 6 changed",
-                              "theme": {
-                                "depth": "0",
-                                "tree": "active"
-                              },
-                              "descendants": {
-                                "w2TSr": {
-                                  "enabled": false
-                                },
-                                "Mbu4C": {
-                                  "icon": "git-compare"
-                                },
-                                "ROY2j": {
-                                  "content": "Diff · 6 changed",
-                                  "fill": "$tree-fg"
-                                }
-                              }
-                            },
-                            {
-                              "id": "wKUUH",
-                              "type": "ref",
-                              "ref": "t5G2s8",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -83895,7 +84149,7 @@
                           ],
                           "children": [
                             {
-                              "id": "BdYEI",
+                              "id": "d4rYs",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Search",
@@ -83917,7 +84171,7 @@
                               }
                             },
                             {
-                              "id": "Ph4n5",
+                              "id": "ywuPB",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Notifications",
@@ -83930,7 +84184,7 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "bell"
+                                  "icon": "inbox"
                                 },
                                 "ROY2j": {
                                   "content": "Notifications",
@@ -83939,7 +84193,7 @@
                               }
                             },
                             {
-                              "id": "WyPmM",
+                              "id": "Z9JQf",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Sessions",
@@ -83952,16 +84206,16 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "message-circle"
                                 },
                                 "ROY2j": {
                                   "content": "Sessions",
-                                  "fill": "#8B9099"
+                                  "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "d60ptv",
+                              "id": "aR9RT",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Workspaces",
@@ -83971,11 +84225,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "layers"
+                                  "icon": "computer"
                                 },
                                 "ROY2j": {
                                   "content": "Workspaces",
@@ -83984,7 +84237,7 @@
                               }
                             },
                             {
-                              "id": "x7Y6NW",
+                              "id": "W70ZP",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Tickets",
@@ -83994,11 +84247,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "list-checks"
+                                  "icon": "square-kanban"
                                 },
                                 "ROY2j": {
                                   "content": "Tickets",
@@ -84008,121 +84260,143 @@
                             },
                             {
                               "type": "frame",
-                              "id": "d6mmc",
-                              "name": "Resource Region Gap",
+                              "id": "udK82",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 12
+                              "height": 12,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
-                              "id": "CwlHL",
-                              "name": "Selected Resource",
+                              "id": "IFiVQ",
+                              "name": "Selected Workspace",
                               "width": "fill_container",
                               "gap": 7,
                               "padding": [
-                                10,
+                                8,
+                                5,
                                 4,
-                                4,
-                                4
+                                5
                               ],
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "icon",
-                                  "id": "eFB0e",
-                                  "name": "Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "git-branch",
+                                  "id": "B0VOLe",
+                                  "name": "Workspace Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "computer",
                                   "library": "lucide",
-                                  "fill": "$ds-info"
+                                  "fill": "#81B4FE"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "HVR8t",
-                                  "name": "Kind",
-                                  "fill": "$ds-fg-subtle",
-                                  "content": "Workspace",
+                                  "id": "U3PvG",
+                                  "name": "Workspace Kind",
+                                  "fill": "#81B4FE",
+                                  "content": "WORKSPACE",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 },
                                 {
                                   "type": "text",
-                                  "id": "q8CXjk",
-                                  "name": "Name",
+                                  "id": "k6YMgp",
+                                  "name": "Workspace Name",
                                   "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "fix-sidebar-shortcuts",
+                                  "content": "Mode-driven sidenav",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 10,
                                   "fontWeight": "600"
                                 }
                               ]
                             },
                             {
-                              "id": "FrloU",
+                              "type": "frame",
+                              "id": "qTzna",
+                              "name": "Today session bucket",
+                              "width": "fill_container",
+                              "height": 24,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "qniJn",
+                                  "name": "Today label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UHNYG",
+                                  "name": "Today count",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "TRq9F",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Files",
+                              "name": "Refactor Sidenav session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "folder"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Files",
+                                  "content": "Refactor Sidenav",
                                   "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "NjU5C",
+                              "id": "BBnDV",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Diff · 6 changed",
-                              "theme": {
-                                "depth": "0",
-                                "tree": "active"
-                              },
-                              "descendants": {
-                                "w2TSr": {
-                                  "enabled": false
-                                },
-                                "Mbu4C": {
-                                  "icon": "git-compare"
-                                },
-                                "ROY2j": {
-                                  "content": "Diff · 6 changed",
-                                  "fill": "$tree-fg"
-                                }
-                              }
-                            },
-                            {
-                              "id": "VIAPj",
-                              "type": "ref",
-                              "ref": "t5G2s8",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -85231,46 +85505,7 @@
                           ],
                           "children": [
                             {
-                              "id": "ugGvH",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Project Switcher",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "theme": {
-                                "trig": "open"
-                              },
-                              "descendants": {
-                                "sjyF4": {
-                                  "enabled": true
-                                },
-                                "D5Gofn": {
-                                  "content": "P"
-                                },
-                                "xr1ec": {
-                                  "icon": "box",
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": [
-                                    0,
-                                    0,
-                                    0,
-                                    2
-                                  ],
-                                  "width": "fill_container"
-                                },
-                                "sefGB": {
-                                  "content": "Prompt Studio",
-                                  "fontSize": 13
-                                },
-                                "Tpujq": {
-                                  "icon": "chevrons-up-down"
-                                }
-                              }
-                            },
-                            {
-                              "id": "lWvDY",
+                              "id": "hkrp6",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Search",
@@ -85292,7 +85527,7 @@
                               }
                             },
                             {
-                              "id": "fDu1z",
+                              "id": "HrCTN",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Notifications",
@@ -85305,7 +85540,7 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "bell"
+                                  "icon": "inbox"
                                 },
                                 "ROY2j": {
                                   "content": "Notifications",
@@ -85314,7 +85549,7 @@
                               }
                             },
                             {
-                              "id": "aaFI3",
+                              "id": "HfprN",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Sessions",
@@ -85327,16 +85562,16 @@
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "message-circle"
                                 },
                                 "ROY2j": {
                                   "content": "Sessions",
-                                  "fill": "#8B9099"
+                                  "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "FK8V1",
+                              "id": "ft2mn",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Workspaces",
@@ -85346,11 +85581,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "layers"
+                                  "icon": "computer"
                                 },
                                 "ROY2j": {
                                   "content": "Workspaces",
@@ -85359,7 +85593,7 @@
                               }
                             },
                             {
-                              "id": "ekcha",
+                              "id": "CKfYL",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Tickets",
@@ -85369,11 +85603,10 @@
                               },
                               "descendants": {
                                 "w2TSr": {
-                                  "icon": "chevron-right",
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "list-checks"
+                                  "icon": "square-kanban"
                                 },
                                 "ROY2j": {
                                   "content": "Tickets",
@@ -85383,121 +85616,143 @@
                             },
                             {
                               "type": "frame",
-                              "id": "bxWbe",
-                              "name": "Resource Region Gap",
+                              "id": "Y1I7GG",
+                              "name": "Header / Resource Region Divider",
                               "width": "fill_container",
-                              "height": 12
+                              "height": 12,
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
-                              "id": "PXTem",
-                              "name": "Selected Resource",
+                              "id": "nTYz9",
+                              "name": "Selected Workspace",
                               "width": "fill_container",
                               "gap": 7,
                               "padding": [
-                                10,
+                                8,
+                                5,
                                 4,
-                                4,
-                                4
+                                5
                               ],
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "icon",
-                                  "id": "cQAkN",
-                                  "name": "Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "git-branch",
+                                  "id": "PppwB",
+                                  "name": "Workspace Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "computer",
                                   "library": "lucide",
-                                  "fill": "$ds-info"
+                                  "fill": "#81B4FE"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "iI4xH",
-                                  "name": "Kind",
-                                  "fill": "$ds-fg-subtle",
-                                  "content": "Workspace",
+                                  "id": "Wa4Tz",
+                                  "name": "Workspace Kind",
+                                  "fill": "#81B4FE",
+                                  "content": "WORKSPACE",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
                                 },
                                 {
                                   "type": "text",
-                                  "id": "kd25X",
-                                  "name": "Name",
+                                  "id": "sWg8A",
+                                  "name": "Workspace Name",
                                   "fill": "$ds-fg",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "fix-sidebar-shortcuts",
+                                  "content": "Mode-driven sidenav",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 10,
                                   "fontWeight": "600"
                                 }
                               ]
                             },
                             {
-                              "id": "T6X5Jy",
+                              "type": "frame",
+                              "id": "UK1Xu",
+                              "name": "Today session bucket",
+                              "width": "fill_container",
+                              "height": 24,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dCPIA",
+                                  "name": "Today label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Tuww7",
+                                  "name": "Today count",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Eeslu",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Files",
+                              "name": "Refactor Sidenav session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "folder"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Files",
+                                  "content": "Refactor Sidenav",
                                   "fill": "$tree-fg"
                                 }
                               }
                             },
                             {
-                              "id": "egWZZ",
+                              "id": "Kw3jK",
                               "type": "ref",
                               "ref": "t5G2s8",
-                              "name": "Diff · 6 changed",
-                              "theme": {
-                                "depth": "0",
-                                "tree": "active"
-                              },
-                              "descendants": {
-                                "w2TSr": {
-                                  "enabled": false
-                                },
-                                "Mbu4C": {
-                                  "icon": "git-compare"
-                                },
-                                "ROY2j": {
-                                  "content": "Diff · 6 changed",
-                                  "fill": "$tree-fg"
-                                }
-                              }
-                            },
-                            {
-                              "id": "pmp2m",
-                              "type": "ref",
-                              "ref": "t5G2s8",
-                              "name": "Sessions · 2",
+                              "name": "Wire up board session",
                               "theme": {
                                 "depth": "0",
                                 "tree": "default"
                               },
+                              "width": "fill_container",
                               "descendants": {
                                 "w2TSr": {
                                   "enabled": false
                                 },
                                 "Mbu4C": {
-                                  "icon": "message-square"
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
                                 },
                                 "ROY2j": {
-                                  "content": "Sessions · 2",
+                                  "content": "Wire up board",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -87957,7 +88212,7 @@
                           "name": "Notifications icon",
                           "width": 13,
                           "height": 13,
-                          "icon": "bell",
+                          "icon": "inbox",
                           "library": "lucide",
                           "fill": "#8B9099"
                         },
@@ -87992,7 +88247,7 @@
                           "name": "Sessions icon",
                           "width": 13,
                           "height": 13,
-                          "icon": "message-square",
+                          "icon": "message-circle",
                           "library": "lucide",
                           "fill": "#8B9099"
                         },
@@ -88027,7 +88282,7 @@
                           "name": "Workspaces icon",
                           "width": 13,
                           "height": 13,
-                          "icon": "layers",
+                          "icon": "computer",
                           "library": "lucide",
                           "fill": "#8B9099"
                         },
@@ -88062,7 +88317,7 @@
                           "name": "Tickets icon",
                           "width": 13,
                           "height": 13,
-                          "icon": "list-checks",
+                          "icon": "square-kanban",
                           "library": "lucide",
                           "fill": "#8B9099"
                         },
@@ -88081,9 +88336,14 @@
                     {
                       "type": "frame",
                       "id": "rC8Bl",
-                      "name": "Resource region gap",
+                      "name": "Header / Resource Region Divider",
                       "width": "fill_container",
-                      "height": 10
+                      "height": 12,
+                      "stroke": "#2E333F",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner"
                     },
                     {
                       "type": "text",
