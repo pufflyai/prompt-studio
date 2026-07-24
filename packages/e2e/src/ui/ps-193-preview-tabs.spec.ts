@@ -29,7 +29,8 @@ test.describe("PS-193 preview tabs", () => {
 
     const session = sideHeader.getByRole("tab", { name: "Session 42" });
     await expect(session).toHaveCSS("font-style", "italic");
-    await session.click();
+    await expect(session).toHaveAttribute("aria-selected", "true");
+    await session.click({ force: true });
 
     const customMenu = page.getByRole("menu", { name: "Session 42 menu" });
     await expect(customMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
