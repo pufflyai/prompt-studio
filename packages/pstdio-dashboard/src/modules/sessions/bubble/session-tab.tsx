@@ -134,7 +134,7 @@ const SessionActionRow = (props: { id: string; icon: typeof PenBox; label: strin
   );
 };
 
-export const SessionTabContextMenu = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const SessionTabMenu = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const state = useSessionTabState(input);
 

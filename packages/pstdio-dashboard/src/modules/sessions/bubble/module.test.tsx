@@ -26,7 +26,7 @@ describe("createSessionBubbleModule", () => {
       openCommandId: dashboardCommandIds.createSession,
       tab: {
         contentRendererId: "dashboard-workbench.session-tab",
-        contextMenuRendererId: "dashboard-workbench.session-tab-context-menu",
+        customMenuRendererId: "dashboard-workbench.session-tab-menu",
       },
     });
     expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.sessions)).toBe(false);

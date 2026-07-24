@@ -18,7 +18,7 @@ const INSPECTOR_RENDERER_ID = "onboarding.side-panels.inspector.renderer";
 const ACTIVITY_WIDGET_ID = "onboarding.side-panels.activity";
 const ACTIVITY_RENDERER_ID = "onboarding.side-panels.activity.renderer";
 const ACTIVITY_TAB_RENDERER_ID = "onboarding.side-panels.activity.tab";
-const ACTIVITY_TAB_MENU_RENDERER_ID = "onboarding.side-panels.activity.tab-menu";
+const ACTIVITY_TAB_CUSTOM_MENU_RENDERER_ID = "onboarding.side-panels.activity.tab-custom-menu";
 const PREVIEW_WIDGET_ID = "onboarding.side-panels.preview";
 const PROBLEMS_WIDGET_ID = "onboarding.side-panels.problems";
 const FILES_WIDGET_ID = "onboarding.side-panels.files";
@@ -36,7 +36,7 @@ const ActivityTab = () => (
   </HStack>
 );
 
-const ActivityTabMenu = () => (
+const ActivityTabCustomMenu = () => (
   <Menu.Item value="live" disabled asChild>
     <ListRow asChild variant="full-width" label="Live context" disabled />
   </Menu.Item>
@@ -200,7 +200,10 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       render: ({ workbench }) => <ResourceActivityPanel workbench={workbench} />,
     });
     ctx.renderers.registerRenderer({ id: ACTIVITY_TAB_RENDERER_ID, render: () => <ActivityTab /> });
-    ctx.renderers.registerRenderer({ id: ACTIVITY_TAB_MENU_RENDERER_ID, render: () => <ActivityTabMenu /> });
+    ctx.renderers.registerRenderer({
+      id: ACTIVITY_TAB_CUSTOM_MENU_RENDERER_ID,
+      render: () => <ActivityTabCustomMenu />,
+    });
 
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
@@ -250,7 +253,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       panelMenus: sidePanelMenuDefinitions.activity,
       tab: {
         contentRendererId: ACTIVITY_TAB_RENDERER_ID,
-        contextMenuRendererId: ACTIVITY_TAB_MENU_RENDERER_ID,
+        customMenuRendererId: ACTIVITY_TAB_CUSTOM_MENU_RENDERER_ID,
       },
     });
     ctx.layout.registerSubPanel({

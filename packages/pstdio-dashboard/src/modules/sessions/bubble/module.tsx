@@ -13,10 +13,10 @@ import { createDashboardResource, dashboardResources } from "@/shared/app/resour
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import { openSessionBubbleWidgets } from "./session-bubble";
-import { SessionTabContent, SessionTabContextMenu } from "./session-tab";
+import { SessionTabContent, SessionTabMenu } from "./session-tab";
 
 const sessionTabRendererId = "dashboard-workbench.session-tab";
-const sessionTabContextMenuRendererId = "dashboard-workbench.session-tab-context-menu";
+const sessionTabMenuRendererId = "dashboard-workbench.session-tab-menu";
 
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
@@ -106,7 +106,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
       icon: "MessageCircle",
       tab: {
         contentRendererId: sessionTabRendererId,
-        contextMenuRendererId: sessionTabContextMenuRendererId,
+        customMenuRendererId: sessionTabMenuRendererId,
       },
       priority: 30,
     },
@@ -122,8 +122,8 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     render: (input) => <SessionTabContent input={input} />,
   });
   ctx.renderers.registerRenderer({
-    id: sessionTabContextMenuRendererId,
-    render: (input) => <SessionTabContextMenu input={input} />,
+    id: sessionTabMenuRendererId,
+    render: (input) => <SessionTabMenu input={input} />,
   });
 };
 

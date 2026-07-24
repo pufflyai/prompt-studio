@@ -35,8 +35,16 @@ export const SortableRegionTabList = (props: SortableRegionTabListProps) => {
     if (!over || active.id === over.id) return;
     const activeIndex = placements.findIndex((placement) => placement.widgetId === active.id);
     const overIndex = placements.findIndex((placement) => placement.widgetId === over.id);
+    const source = placements[activeIndex];
     const target = placements[overIndex];
-    if (activeIndex < 0 || overIndex < 0 || target?.role !== "sub-panel" || target.tabRetention === "preview") return;
+    if (
+      source?.role !== "sub-panel" ||
+      source.tabRetention === "preview" ||
+      target?.role !== "sub-panel" ||
+      target.tabRetention === "preview"
+    ) {
+      return;
+    }
     workbench.layout.reorderWidget(
       String(active.id),
       activeIndex < overIndex ? { afterWidgetId: target.widgetId } : { beforeWidgetId: target.widgetId },

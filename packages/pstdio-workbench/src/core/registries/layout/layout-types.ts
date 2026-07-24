@@ -81,7 +81,8 @@ export type WorkbenchPanelMenuOwner =
 
 export interface WorkbenchWidgetTab {
   contentRendererId?: string;
-  contextMenuRendererId?: string;
+  /** Custom actions shown when the user activates an already-active tab. */
+  customMenuRendererId?: string;
 }
 
 export interface WidgetContribution {

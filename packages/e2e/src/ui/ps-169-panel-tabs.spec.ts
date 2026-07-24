@@ -17,6 +17,12 @@ const getVerticalMenuGap = async (
   return Math.abs(menuBox.y - (tabBox.y + tabBox.height));
 };
 
+const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+  await tab.click();
+};
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
   expect(response.ok()).toBe(true);
@@ -31,7 +37,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
-test("PS-169 opens the selected Session tab's own menu", async ({ page, request }) => {
+test("PS-169 opens the active Session tab's custom menu", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((selectedProjectId: string) => {
@@ -50,9 +56,9 @@ test("PS-169 opens the selected Session tab's own menu", async ({ page, request 
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   const sessionTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ });
   await expect(sessionTab).toBeVisible();
-  await sessionTab.click();
+  await openTabCustomMenu(sessionTab);
 
-  const sessionMenu = page.getByRole("menu", { name: "New session actions" });
+  const sessionMenu = page.getByRole("menu", { name: "New session menu" });
   await expect(sessionMenu).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
@@ -88,10 +94,10 @@ test.describe("PS-169 Panel tabs", () => {
     const activityTab = page.getByRole("tab", { name: /Activity Live/ });
     await activityTab.click();
     await expect(
-      page.getByRole("menu", { name: "Activity actions" }).getByRole("menuitem", { name: "Live context" }),
+      page.getByRole("menu", { name: "Activity menu" }).getByRole("menuitem", { name: "Live context" }),
     ).toBeVisible();
 
-    const activityMenu = page.getByRole("menu", { name: "Activity actions" });
+    const activityMenu = page.getByRole("menu", { name: "Activity menu" });
     await expect.poll(() => getVerticalMenuGap(activityTab, activityMenu)).toBeLessThanOrEqual(1);
     await page.keyboard.press("Escape");
 

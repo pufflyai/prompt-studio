@@ -29,24 +29,28 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
     ...workbench.layout.listWidgets().map((widget) => ({
       id: widget.id,
       icon: "PanelTop",
+      kind: "widget",
       label: widget.id,
       value: widget.ownerId,
     })),
     ...commands.map((command) => ({
       id: command.command.id,
       icon: command.command.icon ?? "Command",
+      kind: "command",
       label: command.command.id,
       value: command.ownerId,
     })),
     ...workbench.resources.listKinds().map((kind) => ({
       id: kind.kind,
       icon: kind.icon ?? "Database",
+      kind: "resource",
       label: kind.kind,
       value: kind.ownerId,
     })),
     ...workbench.renderers.listTreeRenderers().map((tree) => ({
       id: tree.id,
       icon: tree.icon ?? "ListTree",
+      kind: "tree",
       label: tree.id,
       value: tree.ownerId,
     })),
@@ -63,7 +67,12 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
         <Panel title="Registered contributions">
           <Grid templateColumns={{ base: "1fr", xl: "repeat(2, minmax(0, 1fr))" }} gapX="lg" gapY="2xs">
             {contributionRows.map((row) => (
-              <InventoryRow key={`${row.value}:${row.id}`} icon={row.icon} label={row.label} value={row.value} />
+              <InventoryRow
+                key={`${row.kind}:${row.value}:${row.id}`}
+                icon={row.icon}
+                label={row.label}
+                value={row.value}
+              />
             ))}
           </Grid>
         </Panel>

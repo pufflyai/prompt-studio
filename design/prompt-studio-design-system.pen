@@ -18310,17 +18310,6 @@
                       "stroke": "$ds-border",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#00000099",
-                        "offset": {
-                          "x": 0,
-                          "y": 8
-                        },
-                        "blur": 24,
-                        "spread": -4
-                      },
                       "layout": "vertical",
                       "gap": 7,
                       "padding": 12,
@@ -33162,7 +33151,7 @@
                   "id": "h7LY2N",
                   "name": "Title",
                   "fill": "$ds-fg",
-                  "content": "Mode, resource, panel — and the slot decides",
+                  "content": "Mode, resource, panel — and tab retention",
                   "lineHeight": 1.05,
                   "fontFamily": "$font-display",
                   "fontSize": 44,
@@ -33175,7 +33164,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1240,
-                  "content": "A project contains everything. Exactly one resource is selected. Nav Chrome owns history and breadcrumbs above the Panel stack. Main and Secondary are resource-owned; the Sidebar, Side Panel, and full-width Status Bar are project-owned. Panel identity is logical, so placement may change without renaming the Panel.",
+                  "content": "A project contains everything. Exactly one resource is selected. Nav Chrome owns history and breadcrumbs above the Panel stack. Main and Secondary restore with the selected resource; the Sidenav, project-stable Side Panel, and full-width Status Bar persist across project navigation. A Side Panel tab may be preview or kept open without changing its resource binding.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -33649,7 +33638,7 @@
                                               "id": "alpCh",
                                               "name": "Owns",
                                               "fill": "$ds-fg-muted",
-                                              "content": "Lives in a slot. The slot decides its lifetime and its behavior.",
+                                              "content": "Lives in a slot and keeps its resource binding. Tab retention decides whether it survives navigation.",
                                               "fontFamily": "$font-body",
                                               "fontSize": 13,
                                               "fontWeight": "normal"
@@ -33695,7 +33684,7 @@
                                               "id": "dDtnm",
                                               "name": "V",
                                               "fill": "$ds-success",
-                                              "content": "prefers certain slots",
+                                              "content": "preview or kept open",
                                               "fontFamily": "$font-body",
                                               "fontSize": 12,
                                               "fontWeight": "normal"
@@ -33711,7 +33700,7 @@
                                       "fill": "$ds-fg-subtle",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "A panel in the side panel is not under the resource — which is why it is drawn full height, outside the breadcrumb. Each panel also carries its own left and right menus, which travel with it. See “You can see which slot owns what” and “Every panel carries its own menus”.",
+                                      "content": "A panel in the Side Panel is outside the resource column, but its tab may still be resource-bound. A preview expires on navigation; a kept-open tab is carried. Panel-local menus travel with the panel in either state.",
                                       "lineHeight": 1.45,
                                       "fontFamily": "$font-body",
                                       "fontSize": 12,
@@ -34013,7 +34002,7 @@
                           "id": "jUzTa",
                           "name": "T",
                           "fill": "$ds-fg",
-                          "content": "The slot decides",
+                          "content": "The slot and tab decide",
                           "fontFamily": "$font-heading",
                           "fontSize": 16,
                           "fontWeight": "600"
@@ -34025,7 +34014,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Not the panel. Placing a panel is choosing how it behaves — and the chrome makes that choice visible instead of asking anyone to remember it. Four of the six slots are project-owned; only main and the bottom panel sit under the breadcrumb.",
+                          "content": "Placement chooses region behavior; retention chooses lifetime. Main and Secondary restore with the resource while the Side Panel frame stays put. A preview occupies the leftmost tab and expires on navigation; Keep Open promotes it into the persistent arrangement.",
                           "lineHeight": 1.5,
                           "fontFamily": "$font-body",
                           "fontSize": 13,
@@ -34281,7 +34270,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "navigation · owns the project switcher",
+                                      "content": "navigation · configurable project and resource groups",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
@@ -34530,7 +34519,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "full height · persists · bubblifies",
+                                      "content": "full height · project-stable · preview + kept-open tabs",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
@@ -34648,7 +34637,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "The rule: the breadcrumb spans exactly the resource-owned slots. Everything project-owned flanks it — action tray and sidenav left, side panel right, status tray beneath.",
+                                      "content": "The breadcrumb spans exactly the resource-owned Main and Secondary Panels. Project-stable chrome flanks them — Action Tray and Sidenav left, Side Panel right, Status Bar beneath.",
                                       "lineHeight": 1.45,
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
@@ -34667,7 +34656,7 @@
                           "fill": "$ds-warning",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "The cost: you cannot reorder freely. Moving a panel accepts the new slot's behavior — “put x right of y” is not a pure layout wish. Flipping main / side is a later affordance.",
+                          "content": "The cost: temporary versus carried must be visible. Preview tabs stay leftmost and read as provisional; carrying requires the explicit Keep Open action.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -34684,7 +34673,7 @@
         {
           "type": "frame",
           "id": "NFzOo",
-          "name": "Slots Carry Behavior",
+          "name": "Side Panel Retention",
           "theme": {
             "mode": "dark"
           },
@@ -34722,7 +34711,7 @@
                   "id": "K5zlR",
                   "name": "Title",
                   "fill": "$ds-fg",
-                  "content": "You can see which slot owns what",
+                  "content": "You can see what stays — and why",
                   "lineHeight": 1.05,
                   "fontFamily": "$font-display",
                   "fontSize": 44,
@@ -34735,7 +34724,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1240,
-                  "content": "Nobody should have to remember why a Panel survived a resource change. Nav Chrome names the selected resource; project-owned Sidebar, Side Panel, and Status Bar remain stable while Main and Secondary restore with the resource.",
+                  "content": "Nav Chrome names the selected resource. Main and Secondary restore with it; the Sidenav, Side Panel frame, and Status Bar remain stable. Inside the Side Panel, one leftmost preview may change or expire without disturbing kept-open tabs.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -35241,7 +35230,7 @@
                                   "id": "ocIGU",
                                   "name": "O",
                                   "fill": "$ds-review",
-                                  "content": "project-owned",
+                                  "content": "project-stable",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -35253,7 +35242,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": 140,
-                                  "content": "full height · outside the breadcrumb · persists · bubblifies",
+                                  "content": "full height · preview leftmost · kept-open tabs carry",
                                   "lineHeight": 1.5,
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
@@ -35450,7 +35439,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "A panel declares where it can live; the “+” in a slot's tab header offers only panels that prefer it and fit the selected resource. Users can re-configure these later.",
+                          "content": "A panel declares where it can live; the “+” offers only panels that fit the selected resource and target slot. Callers may also choose start, end, before, or after placement.",
                           "lineHeight": 1.5,
                           "fontFamily": "$font-body",
                           "fontSize": 13,
@@ -35522,7 +35511,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "bound to whichever workspace opened it — the side panel just carries it along",
+                                  "content": "resource-bound — open as a preview for the moment, or Keep Open to carry it",
                                   "lineHeight": 1.4,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -35588,7 +35577,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "sticky · exactly one at a time · sessions can exist outside resources",
+                                  "content": "workspace default: leftmost preview · Keep Open promotes it into the carried tabs",
                                   "lineHeight": 1.4,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -35654,7 +35643,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "carried, it still shows the workspace it was opened for — not the one you are in",
+                                  "content": "when kept open, it carries its original workspace binding into the next resource",
                                   "lineHeight": 1.4,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -35720,7 +35709,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "same again: carry PS-122's editor while you work in a workspace",
+                                  "content": "Keep Open carries PS-122's editor while you work in a workspace; preview does not",
                                   "lineHeight": 1.4,
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -35801,7 +35790,7 @@
                     {
                       "type": "frame",
                       "id": "R35aS",
-                      "name": "What the side slot admits",
+                      "name": "Preview and Keep Open Rules",
                       "width": "fill_container",
                       "fill": "$ds-bg-subtle",
                       "cornerRadius": 12,
@@ -35829,7 +35818,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Carrying. A panel stays bound to whatever it was opened for — moving it never re-owns it. The side panel simply lets it stay visible while you navigate elsewhere, and because it sits outside the breadcrumb, you can see it is not the selected resource's.",
+                          "content": "Carrying. The Side Panel arrangement is project-stable and stays put while you navigate. Resource-driven tabs open as one leftmost preview; Keep Open promotes the preview into the carried arrangement.",
                           "lineHeight": 1.5,
                           "fontFamily": "$font-body",
                           "fontSize": 13,
@@ -35882,7 +35871,7 @@
                               "fill": "$ds-warning",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "The failure this prevents: “the bottom panel stayed open after I switched to a ticket, because that terminal was the root workspace's and had nothing to do with workspace A.” Slots under the breadcrumb only ever show panels bound to the selected resource. A terminal you want to keep goes in the side panel — still bound to the workspace that opened it, visibly outside, carried on purpose.",
+                              "content": "Preview is tab retention, not a resource-owned Side Panel. Entering a workspace opens its last session as the leftmost preview without forcing a closed panel open. The next navigation replaces or removes that preview; kept-open tabs, order, menus, size, and attached/floating/closed state remain unchanged.",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -35901,7 +35890,7 @@
         {
           "type": "frame",
           "id": "xnYLt",
-          "name": "Placement Is A Decision",
+          "name": "Placement and Retention",
           "theme": {
             "mode": "dark"
           },
@@ -35928,7 +35917,7 @@
                   "id": "xigFn",
                   "name": "Kicker",
                   "fill": "$ds-fg-subtle",
-                  "content": "THE SAME PANEL, TWICE",
+                  "content": "PLACEMENT ≠ RETENTION",
                   "fontFamily": "$font-heading",
                   "fontSize": 12,
                   "fontWeight": "600",
@@ -35939,7 +35928,7 @@
                   "id": "xn3md",
                   "name": "Title",
                   "fill": "$ds-fg",
-                  "content": "Placement is a decision, not a position",
+                  "content": "Placement and retention are separate decisions",
                   "lineHeight": 1.05,
                   "fontFamily": "$font-display",
                   "fontSize": 44,
@@ -35952,7 +35941,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1240,
-                  "content": "Open a terms glossary in main and it is a tab inside this workspace — leave, and you come back to this workspace's state. Open the same glossary in the side panel and it persists across every resource. One panel, two behaviors, chosen by where you put it and legible from where it sits.",
+                  "content": "Main and Secondary restore with their resource. The Side Panel frame stays put, but each tab still chooses a lifetime: preview for the next navigation, or kept open to carry. Resource binding never changes when a tab moves or is promoted.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -36454,7 +36443,7 @@
                           "id": "m0kgCU",
                           "name": "T",
                           "fill": "$ds-review",
-                          "content": "glossary in the side panel",
+                          "content": "kept-open glossary in the side panel",
                           "fontFamily": "$font-heading",
                           "fontSize": 15,
                           "fontWeight": "600"
@@ -36466,7 +36455,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Full height, outside the breadcrumb, flanking like the sidenav. It follows you because you can see it was never under the resource.",
+                          "content": "Full height and outside the breadcrumb. It follows you because Keep Open made its retention explicit — not merely because it sits in the Side Panel.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 11,
@@ -36682,7 +36671,7 @@
                                   "id": "ysFzz",
                                   "name": "S",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "side panel · persists",
+                                  "content": "side panel · kept open",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
                                   "fontWeight": "normal"
@@ -36901,7 +36890,7 @@
                                   "id": "XsIH8",
                                   "name": "S",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "side panel · persists",
+                                  "content": "side panel · kept open",
                                   "fontFamily": "$font-body",
                                   "fontSize": 8,
                                   "fontWeight": "normal"
@@ -36926,7 +36915,7 @@
                 {
                   "type": "frame",
                   "id": "c9Tyk",
-                  "name": "Session",
+                  "name": "Session Preview and Keep Open",
                   "width": "fill_container",
                   "fill": "$ds-bg-subtle",
                   "cornerRadius": 12,
@@ -36950,7 +36939,7 @@
                           "id": "D98fs",
                           "name": "T",
                           "fill": "$ds-fg",
-                          "content": "The session is sticky, and there is only ever one",
+                          "content": "A workspace session starts as a preview",
                           "fontFamily": "$font-heading",
                           "fontSize": 16,
                           "fontWeight": "600"
@@ -36962,7 +36951,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Sessions can exist outside of resources, which is exactly why the session panel is side-panel-only. It never sits under a breadcrumb, so it never implies it belongs to the workspace you happen to be standing in. Bubblify it and only its position changes — its Context files and Run parameters menus travel with it. When no session is active, a message-circle launcher remains in Nav Chrome and opens a new session.",
+                          "content": "Entering a workspace opens its last session in the leftmost Side Panel tab as a preview, without reopening a closed panel. The preview is replaced or removed on navigation. Right-click → Keep Open promotes it; its Context files and Run parameters, resource binding, and attached or floating panel state remain intact.",
                           "lineHeight": 1.5,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -36991,7 +36980,7 @@
                               "id": "LVQpL",
                               "name": "L",
                               "fill": "$ds-fg-muted",
-                              "content": "side panel · docked",
+                              "content": "workspace entry · docked",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
                               "fontWeight": "600"
@@ -37056,8 +37045,8 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "tSZqh",
-                                  "name": "side panel",
+                                  "id": "UKowf",
+                                  "name": "Preview Side Panel",
                                   "width": 84,
                                   "height": "fill_container",
                                   "fill": "$ds-surface",
@@ -37067,29 +37056,58 @@
                                   },
                                   "strokeAlignment": "inner",
                                   "layout": "vertical",
-                                  "gap": 2,
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "lb0yh",
-                                      "name": "T",
-                                      "fill": "$ds-review",
-                                      "content": "Session",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 9,
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "H5aIL",
+                                      "name": "Preview Tab Strip",
+                                      "width": "fill_container",
+                                      "height": 22,
+                                      "stroke": "$ds-border",
+                                      "strokeWidth": {
+                                        "bottom": 1
+                                      },
+                                      "strokeAlignment": "inner",
+                                      "padding": [
+                                        0,
+                                        6
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "X6g66w",
+                                          "name": "Preview Session Tab",
+                                          "fill": "$ds-review",
+                                          "content": "Session",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 9,
+                                          "fontWeight": "600",
+                                          "fontStyle": "italic"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "pQV5e",
-                                      "name": "S",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "side panel · docked",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 8,
-                                      "fontWeight": "normal"
+                                      "type": "frame",
+                                      "id": "C1i5J",
+                                      "name": "Preview Body",
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Wj6BS",
+                                          "name": "Preview Label",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "preview · leftmost",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
                                     }
                                   ]
                                 }
@@ -37114,7 +37132,7 @@
                               "name": "i",
                               "width": 17,
                               "height": 17,
-                              "icon": "picture-in-picture-2",
+                              "icon": "pin",
                               "library": "lucide",
                               "fill": "$ds-review"
                             },
@@ -37123,7 +37141,7 @@
                               "id": "C1l7t",
                               "name": "T",
                               "fill": "$ds-review",
-                              "content": "bubblify",
+                              "content": "Keep Open",
                               "fontFamily": "$font-body",
                               "fontSize": 10,
                               "fontWeight": "600"
@@ -37133,7 +37151,7 @@
                               "id": "kkLN5",
                               "name": "T2",
                               "fill": "$ds-fg-subtle",
-                              "content": "reclaims width",
+                              "content": "promotes preview",
                               "fontFamily": "$font-body",
                               "fontSize": 9,
                               "fontWeight": "normal"
@@ -37153,15 +37171,15 @@
                               "id": "znm76",
                               "name": "L",
                               "fill": "$ds-review",
-                              "content": "side panel · floating",
+                              "content": "same Side Panel · kept open",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
                               "fontWeight": "600"
                             },
                             {
                               "type": "frame",
-                              "id": "MFSRY",
-                              "name": "W",
+                              "id": "k8IyPR",
+                              "name": "Kept-open Side Panel Window",
                               "clip": true,
                               "width": "fill_container",
                               "height": 150,
@@ -37173,16 +37191,16 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "FfIC2",
-                                  "name": "UR",
+                                  "id": "mXEVQ",
+                                  "name": "Kept-open Resource Column",
                                   "width": "fill_container",
                                   "height": "fill_container",
                                   "layout": "vertical",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "jtVHB",
-                                      "name": "Crumb",
+                                      "id": "hg8Is",
+                                      "name": "Kept-open Crumb",
                                       "width": "fill_container",
                                       "height": 16,
                                       "fill": "$ds-bg-subtle",
@@ -37194,8 +37212,8 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "o7lXe9",
-                                      "name": "In",
+                                      "id": "f23HC",
+                                      "name": "Kept-open Main",
                                       "width": "fill_container",
                                       "height": "fill_container",
                                       "layout": "vertical",
@@ -37204,8 +37222,8 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "i2V56U",
-                                          "name": "T",
+                                          "id": "Utk1t",
+                                          "name": "Main Label",
                                           "fill": "$ds-fg-subtle",
                                           "content": "main",
                                           "fontFamily": "$font-body",
@@ -37218,28 +37236,24 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "K9w8AY",
-                                  "layoutPosition": "absolute",
-                                  "x": 360,
-                                  "y": 45,
-                                  "name": "Bubble",
-                                  "clip": true,
-                                  "width": 78,
-                                  "height": 96,
+                                  "id": "kLpre",
+                                  "name": "Kept-open Side Panel",
+                                  "width": 84,
+                                  "height": "fill_container",
                                   "fill": "$ds-surface",
-                                  "cornerRadius": 6,
                                   "stroke": "$ds-review",
-                                  "strokeWidth": 1,
+                                  "strokeWidth": {
+                                    "left": 1
+                                  },
                                   "strokeAlignment": "inner",
                                   "layout": "vertical",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "H8HQLe",
-                                      "name": "Hd",
+                                      "id": "DoY9y",
+                                      "name": "Kept-open Tab Strip",
                                       "width": "fill_container",
-                                      "height": 14,
-                                      "fill": "$ds-bg-subtle",
+                                      "height": 22,
                                       "stroke": "$ds-border",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -37247,26 +37261,26 @@
                                       "strokeAlignment": "inner",
                                       "padding": [
                                         0,
-                                        5
+                                        6
                                       ],
                                       "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "MwTLB",
-                                          "name": "T",
+                                          "id": "SDJ6p",
+                                          "name": "Kept-open Session Tab",
                                           "fill": "$ds-review",
                                           "content": "Session",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 8,
+                                          "fontSize": 9,
                                           "fontWeight": "600"
                                         }
                                       ]
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "Jul13",
-                                      "name": "B",
+                                      "id": "EDiJR",
+                                      "name": "Kept-open Body",
                                       "width": "fill_container",
                                       "height": "fill_container",
                                       "layout": "vertical",
@@ -37275,10 +37289,10 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "aQJtg",
-                                          "name": "T",
+                                          "id": "u7ERD",
+                                          "name": "Kept-open Label",
                                           "fill": "$ds-fg-subtle",
-                                          "content": "bubblified",
+                                          "content": "kept open · carries",
                                           "fontFamily": "$font-body",
                                           "fontSize": 8,
                                           "fontWeight": "normal"
@@ -37314,17 +37328,12 @@
                               "id": "QvZrl",
                               "name": "State label",
                               "fill": "#8B9099",
-                              "content": "no active session · launcher remains",
-                              "fontFamily": "Inter",
-                              "fontSize": 11,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "wwO6i",
-                              "name": "Spacer",
+                              "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "height": 1
+                              "content": "navigation removes the preview",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "600"
                             },
                             {
                               "id": "kO9Nl",
@@ -37381,7 +37390,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "If slots carry behavior, you cannot express a pure layout preference. “Show the glossary to the right of the diff” is not available — moving it right means moving it to the side panel, which changes whether it follows you. That is a real loss and worth naming rather than hiding.",
+                      "content": "Browsing and carrying are now separate gestures. Preview is fast and disposable; Keep Open is explicit and persistent. The tradeoff is one more state to communicate clearly in the tab strip and context menu.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -37433,7 +37442,7 @@
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Reordering tabs inside one slot is free — no behavior changes.",
+                              "content": "The single preview stays leftmost; kept-open tabs can be reordered within their Panel.",
                               "lineHeight": 1.45,
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -37479,7 +37488,7 @@
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Moving between main and bottom keeps the resource; only hideability changes.",
+                              "content": "Moving between Main and Secondary keeps the resource; only the region behavior changes.",
                               "lineHeight": 1.45,
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -37525,7 +37534,7 @@
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Moving never re-owns a panel. The side panel lets you carry a resource-bound panel into another resource's context — it still shows what it was opened for.",
+                              "content": "Keep Open never rebinds a tab. Carried content continues to show the resource it was opened for.",
                               "lineHeight": 1.45,
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -37571,7 +37580,7 @@
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Later: flip main / side panel so the persistent column can sit on the left.",
+                              "content": "Tabs may open at start, end, before, or after a target; pointer drag and Alt+Arrow reorder kept-open tabs.",
                               "lineHeight": 1.45,
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -47159,7 +47168,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "“The shortcut hints are hidden until hover, but the row actions appear on hover too — they would collide. I plan to show both at rest and drop the hover reveal entirely. Fine to change the resting appearance of every sidebar row?”",
+                                      "content": "“The shortcut hints are hidden until hover, but the row actions appear on hover too — they would collide. I plan to show both at rest and drop the hover reveal entirely. Fine to change the resting appearance of every Sidenav row?”",
                                       "lineHeight": 1.55,
                                       "fontFamily": "$font-body",
                                       "fontSize": 13,
@@ -47609,7 +47618,7 @@
                           "fill": "$ds-fg-subtle",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "A bell in the chrome with a popover hanging off it is the reflex answer, and PS-95 ruled it out: it makes notifications a fourth kind of overlay with its own anchor, its own dismissal and its own keyboard story, none of which the workbench already knows. The entry point stays in the sidebar header, with a count. Every design above keeps it there.",
+                          "content": "A bell in the chrome with a popover hanging off it is the reflex answer, and PS-95 ruled it out: it makes notifications a fourth kind of overlay with its own anchor, dismissal and keyboard story. The entry point stays in the Sidenav header, with a count. Every design above keeps it there.",
                           "lineHeight": 1.5,
                           "fontFamily": "$font-body",
                           "fontSize": 11,
@@ -47733,7 +47742,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1100,
-                  "content": "Six slots. The action tray and sidenav flank on the left, the side panel on the right, the status tray beneath — all project-owned, all outside the breadcrumb. Between them sits the resource column: a breadcrumb header naming the selection, over a main slot that cannot be hidden and a bottom panel that can. What is under the breadcrumb belongs to the selection and resets with it.",
+                  "content": "Six slots. The Action Tray and Sidenav flank the resource column on the left; the project-stable Side Panel sits on the right and the Status Bar beneath. Main and Secondary restore with the selected resource. The Side Panel frame and its kept-open tabs stay put, while one leftmost preview may be replaced or removed by navigation.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -48752,6 +48761,7 @@
                       "type": "frame",
                       "id": "wEjM4",
                       "name": "Side Panel",
+                      "context": "Project-stable Side Panel. One leftmost preview may expire on navigation; kept-open tabs, order, menus, size, and attached/floating/closed state persist.",
                       "width": 400,
                       "height": "fill_container",
                       "fill": "$ds-bg",
@@ -48784,18 +48794,20 @@
                               "id": "Ko3GI",
                               "type": "ref",
                               "ref": "TwCXd",
-                              "name": "PS-94_A2 · session",
+                              "name": "PS-94_A2 · preview session",
                               "theme": {
                                 "size": "xs",
                                 "tab": "active",
                                 "tab-status": "in_progress"
                               },
+                              "context": "Leftmost preview tab. Expires on navigation; right-click Keep Open promotes it without changing its resource binding.",
                               "descendants": {
                                 "w7NkD3": {
                                   "icon": "loader-circle"
                                 },
                                 "k9XlqC": {
-                                  "content": "PS-94_A2 "
+                                  "content": "PS-94_A2 · preview",
+                                  "fontStyle": "italic"
                                 },
                                 "g1LJJh": {
                                   "enabled": false
@@ -48811,6 +48823,7 @@
                                 "size": "xs",
                                 "tab": "default"
                               },
+                              "context": "Kept-open tab. Survives navigation and can be reordered within the Side Panel.",
                               "descendants": {
                                 "w7NkD3": {
                                   "icon": "folder"
@@ -48913,7 +48926,7 @@
                               "id": "BIa4l",
                               "name": "S",
                               "fill": "$ds-fg-subtle",
-                              "content": "project-owned · full height · outside the breadcrumb",
+                              "content": "project-stable · full height · outside the breadcrumb",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -48923,10 +48936,64 @@
                               "id": "NHDf3",
                               "name": "S2",
                               "fill": "$ds-fg-subtle",
-                              "content": "carries panels across resources · bubblifies",
+                              "content": "preview leftmost · Keep Open promotes · kept-open tabs reorder + carry",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
                               "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e0JdhU",
+                          "layoutPosition": "absolute",
+                          "x": 10,
+                          "y": 38,
+                          "name": "Preview Tab Context Menu",
+                          "context": "Shown after right-clicking the preview tab.",
+                          "width": 168,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "padding": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Git7h",
+                              "name": "Keep Open Menu Row",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "k0m6Ev",
+                                  "name": "Keep Open Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "pin",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gL28b",
+                                  "name": "Keep Open Label",
+                                  "fill": "$menu-fg",
+                                  "content": "Keep Open",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         }
@@ -49090,7 +49157,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1040,
-                  "content": "Four mode configurations of one workbench. Nav Chrome owns history and breadcrumbs; Panel Headers own tabs, add-panel, and Panel-local menus. Panel identity does not prescribe a fixed edge: Side defaults right but can move left, Secondary defaults below but can move above.",
+                  "content": "Four mode configurations of one workbench. Nav Chrome owns history and breadcrumbs; Panel Headers own tabs, add-panel, and Panel-local menus. The Side Panel is project-stable across modes: navigation may supply one leftmost preview, while kept-open tabs and their order remain.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -49187,7 +49254,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "The full frame. Terminals get a hideable home under the breadcrumb; the session is carried in the side panel.",
+                          "content": "The full frame. Terminals get a hideable home under the breadcrumb; entering the workspace supplies its last session as the leftmost Side Panel preview.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -49356,7 +49423,7 @@
                                   "id": "cfzC7",
                                   "name": "Crumb",
                                   "width": "fill_container",
-                                  "height": 24,
+                                  "height": 28,
                                   "fill": "$ds-bg-subtle",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
@@ -49631,7 +49698,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": 104,
-                                  "content": "session · carried",
+                                  "content": "session · preview",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -49757,7 +49824,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Drops the tree and the drawer. Nothing resource-owned can hide, because there is nowhere to hide it.",
+                          "content": "Drops the Sidenav and Secondary Panel. The project-stable Side Panel remains; its inspector is carried only when kept open.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -49887,7 +49954,7 @@
                                   "id": "NPEiL",
                                   "name": "Crumb",
                                   "width": "fill_container",
-                                  "height": 24,
+                                  "height": 28,
                                   "fill": "$ds-bg-subtle",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
@@ -50124,7 +50191,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": 104,
-                                  "content": "inspector · carried",
+                                  "content": "inspector · kept open",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -50259,7 +50326,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Keeps the tree for walking changes, drops the drawer. The diff owns main; the session sits beside it, still bound to its workspace.",
+                          "content": "Keeps the Sidenav for walking changes and drops Secondary. The diff owns Main; a kept-open session stays beside it, still bound to its original workspace.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -50428,7 +50495,7 @@
                                   "id": "jaB2Y",
                                   "name": "Crumb",
                                   "width": "fill_container",
-                                  "height": 24,
+                                  "height": 28,
                                   "fill": "$ds-bg-subtle",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
@@ -50686,7 +50753,7 @@
                                   "fill": "$ds-fg-subtle",
                                   "textGrowth": "fixed-width",
                                   "width": 104,
-                                  "content": "session · carried",
+                                  "content": "session · kept open",
                                   "textAlign": "center",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -50812,7 +50879,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Everything resource-owned collapses to main. The side panel is still there — bubblified, so it costs no width until you want it.",
+                          "content": "Everything resource-owned collapses to Main. The project-stable Side Panel remains bubblified, so kept-open tabs cost no width until requested; previews still expire on navigation.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -50942,7 +51009,7 @@
                                   "id": "FhFba",
                                   "name": "Crumb",
                                   "width": "fill_container",
-                                  "height": 24,
+                                  "height": 28,
                                   "fill": "$ds-bg-subtle",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
@@ -71446,19 +71513,20 @@
                           "id": "DFIG4",
                           "type": "ref",
                           "ref": "TwCXd",
-                          "name": "Session",
+                          "name": "Session · preview",
                           "theme": {
                             "size": "xs",
                             "tab": "active",
                             "tab-status": "in_progress"
                           },
-                          "context": "Right click opens the Session selector context menu.",
+                          "context": "Leftmost preview tab. Right click opens generic Keep Open plus the Session selector actions.",
                           "descendants": {
                             "w7NkD3": {
                               "icon": "loader-circle"
                             },
                             "k9XlqC": {
-                              "content": "Session"
+                              "content": "Session",
+                              "fontStyle": "italic"
                             },
                             "g1LJJh": {
                               "enabled": false
@@ -71841,7 +71909,7 @@
                   "id": "zn9lS",
                   "name": "Rule",
                   "fill": "$ds-fg-muted",
-                  "content": "Tab content is customizable. Session tabs use the session status icon; optional accessories show compact content; each tab may register its own right-click context menu.",
+                  "content": "Preview tabs are italic and stay first until replaced or promoted with Keep Open. Persistent tabs keep normal styling and can be drag-reordered within their Panel.",
                   "fontFamily": "$font-body",
                   "fontSize": 11,
                   "fontWeight": "normal"
@@ -71986,12 +72054,12 @@
             {
               "type": "frame",
               "id": "BIu9I",
-              "name": "Session tab custom context menu",
+              "name": "Session tab click and context menus",
               "theme": {
                 "mode": "dark"
               },
               "width": "fill_container",
-              "height": 305,
+              "height": 360,
               "fill": "$ds-bg-subtle",
               "cornerRadius": 8,
               "stroke": "$ds-border",
@@ -72006,7 +72074,7 @@
                   "id": "RUsGm",
                   "name": "Title",
                   "fill": "$ds-fg",
-                  "content": "Session tab · custom right-click context menu",
+                  "content": "Tab click and right-click open different menus",
                   "fontFamily": "$font-heading",
                   "fontSize": 13,
                   "fontWeight": "600"
@@ -72016,7 +72084,7 @@
                   "id": "R3GmEk",
                   "name": "Rule",
                   "fill": "$ds-fg-muted",
-                  "content": "Right click is tab-owned. The Session tab opens a selector for existing sessions plus a dedicated New session action; other tab kinds may register different content.",
+                  "content": "Click an inactive tab to activate it. Click the active tab again to open its custom menu. Right-click opens the generic tab context menu; a preview offers Keep Open there. The two menus are never composed.",
                   "fontFamily": "$font-body",
                   "fontSize": 11,
                   "fontWeight": "normal"
@@ -72033,242 +72101,428 @@
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "layout": "none",
+                  "gap": 24,
+                  "padding": 16,
                   "children": [
                     {
                       "type": "frame",
-                      "id": "w7mil",
-                      "x": 0,
-                      "y": 0,
-                      "name": "Side Panel Header",
-                      "width": 650,
-                      "height": 40,
-                      "fill": "$ds-bg-subtle",
-                      "stroke": "$ds-border",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "strokeAlignment": "inner",
-                      "gap": 5,
-                      "padding": [
-                        0,
-                        10
-                      ],
-                      "alignItems": "center",
+                      "id": "oC9Ap",
+                      "name": "Active-tab click",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
                       "children": [
                         {
-                          "id": "n36ZhX",
-                          "type": "ref",
-                          "ref": "TwCXd",
-                          "name": "Session · right clicked",
-                          "theme": {
-                            "size": "xs",
-                            "tab": "active",
-                            "tab-status": "in_progress"
-                          },
-                          "context": "Context menu open",
-                          "descendants": {
-                            "w7NkD3": {
-                              "icon": "loader-circle"
-                            },
-                            "k9XlqC": {
-                              "content": "Session"
-                            },
-                            "g1LJJh": {
-                              "enabled": false
-                            }
-                          }
-                        },
-                        {
-                          "id": "U8gYlg",
-                          "type": "ref",
-                          "ref": "TwCXd",
-                          "name": "Files",
-                          "theme": {
-                            "size": "xs",
-                            "tab": "default",
-                            "tab-status": "none"
-                          },
-                          "descendants": {
-                            "w7NkD3": {
-                              "icon": "folder"
-                            },
-                            "k9XlqC": {
-                              "content": "Files"
-                            },
-                            "g1LJJh": {
-                              "enabled": true
-                            }
-                          }
-                        },
-                        {
-                          "id": "p7jRw",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Add Panel",
-                          "width": 24,
-                          "height": 24,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "xs"
-                          },
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "plus",
-                              "width": 13,
-                              "height": 13
-                            }
-                          }
+                          "type": "text",
+                          "id": "M56Hn8",
+                          "name": "Click behavior label",
+                          "fill": "$ds-accent",
+                          "content": "CLICK ACTIVE TAB · CUSTOM MENU",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.8
                         },
                         {
                           "type": "frame",
-                          "id": "RPThM",
-                          "name": "Header Spacer",
+                          "id": "w7mil",
+                          "name": "Active Session Tab Header",
                           "width": "fill_container",
-                          "height": 2
+                          "height": 40,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 5,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "n36ZhX",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Session preview · active and clicked",
+                              "theme": {
+                                "size": "xs",
+                                "tab": "active",
+                                "tab-status": "in_progress"
+                              },
+                              "context": "Already-active tab clicked; opens the Session custom menu.",
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "loader-circle"
+                                },
+                                "k9XlqC": {
+                                  "content": "Session",
+                                  "fontStyle": "italic"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "U8gYlg",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Files",
+                              "theme": {
+                                "size": "xs",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "folder"
+                                },
+                                "k9XlqC": {
+                                  "content": "Files"
+                                },
+                                "g1LJJh": {
+                                  "enabled": true
+                                }
+                              }
+                            },
+                            {
+                              "id": "p7jRw",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add Panel",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 13,
+                                  "height": 13
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RPThM",
+                              "name": "Header Spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Ze1NC",
+                          "name": "Session custom menu · active-tab click",
+                          "theme": {
+                            "mode": "dark"
+                          },
+                          "clip": true,
+                          "width": 272,
+                          "fill": "$ds-bg",
+                          "cornerRadius": 4,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": 6,
+                          "children": [
+                            {
+                              "id": "b3Lebd",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "New session",
+                              "width": "fill_container",
+                              "height": 28,
+                              "theme": {
+                                "menu": "default",
+                                "mode": "dark"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "pencil-line"
+                                },
+                                "UTbhN": {
+                                  "content": "New session"
+                                },
+                                "zFstx": {
+                                  "enabled": false,
+                                  "height": 1,
+                                  "width": 1,
+                                  "textGrowth": "auto"
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Q0ROmX",
+                              "name": "Menu Divider",
+                              "width": "fill_container",
+                              "height": 1,
+                              "fill": "$ds-border"
+                            },
+                            {
+                              "id": "ScAC6",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Session A · running",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "selected",
+                                "mode": "dark"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "loader-circle",
+                                  "fill": "$ds-info"
+                                },
+                                "UTbhN": {
+                                  "content": "Session A · running"
+                                },
+                                "zFstx": {
+                                  "enabled": false,
+                                  "textGrowth": "auto",
+                                  "width": 1,
+                                  "height": 1
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "C72aF",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Review · awaiting input",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default",
+                                "mode": "dark"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "circle-alert",
+                                  "fill": "$ds-warning"
+                                },
+                                "UTbhN": {
+                                  "content": "Review · awaiting input"
+                                },
+                                "zFstx": {
+                                  "enabled": false,
+                                  "textGrowth": "auto",
+                                  "width": 1,
+                                  "height": 1
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "cWpir",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Debug · completed",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default",
+                                "mode": "dark"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
+                                },
+                                "UTbhN": {
+                                  "content": "Debug · completed"
+                                },
+                                "zFstx": {
+                                  "enabled": false,
+                                  "textGrowth": "auto",
+                                  "width": 1,
+                                  "height": 1
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "Ze1NC",
-                      "x": 10,
-                      "y": 35,
-                      "name": "Session tab context menu",
-                      "theme": {
-                        "mode": "dark"
-                      },
-                      "clip": true,
-                      "width": 272,
-                      "fill": "$ds-bg",
-                      "cornerRadius": 4,
-                      "stroke": "$ds-border",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
+                      "id": "F5TDR",
+                      "name": "Tab right-click",
+                      "width": "fill_container",
+                      "height": "fill_container",
                       "layout": "vertical",
-                      "gap": 2,
-                      "padding": 6,
+                      "gap": 8,
                       "children": [
                         {
-                          "id": "b3Lebd",
-                          "type": "ref",
-                          "ref": "sgbRV",
-                          "name": "New session",
-                          "width": "fill_container",
-                          "height": 28,
-                          "theme": {
-                            "menu": "default",
-                            "mode": "dark"
-                          },
-                          "descendants": {
-                            "UEgTp": {
-                              "icon": "pencil-line"
-                            },
-                            "UTbhN": {
-                              "content": "New session"
-                            },
-                            "zFstx": {
-                              "enabled": false
-                            },
-                            "OxQag": {
-                              "enabled": false
-                            }
-                          }
+                          "type": "text",
+                          "id": "BcBXf",
+                          "name": "Right-click behavior label",
+                          "fill": "$ds-review",
+                          "content": "RIGHT-CLICK TAB · CONTEXT MENU",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.8
                         },
                         {
                           "type": "frame",
-                          "id": "Q0ROmX",
-                          "name": "Menu Divider",
+                          "id": "Yn7cs",
+                          "name": "Right-clicked Preview Tab Header",
                           "width": "fill_container",
-                          "height": 1,
-                          "fill": "$ds-border"
+                          "height": 40,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 5,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "D7roqB",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Session preview · right-clicked",
+                              "context": "Preview tab right-clicked; opens only the generic tab context menu.",
+                              "theme": {
+                                "size": "xs",
+                                "tab": "active",
+                                "tab-status": "in_progress"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "loader-circle"
+                                },
+                                "k9XlqC": {
+                                  "content": "Session",
+                                  "fontStyle": "italic"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "cCGqO",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Files",
+                              "theme": {
+                                "size": "xs",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "folder"
+                                },
+                                "k9XlqC": {
+                                  "content": "Files"
+                                },
+                                "g1LJJh": {
+                                  "enabled": true
+                                }
+                              }
+                            },
+                            {
+                              "id": "g2BCfV",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add Panel",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 13,
+                                  "height": 13
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KkwWM",
+                              "name": "Header Spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
                         },
                         {
-                          "id": "ScAC6",
-                          "type": "ref",
-                          "ref": "sgbRV",
-                          "name": "Session A · running",
-                          "width": "fill_container",
+                          "type": "frame",
+                          "id": "i9pgw",
+                          "name": "Preview tab context menu · right-click",
                           "theme": {
-                            "menu": "selected",
                             "mode": "dark"
                           },
-                          "descendants": {
-                            "UEgTp": {
-                              "icon": "loader-circle",
-                              "fill": "$ds-info"
-                            },
-                            "UTbhN": {
-                              "content": "Session A · running"
-                            },
-                            "zFstx": {
-                              "enabled": false,
-                              "textGrowth": "auto",
-                              "width": 1,
-                              "height": 1
-                            },
-                            "OxQag": {
-                              "enabled": false
+                          "width": 272,
+                          "fill": "$ds-bg",
+                          "cornerRadius": 4,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": 6,
+                          "children": [
+                            {
+                              "id": "a62G4k",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Keep Open",
+                              "width": "fill_container",
+                              "height": 28,
+                              "theme": {
+                                "menu": "default",
+                                "mode": "dark"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "pin"
+                                },
+                                "UTbhN": {
+                                  "content": "Keep Open"
+                                },
+                                "zFstx": {
+                                  "enabled": false,
+                                  "height": 1,
+                                  "width": 1,
+                                  "textGrowth": "auto"
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
                             }
-                          }
-                        },
-                        {
-                          "id": "C72aF",
-                          "type": "ref",
-                          "ref": "sgbRV",
-                          "name": "Review · awaiting input",
-                          "width": "fill_container",
-                          "theme": {
-                            "menu": "default",
-                            "mode": "dark"
-                          },
-                          "descendants": {
-                            "UEgTp": {
-                              "icon": "circle-alert",
-                              "fill": "$ds-warning"
-                            },
-                            "UTbhN": {
-                              "content": "Review · awaiting input"
-                            },
-                            "zFstx": {
-                              "enabled": false,
-                              "textGrowth": "auto",
-                              "width": 1,
-                              "height": 1
-                            },
-                            "OxQag": {
-                              "enabled": false
-                            }
-                          }
-                        },
-                        {
-                          "id": "cWpir",
-                          "type": "ref",
-                          "ref": "sgbRV",
-                          "name": "Debug · completed",
-                          "width": "fill_container",
-                          "theme": {
-                            "menu": "default",
-                            "mode": "dark"
-                          },
-                          "descendants": {
-                            "UEgTp": {
-                              "icon": "circle-check",
-                              "fill": "$ds-success"
-                            },
-                            "UTbhN": {
-                              "content": "Debug · completed"
-                            },
-                            "zFstx": {
-                              "enabled": false,
-                              "textGrowth": "auto",
-                              "width": 1,
-                              "height": 1
-                            },
-                            "OxQag": {
-                              "enabled": false
-                            }
-                          }
+                          ]
                         }
                       ]
                     }

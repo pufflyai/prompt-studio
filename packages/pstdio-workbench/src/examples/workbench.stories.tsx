@@ -1,7 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
 import { createDashboardWorkbench } from "./dashboard/module";
@@ -228,6 +228,28 @@ export const PreferenceSchemas: Story = {
 
 export const PreviewTabs: Story = {
   render: () => <WorkbenchStory workbench={previewTabsWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const sessionTab = await canvas.findByRole("tab", { name: "Session 42" });
+
+    if (sessionTab.getAttribute("aria-selected") === "false") {
+      await userEvent.click(sessionTab);
+      await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+      await expect(sessionTab).toHaveAttribute("aria-expanded", "false");
+    }
+
+    await userEvent.click(sessionTab);
+    const customMenu = await within(document.body).findByRole("menu", { name: "Session 42 menu" });
+    await waitFor(() => expect(within(customMenu).getByRole("menuitem", { name: "New session" })).toBeVisible());
+    await expect(within(customMenu).queryByRole("menuitem", { name: "Keep Open" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.pointer({ target: sessionTab, keys: "[MouseRight]" });
+    const contextMenu = await within(document.body).findByRole("menu", { name: "Session 42 context menu" });
+    await waitFor(() => expect(within(contextMenu).getByRole("menuitem", { name: "Keep Open" })).toBeVisible());
+    await expect(within(contextMenu).queryByRole("menuitem", { name: "New session" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+  },
 };
 
 // The Theme Pack extension registers its color themes into `workbench.themes`;

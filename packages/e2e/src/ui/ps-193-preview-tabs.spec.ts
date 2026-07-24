@@ -18,7 +18,7 @@ test.describe("PS-193 preview tabs", () => {
     storybook?.kill();
   });
 
-  test("promotes the leftmost preview and keyboard-reorders persistent tabs", async ({ page }) => {
+  test("separates the active-tab custom menu from preview context actions", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, previewTabsStoryId));
 
@@ -29,11 +29,19 @@ test.describe("PS-193 preview tabs", () => {
 
     const session = sideHeader.getByRole("tab", { name: "Session 42" });
     await expect(session).toHaveCSS("font-style", "italic");
+    await session.click();
+
+    const customMenu = page.getByRole("menu", { name: "Session 42 menu" });
+    await expect(customMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
+    await expect(customMenu.getByRole("menuitem", { name: "Keep Open" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
     await session.click({ button: "right" });
 
-    const actions = page.getByRole("menu", { name: "Session 42 actions" });
-    const keepOpen = actions.getByRole("menuitem", { name: "Keep Open" });
+    const contextMenu = page.getByRole("menu", { name: "Session 42 context menu" });
+    const keepOpen = contextMenu.getByRole("menuitem", { name: "Keep Open" });
     await expect(keepOpen).toBeVisible();
+    await expect(contextMenu.getByRole("menuitem", { name: "New session" })).toHaveCount(0);
     await keepOpen.click();
     await expect(session).toHaveCSS("font-style", "normal");
 

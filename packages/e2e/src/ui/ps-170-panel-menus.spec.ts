@@ -4,6 +4,12 @@ import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
+
+const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+  await tab.click();
+};
 const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const locationSwitchStoryId = "pstdio-workbench-onboarding--location-switch";
 const allPanelsStoryId = "pstdio-workbench-onboarding--all-three-panels";
@@ -113,8 +119,8 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click();
-  const menu = page.getByRole("menu", { name: "New session actions" });
+  await openTabCustomMenu(sessionTabs.first());
+  const menu = page.getByRole("menu", { name: "New session menu" });
   const newSession = menu.getByRole("menuitem", { name: "New session" });
   const viewAllSessions = menu.getByRole("menuitem", { name: "View all sessions" });
   await expect(newSession).toBeVisible();
@@ -128,17 +134,17 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click();
+  await openTabCustomMenu(sessionTabs.first());
   await page
-    .getByRole("menu", { name: "First context session actions" })
+    .getByRole("menu", { name: "First context session menu" })
     .getByRole("menuitem", { name: "Second context session" })
     .click();
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(1);
 
-  await sessionTabs.first().click();
+  await openTabCustomMenu(sessionTabs.first());
   await page
-    .getByRole("menu", { name: "Second context session actions" })
+    .getByRole("menu", { name: "Second context session menu" })
     .getByRole("menuitem", { name: "New session" })
     .click();
   await expect(sideHeader.getByRole("tab", { name: /New session/ })).toBeVisible();
@@ -147,9 +153,9 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await expect(sessionTabs).toHaveCount(2);
 
-  await sideHeader.locator('[role="tab"][aria-selected="true"]').click();
+  await openTabCustomMenu(sideHeader.locator('[role="tab"][aria-selected="true"]'));
   await page
-    .getByRole("menu", { name: "New session actions" })
+    .getByRole("menu", { name: "New session menu" })
     .last()
     .getByRole("menuitem", {
       name: "View all sessions",
