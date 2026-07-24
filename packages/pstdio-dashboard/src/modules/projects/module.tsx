@@ -296,9 +296,9 @@ const registerProjects = (
       };
       const previousProjectId = getDashboardSelectedProjectId(ctx);
 
+      closeProjectSelectionOverlays(ctx);
       resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
       selectDashboardProject(selectedProjectContext, project, persistence);
-      closeProjectSelectionOverlays(ctx);
       if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
         ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
       }

@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type LayoutPersistenceAdapter, type WorkbenchLayout } from "@pstdio/workbench/core";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createProjectsModule } from "./module";
 
 describe("createProjectsModule", () => {
@@ -23,6 +25,45 @@ describe("createProjectsModule", () => {
     expect(workbench.layout.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
     expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
     expect(workbench.panels.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
+  });
+
+  test("does not persist the project picker into the project being left", async () => {
+    const layouts = new Map<string | undefined, WorkbenchLayout>();
+    const workbench = createWorkbenchCore({
+      layoutPersistence: {
+        getLayout: (scope) => layouts.get(scope),
+        setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+      },
+    });
+    workbench.registerModule(createProjectsModule());
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    const project = (id: string) => ({
+      kind: "project",
+      uri: `dashboard-workbench://project/${id}`,
+      id,
+      label: id,
+    });
+    const sessions = {
+      kind: "dashboard-view",
+      uri: "dashboard-workbench://sessions",
+      id: "sessions",
+      label: "Sessions",
+    };
+
+    await workbench.resources.openResource(project("project-a"));
+    selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
+    await workbench.commands.executeCommand(dashboardCommandIds.openProjects);
+    await workbench.resources.openResource(project("project-b"));
+    selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
+    await workbench.commands.executeCommand(dashboardCommandIds.openProjects);
+    await workbench.resources.openResource(project("project-a"));
+    selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
+
+    expect(
+      workbench.layout
+        .getLayout()
+        .regions.overlay.widgets.some((placement) => placement.contributionId === dashboardWidgetIds.projectPicker),
+    ).toBe(false);
   });
 
   test("clears the back-stack when the selected project is cleared", async () => {
