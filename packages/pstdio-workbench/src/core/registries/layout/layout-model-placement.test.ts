@@ -239,6 +239,45 @@ describe("createLayoutModel placement lifecycle", () => {
     ]);
   });
 
+  test("reuses matching persistent content when opening a preview from another location", () => {
+    const layout = createLayoutModel();
+    const session = { kind: "session", uri: "pstdio://session/a", label: "Session A" };
+
+    layout.registerLocation({
+      id: "project.workspace",
+      title: "Workspace",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerSubPanel({
+      id: "project.session",
+      title: "Session",
+      region: "side",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+
+    layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" },
+    });
+    const persistent = layout.openWidget("project.session", {
+      resource: session,
+      tabRetention: "persistent",
+    });
+    layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/b", label: "Workspace B" },
+    });
+    const preview = layout.openWidget("project.session", {
+      resource: session,
+      tabRetention: "preview",
+    });
+
+    expect(preview).toEqual(persistent);
+    expect(layout.getLayout().regions.side.widgets).toEqual([persistent]);
+    expect(layout.getLayout().regions.side.activeWidgetId).toBe(persistent.widgetId);
+  });
+
   test("opens and reorders persistent tabs by stable positions", () => {
     const layout = createLayoutModel();
 

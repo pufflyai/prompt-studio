@@ -200,11 +200,17 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const region = layout.regions[regionId];
     const replacementIndex = findReplacementIndex(layout, regionId, widget, openInput);
     const replacement = replacementIndex >= 0 ? region.widgets[replacementIndex] : undefined;
+    const previewContent =
+      !openInput.replaceWidgetId && openInput.tabRetention === "preview" && openInput.resource
+        ? findResourcePlacement(layout, widget.id, openInput.resource.uri)
+        : undefined;
     const existing =
       openInput.replaceWidgetId && replacement ? undefined : findReusablePlacement(widget, layout, openInput);
 
     let placement: WorkbenchWidgetPlacement;
-    if (existing) placement = reuseExistingPlacement(widget, existing, regionId, replacementIndex, openInput);
+    if (previewContent) {
+      placement = applyAndActivate(layout, previewContent.regionId, previewContent.placement);
+    } else if (existing) placement = reuseExistingPlacement(widget, existing, regionId, replacementIndex, openInput);
     else if (replacement?.contributionId === widget.id) {
       placement = replaceActive(widget, regionId, replacementIndex, replacement, openInput);
     } else {
@@ -214,7 +220,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     for (const panelMenuId of widget.ownedPanelMenuIds ?? []) {
       openWidget(panelMenuId, { pinned: true });
     }
-    return applyAndActivate(getLayout(), regionId, placement);
+    return applyAndActivate(getLayout(), previewContent?.regionId ?? regionId, placement);
   };
 
   return { openWidget };

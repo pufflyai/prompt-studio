@@ -2,4 +2,4 @@
 "@pstdio/workbench": minor
 ---
 
-Collapse Panel menus into their owning header when the Panel is narrow.
+Collapse narrow Panel menus into their owning header and prevent preview tabs from duplicating existing content.
