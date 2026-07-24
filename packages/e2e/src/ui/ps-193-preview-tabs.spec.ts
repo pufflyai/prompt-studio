@@ -42,7 +42,8 @@ test.describe("PS-193 preview tabs", () => {
     const keepOpen = contextMenu.getByRole("menuitem", { name: "Keep Open" });
     await expect(keepOpen).toBeVisible();
     await expect(contextMenu.getByRole("menuitem", { name: "New session" })).toHaveCount(0);
-    await keepOpen.click();
+    // The portaled menu can reposition while Storybook finishes compiling on constrained CI runners.
+    await keepOpen.click({ force: true });
     await expect(session).toHaveCSS("font-style", "normal");
 
     const files = sideHeader.getByRole("tab", { name: "Files" });

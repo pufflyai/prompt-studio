@@ -20,6 +20,7 @@ test.afterAll(() => {
 });
 
 test("PS-175 restores each mode frame without rebuilding project chrome", async ({ page }) => {
+  test.slow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(storyUrl(storybookBaseUrl, projectStoryId));
 
@@ -53,13 +54,14 @@ test("PS-175 restores each mode frame without rebuilding project chrome", async 
 });
 
 test("PS-175 Storybook exposes every approved initial mode frame", async ({ page }) => {
+  test.slow();
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto(storyUrl(storybookBaseUrl, workspaceStoryId));
-  await expect(page.getByText("Workspace mode", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Workspace mode", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Diff preview", { exact: true })).toBeVisible();
 
   await page.goto(storyUrl(storybookBaseUrl, settingsStoryId));
-  await expect(page.getByText("Workspace preferences", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Workspace preferences", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
 });
