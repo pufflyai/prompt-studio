@@ -51,6 +51,14 @@ const extensionDataRendererCreateRowSchema = z.object({
   submitLabel: localizableStringSchema.optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
+  editableAttributesParam: z.string().optional(),
+  attachments: z
+    .object({
+      commandId: z.string(),
+      resourceParam: z.string(),
+      fileParam: z.string(),
+    })
+    .optional(),
 });
 
 const extensionDataRendererRowActionSchema = z.object({
@@ -64,6 +72,7 @@ const extensionDataRendererRowActionSchema = z.object({
 export const extensionDataRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
+  extensionInstanceId: z.string().optional(),
   title: localizableStringSchema,
   resourceKind: z.string().optional(),
   attributes: z.array(dataRendererAttributeSchema).optional(),

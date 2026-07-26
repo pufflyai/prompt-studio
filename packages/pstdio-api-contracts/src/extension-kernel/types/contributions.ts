@@ -278,6 +278,14 @@ export interface DataRendererCreateRowContribution<TParams extends ParamObjectSc
   submitLabel?: Localizable<string>;
   columnParam?: string;
   params?: TParams;
+  /** Flatten selected editable enum attribute option ids into this command parameter. */
+  editableAttributesParam?: string;
+  /** Upload selected files after creation, then invoke this command once per uploaded file. */
+  attachments?: {
+    command: CommandRef<Struct, unknown> | string;
+    resourceParam: string;
+    fileParam: string;
+  };
 }
 
 export interface DataRendererSavedViewsContribution {

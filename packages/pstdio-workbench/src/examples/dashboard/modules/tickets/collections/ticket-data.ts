@@ -92,7 +92,14 @@ export const registerTicketDataRenderer = (ctx: WorkbenchModuleContributionConte
     onRowClick: (row) => {
       if (row.resource) void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
-    onCreateRow: (columnId) => ctx.notifications.show({ level: "info", title: `Create ticket in ${columnId}` }),
+    createRow: {
+      title: "New ticket",
+      submitLabel: "Create ticket",
+      fields: [{ id: "content", label: "Description", type: "longtext", required: true }],
+    },
+    onCreateRow: (submission) => {
+      ctx.notifications.show({ level: "info", title: `Create ticket in ${submission.columnId}` });
+    },
   });
   ctx.layout.registerWidget(
     {

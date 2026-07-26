@@ -157,6 +157,42 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
+  test("rebinds and reloads a source directory replaced in place by a forced install", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(sourcePath, { recursive: true });
+    writeFileSync(join(sourcePath, "extension.ts"), "export default { version: 1 };\n");
+    const watchers: FakeWatcher[] = [];
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async (path) => {
+        reloaded.push(path);
+      },
+      watch: (_path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchers.push(fake);
+        return fake;
+      },
+    });
+
+    try {
+      rmSync(sourcePath, { recursive: true, force: true });
+      mkdirSync(sourcePath, { recursive: true });
+      writeFileSync(join(sourcePath, "extension.ts"), "export default { version: 2 };\n");
+
+      await watcher.refresh();
+
+      expect(watchers).toHaveLength(2);
+      expect(watchers[0]?.closed).toBe(true);
+      expect(watchers[1]?.closed).toBe(false);
+      expect(reloaded).toEqual([sourcePath]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("routes watcher errors to onError instead of crashing the process", async () => {
     const sourcePath = join(root, "watched");
     mkdirSync(sourcePath, { recursive: true });

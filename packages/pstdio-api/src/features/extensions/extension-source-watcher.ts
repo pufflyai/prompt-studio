@@ -24,6 +24,7 @@ type WatchErrorHandler = (error: unknown) => void;
 type WatchSource = (path: string, listener: WatchListener, onError: WatchErrorHandler) => SourceWatcher;
 
 type WatchedRegistration = {
+  identity: string;
   matcher: ExtensionIgnoreMatcher;
   sourcePath: string;
   timer: ReturnType<typeof setTimeout> | null;
@@ -50,6 +51,11 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
   const watcher = fsWatch(path, listener);
   watcher.on("error", onError);
   return watcher;
+};
+
+const sourceIdentity = (sourcePath: string) => {
+  const stats = lstatSync(sourcePath);
+  return `${stats.dev.toString()}:${stats.ino.toString()}`;
 };
 
 const listWatchableDirectories = (sourcePath: string, matcher: ExtensionIgnoreMatcher, startPath: string) => {
@@ -154,6 +160,7 @@ export const createExtensionSourceWatcher = async (
 
   const addRegistration = (row: InstalledSourceRegistration) => {
     const registration: WatchedRegistration = {
+      identity: sourceIdentity(row.source_path),
       matcher: createExtensionIgnoreMatcher(row.source_path),
       sourcePath: row.source_path,
       timer: null,
@@ -164,17 +171,36 @@ export const createExtensionSourceWatcher = async (
     watchDirectoryTree(registration, row.source_path);
   };
 
+  const refreshRegistration = async (
+    sourcePath: string,
+    registration: WatchedRegistration,
+    rows: InstalledSourceRegistration[],
+  ) => {
+    const next = rows.find((row) => row.source_path === sourcePath);
+    if (!next) {
+      disposeRegistration(registration);
+      registrations.delete(sourcePath);
+      return;
+    }
+    if (sourceIdentity(sourcePath) === registration.identity) return;
+
+    disposeRegistration(registration);
+    registrations.delete(sourcePath);
+    addRegistration(next);
+    try {
+      await input.reloadInstalledSource(sourcePath);
+    } catch (error) {
+      input.onError?.(error);
+    }
+  };
+
   const refresh = async () => {
     if (disposed) return;
 
     const rows = await input.listInstalledSources();
 
     for (const [sourcePath, registration] of registrations) {
-      const next = rows.find((row) => row.source_path === sourcePath);
-      if (!next) {
-        disposeRegistration(registration);
-        registrations.delete(sourcePath);
-      }
+      await refreshRegistration(sourcePath, registration, rows);
     }
 
     for (const row of rows) {

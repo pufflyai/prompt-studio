@@ -159,6 +159,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           executeCommand,
           metadata,
           projectId: nextProjectId,
+          onRegistrationError: (error, extensionId) => {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`[dashboard.extensions:${extensionId}] contribution registration failed: ${message}`);
+          },
         });
         restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {

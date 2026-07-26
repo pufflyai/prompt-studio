@@ -44952,7 +44952,7 @@
                           "id": "Qa77w",
                           "name": "Header",
                           "width": "fill_container",
-                          "height": 44,
+                          "height": 40,
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -45020,8 +45020,8 @@
                                   "type": "ref",
                                   "ref": "nvvgg",
                                   "name": "IconButton check-check",
-                                  "width": 26,
-                                  "height": 26,
+                                  "width": 24,
+                                  "height": 24,
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
@@ -45029,8 +45029,8 @@
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "history",
-                                      "width": 14,
-                                      "height": 14
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 },
@@ -45039,8 +45039,8 @@
                                   "type": "ref",
                                   "ref": "nvvgg",
                                   "name": "IconButton settings-2",
-                                  "width": 26,
-                                  "height": 26,
+                                  "width": 24,
+                                  "height": 24,
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
@@ -45048,8 +45048,8 @@
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "settings-2",
-                                      "width": 14,
-                                      "height": 14
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 }
@@ -45087,8 +45087,8 @@
                               "descendants": {
                                 "w7NkD3": {
                                   "icon": "inbox",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 14,
+                                  "height": 14
                                 },
                                 "k9XlqC": {
                                   "content": "All"
@@ -45107,8 +45107,8 @@
                               "descendants": {
                                 "w7NkD3": {
                                   "icon": "circle-pause",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 14,
+                                  "height": 14
                                 },
                                 "k9XlqC": {
                                   "content": "Needs input"
@@ -45127,8 +45127,8 @@
                               "descendants": {
                                 "w7NkD3": {
                                   "icon": "clock",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 14,
+                                  "height": 14
                                 },
                                 "k9XlqC": {
                                   "content": "Snoozed"
@@ -45678,7 +45678,7 @@
                           "id": "k9qm1L",
                           "name": "Header",
                           "width": "fill_container",
-                          "height": 44,
+                          "height": 40,
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -46456,7 +46456,7 @@
                               "id": "cfxUo",
                               "name": "Header",
                               "width": "fill_container",
-                              "height": 44,
+                              "height": 40,
                               "stroke": "$ds-border",
                               "strokeWidth": {
                                 "bottom": 1
@@ -46517,8 +46517,8 @@
                                   "type": "ref",
                                   "ref": "nvvgg",
                                   "name": "Filter",
-                                  "width": 26,
-                                  "height": 26,
+                                  "width": 24,
+                                  "height": 24,
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
@@ -46526,8 +46526,8 @@
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "list-filter",
-                                      "width": 14,
-                                      "height": 14
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 }
@@ -46947,7 +46947,7 @@
                               "id": "JjFYB",
                               "name": "Header",
                               "width": "fill_container",
-                              "height": 44,
+                              "height": 40,
                               "stroke": "$ds-border",
                               "strokeWidth": {
                                 "bottom": 1
@@ -47031,8 +47031,8 @@
                                       "type": "ref",
                                       "ref": "nvvgg",
                                       "name": "Open",
-                                      "width": 26,
-                                      "height": 26,
+                                      "width": 24,
+                                      "height": 24,
                                       "theme": {
                                         "btn": "ghost",
                                         "size": "xs"
@@ -47040,8 +47040,8 @@
                                       "descendants": {
                                         "k7mgm": {
                                           "icon": "external-link",
-                                          "width": 14,
-                                          "height": 14
+                                          "width": 13,
+                                          "height": 13
                                         }
                                       }
                                     },
@@ -47050,8 +47050,8 @@
                                       "type": "ref",
                                       "ref": "nvvgg",
                                       "name": "Close",
-                                      "width": 26,
-                                      "height": 26,
+                                      "width": 24,
+                                      "height": 24,
                                       "theme": {
                                         "btn": "ghost",
                                         "size": "xs"
@@ -47059,8 +47059,8 @@
                                       "descendants": {
                                         "k7mgm": {
                                           "icon": "x",
-                                          "width": 14,
-                                          "height": 14
+                                          "width": 13,
+                                          "height": 13
                                         }
                                       }
                                     }
@@ -48208,8 +48208,10 @@
                                   "name": "arrow-left",
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
+                                  "height": 24,
+                                  "width": 24,
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "arrow-left",
@@ -48225,8 +48227,10 @@
                                   "name": "arrow-right",
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
+                                  "height": 24,
+                                  "width": 24,
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "arrow-right",
@@ -48246,7 +48250,7 @@
                               "flipX": false,
                               "flipY": false,
                               "width": "fit_content",
-                              "x": 88,
+                              "x": 72,
                               "y": 6,
                               "padding": 0
                             },
@@ -48320,13 +48324,15 @@
                               "name": "Resource actions",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "chevron-down",
-                                  "width": 14,
-                                  "height": 14
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -48344,13 +48350,15 @@
                               "name": "Secondary Panel control",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-bottom",
-                                  "height": 14,
-                                  "width": 14
+                                  "height": 13,
+                                  "width": 13
                                 }
                               }
                             },
@@ -48361,13 +48369,15 @@
                               "name": "Side Panel control",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
-                                  "height": 14,
-                                  "width": 14
+                                  "height": 13,
+                                  "width": 13
                                 }
                               }
                             }
@@ -48448,8 +48458,10 @@
                                   "name": "Add",
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
+                                  "height": 24,
+                                  "width": 24,
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "plus",
@@ -48700,8 +48712,10 @@
                                   "name": "Add",
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
+                                  "height": 24,
+                                  "width": 24,
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "plus",
@@ -48843,8 +48857,10 @@
                               "name": "Add",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
@@ -48867,15 +48883,15 @@
                               "name": "paperclip",
                               "theme": {
                                 "btn": "outline",
-                                "size": "2xs"
+                                "size": "xs"
                               },
                               "width": 24,
                               "height": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "paperclip",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -48886,15 +48902,15 @@
                               "name": "sliders-horizontal",
                               "theme": {
                                 "btn": "outline",
-                                "size": "2xs"
+                                "size": "xs"
                               },
                               "width": 24,
                               "height": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "sliders-horizontal",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             }
@@ -51783,7 +51799,7 @@
                       "id": "GJarn",
                       "name": "Head",
                       "width": "fill_container",
-                      "height": 48,
+                      "height": 40,
                       "fill": "$ds-bg-subtle",
                       "stroke": "$ds-border",
                       "strokeWidth": {
@@ -51842,11 +51858,15 @@
                           "name": "Close",
                           "theme": {
                             "btn": "ghost",
-                            "size": "sm"
+                            "size": "xs"
                           },
+                          "height": 24,
+                          "width": 24,
                           "descendants": {
                             "k7mgm": {
-                              "icon": "x"
+                              "icon": "x",
+                              "height": 13,
+                              "width": 13
                             }
                           }
                         }
@@ -65597,6 +65617,419 @@
         },
         {
           "type": "frame",
+          "id": "v63HIR",
+          "name": "Create · Renderer-owned form",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "GByYj",
+              "name": "Caption",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 5,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YmOFD",
+                  "name": "TR",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cqWvD",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "create resource",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Mhl8y",
+                      "name": "B",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 999,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QYU3O",
+                          "name": "T",
+                          "fill": "$ds-fg-muted",
+                          "content": "renderer-owned form · extension-declared fields",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rVBwu",
+                      "name": "Sp",
+                      "width": "fill_container",
+                      "height": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "i04cN",
+                  "name": "D",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The column plus opens a form owned by the renderer and UI package. The extension declares fields, editable enum attributes, and attachment handling; the renderer supplies the selected column as Status and submits one create command. Primary click on a card opens its resource. Secondary click opens actions. Kanban cards have no chevron.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ZK4tI",
+              "name": "Create form stage",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "padding": [
+                28,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "vmzs5",
+                  "name": "cmp/DataRendererCreateDialog",
+                  "reusable": true,
+                  "clip": true,
+                  "width": 600,
+                  "fill": "$ds-elevated",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "KQyfR",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "height": 52,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "HmqYS",
+                          "name": "Title group",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "APVIP",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "content": "New ticket",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "oAlzT",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D4EvzG",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dDvTk",
+                          "name": "Description field",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "id": "kbWxI",
+                              "type": "ref",
+                              "ref": "Uf6hP",
+                              "name": "Description",
+                              "width": "fill_container",
+                              "height": 144,
+                              "descendants": {
+                                "o89C2": {
+                                  "content": "Describe the ticket…"
+                                }
+                              }
+                            },
+                            {
+                              "id": "VD4pg",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Attach files",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "x": 0,
+                              "y": 150,
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "paperclip"
+                                },
+                                "Hf4GT": {
+                                  "content": "Attach files"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M1OG5F",
+                          "name": "Attachment chips",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "vUHWt",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "evidence.png",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "evidence.png"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "i7yve",
+                              "name": "File size",
+                              "fill": "$ds-fg-subtle",
+                              "content": "84 KB",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "SsUgV",
+                          "name": "Editable attributes",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "fiX0M",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Properties",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mjEdq",
+                              "name": "Property selectors",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Nd4X2",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Ready",
+                                  "theme": {
+                                    "btn": "subtle",
+                                    "size": "sm"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "circle"
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Ready"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "glrbc",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Type · Bug",
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "sm"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "tag"
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Type · Bug"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "f4dTj",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Priority · High",
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "sm"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "signal"
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Priority · High"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ezfaK",
+                      "name": "Footer",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "erR71",
+                          "name": "Actions",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "xv1nz",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Cancel",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Cancel"
+                                }
+                              }
+                            },
+                            {
+                              "id": "KH7yo",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Create ticket",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Create ticket"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "J4SHTG",
           "name": "Saved views",
           "width": "fill_container",
@@ -67190,8 +67623,10 @@
                                       "name": "Add Panel",
                                       "theme": {
                                         "btn": "ghost",
-                                        "size": "2xs"
+                                        "size": "xs"
                                       },
+                                      "height": 24,
+                                      "width": 24,
                                       "descendants": {
                                         "k7mgm": {
                                           "icon": "plus",
@@ -67602,8 +68037,10 @@
                                       "name": "Add Panel",
                                       "theme": {
                                         "btn": "ghost",
-                                        "size": "2xs"
+                                        "size": "xs"
                                       },
+                                      "height": 24,
+                                      "width": 24,
                                       "descendants": {
                                         "k7mgm": {
                                           "icon": "plus",
@@ -68390,8 +68827,10 @@
                               "name": "Add Panel",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
@@ -68821,8 +69260,10 @@
                               "name": "Add Panel",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
@@ -69252,8 +69693,10 @@
                               "name": "Add Panel",
                               "theme": {
                                 "btn": "ghost",
-                                "size": "2xs"
+                                "size": "xs"
                               },
+                              "height": 24,
+                              "width": 24,
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
@@ -71282,8 +71725,10 @@
                           "name": "Add Panel",
                           "theme": {
                             "btn": "ghost",
-                            "size": "2xs"
+                            "size": "xs"
                           },
+                          "height": 24,
+                          "width": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "plus",
@@ -71421,8 +71866,10 @@
                           "name": "Add Panel",
                           "theme": {
                             "btn": "ghost",
-                            "size": "2xs"
+                            "size": "xs"
                           },
+                          "height": 24,
+                          "width": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "plus",
@@ -71562,8 +72009,10 @@
                           "name": "Add Panel",
                           "theme": {
                             "btn": "ghost",
-                            "size": "2xs"
+                            "size": "xs"
                           },
+                          "height": 24,
+                          "width": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "plus",
@@ -71720,8 +72169,10 @@
                           "name": "Add Panel",
                           "theme": {
                             "btn": "ghost",
-                            "size": "2xs"
+                            "size": "xs"
                           },
+                          "height": 24,
+                          "width": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "plus",
@@ -73881,8 +74332,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -73907,8 +74358,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-left",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -73926,8 +74377,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             }
@@ -74014,17 +74465,17 @@
                                   "type": "ref",
                                   "ref": "nvvgg",
                                   "name": "Reattach left menu",
-                                  "width": 22,
-                                  "height": 22,
+                                  "width": 24,
+                                  "height": 24,
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "panel-left",
-                                      "width": 11,
-                                      "height": 11
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 }
@@ -74217,8 +74668,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -74243,8 +74694,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-left",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -74262,8 +74713,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             }
@@ -74401,8 +74852,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "plus",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -74427,8 +74878,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-left",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             },
@@ -74446,8 +74897,8 @@
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
-                                  "width": 12,
-                                  "height": 12
+                                  "width": 13,
+                                  "height": 13
                                 }
                               }
                             }
@@ -74534,17 +74985,17 @@
                                   "type": "ref",
                                   "ref": "nvvgg",
                                   "name": "Reattach right menu",
-                                  "width": 22,
-                                  "height": 22,
+                                  "width": 24,
+                                  "height": 24,
                                   "theme": {
                                     "btn": "ghost",
-                                    "size": "2xs"
+                                    "size": "xs"
                                   },
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "panel-right",
-                                      "width": 11,
-                                      "height": 11
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 }
@@ -75651,7 +76102,7 @@
                               "id": "V7LOh",
                               "name": "Side Panel Header",
                               "width": "fill_container",
-                              "height": 36,
+                              "height": 40,
                               "fill": "$ds-bg-subtle",
                               "stroke": "$ds-border",
                               "strokeWidth": {
@@ -75661,7 +76112,7 @@
                               "gap": 5,
                               "padding": [
                                 0,
-                                8
+                                10
                               ],
                               "alignItems": "center",
                               "children": [
@@ -75842,8 +76293,8 @@
                                   "descendants": {
                                     "k7mgm": {
                                       "icon": "panel-right",
-                                      "width": 11,
-                                      "height": 11
+                                      "width": 13,
+                                      "height": 13
                                     }
                                   }
                                 }
@@ -81547,8 +81998,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -81959,8 +82412,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -83064,8 +83519,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -83168,13 +83625,13 @@
                                                   "height": 24,
                                                   "theme": {
                                                     "btn": "ghost",
-                                                    "size": "2xs"
+                                                    "size": "xs"
                                                   },
                                                   "descendants": {
                                                     "k7mgm": {
                                                       "icon": "rotate-ccw",
-                                                      "width": 12,
-                                                      "height": 12
+                                                      "width": 13,
+                                                      "height": 13
                                                     }
                                                   }
                                                 }
@@ -83436,17 +83893,17 @@
                                                   "type": "ref",
                                                   "ref": "nvvgg",
                                                   "name": "Add variable",
-                                                  "width": 22,
-                                                  "height": 22,
+                                                  "width": 24,
+                                                  "height": 24,
                                                   "theme": {
                                                     "btn": "ghost",
-                                                    "size": "2xs"
+                                                    "size": "xs"
                                                   },
                                                   "descendants": {
                                                     "k7mgm": {
                                                       "icon": "plus",
-                                                      "width": 11,
-                                                      "height": 11
+                                                      "width": 13,
+                                                      "height": 13
                                                     }
                                                   }
                                                 }
@@ -83600,8 +84057,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -84824,8 +85283,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -84978,8 +85439,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -86207,8 +86670,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -86622,8 +87087,10 @@
                                           "name": "Add Panel",
                                           "theme": {
                                             "btn": "ghost",
-                                            "size": "2xs"
+                                            "size": "xs"
                                           },
+                                          "height": 24,
+                                          "width": 24,
                                           "descendants": {
                                             "k7mgm": {
                                               "icon": "plus",
@@ -87419,14 +87886,23 @@
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "KNbF9",
-                                          "name": "Main Panel Tab",
-                                          "fill": "#F7F8F8",
-                                          "content": "Diff",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
+                                          "id": "iV7MI",
+                                          "type": "ref",
+                                          "ref": "TwCXd",
+                                          "name": "Diff tab",
+                                          "theme": {
+                                            "size": "xs",
+                                            "tab": "active",
+                                            "tab-status": "none"
+                                          },
+                                          "descendants": {
+                                            "w7NkD3": {
+                                              "icon": "file-text"
+                                            },
+                                            "k9XlqC": {
+                                              "content": "Diff"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -87518,7 +87994,7 @@
                               "id": "eObB2",
                               "name": "Settings Header",
                               "width": "fill_container",
-                              "height": 42,
+                              "height": 40,
                               "fill": "#0E1016",
                               "stroke": "#2E333F",
                               "strokeWidth": {
@@ -87765,14 +88241,23 @@
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "s33ST",
-                                          "name": "Main Panel Tab",
-                                          "fill": "#F7F8F8",
-                                          "content": "Diff",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
+                                          "id": "MAWnb",
+                                          "type": "ref",
+                                          "ref": "TwCXd",
+                                          "name": "Diff tab",
+                                          "theme": {
+                                            "size": "xs",
+                                            "tab": "active",
+                                            "tab-status": "none"
+                                          },
+                                          "descendants": {
+                                            "w7NkD3": {
+                                              "icon": "file-text"
+                                            },
+                                            "k9XlqC": {
+                                              "content": "Diff"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -88086,14 +88571,23 @@
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "rcImd",
-                                          "name": "Main Panel Tab",
-                                          "fill": "#F7F8F8",
-                                          "content": "Diff",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
+                                          "id": "hZtTH",
+                                          "type": "ref",
+                                          "ref": "TwCXd",
+                                          "name": "Diff tab",
+                                          "theme": {
+                                            "size": "xs",
+                                            "tab": "active",
+                                            "tab-status": "none"
+                                          },
+                                          "descendants": {
+                                            "w7NkD3": {
+                                              "icon": "file-text"
+                                            },
+                                            "k9XlqC": {
+                                              "content": "Diff"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -88185,7 +88679,7 @@
                               "id": "TEmae",
                               "name": "Resource modal header",
                               "width": "fill_container",
-                              "height": 44,
+                              "height": 40,
                               "fill": "#0E1016",
                               "stroke": "#2E333F",
                               "strokeWidth": {
@@ -89123,7 +89617,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
-                          "gap": 6,
+                          "gap": 5,
                           "padding": [
                             0,
                             10
@@ -89131,76 +89625,42 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "frame",
-                              "id": "M4BTV",
+                              "id": "ufgjt",
+                              "type": "ref",
+                              "ref": "TwCXd",
                               "name": "Code tab",
-                              "height": 28,
-                              "fill": "#252932",
-                              "cornerRadius": 4,
-                              "gap": 6,
-                              "padding": [
-                                0,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "BAlFk",
-                                  "name": "Code icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "file-code",
-                                  "library": "lucide",
-                                  "fill": "#81B4FE"
+                              "theme": {
+                                "size": "xs",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "file-code"
                                 },
-                                {
-                                  "type": "text",
-                                  "id": "yOKyZ",
-                                  "name": "Code label",
-                                  "fill": "#F7F8F8",
-                                  "content": "Code",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 10,
-                                  "fontWeight": "600"
+                                "k9XlqC": {
+                                  "content": "Code"
                                 }
-                              ]
+                              }
                             },
                             {
-                              "type": "frame",
-                              "id": "Ue8zz",
+                              "id": "hUsSZ",
+                              "type": "ref",
+                              "ref": "TwCXd",
                               "name": "Preview tab",
-                              "height": 28,
-                              "fill": "#00000000",
-                              "cornerRadius": 4,
-                              "gap": 6,
-                              "padding": [
-                                0,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "POkKk",
-                                  "name": "Preview icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "eye",
-                                  "library": "lucide",
-                                  "fill": "#646973"
+                              "theme": {
+                                "size": "xs",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "eye"
                                 },
-                                {
-                                  "type": "text",
-                                  "id": "ysxjD",
-                                  "name": "Preview label",
-                                  "fill": "#8B9099",
-                                  "content": "Preview",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 10,
-                                  "fontWeight": "normal"
+                                "k9XlqC": {
+                                  "content": "Preview"
                                 }
-                              ]
+                              }
                             },
                             {
                               "id": "AnQNI",
@@ -89878,7 +90338,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
-                          "gap": 6,
+                          "gap": 5,
                           "padding": [
                             0,
                             10
@@ -89886,24 +90346,42 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "y6UDP2",
+                              "id": "oUW5W",
+                              "type": "ref",
+                              "ref": "TwCXd",
                               "name": "Terminal tab",
-                              "fill": "#F7F8F8",
-                              "content": "▣  Terminal",
-                              "fontFamily": "Inter",
-                              "fontSize": 10,
-                              "fontWeight": "600"
+                              "theme": {
+                                "size": "xs",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "square-terminal"
+                                },
+                                "k9XlqC": {
+                                  "content": "Terminal"
+                                }
+                              }
                             },
                             {
-                              "type": "text",
-                              "id": "J7P1W",
+                              "id": "YskfS",
+                              "type": "ref",
+                              "ref": "TwCXd",
                               "name": "Problems tab",
-                              "fill": "#8B9099",
-                              "content": "◇  Problems",
-                              "fontFamily": "Inter",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
+                              "theme": {
+                                "size": "xs",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "folder"
+                                },
+                                "k9XlqC": {
+                                  "content": "Problems"
+                                }
+                              }
                             },
                             {
                               "id": "yCj0j",
@@ -90055,7 +90533,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
-                      "gap": 6,
+                      "gap": 5,
                       "padding": [
                         0,
                         10
@@ -98429,16 +98907,6 @@
             },
             "zAH7D/g1LJJh": {
               "enabled": false
-            },
-            "Pguxu": {
-              "padding": [
-                9,
-                10,
-                8,
-                10
-              ],
-              "gap": 2,
-              "strokeAlignment": "outer"
             },
             "RJsiB": {
               "content": "PROJECT"
@@ -113076,72 +113544,6 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "Pguxu",
-                  "name": "Sidenav Header Actions",
-                  "width": "fill_container",
-                  "stroke": "$ds-border",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "layout": "vertical",
-                  "gap": 1,
-                  "padding": [
-                    8,
-                    10,
-                    6,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "id": "jNQKM",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Search",
-                      "width": "fill_container",
-                      "height": 30,
-                      "theme": {
-                        "row": "default"
-                      },
-                      "descendants": {
-                        "E8VVm": {
-                          "enabled": false
-                        }
-                      }
-                    },
-                    {
-                      "id": "aLoIE",
-                      "type": "ref",
-                      "ref": "hIyB7",
-                      "name": "Notifications",
-                      "width": "fill_container",
-                      "height": 30,
-                      "theme": {
-                        "row": "default"
-                      },
-                      "descendants": {
-                        "E8VVm": {
-                          "enabled": true,
-                          "padding": [
-                            2,
-                            7
-                          ],
-                          "theme": {
-                            "badge": "info"
-                          }
-                        },
-                        "E8VVm/ohhQY": {
-                          "enabled": false
-                        },
-                        "E8VVm/FaaBK": {
-                          "content": "1",
-                          "fontSize": 9
-                        }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "F6vF4",
                   "name": "Resource Links",
                   "width": "fill_container",
@@ -123373,34 +123775,6 @@
                   "fontWeight": "normal"
                 }
               ]
-            },
-            {
-              "type": "frame",
-              "id": "jFoAv",
-              "name": "Static Preview Badge",
-              "height": 24,
-              "fill": "$ds-surface",
-              "cornerRadius": 999,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "ckhzc",
-                  "name": "Label",
-                  "fill": "$ds-fg-muted",
-                  "content": "MOBILE PREVIEW",
-                  "fontFamily": "$font-heading",
-                  "fontSize": 8,
-                  "fontWeight": "600",
-                  "letterSpacing": 0.7
-                }
-              ]
             }
           ]
         },
@@ -123478,73 +123852,14 @@
           "layout": "vertical"
         },
         {
-          "type": "frame",
-          "id": "PRTwk",
-          "name": "Mobile Navigation",
-          "width": "fill_container",
-          "height": 58,
-          "fill": "$ds-bg-subtle",
-          "stroke": "$ds-border",
-          "strokeWidth": {
-            "top": 1
-          },
-          "padding": [
-            0,
-            12
-          ],
-          "justifyContent": "space_between",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "SS7HN",
-              "name": "Preview Caption",
-              "gap": 8,
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "EnlZp",
-                  "name": "Preview Icon",
-                  "width": 16,
-                  "height": 16,
-                  "icon": "monitor-smartphone",
-                  "library": "lucide",
-                  "fill": "$ds-fg-muted"
-                },
-                {
-                  "type": "text",
-                  "id": "OlXsN",
-                  "name": "Preview Label",
-                  "fill": "$ds-fg-muted",
-                  "content": "Static workbench preview",
-                  "fontFamily": "$font-body",
-                  "fontSize": 10,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "B9jalX",
-              "name": "Viewport",
-              "fill": "$ds-fg-subtle",
-              "content": "390 PX",
-              "fontFamily": "$font-mono",
-              "fontSize": 9,
-              "fontWeight": "500"
-            }
-          ]
-        },
-        {
           "id": "reV6V",
           "type": "ref",
           "ref": "C572TP",
           "name": "Session Bubble",
           "context": "Side panel closed; no floating session panel.",
           "layoutPosition": "absolute",
-          "x": 322,
-          "y": 718,
+          "x": 330,
+          "y": 782,
           "theme": {
             "btn": "outline",
             "mode": "dark",

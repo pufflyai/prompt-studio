@@ -91,9 +91,16 @@ describe("pstdio planner extension contributions", () => {
       $l10n: "dataRenderers.tickets.title",
       default: "Tickets",
     });
-    expect(extension.views?.createTicketModal?.title).toEqual({
-      $l10n: "views.createTicketModal.title",
-      default: "New ticket",
+    expect(extension.dataRenderers?.tickets?.createRow).toMatchObject({
+      columnParam: "statusId",
+      editableAttributesParam: "tagIds",
+      params: {
+        content: { type: "longtext", label: "Description", required: true },
+      },
+      attachments: {
+        resourceParam: "ticketId",
+        fileParam: "ref",
+      },
     });
     expect(extension.settingsPanels?.ticketStatuses?.title).toEqual({
       $l10n: "settingsPanels.ticketStatuses.title",

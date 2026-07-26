@@ -17,7 +17,7 @@ interface StartupTaskOptions {
 const ensureDefaultExtensionsInstalled = async () => {
   try {
     await installDefaultExtensions({
-      forceSourceDefaults: false,
+      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName, source }) => {
         apiLogger.warn(
           {

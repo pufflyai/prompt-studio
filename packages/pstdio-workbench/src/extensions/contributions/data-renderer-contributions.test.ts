@@ -213,3 +213,90 @@ describe("registerWorkbenchExtensionDataRenderers", () => {
     expect(refreshes).toEqual(["tickets", "tickets"]);
   });
 });
+
+describe("registerWorkbenchExtensionDataRenderers create forms", () => {
+  test("runs renderer-owned create forms with declarative fields, editable attributes, and attachments", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: Array<{ commandId: string; params: Record<string, unknown> }> = [];
+    const afterCreate: unknown[] = [];
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      queryCommandId: "pstdio-planner.query-tickets",
+      createRow: {
+        commandId: "pstdio-planner.create-ticket",
+        title: "New ticket",
+        submitLabel: "Create ticket",
+        columnParam: "statusId",
+        editableAttributesParam: "tagIds",
+        params: {
+          content: { type: "longtext", label: "Description", required: true },
+        },
+        attachments: {
+          commandId: "pstdio-planner.attach-file",
+          resourceParam: "ticketId",
+          fileParam: "ref",
+        },
+      },
+    } as WorkbenchExtensionDataRendererRecord;
+    const attachment = new File(["evidence"], "evidence.txt", { type: "text/plain" });
+
+    registerWorkbenchExtensionDataRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (commandId, request) => {
+          const params = request && typeof request === "object" && "params" in request ? request.params : {};
+          calls.push({ commandId, params: params as Record<string, unknown> });
+          return { id: "ticket-1", title: "Created ticket" };
+        },
+      },
+      [record],
+      {
+        onAfterCreate: (input) => {
+          afterCreate.push(input);
+        },
+      },
+    );
+
+    const renderer = workbench.renderers.getDataRenderer("tickets");
+
+    expect(renderer?.createRow).toMatchObject({
+      title: "New ticket",
+      submitLabel: "Create ticket",
+      fields: [{ id: "content", type: "longtext", label: "Description", required: true }],
+      includeEditableAttributes: true,
+      allowAttachments: true,
+    });
+
+    await renderer?.onCreateRow?.({
+      columnId: "ready",
+      columnAttributeId: "status",
+      values: { content: "Fix ticket navigation" },
+      attributeValues: {
+        status: "ready",
+        type: "default-type-bug",
+        priority: ["default-priority-high"],
+      },
+      files: [attachment],
+    });
+
+    expect(calls).toEqual([
+      {
+        commandId: "pstdio-planner.create-ticket",
+        params: {
+          content: "Fix ticket navigation",
+          statusId: "ready",
+          tagIds: ["default-type-bug", "default-priority-high"],
+        },
+      },
+    ]);
+    expect(afterCreate).toEqual([
+      expect.objectContaining({
+        created: { id: "ticket-1", title: "Created ticket" },
+        submission: expect.objectContaining({ files: [attachment] }),
+      }),
+    ]);
+  });
+});

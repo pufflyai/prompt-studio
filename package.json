@@ -30,7 +30,7 @@
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
     "pstdio:local:add-dev": "bun run --cwd packages/pstdio local:add-dev",
     "pstdio:local:remove": "bun run --cwd packages/pstdio local:remove",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_DEFAULT_EXTENSIONS=${PSTDIO_DEFAULT_EXTENSIONS:-'[\"harness-claude-code\",\"harness-codex\",\"harness-open-code\",\"pstdio-base-themes\",\"pstdio-planner\",\"pstdio-reports\",\"pstdio-skills\",\"extension-lab\"]'} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
     "dev:isolated": "bun ./scripts/dev/dev-isolated.ts",
     "dev:playwright": "bun ./scripts/dev/dev-isolated.ts --name pstdio-playwright",
     "dev:playwright:down": "bun ./scripts/dev/dev-isolated.ts --name pstdio-playwright --down",

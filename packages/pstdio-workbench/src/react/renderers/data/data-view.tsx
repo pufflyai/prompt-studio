@@ -159,6 +159,7 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         onRowClick={handleOpenRow}
         onAttributeChange={contribution.onAttributeChange}
         onReorder={contribution.onReorder}
+        createRow={contribution.createRow}
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
         getRowContextMenuActions={getRowContextMenuActions}

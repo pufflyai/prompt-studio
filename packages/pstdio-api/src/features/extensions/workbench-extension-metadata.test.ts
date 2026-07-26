@@ -224,7 +224,9 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
       },
     ]);
   });
+});
 
+describe("buildWorkbenchExtensionMetadata data renderers", () => {
   test("includes workbench data renderer contributions", () => {
     const runtime = normalizeExtensionSources([
       {
@@ -253,6 +255,12 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
                 params: {
                   content: { type: "longtext", label: "Ticket content", required: true },
                 },
+                editableAttributesParam: "tagIds",
+                attachments: {
+                  command: "planner.attach-file",
+                  resourceParam: "ticketId",
+                  fileParam: "ref",
+                },
               },
               defaultSettings: { viewMode: "board", columnGrouping: "status" },
             },
@@ -262,6 +270,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
     ]);
 
     const metadata = buildWorkbenchExtensionMetadata({
+      extensionInstanceIdsByExtensionId: new Map([["pstdio.planner", "planner-instance"]]),
       installNamesByExtensionId: new Map(),
       runtime,
       webviewCacheRoot: "/cache",
@@ -271,12 +280,19 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
       expect.objectContaining({
         id: "planner.tickets",
         extensionId: "pstdio.planner",
+        extensionInstanceId: "planner-instance",
         title: "Tickets",
         resourceKind: "ticket",
         queryCommandId: "planner.ticketBoard.read",
         createRow: expect.objectContaining({
           commandId: "planner.tickets.create",
           columnParam: "status",
+          editableAttributesParam: "tagIds",
+          attachments: {
+            commandId: "planner.attach-file",
+            resourceParam: "ticketId",
+            fileParam: "ref",
+          },
         }),
         defaultSettings: { viewMode: "board", columnGrouping: "status" },
       }),

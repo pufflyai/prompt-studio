@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { DataRenderer } from "./data-renderer";
 import { attributes, initialRows, type StoryRow } from "./data-renderer-story-fixtures";
-import type { AttributeDescriptor } from "./types";
+import type { AttributeDescriptor, DataRendererCreateSubmission } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
 
 const meta: Meta<typeof DataRenderer> = {
@@ -97,6 +97,72 @@ const Wrapper = (props: {
 
 export const BoardView: Story = {
   render: () => <Wrapper />,
+};
+
+const CreateFormWrapper = () => {
+  const [rows, setRows] = useState<StoryRow[]>(initialRows);
+  const createAttributes = attributes.map((attribute) =>
+    ["status", "component", "priority", "labels"].includes(attribute.id) ? { ...attribute, editable: true } : attribute,
+  );
+  const createRow = (submission: DataRendererCreateSubmission) => {
+    const content = String(submission.values.content);
+    setRows((current) => [
+      ...current,
+      {
+        id: `created-${current.length.toString()}`,
+        title: content.split("\n")[0] || "Untitled",
+        attributes: {
+          status: submission.columnId,
+          assignee: "",
+          component: String(submission.attributeValues.component ?? ""),
+          priority: String(submission.attributeValues.priority ?? ""),
+          labels: submission.attributeValues.labels as string[],
+          updated: new Date().toISOString(),
+        },
+      },
+    ]);
+  };
+
+  return (
+    <Box p="sm" height="560px">
+      <DataRenderer<StoryRow>
+        rows={rows}
+        storageKey="storybook-data-renderer-create-form"
+        attributes={createAttributes}
+        defaultSettings={{
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { attributeId: "manual", direction: "asc" },
+          displayProperties: ["priority", "labels"],
+        }}
+        createRow={{
+          title: "New ticket",
+          submitLabel: "Create ticket",
+          fields: [{ id: "content", label: "Description", type: "longtext", required: true }],
+          includeEditableAttributes: true,
+          allowAttachments: true,
+        }}
+        onCreateRow={createRow}
+        getBoardColumnConfig={() => ({ canCreate: true })}
+      />
+    </Box>
+  );
+};
+
+export const RendererOwnedCreateForm: Story = {
+  render: () => <CreateFormWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(within(canvas.getByTestId("board-column-todo")).getByRole("button", { name: "Create row" }));
+    const dialog = within(document.body).getByRole("dialog");
+    await expect(within(dialog).getByText("Status · Todo")).toBeInTheDocument();
+    await userEvent.type(within(dialog).getByLabelText("Description"), "Restore ticket creation");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create ticket" }));
+    await expect(
+      within(canvas.getByTestId("board-column-todo")).getByText("Restore ticket creation"),
+    ).toBeInTheDocument();
+  },
 };
 
 export const EmptyState: Story = {

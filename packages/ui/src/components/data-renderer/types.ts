@@ -98,6 +98,34 @@ export interface DataRendererSettings {
 
 export type DataRendererFilterState = Record<string, string[]>;
 
+export type DataRendererCreateFieldType = "text" | "longtext" | "number" | "boolean" | "select" | "multi-select";
+
+export interface DataRendererCreateField {
+  id: string;
+  label: string;
+  description?: string;
+  type: DataRendererCreateFieldType;
+  required?: boolean;
+  defaultValue?: unknown;
+  options?: EnumOption[];
+}
+
+export interface DataRendererCreateRowConfig {
+  title: string;
+  submitLabel: string;
+  fields: DataRendererCreateField[];
+  includeEditableAttributes?: boolean;
+  allowAttachments?: boolean;
+}
+
+export interface DataRendererCreateSubmission {
+  columnId: string;
+  columnAttributeId?: string;
+  values: Record<string, unknown>;
+  attributeValues: Record<string, string | string[]>;
+  files: File[];
+}
+
 export const DEFAULT_DATA_RENDERER_SETTINGS: DataRendererSettings = {
   viewMode: "board",
   columnGrouping: NO_GROUPING,

@@ -8,6 +8,7 @@ export type {
 export { DataRendererBoard } from "./data-renderer-board";
 export type { DataRendererCardProps } from "./data-renderer-card";
 export { DataRendererCard } from "./data-renderer-card";
+export { DataRendererCreateDialog } from "./data-renderer-create-dialog";
 export type { AttributeBadge, FilterCategoryView, MenuOption } from "./data-renderer-helpers";
 export {
   buildDisplayPropertyOptions,
@@ -34,6 +35,10 @@ export type {
   AttributeKind,
   AttributesSource,
   AttributeType,
+  DataRendererCreateField,
+  DataRendererCreateFieldType,
+  DataRendererCreateRowConfig,
+  DataRendererCreateSubmission,
   DataRendererFilterState,
   DataRendererOrdering,
   DataRendererRow,

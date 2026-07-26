@@ -6,6 +6,8 @@ import type {
   AttributeDescriptor,
   AttributesSource,
   BoardColumnConfig,
+  DataRendererCreateRowConfig,
+  DataRendererCreateSubmission,
   DataRendererFilterState,
   DataRendererRow,
   DataRendererSettings,
@@ -64,7 +66,8 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Manual within-column reorder (only fires when ordering is manual). */
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
-  onCreateRow?: (columnId: string) => void;
+  createRow?: DataRendererCreateRowConfig;
+  onCreateRow?: (submission: DataRendererCreateSubmission) => Promise<void> | void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }
 

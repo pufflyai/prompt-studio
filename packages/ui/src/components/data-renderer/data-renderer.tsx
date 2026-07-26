@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type {
@@ -9,6 +9,7 @@ import type {
 } from "./data-renderer-board";
 import { applyBoardMoveItem, applyBoardMoveToGroup } from "./data-renderer-board-move";
 import { DataRendererContent } from "./data-renderer-content";
+import { DataRendererCreateDialog } from "./data-renderer-create-dialog";
 import { type DataRendererColumnGroup, filterRows, groupRows, orderRows } from "./data-renderer-grouping";
 import {
   collectDisplayBadges,
@@ -19,7 +20,14 @@ import {
 } from "./data-renderer-helpers";
 import type { DataRendererListItem } from "./data-renderer-list";
 import { DataRendererToolbar } from "./data-renderer-toolbar";
-import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow, DataRendererSettings } from "./types";
+import type {
+  AttributeDescriptor,
+  DataRendererCreateRowConfig,
+  DataRendererCreateSubmission,
+  DataRendererFilterState,
+  DataRendererRow,
+  DataRendererSettings,
+} from "./types";
 import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
@@ -55,7 +63,8 @@ export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRo
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Called for manual row ordering when a dragged row is dropped before another row. */
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
-  onCreateRow?: (columnId: string) => void;
+  createRow?: DataRendererCreateRowConfig;
+  onCreateRow?: (submission: DataRendererCreateSubmission) => Promise<void> | void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
@@ -178,6 +187,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
     onRowClick,
     onAttributeChange,
     onReorder,
+    createRow,
     onCreateRow,
     onColumnAction,
     getBoardColumnConfig,
@@ -187,6 +197,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
   } = props;
 
   const attributes = useResolvedAttributes(rawAttributes);
+  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
   const initialState = { settings: defaultSettings, filters: defaultFilters };
   const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
   const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
@@ -289,6 +300,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
       onReorder,
     });
   };
+  const createColumn = createColumnId ? grouped.find((column) => column.key === createColumnId) : undefined;
 
   return (
     <Stack height="100%" minH="0" gap="0">
@@ -314,11 +326,23 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         emptyDescription={emptyDescription}
         onBoardMoveItem={handleBoardMoveItem}
         onBoardMoveToGroup={handleBoardMoveToGroup}
-        onCreateRow={onCreateRow}
+        onCreateRow={createRow && onCreateRow ? setCreateColumnId : undefined}
         onColumnAction={onColumnAction}
         onListExpandedGroupChange={setExpandedGroup}
         listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
       />
+      {createRow && onCreateRow && createColumnId ? (
+        <DataRendererCreateDialog
+          open
+          columnId={createColumnId}
+          columnLabel={createColumn?.label ?? createColumnId}
+          columnAttributeId={settings.columnGrouping === NO_GROUPING ? undefined : settings.columnGrouping}
+          attributes={attributes}
+          config={createRow}
+          onClose={() => setCreateColumnId(null)}
+          onSubmit={onCreateRow}
+        />
+      ) : null}
     </Stack>
   );
 };

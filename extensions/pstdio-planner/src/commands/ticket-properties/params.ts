@@ -51,7 +51,7 @@ const statusParam = (ticket: StoredTicket, statuses: StoredStatus[]): WireResour
   type: "resource",
   editable: true,
   defaultValue: ticket.statusId ?? "",
-  emptyText: l10n("createTicketModal.noStatus", "No status"),
+  emptyText: l10n("ticketProperties.noStatus", "No status"),
   options: statuses.map((status) => ({
     id: status.id,
     name: status.name,

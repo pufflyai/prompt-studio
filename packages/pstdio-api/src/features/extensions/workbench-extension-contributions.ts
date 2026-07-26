@@ -23,12 +23,22 @@ const toDataRendererCreateRow = (
   if (!createRow) return undefined;
   const commandId = refIdOf(createRow.command);
   if (!commandId) return undefined;
+  const attachmentCommandId = createRow.attachments ? refIdOf(createRow.attachments.command) : undefined;
   return {
     commandId,
     title: createRow.title,
     submitLabel: createRow.submitLabel,
     columnParam: createRow.columnParam,
     params: createRow.params as NonNullable<WorkbenchExtensionDataRendererRecord["createRow"]>["params"],
+    editableAttributesParam: createRow.editableAttributesParam,
+    attachments:
+      createRow.attachments && attachmentCommandId
+        ? {
+            commandId: attachmentCommandId,
+            resourceParam: createRow.attachments.resourceParam,
+            fileParam: createRow.attachments.fileParam,
+          }
+        : undefined,
   };
 };
 

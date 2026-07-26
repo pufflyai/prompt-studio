@@ -9,13 +9,13 @@ import {
   standardResourceIcons,
   type TreeNode,
   type WorkbenchModuleContributionContext,
-  type WorkbenchWidgetPlacement,
 } from "@pstdio/workbench/core";
 import {
   registerWorkbenchExtensionDataRenderers,
   type WorkbenchExtensionCommandContext,
   type WorkbenchExtensionDataRendererAdapter,
 } from "@pstdio/workbench/extensions";
+import { apiRequest } from "@/lib/api";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -26,12 +26,11 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
+import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createExtensionDataRendererResource, dataRendererResourceKindIcon } from "./extension-data-renderer-resource";
-import { dashboardExtensionViewKind, extensionViewWidgetId } from "./extension-view-placement";
 import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 type ExtensionDataRendererRecord = WorkbenchExtensionDataRendererRecord;
-type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
@@ -113,6 +112,57 @@ const createRowActionRefreshSubscription = (commandIds: Set<string>, refresh: ()
   }),
 });
 
+const uploadExtensionFile = async (input: {
+  extensionInstanceId: string;
+  file: File;
+  projectId: string;
+  resourceId: string;
+}) => {
+  const { extensionInstanceId, file, projectId, resourceId } = input;
+  const query = new URLSearchParams({ scope_type: "resource", scope_id: resourceId });
+  return apiRequest<Record<string, unknown>>(
+    `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files?${query.toString()}`,
+    {
+      method: "POST",
+      body: await file.arrayBuffer(),
+      headers: {
+        "content-type": file.type || "application/octet-stream",
+        "x-file-name": encodeURIComponent(file.name),
+      },
+    },
+  );
+};
+
+const attachCreatedFiles = async (input: {
+  created: unknown;
+  executeCommand: ExecuteDashboardExtensionCommand;
+  files: File[];
+  projectId: string;
+  record: ExtensionDataRendererRecord;
+  uploadFile: typeof uploadExtensionFile;
+}) => {
+  const { created, executeCommand, files, projectId, record, uploadFile } = input;
+  const attachment = record.createRow?.attachments;
+  const resourceId = (created as { id?: unknown } | undefined)?.id;
+  if (!attachment || files.length === 0 || typeof resourceId !== "string") return;
+  if (!record.extensionInstanceId) throw new Error(`Extension instance missing for data renderer: ${record.id}`);
+
+  for (const file of files) {
+    const ref = await uploadFile({
+      extensionInstanceId: record.extensionInstanceId,
+      file,
+      projectId,
+      resourceId,
+    });
+    await executeCommand(projectId, attachment.commandId, {
+      params: {
+        [attachment.resourceParam]: resourceId,
+        [attachment.fileParam]: ref,
+      },
+    });
+  }
+};
+
 // Attribute decoration: attributes that opt in to the workspace-badge display get a host renderer.
 const decorateAttribute = (input: {
   attribute: AttributeDescriptor;
@@ -131,68 +181,21 @@ const decorateAttribute = (input: {
   };
 };
 
-// A modal view shares the data renderer's resourceKind but mounts as an overlay; the
-// board create button opens it (pre-pointed at the target column) instead of inline
-// creating. The create command runs inside the modal webview, so we listen on the
-// command feed to close the dialog and refresh the board once it succeeds.
-const createModalController = (input: {
-  ctx: WorkbenchModuleContributionContext;
-  modalView: ExtensionViewRecord;
-  projectId: string;
-  createCommandId: string | undefined;
-  onCreated: (created: unknown) => void;
-  refresh: () => void;
-}) => {
-  const { ctx, modalView, projectId, createCommandId, onCreated, refresh } = input;
-  const widgetId = extensionViewWidgetId(modalView.id);
-  let activePlacement: WorkbenchWidgetPlacement | undefined;
-
-  const close = () => {
-    const placement = activePlacement;
-    activePlacement = undefined;
-    if (placement) ctx.layout.removeWidgetPlacement(placement.widgetId);
-  };
-
-  const openCreateModal = (columnId: string) => {
-    activePlacement = ctx.layout.openWidget(widgetId, {
-      title: modalView.title,
-      resource: {
-        kind: dashboardExtensionViewKind,
-        uri: `dashboard-workbench://project/${projectId}/create/${modalView.id}/${columnId}`,
-        id: columnId,
-        label: resolveLocalizableString(modalView.title, modalView.extensionId),
-        // The renderer derives the modal view from its widget id + cached manifest (PS-11),
-        // so the view record is not stored on the resource.
-        metadata: { extensionId: modalView.extensionId, projectId },
-      },
-    });
-  };
-
-  const unsubscribe = createCommandId
-    ? subscribeToExtensionCommandFeed((event) => {
-        if (event.commandId !== createCommandId || !event.outcome.ok || !activePlacement) return;
-        close();
-        onCreated(event.outcome.value);
-        refresh();
-      })
-    : () => undefined;
-
-  return { openCreateModal, dispose: unsubscribe };
-};
-
 export const registerExtensionDataRenderers = (
   ctx: WorkbenchModuleContributionContext,
-  input: { metadata: DashboardExtensionMetadata; projectId: string },
+  input: {
+    metadata: DashboardExtensionMetadata;
+    projectId: string;
+    executeCommand?: ExecuteDashboardExtensionCommand;
+    uploadFile?: typeof uploadExtensionFile;
+  },
 ) => {
   const { metadata, projectId } = input;
+  const executeCommand = input.executeCommand ?? executeExtensionCommand;
+  const uploadFile = input.uploadFile ?? uploadExtensionFile;
   const disposables: Disposable[] = [];
   const registeredKinds = new Set<string>();
   const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata);
-
-  const findModalView = (resourceKind: string | undefined) =>
-    resourceKind
-      ? metadata.views.find((view) => view.role === "modal" && view.resourceKind === resourceKind)
-      : undefined;
 
   const openResource = (resource: ResourceRef | undefined) => {
     if (resource) void ctx.resources.openResource(resource, { replaceActive: true }).catch(() => undefined);
@@ -201,9 +204,6 @@ export const registerExtensionDataRenderers = (
   const refreshRecord = (record: ExtensionDataRendererRecord) => {
     if (ctx.renderers.getDataRenderer(record.id)) ctx.renderers.refreshDataRenderer(record.id);
   };
-
-  // Per-record modal controllers; built up while iterating dataRenderers and consulted by the adapter.
-  const modalControllers = new Map<string, ReturnType<typeof createModalController>>();
 
   for (const record of metadata.dataRenderers ?? []) {
     if (record.resourceKind && !registeredKinds.has(record.resourceKind)) {
@@ -215,22 +215,6 @@ export const registerExtensionDataRenderers = (
           icon: dataRendererResourceKindIcon(record),
         }),
       );
-    }
-
-    const modalView = findModalView(record.resourceKind);
-    const modal = modalView
-      ? createModalController({
-          ctx,
-          modalView,
-          projectId,
-          createCommandId: record.createRow?.commandId,
-          onCreated: (created) => openResource(synthesizeCreatedResource(record, created, projectId)),
-          refresh: () => refreshRecord(record),
-        })
-      : undefined;
-    if (modal) {
-      modalControllers.set(record.id, modal);
-      disposables.push({ dispose: modal.dispose });
     }
 
     const rowActionCommandIds = new Set((record.rowActions ?? []).map((action) => action.commandId));
@@ -262,7 +246,7 @@ export const registerExtensionDataRenderers = (
   }
 
   const commandContext: WorkbenchExtensionCommandContext = {
-    executeCommand: (commandId, body) => executeExtensionCommand(projectId, commandId, body),
+    executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
     projectId,
     workbench: ctx,
   };
@@ -290,12 +274,8 @@ export const registerExtensionDataRenderers = (
 
       return ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
     },
-    onCreateRow: ({ record, columnId, executeDefault }) => {
-      const modal = modalControllers.get(record.id);
-      if (modal) modal.openCreateModal(columnId);
-      else void executeDefault();
-    },
-    onAfterCreate: ({ record, created }) => {
+    onAfterCreate: async ({ record, created, submission }) => {
+      await attachCreatedFiles({ created, executeCommand, files: submission.files, projectId, record, uploadFile });
       openResource(synthesizeCreatedResource(record, created, projectId));
     },
     onAfterMutation: (record) => refreshRecord(record),
