@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
 import { CreateFieldControl } from "./data-renderer-create-field";
@@ -96,15 +96,36 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
   // Uncontrolled editors (Lexical) read their seed once on mount, so a reset has
   // to remount the fields or the old text stays on screen over fresh state.
   const [resetToken, setResetToken] = useState(0);
+  const initializedRef = useRef(false);
   const editableAttributes = editableCreateAttributes(attributes);
 
+  // Opening is the only thing that clears the form. Attributes and fields can
+  // arrive or change while it is open (they come from live sources), so this
+  // runs once per open cycle — resetting on those would wipe what was typed.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedRef.current = false;
+      return;
+    }
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     setValues(initialFieldValues(config.fields));
     setAttributeValues(initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId));
     setError("");
     setResetToken((token) => token + 1);
   }, [attributes, columnAttributeId, columnId, config.fields, open]);
+
+  // Seed attributes that showed up after opening, without touching ones the
+  // user has already set.
+  useEffect(() => {
+    if (!open) return;
+    const seeded = initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId);
+    setAttributeValues((current) => {
+      const missing = Object.entries(seeded).filter(([id]) => !(id in current));
+      return missing.length === 0 ? current : { ...Object.fromEntries(missing), ...current };
+    });
+  }, [attributes, open, columnId, columnAttributeId]);
 
   const close = () => {
     if (!submitting) onClose();
