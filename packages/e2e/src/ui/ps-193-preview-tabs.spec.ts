@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const previewTabsStoryId = "pstdio-workbench-examples--preview-tabs";
 
@@ -21,6 +21,8 @@ test.describe("PS-193 preview tabs", () => {
   test("separates the active-tab custom menu from preview context actions", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, previewTabsStoryId));
+    // This story's play function opens the same two menus and dismisses them with Escape.
+    await waitForStoryPlayback(page);
 
     const sideHeader = page.locator('[data-workbench-panel-header="side"]');
     const tabs = sideHeader.getByRole("tab");

@@ -1,7 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
-import { type Locator, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
 
@@ -13,6 +13,32 @@ const STORYBOOK_BOOT_HOOK_TIMEOUT_MS = STORYBOOK_BOOT_TIMEOUT_MS + 30_000;
 // A story's first render pays Storybook's on-demand compile on top of the page load, so the
 // initial render gate needs far more room than the default expect timeout.
 export const STORY_RENDER_TIMEOUT_MS = 30_000;
+
+// Playback covers the on-demand compile, the first render and the play function itself.
+// Measured at 22.9s for the preview-tabs story under 20x CPU throttling, so it needs more
+// room than a plain render gate.
+const STORY_PLAYBACK_TIMEOUT_MS = 60_000;
+
+type StorybookPreview = { storyRenders?: Array<{ phase?: string }> };
+
+// A story's `play` function keeps driving the DOM after the story is on screen, and Storybook
+// only marks the render "finished" once it returns. A spec that starts interacting before then
+// races the play function over the same elements — on a loaded runner the play function's
+// trailing keystrokes land in the middle of the spec's own interaction.
+export const waitForStoryPlayback = async (page: Page) => {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as { __STORYBOOK_PREVIEW__?: StorybookPreview }
+            ).__STORYBOOK_PREVIEW__?.storyRenders?.map((render) => render.phase) ?? [],
+        ),
+      { timeout: STORY_PLAYBACK_TIMEOUT_MS },
+    )
+    .toEqual(["finished"]);
+};
 
 const getFreePort = async () =>
   new Promise<number>((resolvePort, reject) => {

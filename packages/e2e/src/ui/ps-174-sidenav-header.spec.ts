@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -254,6 +254,9 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
       }
       if (storyId === ticketWorkspaceBackStoryId) {
+        // Forward history and the trimmed breadcrumb only exist once this story's play function
+        // has navigated in and back, and "PS-164_A1" is absent both before and during that.
+        await waitForStoryPlayback(page);
         const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
         await expect(page.getByRole("button", { name: "Navigate forward" })).toBeEnabled();
         await expect(breadcrumb).toContainText("PS-164 Sidenav resource sections");
