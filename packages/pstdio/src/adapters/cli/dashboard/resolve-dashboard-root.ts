@@ -38,5 +38,7 @@ export const resolveDashboardRoot = (startDir: string, bundledCliPath?: string) 
     if (existsSync(join(bundled, "index.html"))) return bundled;
   }
 
-  throw new Error("Dashboard build not found. Run 'bun run build' in pstdio-dashboard first.");
+  throw new Error(
+    "Dashboard assets not found next to the pstdio CLI. Reinstall pstdio to restore them, or run `bun run build` first when you are running pstdio from a source checkout.",
+  );
 };

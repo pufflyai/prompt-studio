@@ -25,6 +25,7 @@ import {
   createTemplatesDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
+  resolveDbPath,
 } from "pstdio-db";
 import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { registerApi } from "./app-routing";
@@ -42,6 +43,7 @@ import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
+import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
@@ -107,9 +109,10 @@ const createAppTerminalSupervisor = () =>
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string | undefined) => {
   const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
-  if (!/could not locate a valid checkpoint record|Aborted\(\)/i.test(message)) return null;
+  if (!isPgliteCheckpointFailure(message)) return null;
 
-  return `PGlite failed to open ${dbPath ?? "the configured database path"}. Data is often recoverable with pg_resetwal; see .pstdio/docs/lessons-learned/pglite_wal_corruption.md.`;
+  const resolved = resolveDbPath(dbPath);
+  return `PGlite failed to open ${resolved}. ${pgliteRecoverySteps(resolved)}.`;
 };
 
 const openDb = async (dbPath: string | undefined) => {

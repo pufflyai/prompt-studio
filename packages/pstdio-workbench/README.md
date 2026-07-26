@@ -6,7 +6,7 @@
 
 - **Core**: the headless workbench model created by `createWorkbenchCore()`. It owns registries, controllers, and shared state.
 - **Workbench**: the React shell rendered by `Workbench`. It reads the core and turns registered contributions into visible UI.
-- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
+- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, and renderers.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
 - **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
@@ -15,7 +15,7 @@
 
 ## Contributions
 
-Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing. Ownership metadata is documented in [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
+Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing. Ownership metadata is documented in [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 
 ## Public Entry Points
 
@@ -298,7 +298,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, and preferences.
 - **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or DataView.
-- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
+- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench regions, command palette, panels, and session surface from the workbench core only.
 - **Region**: a named layout target. See the Regions Overview table below.

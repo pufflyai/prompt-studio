@@ -1,9 +1,11 @@
+import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "pstdio-api/pglite-recovery-hint";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { runApi as defaultRunApi, shouldAutoStartApi } from "@/adapters/cli/dashboard/api";
 import {
   isHealthy as defaultIsHealthy,
   waitForHealthy as defaultWaitForHealthy,
 } from "@/adapters/cli/dashboard/health-check";
+import { resolveDefaultDbPath } from "@/adapters/cli/dashboard/state-paths";
 
 /**
  * Ensures the pstdio API server is running before CLI commands that need it.
@@ -63,10 +65,10 @@ const captureProcessOutput = (child: ApiChild | undefined) => {
 };
 
 const checkpointRecoveryHint = (output: string) => {
-  if (!/could not locate a valid checkpoint record|Aborted\(\)/i.test(output)) return "";
+  if (!isPgliteCheckpointFailure(output)) return "";
 
-  const dbPath = process.env.PSTDIO_DB_PATH ?? "the configured pstdio database path";
-  return `\nDetected a PGlite checkpoint/WAL startup failure at ${dbPath}. Data is often recoverable with pg_resetwal; see .pstdio/docs/lessons-learned/pglite_wal_corruption.md.`;
+  const dbPath = process.env.PSTDIO_DB_PATH ?? resolveDefaultDbPath();
+  return `\nDetected a PGlite checkpoint/WAL startup failure at ${dbPath}. ${pgliteRecoverySteps(dbPath)}.`;
 };
 
 const formatCapturedOutput = (output: { stdout: string; stderr: string }) => {

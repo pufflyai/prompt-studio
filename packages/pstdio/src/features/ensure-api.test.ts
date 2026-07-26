@@ -3,6 +3,7 @@ import { type EnsureApiDeps, ensureApi } from "./ensure-api";
 
 const originalDisableAutoStart = process.env.PSTDIO_DISABLE_API_AUTO_START;
 const originalLogPath = process.env.PSTDIO_LOG_PATH;
+const originalDbPath = process.env.PSTDIO_DB_PATH;
 const logPath = "/tmp/pstdio-test-logs.jsonl";
 
 const healthyDeps = (spies = { runApiCalled: false }): EnsureApiDeps => ({
@@ -13,6 +14,29 @@ const healthyDeps = (spies = { runApiCalled: false }): EnsureApiDeps => ({
     return null;
   },
 });
+
+// Replays `output` on the api process stderr while the health check is pending, then times out.
+const capturingDeps = (output: string): EnsureApiDeps => {
+  const listeners: Array<(chunk: Buffer) => void> = [];
+
+  return {
+    isHealthy: async () => false,
+    waitForHealthy: async () => {
+      for (const listener of listeners) listener(Buffer.from(output));
+      throw new Error("Service at http://localhost:3000/healthz did not become healthy within 15000ms");
+    },
+    runApi: () => ({
+      apiRoot: "/fake",
+      child: {
+        stderr: {
+          on: (_event: string, listener: (chunk: Buffer) => void) => {
+            listeners.push(listener);
+          },
+        },
+      } as never,
+    }),
+  };
+};
 
 const unhealthyThenHealthyDeps = (spies = { runApiCalled: false }): EnsureApiDeps => ({
   isHealthy: async () => false,
@@ -35,6 +59,12 @@ describe("ensureApi", () => {
       delete process.env.PSTDIO_LOG_PATH;
     } else {
       process.env.PSTDIO_LOG_PATH = originalLogPath;
+    }
+
+    if (originalDbPath === undefined) {
+      delete process.env.PSTDIO_DB_PATH;
+    } else {
+      process.env.PSTDIO_DB_PATH = originalDbPath;
     }
   });
 
@@ -122,27 +152,21 @@ describe("ensureApi", () => {
   });
 
   it("includes captured api output when health check times out", async () => {
-    const listeners: Array<(chunk: Buffer) => void> = [];
-    const deps: EnsureApiDeps = {
-      isHealthy: async () => false,
-      waitForHealthy: async () => {
-        for (const listener of listeners) listener(Buffer.from("PANIC: could not locate a valid checkpoint record\n"));
-        throw new Error("Service at http://localhost:3000/healthz did not become healthy within 15000ms");
-      },
-      runApi: () => ({
-        apiRoot: "/fake",
-        child: {
-          stderr: {
-            on: (_event: string, listener: (chunk: Buffer) => void) => {
-              listeners.push(listener);
-            },
-          },
-        } as never,
-      }),
-    };
+    const deps = capturingDeps("PANIC: could not locate a valid checkpoint record\n");
 
     await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow(
       "PANIC: could not locate a valid checkpoint record",
     );
+  });
+
+  // The hint ships inside the published CLI, so it must carry the repair steps itself.
+  it("spells out WAL recovery steps instead of pointing at repo-only docs", async () => {
+    process.env.PSTDIO_DB_PATH = "/home/dev/.pstdio/pstdio.db";
+    const deps = capturingDeps("RuntimeError: Aborted(). Build with -sASSERTIONS for more info.\n");
+
+    await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow(
+      "pg_resetwal -f /home/dev/.pstdio/pstdio.db",
+    );
+    await expect(ensureApi("http://localhost:3000", deps)).rejects.not.toThrow(/docs\//);
   });
 });

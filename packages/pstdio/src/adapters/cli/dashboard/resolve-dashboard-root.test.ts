@@ -45,10 +45,12 @@ test("finds dashboard dist relative to source CLI entry when cwd is outside the 
   expect(resolveDashboardRoot(startDir, cliEntry)).toBe(dashDist);
 });
 
-test("throws when dashboard not found", () => {
+// The message ships inside the published CLI, so it has to make sense outside this repo.
+test("throws with an instruction an installed user can act on", () => {
   const base = mkdtempSync(join(tmpdir(), "dash-none-"));
   const startDir = join(base, "empty");
   mkdirSync(startDir, { recursive: true });
 
-  expect(() => resolveDashboardRoot(startDir, join(base, "dist", "index.js"))).toThrow("Dashboard build not found");
+  expect(() => resolveDashboardRoot(startDir, join(base, "dist", "index.js"))).toThrow("Dashboard assets not found");
+  expect(() => resolveDashboardRoot(startDir, join(base, "dist", "index.js"))).toThrow("Reinstall pstdio");
 });
