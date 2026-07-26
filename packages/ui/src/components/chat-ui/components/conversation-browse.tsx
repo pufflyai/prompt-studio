@@ -1,4 +1,4 @@
-import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, Flex, Portal, Stack, Text } from "@chakra-ui/react";
 import { type PointerEvent, useState } from "react";
 
 export interface ConversationBrowseItem {
@@ -23,6 +23,11 @@ const TICK_MIN_WIDTH = 10;
 const TICK_MAX_WIDTH = 26;
 const LENS_RADIUS = 4;
 
+interface BrowseCardPosition {
+  left: number;
+  top: number;
+}
+
 // Raised-cosine falloff over LENS_RADIUS neighbours: 1 at the pointer, 0 at the edge of the lens.
 const lensFactor = (index: number, pointerIndex: number | null) => {
   if (pointerIndex === null) return 0;
@@ -39,32 +44,34 @@ const tickColor = (index: number, pointerIndex: number | null) => {
   return "fg.subtle";
 };
 
-const ConversationBrowseCard = (props: { item: ConversationBrowseItem; top: string }) => {
-  const { item, top } = props;
+const ConversationBrowseCard = (props: { item: ConversationBrowseItem; position: BrowseCardPosition }) => {
+  const { item, position } = props;
 
   return (
-    <Box
-      position="absolute"
-      left="100%"
-      ml="2xs"
-      top={top}
-      transform="translateY(-50%)"
-      w="80"
-      maxW="80"
-      zIndex={1}
-      pointerEvents="none"
-    >
-      <Stack gap="1.5" p="3" bg="bg.elevated" borderWidth="1px" borderColor="border" borderRadius="lg">
-        <Text textStyle="label/S/medium" color="fg" lineClamp={2}>
-          {item.message}
-        </Text>
-        {item.reply ? (
-          <Text textStyle="label/XS/regular" color="fg.muted" lineClamp={2}>
-            {item.reply}
+    <Portal>
+      <Box
+        position="fixed"
+        left={`${position.left}px`}
+        ml="2xs"
+        top={`${position.top}px`}
+        transform="translateY(-50%)"
+        w="80"
+        maxW="80"
+        zIndex="popover"
+        pointerEvents="none"
+      >
+        <Stack gap="1.5" p="3" bg="bg.elevated" borderWidth="1px" borderColor="border" borderRadius="lg">
+          <Text textStyle="label/S/medium" color="fg" lineClamp={2}>
+            {item.message}
           </Text>
-        ) : null}
-      </Stack>
-    </Box>
+          {item.reply ? (
+            <Text textStyle="label/XS/regular" color="fg.muted" lineClamp={2}>
+              {item.reply}
+            </Text>
+          ) : null}
+        </Stack>
+      </Box>
+    </Portal>
   );
 };
 
@@ -77,6 +84,7 @@ const ConversationBrowseCard = (props: { item: ConversationBrowseItem; top: stri
 export const ConversationBrowse = (props: ConversationBrowseProps) => {
   const { items, onSelect, floating = false } = props;
   const [pointerIndex, setPointerIndex] = useState<number | null>(null);
+  const [cardPosition, setCardPosition] = useState<BrowseCardPosition | null>(null);
 
   if (items.length < MIN_USER_MESSAGES) return null;
 
@@ -84,7 +92,12 @@ export const ConversationBrowse = (props: ConversationBrowseProps) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const fraction = (event.clientY - rect.top) / rect.height;
     const next = Math.min(items.length - 1, Math.max(0, fraction * items.length - 0.5));
+    const nextActiveIndex = Math.round(next);
     setPointerIndex(next);
+    setCardPosition({
+      left: rect.right,
+      top: rect.top + ((nextActiveIndex + 0.5) / items.length) * rect.height,
+    });
   };
 
   const activeIndex = pointerIndex === null ? null : Math.round(pointerIndex);
@@ -113,8 +126,7 @@ export const ConversationBrowse = (props: ConversationBrowseProps) => {
           : {})}
       >
         {items.map((item, index) => (
-          <Box
-            as="button"
+          <chakra.button
             type="button"
             key={item.id}
             h="2px"
@@ -127,9 +139,7 @@ export const ConversationBrowse = (props: ConversationBrowseProps) => {
           />
         ))}
       </Flex>
-      {activeItem ? (
-        <ConversationBrowseCard item={activeItem} top={`${((activeIndex! + 0.5) / items.length) * 100}%`} />
-      ) : null}
+      {activeItem && cardPosition ? <ConversationBrowseCard item={activeItem} position={cardPosition} /> : null}
     </Box>
   );
 };

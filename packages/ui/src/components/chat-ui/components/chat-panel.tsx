@@ -302,7 +302,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
       </ChatPrimitives.Root>
       {approvalPrompt}
-      {showThinkingIndicator ? <WorkingIndicator /> : null}
+      {streaming ? <WorkingIndicator hidden={!showThinkingIndicator} /> : null}
       <ChatPanelComposer
         actions={actions}
         attachedResources={attachedResources}

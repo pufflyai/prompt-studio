@@ -497,6 +497,42 @@ export const Streaming: Story = {
   },
 };
 
+function WorkingIndicatorVisibilityRenderer(props: ChatPanelProps) {
+  const { messages, emptyStateTitle, emptyStateDescription, chatInputPlaceholder, actions } = props;
+  const [workspaceInitializing, setWorkspaceInitializing] = useState(false);
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setWorkspaceInitializing((current) => !current)}>
+        {workspaceInitializing ? "Show working indicator" : "Hide working indicator"}
+      </Button>
+      <Box flex="1" minH="0">
+        <ChatPanel
+          messages={messages}
+          streaming
+          workspaceInitializing={workspaceInitializing}
+          emptyStateTitle={emptyStateTitle}
+          emptyStateDescription={emptyStateDescription}
+          chatInputPlaceholder={chatInputPlaceholder}
+          actions={actions}
+        />
+      </Box>
+    </>
+  );
+}
+
+export const WorkingIndicatorVisibility: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles} display="flex" flexDirection="column" gap="sm">
+      <WorkingIndicatorVisibilityRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Conversation.args,
+    messages: longPromptMessages,
+  },
+};
+
 export const LongStickyUserPrompt: Story = {
   render: (args) => (
     <Box {...panelContainerStyles}>

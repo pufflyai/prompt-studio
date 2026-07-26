@@ -50,6 +50,14 @@ export const Gutter: Story = {
   ),
 };
 
+export const ClippedContainer: Story = {
+  render: () => (
+    <Box w="10" h="360px" display="flex" alignItems="center" overflow="hidden">
+      <ConversationBrowse items={items} onSelect={(id) => console.log("scroll to", id)} />
+    </Box>
+  ),
+};
+
 export const Floating: Story = {
   render: () => (
     <Box position="relative" w="360px" h="360px" bg="bg" borderWidth="1px" borderColor="border" borderRadius="lg" p="3">

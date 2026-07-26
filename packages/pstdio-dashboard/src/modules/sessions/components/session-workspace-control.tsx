@@ -30,6 +30,7 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
   const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId, onSelectWorkspace } = props;
   const { isLoading: isProjectLoading } = useProject(projectId);
   const workspaceOptions = createDashboardWorkspaceOptions(projectId);
+  const workspaceSelectionKey = workspaceOptions.map((workspace) => workspace.id).join("|");
   const defaultWorkspaceId = workspaceOptions.find((workspace) => workspace.isDefault)?.id ?? null;
   const selectedWorkspaceLabel = getSelectedWorkspaceLabel({
     selectedWorkspaceId,
@@ -39,6 +40,9 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
   });
   const isExistingSession = Boolean(view.sessionId);
 
+  // The options factory returns a fresh array on every render; the key captures the IDs the
+  // resolver reads without turning that array identity into an unconditional effect trigger.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workspaceSelectionKey represents workspaceOptions.
   useEffect(() => {
     const nextWorkspaceId = resolveRuntimeWorkspaceSelection({
       workspaces: workspaceOptions,
@@ -47,7 +51,7 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
       fallbackWorkspaceId: view.workspaceId ?? defaultWorkspaceId,
     });
     if (nextWorkspaceId !== selectedWorkspaceId) setSelectedWorkspaceId(nextWorkspaceId);
-  }, [defaultWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId, view.workspaceId, workspaceOptions]);
+  }, [defaultWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId, view.workspaceId, workspaceSelectionKey]);
 
   const handleSelectWorkspace = (workspaceId: string) => {
     const workspace = workspaceOptions.find((option) => option.id === workspaceId);

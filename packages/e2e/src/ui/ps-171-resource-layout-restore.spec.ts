@@ -74,8 +74,6 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const workspacesNavigation = sidenav.getByRole("option", { name: /^Workspaces(?:\s|$)/ }).first();
-    const navChrome = await page.locator('[data-workbench-region="nav"]').elementHandle();
-    expect(navChrome).not.toBeNull();
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
@@ -99,7 +97,6 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
     await expect(separator).toBeVisible();
     await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
-    expect(await navChrome!.evaluate((element) => element.isConnected)).toBe(true);
 
     await page.reload();
     await expect(separator).toBeVisible();

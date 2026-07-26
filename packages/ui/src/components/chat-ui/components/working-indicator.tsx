@@ -1,5 +1,5 @@
 import { HStack, Spinner, Text } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Compact, unit-dropping elapsed format: "4s", "48s", "10m 20s", "1h 04m".
 const formatElapsed = (totalSeconds: number) => {
@@ -16,16 +16,24 @@ const formatElapsed = (totalSeconds: number) => {
 /**
  * Working indicator: a spinner followed by the elapsed run time in mono digits — never a
  * static "Working…" label. The elapsed time is the one thing a static label cannot tell you
- * and how you judge whether a run is stuck. Counts from mount (the start of the current run).
+ * and how you judge whether a run is stuck. Counts from the start of the active stream, including
+ * time spent temporarily hidden while the workspace initializes.
  */
-export const WorkingIndicator = () => {
+export const WorkingIndicator = (props: { hidden?: boolean }) => {
+  const { hidden = false } = props;
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAtRef = useRef(Date.now());
 
   useEffect(() => {
-    const startedAt = Date.now();
-    const timer = setInterval(() => setElapsedSeconds((Date.now() - startedAt) / 1000), 1000);
+    if (hidden) return;
+
+    const updateElapsed = () => setElapsedSeconds((Date.now() - startedAtRef.current) / 1000);
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [hidden]);
+
+  if (hidden) return null;
 
   return (
     <HStack gap="2xs" px="sm" py="xs">
