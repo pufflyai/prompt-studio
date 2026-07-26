@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -88,7 +88,7 @@ test.describe("PS-169 Panel tabs", () => {
     for (const panel of ["main", "secondary", "side"]) {
       await expect(
         page.locator(`[data-workbench-panel-header="${panel}"]`).getByRole("button", { name: "Add panel" }),
-      ).toBeVisible({ timeout: 30_000 });
+      ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     }
 
     const activityTab = page.getByRole("tab", { name: /Activity Live/ });

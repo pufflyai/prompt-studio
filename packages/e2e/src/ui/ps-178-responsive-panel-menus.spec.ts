@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const storyId = "pstdio-workbench-onboarding--responsive-panel-menus";
 
@@ -58,7 +58,7 @@ test.describe("PS-178 responsive Panel menus", () => {
   test("collapses each Panel at 480 px and restores only responsive collapses", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(storyUrl(baseUrl, storyId));
-    await expect(panel(page, "main")).toBeVisible({ timeout: 30_000 });
+    await expect(panel(page, "main")).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
 
     const mainPanel = panel(page, "main");
     await resizeViewportPanel(page, mainPanel, 481);
@@ -99,7 +99,7 @@ test.describe("PS-178 responsive Panel menus", () => {
   test("collapses menus in a 420 px Side Panel and anchors its dropdown to the trigger", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(storyUrl(baseUrl, storyId));
-    await expect(panel(page, "side")).toBeVisible({ timeout: 30_000 });
+    await expect(panel(page, "side")).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     await expect.poll(() => panel(page, "side").evaluate((element) => element.clientWidth)).toBeGreaterThanOrEqual(400);
     await expect.poll(() => panel(page, "side").evaluate((element) => element.clientWidth)).toBeLessThanOrEqual(420);
 

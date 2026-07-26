@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -116,7 +116,7 @@ test.describe("PS-168 Side Panels Storybook contract", () => {
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const main = page.locator('[data-workbench-panel="main"]');
     const separator = page.getByRole("separator", { name: "Resize Side Panel" });
-    await expect(side).toBeVisible({ timeout: 30_000 });
+    await expect(side).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     const [sideBox, sidenavBox, mainBox] = await Promise.all([
       side.boundingBox(),
       sidenav.boundingBox(),

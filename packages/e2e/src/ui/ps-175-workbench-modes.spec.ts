@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const projectStoryId = "pstdio-workbench-examples--workbench-modes";
 const workspaceStoryId = "pstdio-workbench-examples--workbench-modes-workspace";
@@ -58,10 +58,12 @@ test("PS-175 Storybook exposes every approved initial mode frame", async ({ page
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto(storyUrl(storybookBaseUrl, workspaceStoryId));
-  await expect(page.getByText("Workspace mode", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Workspace mode", { exact: true })).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
   await expect(page.getByText("Diff preview", { exact: true })).toBeVisible();
 
   await page.goto(storyUrl(storybookBaseUrl, settingsStoryId));
-  await expect(page.getByText("Workspace preferences", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Workspace preferences", { exact: true })).toBeVisible({
+    timeout: STORY_RENDER_TIMEOUT_MS,
+  });
   await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
 });

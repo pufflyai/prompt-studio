@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -244,19 +244,20 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
     test(`renders ${storyId} with one persistent global header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(storyUrl(baseUrl, storyId));
+      // Forward history and the trimmed breadcrumb below only exist once this story's play
+      // function has navigated in and back, and "PS-164_A1" is absent both before and during
+      // that. Playback also covers the first render, so it stands in for the render gate.
+      if (storyId === ticketWorkspaceBackStoryId) await waitForStoryPlayback(page);
 
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await expect(
         page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
-      ).toBeVisible({ timeout: 30_000 });
+      ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
       await expectGlobalHeader(sidenav);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
       }
       if (storyId === ticketWorkspaceBackStoryId) {
-        // Forward history and the trimmed breadcrumb only exist once this story's play function
-        // has navigated in and back, and "PS-164_A1" is absent both before and during that.
-        await waitForStoryPlayback(page);
         const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
         await expect(page.getByRole("button", { name: "Navigate forward" })).toBeEnabled();
         await expect(breadcrumb).toContainText("PS-164 Sidenav resource sections");

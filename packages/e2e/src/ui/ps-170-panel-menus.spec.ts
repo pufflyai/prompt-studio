@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -308,7 +308,7 @@ test.describe("PS-170 Panel-owned menus", () => {
 
     const locationTab = page.getByRole("tab", { name: /^Alpha location/ });
     const notesTab = page.getByRole("tab", { name: /Notes/ });
-    await expect(locationTab).toBeVisible({ timeout: 30_000 });
+    await expect(locationTab).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     await expect(locationTab.getByRole("button", { name: /Close/ })).toHaveCount(0);
     await expect(notesTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("button", { name: "Open Main left menu" })).toHaveCount(0);
@@ -336,7 +336,7 @@ test.describe("PS-170 Panel-owned menus", () => {
 
     for (const panel of ["main", "secondary", "side"]) {
       await expect(page.locator(`[data-workbench-panel-menu="${panel}-right"]`)).toContainText("Notes tools", {
-        timeout: 30_000,
+        timeout: STORY_RENDER_TIMEOUT_MS,
       });
       await expect(page.locator(`[data-workbench-panel-menu="${panel}-left"]`)).toHaveCount(0);
     }
@@ -357,7 +357,9 @@ test.describe("PS-170 Panel-owned menus", () => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await page.goto(storyUrl(baseUrl, bubbleFreeLocationStoryId));
 
-    await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible({
+      timeout: STORY_RENDER_TIMEOUT_MS,
+    });
     await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
     await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
 
@@ -370,7 +372,7 @@ test.describe("PS-170 Panel-owned menus", () => {
     await page.goto(storyUrl(baseUrl, widgetVariantsStoryId));
 
     const tabs = page.getByRole("tablist");
-    await expect(tabs.getByRole("tab", { name: /^Widget variants/ })).toBeVisible({ timeout: 30_000 });
+    await expect(tabs.getByRole("tab", { name: /^Widget variants/ })).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     await expect(tabs.getByRole("tab", { name: /^Closable singleton/ })).toBeVisible();
     await expect(tabs.getByRole("tab", { name: /^Alpha note/ })).toBeVisible();
     await expect(tabs.getByRole("tab", { name: /^Beta note/ })).toBeVisible();

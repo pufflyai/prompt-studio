@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -192,7 +192,7 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
     await page.goto(storyUrl(baseUrl, breadcrumbStoryId));
 
     const nav = page.locator('[data-workbench-region="nav"]');
-    await expect(nav).toBeVisible({ timeout: 30_000 });
+    await expect(nav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     await expect(nav.getByRole("button", { name: "Docs" })).toBeVisible();
     await expect(nav.getByRole("button", { name: "Concepts" })).toBeVisible();
     await expect(nav.getByText("Regions", { exact: true })).toBeVisible();
@@ -203,7 +203,7 @@ test.describe("PS-167 breadcrumb Storybook contract", () => {
     await page.goto(storyUrl(baseUrl, paletteResourcesStoryId));
 
     const nav = page.locator('[data-workbench-region="nav"]');
-    await expect(nav).toBeVisible({ timeout: 30_000 });
+    await expect(nav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
     await expect(nav.getByRole("button", { name: /Secondary Panel/ })).toHaveCount(0);
 
