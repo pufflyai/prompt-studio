@@ -275,7 +275,18 @@ export const registerExtensionDataRenderers = (
       return ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
     },
     onAfterCreate: async ({ record, created, submission }) => {
-      await attachCreatedFiles({ created, executeCommand, files: submission.files, projectId, record, uploadFile });
+      // The resource already exists by now. Letting an upload/attach failure
+      // reject would keep the create dialog open reporting failure, and a retry
+      // would create a duplicate — so surface it and still open what was made.
+      try {
+        await attachCreatedFiles({ created, executeCommand, files: submission.files, projectId, record, uploadFile });
+      } catch (error) {
+        ctx.notifications.show({
+          level: "error",
+          title: "Could not attach files",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
       openResource(synthesizeCreatedResource(record, created, projectId));
     },
     onAfterMutation: (record) => refreshRecord(record),

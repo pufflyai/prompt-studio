@@ -35,7 +35,9 @@ const MarkdownControl = (props: {
 
   return (
     <Editor
-      defaultState=""
+      // Seed from the declared default so a pre-filled field is visible rather
+      // than blank-but-submittable. Lexical reads this once, on mount.
+      defaultState={typeof field.defaultValue === "string" ? field.defaultValue : ""}
       isEditable={!disabled}
       placeholder={field.placeholder}
       autoFocus
@@ -63,9 +65,11 @@ const FilesControl = (props: {
         type="file"
         accept={field.accept}
         multiple={field.multiple !== false}
-        // Appending keeps earlier picks; replacing silently discards them.
+        // Appending keeps earlier picks; replacing silently discards them. A
+        // single-file field replaces instead, so it can never hold two.
         onChange={(event) => {
-          onChange([...files, ...Array.from(event.target.files ?? [])]);
+          const picked = Array.from(event.target.files ?? []);
+          onChange(field.multiple === false ? picked.slice(0, 1) : [...files, ...picked]);
           event.target.value = "";
         }}
       />
