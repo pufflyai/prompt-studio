@@ -14166,6 +14166,13 @@
                           "fill": "$ds-fg-subtle"
                         }
                       ]
+                    },
+                    {
+                      "id": "kOcap",
+                      "type": "ref",
+                      "reusable": true,
+                      "ref": "kNQoL",
+                      "name": "cmp/AttachmentChip"
                     }
                   ]
                 }
@@ -65681,7 +65688,7 @@
         {
           "type": "frame",
           "id": "v63HIR",
-          "name": "Create · Extension-owned form in a shared shell",
+          "name": "Create · Declared fields, host-rendered",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 10,
@@ -65731,7 +65738,7 @@
                           "id": "QYU3O",
                           "name": "T",
                           "fill": "$ds-fg-muted",
-                          "content": "renderer-owned form · extension-declared fields",
+                          "content": "derived properties · declared content fields",
                           "fontFamily": "$font-body",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -65754,7 +65761,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The column plus opens a modal the extension owns. @pstdio/ui supplies the shell — surface, header, footer, submit and cancel — and the extension fills the body with its own controls: a markdown description, its own status and tag selectors, its own attachments. The renderer only opens the dialog at the selected column; it neither describes nor draws the form. Primary click on a card opens its resource. Secondary click opens actions. Kanban cards have no chevron.",
+                  "content": "The column plus opens a form the host renders from declarations. Properties derive from the resource's editable attributes and are seeded from the selected column; content fields are declared by the create contribution as typed params, each mapping to one @pstdio/ui control. A control the vocabulary lacks gets added to the vocabulary — not worked around with a custom renderer or a webview. Primary click on a card opens its resource. Secondary click opens actions. Kanban cards have no chevron.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -65783,7 +65790,7 @@
                   "type": "frame",
                   "id": "vmzs5",
                   "name": "cmp/ResourceCreateDialog",
-                  "context": "The shared shell for creating a resource. Three owners, and the split is the point.\n\n@pstdio/ui owns this frame: the elevated surface, the 52 header carrying title and close, the body's padding and scroll, and the 56 footer holding Cancel and the primary submit. Every string arrives as a prop, so the caller keeps its own translations and the shell never ships copy.\n\nThe extension owns the Body slot. It is a slot and not a field schema on purpose: a schema caps the form at whatever control set the host happens to implement, and the first attempt lost the markdown editor, the host file picker and the real tag selectors to exactly that ceiling. The extension composes the controls it needs and calls its own commands.\n\nThe data renderer owns neither. Its column plus opens this dialog at the selected column and stops there.\n\nTwo consequences worth keeping: status is not repeated in the header — it appears once, as the first control under Properties, disabled because the column already chose it. And the attach affordance sits under the description it applies to rather than in the footer, so the footer stays a pure commit bar.",
+                  "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own.",
                   "reusable": true,
                   "clip": true,
                   "width": 600,
@@ -65856,12 +65863,6 @@
                       "type": "frame",
                       "id": "B3C8rk",
                       "name": "Body",
-                      "slot": [
-                        "Uf6hP",
-                        "c24zV7",
-                        "Tboo4",
-                        "kNQoL"
-                      ],
                       "width": "fill_container",
                       "layout": "vertical",
                       "gap": 14,
