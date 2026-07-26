@@ -31,7 +31,7 @@ export const dashboardWorkspaceDiffs: Diff[] = [
     oldPath: "packages/pstdio-dashboard/src/features/sessions/components/session-attached-panel.tsx",
     newPath: "packages/pstdio-dashboard/src/features/sessions/components/session-attached-panel.tsx",
     oldContent: `onClick={() => setSessionModalState("bubble")}`,
-    newContent: `onClick={() => workbench.sessionPanel.setMode("bubble")}`,
+    newContent: `onClick={() => workbench.sidePanel.setMode("floating")}`,
     additions: 1,
     deletions: 1,
   },

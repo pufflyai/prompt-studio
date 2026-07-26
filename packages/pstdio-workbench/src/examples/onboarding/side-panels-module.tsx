@@ -3,6 +3,7 @@ import { ListRow, ScrollArea } from "@pstdio/ui";
 import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 import { findSidePanelItem, SIDE_PANEL_ITEM_KIND, sidePanelItemResource, sidePanelItems } from "./side-panels-data";
+import { openFloatingSidePanelDemo, registerFloatingSidePanelDemo } from "./side-panels-floating-demo";
 import { ResourceInspector } from "./side-panels-inspector";
 import { registerSidePanelMenuExamples, sidePanelMenuDefinitions } from "./side-panels-menus";
 import { ResourceActivityPanel } from "./side-panels-secondary";
@@ -157,7 +158,11 @@ const ResourceContextPanel = (props: { workbench: WorkbenchCore }) => {
   );
 };
 
-export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
+interface CreateSidePanelsModuleInput {
+  floatingDemo?: boolean;
+}
+
+export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}): WorkbenchModuleContribution => ({
   id: "onboarding.side-panels",
   activate(ctx) {
     ctx.resources.registerKind({
@@ -204,6 +209,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       id: ACTIVITY_TAB_CUSTOM_MENU_RENDERER_ID,
       render: () => <ActivityTabCustomMenu />,
     });
+    if (input.floatingDemo) registerFloatingSidePanelDemo(ctx);
 
     ctx.layout.registerWidget({
       id: RESOURCE_PICKER_WIDGET_ID,
@@ -285,6 +291,7 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     void ctx.resources.openResource(sidePanelItemResource(sidePanelItems[0])).then(() => {
       ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
       ctx.layout.openWidget(ACTIVITY_WIDGET_ID, { pinned: true });
+      if (input.floatingDemo) openFloatingSidePanelDemo(ctx);
     });
   },
 });

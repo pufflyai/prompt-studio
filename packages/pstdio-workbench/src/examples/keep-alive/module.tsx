@@ -3,7 +3,7 @@ import {
   headerTrailingMenuPath,
   type WorkbenchCoreContributionContext,
   type WorkbenchModuleContribution,
-  type WorkbenchSessionPanelMode,
+  type WorkbenchSidePanelMode,
 } from "../../core";
 import { useWorkbenchClaim } from "../../react/keep-alive/use-workbench-claim";
 import { StreamingChat } from "./streaming-chat";
@@ -23,14 +23,13 @@ const DEMO_RESOURCE = {
   label: "Keep-alive demo",
 };
 
-// The bubble's chrome buttons (close, pop-out) call workbench.sessionPanel.setMode
-// directly — see `WorkbenchSessionBubbleContainer` in react/session-panel. Drive
-// the whole demo from sessionPanel so those built-in actions stay coherent.
-const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSessionPanelMode) => {
+// The floating Side Panel chrome owns the same placement controller as the
+// attached presentation, so moving the host keeps the demo's live subtree.
+const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSidePanelMode) => {
   if (mode === "attached") {
     ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
     ctx.layout.openWidget(ATTACHED_WIDGET_ID);
-  } else if (mode === "bubble") {
+  } else if (mode === "floating") {
     ctx.layout.removeWidgetPlacement(ATTACHED_WIDGET_ID);
     ctx.layout.openWidget(BUBBLE_WIDGET_ID);
   } else {
@@ -70,7 +69,7 @@ const IntroPanel = (props: IntroPanelProps) => {
           Attach to main-right
         </Button>
         <Button size="sm" onClick={onShowBubble}>
-          Move to floating bubble
+          Move to floating Side Panel
         </Button>
         <Button size="sm" variant="outline" onClick={onHide}>
           Hide
@@ -96,9 +95,9 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       id: INTRO_RENDERER_ID,
       render: () => (
         <IntroPanel
-          onShowAttached={() => ctx.sessionPanel.setMode("attached")}
-          onShowBubble={() => ctx.sessionPanel.setMode("bubble")}
-          onHide={() => ctx.sessionPanel.setMode("closed")}
+          onShowAttached={() => ctx.sidePanel.setMode("attached")}
+          onShowBubble={() => ctx.sidePanel.setMode("floating")}
+          onHide={() => ctx.sidePanel.setMode("closed")}
         />
       ),
     });
@@ -138,16 +137,16 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         category: "Keep-alive demo",
         when: `${CHAT_MODE_CONTEXT_KEY} != attached`,
       },
-      { execute: () => ctx.sessionPanel.setMode("attached") },
+      { execute: () => ctx.sidePanel.setMode("attached") },
     );
     ctx.commands.registerCommand(
       {
         id: SHOW_BUBBLE_COMMAND_ID,
         label: "Float chat",
         category: "Keep-alive demo",
-        when: `${CHAT_MODE_CONTEXT_KEY} != bubble`,
+        when: `${CHAT_MODE_CONTEXT_KEY} != floating`,
       },
-      { execute: () => ctx.sessionPanel.setMode("bubble") },
+      { execute: () => ctx.sidePanel.setMode("floating") },
     );
     ctx.commands.registerCommand(
       {
@@ -156,7 +155,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         category: "Keep-alive demo",
         when: `${CHAT_MODE_CONTEXT_KEY} != closed`,
       },
-      { execute: () => ctx.sessionPanel.setMode("closed") },
+      { execute: () => ctx.sidePanel.setMode("closed") },
     );
 
     const trailingMenu = headerTrailingMenuPath("main");
@@ -166,11 +165,8 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
 
     ctx.layout.openWidget(INTRO_WIDGET_ID, { resource: DEMO_RESOURCE });
 
-    // Mirror sessionPanel into widget activation. This also captures the
-    // bubble chrome's built-in "close" / "pop-out" buttons, which call
-    // sessionPanel.setMode directly.
-    const subscription = ctx.sessionPanel.onDidChange((mode) => applyChatMode(ctx, mode));
-    applyChatMode(ctx, ctx.sessionPanel.getMode());
+    const subscription = ctx.sidePanel.onDidChange((mode) => applyChatMode(ctx, mode));
+    applyChatMode(ctx, ctx.sidePanel.getMode());
 
     return subscription;
   },

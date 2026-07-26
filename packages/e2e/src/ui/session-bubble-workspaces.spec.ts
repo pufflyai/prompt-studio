@@ -79,15 +79,15 @@ test.describe("Session bubble workspace selection", () => {
     const nav = page.locator('[data-workbench-region="nav"]');
     await nav.getByRole("button", { name: "Show Side Panel" }).click();
     await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-    const sessionPanel = page.getByTestId("workbench-session-attached-panel");
-    await expect(sessionPanel).toBeVisible();
+    const sidePanel = page.getByTestId("workbench-side-panel-attached");
+    await expect(sidePanel).toBeVisible();
 
-    await sessionPanel.getByRole("button", { name: "Select workspace" }).click();
+    await sidePanel.getByRole("button", { name: "Select workspace" }).click();
     await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
 
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/tickets$`));
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(sessionPanel.getByRole("button", { name: "Select workspace" })).toContainText(
+    await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
       workspace.workspace_shorthand,
     );
   });

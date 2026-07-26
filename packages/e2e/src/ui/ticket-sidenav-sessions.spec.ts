@@ -95,14 +95,14 @@ test.describe("Ticket sidenav sessions", () => {
     expect(session.id).toBeTruthy();
 
     // The session must appear in the ticket-mode left sidenav (scoped so we don't false-match the
-    // floating session panel or any "recent sessions" list elsewhere on the page).
+    // floating Side Panel or any "recent sessions" list elsewhere on the page).
     const sessionRow = sidenav.getByText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sessionRow).toBeVisible();
 
     // Clicking it opens the session in the floating panel and keeps the ticket in view (the ticket
     // stays in its own sidenav — we did not navigate away to sessions mode).
     await sessionRow.click();
-    const floatingPanel = page.getByRole("dialog", { name: "Session" });
+    const floatingPanel = page.getByRole("dialog", { name: "Side Panel" });
     await expect(
       floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
     ).toHaveAttribute("aria-selected", "true");

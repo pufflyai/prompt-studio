@@ -85,8 +85,8 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(secondary)).not.toBe(closedPanelBackground);
   await expect(side).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
   await orderedCenters([back, forward, secondary, side]);
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
@@ -126,31 +126,31 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   const openSide = nav.getByRole("button", { name: "Hide Side Panel" });
   await expect(openSide).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(openSide)).not.toBe(closedPanelBackground);
-  await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
   await openSide.click();
   const closedSide = nav.getByRole("button", { name: "Show Side Panel" });
   await expect(closedSide).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => backgroundColor(closedSide)).toBe(closedPanelBackground);
-  const sessionLauncher = page.getByRole("button", { name: "Open session panel" });
+  const sessionLauncher = page.getByRole("button", { name: "Open Side Panel" });
   await expect(sessionLauncher).toBeVisible();
-  await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
-  await expect(page.getByTestId("workbench-session-attached-panel")).not.toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
 
   await sessionLauncher.click();
-  const floatingSession = page.getByTestId("workbench-session-bubble");
+  const floatingSession = page.getByTestId("workbench-side-panel-floating");
   await expect(floatingSession).toBeVisible();
   await expect(sessionLauncher).toHaveCount(0);
-  await floatingSession.getByRole("button", { name: "Minimize panel" }).click();
+  await floatingSession.getByRole("button", { name: "Close Side Panel" }).click();
   await expect(sessionLauncher).toBeVisible();
 
   await sessionLauncher.click();
-  await floatingSession.getByRole("button", { name: "Attach panel" }).click();
-  await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
+  await floatingSession.getByRole("button", { name: "Reattach Side Panel" }).click();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await expect(sessionLauncher).toHaveCount(0);
 });
 

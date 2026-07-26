@@ -27,7 +27,7 @@ const resolvePlacementRegion = (value: unknown, fallback: string) => {
 export const createRegionMapModule = (): WorkbenchModuleContribution => ({
   id: "region-map",
   activate(ctx) {
-    ctx.sessionPanel.setMode("attached");
+    ctx.sidePanel.setMode("attached");
     ctx.resources.registerKind({ kind: regionResourceKind, label: "Workbench region", icon: "SquareDashed" });
 
     ctx.renderers.registerRenderer({

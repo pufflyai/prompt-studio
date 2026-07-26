@@ -14,8 +14,8 @@ import { installWorkbenchDataRenderer } from "../renderers/data/install-data-ren
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
-import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WorkbenchFloatingSidePanel } from "../side-panel/side-panel";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -31,8 +31,8 @@ import {
   WorkbenchSidenav,
   WorkbenchStatusBar,
 } from "./workbench-panels";
-import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
-import { WorkbenchSessionRegionHeader, WorkbenchSessionRegionPortal } from "./workbench-session-layout";
+import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
+import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
 interface WorkbenchProps {
   workbench: WorkbenchCore;
@@ -55,24 +55,24 @@ const resolveSidenavSize = (workbench: WorkbenchCore, persistedSize: number | un
   };
 };
 
-const createSessionPanelHost = () => {
+const createSidePanelHost = () => {
   if (typeof document === "undefined") return null;
   const host = document.createElement("div");
   host.style.display = "contents";
-  host.dataset.workbenchSessionPanelHost = "";
+  host.dataset.workbenchSidePanelHost = "";
   return host;
 };
 
-const resolveActiveSessionSlot = (input: {
+const resolveActiveSidePanelSlot = (input: {
   floatingPanelsAllowed: boolean;
   mounted: boolean;
-  mode: "attached" | "bubble" | "closed";
-  sessionAttachedSlot: HTMLDivElement | null;
-  sessionBubbleSlot: HTMLDivElement | null;
+  mode: "attached" | "floating" | "closed";
+  attachedSlot: HTMLDivElement | null;
+  floatingSlot: HTMLDivElement | null;
 }) => {
   if (!input.mounted) return null;
-  if (input.mode === "bubble") return input.floatingPanelsAllowed ? input.sessionBubbleSlot : null;
-  return input.sessionAttachedSlot;
+  if (input.mode === "floating") return input.floatingPanelsAllowed ? input.floatingSlot : null;
+  return input.attachedSlot;
 };
 
 const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
@@ -98,7 +98,7 @@ interface WorkbenchRegionControlsInput {
   secondaryPanelCollapsible: boolean;
   secondaryPanelOpen: boolean;
   hasSidePanel: boolean;
-  sessionPanelMode: "attached" | "bubble" | "closed";
+  sidePanelMode: "attached" | "floating" | "closed";
   setPanelOpen: (region: WorkbenchPanelRegionId, open: boolean) => void;
 }
 
@@ -126,13 +126,13 @@ const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
   }
 
   if (input.hasSidePanel) {
-    const open = input.sessionPanelMode === "attached";
+    const open = input.sidePanelMode === "attached";
     controls.push({
       id: "side",
       label: open ? "Hide Side Panel" : "Show Side Panel",
       icon: "PanelRight",
       open,
-      onToggle: () => input.workbench.sessionPanel.setMode(open ? "closed" : "attached"),
+      onToggle: () => input.workbench.sidePanel.setMode(open ? "closed" : "attached"),
     });
   }
 
@@ -150,12 +150,12 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchDataTableRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
   installWorkbenchControlsRenderer(workbench);
-  const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
-  const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
-  const sessionHostRef = useRef<HTMLDivElement | null>(null);
-  if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
+  const [attachedSidePanelSlot, setAttachedSidePanelSlot] = useState<HTMLDivElement | null>(null);
+  const [floatingSidePanelSlot, setFloatingSidePanelSlot] = useState<HTMLDivElement | null>(null);
+  const sidePanelHostRef = useRef<HTMLDivElement | null>(null);
+  if (!sidePanelHostRef.current) sidePanelHostRef.current = createSidePanelHost();
 
-  const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
+  const sidePanelMode = useWorkbenchStore(workbench.sidePanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const sidenavOpen = useWorkbenchStore(
@@ -192,10 +192,10 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
-  const showAttachedSessionPanel = hasSidePanel && sessionPanelMode === "attached";
+  const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
-  const mountSessionPanel = hasSidePanel;
+  const mountSidePanel = hasSidePanel;
   const setPanelOpen = (region: WorkbenchPanelRegionId, open: boolean) =>
     setWorkbenchPanelOpen(workbench, region, open);
   const regionControls = createWorkbenchRegionControls({
@@ -207,28 +207,28 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     secondaryPanelCollapsible,
     secondaryPanelOpen,
     hasSidePanel,
-    sessionPanelMode,
+    sidePanelMode,
     setPanelOpen,
   });
 
-  const sideHeader = <WorkbenchSessionRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
-  const activeSessionSlot = resolveActiveSessionSlot({
+  const sideHeader = <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
+  const activeSidePanelSlot = resolveActiveSidePanelSlot({
     floatingPanelsAllowed,
-    mounted: mountSessionPanel,
-    mode: sessionPanelMode,
-    sessionAttachedSlot,
-    sessionBubbleSlot,
+    mounted: mountSidePanel,
+    mode: sidePanelMode,
+    attachedSlot: attachedSidePanelSlot,
+    floatingSlot: floatingSidePanelSlot,
   });
 
   useLayoutEffect(() => {
-    const host = sessionHostRef.current;
+    const host = sidePanelHostRef.current;
     if (!host) return;
-    if (activeSessionSlot) {
-      if (host.parentNode !== activeSessionSlot) activeSessionSlot.appendChild(host);
-    } else if (!mountSessionPanel && host.parentNode) {
+    if (activeSidePanelSlot) {
+      if (host.parentNode !== activeSidePanelSlot) activeSidePanelSlot.appendChild(host);
+    } else if (!mountSidePanel && host.parentNode) {
       host.parentNode.removeChild(host);
     }
-  }, [activeSessionSlot, mountSessionPanel]);
+  }, [activeSidePanelSlot, mountSidePanel]);
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
@@ -283,20 +283,20 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
       <Flex direction="column" h="full" minH="0" minW="0" position="relative" w="full">
         <Flex flex="1" minH="0" minW="0" overflow="hidden">
-          <WorkbenchSessionBoundary
+          <WorkbenchSidePanelBoundary
             workbench={workbench}
-            showAttachedSessionPanel={showAttachedSessionPanel}
+            showAttachedSidePanel={showAttachedSidePanel}
             contentFrame={contentFrame}
             sideHeader={sideHeader}
             contentMinSizePx={CONTENT_MIN_SIZE_PX}
-            onAttachedSlotChange={setSessionAttachedSlot}
+            onAttachedSlotChange={setAttachedSidePanelSlot}
           />
         </Flex>
         {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
         {hasSidePanel && floatingPanelsAllowed ? (
-          <WorkbenchSessionBubbleContainer
+          <WorkbenchFloatingSidePanel
             workbench={workbench}
-            contentSlotRef={setSessionBubbleSlot}
+            contentSlotRef={setFloatingSidePanelSlot}
             bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
             header={sideHeader}
           />
@@ -311,14 +311,14 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         <WorkbenchKeybindingDispatcher workbench={workbench} />
         <WorkbenchNotificationHost workbench={workbench} />
       </Flex>
-      <WorkbenchSessionRegionPortal
+      <WorkbenchSidePanelRegionPortal
         workbench={workbench}
         hasSidePanel={hasSidePanel}
-        mounted={mountSessionPanel}
-        sessionHost={sessionHostRef.current}
+        mounted={mountSidePanel}
+        sidePanelHost={sidePanelHostRef.current}
       />
       {/* Kept-alive renderer portals sit at the workbench root so their hosts
-          stay stable while widget slots and session panel containers move. */}
+          stay stable while widget slots and Side Panel containers move. */}
       <WorkbenchKeepAliveLayer workbench={workbench} />
     </WorkbenchThemeScope>
   );

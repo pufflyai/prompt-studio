@@ -24,10 +24,10 @@ import {
 } from "./controllers/panels/panels-controller";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
 import {
-  createWorkbenchSessionPanelController,
-  type WorkbenchSessionPanelController,
-  type WorkbenchSessionPanelMode,
-} from "./controllers/session-panel/session-panel-controller";
+  createWorkbenchSidePanelController,
+  type WorkbenchSidePanelController,
+  type WorkbenchSidePanelMode,
+} from "./controllers/side-panel/side-panel-controller";
 import {
   createWorkbenchTerminalController,
   type WorkbenchTerminalController,
@@ -125,7 +125,7 @@ export interface WorkbenchCoreContributionContext {
   renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
   settings: SettingsRegistry;
-  sessionPanel: WorkbenchSessionPanelController;
+  sidePanel: WorkbenchSidePanelController;
   terminal: WorkbenchTerminalController;
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
@@ -158,7 +158,7 @@ export interface CreateWorkbenchCoreInput {
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
   defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   lastResourcePersistence?: LastResourcePersistenceAdapter;
-  initialSessionPanelMode?: WorkbenchSessionPanelMode;
+  initialSidePanelMode?: WorkbenchSidePanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
 }
 
@@ -341,9 +341,9 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerPanel: (panel, metadata) =>
         track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
     },
-    sessionPanel: {
-      ...core.sessionPanel,
-      onDidChange: (listener) => track(core.sessionPanel.onDidChange(listener)),
+    sidePanel: {
+      ...core.sidePanel,
+      onDidChange: (listener) => track(core.sidePanel.onDidChange(listener)),
     },
     themes: {
       ...core.themes,
@@ -447,7 +447,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       getPrimary: () => getActiveLocationPlacement(core.layout.getLayout())?.resource,
     }),
     settings: createSettingsRegistry(),
-    sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
+    sidePanel: createWorkbenchSidePanelController({ initialMode: input.initialSidePanelMode }),
     terminal: createWorkbenchTerminalController(),
     themes: createThemeRegistry(),
     fileIconThemes: createFileIconThemeRegistry(),

@@ -41,7 +41,7 @@ test.describe("PS-172 workspace sessions", () => {
     const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
     await sidenav.getByRole("option", { name: "Wire up board", exact: true }).click();
 
-    const sidePanel = page.getByTestId("workbench-session-bubble");
+    const sidePanel = page.getByTestId("workbench-side-panel-floating");
     await expect(sidePanel).toBeVisible();
     await expect(sidePanel.getByText("Wire up board", { exact: true })).toBeVisible();
     await expect(breadcrumb.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();

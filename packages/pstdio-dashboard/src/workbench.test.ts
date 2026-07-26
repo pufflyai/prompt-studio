@@ -6,7 +6,7 @@ describe("createDashboardWorkbench", () => {
   test("starts the eligible Side Panel closed", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.sessionPanel.getMode()).toBe("closed");
+    expect(workbench.sidePanel.getMode()).toBe("closed");
   });
 
   test("starts the Secondary Panel closed", () => {

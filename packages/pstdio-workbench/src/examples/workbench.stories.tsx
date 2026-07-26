@@ -80,7 +80,7 @@ const foundationWorkbench = createFoundationWorkbench();
 const randomWorkbench = createWorkbenchCore();
 randomWorkbench.registerModule(createRandomExampleModule());
 
-const keepAliveWorkbench = createWorkbenchCore({ initialSessionPanelMode: "attached" });
+const keepAliveWorkbench = createWorkbenchCore({ initialSidePanelMode: "attached" });
 keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
 
 const navigationWorkbench = createWorkbenchCore();
@@ -94,7 +94,7 @@ const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
 const preferenceSchemasWorkbench = createWorkbenchCore();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
 
-const previewTabsWorkbench = createWorkbenchCore({ initialSessionPanelMode: "attached" });
+const previewTabsWorkbench = createWorkbenchCore({ initialSidePanelMode: "attached" });
 previewTabsWorkbench.registerModule(createPreviewTabsExampleModule());
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();

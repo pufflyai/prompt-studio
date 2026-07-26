@@ -8,7 +8,7 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
   source: "extension",
   activate(ctx) {
     const openAssistant = () => {
-      ctx.sessionPanel.setMode("attached");
+      ctx.sidePanel.setMode("attached");
       ctx.layout.openWidget(assistantWidgetId);
     };
 

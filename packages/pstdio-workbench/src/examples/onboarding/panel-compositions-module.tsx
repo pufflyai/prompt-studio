@@ -305,8 +305,8 @@ export const createPanelCompositionModule = (
 export const createPanelCompositionWorkbench = (kind: CompositionKind) => {
   const workbench = createWorkbenchCore();
   workbench.registerModule(createPanelCompositionModule(kind));
-  if (kind === "all-panels" || kind === "cross-panel-history") workbench.sessionPanel.setMode("attached");
-  if (kind === "floating-panel-free") workbench.sessionPanel.setMode("bubble");
+  if (kind === "all-panels" || kind === "cross-panel-history") workbench.sidePanel.setMode("attached");
+  if (kind === "floating-panel-free") workbench.sidePanel.setMode("floating");
   return workbench;
 };
 
@@ -346,6 +346,6 @@ export const createRestoredPanelCompositionWorkbench = (afterBack: boolean) => {
   restored.layout.setPersistenceScope("project:alpha");
   restored.history.setPersistenceScope("project:alpha");
   restored.history.restore();
-  restored.sessionPanel.setMode("attached");
+  restored.sidePanel.setMode("attached");
   return restored;
 };

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { ReactElement, ReactNode } from "react";
 import { createWorkbenchCore } from "../../core";
-import { shouldFocusWorkbenchKeyboardFrame, WorkbenchSessionBoundary } from "./workbench-session-boundary";
-import { WorkbenchAttachedSessionLayout } from "./workbench-session-layout";
+import { shouldFocusWorkbenchKeyboardFrame, WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
+import { WorkbenchAttachedSidePanelLayout } from "./workbench-side-panel-layout";
 
 interface AttachedLayoutTestProps {
   attached: boolean;
@@ -16,11 +16,11 @@ const createTarget = (matchesInteractive: boolean) =>
     closest: () => (matchesInteractive ? {} : null),
   }) as unknown as EventTarget;
 
-const renderBoundary = (showAttachedSessionPanel: boolean) => {
+const renderBoundary = (showAttachedSidePanel: boolean) => {
   const contentFrame = <div data-testid="workbench-frame" />;
-  const element = WorkbenchSessionBoundary({
+  const element = WorkbenchSidePanelBoundary({
     workbench,
-    showAttachedSessionPanel,
+    showAttachedSidePanel,
     contentFrame,
     sideHeader: <div />,
     contentMinSizePx: 320,
@@ -30,19 +30,19 @@ const renderBoundary = (showAttachedSessionPanel: boolean) => {
   return { content: element.props.children, contentFrame };
 };
 
-describe("WorkbenchSessionBoundary", () => {
-  test("keeps the workbench frame inside the attached layout when the session panel is hidden", () => {
+describe("WorkbenchSidePanelBoundary", () => {
+  test("keeps the workbench frame inside the attached layout when the Side Panel is hidden", () => {
     const { content, contentFrame } = renderBoundary(false);
 
-    expect(content.type).toBe(WorkbenchAttachedSessionLayout);
+    expect(content.type).toBe(WorkbenchAttachedSidePanelLayout);
     expect(content.props.contentPanel).toBe(contentFrame);
     expect(content.props.attached).toBe(false);
   });
 
-  test("uses the same workbench frame parent when the session panel is attached", () => {
+  test("uses the same workbench frame parent when the Side Panel is attached", () => {
     const { content, contentFrame } = renderBoundary(true);
 
-    expect(content.type).toBe(WorkbenchAttachedSessionLayout);
+    expect(content.type).toBe(WorkbenchAttachedSidePanelLayout);
     expect(content.props.contentPanel).toBe(contentFrame);
     expect(content.props.attached).toBe(true);
   });

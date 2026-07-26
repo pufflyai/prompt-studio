@@ -69,7 +69,7 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.sessionPanel.setMode("closed");
+    workbench.sidePanel.setMode("closed");
 
     getWriter("workspaces")?.truncateAndWrite([
       {
@@ -136,7 +136,7 @@ describe("createWorkspacesModule", () => {
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(floatingSession?.tabRetention).toBe("preview");
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.widgetId);
-    expect(workbench.sessionPanel.getMode()).toBe("closed");
+    expect(workbench.sidePanel.getMode()).toBe("closed");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );

@@ -91,9 +91,13 @@ const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
-sidePanelsWorkbench.sessionPanel.setMode("attached");
+sidePanelsWorkbench.sidePanel.setMode("attached");
+const floatingSidePanelWorkbench = createWorkbench(createSidePanelsModule({ floatingDemo: true }));
+floatingSidePanelWorkbench.sidePanel.setMode("floating");
+const sidePanelLauncherWorkbench = createWorkbench(createSidePanelsModule());
+sidePanelLauncherWorkbench.sidePanel.setMode("closed");
 const responsivePanelMenusWorkbench = createWorkbench(createSidePanelsModule());
-responsivePanelMenusWorkbench.sessionPanel.setMode("attached");
+responsivePanelMenusWorkbench.sidePanel.setMode("attached");
 const panelCompositionWorkbenches = {
   locationOnly: createPanelCompositionWorkbench("location-only"),
   eligible: createPanelCompositionWorkbench("eligible"),
@@ -205,6 +209,16 @@ export const SidePanels: Story = {
   name: "14. Side panels",
   parameters: sourceParameters(sidePanelsSource),
   render: () => <WorkbenchFrame workbench={sidePanelsWorkbench} />,
+};
+
+export const FloatingSidePanel: Story = {
+  name: "14.01 Floating Side Panel · active session",
+  render: () => <WorkbenchFrame workbench={floatingSidePanelWorkbench} />,
+};
+
+export const SidePanelLauncher: Story = {
+  name: "14.02 Floating Side Panel · no active session",
+  render: () => <WorkbenchFrame workbench={sidePanelLauncherWorkbench} />,
 };
 
 export const LocationContentOnly: Story = {

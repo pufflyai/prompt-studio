@@ -96,7 +96,7 @@ test("PS-170 keeps the project selector and Session Panel available on project h
   await page.goto(`/projects/${project.id}/`);
 
   await expect(page.getByRole("button", { name: "Switch project" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
 });
 
 test("PS-170 reuses Session Sub Panels and restores them after viewing all sessions", async ({ page, request }) => {
@@ -168,7 +168,7 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
 
   await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
   await expect(sessionTabs).toHaveCount(2);
-  await expect(page.getByRole("region", { name: "Session" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Side Panel" })).toBeVisible();
 });
 
 test("PS-170 updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
@@ -215,8 +215,8 @@ test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", asyn
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Show Side Panel" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
-  await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
 });
 
 test.describe("PS-170 Panel-owned menus", () => {
@@ -360,11 +360,11 @@ test.describe("PS-170 Panel-owned menus", () => {
     await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible({
       timeout: STORY_RENDER_TIMEOUT_MS,
     });
-    await expect(page.getByRole("button", { name: "Open session panel" })).toHaveCount(0);
-    await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
+    await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Show Side Panel" }).click();
-    await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
+    await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   });
 
   test("documents widget variants as one Location Panel with tabbed Sub Panels", async ({ page }) => {

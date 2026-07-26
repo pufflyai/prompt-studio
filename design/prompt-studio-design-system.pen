@@ -32838,7 +32838,7 @@
       "type": "frame",
       "id": "X4RjQ",
       "x": 8052,
-      "y": 11122,
+      "y": 11666,
       "name": "Selectors · pstdio-dashboard",
       "theme": {
         "mode": "dark"
@@ -66598,6 +66598,7 @@
                                     "btn": "outline",
                                     "size": "sm"
                                   },
+                                  "fill": [],
                                   "descendants": {
                                     "DsEVd": {
                                       "icon": "tag"
@@ -66616,6 +66617,7 @@
                                     "btn": "outline",
                                     "size": "sm"
                                   },
+                                  "fill": [],
                                   "descendants": {
                                     "DsEVd": {
                                       "icon": "signal"
@@ -76491,7 +76493,9 @@
                                 "size": "2xs"
                               },
                               "height": 22,
-                              "width": 22
+                              "width": 22,
+                              "name": "Side Panel control",
+                              "context": "Closed-state recovery control for the Side Panel."
                             }
                           }
                         },
@@ -76576,6 +76580,28 @@
                                       "icon": "plus",
                                       "library": "lucide",
                                       "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "id": "g3tmhL",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Float Side Panel",
+                                      "context": "Ghost IconButton accessible name: Float Side Panel. Moves the same live Side Panel host into its bottom-right floating presentation.",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "xs"
+                                      },
+                                      "x": 72,
+                                      "y": 4,
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "minimize-2",
+                                          "width": 13,
+                                          "height": 13
+                                        }
+                                      }
                                     }
                                   ]
                                 },
@@ -91573,7 +91599,7 @@
       "type": "frame",
       "id": "B5M3w",
       "x": 8052,
-      "y": 7187,
+      "y": 7354,
       "name": "Tree Navigation · Component",
       "context": "TreeList (packages/ui/src/components/tree-list) — sectioned, keyboard-navigable tree used for sidenavs, file trees and changed-file lists. Data: sections[{id,label?,collapsible?,actions?,emptyState?,nodes}] with nodes = ListRowItem + children. The composite has 8px padding on both axes. Rows render through cmp/TreeRow (ListRow variant tree|compact): h 30, radius 4, px 8, gap 7, indent $tree-pl (8/26/44) per depth. Row states use the tree theme axis default|active|hover; depth uses 0|1|2. Controlled props: expandedSectionIds / expandedNodeIds / activeNodeId + onToggleSection / onToggleNode / onNavigate. Virtualizes long trees (32px row estimate). In the Sidenav, right-clicking anywhere opens one customize menu for hideable header, main, and footer items. Drag ordering persists per tree id and stays inside the item's region and group; canReorder=false locks exceptions. Visibility and order reset independently.",
       "theme": {
@@ -126546,7 +126572,7 @@
       "type": "frame",
       "id": "k7UDtb",
       "x": 8052,
-      "y": 10305,
+      "y": 10655,
       "name": "Sessions List · Component",
       "theme": {
         "mode": "dark"
