@@ -1,10 +1,7 @@
-import { HStack, Icon, IconButton, Stack, Text, Wrap } from "@chakra-ui/react";
-import { ChevronDown } from "lucide-react";
+import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler, MouseEvent, ReactNode } from "react";
-import { ResourceActionMenu, type ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
-import { isDataRendererCardClickSuppressed } from "./card-interaction-guard";
 import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
 import type { AttributeBadge } from "./data-renderer-helpers";
 
@@ -13,7 +10,6 @@ export interface DataRendererCardProps {
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
   workspaceBadge?: WorkspaceBadgeProps;
-  contextMenuActions?: ResourceContextAction[];
   isSelected?: boolean;
   draggable?: boolean;
   onBadgeChange?: (attributeId: string, value: unknown) => void;
@@ -28,7 +24,6 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
     badges = [],
     customSlots = [],
     workspaceBadge,
-    contextMenuActions = [],
     isSelected = false,
     draggable,
     onBadgeChange,
@@ -40,7 +35,6 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
   const hasBadges = badges.length > 0 || customSlots.length > 0;
   const cursor = draggable ? "grab" : onClick ? "pointer" : "default";
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (isDataRendererCardClickSuppressed()) return;
     if (event.defaultPrevented) return;
     if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
     onClick?.();
@@ -70,18 +64,6 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
           {title}
         </Text>
         {workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
-        {contextMenuActions.length > 0 ? (
-          <ResourceActionMenu actions={contextMenuActions} positioning={{ placement: "bottom-end" }}>
-            <IconButton
-              variant="ghost"
-              size="2xs"
-              aria-label={`Actions for ${title}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Icon as={ChevronDown} boxSize="14px" />
-            </IconButton>
-          </ResourceActionMenu>
-        ) : null}
       </HStack>
 
       {hasBadges && (

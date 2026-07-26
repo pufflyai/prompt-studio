@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { expect, fireEvent, within } from "storybook/test";
 
 import { DataRendererBoard, type DataRendererBoardColumn } from "./data-renderer-board";
 
@@ -140,4 +141,16 @@ const Wrapper = () => {
 
 export const Default: Story = {
   render: () => <Wrapper />,
+};
+
+export const WithContextMenuActions: Story = {
+  render: () => <Wrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const card = canvas.getByText("Set up auth").closest('[data-testid="renderer-card"]');
+    expect(card).not.toBeNull();
+    fireEvent.contextMenu(card!);
+    await expect(within(document.body).getByRole("menuitem", { name: "Run attempt" })).toBeVisible();
+    await expect(within(document.body).getByRole("menuitem", { name: "Delete" })).toBeVisible();
+  },
 };

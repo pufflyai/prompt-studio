@@ -42,6 +42,10 @@ import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
+import {
+  captureExtensionContributionRefreshLayout,
+  restoreExtensionContributionRefreshLayout,
+} from "./extension-contribution-refresh-layout";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
@@ -148,6 +152,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           setDashboardExtensionsReadyProject(ctx, nextProjectId);
           return;
         }
+        const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         clearContributions();
         contributionDisposables = registerExtensionContributions({
           ctx,
@@ -155,6 +160,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           metadata,
           projectId: nextProjectId,
         });
+        restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }

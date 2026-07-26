@@ -32,27 +32,98 @@ describe("extension-lab workbench attachments", () => {
       target: "workbench.left.tree",
       action: { kind: "command", command: "workbench.terminal.open" },
     });
-    expect(extension.treeItems?.openLabMode).toMatchObject({
-      target: "workbench.left.tree",
-      action: {
-        kind: "command",
-        command: "workbench.action.switchMode",
-        params: { modeId: "pstdio.extension-lab.lab" },
-      },
-    });
+    expect(
+      ["openLabMode", "openLabDesignMode", "openLabReviewMode", "openLabFocusMode"].map(
+        (id) => extension.treeItems?.[id as keyof typeof extension.treeItems],
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          target: "workbench.left.tree",
+          action: {
+            kind: "command",
+            command: "workbench.action.switchMode",
+            params: { modeId: "pstdio.extension-lab.lab" },
+          },
+        }),
+        expect.objectContaining({
+          action: {
+            kind: "command",
+            command: "workbench.action.switchMode",
+            params: { modeId: "pstdio.extension-lab.design" },
+          },
+        }),
+        expect.objectContaining({
+          action: {
+            kind: "command",
+            command: "workbench.action.switchMode",
+            params: { modeId: "pstdio.extension-lab.review" },
+          },
+        }),
+        expect.objectContaining({
+          action: {
+            kind: "command",
+            command: "workbench.action.switchMode",
+            params: { modeId: "pstdio.extension-lab.focus" },
+          },
+        }),
+      ]),
+    );
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
       layout: {
-        panels: ["main"],
-        open: [{ target: "workbench.main", view: "labOverview" }],
+        panels: ["main", "secondary", "side"],
+        open: [
+          { target: "workbench.main", view: "labOverview" },
+          { target: "workbench.main.left", view: "labTools", pinned: true },
+          { target: "workbench.main.right", view: "labInspector", pinned: true },
+          { target: "workbench.secondary", view: "labConsole" },
+        ],
+      },
+    });
+    expect(extension.modes?.labDesign).toMatchObject({
+      id: "pstdio.extension-lab.design",
+      layout: {
+        panels: ["main", "side"],
+        open: [
+          { target: "workbench.main", view: "labCanvas" },
+          { target: "workbench.main.left", view: "labPalette", pinned: true },
+          { target: "workbench.main.right", view: "labInspector", pinned: true },
+        ],
+      },
+    });
+    expect(extension.modes?.labReview).toMatchObject({
+      id: "pstdio.extension-lab.review",
+      layout: {
+        panels: ["main", "secondary", "side"],
+        open: [
+          { target: "workbench.main", view: "labReview" },
+          { target: "workbench.main.right", view: "labInspector", pinned: true },
+          { target: "workbench.secondary", view: "labChecks" },
+        ],
       },
     });
     expect(extension.modes?.labFocus).toMatchObject({
+      id: "pstdio.extension-lab.focus",
       layout: {
         panels: ["main"],
+        open: [{ target: "workbench.main", view: "labFocus" }],
       },
     });
+    expect(extension.views).not.toHaveProperty("labSidenav");
     expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
+    expect(extension.views?.labTools?.webview.entry.path).toBe("./src/views/lab-tools.tsx");
+    expect(extension.views?.labInspector?.webview.entry.path).toBe("./src/views/lab-inspector.tsx");
+    expect(extension.views?.labConsole?.webview.entry.path).toBe("./src/views/lab-console.tsx");
+    expect(extension.views?.labPalette?.webview.entry.path).toBe("./src/views/lab-palette.tsx");
+    expect(extension.views?.labCanvas?.webview.entry.path).toBe("./src/views/lab-canvas.tsx");
+    expect(extension.views?.labReview?.webview.entry.path).toBe("./src/views/lab-review.tsx");
+    expect(extension.views?.labChecks?.webview.entry.path).toBe("./src/views/lab-checks.tsx");
+    expect(extension.views?.labFocus?.webview.entry.path).toBe("./src/views/lab-focus.tsx");
+    expect(extension.views?.labOverview?.webview.capabilities).toContain("commands.execute");
+    expect(extension.views?.labCanvas?.webview.capabilities).toBeUndefined();
+    expect(extension.views?.labReview?.webview.capabilities).toBeUndefined();
+    expect(extension.views?.labFocus?.webview.capabilities).toBeUndefined();
     expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");
     expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
     expect(extension.routes).not.toHaveProperty("labTerminalPage");

@@ -72,11 +72,17 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Modes, routes, views, and tree items
 
-- `modes.lab` registers `pstdio.extension-lab.lab` with a Main-only mode frame.
-- `modes.labFocus` registers `pstdio.extension-lab.focus` with a Main-only mode frame.
-- `views.labOverview` is opened by both mode layouts.
+- `modes.lab` demonstrates the full Coding frame: both Main Panel menus, Main content, Secondary content,
+  the host-owned Sidenav, and Side Panel availability.
+- `modes.labDesign` demonstrates a distinct Main + Side frame with its own left menu, Main content, and restored
+  Inspector.
+- `modes.labReview` demonstrates a second full frame with different Main and Secondary content.
+- `modes.labFocus` demonstrates a Main-only frame and exposes in-view switching while optional Panels are unavailable.
+- Switching away and back exercises one-time mode seeding, per-mode layout persistence, unavailable-Panel removal,
+  pinned views, shared views, and restoration without rebuilding project chrome.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
-- `treeItems.openLabMode` switches to the lab mode through `workbench.action.switchMode`.
+- Four mode tree items enter each layout from Project mode. Once inside a custom mode, use `Switch Mode` in the
+  workbench Command Palette to compare layouts through the supported mode picker.
 - `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon.
 
 ### Storage

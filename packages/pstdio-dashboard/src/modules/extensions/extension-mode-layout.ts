@@ -122,15 +122,31 @@ const modalOverlayConfig = {
   trapFocus: true,
 } as const;
 
+const getModeIdsByViewId = (metadata: DashboardExtensionMetadata) => {
+  const modeIdsByViewId = new Map<string, string[]>();
+
+  for (const mode of metadata.modes) {
+    for (const entry of mode.layout?.open ?? []) {
+      if (!entry.view) continue;
+      const modeIds = modeIdsByViewId.get(entry.view) ?? [];
+      modeIdsByViewId.set(entry.view, [...modeIds, mode.modeId]);
+    }
+  }
+
+  return modeIdsByViewId;
+};
+
 const registerExtensionViews = (
   ctx: WorkbenchModuleContributionContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
 ) => {
   const disposables: Disposable[] = [];
+  const modeIdsByViewId = getModeIdsByViewId(metadata);
 
   for (const view of metadata.views) {
     if (!view.webview) continue;
+    const modeIds = modeIdsByViewId.get(view.id);
     disposables.push(
       registerWorkbenchExtensionViewWidget({
         workbench: ctx,
@@ -142,7 +158,13 @@ const registerExtensionViews = (
           rendererId: dashboardWidgetIds.extensionView,
           config: { ...(view.role === "modal" ? modalOverlayConfig : {}), projectId },
           resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-          eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
+          eligibleLocations:
+            modeIds || view.resourceKind
+              ? {
+                  modeIds,
+                  resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+                }
+              : undefined,
           panelMenuOwner: view.panelMenuOwner,
         },
       }),

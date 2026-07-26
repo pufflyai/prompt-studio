@@ -82,8 +82,11 @@ export const metadataWithLabMode = {
       label: "Lab",
       icon: "flask-conical",
       layout: {
-        panels: ["main"],
-        open: [{ target: "workbench.main", view: "extension-lab.labOverview" }],
+        panels: ["main", "secondary", "side"],
+        open: [
+          { target: "workbench.left", view: "extension-lab.labSidenav", pinned: true },
+          { target: "workbench.main", view: "extension-lab.labOverview" },
+        ],
       },
     },
   ],

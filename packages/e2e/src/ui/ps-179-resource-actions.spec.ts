@@ -71,16 +71,49 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     const ticketCard = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible({ timeout: 30_000 });
-    const ticketCardActions = ticketCard.getByRole("button", {
-      name: `Actions for ${ticket.title}`,
+    await ticketCard.getByText(ticket.title, { exact: true }).click();
+    await expect(
+      sidenav.getByRole("option", {
+        name: `${ticket.shorthand} ${ticket.title}`,
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    await expect(ticketCard).toBeVisible();
+
+    await ticketCard.click({ button: "right" });
+    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
+    await ticketCard.getByText(ticket.title, { exact: true }).click();
+    await expect(
+      sidenav.getByRole("option", {
+        name: `${ticket.shorthand} ${ticket.title}`,
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    await expect(ticketCard).toBeVisible();
+
+    await ticketCard.getByRole("button", { name: "Type", exact: true }).click();
+    const bugMenuItem = page.getByRole("menuitemradio", { name: "Bug", exact: true });
+    await expect(bugMenuItem).toBeVisible();
+    const updateResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
+        response.status() === 200,
+    );
+    await bugMenuItem.click();
+    await updateResponse;
+    await expect(bugMenuItem).toBeHidden();
+    await ticketCard.getByText(ticket.title, { exact: true }).click();
+    const selectedTicketRow = sidenav.getByRole("option", {
+      name: `${ticket.shorthand} ${ticket.title}`,
       exact: true,
     });
-    await ticketCardActions.click();
-    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
-    await ticketCardActions.click();
-    await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
-
-    await ticketCard.getByText(ticket.title, { exact: true }).click();
+    await expect(selectedTicketRow).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("content-editable").first()).toContainText("PS-179 keeps actions beside resources");
     const breadcrumbAction = page.locator("[data-workbench-breadcrumb-resource-actions]");
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();

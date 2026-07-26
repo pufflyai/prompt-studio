@@ -2,7 +2,6 @@ import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck, X } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-color-picker";
-import { suppressNextDataRendererCardClick } from "./card-interaction-guard";
 import type { AttributeBadge } from "./data-renderer-helpers";
 
 interface DataRendererAttributeBadgeProps {
@@ -11,11 +10,6 @@ interface DataRendererAttributeBadgeProps {
 }
 
 const stopRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
-const markRowActivationSuppression = () => suppressNextDataRendererCardClick();
-const suppressRowActivation = (event: { stopPropagation: () => void }) => {
-  markRowActivationSuppression();
-  event.stopPropagation();
-};
 
 const getSelectedValues = (badge: AttributeBadge) => {
   if (Array.isArray(badge.value)) return badge.value;
@@ -46,8 +40,8 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
   const selectedValues = getSelectedValues(badge);
   const attributeLabel = badge.attributeLabel ?? badge.label;
   const rowInteractionProps = {
-    onClickCapture: markRowActivationSuppression,
-    onPointerDownCapture: markRowActivationSuppression,
+    onClick: stopRowActivation,
+    onPointerDown: stopRowActivation,
     onKeyDown: stopRowActivation,
   };
 
@@ -86,10 +80,8 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
           textStyle="label/XS/medium"
           cursor="pointer"
           {...badgeStyleProps}
-          onClickCapture={markRowActivationSuppression}
           onClick={stopRowActivation}
-          onPointerDownCapture={markRowActivationSuppression}
-          onPointerDown={suppressRowActivation}
+          onPointerDown={stopRowActivation}
           onKeyDown={stopRowActivation}
         >
           {badgeContent}
@@ -102,10 +94,8 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
             bg="bg"
             p="0"
             gap="0"
-            onClickCapture={markRowActivationSuppression}
             onClick={stopRowActivation}
-            onPointerDownCapture={markRowActivationSuppression}
-            onPointerDown={suppressRowActivation}
+            onPointerDown={stopRowActivation}
             onKeyDown={stopRowActivation}
           >
             {!isMultiValue ? (

@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Archive, Trash2 } from "lucide-react";
 
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { DataRendererCard } from "./data-renderer-card";
@@ -28,22 +27,6 @@ export const Default: Story = {
 
 export const Selected: Story = {
   args: { title: "Implement user authentication flow", isSelected: true },
-};
-
-export const WithResourceActions: Story = {
-  args: {
-    title: "Implement user authentication flow",
-    contextMenuActions: [
-      { key: "archive", label: "Archive", icon: <Archive size={14} />, onClick: () => undefined },
-      {
-        key: "delete",
-        label: "Delete",
-        icon: <Trash2 size={14} />,
-        separatorBefore: true,
-        onClick: () => undefined,
-      },
-    ],
-  },
 };
 
 export const WithSingleBadge: Story = {

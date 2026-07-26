@@ -1,9 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { createProjectsModule } from "../projects/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createExtensionsModule } from "./module";
 import {
@@ -20,7 +22,9 @@ describe("createExtensionsModule mode layout", () => {
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const sidenavDisposable = workbench.registerModule(createSidenavModule());
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+    const projectsDisposable = workbench.registerModule(createProjectsModule());
 
     try {
       await flushMicrotasks();
@@ -29,12 +33,68 @@ describe("createExtensionsModule mode layout", () => {
 
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
+      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
+        dashboardWidgetIds.dashboardSidenav,
+        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+      ]);
+      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
+        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+      );
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+      ]);
+      expect(
+        workbench.layout.getWidget("dashboard-workbench.extension-view.extension-lab.labOverview")?.eligibleLocations,
+      ).toEqual({ modeIds: ["pstdio.extension-lab.lab"] });
+      expect(
+        workbench.layout.getWidget("dashboard-workbench.extension-view.extension-lab.labSidenav")?.eligibleLocations,
+      ).toEqual({ modeIds: ["pstdio.extension-lab.lab"] });
+    } finally {
+      projectsDisposable.dispose();
+      disposable.dispose();
+      sidenavDisposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("keeps the active extension mode layout mounted across webview metadata refreshes", async () => {
+    let nextMetadata = metadataWithLabMode;
+    const loadMetadata = mock(async () => nextMetadata);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const sidenavDisposable = workbench.registerModule(createSidenavModule());
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+
+      nextMetadata = {
+        ...metadataWithLabMode,
+        views: metadataWithLabMode.views.map((view) => ({
+          ...view,
+          webview: { ...view.webview, moduleUrl: `${view.webview.moduleUrl}?h=2` },
+        })),
+      };
+      getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
+      await flushMicrotasks();
+
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
+      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
+        dashboardWidgetIds.dashboardSidenav,
+        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+      ]);
+      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
+        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+      );
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);
     } finally {
       disposable.dispose();
+      sidenavDisposable.dispose();
+      getWriter("installed_extension_sources")?.truncateAndWrite([]);
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
