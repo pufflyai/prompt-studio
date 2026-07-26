@@ -116,6 +116,21 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
     setResetToken((token) => token + 1);
   }, [attributes, columnAttributeId, columnId, config.fields, open]);
 
+  // Fields can be added or withdrawn while the dialog is open. Seed the new
+  // ones and drop the withdrawn, so what is submitted always matches what is
+  // rendered — but leave everything the user has already filled in alone.
+  useEffect(() => {
+    if (!open) return;
+    const seeded = initialFieldValues(config.fields);
+    const declared = new Set(config.fields.map((field) => field.id));
+    setValues((current) => {
+      const kept = Object.entries(current).filter(([id]) => declared.has(id));
+      const added = Object.entries(seeded).filter(([id]) => !(id in current));
+      if (added.length === 0 && kept.length === Object.keys(current).length) return current;
+      return { ...Object.fromEntries(added), ...Object.fromEntries(kept) };
+    });
+  }, [config.fields, open]);
+
   // Seed attributes that showed up after opening, without touching ones the
   // user has already set.
   useEffect(() => {
