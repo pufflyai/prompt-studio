@@ -90,24 +90,28 @@ Created workspace PS-12_A1 for PS-12 at ~/.pstdio/workspaces/PS-12_A1
 ### Usage
 
 ```sh
-pst workspaces list
+pst workspaces list [--json]
 ```
 
 ### Flags
 
-None.
+| Flag     | Type      | Required | Description                                 |
+| -------- | --------- | -------- | ------------------------------------------- |
+| `--json` | `boolean` | no       | Print complete workspace records as JSON.   |
 
 ### Behavior
 
 1. Must run inside a linked Prompt Studio project.
 2. Reads active workspaces from API for the current project.
-3. Prints a table-like list with columns: `Workspace`, `Ticket`, `Branch`, `Path`.
+3. Prints a table-like list with columns: `Workspace`, `ID`, `Branch`, `Path`.
+4. With `--json`, prints the complete workspace records returned by the API.
 
 ### Output
 
 ```text
-Workspace   Ticket   Branch               Path
-PS-12_A1    PS-12    workspace/PS-12_A1   /Users/you/.pstdio/workspaces/PS-12_A1
+Workspace   ID                                     Branch               Path
+default     7d08f5cf-f788-4106-87e9-2f39d92576ea   main                 null
+PS-12_A1    5028ce50-4d5b-4cf4-8c68-3d257126673c   workspace/PS-12_A1   /Users/you/.pstdio/workspaces/PS-12_A1
 ```
 
 If no workspaces exist:
@@ -115,6 +119,8 @@ If no workspaces exist:
 ```text
 No active workspaces.
 ```
+
+JSON mode prints `[]` when no active workspaces exist.
 
 ### Errors
 
