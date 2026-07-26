@@ -19,7 +19,7 @@ Use Bun commands only.
 
 ```bash
 bun test <path-to-test>
-bun run --cwd extensions/<name> typecheck
+bun run --cwd <path-to-extension> typecheck
 ```
 
 Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
@@ -27,11 +27,11 @@ tests next to the relevant extension file or in the package that owns the runtim
 
 ## Install And Runtime Smoke
 
-Install a local extension source into an isolated Prompt Studio home and validate loaded contributions:
+Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/<name> --force
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions check
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 ```
 
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
@@ -43,34 +43,31 @@ treated as a production-like installed extension.
 If the extension contributes CLI commands, inspect the generated help and run a happy-path command:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst <extension-name> --help
-PSTDIO_HOME="$HOME/.pstdio-dev" pst <extension-name> <command> --help
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst <extension-name> --help
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst <extension-name> <command> --help
 ```
 
-If dashboard UI or webviews must be checked, run the isolated stack rather than a direct dev server:
+If dashboard UI or webviews must be checked, start the dashboard against the same throwaway home:
 
 ```bash
-bun run dev:isolated
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst
 ```
 
 Then exercise the route, menu item, settings panel, renderer, or command palette entry in the dashboard.
 
 ## Packaged Artifacts
 
-When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults:
+When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults,
+reinstall the extension and confirm the packaged asset set still loads:
 
 ```bash
-bun run --cwd scripts verify:packages
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
+PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 ```
 
-Keep packaged smoke-test expectations aligned with the current bundled artifact set.
+Keep any packaged smoke-test expectations aligned with the current bundled artifact set.
 
-## Final Repo Validation
+## Final Validation
 
-Before handoff for non-documentation changes:
-
-```bash
-bun run validate
-```
-
-If validation cannot run, record the exact command, failure, and reason.
+Before handoff for non-documentation changes, run the full validation command your project defines
+(for example `bun run validate`). If validation cannot run, record the exact command, failure, and reason.

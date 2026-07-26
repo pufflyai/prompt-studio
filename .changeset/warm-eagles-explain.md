@@ -1,6 +1,7 @@
 ---
 "pstdio": patch
 "@pstdio/workbench": patch
+"pstdio-skills": patch
 ---
 
-Carry PGlite and dashboard recovery steps in the error messages themselves instead of pointing at repository-only files
+Carry recovery and validation steps in shipped messages and skills instead of pointing at repository-only files

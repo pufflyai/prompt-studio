@@ -42,8 +42,8 @@ metadata:
 5. Validate the extension.
    - Read [references/validation.md](references/validation.md) for commands and smoke-test expectations.
    - Do not use `--skip-install` for user/global install smoke tests. Installed extensions must have package-local dependencies.
-   - Run focused tests first, then `bun run validate` before handoff unless the change is documentation-only.
-   - If bundled runtime artifacts changed, run `bun run --cwd scripts verify:packages`.
+   - Run focused tests first, then your project's full validation command before handoff unless the change is documentation-only.
+   - If bundled runtime artifacts changed, reinstall the extension and re-run `pst extensions check`.
 6. Add a changeset when changing released extension source or assets.
 
 ## References
