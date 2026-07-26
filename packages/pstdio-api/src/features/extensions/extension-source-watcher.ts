@@ -54,8 +54,14 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
 };
 
 const sourceIdentity = (sourcePath: string) => {
-  const stats = lstatSync(sourcePath);
-  return `${stats.dev.toString()}:${stats.ino.toString()}`;
+  const stats = lstatSync(sourcePath, { bigint: true });
+  return [
+    stats.dev.toString(),
+    stats.ino.toString(),
+    stats.birthtimeNs.toString(),
+    stats.ctimeNs.toString(),
+    stats.mtimeMs.toString(),
+  ].join(":");
 };
 
 const listWatchableDirectories = (sourcePath: string, matcher: ExtensionIgnoreMatcher, startPath: string) => {
