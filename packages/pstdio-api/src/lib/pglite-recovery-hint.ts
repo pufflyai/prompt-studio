@@ -5,5 +5,9 @@ const CHECKPOINT_FAILURE = /could not locate a valid checkpoint record|Aborted\(
 
 export const isPgliteCheckpointFailure = (output: string) => CHECKPOINT_FAILURE.test(output);
 
+// The repair step is meant to be pasted into a shell, so the path travels as a single
+// quoted argument — a home directory with a space would otherwise reach pg_resetwal split.
+const shellQuote = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
+
 export const pgliteRecoverySteps = (dbPath: string) =>
-  `Most data is usually recoverable: stop every pstdio process, back up ${dbPath}, then reset the write-ahead log with PostgreSQL 17's pg_resetwal (pg_resetwal -f ${dbPath})`;
+  `Most data is usually recoverable: stop every pstdio process, back up ${dbPath}, then reset the write-ahead log with PostgreSQL 17's pg_resetwal (pg_resetwal -f ${shellQuote(dbPath)})`;

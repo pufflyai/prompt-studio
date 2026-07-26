@@ -161,11 +161,14 @@ describe("ensureApi", () => {
 
   // The hint ships inside the published CLI, so it must carry the repair steps itself.
   it("spells out WAL recovery steps instead of pointing at repo-only docs", async () => {
+    // The db path is a fixture, so the startup logger has to be pointed somewhere writable —
+    // it otherwise derives its own path from the db path and tries to create that directory.
+    process.env.PSTDIO_LOG_PATH = logPath;
     process.env.PSTDIO_DB_PATH = "/home/dev/.pstdio/pstdio.db";
     const deps = capturingDeps("RuntimeError: Aborted(). Build with -sASSERTIONS for more info.\n");
 
     await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow(
-      "pg_resetwal -f /home/dev/.pstdio/pstdio.db",
+      "pg_resetwal -f '/home/dev/.pstdio/pstdio.db'",
     );
     await expect(ensureApi("http://localhost:3000", deps)).rejects.not.toThrow(/docs\//);
   });
