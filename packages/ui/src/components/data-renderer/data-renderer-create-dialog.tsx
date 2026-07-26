@@ -93,6 +93,9 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
   const [attributeValues, setAttributeValues] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Uncontrolled editors (Lexical) read their seed once on mount, so a reset has
+  // to remount the fields or the old text stays on screen over fresh state.
+  const [resetToken, setResetToken] = useState(0);
   const editableAttributes = editableCreateAttributes(attributes);
 
   useEffect(() => {
@@ -100,6 +103,7 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
     setValues(initialFieldValues(config.fields));
     setAttributeValues(initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId));
     setError("");
+    setResetToken((token) => token + 1);
   }, [attributes, columnAttributeId, columnId, config.fields, open]);
 
   const close = () => {
@@ -141,7 +145,7 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
             <Stack gap="md">
               {config.fields.map((field) => (
                 <CreateFieldControl
-                  key={field.id}
+                  key={`${field.id}:${resetToken.toString()}`}
                   field={field}
                   removeLabel={config.labels.removeFile}
                   value={values[field.id]}
