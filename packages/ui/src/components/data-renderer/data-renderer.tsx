@@ -300,7 +300,6 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
       onReorder,
     });
   };
-  const createColumn = createColumnId ? grouped.find((column) => column.key === createColumnId) : undefined;
 
   return (
     <Stack height="100%" minH="0" gap="0">
@@ -335,7 +334,6 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         <DataRendererCreateDialog
           open
           columnId={createColumnId}
-          columnLabel={createColumn?.label ?? createColumnId}
           columnAttributeId={settings.columnGrouping === NO_GROUPING ? undefined : settings.columnGrouping}
           attributes={attributes}
           config={createRow}

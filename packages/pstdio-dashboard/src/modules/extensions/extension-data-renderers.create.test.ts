@@ -17,9 +17,10 @@ const ticketsRecord = {
   createRow: {
     commandId: "pstdio-planner.create-ticket",
     columnParam: "statusId",
-    editableAttributesParam: "tagIds",
+    attributesParam: "attributes",
     params: {
-      content: { type: "longtext" as const, label: "Description", required: true },
+      content: { type: "markdown" as const, label: "Description", required: true },
+      files: { type: "files" as const, label: "Attach files", multiple: true },
     },
     attachments: {
       commandId: "pstdio-planner.attach-file",
@@ -94,7 +95,7 @@ describe("registerExtensionDataRenderers create form", () => {
           params: {
             content: "Created ticket",
             statusId: "ready",
-            tagIds: ["default-type-bug"],
+            attributes: { status: "ready", type: "default-type-bug" },
           },
         }),
       },

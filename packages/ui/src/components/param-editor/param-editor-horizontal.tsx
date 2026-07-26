@@ -24,12 +24,13 @@ const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, 
 
 export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const { params = [], groups = [], defaultValues, onChange, readOnly } = props;
+  const isReadOnly = (param: Param) => readOnly || param.readOnly;
 
   const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
     <NumberInput
       hideLabel
       hideSlider
-      readOnly={readOnly}
+      readOnly={isReadOnly(param)}
       id={param.id}
       key={param.id}
       name={param.name}
@@ -46,7 +47,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const renderTextParam = (param: Extract<Param, { type: "text" }>) => (
     <HorizontalTextInput
       hideLabel
-      readOnly={readOnly}
+      readOnly={isReadOnly(param)}
       id={param.id}
       key={param.id}
       name={param.name}
@@ -60,7 +61,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const renderSelectionParam = (param: Extract<Param, { type: "selection" }>) => (
     <SelectionInput
       hideLabel
-      readOnly={readOnly}
+      readOnly={isReadOnly(param)}
       id={param.id}
       key={param.id}
       name={param.name}
@@ -71,13 +72,15 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
       multiSelect={param.multiSelect}
       tooltipPlacement="top"
       placeholder={param.placeholder}
+      clearable={param.clearable}
+      disabled={param.disabled}
     />
   );
 
   const renderDateParam = (param: Extract<Param, { type: "date" }>) => (
     <DateInput
       hideLabel
-      readOnly={readOnly}
+      readOnly={isReadOnly(param)}
       id={param.id}
       key={param.id}
       name={param.name}
@@ -93,7 +96,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const renderColorParam = (param: Extract<Param, { type: "color" }>) => (
     <ColorInput
       hideLabel
-      readOnly={readOnly}
+      readOnly={isReadOnly(param)}
       id={param.id}
       key={param.id}
       name={param.name}

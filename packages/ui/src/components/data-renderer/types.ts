@@ -98,31 +98,52 @@ export interface DataRendererSettings {
 
 export type DataRendererFilterState = Record<string, string[]>;
 
-export type DataRendererCreateFieldType = "text" | "longtext" | "number" | "boolean" | "select" | "multi-select";
+export type DataRendererCreateFieldType =
+  | "text"
+  | "longtext"
+  | "markdown"
+  | "number"
+  | "boolean"
+  | "select"
+  | "multi-select"
+  | "files";
 
 export interface DataRendererCreateField {
   id: string;
   label: string;
   description?: string;
+  placeholder?: string;
   type: DataRendererCreateFieldType;
   required?: boolean;
   defaultValue?: unknown;
   options?: EnumOption[];
+  /** `files` fields only. */
+  multiple?: boolean;
+  accept?: string;
+}
+
+/** Chrome copy is supplied by the caller so the dialog ships no strings of its own. */
+export interface DataRendererCreateLabels {
+  cancel: string;
+  properties: string;
+  submitError: string;
+  removeFile: string;
 }
 
 export interface DataRendererCreateRowConfig {
   title: string;
   submitLabel: string;
   fields: DataRendererCreateField[];
-  includeEditableAttributes?: boolean;
-  allowAttachments?: boolean;
+  labels: DataRendererCreateLabels;
 }
 
 export interface DataRendererCreateSubmission {
   columnId: string;
   columnAttributeId?: string;
+  /** Declared field values, excluding `files` fields — those arrive as `files`. */
   values: Record<string, unknown>;
-  attributeValues: Record<string, string | string[]>;
+  /** Every editable attribute the user set, keyed by attribute id. */
+  attributeValues: Record<string, unknown>;
   files: File[];
 }
 

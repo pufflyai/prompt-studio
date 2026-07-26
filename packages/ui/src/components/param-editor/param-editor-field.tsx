@@ -88,6 +88,8 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           options={param.options}
           multiSelect={param.multiSelect}
           placeholder={param.placeholder}
+          clearable={param.clearable}
+          disabled={param.disabled}
         />
       );
     case "date":

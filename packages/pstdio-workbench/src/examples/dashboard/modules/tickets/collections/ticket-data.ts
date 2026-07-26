@@ -95,7 +95,22 @@ export const registerTicketDataRenderer = (ctx: WorkbenchModuleContributionConte
     createRow: {
       title: "New ticket",
       submitLabel: "Create ticket",
-      fields: [{ id: "content", label: "Description", type: "longtext", required: true }],
+      fields: [
+        {
+          id: "content",
+          label: "Description",
+          placeholder: "Describe the ticket...",
+          type: "markdown",
+          required: true,
+        },
+        { id: "files", label: "Attach files", type: "files", multiple: true },
+      ],
+      labels: {
+        cancel: "Cancel",
+        properties: "Properties",
+        submitError: "Could not create ticket",
+        removeFile: "Remove file",
+      },
     },
     onCreateRow: (submission) => {
       ctx.notifications.show({ level: "info", title: `Create ticket in ${submission.columnId}` });

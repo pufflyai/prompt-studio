@@ -1,13 +1,16 @@
+import type { Localizable } from "../l10n";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 
 export type ParamType =
   | "text"
   | "longtext"
+  | "markdown"
   | "number"
   | "boolean"
   | "select"
   | "multi-select"
+  | "files"
   | "repo"
   | "harness"
   | "template"
@@ -22,8 +25,8 @@ type ParamRequired<TRequired extends boolean | undefined> = TRequired extends tr
     : { required?: boolean };
 
 type ParamBase<TValue, TRequired extends boolean | undefined = boolean | undefined> = {
-  label?: string;
-  description?: string;
+  label?: Localizable<string>;
+  description?: Localizable<string>;
   defaultValue?: TValue;
   metadata?: JsonObject;
 } & ParamRequired<TRequired>;
@@ -39,8 +42,27 @@ export type LongTextParam<TRequired extends boolean | undefined = boolean | unde
   type: "longtext";
 };
 
+// Markdown source text. Rendered with the rich-text editor rather than a plain
+// textarea, so formatting survives the round trip.
+export type MarkdownParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  string,
+  TRequired
+> & {
+  type: "markdown";
+  placeholder?: Localizable<string>;
+};
+
 export type NumberParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<number, TRequired> & {
   type: "number";
+};
+
+// Files chosen by the user. The value reaching a command is the list of upload
+// refs, not the browser File objects — the host uploads before it invokes.
+export type FilesParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
+  type: "files";
+  multiple?: boolean;
+  /** Passed through to the picker, e.g. "image/*". */
+  accept?: string;
 };
 
 export type BooleanParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -111,10 +133,12 @@ export type ListParam<TRequired extends boolean | undefined = boolean | undefine
 export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefined = boolean | undefined> =
   | TextParam<TRequired>
   | LongTextParam<TRequired>
+  | MarkdownParam<TRequired>
   | NumberParam<TRequired>
   | BooleanParam<TRequired>
   | SelectParam<TRequired>
   | MultiSelectParam<TRequired>
+  | FilesParam<TRequired>
   | RepoParam<TRequired>
   | HarnessParam<TRequired>
   | TemplateParam<TRequired>

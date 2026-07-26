@@ -17,7 +17,6 @@ import {
   type DataRendererRow,
   defaultResolveRowActionResource,
   defaultResolveRowResource,
-  editableAttributeValues,
   executeDataRendererCommand,
   isQueryResult,
   type Localizer,
@@ -119,9 +118,13 @@ const toCreateRowConfig = (record: WorkbenchExtensionDataRendererRecord, localiz
   return {
     title: localize(record.createRow.title, "Create row"),
     submitLabel: localize(record.createRow.submitLabel, "Create"),
-    fields: toCreateFields(record),
-    includeEditableAttributes: Boolean(record.createRow.editableAttributesParam),
-    allowAttachments: Boolean(record.createRow.attachments),
+    fields: toCreateFields(record, localize),
+    labels: {
+      cancel: localize(record.createRow.labels?.cancel, "Cancel"),
+      properties: localize(record.createRow.labels?.properties, "Properties"),
+      submitError: localize(record.createRow.labels?.submitError, "Could not create resource."),
+      removeFile: localize(record.createRow.labels?.removeFile, "Remove file"),
+    },
   };
 };
 
@@ -149,9 +152,7 @@ const toCreateRowHandler = (
     const params = mergeParams(
       submission.values,
       contribution.columnParam ? { [contribution.columnParam]: submission.columnId } : undefined,
-      contribution.editableAttributesParam
-        ? { [contribution.editableAttributesParam]: editableAttributeValues(submission) }
-        : undefined,
+      contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
     );
     const created = await runMutation(record, contribution.commandId, params);
     await adapter.onAfterCreate?.({ record, created, submission });

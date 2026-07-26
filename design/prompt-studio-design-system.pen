@@ -23593,6 +23593,624 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GKZfm",
+                  "name": "Option picker",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vDx5X",
+                      "name": "Card Head",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lnQq2",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Option picker",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "sAAVd",
+                          "name": "Desc",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "One dropdown behind every option control — selection params and editable resource params alike. Trigger shows the value alone, never the field name; the name is the placeholder. A single-select clears by re-picking its selected option, so the list carries no extra \"none\" row pretending to be a value.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CVcXd",
+                      "name": "Demo",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Kc63a",
+                          "name": "Triggers",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JK8qT",
+                              "name": "Ready",
+                              "opacity": 0.6,
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "L4ZDRh",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "circle",
+                                  "library": "lucide",
+                                  "fill": "$ds-info"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ncrZb",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "Ready",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "JFwX0",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "k7nAt",
+                              "name": "Type",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cd8a8",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "Type",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "FzgXY",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FwLNf",
+                              "name": "High, Low",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Xiluc",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "flame",
+                                  "library": "lucide",
+                                  "fill": "$ds-warning"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "txo98",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "High, Low",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "X3QFH",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y7ZpI",
+                          "name": "Menu",
+                          "width": 260,
+                          "fill": "$ds-elevated",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "padding": 6,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YULt2",
+                              "name": "Bug",
+                              "width": "fill_container",
+                              "height": 28,
+                              "fill": "$ds-bg-active",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "mpG6K",
+                                  "name": "Icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "bug",
+                                  "library": "lucide",
+                                  "fill": "$ds-danger"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "AgyNv",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "Bug",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "wbbXd",
+                                  "name": "Sp",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "WB5rE",
+                                  "name": "Check",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rwZ6U",
+                              "name": "Feature",
+                              "width": "fill_container",
+                              "height": 28,
+                              "fill": "#00000000",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "EtCUU",
+                                  "name": "Icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "sparkles",
+                                  "library": "lucide",
+                                  "fill": "$ds-accent"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "b5hmYO",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "Feature",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "u0VEA",
+                                  "name": "Sp",
+                                  "width": "fill_container",
+                                  "height": 1
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "J08KX",
+                  "name": "Parameter editor · Horizontal",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aKqM0",
+                      "name": "Card Head",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "S7e48O",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Parameter editor · Horizontal",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Q9hWv",
+                          "name": "Desc",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The same params laid out as a wrapping row of label-less controls. Used where properties sit beside their subject rather than in a panel — the create dialog's Properties zone and any inline property strip. Labels move into each control's placeholder, so a value reads on its own and an unset control still names itself.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Pi5CM",
+                      "name": "Demo",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "S221P",
+                          "name": "Caption",
+                          "fill": "$ds-fg",
+                          "content": "Properties",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 11,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "iCp66",
+                          "name": "Row",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lZ05R",
+                              "name": "Ready",
+                              "opacity": 0.6,
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "s3iBBI",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "circle",
+                                  "library": "lucide",
+                                  "fill": "$ds-info"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "JXPo6",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "Ready",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "cYU7W",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uOHQF",
+                              "name": "Bug",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "U4WB5",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "bug",
+                                  "library": "lucide",
+                                  "fill": "$ds-danger"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "RGAUc",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "Bug",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "OSqpd",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "V9wCz",
+                              "name": "Priority",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "t3fN8m",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "Priority",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "E6g5U7",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mNE4i",
+                              "name": "Assignee",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w9eP2s",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "Assignee",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "C0MbA",
+                                  "name": "Chevron",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uA1iA",
+                              "name": "Estimate",
+                              "height": 32,
+                              "fill": "$ds-bg",
+                              "cornerRadius": "$btn-radius",
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 7,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iAnaZ",
+                                  "name": "Label",
+                                  "fill": "$ds-fg",
+                                  "content": "3",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "K4PAo",
+                          "name": "Note",
+                          "fill": "$ds-fg-subtle",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Locked controls stay controls — greyed, still showing their icon — never collapsed to plain text.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }

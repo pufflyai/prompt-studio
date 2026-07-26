@@ -139,9 +139,22 @@ const CreateFormWrapper = () => {
         createRow={{
           title: "New ticket",
           submitLabel: "Create ticket",
-          fields: [{ id: "content", label: "Description", type: "longtext", required: true }],
-          includeEditableAttributes: true,
-          allowAttachments: true,
+          fields: [
+            {
+              id: "content",
+              label: "Description",
+              placeholder: "Describe the ticket...",
+              type: "markdown",
+              required: true,
+            },
+            { id: "files", label: "Attach files", type: "files", multiple: true },
+          ],
+          labels: {
+            cancel: "Cancel",
+            properties: "Properties",
+            submitError: "Could not create ticket",
+            removeFile: "Remove file",
+          },
         }}
         onCreateRow={createRow}
         getBoardColumnConfig={() => ({ canCreate: true })}

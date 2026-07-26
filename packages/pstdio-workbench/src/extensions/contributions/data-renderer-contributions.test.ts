@@ -229,9 +229,10 @@ describe("registerWorkbenchExtensionDataRenderers create forms", () => {
         title: "New ticket",
         submitLabel: "Create ticket",
         columnParam: "statusId",
-        editableAttributesParam: "tagIds",
+        attributesParam: "attributes",
         params: {
-          content: { type: "longtext", label: "Description", required: true },
+          content: { type: "markdown", label: "Description", required: true },
+          files: { type: "files", label: "Attach files", multiple: true },
         },
         attachments: {
           commandId: "pstdio-planner.attach-file",
@@ -265,9 +266,11 @@ describe("registerWorkbenchExtensionDataRenderers create forms", () => {
     expect(renderer?.createRow).toMatchObject({
       title: "New ticket",
       submitLabel: "Create ticket",
-      fields: [{ id: "content", type: "longtext", label: "Description", required: true }],
-      includeEditableAttributes: true,
-      allowAttachments: true,
+      fields: [
+        { id: "content", type: "markdown", label: "Description", required: true },
+        { id: "files", type: "files", label: "Attach files", multiple: true },
+      ],
+      labels: { cancel: "Cancel", properties: "Properties", removeFile: "Remove file" },
     });
 
     await renderer?.onCreateRow?.({
@@ -282,13 +285,19 @@ describe("registerWorkbenchExtensionDataRenderers create forms", () => {
       files: [attachment],
     });
 
+    // Attributes travel as one structured param keyed by attribute id, so the
+    // command can tell status from tags instead of receiving a flattened bag.
     expect(calls).toEqual([
       {
         commandId: "pstdio-planner.create-ticket",
         params: {
           content: "Fix ticket navigation",
           statusId: "ready",
-          tagIds: ["default-type-bug", "default-priority-high"],
+          attributes: {
+            status: "ready",
+            type: "default-type-bug",
+            priority: ["default-priority-high"],
+          },
         },
       },
     ]);

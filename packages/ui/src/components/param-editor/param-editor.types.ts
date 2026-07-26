@@ -4,6 +4,8 @@ export interface BaseParam {
   id: string;
   name: string;
   description?: string;
+  /** Locks this one param while the rest of the editor stays editable. */
+  readOnly?: boolean;
 }
 
 export interface NumberParam extends BaseParam {
@@ -20,12 +22,27 @@ export interface TextParam extends BaseParam {
   singleLine?: boolean;
 }
 
+export interface SelectionOption {
+  id: string;
+  name: string;
+  icon?: string;
+  /** Palette key (e.g. "blue") applied to the option's icon. */
+  color?: string;
+}
+
 export interface SelectionParam extends BaseParam {
   type: "selection";
   defaultValue: string | string[];
-  options: { id: string; name: string; icon?: string }[];
+  options: SelectionOption[];
   multiSelect?: boolean;
   placeholder?: string;
+  /** Adds a "clear" row so a single-select can be returned to unset. */
+  clearable?: boolean;
+  /**
+   * Renders the control inert but still as a control — unlike `readOnly`, which
+   * collapses it to plain text and drops the option's icon.
+   */
+  disabled?: boolean;
 }
 
 export interface DateParam extends BaseParam {

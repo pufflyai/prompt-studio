@@ -51,12 +51,20 @@ const extensionDataRendererCreateRowSchema = z.object({
   submitLabel: localizableStringSchema.optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
-  editableAttributesParam: z.string().optional(),
+  attributesParam: z.string().optional(),
   attachments: z
     .object({
       commandId: z.string(),
       resourceParam: z.string(),
       fileParam: z.string(),
+    })
+    .optional(),
+  labels: z
+    .object({
+      cancel: localizableStringSchema.optional(),
+      properties: localizableStringSchema.optional(),
+      submitError: localizableStringSchema.optional(),
+      removeFile: localizableStringSchema.optional(),
     })
     .optional(),
 });

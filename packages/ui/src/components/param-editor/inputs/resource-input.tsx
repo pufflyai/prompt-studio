@@ -1,12 +1,12 @@
-import { Box, Button, Flex, Icon, Menu } from "@chakra-ui/react";
-import { Check, ChevronDown, Plus, Square, SquareCheck, X } from "lucide-react";
+import { Box, Flex, Icon } from "@chakra-ui/react";
+import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { ListRow } from "../../list-row/list-row";
 import { getIconComponent } from "../../primitives/icon-color-picker";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ResourceChipList } from "./resource-input-chips";
+import { SelectionMenu } from "./selection-menu";
 
 interface ResourceInputProps {
   id: string;
@@ -59,73 +59,22 @@ interface ResourceSelectMenuProps {
   options: ResourceOption[];
   selectedIds: string[];
   multiSelect: boolean;
-  name: string;
-  emptyText?: string;
   onToggle: (optionId: string) => void;
-  onClear: () => void;
 }
 
-const selectionIndicator = (multiSelect: boolean, selected: boolean) => {
-  if (multiSelect)
-    return <Icon as={selected ? SquareCheck : Square} boxSize="14px" color={selected ? "fg" : "fg.muted"} />;
-  return selected ? <Icon as={Check} boxSize="14px" color="fg" /> : null;
-};
-
+// Resource params share the editor's one dropdown, so a ticket property and a
+// command param cannot drift into two looks.
 const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
-  const { triggerLabel, options, selectedIds, multiSelect, name, emptyText, onToggle, onClear } = props;
-  const noneSelected = selectedIds.length === 0;
+  const { triggerLabel, options, selectedIds, multiSelect, onToggle } = props;
 
   return (
-    <Menu.Root closeOnSelect={!multiSelect}>
-      <Menu.Trigger asChild>
-        <Button size="xs" variant="subtle" gap="2xs" justifyContent="space-between">
-          {triggerLabel}
-          <Icon as={ChevronDown} boxSize="12px" color="fg.muted" />
-        </Button>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content bg="bg">
-          {!multiSelect ? (
-            <Menu.Item value="__clear" asChild>
-              <ListRow
-                asChild
-                variant="full-width"
-                role="menuitemradio"
-                aria-checked={noneSelected}
-                id="__clear"
-                label={emptyText ?? `No ${name}`}
-                icon={<Icon as={X} boxSize="16px" />}
-                iconColor="gray.500"
-                isSelected={noneSelected}
-                endContent={selectionIndicator(false, noneSelected)}
-                onActivate={onClear}
-              />
-            </Menu.Item>
-          ) : null}
-          {options.map((option) => {
-            const selected = selectedIds.includes(option.id);
-            return (
-              <Menu.Item key={option.id} value={option.id} asChild>
-                <ListRow
-                  asChild
-                  variant="full-width"
-                  role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
-                  aria-checked={selected}
-                  id={option.id}
-                  label={option.name}
-                  icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
-                  iconColor={`${option.color ?? "gray"}.500`}
-                  tooltip={option.description ?? undefined}
-                  isSelected={selected}
-                  endContent={selectionIndicator(multiSelect, selected)}
-                  onActivate={() => onToggle(option.id)}
-                />
-              </Menu.Item>
-            );
-          })}
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
+    <SelectionMenu
+      triggerLabel={triggerLabel}
+      options={options}
+      selectedIds={selectedIds}
+      multiSelect={multiSelect}
+      onToggle={onToggle}
+    />
   );
 };
 
@@ -189,20 +138,16 @@ export const ResourceInput = (props: ResourceInputProps) => {
       scheduleChange(next);
       return;
     }
-    setValue(optionId);
-    emitChange(optionId);
+    // Re-picking the selected option clears it.
+    const next = selectedIds.includes(optionId) ? "" : optionId;
+    setValue(next);
+    emitChange(next);
   };
 
   const removeOption = (optionId: string) => {
     const next = selectedIds.filter((entry) => entry !== optionId);
     setValue(next);
     scheduleChange(next);
-  };
-
-  const clearSelection = () => {
-    const next = multiSelect ? [] : "";
-    setValue(next);
-    emitChange(next);
   };
 
   if (multiSelect) {
@@ -226,10 +171,7 @@ export const ResourceInput = (props: ResourceInputProps) => {
           options={options}
           selectedIds={selectedIds}
           multiSelect
-          name={name}
-          emptyText={emptyText}
           onToggle={toggleOption}
-          onClear={clearSelection}
         />
       </Flex>
     );
@@ -261,10 +203,7 @@ export const ResourceInput = (props: ResourceInputProps) => {
           options={options}
           selectedIds={selectedIds}
           multiSelect={false}
-          name={name}
-          emptyText={emptyText}
           onToggle={toggleOption}
-          onClear={clearSelection}
         />
       }
     />

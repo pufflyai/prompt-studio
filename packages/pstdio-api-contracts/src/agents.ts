@@ -7,9 +7,13 @@ export const agentSkillsLayoutSchema = z.object({
   global_dir: z.string(),
 });
 
+// Mirrors ParamDescriptor: labels are Localizable so a harness can ship
+// translated copy for its run params.
+const localizableSchema = z.union([z.string(), z.object({ $l10n: z.string(), default: z.string().optional() })]);
+
 const harnessParamBaseSchema = z.object({
-  label: z.string().optional(),
-  description: z.string().optional(),
+  label: localizableSchema.optional(),
+  description: localizableSchema.optional(),
   required: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

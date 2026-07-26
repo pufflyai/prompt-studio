@@ -17,7 +17,13 @@ interface HarnessParamControlsProps {
   disabled?: boolean;
 }
 
-const labelFor = (key: string, label: string | undefined) => label ?? key.replace(/[-_]/g, " ");
+// Harness param labels are Localizable; resolve before rendering so an l10n
+// object never reaches the DOM as "[object Object]".
+const labelFor = (key: string, label: string | { $l10n: string; default?: string } | undefined) => {
+  if (typeof label === "string") return label;
+  if (label) return label.default ?? label.$l10n;
+  return key.replace(/[-_]/g, " ");
+};
 
 const removeOverride = (overrides: HarnessParamValues, key: string) => {
   const { [key]: _removed, ...rest } = overrides;

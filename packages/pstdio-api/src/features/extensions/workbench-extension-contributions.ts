@@ -30,7 +30,8 @@ const toDataRendererCreateRow = (
     submitLabel: createRow.submitLabel,
     columnParam: createRow.columnParam,
     params: createRow.params as NonNullable<WorkbenchExtensionDataRendererRecord["createRow"]>["params"],
-    editableAttributesParam: createRow.editableAttributesParam,
+    attributesParam: createRow.attributesParam,
+    labels: createRow.labels,
     attachments:
       createRow.attachments && attachmentCommandId
         ? {

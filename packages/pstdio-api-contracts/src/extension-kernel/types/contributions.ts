@@ -278,13 +278,23 @@ export interface DataRendererCreateRowContribution<TParams extends ParamObjectSc
   submitLabel?: Localizable<string>;
   columnParam?: string;
   params?: TParams;
-  /** Flatten selected editable enum attribute option ids into this command parameter. */
-  editableAttributesParam?: string;
+  /**
+   * Pass the resource's editable attribute values to the create command as one
+   * structured parameter, keyed by attribute id. The command destructures it.
+   */
+  attributesParam?: string;
   /** Upload selected files after creation, then invoke this command once per uploaded file. */
   attachments?: {
     command: CommandRef<Struct, unknown> | string;
     resourceParam: string;
     fileParam: string;
+  };
+  /** Dialog chrome copy. Defaults are English; supply l10n() values to translate. */
+  labels?: {
+    cancel?: Localizable<string>;
+    properties?: Localizable<string>;
+    submitError?: Localizable<string>;
+    removeFile?: Localizable<string>;
   };
 }
 

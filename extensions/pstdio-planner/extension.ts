@@ -1,4 +1,4 @@
-import { commandRef, defineExtension, l10n, packageAsset, params, sessionEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { cleanupLegacyWorkspaceStatus } from "./src/data/cleanup-legacy-workspace-status";
@@ -105,14 +105,33 @@ export default defineExtension({
         columnParam: "statusId",
         title: l10n("dataRenderers.tickets.createRow.title", "New ticket"),
         submitLabel: l10n("dataRenderers.tickets.createRow.submitLabel", "Create ticket"),
+        // Declared literally rather than via params.markdown()/params.files():
+        // the builders ship in @pstdio/sdk > 0.15.0, and this extension resolves
+        // the published SDK at runtime. Swap to the builders after that release.
         params: {
-          content: params.longText({ label: "Description", required: true }),
+          content: {
+            type: "markdown",
+            label: l10n("dataRenderers.tickets.createRow.content.label", "Description"),
+            placeholder: l10n("dataRenderers.tickets.createRow.content.placeholder", "Describe the ticket..."),
+            required: true,
+          },
+          files: {
+            type: "files",
+            label: l10n("dataRenderers.tickets.createRow.attachments.label", "Attach files"),
+            multiple: true,
+          },
         },
-        editableAttributesParam: "tagIds",
+        attributesParam: "attributes",
         attachments: {
           command: commandRef("pstdio-planner.attach-file"),
           resourceParam: "ticketId",
           fileParam: "ref",
+        },
+        labels: {
+          cancel: l10n("dataRenderers.tickets.createRow.cancel", "Cancel"),
+          properties: l10n("dataRenderers.tickets.createRow.properties", "Properties"),
+          submitError: l10n("dataRenderers.tickets.createRow.submitError", "Could not create ticket"),
+          removeFile: l10n("dataRenderers.tickets.createRow.removeFile", "Remove file"),
         },
       },
       rowActions: [

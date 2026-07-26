@@ -4,7 +4,7 @@ import type {
   AttributeDescriptor,
   DataRendererContribution,
   DataRendererCreateField,
-  DataRendererCreateSubmission,
+  DataRendererCreateFieldType,
   ResourceRef,
 } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
@@ -124,51 +124,58 @@ const asParams = (value: unknown): Record<string, unknown> | undefined =>
 
 const hasCommandParameters = (params: Record<string, unknown> | undefined) => Object.keys(params ?? {}).length > 0;
 
+const CREATE_FIELD_TYPES: ReadonlySet<string> = new Set<DataRendererCreateFieldType>([
+  "text",
+  "longtext",
+  "markdown",
+  "number",
+  "boolean",
+  "select",
+  "multi-select",
+  "files",
+]);
+
 const toCreateField = (
   id: string,
   descriptor: NonNullable<NonNullable<WorkbenchExtensionDataRendererRecord["createRow"]>["params"]>[string],
-): DataRendererCreateField | undefined => {
-  if (
-    descriptor.type !== "text" &&
-    descriptor.type !== "longtext" &&
-    descriptor.type !== "number" &&
-    descriptor.type !== "boolean" &&
-    descriptor.type !== "select" &&
-    descriptor.type !== "multi-select"
-  )
-    return undefined;
+  localize: Localizer,
+): DataRendererCreateField => {
+  // Dropping an unsupported type renders a form silently missing what the
+  // extension declared, so refuse the contribution instead.
+  if (!CREATE_FIELD_TYPES.has(descriptor.type))
+    throw new Error(
+      `Create form cannot render param "${id}" of type "${descriptor.type}". Supported types: ${[...CREATE_FIELD_TYPES].join(", ")}.`,
+    );
 
   const options =
     "options" in descriptor && Array.isArray(descriptor.options)
       ? (descriptor.options as Array<{ value: string; label: string; icon?: string }>)
       : [];
+  const optional = descriptor as { placeholder?: unknown; multiple?: unknown; accept?: unknown };
 
   return {
     id,
-    label: typeof descriptor.label === "string" ? descriptor.label : id,
-    description: typeof descriptor.description === "string" ? descriptor.description : undefined,
-    type: descriptor.type,
+    label: localize(descriptor.label, id),
+    description: descriptor.description === undefined ? undefined : localize(descriptor.description),
+    placeholder: optional.placeholder === undefined ? undefined : localize(optional.placeholder),
+    type: descriptor.type as DataRendererCreateFieldType,
     required: descriptor.required === true,
     defaultValue: descriptor.defaultValue,
     options:
       descriptor.type === "select" || descriptor.type === "multi-select"
-        ? options.map((option) => ({ value: option.value, label: option.label, icon: option.icon }))
+        ? options.map((option) => ({
+            value: option.value,
+            label: localize(option.label, option.value),
+            icon: option.icon,
+          }))
         : undefined,
+    multiple: descriptor.type === "files" ? optional.multiple !== false : undefined,
+    accept: descriptor.type === "files" && typeof optional.accept === "string" ? optional.accept : undefined,
   };
 };
 
-export const toCreateFields = (record: WorkbenchExtensionDataRendererRecord) =>
-  Object.entries(record.createRow?.params ?? {}).flatMap(([id, descriptor]) => {
-    const field = toCreateField(id, descriptor);
-    return field ? [field] : [];
-  });
-
-export const editableAttributeValues = (submission: DataRendererCreateSubmission) =>
-  Object.entries(submission.attributeValues).flatMap(([attributeId, value]) => {
-    if (attributeId === submission.columnAttributeId) return [];
-    if (Array.isArray(value)) return value;
-    return value ? [value] : [];
-  });
+export const toCreateFields = (record: WorkbenchExtensionDataRendererRecord, localize: Localizer) =>
+  Object.entries(record.createRow?.params ?? {}).map(([id, descriptor]) => toCreateField(id, descriptor, localize));
 
 const createDataRendererSlot = (
   context: WorkbenchExtensionCommandContext,

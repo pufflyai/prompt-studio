@@ -1,19 +1,19 @@
-import { Button, CloseButton, Dialog, HStack, Input, Menu, Stack, Text, Textarea, Wrap } from "@chakra-ui/react";
-import { Check, ChevronDown, Paperclip, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
+import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
+import { CreateFieldControl } from "./data-renderer-create-field";
 import { getEnumOptions } from "./data-renderer-helpers";
 import type {
   AttributeDescriptor,
   DataRendererCreateField,
   DataRendererCreateRowConfig,
   DataRendererCreateSubmission,
-  EnumOption,
 } from "./types";
 
 interface DataRendererCreateDialogProps {
   open: boolean;
   columnId: string;
-  columnLabel: string;
   columnAttributeId?: string;
   attributes: AttributeDescriptor[];
   config: DataRendererCreateRowConfig;
@@ -21,13 +21,14 @@ interface DataRendererCreateDialogProps {
   onSubmit: (submission: DataRendererCreateSubmission) => Promise<void> | void;
 }
 
+const emptyValue = (field: DataRendererCreateField) => {
+  if (field.type === "files" || field.type === "multi-select") return [];
+  if (field.type === "boolean") return false;
+  return "";
+};
+
 const initialFieldValues = (fields: DataRendererCreateField[]) =>
-  Object.fromEntries(
-    fields.map((field) => [
-      field.id,
-      field.defaultValue ?? (field.type === "multi-select" ? [] : field.type === "boolean" ? false : ""),
-    ]),
-  );
+  Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? emptyValue(field)]));
 
 const isFilled = (field: DataRendererCreateField, value: unknown) => {
   if (!field.required) return true;
@@ -36,137 +37,10 @@ const isFilled = (field: DataRendererCreateField, value: unknown) => {
   return value !== undefined && value !== null;
 };
 
-const selectedOptionLabel = (options: EnumOption[], value: unknown, fallback: string) => {
-  const values = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
-  const labels = values.map((item) => options.find((option) => option.value === item)?.label ?? item);
-  return labels.length > 0 ? labels.join(", ") : fallback;
-};
-
-const SelectionControl = (props: {
-  disabled: boolean;
-  label: string;
-  multi: boolean;
-  options: EnumOption[];
-  value: unknown;
-  onChange: (value: string | string[]) => void;
-}) => {
-  const { disabled, label, multi, options, value, onChange } = props;
-  const selected = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
-  const toggle = (optionValue: string) => {
-    if (!multi) {
-      onChange(optionValue);
-      return;
-    }
-    onChange(
-      selected.includes(optionValue) ? selected.filter((item) => item !== optionValue) : [...selected, optionValue],
-    );
-  };
-
-  return (
-    <Menu.Root closeOnSelect={!multi}>
-      <Menu.Trigger asChild>
-        <Button size="sm" variant="outline" disabled={disabled}>
-          {selectedOptionLabel(options, value, label)}
-          <ChevronDown size={14} aria-hidden="true" />
-        </Button>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content>
-          {options.map((option) => (
-            <Menu.Item key={option.value} value={option.value} onClick={() => toggle(option.value)}>
-              <HStack gap="2">
-                {selected.includes(option.value) ? <Check size={14} aria-hidden="true" /> : null}
-                <Text>{option.label}</Text>
-              </HStack>
-            </Menu.Item>
-          ))}
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
-  );
-};
-
-const CreateFieldInput = (props: {
-  disabled: boolean;
-  field: DataRendererCreateField;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) => {
-  const { disabled, field, value, onChange } = props;
-
-  if (field.type === "longtext")
-    return (
-      <Textarea
-        aria-label={field.label}
-        minH="120px"
-        size="sm"
-        value={typeof value === "string" ? value : ""}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    );
-
-  if (field.type === "select" || field.type === "multi-select")
-    return (
-      <SelectionControl
-        disabled={disabled}
-        label={`Select ${field.label.toLowerCase()}`}
-        multi={field.type === "multi-select"}
-        options={field.options ?? []}
-        value={value}
-        onChange={onChange}
-      />
-    );
-
-  if (field.type === "boolean")
-    return (
-      <Button size="sm" variant="outline" disabled={disabled} onClick={() => onChange(value !== true)}>
-        {value === true ? "Enabled" : "Disabled"}
-      </Button>
-    );
-
-  return (
-    <Input
-      aria-label={field.label}
-      size="sm"
-      type={field.type === "number" ? "number" : "text"}
-      value={typeof value === "string" || typeof value === "number" ? value : ""}
-      disabled={disabled}
-      onChange={(event) =>
-        onChange(field.type === "number" && event.target.value ? Number(event.target.value) : event.target.value)
-      }
-    />
-  );
-};
-
-const CreateFieldControl = (props: {
-  disabled: boolean;
-  field: DataRendererCreateField;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) => {
-  const { disabled, field, value, onChange } = props;
-  const label = `${field.label}${field.required ? " *" : ""}`;
-
-  return (
-    <Stack gap="2xs">
-      <Text textStyle="label/S/medium">{label}</Text>
-      {field.description ? (
-        <Text textStyle="paragraph/XS/regular" color="fg.muted">
-          {field.description}
-        </Text>
-      ) : null}
-      <CreateFieldInput disabled={disabled} field={field} value={value} onChange={onChange} />
-    </Stack>
-  );
-};
-
-const editableCreateAttributes = (attributes: AttributeDescriptor[], enabled: boolean | undefined) =>
-  enabled
-    ? attributes.filter(
-        (attribute) => attribute.editable && (attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"),
-      )
-    : [];
+// Every editable attribute is offered, whatever its kind — narrowing to enums
+// silently drops editable user/date/number attributes from the create form.
+const editableCreateAttributes = (attributes: AttributeDescriptor[]) =>
+  attributes.filter((attribute) => attribute.editable);
 
 const initialAttributeValues = (
   attributes: AttributeDescriptor[],
@@ -180,43 +54,73 @@ const initialAttributeValues = (
     ]),
   );
 
+/**
+ * Editable attributes render through the ParamEditor so a resource property and
+ * a command param are the same control, not two that merely resemble each other.
+ */
+const attributeToParam = (attribute: AttributeDescriptor, locked: boolean): Param => {
+  const base = { id: attribute.id, name: attribute.label, description: "" };
+
+  if (attribute.type.kind === "enum" || attribute.type.kind === "enum-multi") {
+    const multiSelect = attribute.type.kind === "enum-multi";
+    return {
+      ...base,
+      type: "selection",
+      defaultValue: multiSelect ? [] : "",
+      multiSelect,
+      // The trigger shows the value alone; the attribute name is the placeholder.
+      placeholder: attribute.label,
+      clearable: !locked,
+      // The column already chose this value, and the create command reads it
+      // from the column param — editing it here would be ignored.
+      disabled: locked,
+      options: getEnumOptions(attribute.type).map((option) => ({
+        id: option.value,
+        name: option.label,
+        icon: option.icon ?? undefined,
+        color: option.color,
+      })),
+    };
+  }
+
+  if (attribute.type.kind === "number") return { ...base, type: "number", defaultValue: 0 };
+  return { ...base, type: "text", defaultValue: "", singleLine: true };
+};
+
 export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) => {
-  const { open, columnId, columnLabel, columnAttributeId, attributes, config, onClose, onSubmit } = props;
-  const fileInput = useRef<HTMLInputElement>(null);
+  const { open, columnId, columnAttributeId, attributes, config, onClose, onSubmit } = props;
   const [values, setValues] = useState<Record<string, unknown>>({});
-  const [attributeValues, setAttributeValues] = useState<Record<string, string | string[]>>({});
-  const [files, setFiles] = useState<File[]>([]);
+  const [attributeValues, setAttributeValues] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const editableAttributes = editableCreateAttributes(attributes, config.includeEditableAttributes);
+  const editableAttributes = editableCreateAttributes(attributes);
 
   useEffect(() => {
     if (!open) return;
     setValues(initialFieldValues(config.fields));
-    setAttributeValues(
-      initialAttributeValues(
-        editableCreateAttributes(attributes, config.includeEditableAttributes),
-        columnAttributeId,
-        columnId,
-      ),
-    );
-    setFiles([]);
+    setAttributeValues(initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId));
     setError("");
-  }, [attributes, columnAttributeId, columnId, config.fields, config.includeEditableAttributes, open]);
+  }, [attributes, columnAttributeId, columnId, config.fields, open]);
 
   const close = () => {
     if (!submitting) onClose();
   };
+
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
+
   const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true);
     setError("");
     try {
-      await onSubmit({ columnId, columnAttributeId, values, attributeValues, files });
+      const fileFieldIds = new Set(config.fields.filter((field) => field.type === "files").map((field) => field.id));
+      const files = [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : []));
+      const declaredValues = Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id)));
+
+      await onSubmit({ columnId, columnAttributeId, values: declaredValues, attributeValues, files });
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not create resource.");
+      setError(caught instanceof Error ? caught.message : config.labels.submitError);
     } finally {
       setSubmitting(false);
     }
@@ -228,12 +132,7 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
       <Dialog.Positioner>
         <Dialog.Content maxH="calc(100% - 48px)">
           <Dialog.Header>
-            <Stack gap="2xs">
-              <Text textStyle="heading/M/semibold">{config.title}</Text>
-              <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                Status · {columnLabel}
-              </Text>
-            </Stack>
+            <Text textStyle="heading/M/semibold">{config.title}</Text>
             <Dialog.CloseTrigger asChild>
               <CloseButton size="sm" disabled={submitting} />
             </Dialog.CloseTrigger>
@@ -244,6 +143,7 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
                 <CreateFieldControl
                   key={field.id}
                   field={field}
+                  removeLabel={config.labels.removeFile}
                   value={values[field.id]}
                   disabled={submitting}
                   onChange={(value) => setValues((current) => ({ ...current, [field.id]: value }))}
@@ -251,37 +151,18 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
               ))}
               {editableAttributes.length > 0 ? (
                 <Stack gap="2xs">
-                  <Text textStyle="label/S/medium">Properties</Text>
-                  <Wrap gap="2xs">
-                    {editableAttributes.map((attribute) => (
-                      <SelectionControl
-                        key={attribute.id}
-                        disabled={submitting || attribute.id === columnAttributeId}
-                        label={attribute.label}
-                        multi={attribute.type.kind === "enum-multi"}
-                        options={getEnumOptions(attribute.type)}
-                        value={attributeValues[attribute.id]}
-                        onChange={(value) => setAttributeValues((current) => ({ ...current, [attribute.id]: value }))}
-                      />
-                    ))}
-                  </Wrap>
+                  <Text textStyle="label/S/medium">{config.labels.properties}</Text>
+                  <ParamEditorHorizontal
+                    params={editableAttributes.map((attribute) =>
+                      attributeToParam(attribute, attribute.id === columnAttributeId),
+                    )}
+                    defaultValues={attributeValues as ParamValueMap}
+                    readOnly={submitting}
+                    onChange={(attributeId, value) =>
+                      setAttributeValues((current) => ({ ...current, [attributeId]: value }))
+                    }
+                  />
                 </Stack>
-              ) : null}
-              {files.length > 0 ? (
-                <Wrap gap="2xs">
-                  {files.map((file, index) => (
-                    <Button
-                      key={`${file.name}-${index.toString()}`}
-                      size="xs"
-                      variant="subtle"
-                      disabled={submitting}
-                      onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-                    >
-                      {file.name}
-                      <X size={12} aria-hidden="true" />
-                    </Button>
-                  ))}
-                </Wrap>
               ) : null}
               {error ? (
                 <Text textStyle="paragraph/S/regular" color="fg.error">
@@ -290,27 +171,10 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
               ) : null}
             </Stack>
           </Dialog.Body>
-          <Dialog.Footer justifyContent="space-between">
-            {config.allowAttachments ? (
-              <>
-                <input
-                  ref={fileInput}
-                  hidden
-                  type="file"
-                  multiple
-                  onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-                />
-                <Button size="sm" variant="ghost" disabled={submitting} onClick={() => fileInput.current?.click()}>
-                  <Paperclip size={14} aria-hidden="true" />
-                  Attach files
-                </Button>
-              </>
-            ) : (
-              <span />
-            )}
+          <Dialog.Footer justifyContent="end">
             <HStack gap="2">
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>
-                Cancel
+                {config.labels.cancel}
               </Button>
               <Button size="sm" variant="primary" disabled={!valid} loading={submitting} onClick={() => void submit()}>
                 {config.submitLabel}
