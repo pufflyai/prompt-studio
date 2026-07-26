@@ -190,8 +190,6 @@ A CI timeout is a budget the project has committed to, not a knob to turn when a
 
 A job that times out is reported, not absorbed. Say what got slower and by how much, then fix that — or ask.
 
-Not covered, because it is a fix rather than a concession: a single assertion's `{ timeout }` where the work genuinely takes that long and you can show the measurement. Widening one wait so it stops racing real work is different from widening a job budget so a slow suite still fits — the second hides the regression the budget existed to catch. If the per-assertion gate you need would no longer fit inside the whole test's budget, you have crossed back into the list above: ask.
-
 ---
 
 # Project Planning and Documentation (pstdio)
