@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const workspaceModeStoryId = "dashboard-sidenav--workspace-mode";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
@@ -24,7 +24,7 @@ test.describe("PS-172 workspace sessions", () => {
     await page.goto(storyUrl(baseUrl, workspaceModeStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    await expect(sidenav).toBeVisible({ timeout: 15_000 });
+    await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
     await expect(workspaceSessions).toBeVisible();
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
@@ -52,7 +52,7 @@ test.describe("PS-172 workspace sessions", () => {
     await page.goto(storyUrl(baseUrl, sessionModeStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    await expect(sidenav).toBeVisible({ timeout: 15_000 });
+    await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
     const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
 

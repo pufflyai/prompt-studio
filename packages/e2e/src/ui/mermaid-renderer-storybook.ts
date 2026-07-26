@@ -1,7 +1,18 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
-import type { Locator } from "@playwright/test";
+import { type Locator, test } from "@playwright/test";
+
+const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
+
+// Storybook compiles the package from source on boot, which on a loaded machine outruns
+// Playwright's default 30s hook timeout. Without this the hook is killed mid-boot and the
+// whole describe block fails on a spec that never ran.
+const STORYBOOK_BOOT_HOOK_TIMEOUT_MS = STORYBOOK_BOOT_TIMEOUT_MS + 30_000;
+
+// A story's first render pays Storybook's on-demand compile on top of the page load, so the
+// initial render gate needs far more room than the default expect timeout.
+export const STORY_RENDER_TIMEOUT_MS = 30_000;
 
 const getFreePort = async () =>
   new Promise<number>((resolvePort, reject) => {
@@ -30,7 +41,7 @@ const getFreePort = async () =>
 
 const waitForStorybook = async (baseUrl: string, process: ChildProcessWithoutNullStreams, probeStoryId: string) => {
   const startedAt = Date.now();
-  while (Date.now() - startedAt < 60_000) {
+  while (Date.now() - startedAt < STORYBOOK_BOOT_TIMEOUT_MS) {
     if (process.exitCode !== null) {
       throw new Error(`Storybook exited before it became reachable with code ${process.exitCode}`);
     }
@@ -54,6 +65,8 @@ export const startStorybook = async (
   probeStoryId: string,
   packageName: "ui" | "pstdio-dashboard" | "pstdio-workbench" = "ui",
 ) => {
+  test.setTimeout(STORYBOOK_BOOT_HOOK_TIMEOUT_MS);
+
   const port = await getFreePort();
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
   const packageRoot = resolve(repoRoot, "packages", packageName);
