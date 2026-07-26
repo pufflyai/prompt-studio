@@ -131,14 +131,19 @@ export const DataRendererCreateDialog = (props: DataRendererCreateDialogProps) =
     });
   }, [config.fields, open]);
 
-  // Seed attributes that showed up after opening, without touching ones the
-  // user has already set.
+  // Same contract for attributes: seed the ones that appear after opening, drop
+  // the ones withdrawn. A withdrawn entry left behind would still be submitted
+  // even though its control is gone.
   useEffect(() => {
     if (!open) return;
-    const seeded = initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId);
+    const editable = editableCreateAttributes(attributes);
+    const seeded = initialAttributeValues(editable, columnAttributeId, columnId);
+    const declared = new Set(editable.map((attribute) => attribute.id));
     setAttributeValues((current) => {
-      const missing = Object.entries(seeded).filter(([id]) => !(id in current));
-      return missing.length === 0 ? current : { ...Object.fromEntries(missing), ...current };
+      const kept = Object.entries(current).filter(([id]) => declared.has(id));
+      const added = Object.entries(seeded).filter(([id]) => !(id in current));
+      if (added.length === 0 && kept.length === Object.keys(current).length) return current;
+      return { ...Object.fromEntries(added), ...Object.fromEntries(kept) };
     });
   }, [attributes, open, columnId, columnAttributeId]);
 
