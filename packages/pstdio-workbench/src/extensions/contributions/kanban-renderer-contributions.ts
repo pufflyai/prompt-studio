@@ -231,6 +231,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         attributes: attributes.source,
         defaultSettings: record.defaultSettings,
         defaultFilters: record.defaultFilters,
+        defaultViews: record.defaultViews?.map((view) => ({
+          ...view,
+          title: localize(view.title, view.id),
+        })),
+        defaultActiveViewId: record.defaultActiveViewId,
         emptyTitle: localize(record.emptyTitle, ""),
         emptyDescription: localize(record.emptyDescription, ""),
         hideToolbar: record.hideToolbar,

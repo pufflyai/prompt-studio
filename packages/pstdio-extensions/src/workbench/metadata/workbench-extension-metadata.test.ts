@@ -236,6 +236,74 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 });
 
+describe("createWorkbenchExtensionMetadata kanban renderers", () => {
+  test("preserves extension-declared default saved views", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: { queryRows: { title: "Query rows", run: async () => ({ rows: [] }) } },
+          kanbanRenderers: {
+            rows: {
+              title: "Rows",
+              queryCommand: "queryRows",
+              defaultViews: [
+                {
+                  id: "all",
+                  title: "All rows",
+                  settings: {
+                    viewMode: "board",
+                    columnGrouping: "status",
+                    rowGrouping: "none",
+                    ordering: { attributeId: "manual", direction: "asc" },
+                    displayProperties: [],
+                  },
+                  filters: {},
+                  isDefault: true,
+                },
+              ],
+              defaultActiveViewId: "all",
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.kanbanRenderers?.[0]).toMatchObject({
+      id: "lab.rows",
+      defaultViews: [
+        {
+          id: "all",
+          title: "All rows",
+          settings: {
+            viewMode: "board",
+            columnGrouping: "status",
+            rowGrouping: "none",
+            ordering: { attributeId: "manual", direction: "asc" },
+            displayProperties: [],
+          },
+          filters: {},
+          isDefault: true,
+        },
+      ],
+      defaultActiveViewId: "all",
+    });
+  });
+});
+
 describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
   test("resolves a Sub Panel view reference to its contribution id", () => {
     const runtime = normalizeExtensionSources([

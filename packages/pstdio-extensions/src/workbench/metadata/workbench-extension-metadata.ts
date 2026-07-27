@@ -298,6 +298,8 @@ const toKanbanRendererRecord = (
     ),
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
+    defaultViews: renderer.contribution.defaultViews,
+    defaultActiveViewId: renderer.contribution.defaultActiveViewId,
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,

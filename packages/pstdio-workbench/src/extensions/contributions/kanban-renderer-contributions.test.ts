@@ -23,6 +23,43 @@ const queryState: KanbanRendererQueryState = {
 };
 
 describe("registerWorkbenchExtensionKanbanRenderers", () => {
+  test("registers extension-declared default saved views", () => {
+    const workbench = createWorkbenchCore();
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      queryCommandId: "pstdio-planner.query-tickets",
+      defaultViews: [
+        {
+          id: "all",
+          title: "All tickets",
+          settings: queryState.settings,
+          filters: {},
+          isDefault: true,
+        },
+      ],
+      defaultActiveViewId: "all",
+    } as WorkbenchExtensionKanbanRendererRecord;
+
+    registerWorkbenchExtensionKanbanRenderers({ projectId: "project-1", workbench, executeCommand: async () => [] }, [
+      record,
+    ]);
+
+    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+
+    expect(renderer?.defaultViews).toEqual([
+      {
+        id: "all",
+        title: "All tickets",
+        settings: queryState.settings,
+        filters: {},
+        isDefault: true,
+      },
+    ]);
+    expect(renderer?.defaultActiveViewId).toBe("all");
+  });
+
   test("maps extension board column action icons into column actions", async () => {
     const workbench = createWorkbenchCore();
     const record = {

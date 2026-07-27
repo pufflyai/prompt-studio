@@ -45,6 +45,14 @@ const kanbanRendererSettingsSchema = z.object({
   displayProperties: z.array(z.string()),
 });
 
+const kanbanRendererSavedViewSchema = z.object({
+  id: z.string(),
+  title: localizableStringSchema,
+  settings: kanbanRendererSettingsSchema,
+  filters: z.record(z.string(), z.array(z.string())),
+  isDefault: z.boolean().optional(),
+});
+
 const extensionKanbanRendererCreateRowSchema = z.object({
   commandId: z.string(),
   title: localizableStringSchema.optional(),
@@ -92,6 +100,8 @@ export const extensionKanbanRendererRecordSchema = z.object({
   rowActions: z.array(extensionKanbanRendererRowActionSchema).optional(),
   defaultSettings: kanbanRendererSettingsSchema.partial().optional(),
   defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
+  defaultViews: z.array(kanbanRendererSavedViewSchema).optional(),
+  defaultActiveViewId: z.string().optional(),
   emptyTitle: localizableStringSchema.optional(),
   emptyDescription: localizableStringSchema.optional(),
   hideToolbar: z.boolean().optional(),

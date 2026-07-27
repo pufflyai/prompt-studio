@@ -231,6 +231,14 @@ export interface KanbanRendererSettings {
 
 export type KanbanRendererFilterState = Record<string, string[]>;
 
+export interface KanbanRendererSavedView {
+  id: string;
+  title: Localizable<string>;
+  settings: KanbanRendererSettings;
+  filters: KanbanRendererFilterState;
+  isDefault?: boolean;
+}
+
 export interface KanbanRendererQueryParams {
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
@@ -319,6 +327,8 @@ export interface KanbanRendererContribution {
   rowActions?: KanbanRendererRowAction[];
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
+  defaultViews?: KanbanRendererSavedView[];
+  defaultActiveViewId?: string;
   emptyTitle?: Localizable<string>;
   emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
