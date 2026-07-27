@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { expect, fireEvent, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { KanbanRendererCreateSubmission, KanbanRendererSavedView, ViewMode } from "./types";
@@ -131,8 +131,22 @@ export const RendererChromeAndTicketMenu: Story = {
     await expect(getComputedStyle(header).backgroundColor).toBe("rgba(0, 0, 0, 0)");
     await expect(canvas.getAllByTestId("column-status-icon")[0]).toBeVisible();
 
+    const filterButton = canvas.getByRole("button", { name: "Filter rows" });
+    const displayButton = canvas.getByRole("button", { name: "Display settings" });
+    const body = within(document.body);
+
+    await userEvent.hover(filterButton);
+    await expect(await body.findByRole("tooltip")).toHaveTextContent("Filter");
+    await userEvent.unhover(filterButton);
+    await waitFor(() => expect(body.queryByRole("tooltip")).not.toBeInTheDocument());
+
+    await userEvent.hover(displayButton);
+    await expect(await body.findByRole("tooltip")).toHaveTextContent("Display");
+    await userEvent.unhover(displayButton);
+    await waitFor(() => expect(body.queryByRole("tooltip")).not.toBeInTheDocument());
+
     fireEvent.contextMenu(firstCard);
-    const menu = await within(document.body).findByRole("menu");
+    const menu = await body.findByRole("menu");
     await expect(menu.getBoundingClientRect().width).toBe(280);
   },
 };

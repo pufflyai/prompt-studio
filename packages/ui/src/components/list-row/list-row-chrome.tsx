@@ -44,9 +44,5 @@ export const ListRowChrome = (props: ListRowChromeProps) => {
   const row = item.tooltip ? <Tooltip content={item.tooltip}>{children}</Tooltip> : children;
   if (!item.contextMenuItems || item.contextMenuItems.length === 0) return row;
 
-  return (
-    <ResourceContextMenu actions={createResourceContextActions(item.contextMenuItems)} contentMinWidth="180px">
-      {row}
-    </ResourceContextMenu>
-  );
+  return <ResourceContextMenu actions={createResourceContextActions(item.contextMenuItems)}>{row}</ResourceContextMenu>;
 };

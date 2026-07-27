@@ -28,7 +28,7 @@ import {
   shouldCollapseWorkbenchPanelMenus,
 } from "./panel-menu-sizing";
 
-const PANEL_MENU_SIZE = { defaultPx: 180, minPx: 144, maxPx: 320 };
+const PANEL_MENU_SIZE = { defaultPx: 280, minPx: 144, maxPx: 320 };
 
 const panelLabels: Record<WorkbenchPanelRegion, string> = {
   main: "Main",
@@ -214,7 +214,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
             aria-label={`Open ${view.label}`}
             flexShrink={0}
           >
-            <WorkbenchIcon name={view.icon} size={14} />
+            <WorkbenchIcon name={view.side === "left" ? "PanelLeftOpen" : "PanelRightOpen"} size={14} />
           </IconButton>
         </Menu.Trigger>
       </Tooltip>

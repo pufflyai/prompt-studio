@@ -1,5 +1,5 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
-import { Header, Tooltip } from "@pstdio/ui";
+import { Header, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
@@ -30,7 +30,7 @@ const WorkbenchRegionControl = (props: { control: WorkbenchNavRegionControl }) =
   return (
     <Tooltip content={control.label}>
       <IconButton
-        size="xs"
+        size={PANEL_HEADER_CONTROL_SIZE}
         variant="ghost"
         aria-label={control.label}
         aria-pressed={control.open}

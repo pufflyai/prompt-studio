@@ -3,6 +3,7 @@ import { Filter, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
 import type { FilterCategoryView } from "./kanban-renderer-helpers";
 import type { KanbanRendererFilterState } from "./types";
@@ -104,17 +105,19 @@ export const FilterMenu = (props: FilterMenuProps) => {
         if (!details.open) setQuery("");
       }}
     >
-      <Popover.Trigger asChild>
-        <IconButton
-          ref={triggerRef}
-          aria-label="Filter rows"
-          aria-pressed={filtersApplied}
-          variant={filtersApplied ? "subtle" : "ghost"}
-          size="2xs"
-        >
-          <Icon as={Filter} />
-        </IconButton>
-      </Popover.Trigger>
+      <Tooltip content="Filter">
+        <Popover.Trigger asChild>
+          <IconButton
+            ref={triggerRef}
+            aria-label="Filter rows"
+            aria-pressed={filtersApplied}
+            variant={filtersApplied ? "subtle" : "ghost"}
+            size="2xs"
+          >
+            <Icon as={Filter} />
+          </IconButton>
+        </Popover.Trigger>
+      </Tooltip>
       <Portal>
         <Popover.Positioner>
           <Popover.Content

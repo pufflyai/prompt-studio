@@ -166,7 +166,13 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
   ];
 
   return (
-    <Stack data-testid="kanban-renderer-header" gap="0" flexShrink={0} borderBottomWidth="1px" borderColor="border">
+    <Stack
+      data-testid="kanban-renderer-header"
+      gap="0"
+      flexShrink={0}
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
       <HStack height="view-bar" minW="0" gap="2xs" paddingX="xs">
         {leading}
         <Tabs.Root

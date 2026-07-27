@@ -13051,7 +13051,7 @@
                       "type": "frame",
                       "id": "Uke3B",
                       "name": "cmp/Nav Chrome",
-                      "context": "Owns history, breadcrumbs, resource actions, and closed-Panel recovery.",
+                      "context": "Owns history, breadcrumbs, resource actions, and closed-Panel recovery. Sidenav, Secondary Panel, and Side Panel recovery controls use the compact 2xs icon-button size shared by Kanban Filter and Display controls.",
                       "reusable": true,
                       "width": "fill_container",
                       "height": 40,
@@ -13228,15 +13228,15 @@
                           "name": "Sidenav control",
                           "theme": {
                             "btn": "ghost",
-                            "size": "xs"
+                            "size": "2xs"
                           },
                           "width": 24,
                           "height": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "panel-left",
-                              "width": 13,
-                              "height": 13
+                              "width": 12,
+                              "height": 12
                             }
                           }
                         },
@@ -13247,15 +13247,15 @@
                           "name": "Secondary Panel control",
                           "theme": {
                             "btn": "ghost",
-                            "size": "xs"
+                            "size": "2xs"
                           },
                           "width": 24,
                           "height": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "panel-bottom",
-                              "width": 13,
-                              "height": 13
+                              "width": 12,
+                              "height": 12
                             }
                           }
                         },
@@ -13266,15 +13266,15 @@
                           "name": "Side Panel control",
                           "theme": {
                             "btn": "ghost",
-                            "size": "xs"
+                            "size": "2xs"
                           },
                           "width": 24,
                           "height": 24,
                           "descendants": {
                             "k7mgm": {
                               "icon": "panel-right",
-                              "width": 13,
-                              "height": 13
+                              "width": 12,
+                              "height": 12
                             }
                           }
                         }
@@ -16999,11 +16999,11 @@
                       "type": "frame",
                       "id": "DuUAX",
                       "name": "cmp/ViewBar",
-                      "context": "The renderer header is transparent and has a fixed 40px saved-view bar plus a conditional 36px filters row. The top bar holds saved views as tabs, New view, and icon-only Filter and Display controls. The Filter control uses the subtle active surface whenever filters are applied; it never carries a numeric badge.\n\nThe Filters row appears whenever the active view has applied filters, including after those filters are saved. Each clause stays visible as a filter pill so the narrowed dataset is never hidden. If the view is dirty, Reset and Save appear at the right and the active tab carries the warning dot. Display-only edits can also raise the row for those actions even when there are no filter pills.\n\nTabs use the standard $ds-border stroke in every state. Tabs, buttons, and pills share the compact baseline.",
+                      "context": "The renderer header is transparent and has a fixed 40px saved-view bar plus a conditional 36px filters row. The top bar holds saved views as tabs, New view, and icon-only Filter and Display controls. Filter and Display expose matching hover/focus tooltips, and both use the compact 2xs control size. The Filter control uses the subtle active surface whenever filters are applied; it never carries a numeric badge.\n\nThe Filters row appears whenever the active view has applied filters, including after those filters are saved. Each clause stays visible as a filter pill so the narrowed dataset is never hidden. If the view is dirty, Reset and Save appear at the right and the active tab carries the warning dot. Display-only edits can also raise the row for those actions even when there are no filter pills.\n\nThe header bottom divider uses $ds-border-subtle. Tabs, buttons, and pills share the compact baseline.",
                       "reusable": true,
                       "width": 1000,
                       "fill": "#00000000",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": {
                         "bottom": 1
                       },
@@ -66635,7 +66635,7 @@
                                       "icon": "tag"
                                     },
                                     "Hf4GT": {
-                                      "content": "Type · Bug"
+                                      "content": "Bug"
                                     }
                                   }
                                 },
@@ -66654,7 +66654,7 @@
                                       "icon": "signal"
                                     },
                                     "Hf4GT": {
-                                      "content": "Priority · High"
+                                      "content": "High"
                                     }
                                   }
                                 }
@@ -74008,6 +74008,7 @@
               "type": "frame",
               "id": "p9R6Y",
               "name": "F09 · Attached, closed, and dropdown menu anatomy",
+              "context": "Panel menus default to 280px when attached. Collapsed menu openers use directional panel-left-open and panel-right-open icons rather than the active widget's content icon.",
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 12,
@@ -74035,7 +74036,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1300,
-                  "content": "Tabs and the “+” sit on the left of the strip. A menu's icon appears only when that menu is closed — an attached menu has no internal header or close action and collapses by dragging its divider closed. Closed, the icon opens the menu as a dropdown, where a single icon button reattaches it. The visible dropdown surface anchors directly below its own icon; no wider invisible wrapper offsets it from the trigger.",
+                  "content": "Tabs and the “+” sit on the left of the strip. Attached panel menus default to 280px and have no internal header or close action; they collapse by dragging the divider closed. Closed menus use directional panel-open icons instead of their content icons, and open as dropdowns where a single icon button reattaches them. The visible dropdown surface anchors directly below its own icon.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -74595,7 +74596,7 @@
                                   },
                                   "descendants": {
                                     "k7mgm": {
-                                      "icon": "sliders-horizontal",
+                                      "icon": "panel-right-open",
                                       "width": 10,
                                       "height": 10
                                     }
@@ -74922,7 +74923,7 @@
                                   },
                                   "descendants": {
                                     "k7mgm": {
-                                      "icon": "paperclip",
+                                      "icon": "panel-left-open",
                                       "width": 10,
                                       "height": 10
                                     }
@@ -74941,7 +74942,7 @@
                                   },
                                   "descendants": {
                                     "k7mgm": {
-                                      "icon": "sliders-horizontal",
+                                      "icon": "panel-right-open",
                                       "width": 10,
                                       "height": 10
                                     }
@@ -75198,6 +75199,7 @@
           "type": "frame",
           "id": "ASFCn",
           "name": "F10 · Narrow Panel menu states",
+          "context": "Narrow panels collapse attached 280px menus into 2xs directional panel-open buttons in the panel header.",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 12,
@@ -75869,7 +75871,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "panel-left",
+                                  "icon": "panel-left-open",
                                   "width": 13,
                                   "height": 13
                                 }
@@ -75888,7 +75890,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "panel-right",
+                                  "icon": "panel-right-open",
                                   "width": 13,
                                   "height": 13
                                 }
@@ -76084,7 +76086,7 @@
               "id": "P337L",
               "name": "Placement Rule",
               "fill": "$ds-fg-subtle",
-              "content": "Dropdown surface begins directly below its own visible button; no invisible wrapper, no shadow, no X close button.",
+              "content": "Collapsed menus use directional panel-open icons. Their dropdown surface begins directly below its own visible 2xs button; no invisible wrapper, no shadow, no X close button.",
               "fontFamily": "$font-body",
               "fontSize": 11,
               "fontWeight": "normal"
@@ -91915,7 +91917,7 @@
       "type": "frame",
       "id": "B5M3w",
       "x": 8052,
-      "y": 7354,
+      "y": 7383,
       "name": "Tree Navigation · Component",
       "context": "TreeList (packages/ui/src/components/tree-list) — sectioned, keyboard-navigable tree used for sidenavs, file trees and changed-file lists. Data: sections[{id,label?,collapsible?,actions?,emptyState?,nodes}] with nodes = ListRowItem + children. The composite has 8px padding on both axes. Rows render through cmp/TreeRow (ListRow variant tree|compact): h 30, radius 4, px 8, gap 7, indent $tree-pl (8/26/44) per depth. Row states use the tree theme axis default|active|hover; depth uses 0|1|2. Controlled props: expandedSectionIds / expandedNodeIds / activeNodeId + onToggleSection / onToggleNode / onNavigate. Virtualizes long trees (32px row estimate). In the Sidenav, right-clicking anywhere opens one customize menu for hideable header, main, and footer items. Drag ordering persists per tree id and stays inside the item's region and group; canReorder=false locks exceptions. Visibility and order reset independently.",
       "theme": {

@@ -1,6 +1,7 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
 import { Check, ChevronDown, List, Settings2, SortAsc, SortDesc, SquareKanban } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
 
@@ -110,11 +111,13 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
       positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
       onOpenChange={(details) => setOpen(details.open)}
     >
-      <Popover.Trigger asChild>
-        <IconButton ref={triggerRef} aria-label="Display settings" variant="ghost" size="2xs">
-          <Icon as={Settings2} />
-        </IconButton>
-      </Popover.Trigger>
+      <Tooltip content="Display">
+        <Popover.Trigger asChild>
+          <IconButton ref={triggerRef} aria-label="Display settings" variant="ghost" size="2xs">
+            <Icon as={Settings2} />
+          </IconButton>
+        </Popover.Trigger>
+      </Tooltip>
       <Portal>
         <Popover.Positioner>
           <Popover.Content ref={contentRef} width="18.75rem" padding="xs" gap="1px">
