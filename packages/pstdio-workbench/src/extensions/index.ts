@@ -16,10 +16,6 @@ export {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionControlsAdapter,
 } from "./contributions/controls-renderer-contributions";
-export {
-  registerWorkbenchExtensionDataRenderers,
-  type WorkbenchExtensionDataRendererAdapter,
-} from "./contributions/data-renderer-contributions";
 export { registerWorkbenchExtensionDataTableRenderers } from "./contributions/data-table-renderer-contributions";
 export {
   buildWorkbenchExtensionCommandPaletteRegistrations,
@@ -38,6 +34,10 @@ export {
   type RegisterWorkbenchExtensionFileRenderersInput,
   registerWorkbenchExtensionFileRenderers,
 } from "./contributions/file-renderer-contributions";
+export {
+  registerWorkbenchExtensionKanbanRenderers,
+  type WorkbenchExtensionKanbanRendererAdapter,
+} from "./contributions/kanban-renderer-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,

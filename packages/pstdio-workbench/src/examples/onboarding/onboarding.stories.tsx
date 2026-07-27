@@ -1,10 +1,10 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
-import { createDataRendererStoryModule } from "../data-renderer/module";
 import { createDataTableRendererStoryModule } from "../data-table-renderer/module";
 import { createExtensionThemesWorkbench } from "../extension-themes/module";
 import { createFileRendererStoryModule } from "../file-renderer/module";
+import { createKanbanRendererStoryModule } from "../kanban-renderer/module";
 import { createSettingsModule } from "../settings/module";
 import type { WorkbenchStoryProps } from "../workbench-story";
 import { createBreadcrumbModule } from "./breadcrumb-module";
@@ -86,7 +86,7 @@ const modesWorkbench = createWorkbench(createModesModule());
 const commandKeybindingThemeWorkbench = createWorkbench(createCommandKeybindingThemeModule());
 const focusContextWorkbench = createWorkbench(createFocusContextModule());
 const navigationWorkbench = createWorkbench(createNavigationModule());
-const dataRendererWorkbench = createWorkbench(createDataRendererStoryModule());
+const kanbanRendererWorkbench = createWorkbench(createKanbanRendererStoryModule());
 const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
@@ -177,10 +177,10 @@ export const Navigation: Story = {
   render: () => <WorkbenchFrame workbench={navigationWorkbench} />,
 };
 
-export const DataRenderer: Story = {
-  name: "10. Data renderer",
-  parameters: sourceParameters(onboardingSources.dataRenderer),
-  render: () => <WorkbenchFrame workbench={dataRendererWorkbench} />,
+export const KanbanRenderer: Story = {
+  name: "10. Kanban renderer",
+  parameters: sourceParameters(onboardingSources.kanbanRenderer),
+  render: () => <WorkbenchFrame workbench={kanbanRendererWorkbench} />,
 };
 
 export const Extensions: Story = {

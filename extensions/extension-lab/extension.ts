@@ -8,7 +8,7 @@ import {
   createLabRoutes,
   createLabSettingsPanels,
   createLabViews,
-  labDataRenderers,
+  labKanbanRenderers,
   labModes,
   labTreeItems,
 } from "./src/renderers/ui-contributions";
@@ -31,7 +31,7 @@ const extension = defineExtension({
   views: createLabViews(import.meta.url),
   routes: createLabRoutes(import.meta.url),
   treeItems: labTreeItems,
-  dataRenderers: labDataRenderers,
+  kanbanRenderers: labKanbanRenderers,
   commandPaletteResources: {
     slides: {
       title: l10n("commandPaletteResources.slides.title", "Lab slides"),

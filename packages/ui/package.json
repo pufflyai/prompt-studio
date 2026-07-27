@@ -37,9 +37,9 @@
       "import": "./dist/diff.js",
       "types": "./dist/components/diff-viewer/index.d.ts"
     },
-    "./data-renderer": {
-      "import": "./dist/data-renderer.js",
-      "types": "./dist/components/data-renderer/index.d.ts"
+    "./kanban-renderer": {
+      "import": "./dist/kanban-renderer.js",
+      "types": "./dist/components/kanban-renderer/index.d.ts"
     },
     "./data-table": {
       "import": "./dist/data-table.js",

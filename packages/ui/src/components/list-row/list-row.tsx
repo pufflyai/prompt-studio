@@ -22,6 +22,10 @@ const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
   variant === "compact" || variant === "full-width" || variant === "empty-state";
 
 const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
+  if (variant === "collection" && !hasDescription) {
+    return { rowHeight: "collection-row", minHeight: undefined };
+  }
+
   if (isFixedHeightDenseVariant(variant) && !hasDescription) {
     return { rowHeight: "1.75rem", minHeight: undefined };
   }
@@ -83,7 +87,7 @@ const createListRowRootProps = (input: {
   px: "sm",
   py: input.verticalPadding,
   pl: input.paddingLeft,
-  borderRadius: input.variant === "full-width" ? "0" : ("xs" as const),
+  borderRadius: input.variant === "full-width" || input.variant === "collection" ? "0" : ("xs" as const),
   ...createRowBackgroundProps({ ...input }),
   cursor:
     input.variant === "empty-state"

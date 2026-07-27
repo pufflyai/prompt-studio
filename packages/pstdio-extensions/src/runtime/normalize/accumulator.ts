@@ -7,10 +7,10 @@ import type {
   RuntimeCommandPaletteResourceRecord,
   RuntimeCommandRecord,
   RuntimeControlsRendererRecord,
-  RuntimeDataRendererRecord,
   RuntimeDataTableRendererRecord,
   RuntimeFileIconThemeRecord,
   RuntimeFileRendererRecord,
+  RuntimeKanbanRendererRecord,
   RuntimeKeybindingRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
@@ -23,7 +23,7 @@ export type RegistryIndex = {
   commandIds: Map<string, RuntimeCommandRecord>;
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
-  dataRendererIds: Map<string, RuntimeDataRendererRecord>;
+  kanbanRendererIds: Map<string, RuntimeKanbanRendererRecord>;
   dataTableRendererIds: Map<string, RuntimeDataTableRendererRecord>;
   commandPaletteResourceIds: Map<string, RuntimeCommandPaletteResourceRecord>;
   treeRendererIds: Map<string, RuntimeTreeRendererRecord>;
@@ -49,7 +49,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   navigation: [],
   treeItems: [],
   settingsPanels: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   dataTableRenderers: [],
   commandPaletteResources: [],
   treeRenderers: [],
@@ -72,7 +72,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   commandIds: new Map(),
   cliKeys: new Map(),
   mountKeys: new Map(),
-  dataRendererIds: new Map(),
+  kanbanRendererIds: new Map(),
   dataTableRendererIds: new Map(),
   commandPaletteResourceIds: new Map(),
   treeRendererIds: new Map(),

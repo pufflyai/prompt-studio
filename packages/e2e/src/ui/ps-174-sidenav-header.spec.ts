@@ -40,8 +40,8 @@ const waitForTicketsExtension = async (request: import("@playwright/test").APIRe
       async () => {
         const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
         if (!response.ok()) return false;
-        const metadata = (await response.json()) as { dataRenderers?: Array<{ resourceKind?: string }> };
-        return metadata.dataRenderers?.some((renderer) => renderer.resourceKind === "ticket") ?? false;
+        const metadata = (await response.json()) as { kanbanRenderers?: Array<{ resourceKind?: string }> };
+        return metadata.kanbanRenderers?.some((renderer) => renderer.resourceKind === "ticket") ?? false;
       },
       { timeout: 30_000 },
     )

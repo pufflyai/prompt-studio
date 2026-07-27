@@ -53,7 +53,7 @@ export const emptyWorkbenchExtensionMetadata = {
   modes: [],
   navigation: [],
   routes: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   dataTableRenderers: [],
   treeRenderers: [],
   fileRenderers: [],

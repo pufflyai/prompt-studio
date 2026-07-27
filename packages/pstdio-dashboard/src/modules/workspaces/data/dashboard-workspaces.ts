@@ -1,4 +1,4 @@
-import type { DataRendererRow } from "@pstdio/ui/data-renderer";
+import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -45,7 +45,7 @@ export interface DashboardWorkspace {
   resource: ResourceRef;
 }
 
-export interface DashboardWorkspaceRow extends DataRendererRow {
+export interface DashboardWorkspaceRow extends KanbanRendererRow {
   resource: ResourceRef;
   attributes: DashboardWorkspaceAttributes;
 }

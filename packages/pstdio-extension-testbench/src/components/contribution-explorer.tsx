@@ -105,7 +105,7 @@ const viewItems = (props: ContributionExplorerProps) => {
 const dataItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return (bench.metadata.dataRenderers ?? []).map((renderer) => ({
+  return (bench.metadata.kanbanRenderers ?? []).map((renderer) => ({
     id: renderer.id,
     label: text(renderer.title, renderer.id),
     description: renderer.id,

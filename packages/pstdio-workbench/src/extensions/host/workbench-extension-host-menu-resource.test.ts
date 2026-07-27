@@ -38,7 +38,7 @@ const metadata = {
   settingsPanels: [],
   treeItems: [],
   treeRenderers: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   views: [
     {
       id: "lab.ticketPanel",

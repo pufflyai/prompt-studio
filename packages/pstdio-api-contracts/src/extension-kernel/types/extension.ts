@@ -13,9 +13,9 @@ import type {
   CliContribution,
   CommandPaletteContribution,
   CommandPaletteResourceContribution,
-  DataRendererContribution,
   ExtensionSettingsContribution,
   FileIconThemeContribution,
+  KanbanRendererContribution,
   KeybindingContribution,
   MenuContribution,
   ModeContribution,
@@ -152,7 +152,7 @@ export interface UiContributions {
   fileRenderers?: Record<string, FileRendererContribution>;
   controlsRenderers?: Record<string, ControlsRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
-  dataRenderers?: Record<string, DataRendererContribution>;
+  kanbanRenderers?: Record<string, KanbanRendererContribution>;
   dataTableRenderers?: Record<string, DataTableRendererContribution>;
   commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous keybinding shapes

@@ -1,9 +1,9 @@
 import type {
   ExtensionCommandPaletteContribution,
   ExtensionControlsRendererRecord,
-  ExtensionDataRendererRecord,
   ExtensionDataTableRendererRecord,
   ExtensionFileIconThemeRecord,
+  ExtensionKanbanRendererRecord,
   ExtensionMenuContribution,
   ExtensionRouteRecord,
   ExtensionSettingsPanelRecord,
@@ -15,8 +15,8 @@ import type { ExtensionRuntime } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
 import {
   toCommandPaletteResourceRecord,
-  toDataRendererRecord,
   toDataTableRendererRecord,
+  toKanbanRendererRecord,
   toTreeItemRecord,
 } from "./workbench-extension-contributions";
 
@@ -235,8 +235,9 @@ export const toCheckSettingsDefinitions = (settings: ExtensionRuntime["settings"
 export const toCheckTreeItems = (treeItems: ExtensionRuntime["treeItems"]): ExtensionTreeItemContribution[] =>
   treeItems.map(toTreeItemRecord);
 
-export const toCheckDataRenderers = (renderers: ExtensionRuntime["dataRenderers"]): ExtensionDataRendererRecord[] =>
-  compact(renderers.map(toDataRendererRecord));
+export const toCheckKanbanRenderers = (
+  renderers: ExtensionRuntime["kanbanRenderers"],
+): ExtensionKanbanRendererRecord[] => compact(renderers.map(toKanbanRendererRecord));
 
 export const toCheckDataTableRenderers = (
   renderers: ExtensionRuntime["dataTableRenderers"],

@@ -66,7 +66,7 @@ export interface TreeItemContribution<TParams extends Struct = Struct> {
         command: CommandRef<TParams, unknown> | string;
         params?: Partial<TParams>;
       }
-    | { kind: "dataRenderer"; dataRenderer: string }
+    | { kind: "kanbanRenderer"; kanbanRenderer: string }
     | { kind: "route"; route: string }
     | { kind: "href"; href: string };
 }
@@ -123,7 +123,7 @@ export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
   /**
    * Marks this view as the editor for resources of the given kind. The host opens
    * the view's webview as a widget (bound to the resource) whenever a resource of
-   * this kind is opened — e.g. a `ticket` data-renderer row opening the editor.
+   * this kind is opened — e.g. a `ticket` kanban-renderer row opening the editor.
    */
   resourceKind?: string;
   /** Opts tree-backed views into host-owned default header rows such as dashboard Search. */
@@ -186,57 +186,57 @@ export interface SettingsPanelContribution<TSlotContext extends Struct = Struct>
   webview: WebviewContribution;
 }
 
-export type DataRendererViewMode = "board" | "list";
-export type DataRendererSortDirection = "asc" | "desc";
+export type KanbanRendererViewMode = "board" | "list";
+export type KanbanRendererSortDirection = "asc" | "desc";
 
-export interface DataRendererEnumOption {
+export interface KanbanRendererEnumOption {
   value: string;
   label: Localizable<string>;
   color?: string;
   icon?: string | null;
 }
 
-export type DataRendererAttributeType =
-  | { kind: "enum"; options: DataRendererEnumOption[] }
-  | { kind: "enum-multi"; options: DataRendererEnumOption[] }
+export type KanbanRendererAttributeType =
+  | { kind: "enum"; options: KanbanRendererEnumOption[] }
+  | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }
   | { kind: "user" };
 
-export type DataRendererAttributeDisplay = { kind: "workspace-badge"; itemsAttributeId: string };
+export type KanbanRendererAttributeDisplay = { kind: "workspace-badge"; itemsAttributeId: string };
 
-export interface DataRendererAttributeDescriptor {
+export interface KanbanRendererAttributeDescriptor {
   id: string;
   label: Localizable<string>;
-  type: DataRendererAttributeType;
+  type: KanbanRendererAttributeType;
   filterable?: boolean;
   groupable?: boolean;
   sortable?: boolean;
   displayable?: boolean;
   editable?: boolean;
-  display?: DataRendererAttributeDisplay;
+  display?: KanbanRendererAttributeDisplay;
 }
 
-export interface DataRendererSettings {
-  viewMode: DataRendererViewMode;
+export interface KanbanRendererSettings {
+  viewMode: KanbanRendererViewMode;
   columnGrouping: string;
   rowGrouping: string;
   ordering: {
     attributeId: string;
-    direction: DataRendererSortDirection;
+    direction: KanbanRendererSortDirection;
   };
   displayProperties: string[];
 }
 
-export type DataRendererFilterState = Record<string, string[]>;
+export type KanbanRendererFilterState = Record<string, string[]>;
 
-export interface DataRendererQueryParams {
-  settings: DataRendererSettings;
-  filters: DataRendererFilterState;
+export interface KanbanRendererQueryParams {
+  settings: KanbanRendererSettings;
+  filters: KanbanRendererFilterState;
 }
 
-export interface DataRendererResourceRef {
+export interface KanbanRendererResourceRef {
   type: string;
   id: string;
   projectId?: string;
@@ -245,34 +245,34 @@ export interface DataRendererResourceRef {
   metadata?: JsonObject;
 }
 
-export interface DataRendererRow {
+export interface KanbanRendererRow {
   id: string;
   title: string;
-  resource?: DataRendererResourceRef;
+  resource?: KanbanRendererResourceRef;
   attributes: Record<string, unknown>;
 }
 
-export interface DataRendererColumnAction {
+export interface KanbanRendererColumnAction {
   id: string;
   label: Localizable<string>;
   icon?: string;
 }
 
-export interface DataRendererBoardColumnConfig {
+export interface KanbanRendererBoardColumnConfig {
   color?: string;
   canDragIn?: boolean;
   canDragOut?: boolean;
   canCreate?: boolean;
-  actions?: DataRendererColumnAction[];
+  actions?: KanbanRendererColumnAction[];
 }
 
-export interface DataRendererQueryResult {
-  rows: DataRendererRow[];
-  attributes?: DataRendererAttributeDescriptor[];
-  boardColumnConfigs?: Record<string, DataRendererBoardColumnConfig>;
+export interface KanbanRendererQueryResult {
+  rows: KanbanRendererRow[];
+  attributes?: KanbanRendererAttributeDescriptor[];
+  boardColumnConfigs?: Record<string, KanbanRendererBoardColumnConfig>;
 }
 
-export interface DataRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
+export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
   command: CommandRef<Struct, unknown> | string;
   title?: Localizable<string>;
   submitLabel?: Localizable<string>;
@@ -288,12 +288,7 @@ export interface DataRendererCreateRowContribution<TParams extends ParamObjectSc
   };
 }
 
-export interface DataRendererSavedViewsContribution {
-  resourceKind: string;
-  scope?: "project" | "user";
-}
-
-export interface DataRendererRowAction<TParams extends Struct = Struct> {
+export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   id: string;
   label: Localizable<string>;
   icon?: string;
@@ -302,22 +297,21 @@ export interface DataRendererRowAction<TParams extends Struct = Struct> {
   destructive?: boolean;
 }
 
-export interface DataRendererContribution {
+export interface KanbanRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
-  attributes?: DataRendererAttributeDescriptor[];
-  queryCommand: CommandRef<DataRendererQueryParams, DataRendererQueryResult> | string;
+  attributes?: KanbanRendererAttributeDescriptor[];
+  queryCommand: CommandRef<KanbanRendererQueryParams, KanbanRendererQueryResult> | string;
   updateAttributeCommand?: CommandRef<{ rowId: string; attributeId: string; value: unknown }, unknown> | string;
   reorderCommand?: CommandRef<{ rowId: string; beforeRowId?: string }, unknown> | string;
   columnActionCommand?: CommandRef<{ columnId: string; actionId: string }, unknown> | string;
-  createRow?: DataRendererCreateRowContribution;
-  rowActions?: DataRendererRowAction[];
-  defaultSettings?: Partial<DataRendererSettings>;
-  defaultFilters?: DataRendererFilterState;
+  createRow?: KanbanRendererCreateRowContribution;
+  rowActions?: KanbanRendererRowAction[];
+  defaultSettings?: Partial<KanbanRendererSettings>;
+  defaultFilters?: KanbanRendererFilterState;
   emptyTitle?: Localizable<string>;
   emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
-  savedViews?: DataRendererSavedViewsContribution;
 }
 
 /**

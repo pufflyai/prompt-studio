@@ -77,7 +77,7 @@ describe("data table state helpers", () => {
     });
   });
 
-  test("filters table rows through data-renderer filter state", () => {
+  test("filters table rows through kanban-renderer filter state", () => {
     const rows: RowData[] = [
       { id: "row-1", Status: "Paid" },
       { id: "row-2", Status: "Pending" },

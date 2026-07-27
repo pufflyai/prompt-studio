@@ -242,39 +242,6 @@ export type {
 } from "./registries/renderers/controls-renderer-registry";
 export { createControlsRendererRegistry } from "./registries/renderers/controls-renderer-registry";
 export type {
-  AttributeDescriptor,
-  AttributeDisplayDescriptor,
-  AttributeKind,
-  AttributesSource,
-  AttributeType,
-  BoardColumnAction,
-  BoardColumnConfig,
-  DataRendererCreateField,
-  DataRendererCreateFieldType,
-  DataRendererCreateRowConfig,
-  DataRendererCreateSubmission,
-  DataRendererFilterState,
-  DataRendererOrdering,
-  DataRendererRow,
-  DataRendererSettings,
-  EnumOption,
-  EnumOptions,
-  EnumOptionsSource,
-  ResourceContextAction,
-  SortDirection,
-  ViewMode,
-} from "./registries/renderers/data-renderer-contracts";
-export type {
-  CreateDataRendererRegistryInput,
-  DataRendererContribution,
-  DataRendererImplementation,
-  DataRendererQueryState,
-  DataRendererRegistry,
-  DataRendererStoreState,
-  RegisteredDataRendererContribution,
-} from "./registries/renderers/data-renderer-registry";
-export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
-export type {
   DataTableRendererColumn,
   DataTableRendererColumnRenderer,
   DataTableRendererColumnStat,
@@ -301,6 +268,40 @@ export type {
   RegisteredFileRendererContribution,
 } from "./registries/renderers/file-renderer-registry";
 export { createFileRendererRegistry } from "./registries/renderers/file-renderer-registry";
+export type {
+  AttributeDescriptor,
+  AttributeDisplayDescriptor,
+  AttributeKind,
+  AttributesSource,
+  AttributeType,
+  BoardColumnAction,
+  BoardColumnConfig,
+  EnumOption,
+  EnumOptions,
+  EnumOptionsSource,
+  KanbanRendererCreateField,
+  KanbanRendererCreateFieldType,
+  KanbanRendererCreateRowConfig,
+  KanbanRendererCreateSubmission,
+  KanbanRendererFilterState,
+  KanbanRendererOrdering,
+  KanbanRendererRow,
+  KanbanRendererSavedView,
+  KanbanRendererSettings,
+  ResourceContextAction,
+  SortDirection,
+  ViewMode,
+} from "./registries/renderers/kanban-renderer-contracts";
+export type {
+  CreateKanbanRendererRegistryInput,
+  KanbanRendererContribution,
+  KanbanRendererImplementation,
+  KanbanRendererQueryState,
+  KanbanRendererRegistry,
+  KanbanRendererStoreState,
+  RegisteredKanbanRendererContribution,
+} from "./registries/renderers/kanban-renderer-registry";
+export { createKanbanRendererRegistry } from "./registries/renderers/kanban-renderer-registry";
 export type {
   CreateWorkbenchRendererRegistryInput,
   RegisteredKeepAliveHost,

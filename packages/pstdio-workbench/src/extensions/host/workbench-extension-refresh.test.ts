@@ -15,7 +15,7 @@ const webview = {
 
 const metadata = {
   commands: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   diagnostics: [],
   extensions: [],
   menuContributions: [],
@@ -62,10 +62,10 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 
-const dataRendererMetadata = {
+const kanbanRendererMetadata = {
   ...metadata,
   treeRenderers: [],
-  dataRenderers: [
+  kanbanRenderers: [
     {
       id: "planner.tickets",
       extensionId: "pstdio.pstdio-planner",
@@ -161,34 +161,34 @@ describe("refreshWorkbenchExtensionContributions", () => {
     expect(refreshed).toEqual([]);
   });
 
-  test("refreshes data renderers after extension mutation commands", () => {
+  test("refreshes kanban renderers after extension mutation commands", () => {
     const workbench = createWorkbenchCore();
     const refreshed: string[] = [];
-    workbench.renderers.registerDataRenderer({
+    workbench.renderers.registerKanbanRenderer({
       id: "planner.tickets",
       title: "Tickets",
       attributes: [],
       executeQuery: () => [],
     });
-    workbench.renderers.onDidRefreshDataRenderer((event) => refreshed.push(event.dataRendererId));
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(event.kanbanRendererId));
 
-    refreshWorkbenchExtensionContributions(workbench, dataRendererMetadata, "planner.create-ticket");
+    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.create-ticket");
 
     expect(refreshed).toEqual(["planner.tickets"]);
   });
 
-  test("skips data renderer refresh after data query commands", () => {
+  test("skips kanban renderer refresh after data query commands", () => {
     const workbench = createWorkbenchCore();
     const refreshed: string[] = [];
-    workbench.renderers.registerDataRenderer({
+    workbench.renderers.registerKanbanRenderer({
       id: "planner.tickets",
       title: "Tickets",
       attributes: [],
       executeQuery: () => [],
     });
-    workbench.renderers.onDidRefreshDataRenderer((event) => refreshed.push(event.dataRendererId));
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(event.kanbanRendererId));
 
-    refreshWorkbenchExtensionContributions(workbench, dataRendererMetadata, "planner.query-tickets");
+    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.query-tickets");
 
     expect(refreshed).toEqual([]);
   });

@@ -62,7 +62,7 @@ export const toWorkbenchResource = (
     resource.type,
     resource.id,
     resource.label ?? resource.id,
-    resource.type === "workspace" ? standardResourceIcons.workspace : standardResourceIcons.dataRenderer,
+    resource.type === "workspace" ? standardResourceIcons.workspace : standardResourceIcons.kanbanRenderer,
     resource.projectId ?? projectId,
     resource.metadata,
   );

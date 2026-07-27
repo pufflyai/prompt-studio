@@ -1,17 +1,17 @@
 import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
+import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 
 export const registerExtensionResourceHierarchy = (
   ctx: WorkbenchModuleContributionContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable => {
-  const hierarchyRenderers = input.metadata.dataRenderers?.filter((renderer) => renderer.resourceKind) ?? [];
+  const hierarchyRenderers = input.metadata.kanbanRenderers?.filter((renderer) => renderer.resourceKind) ?? [];
   const rootsByKind = new Map(
     hierarchyRenderers.map((renderer) => [
       renderer.resourceKind!,
-      createExtensionDataRendererResource(renderer, input.projectId),
+      createExtensionKanbanRendererResource(renderer, input.projectId),
     ]),
   );
   const ownerId = [...new Set(hierarchyRenderers.map((renderer) => renderer.extensionId))].sort().join("+") || "none";

@@ -91,9 +91,9 @@ export default defineExtension({
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   },
-  dataRenderers: {
+  kanbanRenderers: {
     tickets: {
-      title: l10n("dataRenderers.tickets.title", "Tickets"),
+      title: l10n("kanbanRenderers.tickets.title", "Tickets"),
       resourceKind: "ticket",
       attributes: buildTicketAttributes([]),
       queryCommand: commandRef("pstdio-planner.query-tickets"),
@@ -103,8 +103,8 @@ export default defineExtension({
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
         columnParam: "statusId",
-        title: l10n("dataRenderers.tickets.createRow.title", "New ticket"),
-        submitLabel: l10n("dataRenderers.tickets.createRow.submitLabel", "Create ticket"),
+        title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
+        submitLabel: l10n("kanbanRenderers.tickets.createRow.submitLabel", "Create ticket"),
         params: {
           content: params.longText({ label: "Description", required: true }),
         },
@@ -118,37 +118,37 @@ export default defineExtension({
       rowActions: [
         {
           id: "create-workspace",
-          label: l10n("dataRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
+          label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
           icon: "git-branch",
           command: commandRef("pstdio-planner.create-workspace"),
         },
         {
           id: "run-attempt",
-          label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
+          label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
           icon: "play",
           command: commandRef("pstdio-planner.run-attempt"),
         },
         {
           id: "refine-ticket",
-          label: l10n("dataRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
+          label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
           icon: "sparkles",
           command: commandRef("pstdio-planner.refine-ticket"),
         },
         {
           id: "break-into-sub-tickets",
-          label: l10n("dataRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
+          label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
           icon: "list-tree",
           command: commandRef("pstdio-planner.break-into-sub-tickets"),
         },
         {
           id: "archive",
-          label: l10n("dataRenderers.tickets.rowActions.archive", "Archive"),
+          label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
           icon: "archive",
           command: commandRef("pstdio-planner.archive-ticket"),
         },
         {
           id: "delete",
-          label: l10n("dataRenderers.tickets.rowActions.delete", "Delete"),
+          label: l10n("kanbanRenderers.tickets.rowActions.delete", "Delete"),
           icon: "trash",
           destructive: true,
           command: commandRef("pstdio-planner.delete-ticket"),
@@ -161,9 +161,9 @@ export default defineExtension({
         ordering: { attributeId: "created", direction: "desc" },
         displayProperties: ["id", "workspace", "type", "priority"],
       },
-      emptyTitle: l10n("dataRenderers.tickets.emptyTitle", "No tickets yet"),
+      emptyTitle: l10n("kanbanRenderers.tickets.emptyTitle", "No tickets yet"),
       emptyDescription: l10n(
-        "dataRenderers.tickets.emptyDescription",
+        "kanbanRenderers.tickets.emptyDescription",
         "Create a ticket to start tracking work for this project.",
       ),
     },

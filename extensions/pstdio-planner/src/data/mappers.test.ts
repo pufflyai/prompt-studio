@@ -33,7 +33,7 @@ const status: StoredStatus = {
 };
 
 describe("ticketToRow", () => {
-  test("maps a ticket to a data-renderer row with a ticket resource", () => {
+  test("maps a ticket to a kanban-renderer row with a ticket resource", () => {
     const row = ticketToRow(ticket, "proj-1");
 
     expect(row.id).toBe("t1");

@@ -19,7 +19,7 @@ describe("extension-lab workbench attachments", () => {
         expect.objectContaining({ label: expect.objectContaining({ $l10n: "commands.counter.read.title" }) }),
       ]),
     );
-    expect(extension.dataRenderers?.glassLabArtifacts).toMatchObject({
+    expect(extension.kanbanRenderers?.glassLabArtifacts).toMatchObject({
       title: "Glass Lab artifacts",
       resourceKind: "glass-lab-artifact",
       queryCommand: { id: "extension-lab.glass-lab-artifacts.query" },

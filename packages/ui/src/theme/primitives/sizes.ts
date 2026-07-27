@@ -25,6 +25,7 @@ export const spacing = {
   none: { value: "0" },
   "2xs": { value: sp[50] },
   xs: { value: sp[100] },
+  compact: { value: "0.625rem" },
   sm: { value: sp[150] },
   md: { value: sp[200] },
   lg: { value: sp[300] },
@@ -37,10 +38,19 @@ export const spacing = {
   "5xl": { value: sp[1600] },
 };
 
+export const sizes = {
+  "collection-row": { value: "2.125rem" },
+  "filter-pill": { value: sp[300] },
+  "resource-id": { value: sp[600] },
+  "view-bar": { value: sp[500] },
+  "view-subheader": { value: "2.25rem" },
+};
+
 export const radii = {
   none: { value: "0" },
   "2xs": { value: sp[25] },
   xs: { value: sp[50] },
+  compact: { value: "0.375rem" },
   sm: { value: sp[100] },
   md: { value: sp[150] },
   lg: { value: sp[200] },

@@ -49,7 +49,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 | `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
 | `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
 | `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
-| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns Glass Lab artifact rows used by the demo data renderer.                           |
+| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns Glass Lab artifact rows used by the demo kanban renderer.                           |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
 | `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
 | `heartbeat`       | `lab.heartbeat`       | no   | Invoked by the schedule below.                                                           |
@@ -91,7 +91,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Templates and skills
 
-- `dataRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with themed artifact rows.
+- `kanbanRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with themed artifact rows.
 - `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
 
 > Color themes and file icon themes now ship in the `pstdio-base-themes` extension; the lab no longer contributes appearance assets.

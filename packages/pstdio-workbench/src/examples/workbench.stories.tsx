@@ -5,13 +5,13 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
 import { createDashboardWorkbench } from "./dashboard/module";
-import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
 import { createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
+import { createKanbanRendererStoryModule } from "./kanban-renderer/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
@@ -69,8 +69,8 @@ rendererTypesWorkbench.registerModule(
 
 const dashboardWorkbench = createDashboardWorkbench({ canonicalGeometry: true });
 
-const dataRendererWorkbench = createWorkbenchCore();
-dataRendererWorkbench.registerModule(createDataRendererStoryModule());
+const kanbanRendererWorkbench = createWorkbenchCore();
+kanbanRendererWorkbench.registerModule(createKanbanRendererStoryModule());
 
 const fileRendererWorkbench = createWorkbenchCore();
 fileRendererWorkbench.registerModule(createFileRendererStoryModule());
@@ -202,8 +202,8 @@ export const DashboardWorkbench: Story = {
   render: () => <WorkbenchStory workbench={dashboardWorkbench} />,
 };
 
-export const DataRenderer: Story = {
-  render: () => <WorkbenchStory workbench={dataRendererWorkbench} />,
+export const KanbanRenderer: Story = {
+  render: () => <WorkbenchStory workbench={kanbanRendererWorkbench} />,
 };
 
 // The file renderer dispatches by file type: markdown (notes.md) via the

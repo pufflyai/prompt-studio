@@ -16,7 +16,7 @@ const baseMetadata = {
   routes: [],
   settingsPanels: [],
   treeItems: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   treeRenderers: [],
 };
 

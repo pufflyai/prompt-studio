@@ -61,12 +61,15 @@ import {
   type ControlsRendererRegistry,
   createControlsRendererRegistry,
 } from "./registries/renderers/controls-renderer-registry";
-import { createDataRendererRegistry, type DataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 import {
   createDataTableRendererRegistry,
   type DataTableRendererRegistry,
 } from "./registries/renderers/data-table-renderer-registry";
 import { createFileRendererRegistry, type FileRendererRegistry } from "./registries/renderers/file-renderer-registry";
+import {
+  createKanbanRendererRegistry,
+  type KanbanRendererRegistry,
+} from "./registries/renderers/kanban-renderer-registry";
 import {
   type CreateWorkbenchRendererRegistryInput,
   createWorkbenchRendererRegistry,
@@ -97,11 +100,11 @@ import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 
 // The renderer namespace owns content-producing registrations. Tree renderers
-// and data renderers live here too: each auto-registers a widget renderer so
+// and kanban renderers live here too: each auto-registers a widget renderer so
 // they are placed via layout.registerWidget like any other content.
 export type WorkbenchRenderers = WorkbenchRendererRegistry &
   TreeRendererRegistry &
-  DataRendererRegistry &
+  KanbanRendererRegistry &
   DataTableRendererRegistry &
   FileRendererRegistry &
   ControlsRendererRegistry;
@@ -315,8 +318,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerRenderer: (renderer) => track(core.renderers.registerRenderer(renderer)),
       registerTreeRenderer: (view, metadata) =>
         track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
-      registerDataRenderer: (contribution, metadata) =>
-        track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
+      registerKanbanRenderer: (contribution, metadata) =>
+        track(core.renderers.registerKanbanRenderer(contribution, withModuleMetadata(input, metadata))),
       registerDataTableRenderer: (contribution, metadata) =>
         track(core.renderers.registerDataTableRenderer(contribution, withModuleMetadata(input, metadata))),
       registerFileRenderer: (contribution, metadata) =>
@@ -367,7 +370,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     rendererRegistry,
     persistence: input.treePersistence,
   });
-  const dataRendererRegistry = createDataRendererRegistry({ rendererRegistry });
+  const kanbanRendererRegistry = createKanbanRendererRegistry({ rendererRegistry });
   const dataTableRendererRegistry = createDataTableRendererRegistry({ rendererRegistry });
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
   const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
@@ -437,7 +440,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     renderers: {
       ...rendererRegistry,
       ...treeRendererRegistry,
-      ...dataRendererRegistry,
+      ...kanbanRendererRegistry,
       ...dataTableRendererRegistry,
       ...fileRendererRegistry,
       ...controlsRendererRegistry,

@@ -126,7 +126,7 @@ export const createWorkspaceCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
+      label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
       icon: "git-branch",
       placement: "first",
     },
@@ -154,7 +154,7 @@ export const runAttemptCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
+      label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
       icon: "play",
     },
   ],
@@ -189,7 +189,7 @@ export const refineTicketCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
+      label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
       icon: "sparkles",
     },
   ],
@@ -253,7 +253,7 @@ export const breakIntoSubTicketsCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
+      label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
       icon: "list-tree",
     },
   ],

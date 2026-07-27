@@ -98,7 +98,7 @@ const metadata = {
   ],
   treeItems: [],
   treeRenderers: [],
-  dataRenderers: [
+  kanbanRenderers: [
     {
       id: "lab.rows",
       extensionId: "pstdio.lab",
@@ -184,7 +184,7 @@ describe("registerWorkbenchExtensionContributions", () => {
     });
     expect(workbench.preferences.getSchema("lab.enabled")).toMatchObject({ scope: "project", default: true });
 
-    const renderer = workbench.renderers.getDataRenderer("lab.rows");
+    const renderer = workbench.renderers.getKanbanRenderer("lab.rows");
     expect(renderer).toMatchObject({ id: "lab.rows", title: "Rows" });
     expect(workbench.layout.getWidget("lab.rows")).toMatchObject({
       region: "main",

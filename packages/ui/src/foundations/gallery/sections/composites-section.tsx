@@ -12,9 +12,9 @@ import {
   Settings,
 } from "lucide-react";
 import { Activity, type ActivityActor } from "@/components/activity";
-import type { AttributeDescriptor, DataRendererRow } from "@/components/data-renderer";
-import { DataRenderer, MANUAL_ORDERING, NO_GROUPING } from "@/components/data-renderer";
 import { DataTable, type RowData } from "@/components/data-table";
+import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer";
+import { KanbanRenderer, MANUAL_ORDERING, NO_GROUPING } from "@/components/kanban-renderer";
 import { MermaidRenderer } from "@/components/mermaid-renderer/mermaid-renderer";
 import { TreeList } from "@/components/tree-list/tree-list";
 import type { TreeListSection } from "@/components/tree-list/tree-list.types";
@@ -68,7 +68,7 @@ const workflowAttributes: AttributeDescriptor[] = [
   },
 ];
 
-const workflowRows: DataRendererRow[] = [
+const workflowRows: KanbanRendererRow[] = [
   {
     id: "draft-system-prompt",
     title: "Draft system prompt",
@@ -163,7 +163,7 @@ const diagramCode = `flowchart LR
   Validate[Validate]
   Input --> Theme --> Gallery --> Validate`;
 
-const dataRendererColumnColor = (groupKey: string) => {
+const kanbanRendererColumnColor = (groupKey: string) => {
   if (groupKey === "running") return { color: "blue" };
   if (groupKey === "review") return { color: "purple" };
   return { color: "gray" };
@@ -175,9 +175,9 @@ export const CompositesSection = () => {
       title="Advanced components"
       description="Composed UI surfaces that own richer state, density, or workflow structure."
     >
-      <GalleryCard title="Workflow renderer" names={["DataRenderer"]} gridColumn={{ base: "auto", xl: "span 2" }}>
+      <GalleryCard title="Workflow renderer" names={["KanbanRenderer"]} gridColumn={{ base: "auto", xl: "span 2" }}>
         <Box height="28rem" minW="0" overflow="hidden">
-          <DataRenderer
+          <KanbanRenderer
             storageKey="component-gallery-composites-workflow"
             rows={workflowRows}
             attributes={workflowAttributes}
@@ -189,7 +189,7 @@ export const CompositesSection = () => {
               ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
               displayProperties: ["priority", "owner"],
             }}
-            getBoardColumnConfig={dataRendererColumnColor}
+            getBoardColumnConfig={kanbanRendererColumnColor}
           />
         </Box>
       </GalleryCard>

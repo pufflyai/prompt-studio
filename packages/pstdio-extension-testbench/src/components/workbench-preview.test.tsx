@@ -13,7 +13,7 @@ const baseBench = {
   metadata: {
     commands: [],
     commandPaletteContributions: [],
-    dataRenderers: [],
+    kanbanRenderers: [],
     diagnostics: [],
     extensions: [{ id: "lab", name: "lab", displayName: "Lab", sourcePath: "" }],
     menuContributions: [],

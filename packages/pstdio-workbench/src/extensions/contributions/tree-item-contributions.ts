@@ -20,7 +20,7 @@ const targetForTreeAction = (
   input: RegisterWorkbenchExtensionTreeItemsInput,
   item: TreeItem,
 ): NavigationTarget | undefined => {
-  if (item.action.kind === "dataRenderer") return { kind: "view", widgetId: item.action.dataRendererId };
+  if (item.action.kind === "kanbanRenderer") return { kind: "view", widgetId: item.action.kanbanRendererId };
   const action = item.action;
   if (action.kind === "route") {
     const route = input.metadata.routes.find((candidate) => candidate.id === action.route);

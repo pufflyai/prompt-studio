@@ -9,8 +9,8 @@ const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
     ),
   );
 
-const dataRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set((metadata.dataRenderers ?? []).map((renderer) => renderer.queryCommandId));
+const kanbanRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
+  new Set((metadata.kanbanRenderers ?? []).map((renderer) => renderer.queryCommandId));
 
 const dataTableRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryCommandId));
@@ -39,8 +39,10 @@ const restoreActiveWidget = (workbench: WorkbenchModuleContributionContext, widg
 export const shouldRefreshWorkbenchExtensionTrees = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
   !treeQueryCommandIds(metadata).has(commandId);
 
-export const shouldRefreshWorkbenchExtensionDataRenderers = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
-  !dataRendererQueryCommandIds(metadata).has(commandId);
+export const shouldRefreshWorkbenchExtensionKanbanRenderers = (
+  metadata: WorkbenchExtensionMetadata,
+  commandId: string,
+) => !kanbanRendererQueryCommandIds(metadata).has(commandId);
 
 export const shouldRefreshWorkbenchExtensionDataTableRenderers = (
   metadata: WorkbenchExtensionMetadata,
@@ -87,8 +89,8 @@ export const refreshWorkbenchExtensionContributions = (
     for (const renderer of metadata.treeRenderers ?? []) workbench.renderers.refresh(renderer.id);
   }
 
-  if (shouldRefreshWorkbenchExtensionDataRenderers(metadata, commandId)) {
-    for (const renderer of metadata.dataRenderers ?? []) workbench.renderers.refreshDataRenderer(renderer.id);
+  if (shouldRefreshWorkbenchExtensionKanbanRenderers(metadata, commandId)) {
+    for (const renderer of metadata.kanbanRenderers ?? []) workbench.renderers.refreshKanbanRenderer(renderer.id);
   }
 
   if (shouldRefreshWorkbenchExtensionDataTableRenderers(metadata, commandId)) {

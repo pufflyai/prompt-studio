@@ -37,7 +37,7 @@ const preview: Preview = {
           "Components",
           ["Inputs", "Layout", "Data Display", "Feedback", "Navigation", "Overlays"],
           "Patterns",
-          ["Chat", "Data Renderer", "Editors", "Diff"],
+          ["Chat", "Kanban Renderer", "Editors", "Diff"],
         ],
       },
     },

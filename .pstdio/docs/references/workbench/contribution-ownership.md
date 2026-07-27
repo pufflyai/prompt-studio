@@ -48,7 +48,7 @@ The metadata is used for:
 - extension webview attribution, where a widget contribution's owner id becomes the extension id
 - lifecycle clarity when a group of contributions is registered and disposed together
 
-The metadata is attached to contributions across commands, keybindings, resources, layout widgets, placeholders, menu items, navigation handlers, tree renderer contributions, data renderer contributions, notifications, and preference schemas.
+The metadata is attached to contributions across commands, keybindings, resources, layout widgets, placeholders, menu items, navigation handlers, tree renderer contributions, kanban renderer contributions, notifications, and preference schemas.
 
 ## Module context
 

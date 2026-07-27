@@ -88,7 +88,7 @@ const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
     commandId: z.string(),
     args: jsonObjectSchema.optional(),
   }),
-  z.object({ kind: z.literal("dataRenderer"), dataRendererId: z.string() }),
+  z.object({ kind: z.literal("kanbanRenderer"), kanbanRendererId: z.string() }),
   z.object({ kind: z.literal("route"), route: z.string() }),
   z.object({ kind: z.literal("href"), href: z.string() }),
 ]);

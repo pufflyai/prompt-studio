@@ -8,7 +8,7 @@ import { dashboardResources } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { setResourceBreadcrumb, syncResourceSidenav } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
+import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { registerResourceSidenavTree } from "./resource-sidenav-tree";
 
@@ -68,7 +68,7 @@ const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContributionContext) 
 export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.workspaces",
   activate(ctx) {
-    registerWorkspaceDataRenderer(ctx);
+    registerWorkspaceKanbanRenderer(ctx);
     registerWorkspaceDetailWidget(ctx);
     registerResourceSidenavTree(ctx);
 

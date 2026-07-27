@@ -15,8 +15,8 @@ import {
 } from "./commands";
 import { extensionDiagnosticSchema, extensionRecordSchema } from "./common";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
-import { extensionCommandPaletteResourceRecordSchema, extensionDataRendererRecordSchema } from "./data-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
+import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import {
@@ -56,7 +56,7 @@ export const extensionsCheckResponseSchema = z.object({
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
-  dataRenderers: z.array(extensionDataRendererRecordSchema),
+  kanbanRenderers: z.array(extensionKanbanRendererRecordSchema),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
@@ -80,7 +80,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
-  dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
+  kanbanRenderers: z.array(extensionKanbanRendererRecordSchema).optional(),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),

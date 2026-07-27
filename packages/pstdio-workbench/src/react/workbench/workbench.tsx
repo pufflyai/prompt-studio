@@ -10,9 +10,9 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
-import { installWorkbenchDataRenderer } from "../renderers/data/install-data-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
+import { installWorkbenchKanbanRenderer } from "../renderers/kanban/install-kanban-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -146,7 +146,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     renderParamField,
     onSidenavContextActionsChange: setSidenavContextActions,
   });
-  installWorkbenchDataRenderer(workbench);
+  installWorkbenchKanbanRenderer(workbench);
   installWorkbenchDataTableRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
   installWorkbenchControlsRenderer(workbench);

@@ -188,7 +188,7 @@ describe("buildTreeVisibilityMenuActions", () => {
       {
         sections: [
           {
-            id: "extension-data-renderers",
+            id: "extension-kanban-renderers",
             // Unlabeled structural section: not a toggle target itself, but its top-level rows can opt in.
             nodes: [
               { id: "tickets", label: "Tickets", canHide: true, children: [{ id: "ticket-1", label: "PS-1" }] },

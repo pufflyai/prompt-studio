@@ -130,7 +130,7 @@ export const metadataWithTickets = {
       title: "List ticket files",
     },
   ],
-  dataRenderers: [
+  kanbanRenderers: [
     {
       id: "pstdio-core-tickets.tickets",
       extensionId: "pstdio.pstdio-core-tickets",

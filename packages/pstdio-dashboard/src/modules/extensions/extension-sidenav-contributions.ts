@@ -6,7 +6,7 @@ import {
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { buildExtensionDataRendererSidenavHeaderNodes } from "./extension-data-renderers";
+import { buildExtensionKanbanRendererSidenavHeaderNodes } from "./extension-kanban-renderers";
 
 interface ExtensionSidenavContributionState {
   metadata: DashboardExtensionMetadata | undefined;
@@ -60,16 +60,16 @@ export const registerExtensionSidenavContributions = (
   });
 };
 
-export const registerExtensionDataRendererSidenavContribution = (
+export const registerExtensionKanbanRendererSidenavContribution = (
   ctx: WorkbenchModuleContributionContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ) =>
   registerSidenavContribution(ctx, {
-    id: "dashboard.extensions.data-renderers",
+    id: "dashboard.extensions.kanban-renderers",
     modes: ["*"],
     region: "header",
     order: 40,
-    getHeaderNodes: () => buildExtensionDataRendererSidenavHeaderNodes(input),
+    getHeaderNodes: () => buildExtensionKanbanRendererSidenavHeaderNodes(input),
   });
 
 const resourceSidenavModeId = (

@@ -1,9 +1,9 @@
-import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui/data-renderer";
+import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../../../core";
 import { dashboardStatusColumns, dashboardTickets, dashboardTicketTags } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
-interface TicketRow extends DataRendererRow {
+interface TicketRow extends KanbanRendererRow {
   resource?: ResourceRef;
   attributes: {
     status: string;
@@ -78,10 +78,10 @@ const toTicketRow = (ticket: (typeof dashboardTickets)[number]): TicketRow => {
   };
 };
 
-// The tickets board is a workbench data renderer so filter, grouping, and
+// The tickets board is a workbench kanban renderer so filter, grouping, and
 // display controls stay local to the widget.
-export const registerTicketDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.renderers.registerDataRenderer<TicketRow>({
+export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.renderers.registerKanbanRenderer<TicketRow>({
     id: dashboardWidgetIds.tickets,
     title: "Tickets",
     resourceKind: "ticket",

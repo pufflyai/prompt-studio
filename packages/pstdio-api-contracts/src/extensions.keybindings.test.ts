@@ -48,7 +48,7 @@ describe("extension keybinding contracts", () => {
         modes: [],
         views: [],
         routes: [],
-        dataRenderers: [],
+        kanbanRenderers: [],
         commandPaletteResources: [],
         navigation: [],
         treeItems: [],

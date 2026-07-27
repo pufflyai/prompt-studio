@@ -1,4 +1,4 @@
-import type { DataRendererQueryResult, ExtensionStorageApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, ExtensionWorkspace, KanbanRendererQueryResult } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -24,7 +24,7 @@ export const runTicketsQuery = async ({
   storage,
   projectId,
   workspaces = [],
-}: TicketsQueryInput): Promise<DataRendererQueryResult> => {
+}: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
   const [tickets, statuses, tags] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultStatuses(storage),

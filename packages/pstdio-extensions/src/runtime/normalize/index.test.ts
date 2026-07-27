@@ -194,9 +194,9 @@ describe("normalizeExtensionSources runtime records", () => {
     ]);
   });
 
-  test("registers data renderer contributions", () => {
+  test("registers kanban renderer contributions", () => {
     const planner = defineExtension({
-      dataRenderers: {
+      kanbanRenderers: {
         tickets: {
           title: "Tickets",
           resourceKind: "ticket",
@@ -211,7 +211,7 @@ describe("normalizeExtensionSources runtime records", () => {
 
     const runtime = normalizeExtensionSources([wrap("planner", planner)]);
 
-    expect(runtime.dataRenderers).toEqual([
+    expect(runtime.kanbanRenderers).toEqual([
       expect.objectContaining({
         id: "planner.tickets",
         localId: "tickets",

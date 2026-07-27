@@ -27,7 +27,6 @@ import {
 } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
-import { registerWorkbenchExtensionDataRenderers } from "../contributions/data-renderer-contributions";
 import { registerWorkbenchExtensionDataTableRenderers } from "../contributions/data-table-renderer-contributions";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
@@ -36,6 +35,7 @@ import {
   type WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-renderer-contributions";
+import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
@@ -285,7 +285,7 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
 const registerResourceOpeners = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const resourceKinds = new Set<string>();
   for (const view of input.metadata.views) if (view.resourceKind) resourceKinds.add(view.resourceKind);
-  for (const renderer of input.metadata.dataRenderers ?? [])
+  for (const renderer of input.metadata.kanbanRenderers ?? [])
     if (renderer.resourceKind) resourceKinds.add(renderer.resourceKind);
 
   const disposables: Disposable[] = [];
@@ -375,7 +375,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
   disposables.push(registerWorkbenchExtensionFileRenderers(input));
   disposables.push(...registerWebviewViews(input));
-  disposables.push(registerWorkbenchExtensionDataRenderers(context, input.metadata.dataRenderers ?? []));
+  disposables.push(registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? []));
   disposables.push(
     registerWorkbenchExtensionDataTableRenderers(
       context,

@@ -15,11 +15,11 @@ import {
   toCheckCommandPaletteResources,
   toCheckCommands,
   toCheckControlsRenderers,
-  toCheckDataRenderers,
   toCheckDataTableRenderers,
   toCheckFileIconThemes,
   toCheckFileRenderers,
   toCheckHooks,
+  toCheckKanbanRenderers,
   toCheckMenuContributions,
   toCheckMiddlewares,
   toCheckPaletteContributions,
@@ -81,7 +81,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   controlsRenderers: [],
   keybindings: [],
   settingsPanels: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   dataTableRenderers: [],
   commandPaletteResources: [],
   settingsDefinitions: [],
@@ -106,7 +106,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
   treeRenderers: Object.keys((definition.treeRenderers as UnknownRecord | undefined) ?? {}),
-  dataRenderers: Object.keys((definition.dataRenderers as UnknownRecord | undefined) ?? {}),
+  kanbanRenderers: Object.keys((definition.kanbanRenderers as UnknownRecord | undefined) ?? {}),
   dataTableRenderers: Object.keys((definition.dataTableRenderers as UnknownRecord | undefined) ?? {}),
   commandPaletteResources: Object.keys((definition.commandPaletteResources as UnknownRecord | undefined) ?? {}),
   controlsRenderers: Object.keys((definition.controlsRenderers as UnknownRecord | undefined) ?? {}),
@@ -186,7 +186,7 @@ const populateCheckFromRuntime = (
   check.treeItems.push(...toCheckTreeItems(runtime.treeItems));
   check.treeRenderers.push(...toCheckTreeRenderers(runtime.treeRenderers));
   check.fileRenderers.push(...toCheckFileRenderers(runtime.fileRenderers));
-  check.dataRenderers.push(...toCheckDataRenderers(runtime.dataRenderers));
+  check.kanbanRenderers.push(...toCheckKanbanRenderers(runtime.kanbanRenderers));
   check.dataTableRenderers?.push(...toCheckDataTableRenderers(runtime.dataTableRenderers));
   check.commandPaletteResources.push(...toCheckCommandPaletteResources(runtime.commandPaletteResources));
   check.controlsRenderers.push(...toCheckControlsRenderers(runtime.controlsRenderers));

@@ -18,7 +18,7 @@ import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
-import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
+import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
@@ -213,7 +213,7 @@ export const createWorkspacesModule = () =>
       });
 
       registerWorkspaceResourceActions(ctx);
-      registerWorkspaceDataRenderer(ctx);
+      registerWorkspaceKanbanRenderer(ctx);
       registerWorkspaceDetailWidgets(ctx);
       watchOpenWorkspaceRename(ctx);
 

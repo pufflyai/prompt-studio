@@ -215,7 +215,7 @@ export const labTreeItems = {
   },
 } satisfies NonNullable<ExtensionDefinition["treeItems"]>;
 
-export const labDataRenderers = {
+export const labKanbanRenderers = {
   glassLabArtifacts: {
     title: "Glass Lab artifacts",
     resourceKind: "glass-lab-artifact",
@@ -230,7 +230,7 @@ export const labDataRenderers = {
     emptyTitle: "No artifacts found",
     emptyDescription: "The sealed research facility has not cataloged any artifacts yet.",
   },
-} satisfies NonNullable<ExtensionDefinition["dataRenderers"]>;
+} satisfies NonNullable<ExtensionDefinition["kanbanRenderers"]>;
 
 export const createLabSettingsPanels = (baseUrl: string) =>
   ({

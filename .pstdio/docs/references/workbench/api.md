@@ -255,7 +255,7 @@ Use the standard resource icon names for common workbench concepts:
 | Workspace     | `computer`                |
 | Worktree      | `git-pull-request-draft`  |
 | Ticket        | `component`               |
-| Data renderer | `square-kanban`           |
+| Kanban renderer | `square-kanban`           |
 | Settings      | `settings`                |
 
 Call `resources.openResource(resource, { replaceActive: true })` to route through the highest-priority opener whose `canOpen()` returns true. A kind's `surface` (`primary` | `secondary` | `attached`) declares which anchor it belongs to; `resources.getSurface(resource)` reads it, and `resolveAnchorArea(surface)` maps it to an area so openers do not hardcode one.
@@ -416,29 +416,25 @@ ctx.layout.openWidget("project.tree");
 
 Tree nodes can carry `resource` for workbench opening, `actions` for inline buttons, `contextMenuActions` or `menuPath` for context menus, `children`, `description`, and `contextValue`.
 
-## Data renderers
+## Kanban renderers
 
-A data renderer is a Notion/Linear-style data workspace registered under `renderers`. It contributes the schema (tag definitions, grouping/ordering/display options, filter categories), the data via `executeQuery(state)` (receives current settings + filters so backends can push filter/sort/pagination down), row-mutation callbacks, and optionally a `savedViews` config block. With `savedViews` set, the workbench's built-in `WorkbenchDataView` shows a save / save-as / rename / duplicate / delete menu wired to `workbench.savedViews`.
+A kanban renderer is a Notion/Linear-style data workspace registered under `renderers`. It contributes an attribute schema, the data via `executeQuery(state)`, row-mutation callbacks, and optional initial views. Each saved view captures filters and display settings; selection, scroll position, and collapsed groups remain transient. Views persist locally for the renderer placement.
 
-Like tree renderers, a data renderer auto-registers a widget renderer with the same id; widgets place the workspace through `layout.registerWidget` and `layout.openWidget`. The data renderer never imports the saved-view registry — saved-view application is the workbench wrapper's job, driven entirely off `placement.resource.metadata.{filter, display}`.
+Like tree renderers, a kanban renderer auto-registers a widget renderer with the same id; widgets place the workspace through `layout.registerWidget` and `layout.openWidget`.
 
 ```ts
-ctx.renderers.registerDataRenderer({
+ctx.renderers.registerKanbanRenderer({
   id: "tickets",
   title: "Tickets",
   resourceKind: "ticket",
-  tagDefinitions: [/* ... */],
-  groupingOptions: [/* ... */],
-  orderingOptions: [/* ... */],
-  displayPropertyOptions: [/* ... */],
-  filterCategories: [/* ... */],
-  knownColumnKeys: ["backlog", "in-progress", "review", "done"],
+  attributes: [/* ... */],
+  defaultViews: [/* ... */],
+  defaultActiveViewId: "all",
   getBoardColumnConfig: (groupKey) => ({ color: "gray", canDragIn: true, canDragOut: true, canCreate: true }),
   executeQuery: ({ settings, filters }) => fetchRows(settings, filters),
-  onTicketClick: (row) => {/* ... */},
-  onMoveTicket: (rowId, targetColumn, ctx) => {/* ... */},
-  onCreateTicket: (columnId) => {/* ... */},
-  savedViews: { resourceKind: "ticket", scope: "project", projectId: "demo" },
+  onRowClick: (row) => {/* ... */},
+  onAttributeChange: (rowId, attributeId, value) => {/* ... */},
+  onCreateRow: (submission) => {/* ... */},
 });
 
 ctx.layout.registerWidget({
@@ -446,12 +442,11 @@ ctx.layout.registerWidget({
   title: "Tickets",
   area: "main",
   rendererId: "tickets",
-  resourceKinds: ["savedView"],
   singleton: true,
 });
 ```
 
-When a saved-view resource is opened in this widget, the workbench reads `metadata.{filter, display}` off the resource and applies it to the per-placement workspace store. The save menu turns the current store state back into a saved view via `workbench.savedViews.create` / `.update`.
+The view bar supports create, rename, duplicate, default, and delete actions. Editing filters or display settings marks the active tab as dirty and exposes Reset and Save view actions.
 
 ## Controls renderers
 

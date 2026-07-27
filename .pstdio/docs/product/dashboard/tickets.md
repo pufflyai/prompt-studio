@@ -32,7 +32,7 @@ and must be loaded or mutated through planner extension commands.
 
 ## Overview
 
-The planner extension contributes a `tickets` data renderer with
+The planner extension contributes a `tickets` kanban renderer with
 `resourceKind: "ticket"`. The dashboard workbench renders that contribution and
 passes user actions back to extension commands such as
 `pstdio-planner.query-tickets`, `pstdio-planner.set-ticket-attribute`,
@@ -43,7 +43,7 @@ passes user actions back to extension commands such as
 
 ### Functional Requirements
 
-1. The dashboard must render the planner-provided ticket data renderer.
+1. The dashboard must render the planner-provided ticket kanban renderer.
 2. The dashboard must execute planner row actions without interpreting ticket
    storage itself.
 3. Moving a row between status columns must call the planner update command.
@@ -53,7 +53,7 @@ passes user actions back to extension commands such as
 
 ### UX Requirements
 
-- Ticket rows must use the attributes returned by the planner data renderer.
+- Ticket rows must use the attributes returned by the planner kanban renderer.
 - Row context menus must show planner row actions.
 - Host-owned workspace/session sync may be combined with planner rows for
   display, but planner ticket state remains extension-owned.
@@ -69,8 +69,8 @@ passes user actions back to extension commands such as
 ## Behavior
 
 1. Load workbench metadata for the project.
-2. Render the planner `tickets` data renderer.
-3. Execute data renderer queries and mutations through planner extension
+2. Render the planner `tickets` kanban renderer.
+3. Execute kanban renderer queries and mutations through planner extension
    commands.
 4. Execute row actions with the row id supplied by the workbench host.
 5. Refresh planner queries after mutation command outcomes.
@@ -81,7 +81,7 @@ passes user actions back to extension commands such as
 
 | Surface                         | Purpose                       |
 | ------------------------------- | ----------------------------- |
-| Planner `tickets` data renderer | Extension-owned ticket board. |
+| Planner `tickets` kanban renderer | Extension-owned ticket board. |
 
 ### Current Visible Controls
 
@@ -93,7 +93,7 @@ passes user actions back to extension commands such as
 
 ## Rules & Constraints
 
-- Dashboard code must know how to render a data renderer, not how to persist
+- Dashboard code must know how to render a kanban renderer, not how to persist
   tickets.
 - Ticket files and image attachments are surfaced by the planner ticket files
   tree, not dashboard file endpoints.
@@ -109,6 +109,6 @@ passes user actions back to extension commands such as
 ## Verification & Evidence
 
 - **Commands to run**: `bun test extensions/pstdio-planner/extension.test.ts`
-- **Expected evidence**: The planner extension contributes the `tickets` data
+- **Expected evidence**: The planner extension contributes the `tickets` kanban
   renderer and row actions.
 - **Where to find artifacts**: `extensions/pstdio-planner/extension.ts`

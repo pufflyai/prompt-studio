@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { Fragment, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { useDataRendererStore } from "../data-renderer/use-data-renderer-store";
+import { useKanbanRendererStore } from "../kanban-renderer/use-kanban-renderer-store";
 import { buildColumns } from "./build-columns";
 import { DataTableColumnMenu } from "./data-table-column-menu";
 import { DataTableHeader } from "./data-table-header";
@@ -81,7 +81,7 @@ export const DataTable = (props: DataTableProps) => {
     toolbarStorageKey,
     columnKeys: baseColumnKeys,
   });
-  const filters = useDataRendererStore(resolvedToolbarStorageKey, (state) => state.filters, {
+  const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, {
     settings: { viewMode: "list" },
   });
   const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);

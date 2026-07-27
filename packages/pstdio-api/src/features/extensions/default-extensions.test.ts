@@ -48,7 +48,7 @@ const installed = {
     fileRenderers: [],
     controlsRenderers: [],
     settingsPanels: [],
-    dataRenderers: [],
+    kanbanRenderers: [],
     keybindings: [],
     templates: [],
     skills: [],

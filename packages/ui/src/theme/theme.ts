@@ -2,7 +2,7 @@ import { createSystem, defineConfig } from "@chakra-ui/react";
 import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
-import { radii, spacing } from "./primitives/sizes";
+import { radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
@@ -53,6 +53,7 @@ const config = defineConfig({
       fontSizes,
       fontWeights,
       radii,
+      sizes,
       spacing,
     },
     semanticTokens: {

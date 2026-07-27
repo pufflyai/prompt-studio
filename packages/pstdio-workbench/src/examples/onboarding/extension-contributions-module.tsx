@@ -80,7 +80,7 @@ const metadata = {
   routes: [],
   settingsPanels: [],
   treeItems: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   views: [
     {
       id: TREE_VIEW_ID,

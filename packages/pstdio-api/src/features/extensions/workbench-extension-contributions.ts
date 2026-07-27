@@ -2,8 +2,8 @@ import type {
   ExtensionTreeItemContribution,
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
-  WorkbenchExtensionDataRendererRecord,
   WorkbenchExtensionDataTableRendererRecord,
+  WorkbenchExtensionKanbanRendererRecord,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 
@@ -17,9 +17,9 @@ const refIdOf = (value: unknown) => {
 
 const compact = <T>(items: Array<T | null>) => items.filter((item): item is T => item !== null);
 
-const toDataRendererCreateRow = (
-  createRow: ExtensionRuntime["dataRenderers"][number]["contribution"]["createRow"],
-): WorkbenchExtensionDataRendererRecord["createRow"] => {
+const toKanbanRendererCreateRow = (
+  createRow: ExtensionRuntime["kanbanRenderers"][number]["contribution"]["createRow"],
+): WorkbenchExtensionKanbanRendererRecord["createRow"] => {
   if (!createRow) return undefined;
   const commandId = refIdOf(createRow.command);
   if (!commandId) return undefined;
@@ -29,7 +29,7 @@ const toDataRendererCreateRow = (
     title: createRow.title,
     submitLabel: createRow.submitLabel,
     columnParam: createRow.columnParam,
-    params: createRow.params as NonNullable<WorkbenchExtensionDataRendererRecord["createRow"]>["params"],
+    params: createRow.params as NonNullable<WorkbenchExtensionKanbanRendererRecord["createRow"]>["params"],
     editableAttributesParam: createRow.editableAttributesParam,
     attachments:
       createRow.attachments && attachmentCommandId
@@ -42,9 +42,9 @@ const toDataRendererCreateRow = (
   };
 };
 
-const toDataRendererRowActions = (
-  rowActions: ExtensionRuntime["dataRenderers"][number]["contribution"]["rowActions"],
-): WorkbenchExtensionDataRendererRecord["rowActions"] =>
+const toKanbanRendererRowActions = (
+  rowActions: ExtensionRuntime["kanbanRenderers"][number]["contribution"]["rowActions"],
+): WorkbenchExtensionKanbanRendererRecord["rowActions"] =>
   compact(
     (rowActions ?? []).map((action) => {
       const commandId = refIdOf(action.command);
@@ -59,9 +59,9 @@ const toDataRendererRowActions = (
     }),
   );
 
-export const toDataRendererRecord = (
-  renderer: ExtensionRuntime["dataRenderers"][number],
-): WorkbenchExtensionDataRendererRecord | null => {
+export const toKanbanRendererRecord = (
+  renderer: ExtensionRuntime["kanbanRenderers"][number],
+): WorkbenchExtensionKanbanRendererRecord | null => {
   const queryCommandId = refIdOf(renderer.contribution.queryCommand);
   if (!queryCommandId) return null;
 
@@ -75,14 +75,13 @@ export const toDataRendererRecord = (
     updateAttributeCommandId: refIdOf(renderer.contribution.updateAttributeCommand),
     reorderCommandId: refIdOf(renderer.contribution.reorderCommand),
     columnActionCommandId: refIdOf(renderer.contribution.columnActionCommand),
-    createRow: toDataRendererCreateRow(renderer.contribution.createRow),
-    rowActions: toDataRendererRowActions(renderer.contribution.rowActions),
+    createRow: toKanbanRendererCreateRow(renderer.contribution.createRow),
+    rowActions: toKanbanRendererRowActions(renderer.contribution.rowActions),
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
-    savedViews: renderer.contribution.savedViews,
   };
 };
 
@@ -175,10 +174,10 @@ const toTreeItemAction = (item: ExtensionRuntime["treeItems"][number]): Extensio
       args: action.params as Record<string, unknown> | undefined,
     };
   }
-  if (action.kind === "dataRenderer") {
+  if (action.kind === "kanbanRenderer") {
     return {
-      kind: "dataRenderer",
-      dataRendererId: resolveExtensionContributionId(item.name, action.dataRenderer),
+      kind: "kanbanRenderer",
+      kanbanRendererId: resolveExtensionContributionId(item.name, action.kanbanRenderer),
     };
   }
   return action;

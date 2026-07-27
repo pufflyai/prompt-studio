@@ -28,7 +28,7 @@ const metadata = {
   routes: [],
   settingsPanels: [],
   treeItems: [],
-  dataRenderers: [
+  kanbanRenderers: [
     {
       id: "tickets.board",
       extensionId: "tickets",

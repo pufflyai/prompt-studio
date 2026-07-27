@@ -9,7 +9,7 @@ export const deleteTicketCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.delete", "Delete"),
+      label: l10n("kanbanRenderers.tickets.rowActions.delete", "Delete"),
       icon: "trash",
       placement: "last",
     },

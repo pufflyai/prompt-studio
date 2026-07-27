@@ -1,7 +1,7 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
 import { ListRow, WorkspaceBadge, type WorkspaceBadgeProps } from "@pstdio/ui";
-import type { DataRendererRow } from "@pstdio/ui/data-renderer";
 import { DiffBubble } from "@pstdio/ui/diff";
+import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef } from "@pstdio/workbench/core";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
@@ -175,7 +175,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 
 export const createWorkspaceBadgeRenderer =
   (input: { itemsAttributeId: string; projectId: string; openResource: (resource: ResourceRef) => void }) =>
-  (value: unknown, row: DataRendererRow) => {
+  (value: unknown, row: KanbanRendererRow) => {
     const items = normalizeWorkspaceBadgeItems(row.attributes[input.itemsAttributeId]);
     if (items.length === 0) return null;
     return createElement(ExtensionWorkspaceBadgeDisplay, {

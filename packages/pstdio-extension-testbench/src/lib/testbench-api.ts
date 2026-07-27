@@ -115,7 +115,7 @@ const collectBenchResources = async (input: {
 }) => {
   const resources: ResourceBrowseEntry[] = [];
 
-  for (const renderer of input.metadata.dataRenderers ?? []) {
+  for (const renderer of input.metadata.kanbanRenderers ?? []) {
     if (!renderer.resourceKind) continue;
 
     const outcome = await input.runner.execute({

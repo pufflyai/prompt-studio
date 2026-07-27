@@ -2,9 +2,9 @@ import type { WorkbenchModuleContribution } from "../../../../core";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerTicketDataRenderer } from "./collections/ticket-data";
+import { registerTicketKanbanRenderer } from "./collections/ticket-data";
 
-// The tickets slice: the tickets board, its data renderer, and ticket routing.
+// The tickets slice: the tickets board, its kanban renderer, and ticket routing.
 export const createTicketsModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.tickets",
   activate(ctx) {
@@ -14,7 +14,7 @@ export const createTicketsModule = (): WorkbenchModuleContribution => ({
       list: () => dashboardTickets.map(({ resource }) => ({ resource, group: "Tickets" })),
     });
 
-    registerTicketDataRenderer(ctx);
+    registerTicketKanbanRenderer(ctx);
 
     ctx.resources.registerOpener({
       id: "dashboard.tickets.opener",

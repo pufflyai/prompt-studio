@@ -6,7 +6,7 @@ import { dashboardResources } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { getSidenavContributionHeaderNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
-import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
+import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadata, metadataWithTickets } from "./module-test-fixtures";
 
@@ -168,7 +168,7 @@ test("keeps restored Forward navigation stable when appearance resolves after me
 
   try {
     await flushMicrotasks();
-    const tickets = createExtensionDataRendererResource(metadataWithTickets.dataRenderers[0], "project-1");
+    const tickets = createExtensionKanbanRendererResource(metadataWithTickets.kanbanRenderers[0], "project-1");
     await workbench.resources.openResource(tickets);
     await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
     workbench.history.goBack();

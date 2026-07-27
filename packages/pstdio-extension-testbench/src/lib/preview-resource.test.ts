@@ -4,7 +4,7 @@ import { createPreviewResource } from "./preview-resource";
 
 const baseMetadata = {
   commands: [],
-  dataRenderers: [],
+  kanbanRenderers: [],
   diagnostics: [],
   extensions: [],
   menuContributions: [],

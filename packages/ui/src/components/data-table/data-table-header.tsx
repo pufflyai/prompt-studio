@@ -1,12 +1,12 @@
 import { Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { DataRendererToolbar } from "../data-renderer/data-renderer-toolbar";
-import type { AttributeDescriptor, DataRendererRow } from "../data-renderer/types";
+import { KanbanRendererToolbar } from "../kanban-renderer/kanban-renderer-toolbar";
+import type { AttributeDescriptor, KanbanRendererRow } from "../kanban-renderer/types";
 import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableSelectionAction, RowData } from "./types";
 
 interface DataTableHeaderProps {
-  rows: DataRendererRow[];
+  rows: KanbanRendererRow[];
   attributes: AttributeDescriptor[];
   storageKey: string;
   selectedCount: number;
@@ -51,7 +51,7 @@ export const DataTableHeader = (props: DataTableHeaderProps) => {
     );
 
   return (
-    <DataRendererToolbar
+    <KanbanRendererToolbar
       rows={rows}
       storageKey={storageKey}
       attributes={attributes}

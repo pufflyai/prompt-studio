@@ -226,8 +226,8 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
   });
 });
 
-describe("buildWorkbenchExtensionMetadata data renderers", () => {
-  test("includes workbench data renderer contributions", () => {
+describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
+  test("includes workbench kanban renderer contributions", () => {
     const runtime = normalizeExtensionSources([
       {
         sourcePath: "/extension/extension.ts",
@@ -243,7 +243,7 @@ describe("buildWorkbenchExtensionMetadata data renderers", () => {
           enginesPstdio: "^1.0.0",
         },
         definition: {
-          dataRenderers: {
+          kanbanRenderers: {
             tickets: {
               title: "Tickets",
               resourceKind: "ticket",
@@ -276,7 +276,7 @@ describe("buildWorkbenchExtensionMetadata data renderers", () => {
       webviewCacheRoot: "/cache",
     });
 
-    expect(metadata.dataRenderers).toEqual([
+    expect(metadata.kanbanRenderers).toEqual([
       expect.objectContaining({
         id: "planner.tickets",
         extensionId: "pstdio.planner",

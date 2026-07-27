@@ -19,7 +19,7 @@ export default defineConfig({
         theme: path.resolve(import.meta.dirname, "src/theme/index.ts"),
         "chat-ui": path.resolve(import.meta.dirname, "src/components/chat-ui/index.ts"),
         diff: path.resolve(import.meta.dirname, "src/components/diff-viewer/index.ts"),
-        "data-renderer": path.resolve(import.meta.dirname, "src/components/data-renderer/index.ts"),
+        "kanban-renderer": path.resolve(import.meta.dirname, "src/components/kanban-renderer/index.ts"),
         "data-table": path.resolve(import.meta.dirname, "src/components/data-table/index.ts"),
         mermaid: path.resolve(import.meta.dirname, "src/components/mermaid-renderer/index.ts"),
         terminal: path.resolve(import.meta.dirname, "src/components/terminal/index.ts"),

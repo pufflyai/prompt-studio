@@ -41,7 +41,7 @@ export const extensionSlotKindSchema = z.enum([
   "view",
   "settings",
   "renderer",
-  "dataRenderer",
+  "kanbanRenderer",
   "dataTableRenderer",
 ]);
 

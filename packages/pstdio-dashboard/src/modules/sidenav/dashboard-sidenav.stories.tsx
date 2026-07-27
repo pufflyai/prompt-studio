@@ -37,7 +37,7 @@ const queryClient = new QueryClient({
 });
 const ticketsResource = {
   kind: "dashboard-view",
-  uri: `dashboard-workbench://project/${PROJECT_ID}/data-renderer/tickets`,
+  uri: `dashboard-workbench://project/${PROJECT_ID}/kanban-renderer/tickets`,
   id: "tickets",
   label: "Tickets",
   icon: "square-kanban",

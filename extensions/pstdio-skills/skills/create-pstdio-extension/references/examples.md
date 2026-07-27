@@ -196,7 +196,7 @@ export default defineExtension({
 });
 ```
 
-## Dashboard Data Renderer
+## Dashboard Kanban Renderer
 
 ```ts
 import {
@@ -220,7 +220,7 @@ export default defineExtension({
       },
     },
   },
-  dataRenderers: {
+  kanbanRenderers: {
     tasks: {
       title: "Tasks",
       resourceKind: "task",
@@ -238,8 +238,8 @@ export default defineExtension({
 });
 ```
 
-`dataRenderers` are automatically listed in the project sidenav. Do not add a `treeItems` entry with
-`action.kind === "dataRenderer"`.
+`kanbanRenderers` are automatically listed in the project sidenav. Do not add a `treeItems` entry with
+`action.kind === "kanbanRenderer"`.
 
 ## Native Resource Detail Mode
 

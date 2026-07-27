@@ -21,14 +21,14 @@ import {
   type ExecuteDashboardExtensionCommand,
 } from "./extension-command-handler";
 import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
-import { registerExtensionDataRenderers } from "./extension-data-renderers";
+import { registerExtensionKanbanRenderers } from "./extension-kanban-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 import {
   isExtensionResourceSidenavView,
-  registerExtensionDataRendererSidenavContribution,
+  registerExtensionKanbanRendererSidenavContribution,
   registerExtensionResourceSidenavContributions,
 } from "./extension-sidenav-contributions";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
@@ -64,7 +64,7 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     modes: scoped(metadata.modes) ?? [],
     navigation: scoped(metadata.navigation) ?? [],
     routes: scoped(metadata.routes) ?? [],
-    dataRenderers: scoped(metadata.dataRenderers),
+    kanbanRenderers: scoped(metadata.kanbanRenderers),
     dataTableRenderers: scoped(metadata.dataTableRenderers),
     commandPaletteResources: scoped(metadata.commandPaletteResources),
     treeRenderers: scoped(metadata.treeRenderers),
@@ -135,8 +135,8 @@ const registerSingleExtensionContributions = (
       disposables.push(ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, registration.menuItem));
     }
 
-    disposables.push(...registerExtensionDataRenderers(ctx, { executeCommand, metadata, projectId }));
-    disposables.push(registerExtensionDataRendererSidenavContribution(ctx, { metadata, projectId }));
+    disposables.push(...registerExtensionKanbanRenderers(ctx, { executeCommand, metadata, projectId }));
+    disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
     disposables.push(
       registerWorkbenchExtensionFileRenderers({
@@ -182,7 +182,7 @@ const registerSingleExtensionContributions = (
       ),
     );
     disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
-    if (metadata.dataRenderers?.some((renderer) => renderer.resourceKind)) {
+    if (metadata.kanbanRenderers?.some((renderer) => renderer.resourceKind)) {
       disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
     }
     disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));

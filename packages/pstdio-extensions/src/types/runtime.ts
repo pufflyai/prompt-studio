@@ -4,7 +4,6 @@ import type {
   CommandPaletteResourceContribution,
   CommandRunHandler,
   ControlsRendererContribution,
-  DataRendererContribution,
   DataTableRendererContribution,
   ExtensionDefinition,
   ExtensionSettingProperty,
@@ -14,6 +13,7 @@ import type {
   HarnessProvider,
   HookDefinition,
   JsonObject,
+  KanbanRendererContribution,
   KeybindingContribution,
   Localizable,
   MenuContribution,
@@ -192,13 +192,13 @@ export interface RuntimeSettingsPanelRecord {
   contribution: SettingsPanelContribution;
 }
 
-export interface RuntimeDataRendererRecord {
+export interface RuntimeKanbanRendererRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: DataRendererContribution;
+  contribution: KanbanRendererContribution;
 }
 
 export interface RuntimeDataTableRendererRecord {
@@ -399,7 +399,7 @@ export interface ExtensionRuntime {
   navigation: never[];
   treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
-  dataRenderers: RuntimeDataRendererRecord[];
+  kanbanRenderers: RuntimeKanbanRendererRecord[];
   dataTableRenderers: RuntimeDataTableRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];

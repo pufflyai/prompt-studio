@@ -32,7 +32,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             queryRows: { title: "Query rows", run: async () => ({ rows: [] }) },
             treeBody: { title: "Tree body", run: async () => [] },
           },
-          dataRenderers: {
+          kanbanRenderers: {
             rows: { title: "Rows", queryCommand: "queryRows" },
           },
           modes: {
@@ -64,7 +64,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             rows: {
               target: "workbench.left.tree",
               label: "Rows",
-              action: { kind: "dataRenderer", dataRenderer: "rows" },
+              action: { kind: "kanbanRenderer", kanbanRenderer: "rows" },
             },
           },
           treeRenderers: {
@@ -136,10 +136,10 @@ describe("createWorkbenchExtensionMetadata", () => {
       icon: "flask-conical",
       webview: { runtimeUrl: "/runtime/lab.project.html" },
     });
-    expect(metadata.dataRenderers?.[0]).toMatchObject({ id: "lab.rows", queryCommandId: "lab.queryRows" });
+    expect(metadata.kanbanRenderers?.[0]).toMatchObject({ id: "lab.rows", queryCommandId: "lab.queryRows" });
     expect(metadata.treeItems?.[0]).toMatchObject({
       id: "lab.rows",
-      action: { kind: "dataRenderer", dataRendererId: "lab.rows" },
+      action: { kind: "kanbanRenderer", kanbanRendererId: "lab.rows" },
     });
     expect(metadata.settingsDefinitions?.[0]).toMatchObject({ key: "enabled", default: true });
     expect(metadata.modes[0]).toMatchObject({

@@ -84,7 +84,7 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.fileRenderers.push(...source.fileRenderers);
   target.controlsRenderers.push(...source.controlsRenderers);
   target.settingsPanels.push(...source.settingsPanels);
-  target.dataRenderers.push(...source.dataRenderers);
+  target.kanbanRenderers.push(...source.kanbanRenderers);
   target.dataTableRenderers?.push(...(source.dataTableRenderers ?? []));
   target.commandPaletteResources.push(...source.commandPaletteResources);
   for (const binding of source.keybindings) {

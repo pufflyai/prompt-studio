@@ -1,5 +1,5 @@
-import { dataRendererSource } from "./data-renderer-source";
 import { documentRendererSource } from "./document-renderer-source";
+import { kanbanRendererSource } from "./kanban-renderer-source";
 
 export const onboardingSources = {
   emptyWorkbench: `import { createWorkbenchCore } from "pstdio-workbench/core";
@@ -313,7 +313,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
   },
 });`,
 
-  dataRenderer: dataRendererSource,
+  kanbanRenderer: kanbanRendererSource,
 
   documentRenderer: documentRendererSource,
 

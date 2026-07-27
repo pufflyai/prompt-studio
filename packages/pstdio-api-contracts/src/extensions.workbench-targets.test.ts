@@ -89,7 +89,7 @@ describe("workbench extension metadata targets", () => {
           webview,
         },
       ],
-      dataRenderers: [],
+      kanbanRenderers: [],
       diagnostics: [],
     });
 
@@ -149,7 +149,7 @@ describe("workbench extension metadata targets", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
-      dataRenderers: [],
+      kanbanRenderers: [],
       diagnostics: [],
     });
 
@@ -178,7 +178,7 @@ describe("workbench extension metadata targets", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
-      dataRenderers: [],
+      kanbanRenderers: [],
       diagnostics: [],
     });
 
@@ -205,7 +205,7 @@ describe("workbench extension metadata targets", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
-      dataRenderers: [],
+      kanbanRenderers: [],
       diagnostics: [],
     });
 

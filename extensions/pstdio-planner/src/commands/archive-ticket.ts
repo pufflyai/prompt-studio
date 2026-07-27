@@ -79,7 +79,7 @@ export const archiveTicketCommand = defineCommand({
   menus: [
     {
       slot: "ticket.headerOverflow",
-      label: l10n("dataRenderers.tickets.rowActions.archive", "Archive"),
+      label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
       icon: "archive",
       placement: "last",
     },

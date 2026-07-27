@@ -4,7 +4,7 @@ import { text } from "pstdio-extensions/workbench";
 
 const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
   metadata.views.find((view) => view.resourceKind)?.resourceKind ??
-  metadata.dataRenderers?.find((renderer) => renderer.resourceKind)?.resourceKind;
+  metadata.kanbanRenderers?.find((renderer) => renderer.resourceKind)?.resourceKind;
 
 const ticketPreviewResource = () =>
   ({

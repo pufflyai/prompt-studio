@@ -1,8 +1,8 @@
 import type {
-  DataRendererAttributeDescriptor,
-  DataRendererBoardColumnConfig,
-  DataRendererEnumOption,
   ExtensionWorkspace,
+  KanbanRendererAttributeDescriptor,
+  KanbanRendererBoardColumnConfig,
+  KanbanRendererEnumOption,
   Localizable,
 } from "@pstdio/sdk/extensions";
 import { l10n } from "@pstdio/sdk/extensions";
@@ -169,14 +169,14 @@ export const createTicketRowMapper = (
   return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup, parentLookup);
 };
 
-const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
+const statusToOption = (status: StoredStatus): KanbanRendererEnumOption => ({
   value: status.id,
   label: status.name,
   color: status.color,
   icon: CIRCLE_ICON,
 });
 
-const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
+const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
   id: ticketTagAttributeId(tag),
   label: tag.name,
   type: {
@@ -197,7 +197,7 @@ const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
 export const buildTicketAttributes = (
   statuses: StoredStatus[],
   tags: StoredTag[] = [],
-): DataRendererAttributeDescriptor[] => [
+): KanbanRendererAttributeDescriptor[] => [
   {
     id: "status",
     label: l10n("displayMenu.propertyOptions.status", "Status"),
@@ -232,7 +232,7 @@ export const buildTicketAttributes = (
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];
 
-export const statusToColumnConfig = (status: StoredStatus): DataRendererBoardColumnConfig => ({
+export const statusToColumnConfig = (status: StoredStatus): KanbanRendererBoardColumnConfig => ({
   color: status.color,
   canDragIn: status.canDragIn,
   canDragOut: status.canDragOut,

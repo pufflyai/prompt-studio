@@ -268,7 +268,7 @@ const createTreeNode = (input: {
     };
   }
 
-  if (action.kind === "dataRenderer") return null;
+  if (action.kind === "kanbanRenderer") return null;
 
   if (action.kind === "href") return null;
 

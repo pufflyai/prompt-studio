@@ -110,7 +110,7 @@ export const activateExtensionModeLayout = (input: {
 };
 
 // Modal views mount in the overlay region as a closable dialog instead of docking
-// into a workbench region; data-renderer create flows open them over the board.
+// into a workbench region; kanban-renderer create flows open them over the board.
 const modalOverlayConfig = {
   size: "lg",
   placement: "center",

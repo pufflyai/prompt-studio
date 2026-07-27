@@ -8,7 +8,7 @@ const orderOf = (menu: { placement?: keyof typeof placementOrder }, index: numbe
 
 describe("pstdio planner ticket actions", () => {
   test("keeps ticket header overflow actions aligned with board row actions", () => {
-    const rowActions = extension.dataRenderers?.tickets?.rowActions ?? [];
+    const rowActions = extension.kanbanRenderers?.tickets?.rowActions ?? [];
     const menuActions = Object.values(extension.commands ?? {})
       .flatMap((command) => command.menus ?? [])
       .map((menu, index) => ({ menu, index }))

@@ -8,7 +8,7 @@ export const createDashboardViewsModule = () =>
       ctx.resources.registerKind({
         kind: "dashboard-view",
         label: "Dashboard view",
-        icon: standardResourceIcons.dataRenderer,
+        icon: standardResourceIcons.kanbanRenderer,
       });
       ctx.resources.registerProvider({
         id: "dashboard-workbench.dashboard-views",

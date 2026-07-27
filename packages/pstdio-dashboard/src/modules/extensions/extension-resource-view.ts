@@ -8,7 +8,7 @@ import { selectDashboardNavigationResource } from "@/shared/app/navigation-state
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
+import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 import { extensionModeLayoutRegion, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
@@ -19,7 +19,7 @@ const outcomeValueId = (value: unknown) => {
 };
 
 // Re-derives a resource's display label from a command outcome, mirroring the dashboard's
-// existing `[shorthand, title]` convention (see extension-data-renderers onAfterCreate).
+// existing `[shorthand, title]` convention (see extension-kanban-renderers onAfterCreate).
 const resourceLabelFromOutcomeValue = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
   const record = value as { shorthand?: unknown; title?: unknown; label?: unknown };
@@ -84,8 +84,8 @@ const updatePlacementForResource = (
 };
 
 const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
-  const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
-  return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
+  const parentRenderer = input.metadata.kanbanRenderers?.find((record) => record.resourceKind === input.kind);
+  return parentRenderer ? createExtensionKanbanRendererResource(parentRenderer, input.projectId) : undefined;
 };
 
 const withExtensionResourceContext = (

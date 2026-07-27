@@ -93,15 +93,15 @@ A tree-shaped renderer for side-panel navigation, outlines, resource lists, and 
 - [`dashboard`](src/examples/dashboard/modules/shell/project-nav.ts) — primary tree with resource-backed nodes, footer entries, and context menus.
 - [`dynamic-modules`](src/examples/dynamic-modules/modules/explorer-module.tsx) — tree contributed by a module that can be added and removed at runtime.
 
-### Data Renderers
+### Kanban Renderers
 
-A Notion/Linear-style data workspace registered as a renderer. Data renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), and row-mutation callbacks. Like tree renderers, a data renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <data renderer id> })` and opened with `layout.openWidget(...)`.
+A Notion/Linear-style data workspace registered as a renderer. Kanban renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), and row-mutation callbacks. Like tree renderers, a kanban renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <kanban renderer id> })` and opened with `layout.openWidget(...)`.
 
-- Register with `renderers.registerDataRenderer()`
+- Register with `renderers.registerKanbanRenderer()`
 
 #### Examples
 
-- [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, and renderer-owned controls.
+- [`kanban-renderer`](src/examples/kanban-renderer/module.tsx) — focused showcase: schema, mock rows, and renderer-owned controls.
 - [`dashboard`](src/examples/dashboard/modules/tickets/collections/ticket-data.ts) — ticket workspace integrated into the dashboard shell.
 
 ### Data Table Renderers
@@ -147,7 +147,7 @@ Resource contributions define typed objects the workbench can open, route, or re
 Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, and history speak the same language.
 
 - Register with `resources.registerKind()`
-- Use the standard icon names for common resources: project `folder-root`, workspace `computer`, worktree `git-pull-request-draft`, ticket `component`, data renderer `square-kanban`, settings `settings`.
+- Use the standard icon names for common resources: project `folder-root`, workspace `computer`, worktree `git-pull-request-draft`, ticket `component`, kanban renderer `square-kanban`, settings `settings`.
 
 #### Examples
 
@@ -173,7 +173,7 @@ Look up resources by kind, uri, or search input. Providers let features resolve 
 
 #### Examples
 
-- [`dashboard`](src/examples/dashboard/modules/dashboard.tsx) — provider behind the ticket DataView.
+- [`dashboard`](src/examples/dashboard/modules/dashboard.tsx) — provider behind the ticket KanbanView.
 
 ## 🧭 Navigation Contributions
 
@@ -297,7 +297,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
 - **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, and preferences.
 - **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
-- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or DataView.
+- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or KanbanView.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench regions, command palette, panels, and session surface from the workbench core only.
@@ -305,7 +305,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare a region, a `rendererId`, and optional renderer-owned `config`.
 - **Widget placement**: an opened instance of a widget contribution in a region. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
-- **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
+- **Kanban renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<KanbanRenderer>` from `@pstdio/ui`.
 - **Data table renderer contribution**: a dense table renderer registered under `renderers`. Provides query rows, optional column descriptors, navigation, and row actions. Extensions place it through a native view; the presentational layer is `<DataTable>` from `@pstdio/ui/data-table`.
 - **Placeholder**: an empty-state contribution rendered only when a region has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.

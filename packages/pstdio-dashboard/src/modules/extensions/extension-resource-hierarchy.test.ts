@@ -5,7 +5,7 @@ import { registerExtensionResourceHierarchy } from "./extension-resource-hierarc
 
 const metadataFor = (extensionId: string, rendererId: string, resourceKind: string) => ({
   ...emptyDashboardExtensionMetadata,
-  dataRenderers: [
+  kanbanRenderers: [
     {
       id: rendererId,
       extensionId,

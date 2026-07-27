@@ -72,7 +72,7 @@ describe("dashboard workbench navigation", () => {
 
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
 
-    const workspaceRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.workspaces);
+    const workspaceRenderer = workbench.renderers.getKanbanRenderer(dashboardWidgetIds.workspaces);
     expect(workspaceRenderer).toBeDefined();
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.workspaces);
 
@@ -93,7 +93,7 @@ describe("dashboard workbench navigation", () => {
 
   test("opens tickets into the resource sidenav with workspace links", async () => {
     const workbench = createDashboardWorkbench();
-    const ticketRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.tickets);
+    const ticketRenderer = workbench.renderers.getKanbanRenderer(dashboardWidgetIds.tickets);
     const [ticketRow] = await Promise.resolve(
       ticketRenderer?.executeQuery({
         settings: {

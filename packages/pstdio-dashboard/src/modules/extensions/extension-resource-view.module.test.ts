@@ -395,7 +395,7 @@ describeResourceRouteContract({
     uri: "dashboard-workbench://dashboard-view/pstdio-core-tickets.tickets",
     id: "pstdio-core-tickets.tickets",
     label: "Tickets",
-    metadata: { projectId: "project-1", dataRendererId: "pstdio-core-tickets.tickets" },
+    metadata: { projectId: "project-1", kanbanRendererId: "pstdio-core-tickets.tickets" },
   },
   detail: {
     kind: "ticket",

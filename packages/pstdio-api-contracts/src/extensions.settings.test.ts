@@ -53,7 +53,7 @@ describe("extension settings contracts", () => {
         modes: [],
         views: [],
         routes: [],
-        dataRenderers: [],
+        kanbanRenderers: [],
         fileRenderers: [],
         commandPaletteResources: [],
         navigation: [],

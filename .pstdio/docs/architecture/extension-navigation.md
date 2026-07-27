@@ -21,7 +21,7 @@ Primary resource routes are registered through helpers instead of raw `registerO
 
 A mode-aware primary route. On open it activates the route mode, runs `beforeOpen` side-effect hooks (breadcrumb, sidenav sync — these cannot change navigable identity), and opens the **domain** resource it was handed into the route surface with `replaceActive` forwarded. Because it always places the resource it receives, a root can never silently become a detail. A `requiresProject` guard (default true) sends a project-less open to project selection.
 
-Used by: sessions, workspaces (root in project mode, detail in workspace mode), and extension data-renderer **boards** (`dashboard-view` resources). Boards opt out of the project guard to preserve their prior behavior.
+Used by: sessions, workspaces (root in project mode, detail in workspace mode), and extension kanban-renderer **boards** (`dashboard-view` resources). Boards opt out of the project guard to preserve their prior behavior.
 
 ### `registerExtensionResourceView`
 

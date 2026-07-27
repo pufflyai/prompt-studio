@@ -39,7 +39,7 @@ const installed = {
     modes: [],
     views: [],
     routes: [],
-    dataRenderers: [],
+    kanbanRenderers: [],
     treeRenderers: [],
     fileRenderers: [],
     controlsRenderers: [],

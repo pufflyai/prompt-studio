@@ -48,7 +48,7 @@ export interface ListRowAction {
   onAction?: (context: ListRowActionContext) => void;
 }
 
-export type ListRowVariant = "default" | "compact" | "full-width" | "tree" | "empty-state";
+export type ListRowVariant = "default" | "compact" | "collection" | "full-width" | "tree" | "empty-state";
 export type ListRowTone = "default" | "danger";
 export type ListRowMenuPlacement =
   | "top"

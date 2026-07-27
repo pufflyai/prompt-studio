@@ -1,11 +1,15 @@
-import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow } from "@/components/data-renderer/types";
-import { filterRows } from "../data-renderer/data-renderer-grouping";
+import type {
+  AttributeDescriptor,
+  KanbanRendererFilterState,
+  KanbanRendererRow,
+} from "@/components/kanban-renderer/types";
+import { filterRows } from "../kanban-renderer/kanban-renderer-grouping";
 import { isDisplayValue } from "./helpers";
 import type { DataTableProps, DataTableSelectionAction, RowData } from "./types";
 
 export const defaultPageSize = 30;
 
-export interface DataTableRendererRow extends DataRendererRow {
+export interface DataTableRendererRow extends KanbanRendererRow {
   sourceRow: RowData;
 }
 
@@ -100,7 +104,7 @@ export const buildDataTableRendererRows = (
 
 export const filterDataTableRows = (
   rows: DataTableRendererRow[],
-  filters: DataRendererFilterState,
+  filters: KanbanRendererFilterState,
   attributes: AttributeDescriptor[],
 ) => filterRows(rows, filters, attributes) as DataTableRendererRow[];
 
