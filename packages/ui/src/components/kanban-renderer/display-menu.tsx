@@ -108,7 +108,11 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     <Popover.Root
       open={open}
       closeOnInteractOutside={false}
-      positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
+      positioning={{
+        placement: "bottom-end",
+        offset: { mainAxis: 8 },
+        getAnchorElement: () => triggerRef.current,
+      }}
       onOpenChange={(details) => setOpen(details.open)}
     >
       <Tooltip content="Display">

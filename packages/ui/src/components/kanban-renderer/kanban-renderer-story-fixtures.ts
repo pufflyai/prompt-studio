@@ -2,6 +2,12 @@ import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 export const attributes: AttributeDescriptor[] = [
   {
+    id: "id",
+    label: "ID",
+    type: { kind: "string" },
+    displayable: true,
+  },
+  {
     id: "status",
     label: "Status",
     type: {
@@ -82,6 +88,7 @@ export const attributes: AttributeDescriptor[] = [
 
 export interface StoryRow extends KanbanRendererRow {
   attributes: {
+    id?: string;
     status: string;
     assignee: string;
     component: string;

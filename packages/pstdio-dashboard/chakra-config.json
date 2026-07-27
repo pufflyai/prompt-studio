@@ -2802,9 +2802,6 @@
         "filter-pill": {
           "value": "1.5rem"
         },
-        "resource-id": {
-          "value": "3rem"
-        },
         "view-bar": {
           "value": "2.5rem"
         },
@@ -14257,6 +14254,14 @@
           "fontWeight": "500",
           "lineHeight": "150%",
           "letterSpacing": "0.1px"
+        }
+      },
+      "mono/XS": {
+        "value": {
+          "fontFamily": "mono",
+          "fontSize": "xs",
+          "fontWeight": "400",
+          "lineHeight": "150%"
         }
       },
       "paragraph/S/regular": {

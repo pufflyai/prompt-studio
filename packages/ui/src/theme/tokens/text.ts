@@ -186,6 +186,14 @@ export const textStyles = defineTextStyles({
       letterSpacing: "0.1px",
     },
   },
+  "mono/XS": {
+    value: {
+      fontFamily: "mono",
+      fontSize: "xs",
+      fontWeight: "400",
+      lineHeight: "150%",
+    },
+  },
   "paragraph/S/regular": {
     value: {
       fontFamily: "body",

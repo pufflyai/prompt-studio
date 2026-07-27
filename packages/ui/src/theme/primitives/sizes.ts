@@ -42,7 +42,6 @@ export const spacing = {
 export const sizes = {
   "collection-row": { value: "2.125rem" },
   "filter-pill": { value: sp[300] },
-  "resource-id": { value: sp[600] },
   "view-bar": { value: sp[500] },
   "view-subheader": { value: "2.25rem" },
 };

@@ -20,6 +20,25 @@ export default meta;
 type Story = StoryObj;
 
 const STORYBOOK_STORAGE_KEY = "storybook-kanban-renderer";
+const CHROME_UUID = "550e8400-e29b-41d4-a716-446655440000";
+const chromeRows = initialRows.map((row, index) =>
+  index === 0
+    ? {
+        ...row,
+        id: CHROME_UUID,
+        attributes: { ...row.attributes, id: "PS-1" },
+      }
+    : index === 1
+      ? {
+          ...row,
+          title: "PRA-1_A1",
+          attributes: { ...row.attributes, id: "PRA-1_A1" },
+        }
+      : row,
+);
+
+const getLucideIconName = (element: HTMLElement) =>
+  Array.from(element.classList).find((className) => className !== "lucide" && className.startsWith("lucide-"));
 
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const currentIndex = items.findIndex((row) => row.id === rowId);
@@ -50,18 +69,21 @@ const Wrapper = (props: {
   columnGrouping?: string;
   rowGrouping?: string;
   viewMode?: ViewMode;
+  displayProperties?: string[];
   storageKey?: string;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   withTicketMenu?: boolean;
+  rows?: StoryRow[];
 }) => {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const [rows, setRows] = useState<StoryRow[]>(initialRows);
+  const [rows, setRows] = useState<StoryRow[]>(props.rows ?? initialRows);
   const storageKey = props.storageKey ?? STORYBOOK_STORAGE_KEY;
   const defaultSettings = {
     viewMode: props.viewMode ?? "board",
     columnGrouping: props.columnGrouping ?? "status",
     rowGrouping: props.rowGrouping ?? "none",
+    displayProperties: props.displayProperties,
   };
   const initialState = {
     settings: defaultSettings,
@@ -119,7 +141,14 @@ export const BoardView: Story = {
 
 export const RendererChromeAndTicketMenu: Story = {
   tags: ["renderer-chrome-regression"],
-  render: () => <Wrapper storageKey="storybook-kanban-renderer-chrome" withTicketMenu />,
+  render: () => (
+    <Wrapper
+      storageKey="storybook-kanban-renderer-chrome"
+      displayProperties={["id"]}
+      withTicketMenu
+      rows={chromeRows}
+    />
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const renderer = canvas.getByTestId("kanban-renderer");
@@ -130,6 +159,7 @@ export const RendererChromeAndTicketMenu: Story = {
     await expect(getComputedStyle(renderer).borderTopWidth).toBe("0px");
     await expect(getComputedStyle(header).backgroundColor).toBe("rgba(0, 0, 0, 0)");
     await expect(canvas.getAllByTestId("column-status-icon")[0]).toBeVisible();
+    const boardIconNames = canvas.getAllByTestId("column-status-icon").map(getLucideIconName);
 
     const filterButton = canvas.getByRole("button", { name: "Filter rows" });
     const displayButton = canvas.getByRole("button", { name: "Display settings" });
@@ -148,6 +178,41 @@ export const RendererChromeAndTicketMenu: Story = {
     fireEvent.contextMenu(firstCard);
     const menu = await body.findByRole("menu");
     await expect(menu.getBoundingClientRect().width).toBe(280);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+
+    await userEvent.click(filterButton);
+    const filterDialog = await body.findByRole("dialog");
+    const filterButtonBounds = filterButton.getBoundingClientRect();
+    const filterDialogBounds = filterDialog.getBoundingClientRect();
+    await expect(Math.abs(filterDialogBounds.right - filterButtonBounds.right)).toBeLessThanOrEqual(1);
+    await expect(filterDialogBounds.top).toBeGreaterThanOrEqual(filterButtonBounds.bottom);
+    await userEvent.click(filterButton);
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await userEvent.click(displayButton);
+    const displayDialog = await body.findByRole("dialog");
+    const displayButtonBounds = displayButton.getBoundingClientRect();
+    const displayDialogBounds = displayDialog.getBoundingClientRect();
+    await expect(Math.abs(displayDialogBounds.right - displayButtonBounds.right)).toBeLessThanOrEqual(1);
+    await expect(displayDialogBounds.top).toBeGreaterThanOrEqual(displayButtonBounds.bottom);
+    await userEvent.click(within(displayDialog).getByRole("button", { name: "List" }));
+
+    const ticketRow = await canvas.findByRole("option", { name: "Set up API authentication" });
+    const ticketTag = within(ticketRow).getByTestId("list-row-eyebrow");
+    await expect(ticketTag).toHaveTextContent("PS-1");
+    await expect(canvas.getAllByText("PS-1")).toHaveLength(1);
+    await expect(getComputedStyle(ticketTag).fontSize).toBe("10px");
+    await expect(getComputedStyle(ticketTag.parentElement!).columnGap).toBe("10px");
+    await expect(canvas.queryByText(CHROME_UUID)).not.toBeInTheDocument();
+    const workspaceRow = canvas.getByRole("option", { name: "PRA-1_A1" });
+    await expect(within(workspaceRow).queryByTestId("list-row-eyebrow")).not.toBeInTheDocument();
+    await expect(canvas.getAllByText("PRA-1_A1")).toHaveLength(1);
+    const listIconNames = canvas.getAllByTestId("list-status-icon").map(getLucideIconName);
+    await expect(listIconNames).toEqual(boardIconNames);
+    const rowStatusIcon = within(ticketRow).getByTestId("row-status-icon");
+    await expect(getLucideIconName(rowStatusIcon)).toBe(boardIconNames[0]);
+    await expect(getComputedStyle(rowStatusIcon.parentElement!.parentElement!).columnGap).toBe("10px");
   },
 };
 

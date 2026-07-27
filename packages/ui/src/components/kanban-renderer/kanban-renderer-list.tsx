@@ -8,12 +8,14 @@ import type { AttributeBadge } from "./kanban-renderer-helpers";
 
 export interface KanbanRendererListItem {
   id: string;
+  eyebrow?: string;
   title: string;
   isGroup?: boolean;
   countBadge?: number;
   countColorPalette?: string;
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
+  statusColorPalette?: string;
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
   children?: KanbanRendererListItem[];
@@ -101,8 +103,7 @@ const updateExpandedState = (expandedState: KanbanRendererListExpandedState, row
 const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
   if (isGroup) {
     return (
-      <HStack gap="xs" minW="0" maxW="full" flex="1" colorPalette={item.countColorPalette ?? "gray"}>
-        <Box boxSize="2" borderRadius="full" bg="colorPalette.solid" flexShrink={0} />
+      <HStack gap="xs" minW="0" maxW="full" flex="1">
         <Text textStyle="label/S/medium" minW="0" truncate>
           {item.title}
         </Text>
@@ -114,10 +115,12 @@ const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
   }
 
   return (
-    <HStack gap="sm" minW="0" maxW="full" flex="1">
-      <Text width="resource-id" flexShrink={0} textStyle="mono/XS" color="fg.muted" truncate>
-        {item.id}
-      </Text>
+    <HStack gap="compact" minW="0" maxW="full" flex="1">
+      {item.eyebrow ? (
+        <Text data-testid="list-row-eyebrow" flexShrink={0} textStyle="mono/XS" color="fg.muted" truncate>
+          {item.eyebrow}
+        </Text>
+      ) : null}
       <Text textStyle="paragraph/S/regular" minW="0" truncate>
         {item.title}
       </Text>
@@ -145,8 +148,15 @@ const renderEndContent = (item: KanbanRendererListItem) => {
 const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): ListRowItem => ({
   id: item.id,
   label: renderLabel(item, item.isGroup === true),
-  icon: item.statusIcon ? <Icon as={item.statusIcon} boxSize="16px" /> : undefined,
-  iconColor: item.statusColor ?? "fg.muted",
+  icon: item.statusIcon ? (
+    <Icon
+      data-testid={item.isGroup ? "list-status-icon" : "row-status-icon"}
+      as={item.statusIcon}
+      boxSize="1rem"
+      colorPalette={item.statusColorPalette ?? item.countColorPalette ?? "gray"}
+      color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
+    />
+  ) : undefined,
   endContent: renderEndContent(item),
   isContainer: hasChildren,
   contextMenuItems: item.contextMenuActions?.map((action) => ({

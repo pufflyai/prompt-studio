@@ -104,8 +104,8 @@ const RowContent = (props: RowContentProps) => {
   const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
-  const iconPx = variant === "tree" ? "16px" : "14px";
-  const iconLabelGap = variant === "tree" ? "1" : "2";
+  const iconPx = variant === "tree" || variant === "collection" ? "16px" : "14px";
+  const iconLabelGap = variant === "collection" ? "compact" : variant === "tree" ? "1" : "2";
 
   const labelColor = resolveLabelColor({
     isEmptyStateVariant,
