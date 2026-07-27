@@ -1,5 +1,5 @@
 ---
-"@pstdio/workbench": minor
+"@pstdio/workbench": major
 "pstdio": minor
 ---
 

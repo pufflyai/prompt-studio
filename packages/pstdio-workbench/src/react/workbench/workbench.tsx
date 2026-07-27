@@ -63,7 +63,7 @@ const createSidePanelHost = () => {
   return host;
 };
 
-const resolveActiveSidePanelSlot = (input: {
+export const resolveActiveSidePanelSlot = (input: {
   floatingPanelsAllowed: boolean;
   mounted: boolean;
   mode: "attached" | "floating" | "closed";
@@ -71,7 +71,7 @@ const resolveActiveSidePanelSlot = (input: {
   floatingSlot: HTMLDivElement | null;
 }) => {
   if (!input.mounted) return null;
-  if (input.mode === "floating") return input.floatingPanelsAllowed ? input.floatingSlot : null;
+  if (input.mode === "floating") return input.floatingPanelsAllowed ? input.floatingSlot : input.attachedSlot;
   return input.attachedSlot;
 };
 
