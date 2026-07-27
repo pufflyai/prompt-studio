@@ -178,6 +178,18 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 
 Run `bun run dev:playwright`, open the printed dashboard URL with Playwright or browser automation, and stop it with `bun run dev:playwright:down`.
 
+## CI timeouts
+
+A CI timeout is a budget the project has committed to, not a knob to turn when a job goes red. When a job outgrows its timeout, that is the signal it was put there to give: something got slower, and the slowdown is the bug.
+
+**Never widen a budget without explicit approval** — in the same conversation, for that specific value. This holds even when the job is timing out and widening it is the only thing standing between you and a green check. It covers:
+
+- `timeout-minutes` in any `.github/workflows/` job
+- the suite-wide defaults in `packages/e2e/playwright.config.ts` (`timeout`, `expect.timeout`, `webServer.timeout`)
+- a whole test's budget: `test.slow()` and `test.setTimeout()`
+
+A job that times out is reported, not absorbed. Say what got slower and by how much, then fix that — or ask.
+
 ---
 
 # Project Planning and Documentation (pstdio)

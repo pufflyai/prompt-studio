@@ -1,5 +1,6 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPanel } from "./chat-panel";
@@ -61,26 +62,31 @@ const panelContainerStyles = {
   p: "md",
 } as const;
 
+// Composer toolbar controls (attach lives in the app; here the model/harness menu stands in).
 const defaultActions = (
-  <HStack gap="2">
-    <Button size="xs" variant="subtle">
+  <HStack gap="1">
+    <Button size="xs" variant="outline">
       Opencode
-    </Button>
-    <Button size="xs" variant="subtle">
-      GPT-5.3 Codex
+      <ChevronDown size={14} />
     </Button>
   </HStack>
 );
 
-const defaultRepoMenu = (
-  <HStack gap="2">
-    <Text textStyle="label/S/medium" color="fg.muted">
-      mono
-    </Text>
-    <Button size="xs" variant="ghost">
+// The workspace identity/selector now lives in the hub header, not below the input.
+const defaultWorkspaceControl = (
+  <Button size="xs" variant="ghost" px="2xs">
+    <GitBranch size={14} />
+    <Text textStyle="label/XS/medium" color="fg" ml="2xs">
       main
-    </Button>
-  </HStack>
+    </Text>
+    <ChevronDown size={14} />
+  </Button>
+);
+
+const openWorkspaceAction = (
+  <IconButton size="xs" variant="ghost" aria-label="Open workspace">
+    <ArrowUpRight size={14} />
+  </IconButton>
 );
 
 const streamingMessages = conversationMessages.slice(-18);
@@ -281,7 +287,6 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     emptyStateDescription,
     chatInputPlaceholder,
     actions,
-    repoMenu,
     workspaceHub,
     queuedFollowUps,
     onQueuedFollowUpUpdate,
@@ -345,7 +350,6 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       chatInputPlaceholder={chatInputPlaceholder}
       onSubmitMessage={handleSubmitMessage}
       actions={actions}
-      repoMenu={repoMenu}
       workspaceHub={workspaceHub}
       queuedFollowUps={queuedFollowUps}
       onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
@@ -396,7 +400,6 @@ export const Empty: Story = {
     emptyStateDescription: "Start a conversation to see messages here.",
     chatInputPlaceholder: "Type a message...",
     actions: defaultActions,
-    repoMenu: defaultRepoMenu,
     onSubmitMessage: (text: string, attachments: string[]) => {
       console.log("Submitted", { text, attachments });
     },
@@ -435,14 +438,7 @@ export const QueuedFollowUps: Story = {
 };
 
 function StreamingConversationRenderer(props: ChatPanelProps) {
-  const {
-    messages: allMessages = [],
-    emptyStateTitle,
-    emptyStateDescription,
-    chatInputPlaceholder,
-    actions,
-    repoMenu,
-  } = props;
+  const { messages: allMessages = [], emptyStateTitle, emptyStateDescription, chatInputPlaceholder, actions } = props;
 
   const [visibleMessages, setVisibleMessages] = useState<SessionMessage[]>([]);
   const [streaming, setStreaming] = useState(true);
@@ -485,7 +481,6 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
       emptyStateDescription={emptyStateDescription}
       chatInputPlaceholder={chatInputPlaceholder}
       actions={actions}
-      repoMenu={repoMenu}
     />
   );
 }
@@ -499,6 +494,42 @@ export const Streaming: Story = {
   args: {
     ...Empty.args,
     messages: streamingMessages,
+  },
+};
+
+function WorkingIndicatorVisibilityRenderer(props: ChatPanelProps) {
+  const { messages, emptyStateTitle, emptyStateDescription, chatInputPlaceholder, actions } = props;
+  const [workspaceInitializing, setWorkspaceInitializing] = useState(false);
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setWorkspaceInitializing((current) => !current)}>
+        {workspaceInitializing ? "Show working indicator" : "Hide working indicator"}
+      </Button>
+      <Box flex="1" minH="0">
+        <ChatPanel
+          messages={messages}
+          streaming
+          workspaceInitializing={workspaceInitializing}
+          emptyStateTitle={emptyStateTitle}
+          emptyStateDescription={emptyStateDescription}
+          chatInputPlaceholder={chatInputPlaceholder}
+          actions={actions}
+        />
+      </Box>
+    </>
+  );
+}
+
+export const WorkingIndicatorVisibility: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles} display="flex" flexDirection="column" gap="sm">
+      <WorkingIndicatorVisibilityRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Conversation.args,
+    messages: longPromptMessages,
   },
 };
 
@@ -525,14 +556,10 @@ export const ConversationWithWorkspaceHub: Story = {
     streaming: true,
     workspaceHub: (
       <ChatWorkspaceHub
-        changesLabel="9 files changed"
+        workspaceControl={defaultWorkspaceControl}
         additions={83}
         deletions={9}
-        action={
-          <Button size="sm" variant="plain">
-            Review changes
-          </Button>
-        }
+        action={openWorkspaceAction}
       />
     ),
   },
@@ -549,14 +576,10 @@ export const QueuedFollowUpsWithWorkspaceHub: Story = {
     streaming: true,
     workspaceHub: (
       <ChatWorkspaceHub
-        changesLabel="PS-153"
+        workspaceControl={defaultWorkspaceControl}
         additions={42}
         deletions={6}
-        action={
-          <Button size="sm" variant="plain">
-            Review changes
-          </Button>
-        }
+        action={openWorkspaceAction}
       />
     ),
   },

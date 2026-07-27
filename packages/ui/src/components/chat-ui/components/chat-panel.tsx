@@ -1,4 +1,4 @@
-import { Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Flex, Stack } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -17,6 +17,7 @@ import {
 } from "./message-types";
 import { QueuedFollowUpList } from "./queued-follow-up-list";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
+import { WorkingIndicator } from "./working-indicator";
 
 interface QueuedFollowUpComposerInput {
   queuedFollowUps: QueuedFollowUp[];
@@ -46,7 +47,6 @@ interface ChatPanelComposerProps {
   onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
   queuedComposer: ReturnType<typeof useQueuedFollowUpComposer>;
   queuedFollowUps: QueuedFollowUp[];
-  repoMenu?: ReactNode;
   streaming: boolean;
   workspaceHub?: ReactNode;
 }
@@ -69,9 +69,8 @@ export interface ChatPanelProps {
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
   onChatInputChange?: (text: string) => void;
-  /** Extra controls rendered near the chat input. */
+  /** Extra controls rendered in the chat input toolbar (attach, model, params). */
   actions?: ReactNode;
-  repoMenu?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
@@ -150,7 +149,6 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     onQueuedFollowUpUpdate,
     queuedComposer,
     queuedFollowUps,
-    repoMenu,
     streaming,
     workspaceHub,
   } = props;
@@ -158,12 +156,14 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
 
   return (
     <Stack px={hasWorkspaceHub ? "2xs" : "xs"} gap="0">
+      {/* Concentric hierarchy: the hub shell owns the visible border so the session reads
+          as living inside the workspace; the nested input recedes to border.subtle. */}
       <Stack
-        gap="0"
+        gap={hasWorkspaceHub ? "2xs" : "0"}
         p={hasWorkspaceHub ? "2xs" : undefined}
         borderWidth={hasWorkspaceHub ? "1px" : undefined}
-        borderColor={hasWorkspaceHub ? "border.subtle" : undefined}
-        borderRadius={hasWorkspaceHub ? "xs" : undefined}
+        borderColor={hasWorkspaceHub ? "border" : undefined}
+        borderRadius={hasWorkspaceHub ? "sm" : undefined}
         bg={hasWorkspaceHub ? "bg.subtle" : undefined}
       >
         {workspaceHub}
@@ -189,6 +189,7 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           attachmentList={attachmentList}
           isDisabled={inputDisabled}
           attachedToTop={hasQueuedFollowUps}
+          recessed={hasWorkspaceHub}
           questionPrompt={chatInputQuestionPrompt}
           autoFocus={chatInputAutoFocus}
           focusSignal={queuedComposer.focusSignal}
@@ -196,9 +197,6 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           references={chatInputReferences}
           onAddReference={onChatInputAddReference}
         />
-        <Flex pt={hasWorkspaceHub ? "2xs" : undefined} justifyContent="flex-end">
-          {repoMenu}
-        </Flex>
       </Stack>
     </Stack>
   );
@@ -222,7 +220,6 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onAttachText,
     onChatInputChange,
     actions,
-    repoMenu,
     attachedResources,
     onClearAttachments,
     attachmentList,
@@ -305,14 +302,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
       </ChatPrimitives.Root>
       {approvalPrompt}
-      {showThinkingIndicator ? (
-        <HStack gap="xs" px="sm" py="2xs">
-          <Spinner size="xs" color="fg.muted" />
-          <Text textStyle="label/XS/regular" color="fg.muted">
-            Working...
-          </Text>
-        </HStack>
-      ) : null}
+      {streaming ? <WorkingIndicator hidden={!showThinkingIndicator} /> : null}
       <ChatPanelComposer
         actions={actions}
         attachedResources={attachedResources}
@@ -333,7 +323,6 @@ export const ChatPanel = (props: ChatPanelProps) => {
         onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
         queuedComposer={queuedComposer}
         queuedFollowUps={queuedFollowUps}
-        repoMenu={repoMenu}
         streaming={streaming}
         workspaceHub={workspaceHub}
       />

@@ -1,31 +1,38 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useSyncExternalStore } from "react";
+import {
+  dashboardActiveResourceIdContextKey,
+  dashboardActiveResourceKindContextKey,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
-import { shouldShowSessionWorkspaceHub } from "../data/session-workspace-hub-visibility";
 import { DashboardSessionChatPanel, ReviewChangesAction } from "./session-chat-panel";
 
 export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
-  const activeModeId = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId);
 
   const view = resolveDashboardSessionViewForPlacement(input.placement);
-  const showWorkspaceHub = shouldShowSessionWorkspaceHub({
-    sessionId: view.sessionId,
-    workspaceId: view.workspaceId,
-    activeModeId,
-  });
+  // Hide the open action when this workspace is already the active resource — you are looking at it.
+  const isWorkspaceOpen = useWorkbenchStore(
+    input.workbench.context.store,
+    (state) =>
+      state.values[dashboardActiveResourceKindContextKey] === "workspace" &&
+      state.values[dashboardActiveResourceIdContextKey] === view.workspaceId,
+  );
 
   return (
     <DashboardSessionChatPanel
       input={input}
       view={view}
-      emptyStateTitle="No messages yet"
-      emptyStateDescription="Pick a session to open the conversation."
-      workspaceAction={<ReviewChangesAction input={input} view={view} />}
-      showWorkspaceHub={showWorkspaceHub}
+      emptyStateTitle="No active conversations"
+      emptyStateDescription="Start a conversation to see messages here."
+      // The hub frames every session; the open action only appears when there is a workspace to open
+      // and it is not already the active resource.
+      workspaceAction={
+        view.workspaceId && !isWorkspaceOpen ? <ReviewChangesAction input={input} view={view} /> : undefined
+      }
     />
   );
 };

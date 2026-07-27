@@ -255,7 +255,7 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
                 params: {
                   content: { type: "longtext", label: "Ticket content", required: true },
                 },
-                editableAttributesParam: "tagIds",
+                attributesParam: "attributes",
                 attachments: {
                   command: "planner.attach-file",
                   resourceParam: "ticketId",
@@ -287,7 +287,7 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
         createRow: expect.objectContaining({
           commandId: "planner.tickets.create",
           columnParam: "status",
-          editableAttributesParam: "tagIds",
+          attributesParam: "attributes",
           attachments: {
             commandId: "planner.attach-file",
             resourceParam: "ticketId",

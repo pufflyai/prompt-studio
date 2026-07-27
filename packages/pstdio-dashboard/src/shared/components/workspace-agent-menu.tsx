@@ -39,6 +39,7 @@ interface WorkspaceAgentMenuProps {
   isModelsLoading?: boolean;
   labels?: Partial<WorkspaceAgentMenuLabels>;
   portalled?: boolean;
+  size?: "2xs" | "xs" | "sm";
 }
 
 const getSelectedLabel = (
@@ -111,6 +112,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     isModelsLoading = false,
     labels,
     portalled = true,
+    size = "sm",
   } = props;
   const { t } = useTranslation("projects");
   const resolvedLabels = {
@@ -149,7 +151,13 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
       trigger={
         <Box>
           <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
-            <Button variant="ghost" size="sm" px="2" aria-label={resolvedLabels.modelSelect} disabled={isMenuDisabled}>
+            <Button
+              variant="ghost"
+              size={size}
+              px="2"
+              aria-label={resolvedLabels.modelSelect}
+              disabled={isMenuDisabled}
+            >
               <Text textStyle="label/XS/medium" color="fg">
                 {selectedModelLabel}
               </Text>

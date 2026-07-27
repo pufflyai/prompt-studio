@@ -1,7 +1,9 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box, IconButton } from "@chakra-ui/react";
+import { Tooltip } from "@pstdio/ui";
 import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -35,7 +37,8 @@ import { resolveSessionSelectionSync } from "../runtime/session-runtime-selectio
 import type { HarnessParamValues } from "./harness-param-controls";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
-import { SessionRuntimeControls } from "./session-runtime-controls";
+import { SessionModelControls } from "./session-model-controls";
+import { SessionWorkspaceControl } from "./session-workspace-control";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
 type QueuedFollowUpMoveDirection = "up" | "down";
@@ -46,7 +49,6 @@ interface DashboardSessionChatPanelProps {
   emptyStateTitle: string;
   emptyStateDescription: string;
   workspaceAction: ReactNode;
-  showWorkspaceHub: boolean;
 }
 
 type SessionWorkspaceReviewView = Pick<
@@ -93,7 +95,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, showWorkspaceHub } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -214,11 +216,23 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           chatInputPlaceholder="Reply to the agent..."
           attachedResources={attachedResources}
           actions={
-            <SessionAttachmentControls
-              projectId={projectId}
-              uploading={draftAttachments.uploading}
-              onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
-            />
+            <>
+              <SessionAttachmentControls
+                projectId={projectId}
+                uploading={draftAttachments.uploading}
+                onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
+              />
+              <SessionModelControls
+                view={view}
+                projectId={projectId}
+                selectedAgent={selectedAgent}
+                setSelectedAgent={setSelectedAgent}
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                harnessParamOverrides={harnessParamOverrides}
+                setHarnessParamOverrides={setHarnessParamOverrides}
+              />
+            </>
           }
           attachmentList={
             draftAttachments.attachments.length > 0 ? (
@@ -232,32 +246,23 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
           inputDisabled={draftAttachments.uploading}
           workspaceHub={
-            showWorkspaceHub ? (
-              <ChatWorkspaceHub
-                changesLabel={view.workspaceShorthand}
-                additions={view.additions}
-                deletions={view.deletions}
-                action={workspaceAction}
-              />
-            ) : undefined
-          }
-          repoMenu={
-            <SessionRuntimeControls
-              view={view}
-              projectId={projectId}
-              selectedAgent={selectedAgent}
-              setSelectedAgent={setSelectedAgent}
-              selectedModel={selectedModel}
-              setSelectedModel={setSelectedModel}
-              selectedWorkspaceId={selectedWorkspaceId}
-              setSelectedWorkspaceId={setSelectedWorkspaceId}
-              harnessParamOverrides={harnessParamOverrides}
-              setHarnessParamOverrides={setHarnessParamOverrides}
-              onSelectWorkspace={
-                openWorkspaceOnSelection
-                  ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
-                  : undefined
+            <ChatWorkspaceHub
+              workspaceControl={
+                <SessionWorkspaceControl
+                  view={view}
+                  projectId={projectId}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  setSelectedWorkspaceId={setSelectedWorkspaceId}
+                  onSelectWorkspace={
+                    openWorkspaceOnSelection
+                      ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+                      : undefined
+                  }
+                />
               }
+              additions={view.additions}
+              deletions={view.deletions}
+              action={workspaceAction}
             />
           }
           onSubmitMessage={(text, _attachments, questionResponse) => {
@@ -296,8 +301,15 @@ export const ReviewChangesAction = (props: { input: WorkbenchWidgetRenderInput; 
   const { input, view } = props;
 
   return (
-    <Button size="sm" variant="plain" onClick={() => void openReviewWorkspace(input, view)}>
-      Review changes
-    </Button>
+    <Tooltip content="Open workspace">
+      <IconButton
+        size="xs"
+        variant="ghost"
+        aria-label="Open workspace"
+        onClick={() => void openReviewWorkspace(input, view)}
+      >
+        <ArrowUpRight size={14} />
+      </IconButton>
+    </Tooltip>
   );
 };

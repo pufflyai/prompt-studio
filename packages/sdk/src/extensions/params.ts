@@ -1,9 +1,11 @@
 import type {
   BooleanParam,
+  FilesParam,
   HarnessParam,
   JsonParam,
   ListParam,
   LongTextParam,
+  MarkdownParam,
   MultiSelectParam,
   NumberParam,
   RepoParam,
@@ -35,6 +37,14 @@ export const params = {
   longText: <const TOptions extends ParamOptions<LongTextParam> | undefined = undefined>(
     options?: TOptions,
   ): LongTextParam<RequiredOf<TOptions>> => ({ type: "longtext", ...options }) as LongTextParam<RequiredOf<TOptions>>,
+
+  markdown: <const TOptions extends ParamOptions<MarkdownParam> | undefined = undefined>(
+    options?: TOptions,
+  ): MarkdownParam<RequiredOf<TOptions>> => ({ type: "markdown", ...options }) as MarkdownParam<RequiredOf<TOptions>>,
+
+  files: <const TOptions extends ParamOptions<FilesParam> | undefined = undefined>(
+    options?: TOptions,
+  ): FilesParam<RequiredOf<TOptions>> => ({ type: "files", ...options }) as FilesParam<RequiredOf<TOptions>>,
 
   number: <const TOptions extends ParamOptions<NumberParam> | undefined = undefined>(
     options?: TOptions,

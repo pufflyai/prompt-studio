@@ -1,5 +1,6 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box, Button, Text } from "@chakra-ui/react";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
+import { ChevronDown, GitBranch } from "lucide-react";
 import type { WorkbenchWidgetRenderInput } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 import { dashboardMockChatMessages } from "../mock-data/sessions";
@@ -19,7 +20,15 @@ export const SessionsOverviewWidget = (props: { input: WorkbenchWidgetRenderInpu
         attachedResources={["PS-294", "Attempt A1"]}
         workspaceHub={
           <ChatWorkspaceHub
-            changesLabel="Attempt A1"
+            workspaceControl={
+              <Button size="xs" variant="ghost" px="2xs">
+                <GitBranch size={14} />
+                <Text textStyle="label/XS/medium" color="fg" ml="2xs">
+                  Attempt A1
+                </Text>
+                <ChevronDown size={14} />
+              </Button>
+            }
             additions={148}
             deletions={37}
             action={

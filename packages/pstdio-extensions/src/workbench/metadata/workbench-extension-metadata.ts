@@ -254,7 +254,8 @@ const toKanbanRendererCreateRow = (
     submitLabel: createRow.submitLabel,
     columnParam: createRow.columnParam,
     params: createRow.params as NonNullable<WorkbenchExtensionKanbanRendererRecord["createRow"]>["params"],
-    editableAttributesParam: createRow.editableAttributesParam,
+    attributesParam: createRow.attributesParam,
+    labels: createRow.labels,
     attachments:
       createRow.attachments && attachmentCommandId
         ? {
@@ -300,6 +301,7 @@ const toKanbanRendererRecord = (
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
+    savedViews: renderer.contribution.savedViews,
   };
 };
 

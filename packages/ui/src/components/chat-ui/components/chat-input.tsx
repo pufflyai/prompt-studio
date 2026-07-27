@@ -20,6 +20,7 @@ import {
   hasMissingRequiredQuestionAnswer,
   QuestionPromptControls,
 } from "./chat-input-question-prompt";
+import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { SendButton } from "./send-button";
 
 export interface ChatInputProps {
@@ -38,6 +39,8 @@ export interface ChatInputProps {
   attachmentList?: ReactNode;
   actions?: ReactNode;
   attachedToTop?: boolean;
+  /** Recede the resting border to border.subtle when nested inside a stronger shell (the workspace hub). */
+  recessed?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
   autoFocus?: boolean;
   focusSignal?: number;
@@ -87,6 +90,7 @@ export const ChatInput = (props: ChatInputProps) => {
     attachmentList,
     actions,
     attachedToTop = false,
+    recessed = false,
     questionPrompt,
     autoFocus = false,
     focusSignal = 0,
@@ -95,6 +99,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onAddReference,
   } = props;
 
+  const restingBorderColor = recessed ? "border.subtle" : "border";
   const [isSelected, setIsSelected] = useState(false);
   const [editorState, setEditorState] = useState(defaultState);
   const [editorKey, setEditorKey] = useState(0);
@@ -255,11 +260,11 @@ export const ChatInput = (props: ChatInputProps) => {
       borderTopRadius={attachedToTop ? "0" : undefined}
       borderWidth="1px"
       borderStyle="solid"
-      borderColor={isSelected ? selectedChatInputBorderColor : "border"}
+      borderColor={isSelected ? selectedChatInputBorderColor : restingBorderColor}
       zIndex={isSelected ? 1 : 0}
       transition="border-color 0.2s ease-in-out"
       _hover={{
-        borderColor: isSelected ? selectedChatInputBorderColor : "border",
+        borderColor: isSelected ? selectedChatInputBorderColor : restingBorderColor,
         zIndex: 1,
       }}
       _focusWithin={{
@@ -272,8 +277,8 @@ export const ChatInput = (props: ChatInputProps) => {
       onClick={handleContainerClick}
       onBlur={() => setIsSelected(false)}
     >
-      <Flex direction="column" color="fg">
-        {attachmentList ? <Box mb="xs">{attachmentList}</Box> : null}
+      <Flex direction="column" color="fg" gap="xs">
+        {attachmentList ? <Box>{attachmentList}</Box> : null}
         {questionPrompt ? (
           <QuestionPromptControls
             questionPrompt={questionPrompt}
@@ -283,28 +288,33 @@ export const ChatInput = (props: ChatInputProps) => {
             onCustomAnswerChange={updateQuestionCustomAnswer}
           />
         ) : (
+          // The editor is its own composer row: it centres a single line at the shared
+          // control height and grows with content, never shrinking below it, so the row
+          // aligns with the toolbar beneath it.
           <ScrollArea maxH="10rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
-            <PromptEditor
-              key={editorKey}
-              defaultState={editorState}
-              isEditable={!isDisabled}
-              placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
-              onChange={(t) => {
-                setText(t);
-                onChange?.(t);
-              }}
-              onSubmit={handleKeyboardSubmit}
-              references={references}
-              onAddReference={onAddReference}
-            />
+            <Flex minH={COMPOSER_CONTROL_HEIGHT} align="center">
+              <PromptEditor
+                key={editorKey}
+                defaultState={editorState}
+                isEditable={!isDisabled}
+                placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
+                onChange={(t) => {
+                  setText(t);
+                  onChange?.(t);
+                }}
+                onSubmit={handleKeyboardSubmit}
+                references={references}
+                onAddReference={onAddReference}
+              />
+            </Flex>
           </ScrollArea>
         )}
-        <HStack gap="1" mt="md">
+        <HStack gap="1" minH={COMPOSER_CONTROL_HEIGHT} align="center">
           {actions}
           <Spacer />
           <SendButton
             canInterrupt={canInterrupt}
-            title={canInterrupt ? "Stop Response" : (submitTitle ?? "Message Sending")}
+            title={canInterrupt ? "Stop Response" : (submitTitle ?? "Send message")}
             shortcut={streaming ? undefined : "Enter"}
             onClick={handleButtonClick}
             disabled={buttonAction === "none"}

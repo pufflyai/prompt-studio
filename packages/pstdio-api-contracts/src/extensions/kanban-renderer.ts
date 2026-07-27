@@ -51,12 +51,20 @@ const extensionKanbanRendererCreateRowSchema = z.object({
   submitLabel: localizableStringSchema.optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
-  editableAttributesParam: z.string().optional(),
+  attributesParam: z.string().optional(),
   attachments: z
     .object({
       commandId: z.string(),
       resourceParam: z.string(),
       fileParam: z.string(),
+    })
+    .optional(),
+  labels: z
+    .object({
+      cancel: localizableStringSchema.optional(),
+      properties: localizableStringSchema.optional(),
+      submitError: localizableStringSchema.optional(),
+      removeFile: localizableStringSchema.optional(),
     })
     .optional(),
 });
@@ -87,6 +95,12 @@ export const extensionKanbanRendererRecordSchema = z.object({
   emptyTitle: localizableStringSchema.optional(),
   emptyDescription: localizableStringSchema.optional(),
   hideToolbar: z.boolean().optional(),
+  savedViews: z
+    .object({
+      resourceKind: z.string(),
+      scope: z.enum(["project", "user"]).optional(),
+    })
+    .optional(),
 });
 
 export const extensionCommandPaletteResourceRecordSchema = z.object({

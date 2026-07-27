@@ -11,6 +11,7 @@ import type {
   WorkbenchModuleContributionContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
+import { localizeParamSchema } from "./param-schema-localization";
 import type {
   ExtensionTreeAction,
   ExtensionTreeNode,
@@ -182,7 +183,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(action.label),
       icon: action.icon,
       args: action.args,
-      params: action.params,
+      params: localizeParamSchema(action.params, text),
       submitLabel: action.submitLabel,
       when: action.when,
       disabled: action.disabled,

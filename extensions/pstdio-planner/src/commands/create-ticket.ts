@@ -24,6 +24,9 @@ export const createTicketCommand = defineCommand({
     status: params.text(),
     tagIds: params.json<string[]>(),
     tags: params.list(),
+    // The board's create form submits every editable attribute in one object
+    // keyed by attribute id: `status` plus one entry per tag attribute.
+    attributes: params.json<Record<string, unknown>>(),
     attachments: params.json<StoredTicketAttachment[]>(),
     parentId: params.text(),
     parent: params.text(),
@@ -36,14 +39,24 @@ export const createTicketCommand = defineCommand({
     const now = new Date().toISOString();
     const { shorthand, sortOrder } = allocateTicketIdentity(ctx.project.shorthand, existing);
 
+    const attributes = ctx.params.attributes ?? {};
+    const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
+    // Every attribute other than `status` is a tag attribute; its value is one
+    // option id or a list of them.
+    const attributeTagIds = Object.entries(attributes).flatMap(([attributeId, value]) => {
+      if (attributeId === "status") return [];
+      if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+      return typeof value === "string" && value ? [value] : [];
+    });
+
     const statusId =
       ctx.params.status !== undefined
         ? await resolveStatusId(ctx.storage, ctx.params.status)
-        : (ctx.params.statusId ?? defaultStatus?.id ?? null);
+        : (ctx.params.statusId ?? attributeStatusId ?? defaultStatus?.id ?? null);
     const tagIds =
       ctx.params.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, ctx.params.tags)
-        : (ctx.params.tagIds ?? []);
+        : (ctx.params.tagIds ?? attributeTagIds);
     const parentId =
       ctx.params.parent !== undefined
         ? await resolveTicketId(ctx.storage, ctx.params.parent)

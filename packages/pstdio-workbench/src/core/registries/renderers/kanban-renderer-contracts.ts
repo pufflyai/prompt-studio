@@ -103,31 +103,52 @@ export interface KanbanRendererSavedView {
   isDefault?: boolean;
 }
 
-export type KanbanRendererCreateFieldType = "text" | "longtext" | "number" | "boolean" | "select" | "multi-select";
+export type KanbanRendererCreateFieldType =
+  | "text"
+  | "longtext"
+  | "markdown"
+  | "number"
+  | "boolean"
+  | "select"
+  | "multi-select"
+  | "files";
 
 export interface KanbanRendererCreateField {
   id: string;
   label: string;
   description?: string;
+  placeholder?: string;
   type: KanbanRendererCreateFieldType;
   required?: boolean;
   defaultValue?: unknown;
   options?: EnumOption[];
+  /** `files` fields only. */
+  multiple?: boolean;
+  accept?: string;
+}
+
+/** Chrome copy is supplied by the caller so the dialog ships no strings of its own. */
+export interface KanbanRendererCreateLabels {
+  cancel: string;
+  properties: string;
+  submitError: string;
+  removeFile: string;
 }
 
 export interface KanbanRendererCreateRowConfig {
   title: string;
   submitLabel: string;
   fields: KanbanRendererCreateField[];
-  includeEditableAttributes?: boolean;
-  allowAttachments?: boolean;
+  labels: KanbanRendererCreateLabels;
 }
 
 export interface KanbanRendererCreateSubmission {
   columnId: string;
   columnAttributeId?: string;
+  /** Declared field values, excluding `files` fields — those arrive as `files`. */
   values: Record<string, unknown>;
-  attributeValues: Record<string, string | string[]>;
+  /** Every editable attribute the user set, keyed by attribute id. */
+  attributeValues: Record<string, unknown>;
   files: File[];
 }
 

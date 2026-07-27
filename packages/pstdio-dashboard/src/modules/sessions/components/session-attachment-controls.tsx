@@ -36,7 +36,7 @@ export const SessionAttachmentControls = (props: SessionAttachmentControlsProps)
       <Tooltip content="Attach files">
         <IconButton
           aria-label="Attach files"
-          size="2xs"
+          size="xs"
           variant="ghost"
           disabled={isDisabled}
           onClick={() => inputRef.current?.click()}

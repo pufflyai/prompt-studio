@@ -64,6 +64,7 @@ test.describe("PS-172 workspace sessions", () => {
     await expect(
       page.getByRole("navigation", { name: "breadcrumb" }).getByText("New session", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("No messages yet", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-testid='content-editable']")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
   });
 });

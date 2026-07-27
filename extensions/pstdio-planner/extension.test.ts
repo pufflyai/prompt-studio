@@ -93,13 +93,21 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.kanbanRenderers?.tickets?.createRow).toMatchObject({
       columnParam: "statusId",
-      editableAttributesParam: "tagIds",
+      attributesParam: "attributes",
       params: {
-        content: { type: "longtext", label: "Description", required: true },
+        content: {
+          type: "markdown",
+          label: { $l10n: "kanbanRenderers.tickets.createRow.content.label", default: "Description" },
+          required: true,
+        },
+        files: { type: "files", multiple: true },
       },
       attachments: {
         resourceParam: "ticketId",
         fileParam: "ref",
+      },
+      labels: {
+        cancel: { $l10n: "kanbanRenderers.tickets.createRow.cancel", default: "Cancel" },
       },
     });
     expect(extension.settingsPanels?.ticketStatuses?.title).toEqual({
