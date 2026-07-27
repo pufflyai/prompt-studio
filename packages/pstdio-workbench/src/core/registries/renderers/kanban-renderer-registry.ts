@@ -91,9 +91,7 @@ export type KanbanRendererRefreshListener = (event: KanbanRendererRefreshEvent) 
 // The React layer supplies the rendering for a kanban-renderer Panel. Set once on
 // workbench mount via setKanbanRendererImplementation so registerKanbanRenderer can
 // auto-register a Panel renderer with the same id.
-export type KanbanRendererImplementation = (
-  input: WorkbenchPanelRenderInput & { kanbanRendererId: string },
-) => unknown;
+export type KanbanRendererImplementation = (input: WorkbenchPanelRenderInput & { kanbanRendererId: string }) => unknown;
 
 export interface CreateKanbanRendererRegistryInput {
   rendererRegistry: WorkbenchRendererRegistry;
