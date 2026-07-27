@@ -21,6 +21,10 @@ import {
   resolveDashboardSessionViewForPlacement,
 } from "../data/dashboard-sessions";
 
+// Keep the dropdown compact so long titles cannot stretch the menu.
+const maxSessionsInMenu = 5;
+const sessionMenuWidth = "18.75rem";
+
 const createWorkspaceResource = (input: {
   workspaceId: string | null;
   workspaceTitle: string;
@@ -133,36 +137,29 @@ const SessionActionRow = (props: { id: string; icon: typeof PenBox; label: strin
   );
 };
 
-export const SessionTabMenu = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
-  const state = useSessionTabState(input);
+interface SessionTabMenuViewProps {
+  sessions: DashboardSession[];
+  selectedSessionId: string | undefined;
+  onNewSession: () => void;
+  onSelectSession: (session: DashboardSession) => void;
+  onViewAllSessions: () => void;
+}
+
+export const SessionTabMenuView = (props: SessionTabMenuViewProps) => {
+  const { sessions, selectedSessionId, onNewSession, onSelectSession, onViewAllSessions } = props;
+  const recentSessions = sessions.slice(0, maxSessionsInMenu);
 
   return (
-    <>
-      <SessionActionRow
-        id="new-session"
-        icon={PenBox}
-        label="New session"
-        onSelect={() => {
-          void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
-            ...(state.workspace ? { workspace: state.workspace } : {}),
-            replaceWidgetId: input.instance.instanceId,
-          });
-        }}
-      />
+    <Box w={sessionMenuWidth} maxW={sessionMenuWidth}>
+      <SessionActionRow id="new-session" icon={PenBox} label="New session" onSelect={onNewSession} />
       <Menu.Separator />
-      {state.sessions.length > 0 ? (
-        state.sessions.map((session) => (
+      {recentSessions.length > 0 ? (
+        recentSessions.map((session) => (
           <SessionMenuRow
             key={session.id}
             session={session}
-            isSelected={session.id === state.view.sessionId}
-            onSelect={() => {
-              void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-                resource: session.resource,
-                replaceWidgetId: input.instance.instanceId,
-              });
-            }}
+            isSelected={session.id === selectedSessionId}
+            onSelect={() => onSelectSession(session)}
           />
         ))
       ) : (
@@ -182,10 +179,35 @@ export const SessionTabMenu = (props: { input: WorkbenchPanelRenderInput }) => {
         id="view-all-sessions"
         icon={ArrowUpRight}
         label="View all sessions"
-        onSelect={() => {
-          void input.workbench.commands.executeCommand(dashboardCommandIds.openSessions);
-        }}
+        onSelect={onViewAllSessions}
       />
-    </>
+    </Box>
+  );
+};
+
+export const SessionTabMenu = (props: { input: WorkbenchPanelRenderInput }) => {
+  const { input } = props;
+  const state = useSessionTabState(input);
+
+  return (
+    <SessionTabMenuView
+      sessions={state.sessions}
+      selectedSessionId={state.view.sessionId}
+      onNewSession={() => {
+        void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
+          ...(state.workspace ? { workspace: state.workspace } : {}),
+          replaceWidgetId: input.instance.instanceId,
+        });
+      }}
+      onSelectSession={(session) => {
+        void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+          resource: session.resource,
+          replaceWidgetId: input.instance.instanceId,
+        });
+      }}
+      onViewAllSessions={() => {
+        void input.workbench.commands.executeCommand(dashboardCommandIds.openSessions);
+      }}
+    />
   );
 };
