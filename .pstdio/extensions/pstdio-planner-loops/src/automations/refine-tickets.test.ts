@@ -61,7 +61,7 @@ describe("refine-tickets automation", () => {
     expect(callsTo(calls, "pstdio-planner.refine-ticket")).toHaveLength(1);
   });
 
-  test("moves the ticket to Ready and adds human_requested when refinement completes", async () => {
+  test("moves the ticket to TODO and adds human_requested when refinement completes", async () => {
     const state = {
       tickets: [makeTicket({ id: "t1" })],
       sessionsById: { "refine-session-1": { id: "refine-session-1", status: "completed" } },

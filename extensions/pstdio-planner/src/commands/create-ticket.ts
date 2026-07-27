@@ -15,7 +15,7 @@ export const createTicketCommand = defineCommand({
       ["tickets", "create"],
       ["tickets", "add"],
     ],
-    examples: ["pstdio tickets create --content '# Title' --status Ready --tags High"],
+    examples: ["pstdio tickets create --content '# Title' --status TODO --tags High"],
   },
   params: {
     title: params.text(),

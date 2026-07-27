@@ -75,7 +75,7 @@ export const updateTicketStatusCommand = defineCommand({
 
 export const deleteTicketStatusCommand = defineCommand({
   title: "Delete ticket status",
-  cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status Ready"] },
+  cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status TODO"] },
   params: {
     statusId: params.text({ label: "Status", required: false }),
     status: params.text({ label: "Status name", required: false }),
@@ -88,7 +88,7 @@ export const deleteTicketStatusCommand = defineCommand({
 
 export const setDefaultTicketStatusCommand = defineCommand({
   title: "Set default ticket status",
-  cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status Ready"] },
+  cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status TODO"] },
   params: {
     status: params.text({ label: "Status", required: true }),
   },

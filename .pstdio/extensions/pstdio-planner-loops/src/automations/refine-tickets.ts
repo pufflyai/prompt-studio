@@ -59,8 +59,8 @@ export const refineTicketsCommand = defineCommand({
       executePlanner(ctx, planner.readTags, {}),
     ]);
     const backlogId = statusIdByNames(statuses, ["Backlog"]);
-    const readyId = statusIdByNames(statuses, ["Ready"]);
-    if (!backlogId || !readyId) return { ran: false, reason: "Backlog/Ready statuses not found" };
+    const readyId = statusIdByNames(statuses, ["TODO", "Ready"]);
+    if (!backlogId || !readyId) return { ran: false, reason: "Backlog/TODO statuses not found" };
 
     const running = await reconcilePendingRefinements(ctx, backlogId, readyId);
     if (running > 0) {

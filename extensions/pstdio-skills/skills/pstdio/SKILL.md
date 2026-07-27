@@ -42,7 +42,7 @@ The top-level container grouping repos, tickets, docs, templates, workspaces, an
 
 ### Tickets
 
-Work items (bugs, features, proposals) tracked end-to-end and owned by the `pstdio-planner` extension. Each ticket has a shorthand (e.g. `PS-12`) and a status. The canonical copy lives in the extension's storage; `.pstdio/tickets/<shorthand>/` is the local draft checkout you materialize with `pst tickets write`/`pull`, edit, and persist with `pst tickets save`. Default statuses: `Backlog`, `Ready`, `In Progress`, `Blocked`, `In Review`, `Done`. Tickets also have a `draft` flag (separate from status) that is set on creation and cleared on save.
+Work items (bugs, features, proposals) tracked end-to-end and owned by the `pstdio-planner` extension. Each ticket has a shorthand (e.g. `PS-12`) and a status. The canonical copy lives in the extension's storage; `.pstdio/tickets/<shorthand>/` is the local draft checkout you materialize with `pst tickets write`/`pull`, edit, and persist with `pst tickets save`. Default statuses: `Backlog`, `TODO`, `In Progress`, `Blocked`, `In Review`, `Done`. Tickets also have a `draft` flag (separate from status) that is set on creation and cleared on save.
 
 ### Skills
 

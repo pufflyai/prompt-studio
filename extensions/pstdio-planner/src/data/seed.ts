@@ -23,8 +23,8 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
   },
   {
     id: "ready",
-    name: "Ready",
-    color: "green",
+    name: "TODO",
+    color: "purple",
     icon: null,
     sortOrder: 1,
     isDefault: false,

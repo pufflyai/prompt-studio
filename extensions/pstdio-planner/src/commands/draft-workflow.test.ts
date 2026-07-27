@@ -26,7 +26,7 @@ describe("draft workflow", () => {
     const result = await writeTicketCommand.run(
       makeCommandContext({
         storage,
-        params: { title: "Fix login", status: "Ready", tags: ["High"] },
+        params: { title: "Fix login", status: "TODO", tags: ["High"] },
         overrides: { repoFiles },
       }),
     );

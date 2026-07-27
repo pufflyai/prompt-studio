@@ -17,7 +17,7 @@ describe("implement-tickets automation", () => {
     expect(calls).toEqual([]);
   });
 
-  test("implements Ready tickets by priority, then oldest created", async () => {
+  test("implements TODO tickets by priority, then oldest created", async () => {
     const { ctx } = makeAutomationContext({
       tickets: [
         makeTicket({ id: "t1", statusId: "ready", createdAt: "2026-06-01T00:00:00.000Z" }),
@@ -89,6 +89,6 @@ describe("implement-tickets automation", () => {
     const result = await run(ctx as never);
 
     expect(result).toMatchObject({ implemented: [] });
-    expect(activities.at(-1)?.message).toContain("no eligible Ready ticket");
+    expect(activities.at(-1)?.message).toContain("no eligible TODO ticket");
   });
 });

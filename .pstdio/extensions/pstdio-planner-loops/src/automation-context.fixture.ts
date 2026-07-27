@@ -4,7 +4,7 @@ import type { PlannerStatus, PlannerTag, PlannerTicket, TicketWorkspaceRow, Work
 
 export const DEFAULT_STATUSES: PlannerStatus[] = [
   { id: "backlog", name: "Backlog", sortOrder: 0 },
-  { id: "ready", name: "Ready", sortOrder: 1 },
+  { id: "ready", name: "TODO", sortOrder: 1 },
   { id: "in-progress", name: "In Progress", sortOrder: 2 },
   { id: "blocked", name: "Blocked", sortOrder: 3 },
   { id: "in-review", name: "In Review", sortOrder: 4 },

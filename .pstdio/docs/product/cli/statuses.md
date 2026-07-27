@@ -18,7 +18,7 @@ Statuses are project-scoped through the planner extension.
 | Name          | Color   | Default |
 | ------------- | ------- | ------- |
 | `Backlog`     | `gray`  | yes     |
-| `Ready`       | `teal`  | no      |
+| `TODO`        | `purple`| no      |
 | `In Progress` | `blue`  | no      |
 | `Blocked`     | `red`   | no      |
 | `In Review`   | `amber` | no      |
@@ -32,7 +32,7 @@ project id flag is provided by the router.
 ```sh
 pst statuses list
 pst statuses create --name "Triaging" --color amber
-pst statuses set-default --name "Ready"
+pst statuses set-default --name "TODO"
 pst statuses delete --name "Triaging"
 ```
 

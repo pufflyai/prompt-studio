@@ -17,9 +17,9 @@ export const implementTicketsCommand = defineCommand({
       executePlanner(ctx, planner.readTickets, {}),
       maxInProgress(ctx),
     ]);
-    const readyId = statusIdByNames(statuses, ["Ready"]);
+    const readyId = statusIdByNames(statuses, ["TODO", "Ready"]);
     const inProgressId = statusIdByNames(statuses, ["In Progress", "wip"]);
-    if (!readyId || !inProgressId) return { ran: false, reason: "Ready/In Progress statuses not found" };
+    if (!readyId || !inProgressId) return { ran: false, reason: "TODO/In Progress statuses not found" };
 
     const inProgressCount = tickets.filter((ticket) => !ticket.draft && ticket.statusId === inProgressId).length;
     const capacity = cap - inProgressCount;
@@ -33,7 +33,7 @@ export const implementTicketsCommand = defineCommand({
       .sort(byPriorityThenCreatedAt(tags))
       .slice(0, capacity);
     if (selected.length === 0) {
-      await recordAutomationActivity(ctx, AUTOMATION, "no eligible Ready ticket");
+      await recordAutomationActivity(ctx, AUTOMATION, "no eligible TODO ticket");
       return { ran: true, implemented: [], inProgressCount };
     }
 

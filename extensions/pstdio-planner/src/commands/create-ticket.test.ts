@@ -93,7 +93,7 @@ describe("createTicketCommand", () => {
     const created = await createTicketCommand.run(
       makeCommandContext({
         storage,
-        params: { title: "Child", status: "Ready", tags: ["High", "Bug"], parent: parent.shorthand },
+        params: { title: "Child", status: "TODO", tags: ["High", "Bug"], parent: parent.shorthand },
       }),
     );
 

@@ -27,7 +27,7 @@ describe("seedDefaultStatuses", () => {
       })),
     ).toEqual([
       { name: "Backlog", color: "gray", isDefault: true },
-      { name: "Ready", color: "green", isDefault: false },
+      { name: "TODO", color: "purple", isDefault: false },
       { name: "In Progress", color: "blue", isDefault: false },
       { name: "Blocked", color: "red", isDefault: false },
       { name: "In Review", color: "yellow", isDefault: false },
