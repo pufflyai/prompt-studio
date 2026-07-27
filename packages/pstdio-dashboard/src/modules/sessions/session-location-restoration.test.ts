@@ -17,7 +17,12 @@ test("sessions mode preserves the previous Location's Session Sub Panels", async
     region: "main",
     rendererId: "dashboard.tickets",
   });
-  workbench.layout.openPanel("dashboard.tickets", { resource: location });
+  workbench.resources.registerPresenter({
+    id: "dashboard.tickets",
+    canOpen: (resource) => resource.uri === location.uri,
+    open: (resource) => workbench.layout.openPanel("dashboard.tickets", { resource }),
+  });
+  await workbench.resources.openResource(location);
   workbench.registerModule(createSessionBubbleModule());
   const sessionsModule = workbench.registerModule(createSessionsModule());
 
