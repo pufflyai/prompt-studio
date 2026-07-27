@@ -58,7 +58,13 @@ export const flattenKanbanRendererListItems = (
 
   for (const item of items) {
     const canExpand = (item.children?.length ?? 0) > 0;
-    rows.push({ id: item.id, item, depth, isGroup: item.isGroup === true, canExpand });
+    rows.push({
+      id: item.id,
+      item,
+      depth,
+      isGroup: item.isGroup === true,
+      canExpand,
+    });
 
     if (canExpand && getRowIsExpanded(expanded, item.id)) {
       rows.push(...flattenKanbanRendererListItems(item.children ?? [], expanded, depth + 1));
@@ -292,6 +298,7 @@ const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
         isSelected={isSelected}
         isExpanded={isExpanded}
         showExpandToggle={canExpand}
+        showContextMenuTrigger={false}
         onActivate={handleActivate}
         onToggleExpand={toggleExpanded}
       />

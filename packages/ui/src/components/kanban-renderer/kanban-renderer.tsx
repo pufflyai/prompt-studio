@@ -72,6 +72,11 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
 
+const rowEyebrow = (row: KanbanRendererRow) => {
+  const shorthand = row.attributes.id;
+  return typeof shorthand === "string" && shorthand ? shorthand : row.id;
+};
+
 export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRendererProps<TRow>) => {
   const {
     rows,
@@ -132,15 +137,16 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     getRowContextMenuActions,
   });
 
+  const cardDisplayProperties = settings.displayProperties.filter((property) => property !== "id");
   const toBoardItems = (boardRows: KanbanRendererRow[]) =>
     boardRows.map((row) => ({
       id: row.id,
       contextMenuActions: getRowContextMenuActions?.(row as TRow),
       cardProps: {
-        eyebrow: row.id,
+        eyebrow: settings.displayProperties.includes("id") ? rowEyebrow(row) : undefined,
         title: row.title,
-        badges: collectDisplayBadges(row, attributes, settings.displayProperties),
-        customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
+        badges: collectDisplayBadges(row, attributes, cardDisplayProperties),
+        customSlots: collectDisplayCustomSlots(row, attributes, cardDisplayProperties),
         onBadgeChange: onAttributeChange
           ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
           : undefined,
@@ -155,9 +161,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     const orderedRows = orderRows(column.rows, settings.ordering, attributes);
     // Column color follows the enum option when the contribution does not
     // provide one, while row display badges stay visually neutral.
-    const enumColor = columnGroupingDescriptor
-      ? findEnumOption(columnGroupingDescriptor.type, column.key)?.color
-      : undefined;
+    const enumOption = columnGroupingDescriptor ? findEnumOption(columnGroupingDescriptor.type, column.key) : undefined;
 
     const groups: KanbanRendererBoardGroup[] | undefined =
       column.subgroups.length > 0
@@ -171,7 +175,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     return {
       id: column.key,
       label: column.label,
-      color: columnConfig.color ?? enumColor,
+      color: columnConfig.color ?? enumOption?.color,
+      icon: enumOption?.icon ?? "circle",
       canDragIn: columnConfig.canDragIn ?? false,
       canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
@@ -209,7 +214,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
   };
 
   return (
-    <Stack height="100%" minH="0" gap="0">
+    <Stack data-testid="kanban-renderer" height="100%" minH="0" gap="0" background="bg" overflow="hidden">
       {hideToolbar ? null : (
         <KanbanRendererToolbar
           rows={rows}

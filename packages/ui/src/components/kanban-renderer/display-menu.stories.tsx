@@ -94,10 +94,20 @@ const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
 export const Default: Story = { render: () => <Wrapper /> };
 
 export const AscendingSortMenu: Story = {
-  render: () => <Wrapper />,
+  render: () => (
+    <Wrapper
+      initialSettings={{
+        ...DEFAULT_KANBAN_RENDERER_SETTINGS,
+        ordering: { attributeId: "updated", direction: "asc" },
+      }}
+    />
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Display settings"));
+    const displayMenu = within(document.body);
+    await expect(displayMenu.getByRole("img", { name: "Ascending order" })).toBeVisible();
+    await expect(displayMenu.getByText("Updated").parentElement).not.toHaveTextContent("ASC");
   },
 };
 
@@ -113,6 +123,9 @@ export const DescendingSortMenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Display settings"));
+    const displayMenu = within(document.body);
+    await expect(displayMenu.getByRole("img", { name: "Descending order" })).toBeVisible();
+    await expect(displayMenu.getByText("Updated").parentElement).not.toHaveTextContent("DESC");
   },
 };
 

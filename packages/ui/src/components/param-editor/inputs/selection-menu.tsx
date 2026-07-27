@@ -76,7 +76,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content bg="bg">
+        <Menu.Content>
           {options.map((option) => {
             const selected = selectedIds.includes(option.id);
             return (

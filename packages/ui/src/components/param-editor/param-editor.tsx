@@ -10,10 +10,20 @@ export interface ParamEditorProps {
   onOpenResource?: (ref: ResourceRefValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
+  variant?: "default" | "small";
 }
 
 export const ParamEditor = (props: ParamEditorProps) => {
-  const { params = [], groups = [], defaultValues = {}, onChange, onOpenResource, readOnly, fullWidth = false } = props;
+  const {
+    params = [],
+    groups = [],
+    defaultValues = {},
+    onChange,
+    onOpenResource,
+    readOnly,
+    fullWidth = false,
+    variant = "default",
+  } = props;
   const handleChange = onChange ?? (() => undefined);
 
   return (
@@ -26,6 +36,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           onOpenResource={onOpenResource}
           readOnly={readOnly}
           fullWidth={fullWidth}
+          variant={variant}
           isFirst
         />
       ) : null}
@@ -40,6 +51,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           onOpenResource={onOpenResource}
           readOnly={readOnly}
           fullWidth={fullWidth}
+          variant={variant}
           collapsible={group.collapsible}
           defaultCollapsed={group.defaultCollapsed}
           isFirst={params.length === 0 && index === 0}

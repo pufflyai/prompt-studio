@@ -104,6 +104,11 @@ export const Demo: Story = {
   },
 };
 
+export const Small: Story = {
+  ...Demo,
+  args: { ...Demo.args, variant: "small" },
+};
+
 export const ReadOnly: Story = {
   render: (props) => {
     return (

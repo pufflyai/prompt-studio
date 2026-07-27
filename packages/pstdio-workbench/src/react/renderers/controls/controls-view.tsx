@@ -96,6 +96,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
           </Box>
         ) : hasControls ? (
           <ParamEditor
+            variant="small"
             params={state.params}
             groups={state.groups}
             defaultValues={state.values}

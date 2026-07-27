@@ -121,6 +121,8 @@ export interface ListRowProps
   isExpanded?: boolean;
   /** Forces the expand affordance when children are lazy-loaded or externally controlled. */
   showExpandToggle?: boolean;
+  /** Shows context-menu actions from an inline trigger in addition to right-click access. */
+  showContextMenuTrigger?: boolean;
   variant?: ListRowVariant;
   tone?: ListRowTone;
   selectedBg?: ListRowRootProps["bg"];

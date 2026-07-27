@@ -47,7 +47,12 @@ const createRowBackgroundProps = (input: {
   _hover: (() => {
     if (input.variant === "empty-state") return { bg: "transparent" };
     if (input.isSelected) return { bg: input.selectedBg };
-    if (input.tone === "danger") return { outline: "1px solid", outlineColor: "red.500", outlineOffset: "-1px" };
+    if (input.tone === "danger")
+      return {
+        outline: "1px solid",
+        outlineColor: "red.500",
+        outlineOffset: "-1px",
+      };
     return { bg: input.hoverBg };
   })(),
   _active: input.variant === "empty-state" ? { bg: "transparent" } : { bg: input.selectedBg },
@@ -126,6 +131,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     isSelected = false,
     isExpanded = false,
     showExpandToggle = false,
+    showContextMenuTrigger = true,
     variant = "default",
     tone = "default",
     selectedBg = "bg.active",
@@ -261,6 +267,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       isDisabled={isDisabled}
       tone={tone}
       variant={variant}
+      showContextMenuTrigger={showContextMenuTrigger}
     />
   );
 

@@ -113,8 +113,8 @@ describe("buildTicketAttributes", () => {
     expect(statusAttr?.type).toEqual({
       kind: "enum",
       options: [
-        { value: "s-todo", label: "Todo", color: "blue", icon: "circle" },
-        { value: "s-done", label: "Done", color: "blue", icon: "circle" },
+        { value: "s-todo", label: "Todo", color: "blue", icon: "flag" },
+        { value: "s-done", label: "Done", color: "blue", icon: "check-circle" },
       ],
     });
     expect(statusAttr?.groupable).toBe(true);
@@ -153,7 +153,7 @@ describe("buildTicketAttributes", () => {
     });
   });
 
-  test("renders the default complexity tag with circle option icons", () => {
+  test("preserves the configured default complexity option icons", () => {
     const attributes = buildTicketAttributes(
       [],
       [
@@ -189,8 +189,8 @@ describe("buildTicketAttributes", () => {
     expect(complexityAttribute?.type).toEqual({
       kind: "enum",
       options: [
-        { value: "default-complexity-simple", label: "Simple", color: "green", icon: "circle" },
-        { value: "default-complexity-complex", label: "Complex", color: "red", icon: "circle" },
+        { value: "default-complexity-simple", label: "Simple", color: "green", icon: "feather" },
+        { value: "default-complexity-complex", label: "Complex", color: "red", icon: "layers" },
       ],
     });
   });

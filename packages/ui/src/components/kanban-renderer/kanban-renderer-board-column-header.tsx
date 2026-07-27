@@ -1,7 +1,8 @@
-import { Box, HStack, Icon, IconButton, Menu, Spacer, Text } from "@chakra-ui/react";
+import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text } from "@chakra-ui/react";
 import { MoreHorizontal, Plus } from "lucide-react";
 
 import { ListRow } from "@/components/list-row/list-row";
+import { getIconComponent } from "@/components/primitives/icon-color-picker";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
@@ -16,12 +17,18 @@ export const ColumnHeader = (props: ColumnHeaderProps) => {
 
   return (
     <HStack minH="1.5rem" gap="2xs" alignItems="center" colorPalette={column.color ?? "gray"}>
-      <Box boxSize="0.5rem" borderRadius="full" bg="colorPalette.solid" />
+      <Icon
+        data-testid="column-status-icon"
+        as={getIconComponent(column.icon)}
+        boxSize="0.875rem"
+        color="colorPalette.solid"
+        flexShrink={0}
+      />
       <Text textStyle="label/S/medium">{column.label}</Text>
 
-      <Text textStyle="label/XS" color="fg.muted">
+      <Badge variant="number" size="xs" colorPalette="gray">
         {column.items.length}
-      </Text>
+      </Badge>
 
       <Spacer />
 

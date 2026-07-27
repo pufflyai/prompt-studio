@@ -1,5 +1,5 @@
 import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown, Square, SquareCheck, X } from "lucide-react";
+import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-color-picker";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
@@ -38,7 +38,6 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
   const canEdit = Boolean(onChange && badge.isEditable && options.length > 0);
   const isMultiValue = Array.isArray(badge.value);
   const selectedValues = getSelectedValues(badge);
-  const attributeLabel = badge.attributeLabel ?? badge.label;
   const rowInteractionProps = {
     onClick: stopRowActivation,
     onPointerDown: stopRowActivation,
@@ -46,11 +45,11 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
   };
 
   const handleOptionChange = (optionValue: string) => {
-    const nextValue = isMultiValue ? toggleMultiValue(selectedValues, optionValue) : optionValue;
+    let nextValue: string | string[];
+    if (isMultiValue) nextValue = toggleMultiValue(selectedValues, optionValue);
+    else nextValue = selectedValues.includes(optionValue) ? "" : optionValue;
     onChange?.(badge.attributeId, nextValue);
   };
-
-  const handleClearSelection = () => onChange?.(badge.attributeId, isMultiValue ? [] : "");
 
   const badgeContent = (
     <>
@@ -91,34 +90,12 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
         <Menu.Positioner>
           <Menu.Content
             minW="180px"
-            bg="bg"
             p="0"
             gap="0"
             onClick={stopRowActivation}
             onPointerDown={stopRowActivation}
             onKeyDown={stopRowActivation}
           >
-            {!isMultiValue ? (
-              <>
-                <Menu.Item value="__clear" asChild>
-                  <ListRow
-                    asChild
-                    role="menuitemradio"
-                    aria-checked={selectedValues.length === 0}
-                    variant="full-width"
-                    id="__clear"
-                    label={`No ${attributeLabel}`}
-                    icon={<X size={16} />}
-                    iconColor="gray.500"
-                    isSelected={selectedValues.length === 0}
-                    endContent={selectionIcon({ isMultiValue: false, isSelected: selectedValues.length === 0 })}
-                    onActivate={handleClearSelection}
-                    {...rowInteractionProps}
-                  />
-                </Menu.Item>
-                <Menu.Separator margin="0" />
-              </>
-            ) : null}
             {options.map((option) => {
               const isSelected = selectedValues.includes(option.value);
               return (

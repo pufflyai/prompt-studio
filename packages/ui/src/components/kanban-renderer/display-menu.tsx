@@ -1,6 +1,6 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
-import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, List, Settings2, SortAsc, SortDesc, SquareKanban } from "lucide-react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
 
@@ -28,7 +28,7 @@ const Dropdown = (props: {
   value: string;
   options: MenuOption[];
   onSelect: (value: string) => void;
-  valueSuffix?: string;
+  valueSuffix?: ReactNode;
   onSuffixAction?: () => void;
 }) => {
   const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
@@ -39,15 +39,17 @@ const Dropdown = (props: {
       <Menu.Trigger asChild>
         <Button size="xs" variant="ghost" width="full" justifyContent="flex-start" gap="xs">
           <Text textStyle="label/S/regular">{props.label}</Text>
-          <Text marginLeft="auto" textStyle="label/S/regular" color="fg.muted" truncate>
-            {selectedLabel}
+          <HStack marginLeft="auto" minW="0" gap="2xs" color="fg.muted">
+            <Text textStyle="label/S/regular" truncate>
+              {selectedLabel}
+            </Text>
             {props.valueSuffix}
-          </Text>
+          </HStack>
           <ChevronDown size={12} />
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="16rem" bg="bg.muted">
+        <Menu.Content>
           {props.options.map((option, index) => (
             <Fragment key={option.value}>
               {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
@@ -115,13 +117,13 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content ref={contentRef} width="18.75rem" padding="xs" bg="bg.muted" gap="1px">
+          <Popover.Content ref={contentRef} width="18.75rem" padding="xs" gap="1px">
             <SectionLabel>DISPLAY</SectionLabel>
             <HStack borderRadius="sm" bg="bg.subtle" padding="2xs" gap="2xs">
               <Button
                 flex="1"
                 size="2xs"
-                variant={settings.viewMode === "list" ? "subtle" : "ghost"}
+                variant="ghost"
                 aria-pressed={settings.viewMode === "list"}
                 onClick={() => onViewModeChange("list")}
               >
@@ -131,7 +133,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               <Button
                 flex="1"
                 size="2xs"
-                variant={settings.viewMode === "board" ? "subtle" : "ghost"}
+                variant="ghost"
                 aria-pressed={settings.viewMode === "board"}
                 onClick={() => onViewModeChange("board")}
               >
@@ -154,7 +156,16 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               value={settings.ordering.attributeId}
               options={orderingOptions}
               valueSuffix={
-                settings.ordering.attributeId === "manual" ? "" : ` · ${settings.ordering.direction.toUpperCase()}`
+                settings.ordering.attributeId === "manual" ? undefined : (
+                  <Icon
+                    as={settings.ordering.direction === "asc" ? SortAsc : SortDesc}
+                    aria-label={`${settings.ordering.direction === "asc" ? "Ascending" : "Descending"} order`}
+                    aria-hidden={false}
+                    role="img"
+                    boxSize="0.875rem"
+                    flexShrink={0}
+                  />
+                )
               }
               onSelect={onOrderingAttributeIdChange}
               onSuffixAction={settings.ordering.attributeId === "manual" ? undefined : onSortDirectionToggle}
@@ -174,7 +185,8 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                   <Button
                     key={option.value}
                     size="2xs"
-                    variant={active ? "subtle" : "outline"}
+                    variant="ghost"
+                    aria-pressed={active}
                     onClick={() => onDisplayPropertyToggle(option.value)}
                   >
                     {option.label}

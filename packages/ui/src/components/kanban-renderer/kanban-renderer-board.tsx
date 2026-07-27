@@ -33,6 +33,7 @@ export interface KanbanRendererBoardColumn {
   label: string;
   createLabel?: string;
   color?: string;
+  icon?: string | null;
   items: KanbanRendererBoardItem[];
   groups?: KanbanRendererBoardGroup[];
   canDragIn: boolean;
@@ -97,7 +98,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
       size="xs"
       showHorizontalScrollbar
       showVerticalScrollbar={false}
-      contentProps={{ display: "flex", alignItems: "stretch", gap: "sm", padding: "sm", minH: "100%" }}
+      contentProps={{ display: "flex", alignItems: "stretch", gap: "sm", padding: "comfortable", minH: "100%" }}
     >
       {columns.map((column) => (
         <Stack
@@ -106,9 +107,9 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           gap="xs"
           padding="compact"
           borderWidth="1px"
-          borderColor="border.subtle"
+          borderColor="border"
           borderRadius="sm"
-          background={activeColumn === column.id ? "bg.active" : "bg.muted"}
+          background={activeColumn === column.id ? "bg.active" : "bg.subtle"}
           transition="background 150ms ease"
           height="100%"
           minH="240px"

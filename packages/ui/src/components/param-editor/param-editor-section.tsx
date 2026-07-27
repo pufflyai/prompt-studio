@@ -16,6 +16,7 @@ interface ParamEditorSectionProps {
   collapsible?: boolean;
   defaultCollapsed?: boolean;
   isFirst?: boolean;
+  variant?: "default" | "small";
 }
 
 const ParamEditorSectionTitle = (props: { title: string; description?: string }) => {
@@ -81,12 +82,15 @@ const ParamEditorSectionHeader = (props: {
 };
 
 const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "description" | "collapsible">) => {
-  const { params, defaultValues, onChange, onOpenResource, readOnly, fullWidth, defaultCollapsed, isFirst } = props;
+  const { params, defaultValues, onChange, onOpenResource, readOnly, fullWidth, defaultCollapsed, isFirst, variant } =
+    props;
+  let sectionPadding = defaultCollapsed || isFirst ? "2xs" : "xs";
+  if (variant === "small") sectionPadding = "none";
 
   return (
-    <Stack gap="0" py={defaultCollapsed || isFirst ? "2xs" : "xs"}>
+    <Stack gap="0" py={sectionPadding}>
       {params.map((param) => (
-        <Box key={param.id} px="sm" py="xs">
+        <Box key={param.id} px="sm" py={variant === "small" ? "2xs" : "xs"}>
           <ParamEditorField
             param={param}
             defaultValues={defaultValues}
@@ -114,6 +118,7 @@ export const ParamEditorSection = (props: ParamEditorSectionProps) => {
     collapsible,
     defaultCollapsed = false,
     isFirst = false,
+    variant = "default",
   } = props;
   const [open, setOpen] = useState(!defaultCollapsed);
   const hasTitle = Boolean(title);
@@ -142,6 +147,7 @@ export const ParamEditorSection = (props: ParamEditorSectionProps) => {
             fullWidth={fullWidth}
             defaultCollapsed={defaultCollapsed}
             isFirst={isFirst}
+            variant={variant}
           />
         </Collapsible.Content>
       </Collapsible.Root>

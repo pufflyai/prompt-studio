@@ -70,6 +70,52 @@ export const EditableDisplayBadge: Story = {
   },
 };
 
+const ClearableSingleSelectBadgeWrapper = () => {
+  const [rows, setRows] = useState<StoryRow[]>(initialRows);
+  const editableAttributes = attributes.map((attribute) =>
+    attribute.id === "priority" ? { ...attribute, editable: true } : attribute,
+  );
+
+  return (
+    <Box p="sm" height="560px">
+      <KanbanRenderer<StoryRow>
+        rows={rows}
+        storageKey="storybook-kanban-renderer-clearable-single-badge"
+        attributes={editableAttributes}
+        defaultSettings={{
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { attributeId: "manual", direction: "asc" },
+          displayProperties: ["priority"],
+        }}
+        onAttributeChange={(rowId, attributeId, value) =>
+          setRows((current) =>
+            current.map((row) =>
+              row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
+            ),
+          )
+        }
+      />
+    </Box>
+  );
+};
+
+export const ClearSingleSelectBadgeByRepicking: Story = {
+  tags: ["clearable-single-select-badge-regression"],
+  render: () => <ClearableSingleSelectBadgeWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const card = canvas.getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
+    if (!card) throw new Error("Expected the ticket card to render");
+
+    await userEvent.click(within(card as HTMLElement).getByText("High"));
+    await expect(within(document.body).queryByRole("menuitemradio", { name: "No Priority" })).not.toBeInTheDocument();
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "High" }));
+    await expect(within(card as HTMLElement).queryByText("High")).not.toBeInTheDocument();
+  },
+};
+
 const EditableMultiSelectBadgeWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
   const editableAttributes = attributes.map((attribute) =>

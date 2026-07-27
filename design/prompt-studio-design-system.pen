@@ -12096,8 +12096,9 @@
                           "type": "frame",
                           "id": "B1d38",
                           "name": "Menu",
+                          "context": "Default ResourceContextMenu surface. Width is fixed at 280px so ticket and resource actions do not collapse to their label width; specialized compact menus must opt into a narrower width explicitly.",
                           "clip": true,
-                          "width": 180,
+                          "width": 280,
                           "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
                           "stroke": "$ds-border",
@@ -15842,11 +15843,11 @@
                       "type": "frame",
                       "id": "ANO6t",
                       "name": "cmp/WorkspaceMenu",
-                      "context": "SessionWorkspaceMenu (pstdio-dashboard/src/modules/sessions/components/session-workspace-menu.tsx). SearchableMenu width 280, radius 8, surface $ds-elevated on a $ds-border hairline — elevation by surface, not shadow, per the system's flat rule. Menu padding 6 so rows inset and their 6px radius reads. Search row only renders when workspaces.length > 10. Rows are single-line: GitBranch icon + workspace.title, no description. Default workspace (root repo) is pinned first, rest newest-first. Empty state: 'No workspaces', compact row, 16px icon, disabled.",
+                      "context": "SessionWorkspaceMenu (pstdio-dashboard/src/modules/sessions/components/session-workspace-menu.tsx). SearchableMenu width 280, radius 8, primary $ds-bg surface on a $ds-border hairline. Menu padding 6 so rows inset and their 6px radius reads. Search row only renders when workspaces.length > 10. Rows are single-line: GitBranch icon + workspace.title, no description. Default workspace (root repo) is pinned first, rest newest-first. Empty state: 'No workspaces', compact row, 16px icon, disabled.",
                       "reusable": true,
                       "clip": true,
                       "width": 280,
-                      "fill": "$ds-elevated",
+                      "fill": "$ds-bg",
                       "cornerRadius": 8,
                       "stroke": "$ds-border",
                       "strokeWidth": 1,
@@ -16998,10 +16999,10 @@
                       "type": "frame",
                       "id": "DuUAX",
                       "name": "cmp/ViewBar",
-                      "context": "The renderer's header. Two rows.\n\nBar (h 40, always): the saved views as tabs, then New view; on the right, Filter and Display as icon-only buttons (cmp/IconButton). A view is a NAME over a (filter + display) pair — the same set narrowed and drawn a particular way — so switching tabs can change both which resources are shown and whether they are rows or cards.\n\nAt rest the bar carries names, not clauses: a row that grows with the filter cannot also be a stable home for the view names. Hidden state is announced by the Filter button going subtle while clauses are active; open it to see and edit them.\n\nFilters (h 36, only while the view is edited): the applied clauses, as cmp/FilterPill, with Reset and Save on the right. Editing a filter or display detaches the active view and drops this row in. It is the one place the clauses are spelled out in the header, and it costs nothing at rest because it isn't there at rest — the bar above keeps its fixed height either way. Note the row lists the FILTER, but Reset and Save act on the whole view, display included: a display-only edit still raises it, showing clauses that did not themselves change.\n\nReset is outline, Save is primary — the pair reads as revert-or-commit, with the commit weighted.\n\nThe active tab carries a small $ds-warning dot (cmp/Tab's Modified mark) while the view is dirty, so the unsaved view is identifiable from the tab strip alone — the tabs are where you'd look to switch away and lose the edit.\n\ntabs, buttons and pills are all 24 so they sit on one baseline in either row.",
+                      "context": "The renderer header is transparent and has a fixed 40px saved-view bar plus a conditional 36px filters row. The top bar holds saved views as tabs, New view, and icon-only Filter and Display controls. The Filter control uses the subtle active surface whenever filters are applied; it never carries a numeric badge.\n\nThe Filters row appears whenever the active view has applied filters, including after those filters are saved. Each clause stays visible as a filter pill so the narrowed dataset is never hidden. If the view is dirty, Reset and Save appear at the right and the active tab carries the warning dot. Display-only edits can also raise the row for those actions even when there are no filter pills.\n\nTabs use the standard $ds-border stroke in every state. Tabs, buttons, and pills share the compact baseline.",
                       "reusable": true,
                       "width": 1000,
-                      "fill": "$ds-bg-subtle",
+                      "fill": "#00000000",
                       "stroke": "$ds-border",
                       "strokeWidth": {
                         "bottom": 1
@@ -17140,7 +17141,7 @@
                               "width": 24,
                               "height": 24,
                               "theme": {
-                                "btn": "ghost",
+                                "btn": "subtle",
                                 "size": "2xs"
                               },
                               "descendants": {
@@ -17175,11 +17176,9 @@
                         {
                           "type": "frame",
                           "id": "HQxAx",
-                          "x": 0,
-                          "y": 0,
                           "name": "Filters",
-                          "enabled": false,
-                          "width": "fill_container(0)",
+                          "context": "Shown whenever the active view has applied filters. Filter pills remain visible after the view is saved so hidden constraints are always legible. Reset and Save appear at the right only while the view has unsaved filter or display changes; a saved filtered view shows the pills without edit actions.",
+                          "width": "fill_container",
                           "height": 36,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": {
@@ -17280,13 +17279,12 @@
                       "type": "frame",
                       "id": "Vh7Tg",
                       "name": "cmp/KanbanBoard",
+                      "context": "Canonical Kanban renderer. The renderer itself has no outer border or radius; it inherits the containing panel surface. The transparent View Bar sits above a padded board. Each board column owns its own subtle surface and border. Column headers show the configured status icon before the label, matching the enum option rather than substituting a generic filled dot.",
                       "reusable": true,
                       "clip": true,
                       "width": 1000,
                       "fill": "$ds-bg",
-                      "cornerRadius": 12,
                       "stroke": "$ds-border",
-                      "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
                       "children": [
@@ -17376,14 +17374,29 @@
                                       "fontWeight": "600"
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "ZFbG4",
-                                      "name": "C",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "3",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
+                                      "type": "frame",
+                                      "id": "vcCMR",
+                                      "name": "Count Badge",
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "m3G35",
+                                          "name": "Count",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "3",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "frame",
@@ -17564,14 +17577,29 @@
                                       "fontWeight": "600"
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "xKfWn",
-                                      "name": "C",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "2",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
+                                      "type": "frame",
+                                      "id": "BSYyY",
+                                      "name": "Count Badge",
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "k996C",
+                                          "name": "Count",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "2",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "frame",
@@ -17719,14 +17747,29 @@
                                       "fontWeight": "600"
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "Nf1Ra",
-                                      "name": "C",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "3",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
+                                      "type": "frame",
+                                      "id": "wLull",
+                                      "name": "Count Badge",
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "b0crJ",
+                                          "name": "Count",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "3",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "frame",
@@ -17907,14 +17950,29 @@
                                       "fontWeight": "600"
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "ouFtI",
-                                      "name": "C",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "2",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
+                                      "type": "frame",
+                                      "id": "cGe7U",
+                                      "name": "Count Badge",
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "BWhdY",
+                                          "name": "Count",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "2",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "frame",
@@ -18149,7 +18207,7 @@
                           "type": "frame",
                           "id": "RKYkL",
                           "name": "DataTable · Filter",
-                          "width": 320,
+                          "width": 480,
                           "layout": "vertical",
                           "gap": 8,
                           "children": [
@@ -18172,33 +18230,6 @@
                               "descendants": {
                                 "rTKKI": {
                                   "content": "Filter table rows…"
-                                },
-                                "P0j6xA": {
-                                  "content": "COLUMN"
-                                },
-                                "WFSy3/UEgTp": {
-                                  "icon": "hash"
-                                },
-                                "WFSy3/UTbhN": {
-                                  "content": "Score"
-                                },
-                                "bIn1G/UEgTp": {
-                                  "icon": "calendar"
-                                },
-                                "bIn1G/UTbhN": {
-                                  "content": "Updated"
-                                },
-                                "qDgRa/UEgTp": {
-                                  "icon": "type"
-                                },
-                                "qDgRa/UTbhN": {
-                                  "content": "Name"
-                                },
-                                "Oi0uh": {
-                                  "enabled": false
-                                },
-                                "EbGcP": {
-                                  "enabled": false
                                 }
                               }
                             }
@@ -18208,7 +18239,7 @@
                           "type": "frame",
                           "id": "yMBxS",
                           "name": "Kanban · Filter",
-                          "width": 320,
+                          "width": 480,
                           "layout": "vertical",
                           "gap": 8,
                           "children": [
@@ -23802,7 +23833,7 @@
                           "id": "Y7ZpI",
                           "name": "Menu",
                           "width": 260,
-                          "fill": "$ds-elevated",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border",
                           "strokeWidth": 1,
@@ -42992,7 +43023,7 @@
                               "id": "JHXeH",
                               "name": "Resource modal",
                               "width": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": "$overlay-radius",
                               "layout": "vertical",
                               "gap": 5,
@@ -66412,7 +66443,7 @@
                   "reusable": true,
                   "clip": true,
                   "width": 600,
-                  "fill": "$ds-elevated",
+                  "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -66799,18 +66830,17 @@
                   "type": "frame",
                   "id": "V7ww8",
                   "name": "cmp/FilterPopover",
-                  "context": "Canonical renderer filter popover. Search first, then a compact property list using cmp/MenuRow. DataTable and Kanban share this anatomy while overriding the available fields.",
+                  "context": "Canonical two-column renderer filter popover. Search occupies its own top row. Below it, the PROPERTY and active-property headings sit in separate column headers so they never overlap search. The property column is fixed at 188px and separated from the flexible options column by a $ds-border-subtle hairline; all row content fills the remaining container width. DataTable and Kanban share this primary menu surface and anatomy while overriding available fields.",
                   "reusable": true,
                   "clip": true,
-                  "width": 280,
-                  "fill": "$ds-elevated",
+                  "width": 440,
+                  "height": 320,
+                  "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 1,
-                  "padding": 6,
                   "children": [
                     {
                       "type": "frame",
@@ -66826,7 +66856,7 @@
                       "gap": 8,
                       "padding": [
                         0,
-                        6
+                        12
                       ],
                       "alignItems": "center",
                       "children": [
@@ -66854,196 +66884,484 @@
                     },
                     {
                       "type": "frame",
-                      "id": "GsEnn",
-                      "name": "L · PROPERTY",
+                      "id": "NHTOZ",
+                      "name": "Filter columns",
                       "width": "fill_container",
-                      "padding": [
-                        7,
-                        8,
-                        4,
-                        8
-                      ],
+                      "height": "fill_container",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "P0j6xA",
-                          "name": "T",
-                          "fill": "$ds-fg-subtle",
-                          "content": "PROPERTY",
-                          "fontFamily": "$font-heading",
-                          "fontSize": 9,
-                          "fontWeight": "600",
-                          "letterSpacing": 1
+                          "type": "frame",
+                          "id": "k26vd",
+                          "name": "Property column",
+                          "width": 188,
+                          "height": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Q3GoH",
+                              "name": "Property header",
+                              "width": "fill_container",
+                              "height": 32,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "vBMK0",
+                                  "name": "Property label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "PROPERTY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s3j9yU",
+                                  "name": "Clear all action",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Clear all",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "B0DckA",
+                              "name": "Property list",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "padding": [
+                                0,
+                                6,
+                                6,
+                                6
+                              ],
+                              "children": [
+                                {
+                                  "id": "QsVCn",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Status",
+                                  "x": 6,
+                                  "y": 0,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "hover"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "circle-dashed",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Status",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "awWtq",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Assignee",
+                                  "x": 6,
+                                  "y": 29,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "user",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Assignee",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "F5Yml6",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Label",
+                                  "x": 6,
+                                  "y": 58,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "tag",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Label",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "a6Ij6",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Priority",
+                                  "x": 6,
+                                  "y": 87,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "signal-high",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Priority",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "WSLFR",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Target date",
+                                  "x": 6,
+                                  "y": 116,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "calendar",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Target date",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "OalpZ",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Workspace",
+                                  "x": 6,
+                                  "y": 145,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "git-branch",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Workspace",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "chevron-right",
+                                      "fill": "#8B9099"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H1JHi",
+                          "name": "Options column",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uMM4U",
+                              "name": "Options header",
+                              "width": "fill_container",
+                              "height": 32,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "PRiF6",
+                                  "name": "Property name",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "STATUS",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 9,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "nPXsi",
+                                  "name": "Clear action",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Clear",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DR0XM",
+                              "name": "Options list",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "padding": [
+                                0,
+                                6,
+                                6,
+                                6
+                              ],
+                              "children": [
+                                {
+                                  "id": "BoV0m",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Backlog",
+                                  "x": 6,
+                                  "y": 0,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "hover"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "circle",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Backlog",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": true,
+                                      "icon": "check",
+                                      "fill": "#F7F8F8"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "P7HkxS",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Ready",
+                                  "x": 6,
+                                  "y": 29,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "circle",
+                                      "fill": "#16A34A"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Ready",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": false,
+                                      "icon": "check",
+                                      "fill": "#F7F8F8"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "yeaPy",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "In Progress",
+                                  "x": 6,
+                                  "y": 58,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "circle",
+                                      "fill": "#3B82F6"
+                                    },
+                                    "UTbhN": {
+                                      "content": "In Progress",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": false,
+                                      "icon": "check",
+                                      "fill": "#F7F8F8"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "S1FDw",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Blocked",
+                                  "x": 6,
+                                  "y": 87,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "circle",
+                                      "fill": "#EF4444"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Blocked",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": false,
+                                      "icon": "check",
+                                      "fill": "#F7F8F8"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "vKUur",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Done",
+                                  "x": 6,
+                                  "y": 116,
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "check-circle",
+                                      "fill": "#8B9099"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Done",
+                                      "fill": "#F7F8F8"
+                                    },
+                                    "zFstx": {
+                                      "content": "",
+                                      "enabled": false
+                                    },
+                                    "OxQag": {
+                                      "enabled": false,
+                                      "icon": "check",
+                                      "fill": "#F7F8F8"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
                         }
                       ]
-                    },
-                    {
-                      "id": "JmynC",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Status",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "hover"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "circle-dashed",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Status",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
-                    },
-                    {
-                      "id": "WFSy3",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Assignee",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "default"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "user",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Assignee",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
-                    },
-                    {
-                      "id": "bIn1G",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Label",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "default"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "tag",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Label",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
-                    },
-                    {
-                      "id": "qDgRa",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Priority",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "default"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "signal-high",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Priority",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
-                    },
-                    {
-                      "id": "Oi0uh",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Target date",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "default"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "calendar",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Target date",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
-                    },
-                    {
-                      "id": "EbGcP",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Workspace",
-                      "width": "fill_container",
-                      "theme": {
-                        "menu": "default"
-                      },
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "git-branch",
-                          "fill": "$ds-fg-muted"
-                        },
-                        "UTbhN": {
-                          "content": "Workspace",
-                          "fill": "$menu-fg"
-                        },
-                        "zFstx": {
-                          "enabled": false,
-                          "content": ""
-                        },
-                        "OxQag": {
-                          "enabled": true,
-                          "icon": "chevron-right"
-                        }
-                      }
                     }
                   ]
                 },
@@ -67051,11 +67369,11 @@
                   "type": "frame",
                   "id": "s0FaJ",
                   "name": "cmp/DisplayPopover",
-                  "context": "Canonical renderer display popover. Renderer instances share section labels, compact setting rows, property chips, and reset action. The optional renderer switch is disabled for DataTable, whose view is already a table.",
+                  "context": "Canonical renderer display popover. Renderer instances share section labels, compact setting rows, property chips, and reset action. Non-manual ordering shows an ascending or descending icon beside the selected property, never ASC or DESC text. The optional renderer switch is disabled for DataTable, whose view is already a table.",
                   "reusable": true,
                   "clip": true,
                   "width": 300,
-                  "fill": "$ds-elevated",
+                  "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -67258,10 +67576,20 @@
                           "id": "EQyfh",
                           "name": "V",
                           "fill": "$ds-fg-muted",
-                          "content": "Manual",
+                          "content": "Updated",
                           "fontFamily": "$font-body",
                           "fontSize": 12,
                           "fontWeight": "normal"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "oyUCV",
+                          "name": "Ascending order",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "arrow-up-narrow-wide",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
                         },
                         {
                           "type": "icon",
@@ -67476,7 +67804,7 @@
                   "name": "View tab menu",
                   "clip": true,
                   "width": 220,
-                  "fill": "$ds-elevated",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -68030,18 +68358,6 @@
                                   "fill": "$tree-fg"
                                 }
                               }
-                            },
-                            {
-                              "type": "frame",
-                              "id": "F6467I",
-                              "name": "Header / Resource Region Divider",
-                              "width": "fill_container",
-                              "height": 12,
-                              "stroke": "$ds-border",
-                              "strokeWidth": {
-                                "bottom": 1
-                              },
-                              "strokeAlignment": "inner"
                             },
                             {
                               "type": "frame",
@@ -72873,7 +73189,7 @@
                       "y": 35,
                       "name": "Eligible Panel Menu",
                       "width": 280,
-                      "fill": "$ds-elevated",
+                      "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
                       "stroke": "$ds-border",
                       "strokeWidth": 1,
@@ -75092,7 +75408,7 @@
                           "y": 40,
                           "name": "Left Menu Dropdown",
                           "width": 190,
-                          "fill": "$ds-elevated",
+                          "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
                           "stroke": "$ds-accent",
                           "strokeWidth": 1,
@@ -75612,7 +75928,7 @@
                           "y": 40,
                           "name": "Right Menu Dropdown",
                           "width": 190,
-                          "fill": "$ds-elevated",
+                          "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
                           "stroke": "$ds-review",
                           "strokeWidth": 1,
@@ -86662,7 +86978,7 @@
                                 "mode": "dark"
                               },
                               "width": 190,
-                              "fill": "$ds-elevated",
+                              "fill": "$ds-bg",
                               "cornerRadius": "$overlay-radius",
                               "stroke": "$ds-review",
                               "strokeWidth": 1,
@@ -94493,8 +94809,8 @@
                           "type": "frame",
                           "id": "dCvIa",
                           "name": "Menu",
-                          "width": 250,
-                          "fill": "$ds-elevated",
+                          "width": 280,
+                          "fill": "$ds-bg",
                           "cornerRadius": 6,
                           "stroke": "$ds-border",
                           "strokeWidth": 1,
@@ -94702,8 +95018,8 @@
                           "type": "frame",
                           "id": "Y6FOk",
                           "name": "Menu",
-                          "width": 250,
-                          "fill": "$ds-elevated",
+                          "width": 280,
+                          "fill": "$ds-bg",
                           "cornerRadius": 6,
                           "stroke": "$ds-border",
                           "strokeWidth": 1,
@@ -130161,7 +130477,7 @@
                   "y": 352,
                   "name": "Row menu",
                   "width": 248,
-                  "fill": "$ds-elevated",
+                  "fill": "$ds-bg",
                   "cornerRadius": "$overlay-radius",
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -130318,45 +130634,15 @@
               "type": "ref",
               "ref": "V7ww8",
               "name": "DataTable filter popover",
-              "width": 280,
+              "width": 434,
               "x": 72,
               "y": 696,
+              "flipX": false,
+              "flipY": false,
+              "height": 269,
               "descendants": {
                 "rTKKI": {
                   "content": "Filter table rows…"
-                },
-                "P0j6xA": {
-                  "content": "COLUMN"
-                },
-                "JmynC/UEgTp": {
-                  "icon": "circle-dashed"
-                },
-                "JmynC/UTbhN": {
-                  "content": "Status"
-                },
-                "WFSy3/UEgTp": {
-                  "icon": "hash"
-                },
-                "WFSy3/UTbhN": {
-                  "content": "Score"
-                },
-                "bIn1G/UEgTp": {
-                  "icon": "calendar"
-                },
-                "bIn1G/UTbhN": {
-                  "content": "Updated"
-                },
-                "qDgRa/UEgTp": {
-                  "icon": "type"
-                },
-                "qDgRa/UTbhN": {
-                  "content": "Name"
-                },
-                "Oi0uh": {
-                  "enabled": false
-                },
-                "EbGcP": {
-                  "enabled": false
                 }
               }
             },
@@ -130367,7 +130653,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 907,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -130385,7 +130671,7 @@
                   "content": "Sorting"
                 },
                 "EQyfh": {
-                  "content": "Name · ascending"
+                  "content": "Name"
                 },
                 "GIIVJ": {
                   "content": "Density"

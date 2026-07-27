@@ -173,7 +173,7 @@ const statusToOption = (status: StoredStatus): KanbanRendererEnumOption => ({
   value: status.id,
   label: status.name,
   color: status.color,
-  icon: CIRCLE_ICON,
+  icon: status.icon ?? CIRCLE_ICON,
 });
 
 const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
@@ -185,7 +185,7 @@ const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
       value: option.id,
       label: option.name,
       color: option.color,
-      icon: tag.id === "default-complexity" ? CIRCLE_ICON : option.icon,
+      icon: option.icon,
     })),
   },
   filterable: true,

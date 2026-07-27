@@ -128,10 +128,9 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
       .click();
     const workspaceRow = page.getByRole("option").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
-    const workspaceRowActions = workspaceRow.getByRole("button", { name: "Resource actions", exact: true });
-    await workspaceRowActions.click();
+    await workspaceRow.click({ button: "right" });
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
-    await workspaceRowActions.click();
+    await page.keyboard.press("Escape");
 
     await workspaceRow.getByRole("paragraph").filter({ hasText: attempt.workspace.workspace_shorthand }).click();
     await expect(breadcrumbAction).toBeVisible();

@@ -129,6 +129,11 @@ export const GroupedInspector: Story = {
   },
 };
 
+export const SmallInspector: Story = {
+  ...GroupedInspector,
+  args: { ...GroupedInspector.args, variant: "small" },
+};
+
 export const SerializableReadOnlyValues: Story = {
   render: (props) => (
     <Container padding="md">

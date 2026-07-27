@@ -73,7 +73,7 @@ export const ResourceActionMenu = (props: ResourceActionMenuProps) => {
   const {
     actions,
     children,
-    contentMinWidth = "220px",
+    contentMinWidth = "17.5rem",
     contentBackground = "bg",
     positioning = { placement: "bottom-start" },
     closeOnSelect,
@@ -93,7 +93,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
   const {
     actions,
     children,
-    contentMinWidth = "220px",
+    contentMinWidth = "17.5rem",
     contentBackground = "bg",
     positioning = { placement: "bottom-start" },
     closeOnSelect,

@@ -27,6 +27,7 @@ export const spacing = {
   xs: { value: sp[100] },
   compact: { value: "0.625rem" },
   sm: { value: sp[150] },
+  comfortable: { value: "0.875rem" },
   md: { value: sp[200] },
   lg: { value: sp[300] },
   xl: { value: sp[400] },

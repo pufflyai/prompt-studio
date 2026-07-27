@@ -16,6 +16,7 @@ export interface ParamEditorHorizontalProps {
   onChange: (id: string, value: ParamValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean; // This option doesn't do anything in horizontal mode
+  variant?: "default" | "small";
 }
 
 const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
@@ -23,7 +24,7 @@ const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, 
 };
 
 export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
-  const { params = [], groups = [], defaultValues, onChange, readOnly } = props;
+  const { params = [], groups = [], defaultValues, onChange, readOnly, variant = "default" } = props;
   const isReadOnly = (param: Param) => readOnly || param.readOnly;
 
   const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
@@ -136,17 +137,17 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   };
 
   return (
-    <Stack direction="row" flex="1" maxW="full" gap="sm" flexWrap="wrap">
+    <Stack direction="row" flex="1" maxW="full" gap={variant === "small" ? "xs" : "sm"} flexWrap="wrap">
       {/* Render standalone params */}
       {params.map(renderParam)}
 
       {/* Render grouped params */}
       {groups.map((group) => (
-        <VStack key={group.id} gap="xs" align="start">
+        <VStack key={group.id} gap={variant === "small" ? "2xs" : "xs"} align="start">
           <Text fontSize="sm" fontWeight="medium" color="fg.muted">
             {group.title}
           </Text>
-          <HStack gap="xs">{group.params.map(renderParam)}</HStack>
+          <HStack gap={variant === "small" ? "2xs" : "xs"}>{group.params.map(renderParam)}</HStack>
         </VStack>
       ))}
     </Stack>

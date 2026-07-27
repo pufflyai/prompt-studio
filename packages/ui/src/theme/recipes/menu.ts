@@ -70,6 +70,9 @@ export const menuSlotRecipe = defineSlotRecipe({
     content: {
       display: "flex",
       flexDirection: "column",
+      width: "17.5rem",
+      minWidth: "17.5rem",
+      maxWidth: "17.5rem",
       gap: "0",
       borderRadius: "xs",
       p: "0",
@@ -78,7 +81,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       bg: "bg",
       borderWidth: "1px",
       borderStyle: "solid",
-      borderColor: "border.subtle",
+      borderColor: "border",
       zIndex: "dropdown",
       textStyle: "label/M/regular",
     },

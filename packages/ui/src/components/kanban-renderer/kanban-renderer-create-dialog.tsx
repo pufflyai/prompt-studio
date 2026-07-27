@@ -198,6 +198,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                 <Stack gap="2xs">
                   <Text textStyle="label/S/medium">{config.labels.properties}</Text>
                   <ParamEditorHorizontal
+                    variant="small"
                     params={editableAttributes.map((attribute) =>
                       attributeToParam(attribute, attribute.id === columnAttributeId),
                     )}

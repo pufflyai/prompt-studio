@@ -198,7 +198,7 @@ test("ticket card single-select tag badges update and clear selected values", as
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitemradio", { name: "No Type", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Feature", exact: true }).click();
   await expect(clearFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearFeatureResponse;
 
@@ -274,7 +274,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitemradio", { name: "No Priority", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "High", exact: true }).click();
   await expect(clearPriorityRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearPriorityResponse;
 

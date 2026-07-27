@@ -7,9 +7,9 @@ export const attributes: AttributeDescriptor[] = [
     type: {
       kind: "enum",
       options: [
-        { value: "todo", label: "Todo", color: "gray" },
-        { value: "in_progress", label: "In progress", color: "blue" },
-        { value: "done", label: "Done", color: "green" },
+        { value: "todo", label: "Todo", color: "gray", icon: "circle" },
+        { value: "in_progress", label: "In progress", color: "blue", icon: "gauge" },
+        { value: "done", label: "Done", color: "green", icon: "check-circle" },
       ],
     },
     filterable: true,

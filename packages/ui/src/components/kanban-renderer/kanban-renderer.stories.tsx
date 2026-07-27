@@ -53,6 +53,7 @@ const Wrapper = (props: {
   storageKey?: string;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
+  withTicketMenu?: boolean;
 }) => {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
@@ -104,6 +105,9 @@ const Wrapper = (props: {
           canDragOut: true,
           canCreate: false,
         })}
+        getRowContextMenuActions={
+          props.withTicketMenu ? () => [{ key: "open", label: "Open ticket", onClick: () => undefined }] : undefined
+        }
       />
     </Box>
   );
@@ -111,6 +115,26 @@ const Wrapper = (props: {
 
 export const BoardView: Story = {
   render: () => <Wrapper />,
+};
+
+export const RendererChromeAndTicketMenu: Story = {
+  tags: ["renderer-chrome-regression"],
+  render: () => <Wrapper storageKey="storybook-kanban-renderer-chrome" withTicketMenu />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const renderer = canvas.getByTestId("kanban-renderer");
+    const header = canvas.getByTestId("kanban-renderer-header");
+    const firstCard = canvas.getAllByTestId("renderer-card")[0];
+    if (!firstCard) throw new Error("Expected a ticket card to render");
+
+    await expect(getComputedStyle(renderer).borderTopWidth).toBe("0px");
+    await expect(getComputedStyle(header).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    await expect(canvas.getAllByTestId("column-status-icon")[0]).toBeVisible();
+
+    fireEvent.contextMenu(firstCard);
+    const menu = await within(document.body).findByRole("menu");
+    await expect(menu.getBoundingClientRect().width).toBe(280);
+  },
 };
 
 export const ListView: Story = {
@@ -157,6 +181,25 @@ export const SavedViews: Story = {
   render: () => (
     <Wrapper storageKey="storybook-kanban-renderer-saved-views" defaultViews={SAVED_VIEWS} defaultActiveViewId="all" />
   ),
+};
+
+export const SavedFilteredView: Story = {
+  tags: ["saved-filter-row-regression"],
+  render: () => (
+    <Wrapper
+      storageKey="storybook-kanban-renderer-saved-filtered-view"
+      defaultViews={SAVED_VIEWS}
+      defaultActiveViewId="my-work"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const filterPill = canvas.getByRole("button", { name: "Remove Assignee filter" }).parentElement;
+    if (!filterPill) throw new Error("Expected the saved filter pill to render");
+
+    await expect(within(filterPill).getByText("Assignee is")).toBeVisible();
+    await expect(within(filterPill).getByText("Alex")).toBeVisible();
+  },
 };
 
 const CreateFormWrapper = () => {

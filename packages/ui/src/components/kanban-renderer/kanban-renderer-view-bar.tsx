@@ -1,5 +1,5 @@
 import { Box, Button, chakra, Dialog, HStack, Icon, IconButton, Input, Stack, Tabs, Text } from "@chakra-ui/react";
-import { Copy, Pencil, Plus, RotateCcw, Star, Trash2, X } from "lucide-react";
+import { Copy, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import type { FilterCategoryView } from "./kanban-renderer-helpers";
@@ -138,8 +138,9 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
   const renameView = useKanbanRendererStore(storageKey, (state) => state.renameView);
   const duplicateView = useKanbanRendererStore(storageKey, (state) => state.duplicateView);
   const deleteView = useKanbanRendererStore(storageKey, (state) => state.deleteView);
-  const setDefaultView = useKanbanRendererStore(storageKey, (state) => state.setDefaultView);
   const [renameTarget, setRenameTarget] = useState<KanbanRendererSavedView>();
+  const activeFilters = Object.entries(filters).filter(([, values]) => values.length > 0);
+  const showFilterRow = dirty || activeFilters.length > 0;
 
   const actionsFor = (view: KanbanRendererSavedView): ResourceContextAction[] => [
     {
@@ -155,13 +156,6 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
       onClick: () => duplicateView(view.id, duplicateIdentity(view, views)),
     },
     {
-      key: "default",
-      label: "Set as default",
-      icon: <Icon as={Star} boxSize="0.875rem" />,
-      isDisabled: view.isDefault,
-      onClick: () => setDefaultView(view.id),
-    },
-    {
       key: "delete",
       label: "Delete view",
       icon: <Icon as={Trash2} boxSize="0.875rem" />,
@@ -172,7 +166,7 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
   ];
 
   return (
-    <Stack gap="0" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg.subtle">
+    <Stack data-testid="kanban-renderer-header" gap="0" flexShrink={0} borderBottomWidth="1px" borderColor="border">
       <HStack height="view-bar" minW="0" gap="2xs" paddingX="xs">
         {leading}
         <Tabs.Root
@@ -215,7 +209,7 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
         {displayControl}
       </HStack>
 
-      {dirty ? (
+      {showFilterRow ? (
         <HStack
           height="view-subheader"
           minW="0"
@@ -225,7 +219,7 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
           borderColor="border.subtle"
         >
           <HStack minW="0" gap="2xs" overflowX="auto">
-            {Object.entries(filters).map(([categoryId, values]) => (
+            {activeFilters.map(([categoryId, values]) => (
               <FilterPill
                 key={categoryId}
                 category={categories.find((category) => category.id === categoryId)}
@@ -235,13 +229,17 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
             ))}
           </HStack>
           <Box flex="1" />
-          <Button size="2xs" variant="outline" onClick={resetActiveView}>
-            <RotateCcw />
-            Reset
-          </Button>
-          <Button size="2xs" variant="primary" onClick={saveActiveView}>
-            Save view
-          </Button>
+          {dirty ? (
+            <>
+              <Button size="2xs" variant="outline" onClick={resetActiveView}>
+                <RotateCcw />
+                Reset
+              </Button>
+              <Button size="2xs" variant="primary" onClick={saveActiveView}>
+                Save view
+              </Button>
+            </>
+          ) : null}
         </HStack>
       ) : null}
 

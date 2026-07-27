@@ -1,5 +1,5 @@
 import { Badge, Button, HStack, Icon, IconButton, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -16,11 +16,18 @@ interface FilterMenuProps {
   onClearAll: () => void;
 }
 
-const normalizedValues = (filters: KanbanRendererFilterState, categoryId: string) =>
+const contentProps = {
+  p: "2xs",
+  display: "flex",
+  flexDirection: "column",
+  gap: "1px",
+} as const;
+
+const selectedValues = (filters: KanbanRendererFilterState, categoryId: string) =>
   filters[categoryId]?.filter(Boolean) ?? [];
 
-const activeFilterCount = (filters: KanbanRendererFilterState) =>
-  Object.values(filters).reduce((sum, values) => sum + values.length, 0);
+const hasActiveFilters = (filters: KanbanRendererFilterState) =>
+  Object.values(filters).some((values) => values.length > 0);
 
 const selectedDescription = (category: FilterCategoryView, values: string[]) => {
   const labels = values.map((value) => category.options.find((option) => option.value === value)?.label ?? value);
@@ -32,12 +39,12 @@ const CategoryLabel = (props: { category: FilterCategoryView; values: string[] }
   const { category, values } = props;
 
   return (
-    <HStack minW="0" gap="2xs">
+    <HStack minW="0" width="full" gap="2xs">
       <Text textStyle="label/S/regular" truncate>
         {category.label}
       </Text>
       {values.length > 0 ? (
-        <Text textStyle="label/XS" color="fg.muted" truncate>
+        <Text textStyle="label/XS" color="fg.menu-item.secondary" truncate>
           {selectedDescription(category, values)}
         </Text>
       ) : null}
@@ -67,11 +74,12 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeCategoryId, setActiveCategoryId] = useState<string>();
-  const activeCategory = categories.find((category) => category.id === activeCategoryId);
-  const filterCount = activeFilterCount(filters);
+  const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id ?? "");
+  const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
+  const filtersApplied = hasActiveFilters(filters);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleCategories = categories.filter((category) =>
-    category.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+    category.label.toLocaleLowerCase().includes(normalizedQuery),
   );
 
   useEffect(() => {
@@ -93,86 +101,54 @@ export const FilterMenu = (props: FilterMenuProps) => {
       positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
       onOpenChange={(details) => {
         setOpen(details.open);
-        if (!details.open) {
-          setActiveCategoryId(undefined);
-          setQuery("");
-        }
+        if (!details.open) setQuery("");
       }}
     >
       <Popover.Trigger asChild>
         <IconButton
           ref={triggerRef}
           aria-label="Filter rows"
-          aria-pressed={filterCount > 0}
-          variant={filterCount > 0 ? "subtle" : "ghost"}
+          aria-pressed={filtersApplied}
+          variant={filtersApplied ? "subtle" : "ghost"}
           size="2xs"
         >
-          <HStack gap="2xs">
-            <Icon as={Filter} />
-            {filterCount > 0 ? <Badge variant="number">{filterCount}</Badge> : null}
-          </HStack>
+          <Icon as={Filter} />
         </IconButton>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content ref={contentRef} width="17.5rem" maxH="20rem" padding="xs" bg="bg.muted" gap="1px">
-            {activeCategory ? (
-              <>
-                <HStack height="2rem" gap="2xs" borderBottomWidth="1px" borderColor="border.subtle">
-                  <IconButton
-                    aria-label="Back to filter properties"
-                    size="2xs"
-                    variant="ghost"
-                    onClick={() => setActiveCategoryId(undefined)}
-                  >
-                    <ChevronLeft />
-                  </IconButton>
-                  <Text textStyle="label/S/medium" flex="1" truncate>
-                    {activeCategory.label}
-                  </Text>
-                  <Button size="2xs" variant="ghost" onClick={() => onClearFilter(activeCategory.id)}>
-                    Clear
-                  </Button>
-                </HStack>
-                <ScrollArea maxH="15rem" contentProps={{ py: "2xs" }}>
-                  {activeCategory.options.map((option) => {
-                    const checked = normalizedValues(filters, activeCategory.id).includes(option.value);
-                    return (
-                      <ListRow
-                        key={option.value}
-                        id={option.value}
-                        role="checkbox"
-                        aria-label={option.label}
-                        aria-checked={checked}
-                        variant="full-width"
-                        label={<OptionLabel checked={checked} label={option.label} />}
-                        endContent={
-                          <Text textStyle="label/XS" color="fg.muted">
-                            {countsByCategory[activeCategory.id]?.[option.value] ?? 0}
-                          </Text>
-                        }
-                        onActivate={() => onToggleFilterValue(activeCategory.id, option.value)}
-                      />
-                    );
-                  })}
-                </ScrollArea>
-              </>
-            ) : (
-              <>
-                <HStack height="2.25rem" gap="xs" paddingX="2xs" borderBottomWidth="1px" borderColor="border.subtle">
-                  <Icon as={Search} boxSize="0.875rem" color="fg.muted" />
-                  <Input
-                    aria-label="Filter properties"
-                    value={query}
-                    placeholder="Filter by…"
-                    variant="flushed"
-                    border="0"
-                    height="full"
-                    padding="0"
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </HStack>
-                <HStack paddingX="xs" paddingTop="xs" paddingBottom="2xs">
+          <Popover.Content
+            ref={contentRef}
+            width="min(440px, calc(100vw - 32px))"
+            height="min(320px, calc(100vh - 32px))"
+            padding="0"
+            gap="0"
+            overflow="hidden"
+          >
+            <HStack height="2.25rem" gap="xs" paddingX="sm" borderBottomWidth="1px" borderColor="border.subtle">
+              <Icon as={Search} boxSize="0.875rem" color="fg.muted" />
+              <Input
+                aria-label="Filter properties"
+                value={query}
+                placeholder="Filter by…"
+                variant="flushed"
+                border="0"
+                height="full"
+                padding="0"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </HStack>
+            <HStack alignItems="stretch" gap="0" flex="1" minH="0">
+              <Stack
+                data-testid="filter-property-column"
+                width="11.75rem"
+                flexShrink={0}
+                borderRightWidth="1px"
+                borderColor="border.subtle"
+                gap="0"
+                minH="0"
+              >
+                <HStack height="2rem" paddingX="sm">
                   <Text textStyle="label/XS/medium" color="fg.muted">
                     PROPERTY
                   </Text>
@@ -180,26 +156,82 @@ export const FilterMenu = (props: FilterMenuProps) => {
                     Clear all
                   </Button>
                 </HStack>
-                <ScrollArea maxH="14rem">
-                  <Stack gap="1px">
-                    {visibleCategories.map((category) => {
-                      const values = normalizedValues(filters, category.id);
-                      return (
-                        <ListRow
-                          key={category.id}
-                          id={category.id}
-                          variant="full-width"
-                          isSelected={values.length > 0}
-                          label={<CategoryLabel category={category} values={values} />}
-                          endContent={<ChevronRight size={14} />}
-                          onActivate={() => setActiveCategoryId(category.id)}
-                        />
-                      );
-                    })}
-                  </Stack>
+                <ScrollArea
+                  flex="1"
+                  minH="0"
+                  viewportProps={{ overscrollBehavior: "contain" }}
+                  contentProps={contentProps}
+                >
+                  {visibleCategories.map((category) => {
+                    const values = selectedValues(filters, category.id);
+                    return (
+                      <ListRow
+                        key={category.id}
+                        id={category.id}
+                        role="button"
+                        variant="compact"
+                        isSelected={activeCategory?.id === category.id}
+                        label={<CategoryLabel category={category} values={values} />}
+                        endContent={
+                          values.length > 0 ? (
+                            <Badge variant="number" colorPalette="gray">
+                              {values.length}
+                            </Badge>
+                          ) : undefined
+                        }
+                        onActivate={() => setActiveCategoryId(category.id)}
+                      />
+                    );
+                  })}
                 </ScrollArea>
-              </>
-            )}
+              </Stack>
+              <Stack flex="1" minW="0" minH="0" gap="0">
+                {activeCategory ? (
+                  <>
+                    <HStack height="2rem" paddingX="sm">
+                      <Text textStyle="label/S/medium" truncate>
+                        {activeCategory.label}
+                      </Text>
+                      <Button
+                        marginLeft="auto"
+                        size="2xs"
+                        variant="ghost"
+                        onClick={() => onClearFilter(activeCategory.id)}
+                      >
+                        Clear
+                      </Button>
+                    </HStack>
+                    <ScrollArea
+                      flex="1"
+                      minH="0"
+                      viewportProps={{ overscrollBehavior: "contain" }}
+                      contentProps={contentProps}
+                    >
+                      {activeCategory.options.map((option) => {
+                        const checked = selectedValues(filters, activeCategory.id).includes(option.value);
+                        return (
+                          <ListRow
+                            key={option.value}
+                            id={option.value}
+                            role="checkbox"
+                            aria-label={option.label}
+                            aria-checked={checked}
+                            variant="compact"
+                            label={<OptionLabel checked={checked} label={option.label} />}
+                            endContent={
+                              <Text textStyle="label/XS" color="fg.muted">
+                                {countsByCategory[activeCategory.id]?.[option.value] ?? 0}
+                              </Text>
+                            }
+                            onActivate={() => onToggleFilterValue(activeCategory.id, option.value)}
+                          />
+                        );
+                      })}
+                    </ScrollArea>
+                  </>
+                ) : null}
+              </Stack>
+            </HStack>
           </Popover.Content>
         </Popover.Positioner>
       </Portal>
