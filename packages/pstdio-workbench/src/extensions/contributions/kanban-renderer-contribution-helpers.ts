@@ -142,13 +142,8 @@ const toCreateField = (
   id: string,
   descriptor: NonNullable<NonNullable<WorkbenchExtensionKanbanRendererRecord["createRow"]>["params"]>[string],
   localize: Localizer,
-): KanbanRendererCreateField => {
-  // Dropping an unsupported type renders a form silently missing what the
-  // extension declared, so refuse the contribution instead.
-  if (!CREATE_FIELD_TYPES.has(descriptor.type))
-    throw new Error(
-      `Create form cannot render param "${id}" of type "${descriptor.type}". Supported types: ${[...CREATE_FIELD_TYPES].join(", ")}.`,
-    );
+): KanbanRendererCreateField | undefined => {
+  if (!CREATE_FIELD_TYPES.has(descriptor.type)) return undefined;
 
   const options =
     "options" in descriptor && Array.isArray(descriptor.options)
@@ -178,7 +173,10 @@ const toCreateField = (
 };
 
 export const toCreateFields = (record: WorkbenchExtensionKanbanRendererRecord, localize: Localizer) =>
-  Object.entries(record.createRow?.params ?? {}).map(([id, descriptor]) => toCreateField(id, descriptor, localize));
+  Object.entries(record.createRow?.params ?? {}).flatMap(([id, descriptor]) => {
+    const field = toCreateField(id, descriptor, localize);
+    return field ? [field] : [];
+  });
 
 const createKanbanRendererSlot = (
   context: WorkbenchExtensionCommandContext,

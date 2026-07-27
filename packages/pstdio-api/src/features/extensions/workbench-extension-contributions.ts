@@ -83,7 +83,6 @@ export const toKanbanRendererRecord = (
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
-    savedViews: renderer.contribution.savedViews,
   };
 };
 

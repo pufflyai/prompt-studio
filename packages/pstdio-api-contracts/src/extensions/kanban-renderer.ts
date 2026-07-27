@@ -95,12 +95,6 @@ export const extensionKanbanRendererRecordSchema = z.object({
   emptyTitle: localizableStringSchema.optional(),
   emptyDescription: localizableStringSchema.optional(),
   hideToolbar: z.boolean().optional(),
-  savedViews: z
-    .object({
-      resourceKind: z.string(),
-      scope: z.enum(["project", "user"]).optional(),
-    })
-    .optional(),
 });
 
 export const extensionCommandPaletteResourceRecordSchema = z.object({

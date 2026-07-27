@@ -35,8 +35,15 @@ describe("toCreateFields", () => {
     expect(field.label).toBe("Description");
   });
 
-  // A dropped field renders a form that silently omits what the extension asked for.
-  test("rejects a param type the create form cannot render", () => {
-    expect(() => toCreateFields(recordWith({ agent: { type: "harness" } }), localize)).toThrow(/harness/);
+  test("preserves supported fields when another valid param type cannot be rendered", () => {
+    const fields = toCreateFields(
+      recordWith({
+        title: { type: "text", required: true },
+        agent: { type: "harness" },
+      }),
+      localize,
+    );
+
+    expect(fields).toEqual([expect.objectContaining({ id: "title", type: "text", required: true })]);
   });
 });

@@ -17,7 +17,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
-import { createKanbanViewQuerySequencer } from "./kanban-view-query";
+import { createKanbanViewQuerySequencer, executeKanbanViewQuery } from "./kanban-view-query";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
 interface WorkbenchKanbanViewProps {
@@ -110,7 +110,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     const runQuery = () => {
       const queryId = querySequencer.current.next();
       const state: KanbanRendererQueryState = { settings, filters };
-      Promise.resolve(contribution.executeQuery(state)).then((next) => {
+      void executeKanbanViewQuery(() => contribution.executeQuery(state)).then((next) => {
         if (cancelled || !querySequencer.current.isLatest(queryId)) return;
         setRows(next);
       });

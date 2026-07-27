@@ -9,3 +9,11 @@ export const createKanbanViewQuerySequencer = () => {
     isLatest: (queryId: number) => queryId === latestQueryId,
   };
 };
+
+export const executeKanbanViewQuery = async <TRow>(executeQuery: () => Promise<TRow[]> | TRow[]) => {
+  try {
+    return await executeQuery();
+  } catch {
+    return [];
+  }
+};

@@ -298,11 +298,6 @@ export interface KanbanRendererCreateRowContribution<TParams extends ParamObject
   };
 }
 
-export interface KanbanRendererSavedViewsContribution {
-  resourceKind: string;
-  scope?: "project" | "user";
-}
-
 export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   id: string;
   label: Localizable<string>;
@@ -327,7 +322,6 @@ export interface KanbanRendererContribution {
   emptyTitle?: Localizable<string>;
   emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
-  savedViews?: KanbanRendererSavedViewsContribution;
 }
 
 /**
