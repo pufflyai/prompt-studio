@@ -37,14 +37,14 @@ describe("createSessionBubbleModule", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
-    workbench.sessionPanel.setMode("closed");
+    workbench.sidePanel.setMode("closed");
     workbench.layout.clearRegion("side");
     workbench.layout.clearRegion("side-header");
 
     activateModeChromeContributions(workbench, "workspace");
     const layout = workbench.layout.getLayout();
 
-    expect(workbench.sessionPanel.getMode()).toBe("closed");
+    expect(workbench.sidePanel.getMode()).toBe("closed");
     expect(layout.regions.side.widgets).toEqual([]);
     expect(layout.regions["side-header"].widgets).toEqual([]);
   });

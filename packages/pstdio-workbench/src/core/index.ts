@@ -57,13 +57,13 @@ export type {
 } from "./controllers/panels/panels-controller";
 export { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
 export type {
-  CreateWorkbenchSessionPanelControllerInput,
-  WorkbenchSessionPanelChangeListener,
-  WorkbenchSessionPanelController,
-  WorkbenchSessionPanelMode,
-  WorkbenchSessionPanelState,
-} from "./controllers/session-panel/session-panel-controller";
-export { createWorkbenchSessionPanelController } from "./controllers/session-panel/session-panel-controller";
+  CreateWorkbenchSidePanelControllerInput,
+  WorkbenchSidePanelChangeListener,
+  WorkbenchSidePanelController,
+  WorkbenchSidePanelMode,
+  WorkbenchSidePanelState,
+} from "./controllers/side-panel/side-panel-controller";
+export { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
 export type {
   WorkbenchTerminalController,
   WorkbenchTerminalSessionAdapter,

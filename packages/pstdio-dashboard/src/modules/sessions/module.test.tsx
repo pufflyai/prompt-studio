@@ -187,7 +187,7 @@ describe("createSessionsModule", () => {
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "Second session"]);
   });
 
-  test("opens command palette session resources in the floating bubble", async () => {
+  test("opens command palette session resources in the floating Side Panel", async () => {
     seedContractSessions();
     const workbench = createWorkbenchCore();
 
@@ -195,7 +195,7 @@ describe("createSessionsModule", () => {
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
-    workbench.sessionPanel.setMode("closed");
+    workbench.sidePanel.setMode("closed");
 
     const sessionEntry = workbench.resources
       .listResources("")
@@ -208,7 +208,7 @@ describe("createSessionsModule", () => {
       (widget) => widget.resource?.uri === "dashboard-workbench://session/session-1",
     );
 
-    expect(workbench.sessionPanel.getMode()).toBe("bubble");
+    expect(workbench.sidePanel.getMode()).toBe("floating");
     expect(bubblePlacement?.resource?.uri).toBe("dashboard-workbench://session/session-1");
     expect(workbench.modes.getActiveModeId()).not.toBe("sessions");
     expect(

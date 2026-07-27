@@ -7,44 +7,43 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
-interface WorkbenchSessionPanelProps {
+interface WorkbenchSidePanelProps {
   workbench: WorkbenchCore;
   contentSlotRef: (node: HTMLDivElement | null) => void;
   bottomOffset?: string;
   header?: ReactNode;
 }
 
-const bubblePanelBottom = (bottomOffset: string | undefined) =>
+const floatingPanelBottom = (bottomOffset: string | undefined) =>
   bottomOffset ? `calc(${bottomOffset} + 0.75rem)` : "3";
 
-const bubbleButtonBottom = (bottomOffset: string | undefined) =>
-  bottomOffset ? `calc(${bottomOffset} + 1.5rem)` : "6";
+const launcherBottom = (bottomOffset: string | undefined) => (bottomOffset ? `calc(${bottomOffset} + 1.5rem)` : "6");
 
-const WorkbenchSessionTitle = () => (
+const WorkbenchSidePanelTitle = () => (
   <Box flex="1" minW="0">
     <Text textStyle="label/S/medium" color="fg" truncate>
-      Session
+      Side Panel
     </Text>
   </Box>
 );
 
-interface WorkbenchSessionHeaderProps {
+interface WorkbenchSidePanelHeaderProps {
   header?: ReactNode;
 }
 
-const WorkbenchSessionHeader = (props: WorkbenchSessionHeaderProps) => {
+const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
   const { header } = props;
 
-  return header ?? <WorkbenchSessionTitle />;
+  return header ?? <WorkbenchSidePanelTitle />;
 };
 
-export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps) => {
+export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
       <AttachedPanel
-        data-testid="workbench-session-attached-panel"
+        data-testid="workbench-side-panel-attached"
         data-workbench-panel="side"
         data-workbench-region="side"
         width="full"
@@ -52,14 +51,14 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
         bg={workbenchBackgrounds.widget}
         header={
           <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
-            <WorkbenchSessionHeader header={header} />
+            <WorkbenchSidePanelHeader header={header} />
             <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
-            <Tooltip content="Detach panel">
+            <Tooltip content="Float Side Panel">
               <IconButton
                 size={PANEL_HEADER_CONTROL_SIZE}
                 variant="ghost"
-                aria-label="Detach panel"
-                onClick={() => workbench.sessionPanel.setMode("bubble")}
+                aria-label="Float Side Panel"
+                onClick={() => workbench.sidePanel.setMode("floating")}
               >
                 <Minimize2 size={16} />
               </IconButton>
@@ -75,19 +74,19 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
   );
 };
 
-export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProps) => {
+export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, bottomOffset, header } = props;
-  const mode = workbench.sessionPanel.getMode();
+  const mode = workbench.sidePanel.getMode();
 
   if (mode === "attached") return null;
 
   if (mode === "closed") {
     return (
       <BubbleButton
-        aria-label="Open session panel"
-        containerProps={{ bottom: bubbleButtonBottom(bottomOffset) }}
-        tooltip="Open session panel"
-        onClick={() => workbench.sessionPanel.setMode("bubble")}
+        aria-label="Open Side Panel"
+        containerProps={{ bottom: launcherBottom(bottomOffset) }}
+        tooltip="Open Side Panel"
+        onClick={() => workbench.sidePanel.setMode("floating")}
       >
         <MessageCircle size={20} strokeWidth={2} />
       </BubbleButton>
@@ -97,14 +96,14 @@ export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProp
   return (
     <BubblePanel
       isOpen
-      aria-label="Session"
-      testId="workbench-session-bubble"
-      closeLabel="Minimize panel"
-      containerProps={{ bottom: bubblePanelBottom(bottomOffset), bg: workbenchBackgrounds.widget }}
-      popOutLabel="Attach panel"
-      onClose={() => workbench.sessionPanel.setMode("closed")}
-      onPopOut={() => workbench.sessionPanel.setMode("attached")}
-      menu={<WorkbenchSessionHeader header={header} />}
+      aria-label="Side Panel"
+      testId="workbench-side-panel-floating"
+      closeLabel="Close Side Panel"
+      containerProps={{ bottom: floatingPanelBottom(bottomOffset), bg: workbenchBackgrounds.widget }}
+      popOutLabel="Reattach Side Panel"
+      onClose={() => workbench.sidePanel.setMode("closed")}
+      onPopOut={() => workbench.sidePanel.setMode("attached")}
+      menu={<WorkbenchSidePanelHeader header={header} />}
     >
       <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
     </BubblePanel>

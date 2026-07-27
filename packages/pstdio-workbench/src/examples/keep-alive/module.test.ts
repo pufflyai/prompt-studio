@@ -33,7 +33,7 @@ const createFakeNode = (): FakeNode => {
 
 const createKeepAliveWorkbench = () =>
   createWorkbenchCore({
-    initialSessionPanelMode: "attached",
+    initialSidePanelMode: "attached",
     renderers: { createHost: () => createFakeNode() as unknown as HTMLElement },
   });
 
@@ -50,8 +50,8 @@ describe("createKeepAliveExampleModule", () => {
     });
     expect(layout.regions["main-right-menu"].widgets).toHaveLength(1);
 
-    workbench.sessionPanel.setMode("bubble");
-    workbench.sessionPanel.setMode("attached");
+    workbench.sidePanel.setMode("floating");
+    workbench.sidePanel.setMode("attached");
 
     const attachedLayout = workbench.layout.getLayout();
     expect(attachedLayout.regions.side.widgets).toHaveLength(0);

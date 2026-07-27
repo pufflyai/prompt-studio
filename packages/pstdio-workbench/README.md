@@ -80,7 +80,7 @@ The React or bridge implementation for a widget or placeholder. Renderers turn a
 - [`hello-world`](src/examples/hello-world/module.tsx) — one renderer per widget, plus a placeholder renderer.
 - [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five widgets in different regions via `config`.
 - [`renderer-types`](src/examples/renderer-types/module.tsx) — React and bridge renderers registered side by side.
-- [`keep-alive`](src/examples/keep-alive/module.tsx) — keep-alive renderer shared by an attached panel and a floating bubble widget.
+- [`keep-alive`](src/examples/keep-alive/module.tsx) — keep-alive renderer shared by attached and floating Side Panel presentations.
 
 ### Tree Renderers
 
@@ -319,7 +319,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Mode**: a named bundle of temporary contributions activated through `workbench.modes`. Switching modes disposes the previous mode's activation result.
 - **Tree view section**: a group of nodes inside a tree renderer's `getBody`, with an optional label, optional collapsible flag, and inline actions.
 - **Notification**: a transient workbench message emitted by workbench modules or extensions. Notifications can include command-backed actions and are rendered as workbench toast chrome.
-- **Session panel**: the assistant surface controlled by `workbench.sessionPanel`. It can be `attached`, `bubble`, or `closed`; attached sessions render in the `side` region.
+- **Side Panel**: the project-owned carry surface controlled by `workbench.sidePanel`. It can be `attached`, `floating`, or `closed` while preserving one live host and its resource binding.
 
 ## Regions Overview
 

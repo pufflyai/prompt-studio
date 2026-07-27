@@ -140,7 +140,7 @@ const openNewSessionDraft = (
     return ctx.resources.openResource(draftResource, { replaceActive: true });
   }
 
-  if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
+  if (ctx.sidePanel.getMode() === "closed") ctx.sidePanel.setMode("floating");
   const placement = openSessionBubbleWidgets(ctx, {
     resource: draftResource,
     title: draftResource.label,
@@ -195,7 +195,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
             resource,
           });
         }
-        if (!preservePanelMode && ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
+        if (!preservePanelMode && ctx.sidePanel.getMode() === "closed") ctx.sidePanel.setMode("floating");
         return placement.bubble;
       },
     },

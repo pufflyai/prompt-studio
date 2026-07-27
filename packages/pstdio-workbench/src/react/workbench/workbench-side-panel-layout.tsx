@@ -5,32 +5,35 @@ import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
-import { WorkbenchSessionAttachedPanel } from "../session-panel/session-panel";
+import { WorkbenchAttachedSidePanel } from "../side-panel/side-panel";
 
 const ATTACHED_PANEL_DEFAULT_SIZE_PX = 420;
 const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 
-interface WorkbenchSessionRegionPortalProps {
+interface WorkbenchSidePanelRegionPortalProps {
   workbench: WorkbenchCore;
   hasSidePanel: boolean;
   mounted: boolean;
-  sessionHost: HTMLDivElement | null;
+  sidePanelHost: HTMLDivElement | null;
 }
 
-export const WorkbenchSessionRegionPortal = (props: WorkbenchSessionRegionPortalProps) => {
-  const { workbench, hasSidePanel, mounted, sessionHost } = props;
+export const WorkbenchSidePanelRegionPortal = (props: WorkbenchSidePanelRegionPortalProps) => {
+  const { workbench, hasSidePanel, mounted, sidePanelHost } = props;
 
-  if (!hasSidePanel || !mounted || !sessionHost) return null;
+  if (!hasSidePanel || !mounted || !sidePanelHost) return null;
 
-  return createPortal(<WorkbenchRegion workbench={workbench} region="side" title="Session" transparent />, sessionHost);
+  return createPortal(
+    <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />,
+    sidePanelHost,
+  );
 };
 
-interface WorkbenchSessionRegionHeaderProps {
+interface WorkbenchSidePanelRegionHeaderProps {
   workbench: WorkbenchCore;
   hasSideHeader: boolean;
 }
 
-export const WorkbenchSessionRegionHeader = (props: WorkbenchSessionRegionHeaderProps) => {
+export const WorkbenchSidePanelRegionHeader = (props: WorkbenchSidePanelRegionHeaderProps) => {
   const { workbench, hasSideHeader } = props;
 
   return (
@@ -45,7 +48,7 @@ export const WorkbenchSessionRegionHeader = (props: WorkbenchSessionRegionHeader
   );
 };
 
-interface WorkbenchAttachedSessionLayoutProps {
+interface WorkbenchAttachedSidePanelLayoutProps {
   workbench: WorkbenchCore;
   attached: boolean;
   contentPanel: ReactNode;
@@ -55,7 +58,7 @@ interface WorkbenchAttachedSessionLayoutProps {
   onCollapse: () => void;
 }
 
-export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLayoutProps) => {
+export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePanelLayoutProps) => {
   const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapse } = props;
 
   return (
@@ -67,7 +70,7 @@ export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLa
       resizableSide="right"
       contentPanel={contentPanel}
       resizablePanel={
-        <WorkbenchSessionAttachedPanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
+        <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
       }
       collapsed={!attached}
       defaultSizePx={ATTACHED_PANEL_DEFAULT_SIZE_PX}

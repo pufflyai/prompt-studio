@@ -230,7 +230,7 @@ describe("createExtensionsModule command results and refresh", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
-    workbench.sessionPanel.setMode("closed");
+    workbench.sidePanel.setMode("closed");
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
 
     try {
@@ -248,7 +248,7 @@ describe("createExtensionsModule command results and refresh", () => {
         .getLayout()
         .regions.side.widgets.find((widget) => widget.resource?.kind === "session");
 
-      expect(workbench.sessionPanel.getMode()).toBe("bubble");
+      expect(workbench.sidePanel.getMode()).toBe("floating");
       expect(placement?.resource).toMatchObject({
         kind: "session",
         id: "session-1",

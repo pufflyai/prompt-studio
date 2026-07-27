@@ -10,7 +10,7 @@ export const createDynamicModulesHostModule = (
 ): WorkbenchModuleContribution => ({
   id: hostModuleId,
   activate(ctx) {
-    ctx.sessionPanel.setMode("attached");
+    ctx.sidePanel.setMode("attached");
     ctx.layout.registerWidget({
       id: topControlsWidgetId,
       title: "Runtime modules",

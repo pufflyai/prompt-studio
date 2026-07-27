@@ -2,11 +2,11 @@ import { Flex } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
-import { WorkbenchAttachedSessionLayout } from "./workbench-session-layout";
+import { WorkbenchAttachedSidePanelLayout } from "./workbench-side-panel-layout";
 
-interface WorkbenchSessionBoundaryProps {
+interface WorkbenchSidePanelBoundaryProps {
   workbench: WorkbenchCore;
-  showAttachedSessionPanel: boolean;
+  showAttachedSidePanel: boolean;
   contentFrame: ReactNode;
   sideHeader: ReactNode;
   contentMinSizePx: number;
@@ -74,20 +74,19 @@ const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
   );
 };
 
-export const WorkbenchSessionBoundary = (props: WorkbenchSessionBoundaryProps) => {
-  const { workbench, showAttachedSessionPanel, contentFrame, sideHeader, contentMinSizePx, onAttachedSlotChange } =
-    props;
+export const WorkbenchSidePanelBoundary = (props: WorkbenchSidePanelBoundaryProps) => {
+  const { workbench, showAttachedSidePanel, contentFrame, sideHeader, contentMinSizePx, onAttachedSlotChange } = props;
 
   return (
     <WorkbenchKeyboardFrame>
-      <WorkbenchAttachedSessionLayout
+      <WorkbenchAttachedSidePanelLayout
         workbench={workbench}
-        attached={showAttachedSessionPanel}
+        attached={showAttachedSidePanel}
         contentPanel={contentFrame}
         contentMinSizePx={contentMinSizePx}
         header={sideHeader}
         onAttachedSlotChange={onAttachedSlotChange}
-        onCollapse={() => workbench.sessionPanel.setMode("closed")}
+        onCollapse={() => workbench.sidePanel.setMode("closed")}
       />
     </WorkbenchKeyboardFrame>
   );

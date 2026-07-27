@@ -69,7 +69,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 };
 
 const getSessionBubble = (page: import("@playwright/test").Page) =>
-  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Attach panel" }) });
+  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Reattach Side Panel" }) });
 
 test.describe("Sessions page", () => {
   let projectId: string;

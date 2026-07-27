@@ -37,7 +37,7 @@ const expectNear = (actual: number, expected: number) => {
 
 const expectDashboardAttachedBounds = async (page: import("@playwright/test").Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
-  const side = page.getByTestId("workbench-session-attached-panel");
+  const side = page.getByTestId("workbench-side-panel-attached");
   const [mainBox, sideBox] = await Promise.all([main.boundingBox(), side.boundingBox()]);
   expect(mainBox).not.toBeNull();
   expect(sideBox).not.toBeNull();
@@ -59,21 +59,21 @@ test("PS-168 closes and keyboard-restores the same full-height Side Panel", asyn
 
   const nav = page.locator('[data-workbench-region="nav"]');
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
-  await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await expectDashboardAttachedBounds(page);
 
   const mainNode = await page.locator('[data-workbench-region="main"]').elementHandle();
   const secondaryNode = await page.locator('[data-workbench-region="secondary"]').elementHandle();
-  const sideRegionNode = await page.getByRole("region", { name: "Session", exact: true }).elementHandle();
+  const sideRegionNode = await page.getByRole("region", { name: "Side Panel", exact: true }).elementHandle();
   expect(mainNode).not.toBeNull();
   expect(secondaryNode).not.toBeNull();
   expect(sideRegionNode).not.toBeNull();
 
   await nav.getByRole("button", { name: "Hide Side Panel" }).click();
-  await expect(page.getByTestId("workbench-session-attached-panel")).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
-  await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
 
   const closedMainBox = await page.locator('[data-workbench-panel="main"]').boundingBox();
   expect(closedMainBox).not.toBeNull();
@@ -87,7 +87,7 @@ test("PS-168 closes and keyboard-restores the same full-height Side Panel", asyn
   await expect(showSide).toBeFocused();
   await showSide.press("Enter");
 
-  await expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await expectDashboardAttachedBounds(page);
   expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
@@ -112,7 +112,7 @@ test.describe("PS-168 Side Panels Storybook contract", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
 
-    const side = page.getByTestId("workbench-session-attached-panel");
+    const side = page.getByTestId("workbench-side-panel-attached");
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const main = page.locator('[data-workbench-panel="main"]');
     const separator = page.getByRole("separator", { name: "Resize Side Panel" });
@@ -147,7 +147,7 @@ test.describe("PS-168 Side Panels Storybook contract", () => {
 
     await expect(side).not.toBeVisible();
     await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open session panel" })).toBeVisible();
-    await expect(page.getByTestId("workbench-session-bubble")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
+    await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
   });
 });

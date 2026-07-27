@@ -24,7 +24,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = {}) => {
-  const workbench = createWorkbenchCore({ initialSessionPanelMode: input.canonicalGeometry ? "attached" : undefined });
+  const workbench = createWorkbenchCore({ initialSidePanelMode: input.canonicalGeometry ? "attached" : undefined });
   for (const module of createDashboardExampleModules()) workbench.registerModule(module);
   if (input.canonicalGeometry) workbench.registerModule(createCanonicalGeometryModule());
   return workbench;

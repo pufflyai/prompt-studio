@@ -133,7 +133,7 @@ test("PS-168 closes and reopens the live Side Panel within budget", async ({ pag
   await nav.getByRole("button", { name: "Hide Side Panel" }).click();
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await afterTwoFrames(page);
-  const sideRegionNode = await page.getByRole("region", { name: "Session", exact: true }).elementHandle();
+  const sideRegionNode = await page.getByRole("region", { name: "Side Panel", exact: true }).elementHandle();
   expect(sideRegionNode).not.toBeNull();
 
   const hideSide = nav.getByRole("button", { name: "Hide Side Panel" });
@@ -155,7 +155,7 @@ test("PS-168 closes and reopens the live Side Panel within budget", async ({ pag
     page,
     "reopen",
     () => showSide.click(),
-    () => expect(page.getByTestId("workbench-session-attached-panel")).toBeVisible(),
+    () => expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible(),
   );
 
   const sideRegionConnected = await sideRegionNode!.evaluate((element) => element.isConnected);

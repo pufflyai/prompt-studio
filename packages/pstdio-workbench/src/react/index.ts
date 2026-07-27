@@ -39,7 +39,6 @@ export { WorkbenchPreferencesForm } from "./renderers/settings/preferences-form"
 export type { TreeActionParamsRequest } from "./renderers/tree/tree-actions";
 export { createTreeContextMenuItems } from "./renderers/tree/tree-actions";
 export { WorkbenchTreeView } from "./renderers/tree/tree-view";
-export { WorkbenchSessionAttachedPanel, WorkbenchSessionBubbleContainer } from "./session-panel/session-panel";
 export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
 export {
   createWorkbenchSettingsModule,
@@ -58,6 +57,7 @@ export type { BuildSettingsTreeInput } from "./settings/settings-tree";
 export { buildSettingsTreeBody } from "./settings/settings-tree";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
+export { WorkbenchAttachedSidePanel, WorkbenchFloatingSidePanel } from "./side-panel/side-panel";
 export {
   createWorkbenchTerminalModule,
   openWorkbenchTerminal,
