@@ -1,18 +1,21 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleContributionContext } from "../../core";
+import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { resolveWorkbenchViewRegion } from "../shared/workbench-targets";
-import { registerWorkbenchExtensionViewWidget } from "./view-widget-contributions";
+import {
+  registerWorkbenchExtensionPanel,
+  toWorkbenchPanelEligibility,
+  toWorkbenchPanelMenus,
+} from "./panel-contributions";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
-type ViewRecord = WorkbenchExtensionMetadata["views"][number];
+type ViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 export interface RegisterWorkbenchExtensionFileRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
-  workbench: WorkbenchModuleContributionContext;
+  workbench: WorkbenchModuleContext;
 }
 
 interface ExtensionResource {
@@ -75,20 +78,20 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
       : undefined,
   });
 
-const registerFileViewWidget = (input: RegisterWorkbenchExtensionFileRenderersInput, view: ViewRecord) => {
-  if (!view.fileRendererId) return undefined;
-  return registerWorkbenchExtensionViewWidget({
+const registerFileViewWidget = (input: RegisterWorkbenchExtensionFileRenderersInput, panel: ViewRecord) => {
+  if (!panel.fileRendererId) return undefined;
+  return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
-    role: view.role,
     contribution: {
-      id: view.id,
-      title: text(view.title, view.id),
-      region: resolveWorkbenchViewRegion(view.target),
-      rendererId: view.fileRendererId,
+      id: panel.id,
+      title: text(panel.title, panel.id),
+      region: panel.region,
+      closable: panel.closable,
+      rendererId: panel.fileRendererId,
       singleton: true,
-      resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-      eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
-      panelMenuOwner: view.panelMenuOwner,
+      resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
+      eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
+      panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
     },
   });
 };
@@ -100,8 +103,8 @@ export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbench
     disposables.push(registerFileRenderer(input, record));
   }
 
-  for (const view of input.metadata.views) {
-    const disposable = registerFileViewWidget(input, view);
+  for (const panel of input.metadata.panels) {
+    const disposable = registerFileViewWidget(input, panel);
     if (disposable) disposables.push(disposable);
   }
 

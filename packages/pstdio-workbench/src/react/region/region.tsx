@@ -143,7 +143,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   // placement that is not already active.
   const activateOnInteract = () => {
     if (activePlacement && activePlacement.widgetId !== globalActiveWidgetId) {
-      workbench.layout.activateWidget(activePlacement.widgetId);
+      workbench.layout.activatePanel(activePlacement.widgetId);
     }
   };
 

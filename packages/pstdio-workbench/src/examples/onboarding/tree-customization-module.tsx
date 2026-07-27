@@ -84,22 +84,23 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
   id: "onboarding.tree-customization",
   activate(ctx) {
     ctx.resources.registerKind({ kind: DOC_KIND, label: "Tree document", icon: "FileText" });
-    ctx.resources.registerOpener({
-      id: "onboarding.tree-customization.doc-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.tree-customization.doc-presenter",
       canOpen: (resource) => resource.kind === DOC_KIND,
       open: (resource, input) =>
-        ctx.layout.openWidget(DOC_WIDGET_ID, {
+        ctx.layout.openPanel(DOC_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     });
 
     ctx.renderers.registerRenderer({
       id: DOC_RENDERER_ID,
-      render: ({ placement }) => <DocPanel resource={placement.resource} />,
+      render: ({ instance }) => <DocPanel resource={instance.resource} />,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: true,
       id: DOC_WIDGET_ID,
       title: "Document",
       region: "main",
@@ -115,14 +116,15 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
       getBody: treeBody,
       getChildren: () => [],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: TREE_ID,
       title: "Customizable tree",
       region: "sidenav",
       regionSize: { defaultPx: 280, minPx: 240 },
       rendererId: TREE_ID,
     });
-    ctx.layout.openWidget(TREE_ID);
+    ctx.layout.openPanel(TREE_ID);
     void ctx.resources.openResource(docResource(docs[0]));
   },
 });

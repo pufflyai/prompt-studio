@@ -3,8 +3,8 @@ export const sidePanelsSource = `import {
   type ResourceRef,
   type WorkbenchCore,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
-import { useWorkbenchStore } from "pstdio-workbench/react";
+} from "@pstdio/workbench";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 
 const ITEM_KIND = "docs.item";
 const PICKER_ID = "docs.resources";
@@ -95,11 +95,11 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       surface: "primary",
     });
 
-    ctx.resources.registerOpener({
-      id: "docs.item-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.item-presenter",
       canOpen: (resource) => resource.kind === ITEM_KIND,
       open: (resource, input) =>
-        ctx.layout.openWidget(DETAIL_ID, {
+        ctx.layout.openPanel(DETAIL_ID, {
           resource,
           title: resource.label,
           replaceActive: input.replaceActive,
@@ -127,13 +127,15 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       render: ({ workbench }) => <Activity workbench={workbench} />,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: PICKER_ID,
       title: "Resources",
       region: "sidenav",
       rendererId: PICKER_RENDERER_ID,
     });
-    ctx.layout.registerLocation({
+    ctx.layout.registerPanel({
+      closable: false,
       id: DETAIL_ID,
       title: "Detail",
       region: "main",
@@ -150,13 +152,15 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
         },
       ],
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: INSPECTOR_ID,
       title: "Inspector",
       region: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: ACTIVITY_ID,
       title: "Activity",
       region: "secondary",
@@ -164,9 +168,9 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       rendererId: ACTIVITY_RENDERER_ID,
     });
 
-    ctx.layout.openWidget(PICKER_ID, { pinned: true });
-    ctx.layout.openWidget(INSPECTOR_ID, { pinned: true });
-    ctx.layout.openWidget(ACTIVITY_ID, { pinned: true });
+    ctx.layout.openPanel(PICKER_ID, { pinned: true });
+    ctx.layout.openPanel(INSPECTOR_ID, { pinned: true });
+    ctx.layout.openPanel(ACTIVITY_ID, { pinned: true });
     void ctx.resources.openResource(itemResource(items[0]));
   },
 });`;

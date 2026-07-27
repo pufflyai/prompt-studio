@@ -1,10 +1,10 @@
 import type {
   Disposable,
   WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
+  WorkbenchModuleContext,
   WorkbenchRegionSize,
 } from "../../../core";
-import type { WorkbenchWidgetRenderInput } from "../../../react";
+import type { WorkbenchPanelRenderInput } from "../../../react";
 import { MusicControls, MusicPlayer, MusicQueue, MusicStatus, MusicTopBar } from "../components/music";
 import { itemResource, musicWidgetIds, railWidgetId, randomWorkbenchModes } from "../mock-data/data";
 
@@ -16,7 +16,7 @@ interface MusicWidgetSetup {
   region: "nav" | "main" | "main-right-menu" | "secondary" | "status";
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
-  render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
+  render: (input: WorkbenchPanelRenderInput) => React.ReactNode;
 }
 
 const musicWidgets: MusicWidgetSetup[] = [
@@ -50,7 +50,8 @@ const setupMusicMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   for (const widget of musicWidgets) {
     disposables.push(
       ctx.renderers.registerRenderer({ id: widget.id, render: widget.render }),
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: widget.id,
         title: widget.title,
         region: widget.region,
@@ -62,22 +63,22 @@ const setupMusicMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     );
   }
 
-  ctx.layout.openWidget(railWidgetId, { pinned: true });
+  ctx.layout.openPanel(railWidgetId, { pinned: true });
 
   const defaultItem = musicMode.items.find((item) => item.id === musicMode.defaultItemId) ?? musicMode.items[0];
-  ctx.layout.openWidget(musicWidgetIds.player, {
+  ctx.layout.openPanel(musicWidgetIds.player, {
     resource: itemResource(musicMode.id, defaultItem),
     title: defaultItem.title,
   });
   for (const widget of musicWidgets) {
     if (widget.id === musicWidgetIds.player) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true });
+    ctx.layout.openPanel(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const registerMusicMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerMusicMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: musicMode.id,
     label: musicMode.label,

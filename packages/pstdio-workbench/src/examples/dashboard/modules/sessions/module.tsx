@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../../../core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../../../core";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 
@@ -15,9 +15,10 @@ const SessionsOverviewWidget = lazy(() =>
   })),
 );
 
-const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget(
+const registerSessionWidgets = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.sessions,
       title: "Sessions",
       region: "main",
@@ -36,8 +37,9 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
     ),
   });
 
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.session,
       title: "Session",
       region: "side",
@@ -63,17 +65,17 @@ export const createSessionsModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     registerSessionWidgets(ctx);
 
-    ctx.resources.registerOpener({
-      id: "dashboard.sessions.opener",
+    ctx.resources.registerPresenter({
+      id: "dashboard.sessions.presenter",
       priority: 1000,
       canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === "sessions",
       open: (resource, input) => {
         ctx.modes.setActiveMode("project");
         setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openWidget(dashboardWidgetIds.sessions, {
+        return ctx.layout.openPanel(dashboardWidgetIds.sessions, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         });
       },
     });

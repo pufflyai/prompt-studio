@@ -1,10 +1,5 @@
-import type {
-  Disposable,
-  TreeNode,
-  WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
-} from "../../../core";
-import type { WorkbenchWidgetRenderInput } from "../../../react";
+import type { Disposable, TreeNode, WorkbenchModeActivationContext, WorkbenchModuleContext } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../react";
 import { MailParticipants, MailReader, MailStatus, MailTopBar } from "../components/mail";
 import { itemResource, mailWidgetIds, railWidgetId, randomResourceKind, randomWorkbenchModes } from "../mock-data/data";
 
@@ -14,7 +9,7 @@ interface MailWidgetSetup {
   id: string;
   title: string;
   region: "nav" | "main" | "main-right-menu" | "status";
-  render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
+  render: (input: WorkbenchPanelRenderInput) => React.ReactNode;
 }
 
 const mailWidgets: MailWidgetSetup[] = [
@@ -55,7 +50,8 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   for (const widget of mailWidgets) {
     disposables.push(
       ctx.renderers.registerRenderer({ id: widget.id, render: widget.render }),
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: widget.id,
         title: widget.title,
         region: widget.region,
@@ -72,41 +68,42 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       getBody: () => buildMailTreeSections(),
       getChildren: () => [],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: "mail.navigation",
       title: mailMode.label,
       region: "main-left-menu",
       rendererId: "mail.navigation",
     }),
-    ctx.resources.registerOpener({
-      id: "mail.opener",
+    ctx.resources.registerPresenter({
+      id: "mail.presenter",
       canOpen: (resource) => resource.kind === randomResourceKind && resource.metadata?.modeId === mailMode.id,
       open: (resource, input) =>
-        ctx.layout.openWidget(mailWidgetIds.reader, {
+        ctx.layout.openPanel(mailWidgetIds.reader, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     }),
   );
 
-  ctx.layout.openWidget(railWidgetId, { pinned: true });
-  ctx.layout.openWidget("mail.navigation");
+  ctx.layout.openPanel(railWidgetId, { pinned: true });
+  ctx.layout.openPanel("mail.navigation");
 
   const defaultThread = mailMode.items.find((item) => item.id === mailMode.defaultItemId) ?? mailMode.items[0];
-  ctx.layout.openWidget(mailWidgetIds.reader, {
+  ctx.layout.openPanel(mailWidgetIds.reader, {
     resource: itemResource(mailMode.id, defaultThread),
     title: defaultThread.title,
   });
   for (const widget of mailWidgets) {
     if (widget.id === mailWidgetIds.reader) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true });
+    ctx.layout.openPanel(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const registerMailMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerMailMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: mailMode.id,
     label: mailMode.label,

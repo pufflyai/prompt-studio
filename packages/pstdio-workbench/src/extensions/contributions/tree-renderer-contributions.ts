@@ -8,7 +8,7 @@ import type {
   TreeContext,
   TreeNode,
   TreeViewSection,
-  WorkbenchModuleContributionContext,
+  WorkbenchModuleContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
 import { localizeParamSchema } from "./param-schema-localization";
@@ -27,7 +27,7 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
-import { registerTreeViewWidget } from "./tree-renderer-view-widgets";
+import { registerTreeViewWidget } from "./tree-renderer-panels";
 
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
@@ -35,7 +35,7 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
-  workbench: WorkbenchModuleContributionContext;
+  workbench: WorkbenchModuleContext;
 }
 
 const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeResource | undefined => {
@@ -157,7 +157,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     if (target.kind === "resource" && target.resource) {
       return { kind: "resource", resource: toWorkbenchResource(target.resource), input: { replaceActive: true } };
     }
-    if (target.kind === "view" && target.widgetId) return { kind: "view", widgetId: target.widgetId };
+    if (target.kind === "panel" && target.panelId) return { kind: "panel", panelId: target.panelId };
     if (target.kind !== "command" || !target.commandId) return undefined;
     return {
       kind: "command",
@@ -335,8 +335,8 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
     disposables.push(registerTree(input, record));
   }
 
-  for (const view of input.metadata.views) {
-    const disposable = registerTreeViewWidget(input, view);
+  for (const panel of input.metadata.panels) {
+    const disposable = registerTreeViewWidget(input, panel);
     if (disposable) disposables.push(disposable);
   }
 

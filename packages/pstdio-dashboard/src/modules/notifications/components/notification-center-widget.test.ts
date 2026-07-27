@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { surfaceNotificationCommandResponse } from "./notification-center-widget";
 
 describe("NotificationCenterWidget", () => {
@@ -14,7 +14,7 @@ describe("NotificationCenterWidget", () => {
           },
         },
       },
-    } as unknown as Pick<WorkbenchWidgetRenderInput, "workbench">;
+    } as unknown as Pick<WorkbenchPanelRenderInput, "workbench">;
     const response: CommandExecuteResponse = {
       commandId: "extension-lab.say-hello",
       extensionId: "extension-lab",

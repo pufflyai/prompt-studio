@@ -8,22 +8,29 @@ describe("createExtensionWebviewHostCapabilities", () => {
     const opened: { kind: string; uri: string; id?: string; label?: string }[] = [];
 
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.resources.registerOpener({
-      id: "ticket-opener",
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.resources.registerPresenter({
+      id: "ticket-presenter",
       canOpen: (resource) => resource.kind === "ticket",
       open: (resource) => {
         opened.push(resource);
-        return { opened: resource.uri };
+        return workbench.layout.openPanel("ticket", { resource });
       },
     });
 
     const capabilities = createExtensionWebviewHostCapabilities({
       executeCommand: async () => ({}),
       projectId: "proj-1",
-      slotKind: "view",
+      slotKind: "panel",
     })({
       placement: { resource: undefined },
-      webviewId: "view-1",
+      webviewId: "panel-1",
       workbench,
     } as never);
 

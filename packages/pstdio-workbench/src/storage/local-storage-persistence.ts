@@ -9,7 +9,9 @@ import type {
   WorkbenchHistoryPersistence,
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
+  WorkbenchPersistenceAdapter,
 } from "../core";
+import { workbenchRegions } from "../core";
 
 export interface WorkbenchStorageLike {
   getItem(key: string): string | null;
@@ -25,12 +27,19 @@ export type WorkbenchStoragePersistenceKind =
   | "tree"
   | "last-resource";
 
-interface PersistedWorkbenchLayout {
+interface PersistedWorkbenchLayoutV1 {
   version: 1;
   layout: WorkbenchLayout;
 }
 
-const WORKBENCH_LAYOUT_VERSION = 1 as const;
+interface PersistedWorkbenchLayoutV2 {
+  version: 2;
+  layout: WorkbenchLayout;
+}
+
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV1 | PersistedWorkbenchLayoutV2;
+
+const WORKBENCH_LAYOUT_VERSION = 2 as const;
 const WORKBENCH_LAYOUT_RESOURCE_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -100,7 +109,7 @@ export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const pending = new Map<string, { raw: string; scope: string | undefined }>();
+  const pending = new Map<string, { legacyPanelsKey?: string; raw: string; scope: string | undefined }>();
   const debounceMs = input.debounceMs ?? 250;
   const eventTarget =
     input.eventTarget ??
@@ -157,6 +166,7 @@ export const createLocalStorageLayoutPersistence = (
     for (const write of writes) {
       storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", write.scope), write.raw);
       touchResourceScope(write.scope);
+      if (write.legacyPanelsKey) storage.removeItem?.(write.legacyPanelsKey);
     }
   };
 
@@ -173,13 +183,46 @@ export const createLocalStorageLayoutPersistence = (
       const persisted = pending.has(key)
         ? (JSON.parse(pending.get(key)!.raw) as PersistedWorkbenchLayout)
         : readJson<PersistedWorkbenchLayout>(storage, key);
-      return persisted?.version === WORKBENCH_LAYOUT_VERSION ? persisted.layout : undefined;
+      if (persisted?.version === WORKBENCH_LAYOUT_VERSION) return persisted.layout;
+      if (persisted?.version !== 1) return undefined;
+
+      const legacyPanelsKey = workbenchStoragePersistenceKey(input.namespace, "panels", scope);
+      const panels = readJson<unknown>(storage, legacyPanelsKey);
+      const openByRegionId =
+        typeof panels === "object" &&
+        panels !== null &&
+        "openByRegionId" in panels &&
+        typeof panels.openByRegionId === "object" &&
+        panels.openByRegionId !== null
+          ? panels.openByRegionId
+          : {};
+      const regions = { ...persisted.layout.regions };
+      for (const region of workbenchRegions) {
+        const open = (openByRegionId as Record<string, unknown>)[region];
+        if (typeof open === "boolean" && regions[region]) {
+          regions[region] = { ...regions[region], visible: open };
+        }
+      }
+      const layout = { ...persisted.layout, regions };
+      const migrated: PersistedWorkbenchLayoutV2 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      pending.set(key, {
+        legacyPanelsKey: storage.getItem(legacyPanelsKey) === null ? undefined : legacyPanelsKey,
+        raw: JSON.stringify(migrated),
+        scope,
+      });
+      scheduleFlush();
+      return layout;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayout = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV2 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
+      const legacyPanelsKey = workbenchStoragePersistenceKey(input.namespace, "panels", scope);
       pending.delete(key);
-      pending.set(key, { raw: JSON.stringify(persisted), scope });
+      pending.set(key, {
+        legacyPanelsKey: storage.getItem(legacyPanelsKey) === null ? undefined : legacyPanelsKey,
+        raw: JSON.stringify(persisted),
+        scope,
+      });
       scheduleFlush();
     },
     flush,
@@ -262,18 +305,29 @@ export const createLocalStorageLastResourcePersistence = (
 
 export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorageWorkbenchPersistenceInput) => {
   const storage = resolveStorage(input.storage);
+  const layoutPersistence = createLocalStorageLayoutPersistence({
+    debounceMs: input.debounceMs,
+    eventTarget: input.eventTarget,
+    namespace: input.namespace,
+    storage,
+  });
+  const snapshotPersistence: WorkbenchPersistenceAdapter = {
+    getSnapshot: (scope) => {
+      const layout = layoutPersistence.getLayout(scope);
+      return layout ? { layout } : undefined;
+    },
+    setSnapshot: (snapshot, scope) => layoutPersistence.setLayout(snapshot.layout, scope),
+    flush: layoutPersistence.flush,
+    dispose: layoutPersistence.dispose,
+  };
 
   return {
+    snapshotPersistence,
     historyPersistence: createLocalStorageHistoryPersistence({
       namespace: input.namespace,
       storage,
     }),
-    layoutPersistence: createLocalStorageLayoutPersistence({
-      debounceMs: input.debounceMs,
-      eventTarget: input.eventTarget,
-      namespace: input.namespace,
-      storage,
-    }),
+    layoutPersistence,
     panelsPersistence: createLocalStoragePanelsPersistence({
       namespace: input.namespace,
       scope: input.scope ?? "global",

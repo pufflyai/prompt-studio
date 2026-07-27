@@ -1,8 +1,8 @@
 import {
   type ResourceRef,
   standardResourceIcons,
+  type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
 } from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
@@ -17,7 +17,7 @@ const resolveTicket = (resource: ResourceRef) =>
 
 // A ticket or workspace opens into the workspace detail view; its breadcrumb
 // trail walks back up to the board it belongs to.
-const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+const setDetailBreadcrumbs = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (resource.kind === "ticket") {
     const ticket = resolveTicket(resource);
     ctx.breadcrumbs.setItems([
@@ -48,9 +48,10 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource:
   ]);
 };
 
-const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget(
+const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
       region: "main",
@@ -89,8 +90,8 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
         dashboardTickets.map(({ workspaceResource }) => ({ resource: workspaceResource, group: "Workspaces" })),
     });
 
-    ctx.resources.registerOpener({
-      id: "dashboard.workspaces.opener",
+    ctx.resources.registerPresenter({
+      id: "dashboard.workspaces.presenter",
       priority: 1000,
       canOpen: (resource) =>
         (resource.kind === "dashboard-view" && resource.id === "workspaces") ||
@@ -100,20 +101,20 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
         if (resource.kind === "dashboard-view") {
           ctx.modes.setActiveMode("project");
           setResourceBreadcrumb(ctx, resource);
-          return ctx.layout.openWidget(dashboardWidgetIds.workspaces, {
+          return ctx.layout.openPanel(dashboardWidgetIds.workspaces, {
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
             resource,
             title: resource.label,
-            replaceActive: input.replaceActive,
           });
         }
 
         ctx.modes.setActiveMode(undefined);
         syncResourceSidenav(ctx, resource);
         setDetailBreadcrumbs(ctx, resource);
-        return ctx.layout.openWidget(dashboardWidgetIds.workspace, {
+        return ctx.layout.openPanel(dashboardWidgetIds.workspace, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         });
       },
     });

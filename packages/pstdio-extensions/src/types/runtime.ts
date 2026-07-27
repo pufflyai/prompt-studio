@@ -18,6 +18,7 @@ import type {
   Localizable,
   MenuContribution,
   ModeContribution,
+  PanelContribution,
   ParamObjectSchema,
   RouteContribution,
   SettingsPanelContribution,
@@ -28,7 +29,6 @@ import type {
   ThemeMode,
   TreeItemContribution,
   TreeRendererContribution,
-  ViewContribution,
   WhenExpression,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
@@ -147,13 +147,13 @@ export interface RuntimeScheduleRecord {
   disabled?: boolean;
 }
 
-export interface RuntimeViewRecord {
+export interface RuntimePanelRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: ViewContribution;
+  contribution: PanelContribution;
 }
 
 export interface RuntimeRouteRecord {
@@ -394,7 +394,7 @@ export interface ExtensionRuntime {
   schedules: RuntimeScheduleRecord[];
   artifactMounts: RuntimeArtifactMount[];
   modes: RuntimeModeRecord[];
-  views: RuntimeViewRecord[];
+  panels: RuntimePanelRecord[];
   routes: RuntimeRouteRecord[];
   navigation: never[];
   treeItems: RuntimeTreeItemRecord[];

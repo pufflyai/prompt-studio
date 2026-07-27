@@ -1,8 +1,8 @@
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 
 const dashboardExtensionsReadyProjectIdContextKey = "dashboard.extensions.readyProjectId";
 
-type DashboardExtensionReadinessContext = Pick<WorkbenchModuleContributionContext, "context">;
+type DashboardExtensionReadinessContext = Pick<WorkbenchModuleContext, "context">;
 
 export const clearDashboardExtensionsReadyProject = (ctx: DashboardExtensionReadinessContext) => {
   ctx.context.delete(dashboardExtensionsReadyProjectIdContextKey);

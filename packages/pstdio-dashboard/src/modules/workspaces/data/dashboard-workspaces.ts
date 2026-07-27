@@ -1,5 +1,5 @@
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef } from "@pstdio/workbench/core";
+import type { ResourceRef } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import {

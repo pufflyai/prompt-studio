@@ -79,11 +79,19 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     });
 
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.resources.registerOpener({
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.resources.registerPresenter({
       id: "ticket",
       canOpen: (resource) => resource.kind === "ticket",
       open: (_resource, input) => {
         opens.push(input);
+        return workbench.layout.openPanel("ticket");
       },
     });
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);

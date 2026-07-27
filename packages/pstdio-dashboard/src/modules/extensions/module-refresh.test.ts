@@ -1,5 +1,5 @@
 import { expect, mock, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
@@ -145,7 +145,8 @@ test("keeps restored Forward navigation stable when appearance resolves after me
     id: "test.sessions",
     activate(ctx) {
       ctx.modes.registerMode({ id: "sessions", label: "Sessions", activate: () => undefined });
-      ctx.layout.registerLocation({
+      ctx.layout.registerPanel({
+        closable: false,
         id: "test.sessions.widget",
         title: "Sessions",
         region: "main",
@@ -153,10 +154,10 @@ test("keeps restored Forward navigation stable when appearance resolves after me
         rendererId: "test.sessions.widget",
       });
       registerResourceRoute(ctx, {
-        id: "test.sessions.opener",
+        id: "test.sessions.presenter",
         match: (resource) => resource.uri === dashboardResources.sessions.uri,
         mode: "sessions",
-        widgetId: "test.sessions.widget",
+        panelId: "test.sessions.widget",
         beforeOpen: () => ctx.breadcrumbs.setItems([{ title: "Sessions", resource: dashboardResources.sessions }]),
       });
       return undefined;

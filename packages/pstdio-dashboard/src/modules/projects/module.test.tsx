@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type LayoutPersistenceAdapter, type WorkbenchLayout } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type WorkbenchPersistenceAdapter, type WorkbenchSnapshot } from "@pstdio/workbench";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
@@ -22,17 +22,16 @@ describe("createProjectsModule", () => {
 
     expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
     expect(workbench.getPrimaryResource()).toBeUndefined();
-    expect(workbench.layout.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
+    expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
     expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
-    expect(workbench.panels.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
   });
 
   test("does not persist the project picker into the project being left", async () => {
-    const layouts = new Map<string | undefined, WorkbenchLayout>();
+    const snapshots = new Map<string | undefined, WorkbenchSnapshot>();
     const workbench = createWorkbenchCore({
-      layoutPersistence: {
-        getLayout: (scope) => layouts.get(scope),
-        setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+      persistence: {
+        getSnapshot: (scope) => snapshots.get(scope),
+        setSnapshot: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
       },
     });
     workbench.registerModule(createProjectsModule());
@@ -71,7 +70,8 @@ describe("createProjectsModule", () => {
     workbench.registerModule(createProjectsModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "scratch",
       title: "Scratch",
       region: "main",
@@ -79,7 +79,13 @@ describe("createProjectsModule", () => {
       reuse: "none",
       rendererId: "noop",
     });
-    workbench.layout.openWidget("scratch");
+    workbench.resources.registerKind({ kind: "scratch", label: "Scratch" });
+    workbench.resources.registerPresenter({
+      id: "scratch",
+      canOpen: (resource) => resource.kind === "scratch",
+      open: (resource) => workbench.layout.openPanel("scratch", { resource }),
+    });
+    await workbench.resources.openResource({ kind: "scratch", uri: "pstdio://scratch" });
     expect(workbench.history.store.getState().entries.length).toBeGreaterThan(0);
 
     await workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject);
@@ -112,24 +118,42 @@ describe("createProjectsModule", () => {
   });
 
   test("keeps restored project Sub Panels when leaving project selection", () => {
-    const layouts = new Map<string | undefined, WorkbenchLayout>();
-    const layoutPersistence = {
-      getLayout: (scope) => layouts.get(scope),
-      setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
-    } satisfies LayoutPersistenceAdapter;
-    const seed = createWorkbenchCore({ layoutPersistence });
-    seed.layout.setPersistenceScope("project/project-1/mode/none/aggregate/empty");
-    seed.layout.registerLocation({ id: "start", title: "Start", region: "main", rendererId: "noop" });
-    seed.layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
-    seed.layout.openWidget("start", {
+    const snapshots = new Map<string | undefined, WorkbenchSnapshot>();
+    const persistence = {
+      getSnapshot: (scope) => snapshots.get(scope),
+      setSnapshot: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
+    } satisfies WorkbenchPersistenceAdapter;
+    const seed = createWorkbenchCore({ persistence });
+    seed.host.setPersistenceScope("project/project-1/mode/none/aggregate/empty");
+    seed.layout.registerPanel({ closable: false, id: "start", title: "Start", region: "main", rendererId: "noop" });
+    seed.layout.registerPanel({
+      closable: true,
+      id: "terminal",
+      title: "Terminal",
+      region: "secondary",
+      rendererId: "noop",
+    });
+    seed.layout.openPanel("start", {
       resource: { kind: "dashboard-view", uri: "dashboard-workbench://start", id: "start" },
     });
-    seed.layout.openWidget("terminal");
+    seed.layout.openPanel("terminal");
 
     let selectedProjectId: string | undefined = "project-1";
-    const workbench = createWorkbenchCore({ layoutPersistence });
-    workbench.layout.registerLocation({ id: "start", title: "Start", region: "main", rendererId: "noop" });
-    workbench.layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
+    const workbench = createWorkbenchCore({ persistence });
+    workbench.layout.registerPanel({
+      closable: true,
+      id: "start",
+      title: "Start",
+      region: "main",
+      rendererId: "noop",
+    });
+    workbench.layout.registerPanel({
+      closable: false,
+      id: "terminal",
+      title: "Terminal",
+      region: "secondary",
+      rendererId: "noop",
+    });
     getWriter("projects")?.truncateAndWrite([]);
     const projects = workbench.registerModule(
       createProjectsModule({

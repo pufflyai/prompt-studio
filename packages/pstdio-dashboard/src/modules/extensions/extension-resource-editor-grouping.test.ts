@@ -2,28 +2,27 @@ import { describe, expect, test } from "bun:test";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { groupResourceEditorViews } from "./extension-resource-editor-grouping";
 
-type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
+type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
 
-const view = (overrides: Partial<ExtensionViewRecord> & { id: string }): ExtensionViewRecord =>
+const panel = (overrides: Partial<ExtensionPanelRecord> & { id: string }): ExtensionPanelRecord =>
   ({
     extensionId: "ext",
-    slotId: "workbench.main",
     title: overrides.id,
-    role: "location",
+    region: "main",
+    closable: false,
     webview: { id: overrides.id, entry: "entry", capabilities: [] },
     ...overrides,
-  }) as ExtensionViewRecord;
+  }) as ExtensionPanelRecord;
 
 describe("groupResourceEditorViews", () => {
   test("pairs the main editor with companion side-panels for the same resource kind", () => {
-    const properties = view({
+    const properties = panel({
       id: "properties",
       resourceKind: "ticket",
-      role: "panel-menu",
-      target: "workbench.main.right",
+      region: "secondary",
     });
-    const editor = view({ id: "editor", resourceKind: "ticket" });
-    const modal = view({ id: "modal", resourceKind: "ticket", role: "modal" });
+    const editor = panel({ id: "editor", resourceKind: "ticket" });
+    const modal = panel({ id: "modal", resourceKind: "ticket", region: "overlay" });
 
     const groups = groupResourceEditorViews([properties, editor, modal]);
 
@@ -35,8 +34,8 @@ describe("groupResourceEditorViews", () => {
   });
 
   test("prefers an explicit main target over a no-target companion", () => {
-    const files = view({ id: "files", resourceKind: "ticket", role: "sub-panel", slotId: "unknown" });
-    const editor = view({ id: "editor", resourceKind: "ticket", target: "workbench.main" });
+    const files = panel({ id: "files", resourceKind: "ticket", region: "sidenav" });
+    const editor = panel({ id: "editor", resourceKind: "ticket", region: "main" });
 
     const groups = groupResourceEditorViews([files, editor]);
 
@@ -45,10 +44,10 @@ describe("groupResourceEditorViews", () => {
   });
 
   test("excludes modal and kind-less views, and keeps kinds independent", () => {
-    const ticketEditor = view({ id: "ticket-editor", resourceKind: "ticket" });
-    const sessionEditor = view({ id: "session-editor", resourceKind: "session" });
-    const onlyModal = view({ id: "create", resourceKind: "note", role: "modal" });
-    const kindless = view({ id: "overview" });
+    const ticketEditor = panel({ id: "ticket-editor", resourceKind: "ticket" });
+    const sessionEditor = panel({ id: "session-editor", resourceKind: "session" });
+    const onlyModal = panel({ id: "create", resourceKind: "note", region: "overlay" });
+    const kindless = panel({ id: "overview" });
 
     const groups = groupResourceEditorViews([ticketEditor, sessionEditor, onlyModal, kindless]);
 

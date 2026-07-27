@@ -1,45 +1,35 @@
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
-type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
+type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
 
 export interface ResourceEditorGroup {
   kind: string;
-  primary: ExtensionViewRecord;
-  companions: ExtensionViewRecord[];
+  primary: ExtensionPanelRecord;
+  companions: ExtensionPanelRecord[];
 }
-
-const explicitMainTarget = (target: ExtensionViewRecord["target"]) => target === "workbench.main";
-
-// Older/default primary editors may omit target, while mode-owned companions can
-// also omit it because their placement comes from mode layout. Prefer explicit
-// main editors before falling back to the legacy no-target default.
-const defaultMainTarget = (target: ExtensionViewRecord["target"]) => !target;
 
 // Groups editor + companion side-panel views by resource kind. The primary editor
 // docks in `main`; companion views (e.g. a properties panel targeting main-right)
 // open alongside it bound to the same resource. Modal views are excluded — they
-// create rows via the kanban-renderer flow, not as resource openers.
-export const groupResourceEditorViews = (views: ExtensionViewRecord[]): ResourceEditorGroup[] => {
-  const byKind = new Map<string, ExtensionViewRecord[]>();
+// create rows via the kanban-renderer flow, not as resource presenters.
+export const groupResourceEditorViews = (panels: ExtensionPanelRecord[]): ResourceEditorGroup[] => {
+  const byKind = new Map<string, ExtensionPanelRecord[]>();
 
-  for (const view of views) {
-    if (!view.resourceKind || view.role === "modal") continue;
-    const group = byKind.get(view.resourceKind) ?? [];
-    group.push(view);
-    byKind.set(view.resourceKind, group);
+  for (const panel of panels) {
+    if (!panel.resourceKind || panel.region === "overlay") continue;
+    const group = byKind.get(panel.resourceKind) ?? [];
+    group.push(panel);
+    byKind.set(panel.resourceKind, group);
   }
 
   return [...byKind]
     .map(([kind, kindViews]) => {
-      const locations = kindViews.filter((view) => view.role === "location");
-      const primary =
-        locations.find((view) => explicitMainTarget(view.target)) ??
-        locations.find((view) => defaultMainTarget(view.target));
+      const primary = kindViews.find((panel) => panel.region === "main");
       return primary
         ? {
             kind,
             primary,
-            companions: kindViews.filter((view) => view.role === "sub-panel" || view.role === "panel-menu"),
+            companions: kindViews.filter((panel) => panel !== primary),
           }
         : undefined;
     })

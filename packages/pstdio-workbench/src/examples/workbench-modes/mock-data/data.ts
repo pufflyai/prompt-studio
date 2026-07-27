@@ -129,7 +129,7 @@ export const workspaceFiles: WorkspaceFile[] = [
     ],
     diff: {
       added: ["+ registerSettingsMode(ctx);", "+ ctx.modes.setActiveMode('project');"],
-      removed: ["- ctx.layout.openWidget('legacy.overview');"],
+      removed: ["- ctx.layout.openPanel('legacy.overview');"],
     },
   },
   {

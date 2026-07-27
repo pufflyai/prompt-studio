@@ -1,11 +1,11 @@
 import { Box } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "../../../../../react";
+import type { WorkbenchPanelRenderInput } from "../../../../../react";
 import { WebviewPlaceholder } from "../../../shared/components/webview-placeholder";
 
-export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ExtensionRouteWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const routeId = input.placement.resource?.id ?? "repo-health";
-  const title = input.placement.resource?.label ?? "Repo health";
+  const routeId = input.instance.resource?.id ?? "repo-health";
+  const title = input.instance.resource?.label ?? "Repo health";
   const entry = routeId === "changelog" ? "changelog.tsx" : routeId === "lab" ? "lab.tsx" : "health-page.tsx";
 
   return (
@@ -15,7 +15,7 @@ export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput 
         title={`/projects/acme/extensions/${routeId}`}
         contributor={title === "Lab" ? "extension-lab" : "repo-health"}
         entry={entry}
-        icon={input.placement.resource?.icon ?? "PanelLeft"}
+        icon={input.instance.resource?.icon ?? "PanelLeft"}
         height="100%"
       />
     </Box>

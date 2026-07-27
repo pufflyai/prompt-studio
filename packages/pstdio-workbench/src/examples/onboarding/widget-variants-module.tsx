@@ -1,18 +1,18 @@
 import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { WorkbenchCore, WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
+import type { WorkbenchCore, WorkbenchModuleContribution, WorkbenchPanelRenderInput } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
-const LOCATION_RESOURCE_KIND = "onboarding.widget-variants.location";
-const NOTE_RESOURCE_KIND = "onboarding.widget-variants.note";
-const CONTROLS_WIDGET_ID = "onboarding.widget-variants.controls";
-const CONTROLS_RENDERER_ID = "onboarding.widget-variants.controls.renderer";
-const LOCATION_PANEL_ID = "onboarding.widget-variants.location";
-const SINGLETON_SUB_PANEL_ID = "onboarding.widget-variants.singleton-sub-panel";
-const RESOURCE_SUB_PANEL_ID = "onboarding.widget-variants.resource-sub-panel";
-const SCRATCH_SUB_PANEL_ID = "onboarding.widget-variants.scratch-sub-panel";
-const VARIANT_RENDERER_ID = "onboarding.widget-variants.renderer";
+const LOCATION_RESOURCE_KIND = "onboarding.panel-variants.location";
+const NOTE_RESOURCE_KIND = "onboarding.panel-variants.note";
+const CONTROLS_WIDGET_ID = "onboarding.panel-variants.controls";
+const CONTROLS_RENDERER_ID = "onboarding.panel-variants.controls.renderer";
+const LOCATION_PANEL_ID = "onboarding.panel-variants.location";
+const SINGLETON_SUB_PANEL_ID = "onboarding.panel-variants.singleton-sub-panel";
+const RESOURCE_SUB_PANEL_ID = "onboarding.panel-variants.resource-sub-panel";
+const SCRATCH_SUB_PANEL_ID = "onboarding.panel-variants.scratch-sub-panel";
+const VARIANT_RENDERER_ID = "onboarding.panel-variants.renderer";
 
 interface VariantConfig {
   label: string;
@@ -56,8 +56,8 @@ const noteResource = (id: VariantNoteId) => {
   };
 };
 
-const countPlacements = (placements: { contributionId: string }[], contributionId: string) =>
-  placements.filter((placement) => placement.contributionId === contributionId).length;
+const countPlacements = (placements: { contributionId: string }[], panelId: string) =>
+  placements.filter((placement) => placement.contributionId === panelId).length;
 
 const ControlSection = (props: { title: string; children: ReactNode }) => {
   const { title, children } = props;
@@ -87,13 +87,12 @@ const VariantCount = (props: { label: string; count: number }) => {
 
 const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const mainRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main);
-  const placements = mainRegion.widgets;
-  const scratchCount = countPlacements(placements, SCRATCH_SUB_PANEL_ID);
+  const placements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.main.widgets);
+  const scratchCount = placements.filter((placement) => placement.contributionId === SCRATCH_SUB_PANEL_ID).length;
 
   const openResource = (id: VariantNoteId) => {
     const resource = noteResource(id);
-    workbench.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label });
+    workbench.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label });
   };
 
   return (
@@ -106,11 +105,11 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
       <Stack gap="xs">
         <Text textStyle="title/S/semibold">Panel variants</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          The fixed Location Panel owns each tabbed Sub Panel in the main region.
+          The active Location owns each tabbed Sub Panel in the main region.
         </Text>
       </Stack>
 
-      <ControlSection title="Location Panel">
+      <ControlSection title="Location">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           Widget variants is the current Location and cannot be closed.
         </Text>
@@ -120,7 +119,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
         <Button
           size="sm"
           justifyContent="flex-start"
-          onClick={() => workbench.layout.openWidget(SINGLETON_SUB_PANEL_ID)}
+          onClick={() => workbench.layout.openPanel(SINGLETON_SUB_PANEL_ID)}
         >
           <WorkbenchIcon name="X" />
           Closable singleton
@@ -144,7 +143,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
           variant="outline"
           justifyContent="flex-start"
           onClick={() =>
-            workbench.layout.openWidget(SCRATCH_SUB_PANEL_ID, {
+            workbench.layout.openPanel(SCRATCH_SUB_PANEL_ID, {
               title: `Scratch ${scratchCount + 1}`,
             })
           }
@@ -156,7 +155,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
 
       <Box borderTopWidth="1px" borderColor="border.subtle" pt="md">
         <Stack gap="xs">
-          <VariantCount label="Location Panel" count={countPlacements(placements, LOCATION_PANEL_ID)} />
+          <VariantCount label="Location" count={countPlacements(placements, LOCATION_PANEL_ID)} />
           <VariantCount label="singleton Sub Panel" count={countPlacements(placements, SINGLETON_SUB_PANEL_ID)} />
           <VariantCount label="resource Sub Panels" count={countPlacements(placements, RESOURCE_SUB_PANEL_ID)} />
           <VariantCount label="scratch Sub Panels" count={scratchCount} />
@@ -181,11 +180,11 @@ const VariantFact = (props: { label: string; children: ReactNode }) => {
   );
 };
 
-const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const WidgetVariantPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const config = input.widget.config as VariantConfig;
-  const reuse = "reuse" in input.widget ? input.widget.reuse : "resource";
-  const resourceBody = input.placement.resource?.metadata?.body;
+  const config = input.panel.config as VariantConfig;
+  const reuse = "reuse" in input.panel ? input.panel.reuse : "resource";
+  const resourceBody = input.instance.resource?.metadata?.body;
 
   return (
     <ScrollArea
@@ -196,10 +195,10 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
     >
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette={config.colorPalette} variant="subtle">
-          {"role" in input.widget && input.widget.role === "location" ? "Location Panel" : "Sub Panel"}
+          {"role" in input.panel && input.panel.role === "location" ? "Location" : "Sub Panel"}
         </Badge>
-        <Badge colorPalette={input.placement.closable ? "green" : "gray"} variant="subtle">
-          {input.placement.closable ? "closable" : "not closable"}
+        <Badge colorPalette={input.instance.closable ? "green" : "gray"} variant="subtle">
+          {input.instance.closable ? "closable" : "not closable"}
         </Badge>
         <Badge colorPalette={reuse === "none" ? "purple" : "blue"} variant="subtle">
           reuse {reuse}
@@ -207,7 +206,7 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
       </HStack>
 
       <Stack gap="sm" maxW="760px">
-        <Text textStyle="title/M/semibold">{input.placement.title ?? config.label}</Text>
+        <Text textStyle="title/M/semibold">{input.instance.title ?? config.label}</Text>
         <Text textStyle="paragraph/M/regular">{config.summary}</Text>
         {typeof resourceBody === "string" ? (
           <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -218,13 +217,13 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
 
       <Stack gap="0" maxW="760px">
         <VariantFact label="contribution">
-          <Code colorPalette="gray">{input.placement.contributionId}</Code>
+          <Code colorPalette="gray">{input.instance.panelId}</Code>
         </VariantFact>
         <VariantFact label="placement">
-          <Code colorPalette="gray">{input.placement.widgetId}</Code>
+          <Code colorPalette="gray">{input.instance.instanceId}</Code>
         </VariantFact>
         <VariantFact label="resource">
-          <Code colorPalette="gray">{input.placement.resourceUri ?? "none"}</Code>
+          <Code colorPalette="gray">{input.instance.resourceUri ?? "none"}</Code>
         </VariantFact>
       </Stack>
     </ScrollArea>
@@ -234,17 +233,23 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
 const variantConfig = (config: VariantConfig) => config;
 
 export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
-  id: "onboarding.widget-variants",
+  id: "onboarding.panel-variants",
   activate(ctx) {
     ctx.resources.registerKind({ kind: LOCATION_RESOURCE_KIND, label: "Widget variants", icon: "PanelsTopLeft" });
     ctx.resources.registerKind({ kind: NOTE_RESOURCE_KIND, label: "Variant note", icon: "FileText" });
-    ctx.resources.registerOpener({
-      id: "onboarding.widget-variants.note-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.panel-variants.location-presenter",
+      canOpen: (resource) => resource.kind === LOCATION_RESOURCE_KIND,
+      open: (resource) => ctx.layout.openPanel(LOCATION_PANEL_ID, { resource }),
+    });
+    ctx.resources.registerPresenter({
+      id: "onboarding.panel-variants.note-presenter",
       canOpen: (resource) => resource.kind === NOTE_RESOURCE_KIND,
-      open: (resource) => ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label }),
+      open: (resource) => ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label }),
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: CONTROLS_WIDGET_ID,
       title: "Variants",
       region: "sidenav",
@@ -256,7 +261,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       render: ({ workbench }) => <WidgetVariantControls workbench={workbench} />,
     });
 
-    ctx.layout.registerLocation({
+    ctx.layout.registerPanel({
+      closable: false,
       id: LOCATION_PANEL_ID,
       title: "Widget variants",
       region: "main",
@@ -264,11 +270,12 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       rendererId: VARIANT_RENDERER_ID,
       config: variantConfig({
         label: "Widget variants",
-        summary: "The Location Panel is the fixed subject. It appears as an uncloseable tab while Sub Panels are open.",
+        summary: "The Location is the fixed subject. It appears as an uncloseable tab while Sub Panels are open.",
         colorPalette: "blue",
       }),
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: SINGLETON_SUB_PANEL_ID,
       title: "Closable singleton",
       region: "main",
@@ -280,7 +287,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
         colorPalette: "green",
       }),
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: RESOURCE_SUB_PANEL_ID,
       title: "Resource Sub Panel",
       region: "main",
@@ -294,7 +302,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
         colorPalette: "purple",
       }),
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: SCRATCH_SUB_PANEL_ID,
       title: "Scratch",
       region: "main",
@@ -313,14 +322,15 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       render: (input) => <WidgetVariantPanel input={input} />,
     });
 
-    ctx.layout.openWidget(CONTROLS_WIDGET_ID, { pinned: true });
+    ctx.layout.openPanel(CONTROLS_WIDGET_ID, { pinned: true });
     ctx.breadcrumbs.setItems([
       { title: locationResource.label, icon: locationResource.icon, resource: locationResource },
     ]);
-    ctx.layout.openWidget(LOCATION_PANEL_ID, { resource: locationResource });
-    ctx.layout.openWidget(SINGLETON_SUB_PANEL_ID);
-    ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource: noteResource("alpha"), title: variantNotes.alpha.label });
-    ctx.layout.openWidget(RESOURCE_SUB_PANEL_ID, { resource: noteResource("beta"), title: variantNotes.beta.label });
-    ctx.layout.openWidget(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
+    void ctx.resources.openResource(locationResource).then(() => {
+      ctx.layout.openPanel(SINGLETON_SUB_PANEL_ID);
+      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource: noteResource("alpha"), title: variantNotes.alpha.label });
+      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource: noteResource("beta"), title: variantNotes.beta.label });
+      ctx.layout.openPanel(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
+    });
   },
 });

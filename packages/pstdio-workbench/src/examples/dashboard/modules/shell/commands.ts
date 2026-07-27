@@ -1,7 +1,7 @@
 import {
   type MenuPath,
   standardResourceIcons,
-  type WorkbenchModuleContributionContext,
+  type WorkbenchModuleContext,
   workbenchCommandPaletteMenuPath,
 } from "../../../../core";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "../../../../react";
@@ -11,7 +11,7 @@ import { dashboardWidgetIds } from "../../shared/widget-ids";
 
 export const dashboardHelpMenuPath = ["dashboardWorkbench", "help"] as const satisfies MenuPath;
 
-export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
+export const registerCommands = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     {
       id: "dashboard.openTickets",
@@ -78,7 +78,7 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openSession", label: "Open session", category: "Dashboard", icon: "MessageCircle" },
-    { execute: () => ctx.layout.openWidget(dashboardWidgetIds.session, { pinned: true }) },
+    { execute: () => ctx.layout.openPanel(dashboardWidgetIds.session, { pinned: true }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.contactSupport", label: "Contact support", category: "Help", icon: "MessageSquare" },
@@ -86,7 +86,7 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
   );
 };
 
-export const registerMenus = (ctx: WorkbenchModuleContributionContext) => {
+export const registerMenus = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openTickets", order: 10 });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openWorkspaces", order: 20 });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

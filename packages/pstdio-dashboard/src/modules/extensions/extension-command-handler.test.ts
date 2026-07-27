@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { createExtensionMenuCommandHandler } from "./extension-command-handler";
 
 const successResponse = {
@@ -15,7 +15,7 @@ const baseContribution = {
 
 const createHandler = (input: { contribution: ExtensionMenuContribution; onBody: (body: unknown) => void }) =>
   createExtensionMenuCommandHandler({
-    ctx: {} as unknown as WorkbenchModuleContributionContext,
+    ctx: {} as unknown as WorkbenchModuleContext,
     contribution: input.contribution,
     executeCommand: async (_projectId, _commandId, body) => {
       input.onBody(body);
@@ -73,7 +73,7 @@ describe("extension menu command handler", () => {
       label: "WS-1",
     } satisfies ResourceRef;
     const handler = createExtensionMenuCommandHandler({
-      ctx: {} as unknown as WorkbenchModuleContributionContext,
+      ctx: {} as unknown as WorkbenchModuleContext,
       contribution: baseContribution,
       executeCommand: async (_projectId, _commandId, value) => {
         body = value as { resource?: { type?: string; id?: string } };

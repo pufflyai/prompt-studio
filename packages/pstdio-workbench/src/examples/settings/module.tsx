@@ -11,7 +11,7 @@ const LAUNCHER_RENDERER_ID = "onboarding.settings.launcher.renderer";
 
 // Shows how a module adds settings entries: declare a preference schema + sections,
 // then register panels (schema, custom, collection). The unified surface module
-// renders the tree + dispatching panel + opener — no per-page wiring.
+// renders the tree + dispatching panel + presenter — no per-page wiring.
 export const createSettingsModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.settings",
   activate(ctx) {
@@ -102,14 +102,15 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       id: LAUNCHER_RENDERER_ID,
       render: (input) => <SettingsLauncher input={input} />,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: LAUNCHER_WIDGET_ID,
       title: "Settings",
       region: "main",
       singleton: true,
       rendererId: LAUNCHER_RENDERER_ID,
     });
-    ctx.layout.openWidget(LAUNCHER_WIDGET_ID);
+    ctx.layout.openPanel(LAUNCHER_WIDGET_ID);
 
     // Open the overlay so the lesson shows the surface immediately.
     void ctx.resources.openResource(settingsPanelResource({ id: "appearance", title: "Appearance", icon: "Palette" }));

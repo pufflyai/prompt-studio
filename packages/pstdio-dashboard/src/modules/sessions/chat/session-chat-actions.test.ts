@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { Dispatch, SetStateAction } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -20,7 +20,8 @@ const draftResource: ResourceRef = {
 describe("openCreatedSessionFromDraft", () => {
   test("replaces the current draft placement with the created session", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: true,
       id: dashboardWidgetIds.sessionBubble,
       title: "Session",
       region: "side",
@@ -28,15 +29,15 @@ describe("openCreatedSessionFromDraft", () => {
       reuse: "none",
       rendererId: dashboardWidgetIds.sessionBubble,
     });
-    const placement = workbench.layout.openWidget(dashboardWidgetIds.sessionBubble, {
+    const placement = workbench.layout.openPanel(dashboardWidgetIds.sessionBubble, {
       pinned: true,
       resource: draftResource,
       title: draftResource.label,
     });
-    const input: WorkbenchWidgetRenderInput = {
+    const input: WorkbenchPanelRenderInput = {
       workbench,
-      widget: workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)!,
-      placement,
+      panel: workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)!,
+      instance: placement,
       refresh: () => undefined,
     };
 
@@ -50,7 +51,7 @@ describe("openCreatedSessionFromDraft", () => {
     const opened = workbench.layout.getLayout().regions.side.widgets[0];
 
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
-    expect(opened?.widgetId).toBe(placement.widgetId);
+    expect(opened?.widgetId).toBe(placement.instanceId);
     expect(opened?.resourceUri).toBe("dashboard-workbench://session/session-created-from-draft");
     expect(opened?.resource?.kind).toBe("session");
     expect(opened?.title).toBe("Start the project plan");

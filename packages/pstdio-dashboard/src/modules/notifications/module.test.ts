@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createNotificationsModule, DASHBOARD_NOTIFICATIONS_KEYBINDING } from "./module";
 

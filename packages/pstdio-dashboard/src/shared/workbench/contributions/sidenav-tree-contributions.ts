@@ -1,9 +1,4 @@
-import type {
-  ResourceRef,
-  TreeNode,
-  TreeViewSection,
-  WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
 
 // Mode ids are an OPEN SET of strings: dashboard-owned ("project" | "sessions" | "workspace")
 // plus any extension-declared mode id (e.g. "ticket", contributed by the tickets extension
@@ -26,14 +21,14 @@ interface SidenavContribution {
   order?: number;
   region?: SidenavContributionRegion;
   getSections?: (
-    ctx: WorkbenchModuleContributionContext,
+    ctx: WorkbenchModuleContext,
     input: SidenavContributionInput,
   ) => Promise<TreeViewSection[]> | TreeViewSection[];
-  getHeaderNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
-  getFooterNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
+  getHeaderNodes?: (ctx: WorkbenchModuleContext) => TreeNode[];
+  getFooterNodes?: (ctx: WorkbenchModuleContext) => TreeNode[];
 }
 
-type SidenavTreeContext = Pick<WorkbenchModuleContributionContext, "context">;
+type SidenavTreeContext = Pick<WorkbenchModuleContext, "context">;
 
 interface SidenavContributionsState {
   contributions: SidenavContribution[];
@@ -41,10 +36,7 @@ interface SidenavContributionsState {
   revision: number;
 }
 
-const contributionsByWorkbench = new WeakMap<
-  WorkbenchModuleContributionContext["context"]["store"],
-  SidenavContributionsState
->();
+const contributionsByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], SidenavContributionsState>();
 
 const getContributionState = (ctx: SidenavTreeContext) => {
   const existing = contributionsByWorkbench.get(ctx.context.store);
@@ -96,7 +88,7 @@ const matchingContributions = (ctx: SidenavTreeContext, mode: SidenavModeId, reg
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
 
 export const getSidenavContributionSections = async (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   mode: SidenavModeId,
   input: SidenavContributionInput = {},
 ) => {
@@ -108,7 +100,7 @@ export const getSidenavContributionSections = async (
 };
 
 export const getSidenavContributionHeaderNodes = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   mode: SidenavModeId,
   revision = getSidenavContributionsRevision(ctx),
 ) => {
@@ -116,5 +108,5 @@ export const getSidenavContributionHeaderNodes = (
   return matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);
 };
 
-export const getSidenavContributionFooterNodes = (ctx: WorkbenchModuleContributionContext, mode: SidenavModeId) =>
+export const getSidenavContributionFooterNodes = (ctx: WorkbenchModuleContext, mode: SidenavModeId) =>
   matchingContributions(ctx, mode, "footer").flatMap((contribution) => contribution.getFooterNodes?.(ctx) ?? []);

@@ -1,11 +1,11 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { randomWorkbenchModes } from "../mock-data/data";
 
 const mailMode = randomWorkbenchModes.mail;
 
-const findActiveThread = (input: WorkbenchWidgetRenderInput) => {
+const findActiveThread = (input: WorkbenchPanelRenderInput) => {
   const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId =
     typeof placement?.resource?.metadata?.itemId === "string" ? placement.resource.metadata.itemId : undefined;
@@ -16,7 +16,7 @@ const findActiveThread = (input: WorkbenchWidgetRenderInput) => {
   );
 };
 
-export const MailTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const MailTopBar = (props: { input: WorkbenchPanelRenderInput }) => {
   const thread = findActiveThread(props.input);
   return (
     <HStack h="full" px="sm" gap="sm">
@@ -41,7 +41,7 @@ export const MailTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const MailReader = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const MailReader = (props: { input: WorkbenchPanelRenderInput }) => {
   const thread = findActiveThread(props.input);
   return (
     <ScrollArea h="full" minH="0" contentProps={{ p: "md" }}>

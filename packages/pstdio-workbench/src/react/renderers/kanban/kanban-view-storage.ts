@@ -1,6 +1,6 @@
-import type { WorkbenchWidgetPlacement } from "../../../core";
+import type { WorkbenchPanelInstance } from "../../../core";
 
-const resolveProjectScope = (placement: WorkbenchWidgetPlacement) => {
+const resolveProjectScope = (placement: WorkbenchPanelInstance) => {
   const metadata = placement.resource?.metadata;
   const projectId = metadata?.projectId;
   if (typeof projectId === "string") return projectId;
@@ -12,8 +12,8 @@ const resolveProjectScope = (placement: WorkbenchWidgetPlacement) => {
   return scope.scope === "project" && typeof scope.projectId === "string" ? scope.projectId : undefined;
 };
 
-export const resolveKanbanRendererStorageKey = (kanbanRendererId: string, placement: WorkbenchWidgetPlacement) => {
-  const baseKey = `pstdio:workbench:kanbanRenderer:${kanbanRendererId}:${placement.widgetId}`;
+export const resolveKanbanRendererStorageKey = (kanbanRendererId: string, placement: WorkbenchPanelInstance) => {
+  const baseKey = `pstdio:workbench:kanbanRenderer:${kanbanRendererId}:${placement.instanceId}`;
   const projectScope = resolveProjectScope(placement);
   return projectScope ? `${baseKey}:project:${projectScope}` : baseKey;
 };

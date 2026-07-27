@@ -10,7 +10,7 @@ import {
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,

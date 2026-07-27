@@ -1,5 +1,5 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,8 +14,8 @@ import {
   resolveCreateWorkspaceRepositorySelection,
 } from "./create-workspace-state";
 
-const closeCurrentPlacement = (input: WorkbenchWidgetRenderInput) => {
-  input.workbench.layout.removeWidgetPlacement(input.placement.widgetId);
+const closeCurrentPlacement = (input: WorkbenchPanelRenderInput) => {
+  input.workbench.layout.removeWidgetPlacement(input.instance.instanceId);
 };
 
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
@@ -24,7 +24,7 @@ const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBran
   return branch.name;
 };
 
-export const CreateWorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { t } = useTranslation(["projects", "common"]);
   const projectId = getDashboardSelectedProjectId(input.workbench);

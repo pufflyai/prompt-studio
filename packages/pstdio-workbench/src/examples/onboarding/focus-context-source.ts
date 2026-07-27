@@ -1,7 +1,7 @@
 export const focusContextSource = `import {
   workbenchCommandPaletteMenuPath,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const MARK_SELECTED_COMMAND_ID = "docs.mark-selected";
 const SELECTED_KIND_CONTEXT_KEY = "docs.selectedKind";
@@ -9,7 +9,7 @@ const SELECTED_KIND_CONTEXT_KEY = "docs.selectedKind";
 export const createFocusContextModule = (): WorkbenchModuleContribution => ({
   id: "docs.focus-context",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.focus-context.main",
       title: "Focus and context",
       region: "main",
@@ -17,7 +17,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       rendererId: "docs.focus-context.renderer",
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.focus-context.panel",
       title: "Context",
       region: "secondary",
@@ -58,8 +58,8 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       group: "Docs",
     });
 
-    ctx.layout.openWidget("docs.focus-context.main");
-    ctx.layout.openWidget("docs.focus-context.panel");
+    ctx.layout.openPanel("docs.focus-context.main");
+    ctx.layout.openPanel("docs.focus-context.panel");
     ctx.focus.setActiveRegion("main");
   },
 });`;

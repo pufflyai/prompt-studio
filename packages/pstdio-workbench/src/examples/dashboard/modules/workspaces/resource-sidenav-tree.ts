@@ -2,7 +2,7 @@ import {
   getAnchorResource,
   type ResourceRef,
   type TreeViewSection,
-  type WorkbenchModuleContributionContext,
+  type WorkbenchModuleContext,
 } from "../../../../core";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
@@ -102,7 +102,7 @@ const createResourceSidenavSections = (resource: ResourceRef | undefined) => {
   return [createResourceSection(ticket), createFilesSection(ticket), createSessionsSection(ticket)];
 };
 
-export const registerResourceSidenavTree = (ctx: WorkbenchModuleContributionContext) => {
+export const registerResourceSidenavTree = (ctx: WorkbenchModuleContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.ticketSidenav,
     title: "Resource sidenav",
@@ -113,8 +113,9 @@ export const registerResourceSidenavTree = (ctx: WorkbenchModuleContributionCont
     getBody: () => createResourceSidenavSections(getAnchorResource(ctx.layout.getLayout(), "primary")),
     getChildren: () => [],
   });
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.ticketSidenav,
       title: "Resource sidenav",
       region: "sidenav",

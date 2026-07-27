@@ -1,5 +1,5 @@
-import type { WorkbenchModuleContribution } from "@pstdio/workbench/core";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -11,7 +11,7 @@ export const createKeyboardShortcutsModule = () =>
   ({
     id: "dashboard.keyboard-shortcuts",
     activate(ctx) {
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
         id: dashboardWidgetIds.shortcutHelp,
         title: "Keyboard shortcuts",
         region: "overlay",
@@ -27,7 +27,7 @@ export const createKeyboardShortcutsModule = () =>
 
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openShortcuts, label: "Keyboard shortcuts", category: "Help", icon: "CircleHelp" },
-        { execute: () => ctx.layout.openWidget(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }) },
+        { execute: () => ctx.layout.openPanel(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }) },
       );
       ctx.keybindings.registerKeybinding({
         commandId: dashboardCommandIds.openShortcuts,

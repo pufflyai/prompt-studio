@@ -43,24 +43,21 @@ describe("workbench extension metadata targets", () => {
           layout: {
             panels: ["main"],
             open: [
-              { target: "workbench.left", view: "lab.sidenav", pinned: true },
-              { target: "workbench.main", view: "lab.overview" },
+              { region: "sidenav", panel: "lab.sidenav", pinned: true },
+              { region: "main", panel: "lab.overview" },
             ],
           },
         },
       ],
-      views: [
+      panels: [
         {
           id: "lab.files",
           extensionId: "pstdio.lab",
-          slotId: "workbench.main.left",
-          target: "workbench.main.left",
           title: "Files",
-          role: "panel-menu",
+          region: "main",
+          closable: false,
           resourceKind: "ticket",
           treeRendererId: "lab.files",
-          hostTreeHeader: "default",
-          hostTreeFooter: "none",
         },
       ],
       treeRenderers: [
@@ -104,18 +101,16 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.modes[0]?.layout).toEqual({
       panels: ["main"],
       open: [
-        { target: "workbench.left", view: "lab.sidenav", pinned: true },
-        { target: "workbench.main", view: "lab.overview" },
+        { region: "sidenav", panel: "lab.sidenav", pinned: true },
+        { region: "main", panel: "lab.overview" },
       ],
     });
     expect(parsed.modes[0]?.resourceKind).toBe("ticket");
-    expect(parsed.views[0]).toMatchObject({
+    expect(parsed.panels[0]).toMatchObject({
       treeRendererId: "lab.files",
       resourceKind: "ticket",
-      hostTreeHeader: "default",
-      hostTreeFooter: "none",
     });
-    expect(parsed.views[0]).not.toHaveProperty("webview");
+    expect(parsed.panels[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({
       id: "lab.files",
       bodyCommandId: "lab.files.body",
@@ -145,7 +140,7 @@ describe("workbench extension metadata targets", () => {
       treeItems: [],
       treeRenderers: [],
       modes: [],
-      views: [],
+      panels: [],
       routes: [],
       navigation: [],
       settingsPanels: [],
@@ -174,7 +169,7 @@ describe("workbench extension metadata targets", () => {
           },
         },
       ],
-      views: [],
+      panels: [],
       routes: [],
       navigation: [],
       settingsPanels: [],
@@ -201,7 +196,7 @@ describe("workbench extension metadata targets", () => {
           resourceKind: ["ticket"],
         },
       ],
-      views: [],
+      panels: [],
       routes: [],
       navigation: [],
       settingsPanels: [],

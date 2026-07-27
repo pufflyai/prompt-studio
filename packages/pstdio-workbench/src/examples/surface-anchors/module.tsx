@@ -26,16 +26,16 @@ const widgetIds = {
 };
 
 // Routes a resource to the anchor its kind declares (surface routing), so a session lands
-// in the attached anchor and a terminal in the secondary anchor without the opener
+// in the attached anchor and a terminal in the secondary anchor without the presenter
 // hardcoding an region.
 const openBySurface = (
   ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
-  widgetId: string,
+  panelId: string,
   resource: ResourceRef,
 ) => {
   const surface = ctx.resources.getSurface(resource);
   const region = surface ? resolveAnchorRegion(surface) : undefined;
-  return ctx.layout.openWidget(widgetId, { resource, region });
+  return ctx.layout.openPanel(panelId, { resource, region });
 };
 
 export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
@@ -71,49 +71,54 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
         (findWorkspaceByUri(context.primary?.uri)?.terminals ?? []).map((resource) => ({ resource })),
     });
 
-    ctx.resources.registerOpener({
-      id: "surface.workspace.opener",
+    ctx.resources.registerPresenter({
+      id: "surface.workspace.presenter",
       canOpen: (resource) => resource.kind === WORKSPACE_KIND,
-      open: (resource) => ctx.layout.openWidget(widgetIds.workspace, { resource }),
+      open: (resource) => ctx.layout.openPanel(widgetIds.workspace, { resource }),
     });
-    ctx.resources.registerOpener({
-      id: "surface.session.opener",
+    ctx.resources.registerPresenter({
+      id: "surface.session.presenter",
       canOpen: (resource) => resource.kind === SESSION_KIND,
       open: (resource) => openBySurface(ctx, widgetIds.session, resource),
     });
-    ctx.resources.registerOpener({
-      id: "surface.terminal.opener",
+    ctx.resources.registerPresenter({
+      id: "surface.terminal.presenter",
       canOpen: (resource) => resource.kind === TERMINAL_KIND,
       open: (resource) => openBySurface(ctx, widgetIds.terminal, resource),
     });
 
     // Primary anchor (main) + its two menu projections and the two supporting
     // anchors (secondary = terminals, side = sessions).
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: widgetIds.workspace,
       title: "Workspace",
       region: "main",
       rendererId: widgetIds.workspace,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: widgetIds.concept,
       title: "Surface map",
       region: "main-left-menu",
       rendererId: widgetIds.concept,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: widgetIds.primaryVsGlobal,
       title: "Primary vs global",
       region: "main-right-menu",
       rendererId: widgetIds.primaryVsGlobal,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: widgetIds.session,
       title: "Session",
       region: "side",
       rendererId: widgetIds.session,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: widgetIds.terminal,
       title: "Terminal",
       region: "secondary",
@@ -135,8 +140,8 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
       render: (input) => <ResourcePanel input={input} anchor="derived (secondary)" />,
     });
 
-    ctx.layout.openWidget(widgetIds.concept, { pinned: true });
-    ctx.layout.openWidget(widgetIds.primaryVsGlobal, { pinned: true });
+    ctx.layout.openPanel(widgetIds.concept, { pinned: true });
+    ctx.layout.openPanel(widgetIds.primaryVsGlobal, { pinned: true });
     void ctx.resources.openResource(workspaceResource(surfaceWorkspaces[0]));
   },
 });

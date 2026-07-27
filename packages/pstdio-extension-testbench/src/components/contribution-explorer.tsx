@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { ResourceRef, WorkbenchCore } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchCore } from "@pstdio/workbench";
 import { settingsPanelResource } from "@pstdio/workbench/react";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
@@ -86,14 +86,13 @@ const clearResourcePanels = (workbench: WorkbenchCore) => {
 const viewItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
-  return bench.metadata.views.map((view) => ({
+  return bench.metadata.panels.map((view) => ({
     id: view.id,
     label: text(view.title, view.id),
     description: view.id,
     onActivate: () => {
-      const isModal = view.role === "modal";
-      workbench.layout.openWidget(view.id, {
-        closable: isModal ? true : undefined,
+      const isModal = view.region === "overlay";
+      workbench.layout.openPanel(view.id, {
         pinned: !isModal,
         resource: view.resourceKind === resource.kind ? resource : undefined,
         title: text(view.title, view.id),
@@ -111,7 +110,7 @@ const dataItems = (props: ContributionExplorerProps) => {
     description: renderer.id,
     onActivate: () => {
       clearResourcePanels(workbench);
-      workbench.layout.openWidget(renderer.id, {
+      workbench.layout.openPanel(renderer.id, {
         pinned: true,
         title: text(renderer.title, renderer.id),
       });
@@ -144,7 +143,7 @@ const routeItems = (props: ContributionExplorerProps) => {
     id: route.id,
     label: text(route.label, route.id),
     description: route.path,
-    onActivate: () => workbench.layout.openWidget(route.id, { pinned: true, title: text(route.label, route.id) }),
+    onActivate: () => workbench.layout.openPanel(route.id, { pinned: true, title: text(route.label, route.id) }),
   }));
 };
 
@@ -211,7 +210,7 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
   return (bench.metadata.treeRenderers ?? []).map((renderer) => {
-    const view = bench.metadata.views.find((candidate) => candidate.treeRendererId === renderer.id);
+    const view = bench.metadata.panels.find((candidate) => candidate.treeRendererId === renderer.id);
     const widgetId = view?.id ?? `extension-testbench.tree.${renderer.id}`;
     const title = text(view?.title ?? renderer.title, renderer.id);
 
@@ -220,8 +219,9 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
       label: title,
       description: renderer.id,
       onActivate: () => {
-        if (!view && !workbench.layout.getWidget(widgetId)) {
-          workbench.layout.registerWidget({
+        if (!view && !workbench.layout.getPanel(widgetId)) {
+          workbench.layout.registerPanel({
+            closable: false,
             id: widgetId,
             title,
             region: "main-left-menu",
@@ -230,7 +230,7 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
           });
         }
 
-        workbench.layout.openWidget(widgetId, {
+        workbench.layout.openPanel(widgetId, {
           pinned: true,
           resource: view?.resourceKind === resource.kind || !view ? resource : undefined,
           title,
@@ -256,7 +256,7 @@ const contentItems = <T extends { id: string; title: Parameters<typeof text>[0] 
     description: describe(entry),
     onActivate: () => {
       clearResourcePanels(workbench);
-      workbench.layout.openWidget(contentContributionWidgetId(kind, entry.id), {
+      workbench.layout.openPanel(contentContributionWidgetId(kind, entry.id), {
         pinned: true,
         title: text(entry.title, entry.id),
       });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ResourceRef } from "@pstdio/workbench/core";
+import type { ResourceRef } from "@pstdio/workbench";
 import type { DashboardSession } from "../data/dashboard-sessions";
 import { buildSessionBubbleGroups } from "./session-bubble-groups";
 

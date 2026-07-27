@@ -120,7 +120,7 @@ const ticketRefParam = (
 
 // Maps a ticket into the ParamEditor rows the controls renderer displays: read-only
 // property text, the copyable ID chip, editable status/tag resource dropdowns, and
-// view-only ticket/review resource chips (which open via href or the host).
+// panel-only ticket/review resource chips (which open via href or the host).
 export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
   const { ticket, statuses, tags, dependencies, parent } = input;
 

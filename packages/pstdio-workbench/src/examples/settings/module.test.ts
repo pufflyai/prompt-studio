@@ -4,8 +4,7 @@ import { buildSettingsTreeBody, settingsItemResource, settingsPanelResource } fr
 import { createSettingsModule } from "./module";
 
 const activeOverlayResource = (workbench: WorkbenchCore) => {
-  const overlay = workbench.layout.getLayout().regions.overlay;
-  return overlay.widgets.find((widget) => widget.widgetId === overlay.activeWidgetId)?.resource;
+  return workbench.layout.getActivePanel("overlay")?.resource;
 };
 
 const setup = () => {
@@ -67,7 +66,7 @@ describe("settings example module", () => {
     expect(body.find((section) => section.id === "project")?.nodes.map((node) => node.label)).toEqual(["Skills"]);
   });
 
-  test("opener swaps the overlay panel across schema, custom, and collection-item resources", async () => {
+  test("presenter swaps the overlay panel across schema, custom, and collection-item resources", async () => {
     const workbench = setup();
 
     await workbench.resources.openResource(settingsPanelResource({ id: "appearance", title: "Appearance" }));

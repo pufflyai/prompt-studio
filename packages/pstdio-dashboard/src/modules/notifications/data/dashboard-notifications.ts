@@ -1,4 +1,4 @@
-import { standardResourceIcons, type ResourceRef as WorkbenchResourceRef } from "@pstdio/workbench/core";
+import { standardResourceIcons, type ResourceRef as WorkbenchResourceRef } from "@pstdio/workbench";
 import type { ResourceRef as ExtensionResourceRef, Notification, NotificationAction } from "pstdio-api-contracts";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";

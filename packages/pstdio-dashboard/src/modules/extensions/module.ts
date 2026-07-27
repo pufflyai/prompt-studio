@@ -2,12 +2,7 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import type {
-  Disposable,
-  ResourceRef,
-  WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+import type { Disposable, ResourceRef, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
@@ -80,7 +75,7 @@ const resourceProjectId = (resource: ResourceRef | undefined) => {
 };
 
 const restorePrimaryResourceIfRefreshClearedIt = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { projectId: string; resource: ResourceRef | undefined },
 ) => {
   if (!input.resource) return;
@@ -107,7 +102,7 @@ const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId:
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
   ({
     id: "dashboard.extensions",
-    activate(ctx: WorkbenchModuleContributionContext) {
+    activate(ctx: WorkbenchModuleContext) {
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
       const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;
       const loadMetadata = input.loadMetadata ?? getProjectExtensionMetadata;
@@ -206,7 +201,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         // if the new fetch never resolves. Same-project refreshes (extension installs
         // and webview builds emit collection churn for seconds) keep everything live
         // until fresh metadata arrives — applyMetadata swaps contributions
-        // synchronously, so the sidenav never renders entries whose openers are gone.
+        // synchronously, so the sidenav never renders entries whose presenters are gone.
         if (projectId !== previousProjectId || !projectId) {
           projectGeneration += 1;
           metadataRefresh.clear();
@@ -245,8 +240,9 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
       ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
       registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
-      ctx.layout.registerLocation(
+      ctx.layout.registerPanel(
         {
+          closable: false,
           id: dashboardWidgetIds.extensionRoute,
           title: "Extension route",
           region: "main",
@@ -271,31 +267,31 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       });
       // A mode-layout view docked in the primary region (e.g. an extension overview) is recorded
       // as an `extension-view` history landmark. Back/Forward replay reopens it through this
-      // opener, which re-derives the view from the cached manifest and re-places the widget.
+      // presenter, which re-derives the view from the cached manifest and re-places the widget.
       // Without it, replaying that entry would silently leave the primary region desynced from the
-      // history cursor (there is no opener for the synthetic `extension-view` kind otherwise).
-      ctx.resources.registerOpener({
-        id: "dashboard.extensions.view-opener",
+      // history cursor (there is no presenter for the synthetic `extension-view` kind otherwise).
+      ctx.resources.registerPresenter({
+        id: "dashboard.extensions.panel-presenter",
         priority: 1000,
         canOpen: (resource) => resource.kind === dashboardExtensionViewKind,
         open: (resource, openInput) => {
           const viewProjectId =
             typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : projectId;
-          const view = getCachedDashboardExtensionMetadata(viewProjectId)?.views.find(
+          const view = getCachedDashboardExtensionMetadata(viewProjectId)?.panels.find(
             (candidate) => candidate.id === resource.id,
           );
           if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
           selectDashboardNavigationResource(ctx, resource);
-          return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
+          return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
+            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
             resource,
-            region: extensionViewRegion(view.target),
+            region: extensionViewRegion(view.region),
             title: resource.label,
-            replaceActive: openInput.replaceActive,
           });
         },
       });
-      ctx.resources.registerOpener({
-        id: "dashboard.extensions.route-opener",
+      ctx.resources.registerPresenter({
+        id: "dashboard.extensions.route-presenter",
         priority: 1000,
         canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
         open: (resource, openInput) => {
@@ -305,10 +301,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
             ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
           }
-          return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
+          return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
+            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
             resource: availableResource,
             title: availableResource.label,
-            replaceActive: openInput.replaceActive,
           });
         },
       });

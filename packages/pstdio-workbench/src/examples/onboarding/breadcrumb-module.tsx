@@ -74,47 +74,45 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       });
     }
 
-    // Each opener swaps content into the active main tab via replaceActive so
+    // Each presenter swaps content into the active main tab via replaceActive so
     // walking up and down the trail does not accumulate one tab per category.
-    ctx.resources.registerOpener({
-      id: "onboarding.breadcrumb.docs-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.breadcrumb.docs-presenter",
       canOpen: (resource) => resource.kind === DOCS_KIND,
       open: (resource, input) => {
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
-        ctx.layout.openWidget(DOCS_HOME_WIDGET_ID, {
+        return ctx.layout.openPanel(DOCS_HOME_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive ?? true,
         });
       },
     });
 
-    ctx.resources.registerOpener({
-      id: "onboarding.breadcrumb.section-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.breadcrumb.section-presenter",
       canOpen: (resource) => resource.kind === SECTION_KIND,
       open: (resource, input) => {
-        const section = findSection(typeof resource.id === "string" ? resource.id : undefined);
-        if (!section) return;
+        findSection(typeof resource.id === "string" ? resource.id : undefined);
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
-        ctx.layout.openWidget(SECTION_WIDGET_ID, {
+        return ctx.layout.openPanel(SECTION_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive ?? true,
         });
       },
     });
 
-    ctx.resources.registerOpener({
-      id: "onboarding.breadcrumb.page-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.breadcrumb.page-presenter",
       canOpen: (resource) => resource.kind === PAGE_KIND,
       open: (resource, input) => {
-        const match = findPageBySectionPath(typeof resource.id === "string" ? resource.id : undefined);
-        if (!match) return;
+        findPageBySectionPath(typeof resource.id === "string" ? resource.id : undefined);
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
-        ctx.layout.openWidget(PAGE_WIDGET_ID, {
+        return ctx.layout.openPanel(PAGE_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive ?? true,
         });
       },
     });
@@ -125,11 +123,11 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
     });
     ctx.renderers.registerRenderer({
       id: SECTION_RENDERER_ID,
-      render: ({ workbench, placement }) => <SectionWidget workbench={workbench} resource={placement.resource} />,
+      render: ({ workbench, instance }) => <SectionWidget workbench={workbench} resource={instance.resource} />,
     });
     ctx.renderers.registerRenderer({
       id: PAGE_RENDERER_ID,
-      render: ({ workbench, placement }) => <PageWidget workbench={workbench} resource={placement.resource} />,
+      render: ({ workbench, instance }) => <PageWidget workbench={workbench} resource={instance.resource} />,
     });
 
     ctx.renderers.registerTreeRenderer({
@@ -149,28 +147,32 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       getChildren: () => [],
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: BREADCRUMB_TREE_ID,
       title: "Docs",
       region: "sidenav",
       regionSize: { defaultPx: 240, minPx: 200 },
       rendererId: BREADCRUMB_TREE_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: DOCS_HOME_WIDGET_ID,
       title: "Docs",
       region: "main",
       resourceKinds: [DOCS_KIND],
       rendererId: DOCS_HOME_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: SECTION_WIDGET_ID,
       title: "Section",
       region: "main",
       resourceKinds: [SECTION_KIND],
       rendererId: SECTION_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: PAGE_WIDGET_ID,
       title: "Page",
       region: "main",
@@ -178,7 +180,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       rendererId: PAGE_RENDERER_ID,
     });
 
-    ctx.layout.openWidget(BREADCRUMB_TREE_ID);
+    ctx.layout.openPanel(BREADCRUMB_TREE_ID);
 
     const initialSection = sections[0];
     const initialPage = initialSection?.pages[0];

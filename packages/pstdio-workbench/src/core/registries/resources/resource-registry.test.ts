@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createResourceRegistry } from "./resource-registry";
 
+const panelInstance = (id: string) => ({ instanceId: id, panelId: "test-panel", closable: false });
+
 describe("createResourceRegistry scoped candidates", () => {
   test("passes the active primary resource to providers so candidates can be scoped", () => {
     const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
@@ -134,48 +136,48 @@ describe("createResourceRegistry", () => {
     });
   });
 
-  test("opens resources with the highest priority matching opener", async () => {
+  test("opens resources with the highest priority matching presenter", async () => {
     const resources = createResourceRegistry();
     const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
 
     resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerOpener({
+    resources.registerPresenter({
       id: "fallback",
       priority: 1,
       canOpen: () => true,
-      open: () => "fallback",
+      open: () => panelInstance("fallback"),
     });
-    resources.registerOpener({
+    resources.registerPresenter({
       id: "session-chat",
       priority: 50,
       canOpen: ({ kind }) => kind === "session",
-      open: ({ uri }) => `opened:${uri}`,
+      open: ({ uri }) => panelInstance(`opened:${uri}`),
     });
 
-    await expect(resources.openResource(resource)).resolves.toBe("opened:pstdio://session/s1");
+    await expect(resources.openResource(resource)).resolves.toEqual(panelInstance("opened:pstdio://session/s1"));
   });
 
-  test("passes open options to the selected opener", async () => {
+  test("passes open options to the selected presenter", async () => {
     const resources = createResourceRegistry();
     const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
 
     resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerOpener({
+    resources.registerPresenter({
       id: "session-chat",
       canOpen: ({ kind }) => kind === "session",
-      open: (_resource, options) => options.replaceActive,
+      open: (_resource, options) => panelInstance(String(options.replaceActive)),
     });
 
-    await expect(resources.openResource(resource, { replaceActive: true })).resolves.toBe(true);
+    await expect(resources.openResource(resource, { replaceActive: true })).resolves.toEqual(panelInstance("true"));
   });
 
-  test("fails clearly when no opener can handle a known resource", async () => {
+  test("fails clearly when no presenter can handle a known resource", async () => {
     const resources = createResourceRegistry();
 
     resources.registerKind({ kind: "template", label: "Template" });
 
     await expect(resources.openResource({ kind: "template", uri: "pstdio://template/t1" })).rejects.toThrow(
-      "No opener registered for resource kind: template",
+      "No presenter registered for resource kind: template",
     );
   });
 

@@ -1,7 +1,7 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
 import { toaster, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchTerminalController } from "@pstdio/workbench/core";
+import type { WorkbenchTerminalController } from "@pstdio/workbench";
 import { createTerminalSessionCapability } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";

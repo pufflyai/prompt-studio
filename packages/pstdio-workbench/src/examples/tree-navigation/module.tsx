@@ -1,5 +1,5 @@
 import { Button, Heading, Stack, Text } from "@chakra-ui/react";
-import type { ResourceRef, WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
+import type { ResourceRef, WorkbenchModuleContribution, WorkbenchPanelRenderInput } from "../../core";
 import { createWorkbenchCore, createWorkbenchSelectionResourceMetadata } from "../../core";
 import { createWorkbenchSettingsModule, settingsPanelResource } from "../../react";
 
@@ -38,11 +38,11 @@ const resources = {
 
 const settingsResource = settingsPanelResource({ id: SETTINGS_SECTION_ID, title: "Settings", icon: "Settings" });
 
-const openResource = (input: WorkbenchWidgetRenderInput, resource: ResourceRef) => {
+const openResource = (input: WorkbenchPanelRenderInput, resource: ResourceRef) => {
   void input.workbench.resources.openResource(resource, { replaceActive: true });
 };
 
-const TicketsWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+const TicketsWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (
@@ -56,7 +56,7 @@ const TicketsWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-const WorkspacesWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+const WorkspacesWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (
@@ -130,21 +130,24 @@ export const createTreeNavigationWorkbench = () => {
         ],
         getChildren: () => [],
       });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: NAV_TREE_ID,
         title: "Tree navigation",
         region: "sidenav",
         rendererId: NAV_TREE_ID,
         regionSize: { defaultPx: 240, minPx: 200, maxPx: 320 },
       });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: TICKETS_WIDGET_ID,
         title: "Tickets",
         region: "main",
         rendererId: TICKETS_WIDGET_ID,
       });
       ctx.renderers.registerRenderer({ id: TICKETS_WIDGET_ID, render: (input) => <TicketsWidget input={input} /> });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: WORKSPACES_WIDGET_ID,
         title: "Workspaces",
         region: "main",
@@ -154,7 +157,8 @@ export const createTreeNavigationWorkbench = () => {
         id: WORKSPACES_WIDGET_ID,
         render: (input) => <WorkspacesWidget input={input} />,
       });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: TICKET_WIDGET_ID,
         title: "Ticket",
         region: "main",
@@ -162,28 +166,28 @@ export const createTreeNavigationWorkbench = () => {
       });
       ctx.renderers.registerRenderer({ id: TICKET_WIDGET_ID, render: () => <TicketWidget /> });
 
-      ctx.resources.registerOpener({
-        id: "tree-navigation.view-opener",
+      ctx.resources.registerPresenter({
+        id: "tree-navigation.view-presenter",
         canOpen: (resource) => resource.kind === "tree-navigation.view",
         open: (resource, input) =>
-          ctx.layout.openWidget(resource.id === "workspaces" ? WORKSPACES_WIDGET_ID : TICKETS_WIDGET_ID, {
+          ctx.layout.openPanel(resource.id === "workspaces" ? WORKSPACES_WIDGET_ID : TICKETS_WIDGET_ID, {
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
             resource,
-            replaceActive: input.replaceActive,
             title: resource.label,
           }),
       });
-      ctx.resources.registerOpener({
-        id: "tree-navigation.ticket-opener",
+      ctx.resources.registerPresenter({
+        id: "tree-navigation.ticket-presenter",
         canOpen: (resource) => resource.kind === "tree-navigation.ticket",
         open: (resource, input) =>
-          ctx.layout.openWidget(TICKET_WIDGET_ID, {
+          ctx.layout.openPanel(TICKET_WIDGET_ID, {
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
             resource,
-            replaceActive: input.replaceActive,
             title: resource.label,
           }),
       });
 
-      ctx.layout.openWidget(NAV_TREE_ID, { pinned: true });
+      ctx.layout.openPanel(NAV_TREE_ID, { pinned: true });
       void ctx.resources.openResource(resources.tickets);
 
       return settingsSurface;

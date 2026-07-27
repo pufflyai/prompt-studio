@@ -19,13 +19,14 @@ describe("installWorkbenchTreeRenderer", () => {
     const renderer = workbench.renderers.getRenderer("project.tree");
     const rendered = renderer?.render({
       workbench,
-      widget: workbench.layout.registerWidget({
+      panel: workbench.layout.registerPanel({
+        closable: false,
         id: "project.tree",
         title: "Project",
         region: "sidenav",
         rendererId: "project.tree",
       }) as never,
-      placement: { widgetId: "project.tree", contributionId: "project.tree", title: "Project" },
+      instance: { instanceId: "project.tree", panelId: "project.tree", closable: false, title: "Project" },
       refresh: () => undefined,
     }) as { props?: { renderParamField?: CommandParamFieldRenderer } };
 

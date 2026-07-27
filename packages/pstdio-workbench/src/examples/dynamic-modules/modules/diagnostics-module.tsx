@@ -15,7 +15,8 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.resources.registerKind({ kind: diagnosticKind, label: "Diagnostic", icon: "ListChecks" });
     ctx.renderers.registerRenderer({ id: diagnosticsWidgetId, render: (input) => <DiagnosticsWidget input={input} /> });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: diagnosticsWidgetId,
       title: "Diagnostics",
       region: "secondary",
@@ -32,11 +33,11 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
             title: "Diagnostics completed",
             resource: diagnosticResource,
           });
-          return ctx.layout.openWidget(diagnosticsWidgetId, { resource: diagnosticResource });
+          return ctx.layout.openPanel(diagnosticsWidgetId, { resource: diagnosticResource });
         },
       },
     );
     ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: diagnosticsCommandId, order: 30 });
-    ctx.layout.openWidget(diagnosticsWidgetId, { resource: diagnosticResource });
+    ctx.layout.openPanel(diagnosticsWidgetId, { resource: diagnosticResource });
   },
 });

@@ -12,7 +12,7 @@ interface WorkbenchKeepAliveLayerProps {
 // exactly once. Hosts use `display: contents` and are moved between widget
 // slots via `renderers.claim`; React sees the subtree mounted once into a
 // stable host, so state survives the moves. The current widget's
-// `WorkbenchWidgetRenderInput` is exposed to the subtree through
+// `WorkbenchPanelRenderInput` is exposed to the subtree through
 // `useWorkbenchClaim()`.
 export const WorkbenchKeepAliveLayer = (props: WorkbenchKeepAliveLayerProps) => {
   const { workbench } = props;

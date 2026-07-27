@@ -2,6 +2,7 @@ import { Center, Dialog, Portal } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -143,7 +144,12 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
 
   const body =
     widget && renderer ? (
-      (renderer.render({ workbench, widget, placement, refresh: () => undefined }) as ReactNode)
+      (renderer.render({
+        workbench,
+        panel: toPanelContribution(widget),
+        instance: toPanelInstance(placement),
+        refresh: () => undefined,
+      }) as ReactNode)
     ) : (
       <WorkbenchOverlayFallback
         label={
@@ -155,7 +161,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const handleOpenChange = (details: { open: boolean }) => {
     if (!details.open && canCloseOverlay) {
       setExitingPlacement(placement);
-      workbench.layout.closeWidget(placement.widgetId);
+      workbench.layout.closePanel(placement.widgetId);
     }
   };
 

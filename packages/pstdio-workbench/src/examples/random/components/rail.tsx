@@ -1,8 +1,8 @@
 import { IconButton, Stack } from "@chakra-ui/react";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { railEntries } from "../mock-data/data";
 
-export const RandomWorkbenchRail = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const RandomWorkbenchRail = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const activeModeId = input.workbench.modes.getActiveModeId();
 

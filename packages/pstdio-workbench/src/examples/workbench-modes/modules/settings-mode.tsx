@@ -1,10 +1,11 @@
-import type { Disposable, WorkbenchModeActivationContext, WorkbenchModuleContributionContext } from "../../../core";
+import type { Disposable, WorkbenchModeActivationContext, WorkbenchModuleContext } from "../../../core";
 import { SettingsPage } from "../components/settings-views";
 import { activityBarWidgetId, settingsWidgetIds, workbenchModes } from "../mock-data/data";
 
 const setupSettingsMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: settingsWidgetIds.page,
       title: workbenchModes.settings.label,
       region: "main",
@@ -21,11 +22,11 @@ const setupSettingsMode = (ctx: WorkbenchModeActivationContext): Disposable[] =>
 };
 
 const seedSettingsMode = (ctx: WorkbenchModeActivationContext) => {
-  ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
-  ctx.layout.openWidget(settingsWidgetIds.page, { pinned: true });
+  ctx.layout.openPanel(activityBarWidgetId, { pinned: true });
+  ctx.layout.openPanel(settingsWidgetIds.page, { pinned: true });
 };
 
-export const registerSettingsMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerSettingsMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: workbenchModes.settings.id,
     label: workbenchModes.settings.label,

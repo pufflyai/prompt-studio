@@ -80,6 +80,11 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
       isSubPanelPlacement(workbench, placement) &&
       isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
+  const hasMultipleLocations =
+    region === "main" &&
+    layoutState.layout.regions.main.widgets.filter(
+      (placement) => (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location",
+    ).length > 1;
   const eligibleSubPanels = listEligibleSubPanels({
     widgets: Object.values(layoutState.widgets),
     layout: layoutState.layout,
@@ -104,7 +109,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
       .length > 0;
 
   return shouldShowPanelHeader({
-    hasOpenSubPanels: openSubPanels.length > 0,
+    hasOpenSubPanels: openSubPanels.length > 0 || hasMultipleLocations,
     hasEligibleSubPanels: eligibleSubPanels.length > 0,
     hasPanelMenus,
     hasHeaderActions,
@@ -127,12 +132,18 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
       isSubPanelPlacement(workbench, placement) &&
       isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
+  const locationTabs =
+    region === "main"
+      ? layoutState.layout.regions.main.widgets.filter(
+          (placement) => (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location",
+        )
+      : [];
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
     workbenchRegionTabLeadingMenuPath(region),
   );
 
-  return shouldShowRegionTabs(placements, {
+  return shouldShowRegionTabs(locationTabs.length > 1 ? [...locationTabs, ...placements] : placements, {
     hasLeadingActions: leadingItems.length > 0,
     hasAddAction:
       isWorkbenchPanelRegion(region) &&

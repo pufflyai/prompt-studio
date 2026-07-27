@@ -1,10 +1,5 @@
-import type {
-  AnchorId,
-  ResourceRef,
-  WorkbenchModuleContributionContext,
-  WorkbenchWidgetPlacement,
-} from "@pstdio/workbench/core";
-import { resolveAnchorRegion } from "@pstdio/workbench/core";
+import type { AnchorId, ResourceRef, WorkbenchModuleContext, WorkbenchPanelInstance } from "@pstdio/workbench";
+import { resolveAnchorRegion } from "@pstdio/workbench";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
@@ -13,7 +8,7 @@ export interface RegisterResourceRouteInput {
   // Which resources this route opens (root and/or detail of a single kind family).
   match: (resource: ResourceRef) => boolean;
   mode: string;
-  widgetId: string;
+  panelId: string;
   surface?: AnchorId;
   priority?: number;
   // Every dashboard primary route needs a selected project; default true sends a
@@ -25,7 +20,7 @@ export interface RegisterResourceRouteInput {
   // the route always places the resource it was handed, so root can never become a detail.
   beforeOpen?: (input: { resource: ResourceRef }) => void;
   // Side effects that depend on the primary placement/resource being current.
-  afterOpen?: (input: { resource: ResourceRef; placement: WorkbenchWidgetPlacement }) => void;
+  afterOpen?: (input: { resource: ResourceRef; placement: WorkbenchPanelInstance }) => void;
 }
 
 // A mode-aware primary resource route. It owns the mechanical navigation contract so modules
@@ -33,27 +28,27 @@ export interface RegisterResourceRouteInput {
 // activates the route mode, opens the DOMAIN resource into the route's surface with
 // replaceActive forwarded (so history replay replaces in place), and runs side-effect hooks
 // that cannot replace navigable identity.
-export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, input: RegisterResourceRouteInput) => {
+export const registerResourceRoute = (ctx: WorkbenchModuleContext, input: RegisterResourceRouteInput) => {
   const region = resolveAnchorRegion(input.surface ?? "primary");
 
-  return ctx.resources.registerOpener({
+  return ctx.resources.registerPresenter({
     id: input.id,
     priority: input.priority ?? 1000,
     canOpen: input.match,
     open: (resource, openInput) => {
       if ((input.requiresProject ?? true) && !getDashboardSelectedProjectId(ctx)) {
         ctx.modes.setActiveMode("project-selection");
-        return undefined;
+        return ctx.layout.getActivePanel("overlay")!;
       }
 
       selectDashboardNavigationResource(ctx, resource, { modeId: input.mode });
       input.beforeOpen?.({ resource });
 
-      const placement = ctx.layout.openWidget(input.widgetId, {
+      const placement = ctx.layout.openPanel(input.panelId, {
+        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         resource,
         region,
         title: input.title?.(resource) ?? resource.label,
-        replaceActive: openInput.replaceActive,
       });
       input.afterOpen?.({ resource, placement });
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   clearCachedDashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
@@ -11,21 +11,20 @@ import { extensionViewWidgetId } from "./extension-view-placement";
 
 describe("extension-mode-layout exports", () => {
   test("exposes extension view region placement for resource view callers", () => {
-    expect(extensionViewRegion("workbench.main.left")).toBe("main-left-menu");
+    expect(extensionViewRegion("sidenav")).toBe("sidenav");
   });
 
   test("registers explicit Sub Panel views as project-scoped Add panel widgets", () => {
     const workbench = createWorkbenchCore();
     const metadata = {
       ...emptyDashboardExtensionMetadata,
-      views: [
+      panels: [
         {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
-          slotId: "workbench.main",
           title: "Lab overview",
-          role: "sub-panel" as const,
-          target: "workbench.main" as const,
+          region: "main" as const,
+          closable: true,
           webview: {
             entry: {
               kind: "package-asset" as const,
@@ -41,17 +40,17 @@ describe("extension-mode-layout exports", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    const widget = workbench.layout.getWidget(extensionViewWidgetId("pstdio-lab.overview"))!;
+    const widget = workbench.layout.getPanel(extensionViewWidgetId("pstdio-lab.overview"))!;
     expect(widget).toMatchObject({
-      role: "sub-panel",
       closable: true,
+      region: "main",
       config: { projectId: "project-1" },
     });
 
     setCachedDashboardExtensionMetadata("project-1", metadata);
     try {
-      const placement = workbench.layout.openWidget(widget.id, { closable: true });
-      expect(resolveExtensionView({ widget, placement })?.view.id).toBe("pstdio-lab.overview");
+      const placement = workbench.layout.openPanel(widget.id, {});
+      expect(resolveExtensionView({ panel: widget, instance: placement })?.view.id).toBe("pstdio-lab.overview");
     } finally {
       clearCachedDashboardExtensionMetadata("project-1");
     }

@@ -1,11 +1,11 @@
 # pstdio-workbench Navigation
 
-Navigation is workbench's ingress layer. URLs (deep links, command URIs, URI handlers) come in; typed `NavigationTarget`s come out; existing openers do the work. The workbench never tries to be a router — it converts a location into a sequence of actions a host (TanStack Router, the command palette, a tree node click) can dispatch.
+Navigation is workbench's ingress layer. URLs (deep links, command URIs, URI handlers) come in; typed `NavigationTarget`s come out; existing presenters do the work. The workbench never tries to be a router — it converts a location into a sequence of actions a host (TanStack Router, the command palette, a tree node click) can dispatch.
 
 ## Mental Model
 
 1. **Parsers** turn a location string into a `NavigationTarget`.
-2. **The dispatcher** runs the target's items through existing workbench openers (`resources.openResource`, `layout.openWidget`, `commands.executeCommand`).
+2. **The dispatcher** runs the target's items through existing workbench presenters (`resources.openResource`, `layout.openPanel`, `commands.executeCommand`).
 3. **Navigators** are the inverse: they turn a `ResourceRef` back into an `href` or perform a side-effecting navigation outside the workbench (typically routing).
 
 Parsers and the dispatcher solve "given a URL, do the right thing." Navigators solve "given a resource, where does it live in the URL grammar of the host."
@@ -15,7 +15,7 @@ Parsers and the dispatcher solve "given a URL, do the right thing." Navigators s
 ```ts
 type NavigationTarget =
   | { kind: "resource"; resource: ResourceRef; input?: OpenResourceInput }
-  | { kind: "view"; widgetId: string; input?: OpenWidgetInput }
+  | { kind: "panel"; panelId: string; input?: OpenWorkbenchPanelInput }
   | { kind: "command"; commandId: string; args?: unknown }
   | { kind: "compound"; targets: readonly NavigationTargetItem[] };
 ```
@@ -23,13 +23,13 @@ type NavigationTarget =
 | Kind       | Dispatches to                                                |
 | ---------- | ------------------------------------------------------------ |
 | `resource` | `resources.openResource(resource, input)`                    |
-| `view`     | `layout.openWidget(widgetId, input)` + reveal the host area  |
+| `panel`     | `layout.openPanel(panelId, input)` + reveal the host area  |
 | `command`  | `commands.executeCommand(commandId, args)`                   |
 | `compound` | Each item in order via the rules above                       |
 
-`compound` exists because some URLs express more than one action — opening a ticket _and_ revealing the tree view it lives under, for example. Avoid using it for unrelated work; the host can call `navigate()` more than once.
+`compound` exists because some URLs express more than one action — opening a ticket _and_ revealing the tree Panel it lives under, for example. Avoid using it for unrelated work; the host can call `navigate()` more than once.
 
-A `view` target also makes the widget's area visible (`layout.setAreaVisible(area, true)`) and opens the collapsed-panel state (`panels.setOpen(area, true)`) — navigation is ingress driven by a user action, so opening into a hidden panel would be a dead click. Direct `layout.openWidget` calls outside the navigation dispatcher keep the silent semantics so module bootstrap can place widgets in an area that should stay hidden by default.
+A `panel` target also reveals its collapsed region through `shell` — navigation is ingress driven by a user action, so opening into a hidden Panel would be a dead click. Direct `layout.openPanel` calls outside the navigation dispatcher keep silent placement semantics so module bootstrap can populate a region that should stay hidden by default.
 
 ## Parsers
 
@@ -43,8 +43,8 @@ ctx.navigation.registerParser({
   parse: (location) => {
     const url = new URL(location);
     const ticketId = url.searchParams.get("resource")?.split(":")[1];
-    const widgetId = url.searchParams.get("view") ?? "workspace-tree";
-    if (!ticketId) return { kind: "view", widgetId };
+    const panelId = url.searchParams.get("view") ?? "workspace-tree";
+    if (!ticketId) return { kind: "panel", panelId };
     return {
       kind: "compound",
       targets: [
@@ -52,7 +52,7 @@ ctx.navigation.registerParser({
           kind: "resource",
           resource: { kind: "ticket", uri: `ticket:${ticketId}`, id: ticketId },
         },
-        { kind: "view", widgetId },
+        { kind: "panel", panelId },
       ],
     };
   },
@@ -84,7 +84,7 @@ const target = workbench.navigation.resolveLocation(location);
 
 `navigate()` is the shorthand most callers should use. Route loaders, command palette URL inputs, and URI handlers all go through it. Reach for `resolveLocation()` only when you need to inspect or rewrite the target before dispatch.
 
-Both `openTarget()` and `navigate()` return `Promise<readonly unknown[]>`. The array preserves dispatch order; entries are whatever the underlying opener returned (typically the placement or the resource).
+Both `openTarget()` and `navigate()` return `Promise<readonly unknown[]>`. The array preserves dispatch order; entries are whatever the underlying presenter returned (typically the placement or the resource).
 
 ## Compound Atomicity
 
@@ -95,10 +95,10 @@ await workbench.navigation.openTarget({
   kind: "compound",
   targets: [
     { kind: "resource", resource: { kind: "ticket", uri: "ticket:PS-1" } },
-    { kind: "view", widgetId: "missing-view" }, // canOpenWidget?(...) === false
+    { kind: "panel", panelId: "missing-view" }, // canOpenPanel?(...) === false
   ],
 });
-// Rejects with "Cannot open navigation view target: missing-view".
+// Rejects with "Cannot open navigation panel target: missing-view".
 // The resource open above never runs.
 ```
 
@@ -111,16 +111,9 @@ When the dispatcher omits a `can*` predicate, the corresponding target kind is a
 `createWorkbenchCore()` wires `resolveDispatcher` to its own `resources`, `layout`, and `commands`. Hosts almost never override this. Tests and headless usage can configure their own dispatcher:
 
 ```ts
-import { createNavigationRegistry } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 
-const navigation = createNavigationRegistry({
-  resolveDispatcher: () => ({
-    openResource: async (resource) => visited.push(resource.uri),
-    openWidget: (widgetId) => visited.push(`view:${widgetId}`),
-    executeCommand: async (commandId) => visited.push(`cmd:${commandId}`),
-    canOpenWidget: (widgetId) => widgetIds.has(widgetId),
-  }),
-});
+const navigation = createWorkbenchCore().navigation;
 ```
 
 `resolveDispatcher` is lazy so the navigation registry can be created before `resources` / `layout` / `commands` are ready. If `openTarget()` runs without a dispatcher configured, it throws `navigation.openTarget: no dispatcher available (configure resolveDispatcher)`.
@@ -163,7 +156,7 @@ A common rule of thumb: ingress (URL → action) goes through the parser+dispatc
 | `resolveLocation`   | `No navigation parser registered for location: <location>`                     |
 | `openTarget`        | `navigation.openTarget: no dispatcher available (configure resolveDispatcher)` |
 | `openTarget`        | `Cannot open navigation resource target: <uri>`                                |
-| `openTarget`        | `Cannot open navigation view target: <widgetId>`                               |
+| `openTarget`        | `Cannot open navigation panel target: <panelId>`                               |
 | `openTarget`        | `Cannot open navigation command target: <commandId>`                           |
 | `createHref`        | `No navigator href registered for resource kind: <kind>`                       |
 | `navigateResource`  | `No navigator registered for resource kind: <kind>`                            |

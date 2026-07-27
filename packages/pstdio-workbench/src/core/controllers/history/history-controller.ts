@@ -130,16 +130,20 @@ interface ActivateHistoryResourceInput {
   layout: LayoutModel;
   resources: ResourceRegistry;
   replayCurrentLocation?: boolean;
-  replayResource(entry: WorkbenchNavigationEntry): Promise<unknown>;
+  replayResource(entry: WorkbenchNavigationEntry, replaceActive: boolean): Promise<unknown>;
   restoreSelections(entry: WorkbenchNavigationEntry): void;
 }
 
 const activateHistoryResource = (input: ActivateHistoryResourceInput) => {
   const { entry, layout, placement, replayCurrentLocation, replayResource, resource, resources, restoreSelections } =
     input;
-  const opener = Object.values(resources.store.getState().openers).find((candidate) => candidate.canOpen(resource));
+  const presenter = Object.values(resources.store.getState().presenters).find((candidate) =>
+    candidate.canOpen(resource),
+  );
   const activeLocationUri = getActiveLocationPlacement(layout.getLayout())?.resourceUri;
-  if (opener && (replayCurrentLocation || activeLocationUri !== resource.uri)) return replayResource(entry);
+  if (presenter && (replayCurrentLocation || activeLocationUri !== resource.uri)) {
+    return replayResource(entry, placement === undefined);
+  }
 
   if (placement?.resourceUri === resource.uri) layout.activateWidget(placement.widgetId);
   else if (entry.contributionId && layout.getWidget(entry.contributionId)?.role === "location") {
@@ -380,7 +384,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   const normalizeRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
     const snapshot = store.getState();
     const role = workbenchPlacementRole(input.layout, placement);
-    if (role === "location") return;
+    if (role === "location" && input.resources.isOpeningResource()) return;
     if (role !== "sub-panel") {
       if (input.modes?.isTransitioning() || !input.layout.getWidget(placement.contributionId)) return;
       const entries = compactNavigationEntries(
@@ -476,10 +480,10 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     if (input.modes && input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
   };
 
-  const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined) => {
+  const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined, replaceActive: boolean) => {
     const resource = entry.resource!;
     replayingResourceUris.add(resource.uri);
-    return input.resources.openResource(resource).finally(() => {
+    return input.resources.openResource(resource, { replaceActive }).finally(() => {
       if (scope === currentScope) restoreSelections(entry);
       replayingResourceUris.delete(resource.uri);
     });
@@ -503,7 +507,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         layout: input.layout,
         resources: input.resources,
         replayCurrentLocation: options.replayCurrentLocation,
-        replayResource: (candidate) => replayResource(candidate, replayScope),
+        replayResource: (candidate, replaceActive) => replayResource(candidate, replayScope, replaceActive),
         restoreSelections,
       });
     }

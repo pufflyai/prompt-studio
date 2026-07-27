@@ -38,7 +38,7 @@ export const packageAssetDescriptorSchema = z.object({
 export const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 export const extensionSlotKindSchema = z.enum([
   "menu",
-  "view",
+  "panel",
   "settings",
   "renderer",
   "kanbanRenderer",

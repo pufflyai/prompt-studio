@@ -1,10 +1,10 @@
 import type {
   ResourceRef,
+  WorkbenchModuleContext,
   WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
   WorkbenchTabPosition,
   WorkbenchTabRetention,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import { forgetDashboardSession, rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -23,7 +23,7 @@ const metadataString = (resource: ResourceRef | undefined, key: string) => {
   return typeof value === "string" ? value : undefined;
 };
 
-const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContributionContext) => {
+const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) return undefined;
 
@@ -37,7 +37,7 @@ const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContributionContext)
   });
 };
 
-const getWorkspaceModeResource = (ctx: WorkbenchModuleContributionContext) => {
+const getWorkspaceModeResource = (ctx: WorkbenchModuleContext) => {
   if (ctx.modes.getActiveModeId() !== "workspace") return undefined;
 
   const resource = ctx.getPrimaryResource();
@@ -66,7 +66,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
   };
 };
 
-const selectSidenavSessionNode = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef | undefined) => {
+const selectSidenavSessionNode = (ctx: WorkbenchModuleContext, resource: ResourceRef | undefined) => {
   const nodeId = resource?.kind === "session" ? resource.uri : undefined;
 
   if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
@@ -74,7 +74,7 @@ const selectSidenavSessionNode = (ctx: WorkbenchModuleContributionContext, resou
   }
 };
 
-const getReusableSessionPlacementId = (ctx: WorkbenchModuleContributionContext) => {
+const getReusableSessionPlacementId = (ctx: WorkbenchModuleContext) => {
   const region = ctx.layout.getLayout().regions.side;
   const active = region.widgets.find(
     (placement) =>
@@ -89,8 +89,8 @@ const getReusableSessionPlacementId = (ctx: WorkbenchModuleContributionContext) 
   )?.widgetId;
 };
 
-const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerSubPanel(
+const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel(
     {
       id: dashboardWidgetIds.sessionBubble,
       title: "New session",
@@ -128,7 +128,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
 };
 
 const openNewSessionDraft = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { workspace?: ResourceRef; replaceWidgetId?: string } = {},
 ) => {
   const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
@@ -136,7 +136,7 @@ const openNewSessionDraft = (
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
 
-  if (ctx.modes.getActiveModeId() === "sessions" && ctx.layout.getWidget(dashboardWidgetIds.session)) {
+  if (ctx.modes.getActiveModeId() === "sessions" && ctx.layout.getPanel(dashboardWidgetIds.session)) {
     return ctx.resources.openResource(draftResource, { replaceActive: true });
   }
 
@@ -149,7 +149,7 @@ const openNewSessionDraft = (
   return placement.bubble;
 };
 
-const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) => {
+const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     {
       id: dashboardCommandIds.openSessionPanel,

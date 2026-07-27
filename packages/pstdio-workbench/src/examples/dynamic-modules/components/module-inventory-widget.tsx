@@ -1,10 +1,10 @@
 import { Badge, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchWidgetRenderInput } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../../react";
 import { InventoryRow, Metric, Panel } from "./panel";
 
-export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ModuleInventoryWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { workbench } = input;
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
@@ -21,17 +21,17 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
     { label: "Commands", value: commands.length },
     { label: "Shortcuts", value: keybindings.length },
     { label: "Themes", value: themePreferences.length },
-    { label: "Widgets", value: workbench.layout.listWidgets().length },
+    { label: "Widgets", value: workbench.layout.listPanels().length },
     { label: "Resources", value: workbench.resources.listKinds().length },
     { label: "Tree renderers", value: workbench.renderers.listTreeRenderers().length },
   ];
   const contributionRows = [
-    ...workbench.layout.listWidgets().map((widget) => ({
+    ...workbench.layout.listPanels().map((widget) => ({
       id: widget.id,
       icon: "PanelTop",
       kind: "widget",
       label: widget.id,
-      value: widget.ownerId,
+      value: widget.ownerId ?? "application",
     })),
     ...commands.map((command) => ({
       id: command.command.id,

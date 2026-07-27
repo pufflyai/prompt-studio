@@ -52,7 +52,7 @@ const createFakeAdapter = (id: string) => {
 const request: WorkbenchTerminalSessionRequest = { cols: 80, rows: 24 };
 
 describe("createWorkbenchTerminalController", () => {
-  test("is unavailable until a session opener is set", async () => {
+  test("is unavailable until a session presenter is set", async () => {
     const terminal = createWorkbenchTerminalController();
     expect(terminal.isAvailable()).toBe(false);
     await expect(terminal.open({ request })).rejects.toThrow(/terminal/i);

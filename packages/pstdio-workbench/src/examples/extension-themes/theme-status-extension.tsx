@@ -25,7 +25,8 @@ const ThemeStatusItem = () => {
 export const createThemeStatusExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-status",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: STATUS_WIDGET_ID,
       title: "Theme status",
       region: "status",
@@ -36,6 +37,6 @@ export const createThemeStatusExtension = (): WorkbenchModuleContribution => ({
       id: STATUS_RENDERER_ID,
       render: () => <ThemeStatusItem />,
     });
-    ctx.layout.openWidget(STATUS_WIDGET_ID);
+    ctx.layout.openPanel(STATUS_WIDGET_ID);
   },
 });

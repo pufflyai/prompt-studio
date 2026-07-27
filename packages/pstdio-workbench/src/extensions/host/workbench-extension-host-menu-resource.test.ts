@@ -39,14 +39,13 @@ const metadata = {
   treeItems: [],
   treeRenderers: [],
   kanbanRenderers: [],
-  views: [
+  panels: [
     {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "main",
       title: "Ticket",
-      role: "location",
+      closable: false,
       resourceKind: "ticket",
       webview,
     },
@@ -70,8 +69,11 @@ describe("workbench extension host menu resources", () => {
       workbench,
     });
 
-    workbench.layout.openWidget("lab.ticketPanel", {
-      resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1", label: "PS-1" },
+    await workbench.resources.openResource({
+      kind: "ticket",
+      uri: "pstdio://ticket/PS-1",
+      id: "PS-1",
+      label: "PS-1",
     });
 
     const menuItem = workbench.layout.listMenuItems(headerPath)[0];
@@ -104,8 +106,8 @@ describe("workbench extension host menu resources", () => {
     });
 
     const captured = { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1", label: "PS-1" };
-    workbench.layout.openWidget("lab.ticketPanel", { resource: captured });
-    workbench.layout.openWidget("lab.ticketPanel", {
+    workbench.layout.openPanel("lab.ticketPanel", { resource: captured });
+    workbench.layout.openPanel("lab.ticketPanel", {
       resource: { kind: "ticket", uri: "pstdio://ticket/PS-2", id: "PS-2", label: "PS-2" },
     });
 

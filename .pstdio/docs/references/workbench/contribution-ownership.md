@@ -1,6 +1,6 @@
 # Contribution Ownership
 
-Contribution ownership is metadata that records which workbench module or runtime extension contributed something to the workbench. It is deliberately separate from contribution ids, widget placement ids, resource ids, and user or project identity.
+Contribution ownership is metadata that records which workbench module or runtime extension contributed something to the workbench. It is deliberately separate from contribution ids, Panel instance ids, resource ids, and user or project identity.
 
 ## Owner ids
 
@@ -24,7 +24,7 @@ The command above is registered with:
 }
 ```
 
-Runtime extensions should use the extension id as the owner id and `source: "extension"` when the host maps extension metadata into workbench modules. That keeps extension-owned widgets, commands, menu items, notifications, preferences, and webviews attributable to the extension package that supplied them.
+Runtime extensions should use the extension id as the owner id and `source: "extension"` when the host maps extension metadata into workbench modules. That keeps extension-owned Panels, commands, menu items, notifications, preferences, and webviews attributable to the extension package that supplied them.
 
 ## Contribution metadata
 
@@ -45,10 +45,10 @@ The metadata is used for:
 - ownership and debugging surfaces, such as module inventory views
 - deterministic ordering when two contributions have the same priority
 - module-scoped context keys
-- extension webview attribution, where a widget contribution's owner id becomes the extension id
+- extension webview attribution, where a Panel contribution's owner id becomes the extension id
 - lifecycle clarity when a group of contributions is registered and disposed together
 
-The metadata is attached to contributions across commands, keybindings, resources, layout widgets, placeholders, menu items, navigation handlers, tree renderer contributions, kanban renderer contributions, notifications, and preference schemas.
+The metadata is attached to contributions across commands, keybindings, resources, layout Panels, placeholders, menu items, navigation handlers, tree renderer contributions, kanban renderer contributions, notifications, and preference schemas.
 
 ## Module context
 
@@ -59,10 +59,11 @@ const module = {
   id: "dashboard.project",
   activate(ctx) {
     ctx.resources.registerKind({ kind: "project", label: "Project" });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "project.settings",
       title: "Project settings",
-      area: "main",
+      region: "main"
+      closable: false,
       rendererId: "project.settings",
     });
   },
@@ -75,68 +76,68 @@ Ownership metadata is not the disposal mechanism by itself. Module cleanup works
 
 ## Owner id vs contribution id
 
-`ownerId` and `contributionId` answer different questions.
+`ownerId` and `panelId` answer different questions.
 
-`ownerId` answers: which module or extension owns this contribution or placement?
+`ownerId` answers: which module or extension owns this contribution or instance?
 
 ```ts
 ownerId: "dashboard.project"
 ```
 
-`contributionId` answers: which registered widget contribution does this placement instantiate?
+`panelId` answers: which registered Panel contribution does this instance instantiate?
 
 ```ts
-contributionId: "project.settings"
+panelId: "project.settings"
 ```
 
 They often look related, but they are not interchangeable. One owner can contribute many ids:
 
 ```ts
-ownerId: "dashboard.project", contributionId: "project.settings"
-ownerId: "dashboard.project", contributionId: "project.sidenav"
-ownerId: "dashboard.project", contributionId: "project.header"
+ownerId: "dashboard.project", panelId: "project.settings"
+ownerId: "dashboard.project", panelId: "project.sidenav"
+ownerId: "dashboard.project", panelId: "project.header"
 ```
 
-The inverse can also matter for widget placements. A widget contribution may be owned by one module while a placement of that widget is opened by another module. In that case the widget contribution owner and placement owner are intentionally different.
+The inverse can also matter for Panel instances. A Panel contribution may be owned by one module while a instance of that Panel is opened by another module. In that case the Panel contribution owner and instance owner are intentionally different.
 
-## Widget placements
+## Panel instances
 
-A widget contribution is the registered definition. A widget placement is an opened instance of that definition in an area.
+A Panel contribution is the registered definition. A Panel instance is an opened instance of that definition in an area.
 
-Important placement fields:
+Important instance fields:
 
-- `widgetId`: the concrete placement id in the current layout
-- `contributionId`: the registered widget contribution id
-- `ownerId`: the module or extension that owns the placement
-- `resourceUri`: the resource instance associated with the placement, when opened for a resource
+- `instanceId`: the concrete instance id in the current layout
+- `panelId`: the registered Panel contribution id
+- `ownerId`: the module or extension that owns the instance
+- `resourceUri`: the resource instance associated with the instance, when opened for a resource
 
-When a placement is created, layout code sets:
+When an instance is created, layout code sets:
 
 ```ts
-ownerId: spec.ownerId ?? widget.ownerId
-source: spec.source ?? widget.source
+ownerId: spec.ownerId ?? Panel.ownerId
+source: spec.source ?? Panel.source
 ```
 
 That means:
 
-- Opening a widget through a module context marks the placement with the opener module's owner id.
-- Opening a widget directly without placement metadata falls back to the registered widget contribution's owner id.
-- Reopening or updating an existing placement can update its owner metadata when `openWidget()` receives a new `ownerId`.
+- Opening a Panel through a module context marks the instance with the presenter module's owner id.
+- Opening a Panel directly without instance metadata falls back to the registered Panel contribution's owner id.
+- Reopening or updating an existing instance can update its owner metadata when `openPanel()` receives a new `ownerId`.
 
-This distinction is useful when shared widgets are opened by other modules. For example, `shared.resource-viewer` might be contributed by `workbench.shared`, while a project module opens a placement of it:
+This distinction is useful when shared Panels are opened by other modules. For example, `shared.resource-viewer` might be contributed by `workbench.shared`, while a project module opens an instance of it:
 
 ```ts
 {
-  widgetId: "shared.resource-viewer",
-  contributionId: "shared.resource-viewer",
+  instanceId: "shared.resource-viewer:project-1",
+  panelId: "shared.resource-viewer",
   ownerId: "dashboard.project",
   resourceUri: "pstdio://project/project-1",
 }
 ```
 
-The placement says "this visible instance was opened by `dashboard.project`." The contribution registry still says "the widget definition belongs to `workbench.shared`."
+The instance says "this visible instance was opened by `dashboard.project`." The contribution registry still says "the Panel definition belongs to `workbench.shared`."
 
-Code that needs the widget definition should use `contributionId` to read the registered widget. Code that needs to know who opened or owns the visible placement should read the placement `ownerId`.
+Code that needs the Panel definition should use `panelId` to read the registered Panel. Code that needs to know who opened or owns the visible instance should read the instance `ownerId`.
 
 ## Source
 
@@ -162,10 +163,10 @@ Do not use `ownerId` for:
 - user ids
 - project ids
 - resource ids
-- widget instance ids
+- Panel instance ids
 - permission or trust decisions by itself
 - unregistering contributions without a tracked disposable
 
-Do not parse a `contributionId` to infer ownership. Always read `ownerId` from the registered contribution or placement metadata.
+Do not parse a `panelId` to infer ownership. Always read `ownerId` from the registered contribution or instance metadata.
 
 When adding a new registry or contribution type, include `ContributionMetadata` if entries need attribution, ordering, lifecycle clarity, or debug visibility. Prefer normalizing metadata through the shared contribution metadata helpers so defaults stay consistent.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
@@ -128,14 +128,14 @@ describe("createWorkspacesModule", () => {
     await workbench.resources.openResource(workspace!, { replaceActive: true });
 
     const floatingSession = workbench.layout
-      .getLayout()
-      .regions.side.widgets.find((widget) => widget.resource?.uri === "dashboard-workbench://session/session-older");
+      .listPanelInstances("side")
+      .find((panel) => panel.resource?.uri === "dashboard-workbench://session/session-older");
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(floatingSession?.tabRetention).toBe("preview");
-    expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.widgetId);
+    expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.instanceId);
     expect(workbench.sidePanel.getMode()).toBe("closed");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
@@ -240,18 +240,19 @@ describe("createWorkspacesModule sidenav state", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     syncDashboardLayoutPersistenceScope(workbench);
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: true,
       id: "test.files",
       title: "Files",
       region: "side",
       rendererId: "test.files",
     });
-    workbench.layout.openWidget("test.files", { tabRetention: "persistent" });
+    workbench.layout.openPanel("test.files", {});
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
-      expect.objectContaining({ contributionId: "test.files", tabRetention: "persistent" }),
+    expect(workbench.layout.listPanelInstances("side")).toEqual([
+      expect.objectContaining({ panelId: "test.files", tabRetention: "persistent" }),
     ]);
   });
 

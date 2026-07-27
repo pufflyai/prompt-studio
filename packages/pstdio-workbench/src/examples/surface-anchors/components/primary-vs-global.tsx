@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "../../../react";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "../../../react";
 
 interface SignalRowProps {
   label: string;
@@ -25,7 +25,7 @@ const SignalRow = (props: SignalRowProps) => {
 // Shows the two active-resource signals side by side. Activating a supporting anchor (clicking
 // into the Side Panel session) moves the GLOBAL signal but leaves PRIMARY on the workspace —
 // which is why projections, history and lastResource follow primary, not global.
-export const PrimaryVsGlobalPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const PrimaryVsGlobalPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { workbench } = props.input;
   // Re-render on any layout change so both signals stay live.
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);

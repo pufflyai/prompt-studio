@@ -63,7 +63,7 @@ export const metadata = {
       action: { kind: "route", route: "lab" },
     },
   ],
-  views: [],
+  panels: [],
 } satisfies DashboardExtensionMetadata;
 
 export const response = {
@@ -84,20 +84,19 @@ export const metadataWithLabMode = {
       layout: {
         panels: ["main", "secondary", "side"],
         open: [
-          { target: "workbench.left", view: "extension-lab.labSidenav", pinned: true },
-          { target: "workbench.main", view: "extension-lab.labOverview" },
+          { region: "sidenav", panel: "extension-lab.labSidenav", pinned: true },
+          { region: "main", panel: "extension-lab.labOverview" },
         ],
       },
     },
   ],
-  views: [
+  panels: [
     {
       id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
-      slotId: "workbench.left",
-      target: "workbench.main.left",
+      region: "sidenav",
+      closable: false,
       title: "Lab",
-      role: "location",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-sidenav.tsx", baseUrl: "file:///extension/extension.ts" },
         runtimeUrl: "/v1/extensions/runtime",
@@ -107,10 +106,9 @@ export const metadataWithLabMode = {
     {
       id: "extension-lab.labOverview",
       extensionId: "pstdio.extension-lab",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "main",
+      closable: false,
       title: "Lab overview",
-      role: "location",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
         runtimeUrl: "/v1/extensions/runtime",
@@ -149,18 +147,17 @@ export const metadataWithTickets = {
       resourceKind: "ticket",
       layout: {
         panels: ["main", "secondary", "side"],
-        open: [{ target: "workbench.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
+        open: [{ region: "sidenav", panel: "pstdio-core-tickets.ticketFiles", pinned: true }],
       },
     },
   ],
-  views: [
+  panels: [
     {
       id: "pstdio-core-tickets.ticketEditor",
       extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "main",
+      closable: false,
       title: "Ticket",
-      role: "location",
       resourceKind: "ticket",
       webview: {
         entry: {
@@ -171,34 +168,33 @@ export const metadataWithTickets = {
         runtimeUrl: "/v1/extensions/runtime",
         moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-editor/module.js",
       },
+      panelMenus: [
+        {
+          id: "pstdio-core-tickets.ticketProperties",
+          extensionId: "pstdio.pstdio-core-tickets",
+          ownerPanelId: "pstdio-core-tickets.ticketEditor",
+          title: "Properties",
+          side: "right",
+          webview: {
+            entry: {
+              kind: "package-asset",
+              path: "./src/views/ticket-properties.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-properties/module.js",
+          },
+        },
+      ],
     },
     {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "unknown",
       title: "Files",
-      role: "panel-menu",
+      region: "sidenav",
+      closable: false,
       resourceKind: "ticket",
       treeRendererId: "pstdio-core-tickets.ticketFiles",
-      hostTreeHeader: "default",
-    },
-    {
-      id: "pstdio-core-tickets.ticketProperties",
-      extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "workbench.main.right",
-      target: "workbench.main.right",
-      title: "Properties",
-      role: "panel-menu",
-      resourceKind: "ticket",
-      webview: {
-        entry: {
-          kind: "package-asset",
-          path: "./src/views/ticket-properties.tsx",
-          baseUrl: "file:///extension/extension.ts",
-        },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-properties/module.js",
-      },
     },
   ],
   treeRenderers: [

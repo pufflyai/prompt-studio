@@ -22,11 +22,11 @@ metadata:
    - Use schedules for cron-triggered command execution.
    - Use templates, skills, themes, file icon themes, and template types for packaged static catalog assets.
    - Use kanban renderers for Planner-style native dashboard lists or boards. Project-sidenav entries are created from `kanbanRenderers`; do not add a `treeItems` entry with `action.kind === "kanbanRenderer"`.
-   - Use `fileRenderers` plus `views` for native resource file content such as markdown, code, and image previews.
-   - Use `treeRenderers` plus `views` for native workbench trees such as resource files, outline, or navigation panels.
-   - Use resource `modes` and mode layouts to open or pin native resource views. Each view must bind exactly one of `webview`, `treeRenderer`, or `fileRenderer`.
+   - Use `fileRenderers` plus `panels` for native resource file content such as markdown, code, and image previews.
+   - Use `treeRenderers` plus `panels` for native workbench trees such as resource files, outline, or navigation Panels.
+   - Use resource `modes` and mode layouts to open or pin native resource Panels. Each Panel must bind exactly one of `webview`, `treeRenderer`, or `fileRenderer`.
    - Use routes plus `treeItems` for custom webview pages in the project sidenav, not for native resource detail screens. Route tree-item actions reference the route path, not the normalized route id.
-   - Use views, settings panels, activity renderers, and session anchor renderers for dashboard UI that is not project-sidenav navigation.
+   - Use Panels, settings panels, activity renderers, and session anchor renderers for dashboard UI that is not project-sidenav navigation.
    - Use artifact mounts for files under `.pstdio/<extension-package-name>/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.

@@ -129,7 +129,8 @@ const EmptyMainPanel = () => (
 const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContribution => ({
   id: "extension.manager",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: MANAGER_WIDGET_ID,
       title: "Extensions",
       region: "sidenav",
@@ -150,7 +151,7 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
       id: EMPTY_MAIN_RENDERER_ID,
       render: () => <EmptyMainPanel />,
     });
-    ctx.layout.openWidget(MANAGER_WIDGET_ID);
+    ctx.layout.openPanel(MANAGER_WIDGET_ID);
   },
 });
 

@@ -24,7 +24,7 @@ You provide:
 - Optional **`apply`** / **`reset`** for a sticky footer that commits or restores
   the whole value map.
 
-Like the kanban renderer, `registerControlsRenderer` auto-creates a widget renderer
-with the same id; place it with `layout.registerWidget` (default region `main-right`,
+Like the kanban renderer, `registerControlsRenderer` auto-creates a Panel renderer
+with the same id; place it with `layout.registerPanel` (default region `main-right`,
 so it companions the active resource). Extensions declare this as a `controls`
 contribution and the dashboard bridges the query/update/apply/reset command ids.

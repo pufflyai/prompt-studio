@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 

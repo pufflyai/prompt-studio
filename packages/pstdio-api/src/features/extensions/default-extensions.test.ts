@@ -40,7 +40,7 @@ const installed = {
     fileIconThemes: [],
     menuContributions: [],
     modes: [],
-    views: [],
+    panels: [],
     routes: [],
     navigation: [],
     treeItems: [],

@@ -1,4 +1,4 @@
-export const kanbanRendererSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+export const kanbanRendererSource = `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 const ROWS_WIDGET_ID = "docs.rows";
 
@@ -29,12 +29,12 @@ export const createRowsModule = (): WorkbenchModuleContribution => ({
         { id: "DR-1", title: "Schema-aware grouping", attributes: { status: "review" } },
       ],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: ROWS_WIDGET_ID,
       title: "Rows",
       region: "main",
       rendererId: ROWS_WIDGET_ID,
     });
-    ctx.layout.openWidget(ROWS_WIDGET_ID);
+    ctx.layout.openPanel(ROWS_WIDGET_ID);
   },
 });`;

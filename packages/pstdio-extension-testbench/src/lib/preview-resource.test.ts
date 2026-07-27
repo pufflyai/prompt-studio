@@ -15,7 +15,7 @@ const baseMetadata = {
   settingsPanels: [],
   treeItems: [],
   treeRenderers: [],
-  views: [],
+  panels: [],
 } satisfies WorkbenchExtensionMetadata;
 
 describe("createPreviewResource", () => {
@@ -49,13 +49,13 @@ describe("createPreviewResource", () => {
   test("uses a ticket preview resource when the extension contributes ticket views", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
-      views: [
+      panels: [
         {
           id: "tickets.editor",
           extensionId: "pstdio.tickets",
           resourceKind: "ticket",
-          role: "location",
-          slotId: "workbench.main",
+          region: "main",
+          closable: false,
           title: "Ticket",
         },
       ],

@@ -32,18 +32,18 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
 
     ctx.renderers.registerRenderer({
       id: regionMapRendererId,
-      render: ({ placement, workbench }) => {
+      render: ({ instance, workbench }) => {
         const region = resolvePlacementRegion(
-          placement.resource?.metadata?.region,
-          placement.resource?.id ?? placement.contributionId,
+          instance.resource?.metadata?.region,
+          instance.resource?.id ?? instance.panelId,
         );
 
         const placeholder = (
           <RegionMapPlaceholder
             region={region}
             role={describeSurface(region)}
-            name={placement.resource?.label ?? placement.title ?? placement.contributionId}
-            uri={placement.resource?.uri ?? "pstdio://region-map/unknown"}
+            name={instance.resource?.label ?? instance.title ?? instance.panelId}
+            uri={instance.resource?.uri ?? "pstdio://region-map/unknown"}
           />
         );
 
@@ -67,7 +67,7 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
                 size="sm"
                 variant="subtle"
                 onClick={() =>
-                  workbench.layout.openWidget(regionWidgetId("overlay"), {
+                  workbench.layout.openPanel(regionWidgetId("overlay"), {
                     resource: createRegionResource("overlay"),
                   })
                 }
@@ -81,7 +81,7 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
     });
 
     for (const region of workbenchRegions) {
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
         id: regionWidgetId(region),
         title: regionLabels[region],
         region,
@@ -92,7 +92,7 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
       });
 
       if (region !== "overlay") {
-        ctx.layout.openWidget(regionWidgetId(region), { resource: createRegionResource(region) });
+        ctx.layout.openPanel(regionWidgetId(region), { resource: createRegionResource(region) });
       }
     }
   },

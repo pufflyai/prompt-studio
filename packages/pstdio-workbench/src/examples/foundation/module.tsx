@@ -5,13 +5,13 @@ import {
   type RegisteredKeybinding,
   type WorkbenchCore,
   type WorkbenchModuleContribution,
-  type WorkbenchWidgetRenderInput,
+  type WorkbenchPanelRenderInput,
 } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
 const foundationRendererId = "foundation.renderer";
 
-const getKeybindingState = (input: WorkbenchWidgetRenderInput, keybinding: RegisteredKeybinding) => {
+const getKeybindingState = (input: WorkbenchPanelRenderInput, keybinding: RegisteredKeybinding) => {
   const command = input.workbench.commands.getCommand(keybinding.commandId);
   const keybindingContextMatches = input.workbench.context.matches(keybinding.when);
   const commandVisible = command
@@ -37,7 +37,7 @@ const getKeybindingStatusColor = (state: ReturnType<typeof getKeybindingState>) 
   return "gray";
 };
 
-const KeybindingRow = (props: { input: WorkbenchWidgetRenderInput; keybinding: RegisteredKeybinding }) => {
+const KeybindingRow = (props: { input: WorkbenchPanelRenderInput; keybinding: RegisteredKeybinding }) => {
   const { input, keybinding } = props;
   const state = getKeybindingState(input, keybinding);
   const status = getKeybindingStatus(state);
@@ -70,7 +70,7 @@ const KeybindingRow = (props: { input: WorkbenchWidgetRenderInput; keybinding: R
   );
 };
 
-const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const FoundationPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const context = useWorkbenchStore(input.workbench.context.store, (state) => state.values);
   const activeMode = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId) ?? "none";
@@ -145,46 +145,49 @@ const FoundationBadge = (props: { label: string; icon: string }) => {
   );
 };
 
-const registerWidgets = (workbench: WorkbenchCore) => {
+const registerPanels = (workbench: WorkbenchCore) => {
   workbench.renderers.registerRenderer({
     id: foundationRendererId,
     render: (input) => {
-      if (input.widget.id === "foundation.main" || input.widget.id === "foundation.panel") {
+      if (input.panel.id === "foundation.main" || input.panel.id === "foundation.panel") {
         return <FoundationPanel input={input} />;
       }
-      return <FoundationBadge label={input.widget.title} icon={input.widget.config as string} />;
+      return <FoundationBadge label={input.panel.title} icon={input.panel.config as string} />;
     },
   });
 
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: "foundation.activity",
     title: "Activity",
     region: "activity",
     rendererId: foundationRendererId,
     config: "Blocks",
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: "foundation.sidenav",
     title: "Sidenav",
     region: "sidenav",
     rendererId: foundationRendererId,
     config: "PanelLeft",
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
     id: "foundation.main",
     title: "Foundation",
     region: "main",
     rendererId: foundationRendererId,
     closable: true,
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
     id: "foundation.panel",
     title: "Panel",
     region: "secondary",
     rendererId: foundationRendererId,
     closable: true,
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: "foundation.status",
     title: "Ready",
     region: "status",
@@ -202,15 +205,15 @@ export const createFoundationWorkbench = () => {
     },
   });
 
-  registerWidgets(workbench);
+  registerPanels(workbench);
   workbench.context.set("foundation.host", true);
   workbench.layout.setRegionSize("sidenav", 280);
   workbench.layout.setRegionSize("secondary", 260);
-  workbench.layout.openWidget("foundation.activity", { pinned: true });
-  workbench.layout.openWidget("foundation.sidenav", { pinned: true });
-  workbench.layout.openWidget("foundation.status", { pinned: true });
-  workbench.layout.openWidget("foundation.main", { closable: true });
-  workbench.layout.openWidget("foundation.panel", { closable: true });
+  workbench.layout.openPanel("foundation.activity", { pinned: true });
+  workbench.layout.openPanel("foundation.sidenav", { pinned: true });
+  workbench.layout.openPanel("foundation.status", { pinned: true });
+  workbench.layout.openPanel("foundation.main", {});
+  workbench.layout.openPanel("foundation.panel", {});
   workbench.commands.registerCommand(
     {
       id: "foundation.markReviewed",
@@ -239,14 +242,14 @@ const createFoundationModesModule = (): WorkbenchModuleContribution => ({
       id: "project",
       activate(modeCtx) {
         modeCtx.context.set("foundation.project", true);
-        modeCtx.layout.openWidget("foundation.main", { title: "Project Foundation", closable: true });
+        modeCtx.layout.openPanel("foundation.main", { title: "Project Foundation" });
       },
     });
     ctx.modes.registerMode({
       id: "review",
       activate(modeCtx) {
         modeCtx.context.set("foundation.review", true);
-        modeCtx.layout.openWidget("foundation.panel", { title: "Review Panel", closable: true });
+        modeCtx.layout.openPanel("foundation.panel", { title: "Review Panel" });
       },
     });
   },

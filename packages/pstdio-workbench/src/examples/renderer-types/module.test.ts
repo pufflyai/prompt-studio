@@ -21,7 +21,7 @@ describe("createRendererTypesExampleModule", () => {
     );
 
     try {
-      const widget = workbench.layout.getWidget(bridgeWidgetId);
+      const widget = workbench.layout.getPanel(bridgeWidgetId);
       expect(widget?.rendererId).toBe(BRIDGE_WEBVIEW_RENDERER_ID);
       expect(workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)).toBeDefined();
       expect(widget?.config).toMatchObject({

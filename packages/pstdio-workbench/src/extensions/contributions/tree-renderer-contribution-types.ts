@@ -2,7 +2,10 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { Localizable, ParamObjectSchema } from "@pstdio/sdk/extensions";
 
 export type ExtensionTreeRendererRecord = NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number];
-export type ExtensionTreeViewRecord = WorkbenchExtensionMetadata["views"][number];
+export type ExtensionTreePanelRecord = WorkbenchExtensionMetadata["panels"][number];
+export type ExtensionTreeViewRecord =
+  | WorkbenchExtensionMetadata["panels"][number]
+  | NonNullable<WorkbenchExtensionMetadata["panels"][number]["panelMenus"]>[number];
 
 export interface ExtensionTreeResource {
   type: string;
@@ -12,11 +15,11 @@ export interface ExtensionTreeResource {
 }
 
 export interface ExtensionTreeTarget {
-  kind: "command" | "resource" | "view";
+  kind: "command" | "resource" | "panel";
   commandId?: string;
   args?: Record<string, unknown>;
   resource?: ExtensionTreeResource;
-  widgetId?: string;
+  panelId?: string;
 }
 
 export interface ExtensionTreeAction {

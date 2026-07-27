@@ -1,10 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import {
-  createWorkbenchCore,
-  type ResourceRef,
-  workbenchSelectionResourceUriMetadataKey,
-} from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef, workbenchSelectionResourceUriMetadataKey } from "@pstdio/workbench";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -121,6 +117,7 @@ describe("createExtensionsModule resource views", () => {
       expect(rightMenu.widgets.find((widget) => widget.widgetId === rightMenu.activeWidgetId)?.resource?.id).toBe(
         "PS-11",
       );
+      expect(rightMenu.widgets[0]?.ownerResourceUri).toBe(ticketB.uri);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

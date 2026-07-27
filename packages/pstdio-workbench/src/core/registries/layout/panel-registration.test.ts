@@ -2,6 +2,64 @@ import { describe, expect, test } from "bun:test";
 import { createLayoutModel } from "./layout-model";
 
 describe("Panel registration", () => {
+  test("preserves tab and menu behavior without public presentation roles", () => {
+    const layout = createLayoutModel();
+
+    layout.registerPanel({
+      id: "project.overview",
+      title: "Overview",
+      region: "main",
+      rendererId: "overview.renderer",
+      closable: false,
+      panelMenus: [
+        {
+          id: "project.overview.tools",
+          title: "Tools",
+          side: "left",
+          rendererId: "tools.renderer",
+        },
+      ],
+    });
+    layout.registerPanel({
+      id: "project.terminal",
+      title: "Terminal",
+      region: "secondary",
+      rendererId: "terminal.renderer",
+      closable: true,
+    });
+
+    layout.openPanel("project.overview");
+    layout.openPanel("project.terminal");
+
+    expect(layout.getWidget("project.overview")).toMatchObject({ role: "content" });
+    expect(layout.getWidget("project.overview.tools")).toMatchObject({
+      panelMenuOwner: { level: "panel", contributionId: "project.overview" },
+    });
+    expect(layout.getLayout().regions["main-left-menu"].widgets).toEqual([
+      expect.objectContaining({ contributionId: "project.overview.tools" }),
+    ]);
+    expect(layout.getWidget("project.terminal")).toMatchObject({ role: "content", closable: true });
+  });
+
+  test("treats an eligible resource-backed Panel as a Sub Panel", () => {
+    const layout = createLayoutModel();
+
+    layout.registerPanel({
+      id: "project.preview",
+      title: "Preview",
+      region: "main",
+      rendererId: "preview.renderer",
+      closable: true,
+      resourceKinds: ["project"],
+      eligibleLocations: {},
+    });
+
+    expect(layout.getWidget("project.preview")).toMatchObject({
+      role: "sub-panel",
+      closable: true,
+    });
+  });
+
   test("registers and opens menus declared by their Location Panel", () => {
     const layout = createLayoutModel();
 

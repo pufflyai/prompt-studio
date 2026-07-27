@@ -6,7 +6,7 @@ import type {
   FileRendererContent,
   RegisteredFileRendererContribution,
   WorkbenchCore,
-  WorkbenchWidgetPlacement,
+  WorkbenchPanelInstance,
 } from "../../../core";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
@@ -16,7 +16,7 @@ interface WorkbenchFileRendererViewProps {
   contribution: RegisteredFileRendererContribution;
   // The bound resource (e.g. the open ticket / ticket-file) the load/save
   // commands operate on.
-  placement?: WorkbenchWidgetPlacement;
+  placement?: WorkbenchPanelInstance;
 }
 
 interface LoadedFile extends FileRendererContent {

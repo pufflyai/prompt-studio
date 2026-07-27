@@ -24,7 +24,7 @@ describe("classifyWebviewEntry", () => {
 });
 
 describe("collectExtensionWebviews", () => {
-  test("collects route, view, settings, and renderer webviews by package name id", () => {
+  test("collects route, Panel, nested Panel Menu, settings, and renderer webviews by package name id", () => {
     const webviews = collectExtensionWebviews({
       metadata: {
         id: "pstdio.test",
@@ -35,7 +35,14 @@ describe("collectExtensionWebviews", () => {
       },
       definition: {
         routes: { page: { webview: { entry: asset("./route.tsx") } } },
-        views: { panel: { webview: { entry: asset("./view.tsx") } } },
+        panels: {
+          panel: {
+            webview: { entry: asset("./view.tsx") },
+            panelMenus: {
+              inspector: { side: "right", webview: { entry: asset("./inspector.tsx") } },
+            },
+          },
+        },
         settingsPanels: { prefs: { webview: { entry: asset("./settings.tsx") } } },
         activityRenderers: { activity: { webview: { entry: asset("./activity.tsx") } } },
         sessionAnchorRenderers: { anchor: { webview: { entry: asset("./anchor.tsx") } } },
@@ -47,6 +54,7 @@ describe("collectExtensionWebviews", () => {
       "test.anchor",
       "test.page",
       "test.panel",
+      "test.panel.inspector",
       "test.prefs",
     ]);
   });

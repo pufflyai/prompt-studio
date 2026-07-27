@@ -12,6 +12,7 @@ export type {
   ExtensionMenuContribution,
   ExtensionModeRecord,
   ExtensionNavigationRecord,
+  ExtensionPanelRecord,
   ExtensionRecord,
   ExtensionRouteRecord,
   ExtensionSettingDefinitionRecord,
@@ -19,7 +20,6 @@ export type {
   ExtensionSettingValueRecord,
   ExtensionTreeItemContribution,
   ExtensionTreeRendererRecord,
-  ExtensionViewRecord,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   ListExtensionSettingsResponse,
@@ -35,5 +35,6 @@ export type {
   WorkbenchExtensionDataTableRendererRecord,
   WorkbenchExtensionKanbanRendererRecord,
   WorkbenchExtensionMetadata,
+  WorkbenchExtensionPanelRecord,
   WorkbenchExtensionTreeRendererRecord,
 } from "pstdio-api-contracts";

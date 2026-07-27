@@ -3,7 +3,7 @@ import { byContributionPriority, normalizeContributionMetadata } from "../../sha
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { ResourceRef } from "../resources/resource-registry";
-import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
+import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export type ControlsRendererRegion = "main-right-menu" | "secondary" | "overlay";
 
@@ -79,7 +79,7 @@ export type ControlsRendererRefreshListener = (event: ControlsRendererRefreshEve
 // workbench mount via setControlsRendererImplementation so registerControlsRenderer
 // can auto-register a widget renderer with the same id.
 export type ControlsRendererImplementation = (
-  input: WorkbenchWidgetRenderInput & { controlsRendererId: string },
+  input: WorkbenchPanelRenderInput & { controlsRendererId: string },
 ) => unknown;
 
 export interface CreateControlsRendererRegistryInput {

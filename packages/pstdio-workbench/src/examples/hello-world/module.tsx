@@ -26,7 +26,7 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
       rendererId: emptyMainRendererId,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: welcomeWidgetId,
       title: "Welcome",
       region: "main",
@@ -54,7 +54,7 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
         icon: "plus",
       },
       {
-        execute: () => ctx.layout.openWidget(welcomeWidgetId),
+        execute: () => ctx.layout.openPanel(welcomeWidgetId),
       },
     );
 

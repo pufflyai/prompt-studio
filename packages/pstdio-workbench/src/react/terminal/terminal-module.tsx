@@ -26,7 +26,7 @@ const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
     .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
   if (existing) return existing;
 
-  return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
+  return ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
     hiddenByDefault: true,
     pinned: true,
     title: "Terminal",
@@ -76,7 +76,7 @@ export const openWorkbenchTerminal = (
   const { reveal = true, ...openInput } = input;
   const resource = getTerminalResource(ctx, openInput.resource);
   ensureTerminalLauncher(ctx);
-  const placement = ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, {
+  const placement = ctx.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, {
     ...openInput,
     resource,
     title: openInput.title ?? getNextTerminalTitle(ctx),
@@ -100,7 +100,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
   id: "workbench.terminal.surface",
   activate(ctx) {
     const disposables = [
-      ctx.layout.registerSubPanel({
+      ctx.layout.registerPanel({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
         region: "secondary",
@@ -110,14 +110,15 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         mountStrategy: "keep-mounted",
         rendererId: RENDERER_ID,
         openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
+        eligibleLocations: {},
         regionSize: TERMINAL_PANEL_SIZE,
       }),
       ctx.renderers.registerRenderer({
         id: RENDERER_ID,
-        render: (input) => <WorkbenchTerminalPanel placement={input.placement} workbench={input.workbench} />,
+        render: (input) => <WorkbenchTerminalPanel placement={input.instance} workbench={input.workbench} />,
       }),
       ctx.renderers.registerRenderer({ id: LAUNCHER_RENDERER_ID, render: () => null }),
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
         id: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
         title: "Terminal",
         region: "secondary",

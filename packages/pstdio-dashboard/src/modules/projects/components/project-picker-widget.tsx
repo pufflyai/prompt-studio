@@ -1,6 +1,6 @@
 import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { Folder, Plus, Search } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
@@ -22,9 +22,9 @@ const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataV
   });
 };
 
-const isPlacementOpen = (input: WorkbenchWidgetRenderInput) =>
+const isPlacementOpen = (input: WorkbenchPanelRenderInput) =>
   Object.values(input.workbench.layout.getLayout().regions).some((region) =>
-    region.widgets.some((placement) => placement.widgetId === input.placement.widgetId),
+    region.widgets.some((placement) => placement.widgetId === input.instance.instanceId),
   );
 
 interface ProjectPickerRowsProps {
@@ -108,7 +108,7 @@ const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
   );
 };
 
-export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { t } = useTranslation("projects");
   const agentsQuery = useAgents();
@@ -133,8 +133,8 @@ export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }
 
   const handleSelectProject = (project: DashboardProject) => {
     void input.workbench.resources.openResource(project.resource, { replaceActive: true }).then(() => {
-      if (input.placement.closable === true && isPlacementOpen(input)) {
-        input.workbench.layout.closeWidget(input.placement.widgetId);
+      if (input.instance.closable === true && isPlacementOpen(input)) {
+        input.workbench.layout.closePanel(input.instance.instanceId);
       }
     });
   };

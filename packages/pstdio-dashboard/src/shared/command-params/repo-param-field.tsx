@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";

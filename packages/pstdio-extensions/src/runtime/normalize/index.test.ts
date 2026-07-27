@@ -225,7 +225,7 @@ describe("normalizeExtensionSources runtime records", () => {
     ]);
   });
 
-  test("registers data table renderers before resolving table-backed views", () => {
+  test("registers data table renderers before resolving table-backed panels", () => {
     const lab = defineExtension({
       commands: {
         queryHealth: { title: "Query health", run: async () => ({ rows: [] }) },
@@ -237,8 +237,8 @@ describe("normalizeExtensionSources runtime records", () => {
           columns: [{ id: "score", label: "Score", stat: { type: "histogram" } }],
         },
       },
-      views: {
-        health: { title: "Health", role: "location", target: "workbench.main", dataTableRenderer: "health" },
+      panels: {
+        health: { title: "Health", region: "main", closable: false, dataTableRenderer: "health" },
       },
     });
 
@@ -246,12 +246,12 @@ describe("normalizeExtensionSources runtime records", () => {
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.dataTableRenderers[0]).toMatchObject({ id: "lab.health", localId: "health" });
-    expect(runtime.views[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
+    expect(runtime.panels[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
   });
 });
 
-describe("normalizeExtensionSources tree and view runtime records", () => {
-  test("registers tree renderer contributions and tree-backed views", () => {
+describe("normalizeExtensionSources tree and panel runtime records", () => {
+  test("registers tree renderer contributions and tree-backed panels", () => {
     const planner = defineExtension({
       commands: {
         listFiles: { title: "List files", run: async () => [] },
@@ -264,12 +264,12 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
           defaultExpandedSectionIds: ["files"],
         },
       },
-      views: {
+      panels: {
         ticketFiles: {
           title: "Files",
-          role: "location",
+          region: "main",
+          closable: false,
           resourceKind: "ticket",
-          target: "workbench.main.left",
           treeRenderer: "files",
         },
       },
@@ -291,23 +291,25 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
         }),
       }),
     ]);
-    expect(runtime.views[0]).toMatchObject({
+    expect(runtime.panels[0]).toMatchObject({
       id: "planner.ticketFiles",
       contribution: {
         title: "Files",
         resourceKind: "ticket",
-        target: "workbench.main.left",
+        region: "main",
+        closable: false,
         treeRenderer: "files",
       },
     });
   });
 
-  test("registers a resourceKind view as reachable without a target or mode", () => {
+  test("registers a resourceKind panel as reachable without a target or mode", () => {
     const planner = defineExtension({
-      views: {
+      panels: {
         ticketEditor: {
           title: "Ticket",
-          role: "location",
+          region: "main",
+          closable: false,
           resourceKind: "ticket",
           webview: { entry: packageAsset("./editor.tsx", "file:///fake/planner/extension.ts") },
         },
@@ -316,7 +318,7 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
 
     const runtime = normalizeExtensionSources([wrap("planner", planner)]);
 
-    expect(runtime.views).toEqual([
+    expect(runtime.panels).toEqual([
       expect.objectContaining({
         id: "planner.ticketEditor",
         contribution: expect.objectContaining({ title: "Ticket", resourceKind: "ticket" }),
@@ -325,7 +327,7 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain("extension_view_unreachable");
   });
 
-  test("rejects invalid tree renderer contributions and invalid tree-backed views", () => {
+  test("rejects invalid tree renderer contributions and invalid tree-backed panels", () => {
     const planner = defineExtension({
       commands: {
         listFiles: { title: "List files", run: async () => [] },
@@ -334,16 +336,18 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
         missingBody: { title: "Missing body" },
         missingCommand: { title: "Missing command", bodyCommand: "planner.nope" },
       },
-      views: {
+      panels: {
         both: {
           title: "Both",
-          target: "workbench.main.left",
+          region: "main",
+          closable: false,
           treeRenderer: "files",
           webview: { entry: packageAsset("./both.tsx", "file:///fake/planner/extension.ts") },
         },
         missing: {
           title: "Missing",
-          target: "workbench.main.left",
+          region: "main",
+          closable: false,
           treeRenderer: "missing",
         },
       },
@@ -352,7 +356,7 @@ describe("normalizeExtensionSources tree and view runtime records", () => {
     const runtime = normalizeExtensionSources([wrap("planner", planner)]);
 
     expect(runtime.treeRenderers).toEqual([]);
-    expect(runtime.views).toEqual([]);
+    expect(runtime.panels).toEqual([]);
     expect(runtime.diagnostics).toEqual([
       expect.objectContaining({ code: "invalid_tree_renderer", metadata: { contributionId: "planner.missingBody" } }),
       expect.objectContaining({
@@ -832,23 +836,12 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
           run: async () => undefined,
         },
       },
-      views: {
-        sidenav: {
-          title: "Sidenav",
-          role: "location",
-          slot: projectSlots.headerPrimary as never,
-          webview: {
-            entry: packageAsset("./dist/sidenav.js", "file:///fake/extension.ts"),
-          },
-        },
-      },
     });
 
     const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
     expect(runtime.commands[0]?.menus).toEqual([]);
-    expect(runtime.views).toEqual([]);
-    expect(runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_slot_kind", "invalid_slot_kind"]);
+    expect(runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_slot_kind"]);
   });
 
   test("reports legacy navigation contributions as unsupported", () => {

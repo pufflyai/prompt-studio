@@ -23,7 +23,7 @@ describe("createWorkbenchLastResourceController", () => {
     expect(await controller.restore()).toBe(false);
   });
 
-  test("replays the persisted resource through the opener", async () => {
+  test("replays the persisted resource through the presenter", async () => {
     const opened: ResourceRef[] = [];
     const controller = createWorkbenchLastResourceController({
       persistence: createMemoryPersistence(sampleResource),
@@ -36,7 +36,7 @@ describe("createWorkbenchLastResourceController", () => {
     expect(opened).toEqual([sampleResource]);
   });
 
-  test("returns false when the opener throws", async () => {
+  test("returns false when the presenter throws", async () => {
     const controller = createWorkbenchLastResourceController({
       persistence: createMemoryPersistence(sampleResource),
       openResource: async () => {

@@ -96,7 +96,7 @@ const RESERVED_ENTRIES: readonly ReservedKeybindingEntry[] = [
   { chord: "Mod+Shift+C", reason: "browser_devtools", description: "Open browser inspect-element tool" },
   { chord: "F12", reason: "browser_devtools", description: "Open browser developer tools" },
   { chord: "Ctrl+Alt+T", reason: "os_terminal", description: "Open the Linux terminal", platforms: ["linux"] },
-  { chord: "Mod+U", reason: "browser_view_source", description: "View page source", platforms: ["linux", "win"] },
+  { chord: "Mod+U", reason: "browser_view_source", description: "Panel page source", platforms: ["linux", "win"] },
   { chord: "F11", reason: "browser_fullscreen", description: "Toggle browser fullscreen", platforms: ["linux", "win"] },
   { chord: "Mod+H", reason: "browser_history_or_hide", description: "Browser history or hide application window" },
   { chord: "Mod+0", reason: "browser_zoom", description: "Reset browser zoom" },

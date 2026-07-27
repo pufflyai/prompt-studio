@@ -2,6 +2,7 @@ import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type {
   OpenWidgetInput,
+  OpenWorkbenchPanelInput,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
@@ -9,6 +10,8 @@ import type {
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchLocationContribution,
+  WorkbenchPanelContribution,
+  WorkbenchPanelInstance,
   WorkbenchPanelMenuContribution,
   WorkbenchRegion,
   WorkbenchRegionSize,
@@ -34,6 +37,7 @@ export interface CreateLayoutModelInput {
 export interface LayoutModel {
   store: WorkbenchStore<WorkbenchLayoutStoreState>;
   registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
+  registerPanel(panel: WorkbenchPanelContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerLocation(location: WorkbenchLocationContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerSubPanel(subPanel: WorkbenchSubPanelContribution, metadata?: ContributionMetadata): { dispose(): void };
@@ -41,6 +45,7 @@ export interface LayoutModel {
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
   getPlaceholder(regionId: WorkbenchRegion): RegisteredPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
+  getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
@@ -48,7 +53,15 @@ export interface LayoutModel {
   setRegionSize(regionId: WorkbenchRegion, size: number): void;
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
+  listPanels(): WorkbenchPanelContribution[];
+  listPanelInstances(region?: WorkbenchRegion): WorkbenchPanelInstance[];
+  getActivePanel(region?: WorkbenchRegion): WorkbenchPanelInstance | undefined;
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
+  openPanel(id: string, input?: OpenWorkbenchPanelInput): WorkbenchPanelInstance;
+  updatePanel(instanceId: string, input: OpenWorkbenchPanelInput): WorkbenchPanelInstance;
+  reorderPanel(instanceId: string, position: WorkbenchTabPosition): void;
+  activatePanel(instanceId: string): WorkbenchPanelInstance;
+  closePanel(instanceId: string): WorkbenchPanelInstance | undefined;
   updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   reorderWidget(widgetId: string, position: WorkbenchTabPosition): void;
   expirePreviewTabs(ownerResourceUri?: string): void;

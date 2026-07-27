@@ -35,47 +35,41 @@ describe("workbench modules", () => {
     expect(workbench.commands.getCommand("project.open")?.source).toBe("module");
   });
 
-  it("derives the active resource from the active layout placement", () => {
+  it("establishes a Location only when a resource presenter returns its Panel", async () => {
     const workbench = createWorkbenchCore();
     const ticketsResource = {
       kind: "dashboard-view",
       uri: "pstdio://dashboard/tickets",
       label: "Tickets",
     };
-    const workspacesResource = {
-      kind: "dashboard-view",
-      uri: "pstdio://dashboard/workspaces",
-      label: "Workspaces",
-    };
-    const changes: (string | undefined)[] = [];
 
-    workbench.layout.registerWidget({
+    workbench.resources.registerKind({
+      kind: "dashboard-view",
+      label: "Dashboard view",
+      surface: "primary",
+    });
+    workbench.layout.registerPanel({
+      closable: false,
       id: "dashboard.tickets",
       title: "Tickets",
       region: "main",
       rendererId: "dashboard.tickets",
+      resourceKinds: ["dashboard-view"],
     });
-    workbench.layout.registerWidget({
-      id: "dashboard.workspaces",
-      title: "Workspaces",
-      region: "main",
-      rendererId: "dashboard.workspaces",
+    workbench.resources.registerPresenter({
+      id: "dashboard-view",
+      canOpen: (resource) => resource.kind === "dashboard-view",
+      open: (resource) => workbench.layout.openPanel("dashboard.tickets", { resource }),
     });
-    workbench.onDidChangeActiveResource((resource) => changes.push(resource?.uri));
 
-    workbench.layout.openWidget("dashboard.tickets", { resource: ticketsResource });
-    workbench.layout.openWidget("dashboard.workspaces", { resource: workspacesResource });
-    workbench.layout.activateWidget("dashboard.tickets");
+    workbench.layout.openPanel("dashboard.tickets", { resource: ticketsResource });
+    expect(workbench.getPrimaryResource()).toBeUndefined();
 
-    expect(workbench.getActiveResource()).toEqual(ticketsResource);
-    expect(changes).toEqual([
-      "pstdio://dashboard/tickets",
-      "pstdio://dashboard/workspaces",
-      "pstdio://dashboard/tickets",
-    ]);
+    await workbench.resources.openResource(ticketsResource);
+    expect(workbench.getPrimaryResource()).toEqual(ticketsResource);
   });
 
-  it("scopes the primary resource to the main anchor, ignoring side-region activation", () => {
+  it("scopes the primary resource to the main anchor, ignoring side-region activation", async () => {
     const workbench = createWorkbenchCore();
     const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
     const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
@@ -83,12 +77,24 @@ describe("workbench modules", () => {
     const primaryChanges: (string | undefined)[] = [];
     const globalChanges: (string | undefined)[] = [];
 
-    workbench.layout.registerWidget({ id: "board", title: "Board", region: "main", rendererId: "board" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.layout.registerPanel({
+      closable: false,
+      id: "board",
+      title: "Board",
+      region: "main",
+      rendererId: "board",
+    });
     workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.resources.registerPresenter({
+      id: "dashboard-view",
+      canOpen: (resource) => resource.kind === "dashboard-view",
+      open: (resource) => workbench.layout.openPanel("board", { resource }),
+    });
     workbench.onDidChangePrimaryResource((resource) => primaryChanges.push(resource?.uri));
     workbench.onDidChangeActiveResource((resource) => globalChanges.push(resource?.uri));
 
-    workbench.layout.openWidget("board", { resource: board });
+    await workbench.resources.openResource(board);
     // Activating a side anchor moves the global signal but must NOT move primary.
     workbench.layout.openWidget("session", { resource: session });
 
@@ -98,7 +104,7 @@ describe("workbench modules", () => {
     expect(globalChanges).toEqual(["pstdio://dashboard/workspaces", "pstdio://session/s1"]);
   });
 
-  it("persists the primary resource as lastResource, ignoring non-main activation", () => {
+  it("persists the primary resource as lastResource, ignoring non-main activation", async () => {
     let stored: { kind: string; uri: string; label?: string } | undefined;
     const workbench = createWorkbenchCore({
       lastResourcePersistence: {
@@ -111,10 +117,22 @@ describe("workbench modules", () => {
     const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
     const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
 
-    workbench.layout.registerWidget({ id: "board", title: "Board", region: "main", rendererId: "board" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.layout.registerPanel({
+      closable: false,
+      id: "board",
+      title: "Board",
+      region: "main",
+      rendererId: "board",
+    });
     workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.resources.registerPresenter({
+      id: "dashboard-view",
+      canOpen: (resource) => resource.kind === "dashboard-view",
+      open: (resource) => workbench.layout.openPanel("board", { resource }),
+    });
 
-    workbench.layout.openWidget("board", { resource: board });
+    await workbench.resources.openResource(board);
     expect(workbench.lastResource.get()).toEqual(board);
 
     // Activating a side anchor must NOT overwrite the restorable last (primary) resource.
@@ -122,7 +140,7 @@ describe("workbench modules", () => {
     expect(workbench.lastResource.get()).toEqual(board);
   });
 
-  it("disconnects a detached anchor when the primary leaves its scoped candidates", () => {
+  it("disconnects a detached anchor when the primary leaves its scoped candidates", async () => {
     const workbench = createWorkbenchCore();
     const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
     const workspaceB = { kind: "workspace", uri: "pstdio://workspace/b" };
@@ -137,15 +155,26 @@ describe("workbench modules", () => {
       list: (_query, context) => (context.primary?.uri === workspaceA.uri ? [{ resource: sessionA }] : []),
     });
 
-    workbench.layout.registerWidget({ id: "workspace", title: "Workspace", region: "main", rendererId: "workspace" });
+    workbench.layout.registerPanel({
+      closable: false,
+      id: "workspace",
+      title: "Workspace",
+      region: "main",
+      rendererId: "workspace",
+    });
     workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.resources.registerPresenter({
+      id: "workspace",
+      canOpen: (resource) => resource.kind === "workspace",
+      open: (resource) => workbench.layout.openPanel("workspace", { resource }),
+    });
 
-    workbench.layout.openWidget("workspace", { resource: workspaceA });
+    await workbench.resources.openResource(workspaceA);
     workbench.layout.openWidget("session", { resource: sessionA });
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
 
     // Switch the primary to workspace B: session A is no longer a candidate → disconnect.
-    workbench.layout.openWidget("workspace", { resource: workspaceB });
+    await workbench.resources.openResource(workspaceB);
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(0);
   });
 });

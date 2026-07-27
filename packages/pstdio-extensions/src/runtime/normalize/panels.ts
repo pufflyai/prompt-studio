@@ -1,9 +1,9 @@
 import type {
   NormalizedExtension,
+  RuntimePanelRecord,
   RuntimeRouteRecord,
   RuntimeSettingsPanelRecord,
   RuntimeTreeItemRecord,
-  RuntimeViewRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -18,19 +18,6 @@ const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => (
   extensionId: ext.id,
   sourcePath: source.sourcePath,
 });
-
-const modeLayoutViewKeys = (source: LoadedExtensionSource) => {
-  const keys = new Set<string>();
-
-  for (const mode of Object.values(source.definition.modes ?? {})) {
-    if (!isRecord(mode) || !isRecord(mode.layout) || !Array.isArray(mode.layout.open)) continue;
-    for (const entry of mode.layout.open) {
-      if (isRecord(entry) && typeof entry.view === "string") keys.add(entry.view);
-    }
-  }
-
-  return keys;
-};
 
 const resolveTreeRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
   const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
@@ -79,22 +66,22 @@ const rendererBodyChecks = [
   },
 ] as const;
 
-// Each renderer-backed view references a renderer by local/full id; fail loudly when it
+// Each renderer-backed panel references a renderer by local/full id; fail loudly when it
 // points at one that was not registered (mirrors the tree/file/controls renderer passes).
 const rendererBodyResolves = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
-  view: Record<string, unknown>,
+  panel: Record<string, unknown>,
   id: string,
 ) => {
   for (const check of rendererBodyChecks) {
-    const ref = view[check.key];
+    const ref = panel[check.key];
     if (typeof ref !== "string" || check.resolve(ext, ref, runtime)) continue;
     runtime.diagnostics.push(
       createDiagnostic({
         code: check.code,
-        message: `View "${id}" references unknown ${check.label} "${ref}"`,
+        message: `Panel "${id}" references unknown ${check.label} "${ref}"`,
         extensionId: ext.id,
         sourcePath: source.sourcePath,
         metadata: { contributionId: id, [check.key]: ref },
@@ -105,17 +92,15 @@ const rendererBodyResolves = (
   return true;
 };
 
-const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const referencedByModeLayout = modeLayoutViewKeys(source);
-
-  for (const [localId, view] of Object.entries(source.definition.views ?? {})) {
-    if (!isRecord(view) || !isLocalizableString(view.title)) continue;
+const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  for (const [localId, panel] of Object.entries(source.definition.panels ?? {})) {
+    if (!isRecord(panel) || !isLocalizableString(panel.title)) continue;
     const id = contributionId(ext, localId);
-    const hasWebview = isRecord(view.webview);
-    const hasTreeRenderer = typeof view.treeRenderer === "string";
-    const hasFileRenderer = typeof view.fileRenderer === "string";
-    const hasControlsRenderer = typeof view.controlsRenderer === "string";
-    const hasDataTableRenderer = typeof view.dataTableRenderer === "string";
+    const hasWebview = isRecord(panel.webview);
+    const hasTreeRenderer = typeof panel.treeRenderer === "string";
+    const hasFileRenderer = typeof panel.fileRenderer === "string";
+    const hasControlsRenderer = typeof panel.controlsRenderer === "string";
+    const hasDataTableRenderer = typeof panel.dataTableRenderer === "string";
 
     if (
       [hasWebview, hasTreeRenderer, hasFileRenderer, hasControlsRenderer, hasDataTableRenderer].filter(Boolean)
@@ -124,7 +109,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_body_invalid",
-          message: `View "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, controlsRenderer, or dataTableRenderer`,
+          message: `Panel "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, controlsRenderer, or dataTableRenderer`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -133,32 +118,13 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
       continue;
     }
 
-    if (!rendererBodyResolves(ext, source, runtime, view, id)) continue;
+    if (!rendererBodyResolves(ext, source, runtime, panel, id)) continue;
 
-    const validTarget =
-      typeof view.target === "string"
-        ? hasCompatibleWorkbenchTarget({
-            runtime,
-            source: sourceRef(ext, source),
-            expected: "view",
-            target: view.target,
-            contributionId: id,
-          })
-        : hasCompatibleSlotKind({
-            runtime,
-            source: sourceRef(ext, source),
-            expected: "view",
-            slot: view.slot,
-            contributionId: id,
-          });
-    if (!validTarget) {
-      continue;
-    }
-    if (!view.target && !view.slot && !view.resourceKind && !referencedByModeLayout.has(localId)) {
+    if (typeof panel.region !== "string" || typeof panel.closable !== "boolean") {
       runtime.diagnostics.push(
         createDiagnostic({
-          code: "extension_view_unreachable",
-          message: `View "${id}" must declare a target, a resourceKind, or be referenced by a mode layout`,
+          code: "extension_panel_contract_invalid",
+          message: `Panel "${id}" must declare region and closable`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -166,13 +132,13 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
       );
       continue;
     }
-    runtime.views.push({
+    runtime.panels.push({
       id,
       localId,
       extensionId: ext.id,
       name: ext.name,
       sourcePath: source.sourcePath,
-      contribution: view as RuntimeViewRecord["contribution"],
+      contribution: panel as RuntimePanelRecord["contribution"],
     });
   }
 };
@@ -282,12 +248,12 @@ const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensio
   }
 };
 
-export const registerViewLikeContributions = (
+export const registerPanelContributions = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
 ) => {
-  registerViews(ext, source, runtime);
+  registerPanels(ext, source, runtime);
   registerRoutes(ext, source, runtime);
   registerTreeItems(ext, source, runtime);
   reportUnsupportedNavigation(ext, source, runtime);

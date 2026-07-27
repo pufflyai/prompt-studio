@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
@@ -22,23 +22,24 @@ const sessionView = {
 const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCore>) => {
   workbench.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
   workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: dashboardWidgetIds.workspace,
     title: "Workspace",
     region: "main",
     rendererId: dashboardWidgetIds.workspace,
     singleton: true,
   });
-  workbench.resources.registerOpener({
-    id: "test.workspace.opener",
+  workbench.resources.registerPresenter({
+    id: "test.workspace.presenter",
     priority: 1000,
     canOpen: (resource) => resource.kind === "workspace",
     open: (resource, input) => {
       workbench.modes.setActiveMode("workspace");
-      return workbench.layout.openWidget(dashboardWidgetIds.workspace, {
+      return workbench.layout.openPanel(dashboardWidgetIds.workspace, {
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         resource,
         title: resource.label,
-        replaceActive: input.replaceActive,
       });
     },
   });

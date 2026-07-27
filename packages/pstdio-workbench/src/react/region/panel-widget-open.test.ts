@@ -3,9 +3,10 @@ import { createWorkbenchCore } from "../../core";
 import { openPanelWidget } from "./panel-widget-open";
 
 describe("openPanelWidget", () => {
-  test("opens Add panel widgets as closable tabs", () => {
+  test("preserves the Panel's declared closability when opened from Add Panel", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "workspaces",
       title: "Workspaces",
       region: "main",
@@ -15,7 +16,7 @@ describe("openPanelWidget", () => {
     openPanelWidget({ workbench, widget: workbench.layout.getWidget("workspaces")!, region: "main" });
 
     expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workspaces", closable: true }),
+      expect.objectContaining({ contributionId: "workspaces", closable: false }),
     ]);
   });
 
@@ -26,7 +27,8 @@ describe("openPanelWidget", () => {
       { id: "sessions.new", label: "New session" },
       { execute: (_args, context) => contexts.push(context) },
     );
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "sessions",
       title: "Sessions",
       region: "side",
@@ -42,7 +44,8 @@ describe("openPanelWidget", () => {
 
   test("keeps a floating Side Panel detached when adding a tab", () => {
     const workbench = createWorkbenchCore({ initialSidePanelMode: "floating" });
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "sessions",
       title: "Sessions",
       region: "side",

@@ -4,10 +4,11 @@ import type {
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
   WorkbenchCore,
+  WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
   WorkbenchWidgetPlacement,
-  WorkbenchWidgetRenderInput,
 } from "../../core";
+import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -40,7 +41,7 @@ const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode }) => {
 interface WorkbenchKeepAliveSlotProps {
   workbench: WorkbenchCore;
   rendererId: string;
-  workbenchInput: WorkbenchWidgetRenderInput;
+  workbenchInput: WorkbenchPanelRenderInput;
 }
 
 // Claims the renderer's persistent host into a stable slot div. The kept-alive
@@ -62,7 +63,7 @@ const WorkbenchKeepAliveSlot = (props: WorkbenchKeepAliveSlotProps) => {
 
 const noopRefresh = () => undefined;
 
-const renderWidgetBody = (renderer: WorkbenchRendererRegistration, workbenchInput: WorkbenchWidgetRenderInput) => {
+const renderWidgetBody = (renderer: WorkbenchRendererRegistration, workbenchInput: WorkbenchPanelRenderInput) => {
   if (renderer.keepAlive) {
     return (
       <WorkbenchKeepAliveSlot
@@ -84,6 +85,8 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   if (!widget) {
     return <WorkbenchWidgetFallback label="Widget contribution is no longer registered." />;
   }
+  const panel = "role" in widget ? toPanelContribution(widget as RegisteredWidgetContribution) : widget;
+  const instance = toPanelInstance(placement);
 
   return (
     // `flex: 1 0 auto` lets the host fill its region when the widget is short and
@@ -91,7 +94,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     <Box display="flex" flex="1 0 auto" minW="0" minH="0" w="full" overflow="hidden">
       {renderer ? (
         <WorkbenchRenderedWidgetFrame>
-          {renderWidgetBody(renderer, { workbench, widget, placement, refresh })}
+          {renderWidgetBody(renderer, { workbench, panel, instance, refresh })}
         </WorkbenchRenderedWidgetFrame>
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${widget.rendererId}.`} />

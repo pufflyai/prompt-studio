@@ -7,10 +7,10 @@
 - **Core**: the headless workbench model created by `createWorkbenchCore()`. It owns registries, controllers, and shared state.
 - **Workbench**: the React shell rendered by `Workbench`. It reads the core and turns registered contributions into visible UI.
 - **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
-- **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, and renderers.
+- **Registry**: a typed collection of contributions, such as Panels, tree views, commands, menus, resources, and renderers.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
 - **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
-- **Region**: a named layout target where widgets can be placed. The workbench owns the chrome around each region.
+- **Region**: a named layout target where Panels can be placed. The workbench owns the chrome around each region.
 - **Resource**: a typed reference to something the workbench can open or navigate to.
 
 ## Contributions
@@ -19,37 +19,37 @@ Contributions are the workbench extension points. A module contributes capabilit
 
 ## Public Entry Points
 
-- `pstdio-workbench/core` exports the headless workbench core, registries, controllers, and contribution types.
-- `pstdio-workbench/react` exports the React shell, view hosts, shared hooks, and `WorkbenchModuleHost` for syncing a dynamic module list into a core.
-- `pstdio-workbench/storage` exports local-storage-backed layout and panel persistence adapters for hosts that want browser persistence with a namespace and scope.
+- `@pstdio/workbench` exports the headless workbench core, registries, controllers, and contribution types.
+- `@pstdio/workbench/react` exports the React shell, view hosts, shared hooks, and `WorkbenchModuleHost` for syncing a dynamic module list into a core.
+- `@pstdio/workbench/storage` exports local-storage-backed layout and panel persistence adapters for hosts that want browser persistence with a namespace and scope.
 
 ## 🏁 Layout Contributions
 
 Layout contributions are the glue between a region and a view. They declare where a renderer appears in the shell, what config it receives, and how its placements behave — without owning any UI themselves.
 
-### Widgets
+### Panels
 
-Pin a renderer to a region as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare a `region`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
+Pin a renderer to a region as a panel, editor, dashboard, inspector, status item, or overlay. Panels declare a `region`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
 
-- Register with `layout.registerWidget()`
+- Register with `layout.registerPanel()`
 - Set `singleton: true` for one placement total, such as a tree, sidenav, or status view.
-- Non-singleton widgets default to `reuse: "resource"`: one placement per resource URI, with no-resource opens reusing the widget placement.
+- Non-singleton Panels default to `reuse: "resource"`: one placement per resource URI, with no-resource opens reusing the Panel placement.
 - Set `reuse: "none"` for scratch, untitled, or transient views where every open should create a new placement.
 
 #### Examples
 
-- [`hello-world`](src/examples/hello-world/module.tsx) — minimal widget pinned to `main`.
-- [`foundation`](src/examples/foundation/module.tsx) — widgets in five different regions all backed by one shared renderer.
+- [`hello-world`](src/examples/hello-world/module.tsx) — minimal Panel pinned to `main`.
+- [`foundation`](src/examples/foundation/module.tsx) — Panels in five different regions all backed by one shared renderer.
 
 ### Placeholders
 
-Empty state for regions after every widget in that region closes. Placeholders render through a `rendererId`, can provide region sizing hints, and do not create tabs, placements, or persisted layout entries.
+Empty state for regions after every Panel in that region closes. Placeholders render through a `rendererId`, can provide region sizing hints, and do not create tabs, placements, or persisted layout entries.
 
 - Register with `layout.registerPlaceholder()`
 
 #### Examples
 
-- [`hello-world`](src/examples/hello-world/module.tsx) — placeholder shown in `main` when the welcome widget is closed.
+- [`hello-world`](src/examples/hello-world/module.tsx) — placeholder shown in `main` when the welcome Panel is closed.
 
 ### Menu items
 
@@ -70,21 +70,21 @@ View contributions are the UI itself — code that turns a placement, a tree nod
 
 ### Renderers
 
-The React or bridge implementation for a widget or placeholder. Renderers turn a placement, resource, config, and workbench context into UI. A widget contributes only a `rendererId`, so the same renderer can back many widgets and a renderer can be supplied by a different layer than its widget.
+The React or bridge implementation for a Panel or placeholder. Renderers turn a placement, resource, config, and workbench context into UI. A Panel contributes only a `rendererId`, so the same renderer can back many Panels and a renderer can be supplied by a different layer than its Panel.
 
 - Register with `renderers.registerRenderer()`
-- Set `keepAlive: true` on the registration to share one persistent subtree across every widget that points at the same `rendererId`. The subtree is mounted once into a stable host that is reparented between widget slots via DOM moves; React state, focus, scroll, and in-flight effects survive region transitions. Kept-alive renderers receive no per-widget input from `render()`; read the active claim with `useWorkbenchClaim()` from `pstdio-workbench/react`.
+- Set `keepAlive: true` on the registration to share one persistent subtree across every Panel that points at the same `rendererId`. The subtree is mounted once into a stable host that is reparented between Panel slots via DOM moves; React state, focus, scroll, and in-flight effects survive region transitions. Kept-alive renderers receive no per-Panel input from `render()`; read the active claim with `useWorkbenchClaim()` from `@pstdio/workbench/react`.
 
 #### Examples
 
-- [`hello-world`](src/examples/hello-world/module.tsx) — one renderer per widget, plus a placeholder renderer.
-- [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five widgets in different regions via `config`.
+- [`hello-world`](src/examples/hello-world/module.tsx) — one renderer per Panel, plus a placeholder renderer.
+- [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five Panels in different regions via `config`.
 - [`renderer-types`](src/examples/renderer-types/module.tsx) — React and bridge renderers registered side by side.
 - [`keep-alive`](src/examples/keep-alive/module.tsx) — keep-alive renderer shared by attached and floating Side Panel presentations.
 
 ### Tree Renderers
 
-A tree-shaped renderer for side-panel navigation, outlines, resource lists, and contextual hierarchies. Tree renderers expose body sections (`getBody`), optional footer nodes (`getFooter`), and lazy children (`getChildren`); nodes can carry resources, descriptions, inline actions, context menus, and `contextValue`. Placement is left to widgets — a tree renderer auto-registers a widget renderer with the same id, so `layout.registerWidget({ rendererId: <tree id> })` plus `layout.openWidget(<tree id>)` puts the tree in any tree-hosting region.
+A tree-shaped renderer for side-panel navigation, outlines, resource lists, and contextual hierarchies. Tree renderers expose body sections (`getBody`), optional footer nodes (`getFooter`), and lazy children (`getChildren`); nodes can carry resources, descriptions, inline actions, context menus, and `contextValue`. Placement is left to Panels — a tree renderer auto-registers a Panel renderer with the same id, so `layout.registerPanel({ rendererId: <tree id> })` plus `layout.openPanel(<tree id>)` puts the tree in any tree-hosting region.
 
 - Register with `renderers.registerTreeRenderer()`
 
@@ -95,7 +95,7 @@ A tree-shaped renderer for side-panel navigation, outlines, resource lists, and 
 
 ### Kanban Renderers
 
-A Notion/Linear-style data workspace registered as a renderer. Kanban renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), and row-mutation callbacks. Like tree renderers, a kanban renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <kanban renderer id> })` and opened with `layout.openWidget(...)`.
+A Notion/Linear-style data workspace registered as a renderer. Kanban renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), and row-mutation callbacks. Like tree renderers, a kanban renderer auto-registers a Panel renderer with the same id, so the workspace is placed via `layout.registerPanel({ rendererId: <kanban renderer id> })` and opened with `layout.openPanel(...)`.
 
 - Register with `renderers.registerKanbanRenderer()`
 
@@ -106,11 +106,11 @@ A Notion/Linear-style data workspace registered as a renderer. Kanban renderers 
 
 ### Data Table Renderers
 
-A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table renderers keep row ids and resources outside visible values, support declarative column labels, descriptions, icons, statistics and cell renderers, and use the table's local filtering, sorting, column controls, and pagination. They auto-register a widget renderer with the same id and can be placed in any workbench region.
+A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table renderers keep row ids and resources outside visible values, support declarative column labels, descriptions, icons, statistics and cell renderers, and use the table's local filtering, sorting, column controls, and pagination. They auto-register a Panel renderer with the same id and can be placed in any workbench region.
 
 - Register with `renderers.registerDataTableRenderer()`
 - Refresh with `renderers.refreshDataTableRenderer()` or provide a contribution subscription
-- Extensions contribute `dataTableRenderers` and place them explicitly with `views.<id>.dataTableRenderer`
+- Extensions contribute `dataTableRenderers` and place them explicitly with `panels.<id>.dataTableRenderer`
 
 #### Examples
 
@@ -118,24 +118,24 @@ A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table render
 
 ### Breadcrumb (TODO: make it a renderer as well)
 
-`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` renders it in the persistent Nav Chrome; a custom `nav` widget replaces only that trail area. Panel headers do not own breadcrumbs. Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
+`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` renders it in the persistent Nav Chrome; a custom `nav` Panel replaces only that trail area. Panel headers do not own breadcrumbs. Resource navigation drives the trail through `ctx.breadcrumbs.setItems(...)`; each call replaces the trail.
 
-- Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `pstdio-workbench/react`
-- Drive items with `workbench.breadcrumbs.setItems([...])` (typically from a resource opener)
+- Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `@pstdio/workbench/react`
+- Drive items with `workbench.breadcrumbs.setItems([...])` from the resource navigation controller
 - Set `indicator: "session-status"` when a breadcrumb should show the resource's session completion status
 
 #### Examples
 
 - [`dashboard`](src/examples/dashboard/modules/shell/components/dashboard-main-header.tsx) — custom Main Panel header that places the view alongside workspace controls.
-- [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) — three-level trail set from a page opener.
+- [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) — three-level trail synchronized with page navigation.
 
 ---
 
-A typical surface combines both layers: a **renderer** supplies the UI, a **widget** places it in a region with optional `config`, and `layout.openWidget()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
+A typical surface combines both layers: a **renderer** supplies the UI, a **Panel** places it in a region with optional `config`, and `layout.openPanel()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
 
-- Add a **widget** to claim a spot in a region for a renderer.
-- Add a **renderer** to supply the React or bridge UI for a widget or placeholder.
-- Add a **tree renderer** for navigable hierarchy and resource discovery, and place it with a widget.
+- Add a **Panel** to claim a spot in a region for a renderer.
+- Add a **renderer** to supply the React or bridge UI for a Panel or placeholder.
+- Add a **tree renderer** for navigable hierarchy and resource discovery, and place it with a Panel.
 - Add a **placeholder** for region-level empty state, not for normal content.
 
 ## 🗂️ Resource Contributions
@@ -144,7 +144,7 @@ Resource contributions define typed objects the workbench can open, route, or re
 
 ### Resource kinds
 
-Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, and history speak the same language.
+Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, presenters, and history speak the same language.
 
 - Register with `resources.registerKind()`
 - Use the standard icon names for common resources: project `folder-root`, workspace `computer`, worktree `git-pull-request-draft`, ticket `component`, kanban renderer `square-kanban`, settings `settings`.
@@ -154,16 +154,16 @@ Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, 
 - [`renderer-types`](src/examples/renderer-types/module.tsx) — single-kind module.
 - [`navigation`](src/examples/navigation/module.tsx) — multiple kinds participating in routing.
 
-### Resource openers
+### Resource presenters
 
-Route a resource to a widget placement. Openers declare `canOpen(resource)` and `open(resource, input)`. `openResource()` uses the highest-priority opener, so keep default openers broad and alternate views narrow.
+Map a Resource to the Panel instance that presents it. Presenters declare `canOpen(resource)` and return a Panel from `open(resource, input)`. `openResource()` uses the highest-priority presenter, then establishes the returned Panel as the active Location. Direct `layout.openPanel()` calls display supporting Panels without navigating.
 
-- Register with `resources.registerOpener()`
+- Register with `resources.registerPresenter()`
 
 #### Examples
 
-- [`renderer-types`](src/examples/renderer-types/module.tsx) — opener routing one resource kind to one of two widgets.
-- [`navigation`](src/examples/navigation/module.tsx) — openers used by parsed navigation targets.
+- [`renderer-types`](src/examples/renderer-types/module.tsx) — presenter routing one resource kind to one of two Panels.
+- [`navigation`](src/examples/navigation/module.tsx) — presenters used by parsed navigation targets.
 
 ### Resource providers
 
@@ -207,7 +207,7 @@ Any executable workbench action. Commands are the primitive behind menus, keybin
 
 #### Examples
 
-- [`hello-world`](src/examples/hello-world/module.tsx) — command that opens a widget.
+- [`hello-world`](src/examples/hello-world/module.tsx) — command that opens a Panel.
 - [`renderer-types`](src/examples/renderer-types/module.tsx) — commands opening different placements.
 
 ### Keybindings
@@ -285,7 +285,7 @@ Extension webviews never receive PTY handles. A webview that declares the `termi
 
 ---
 
-Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource opener, widget, renderer, tree renderer, commands, and menu items together.
+Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource presenter, Panel, renderer, tree renderer, commands, and menu items together.
 
 ## Core
 
@@ -295,22 +295,22 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 ## Nomenclature
 
 - **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
-- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, and preferences.
+- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (Panels, placeholders, menu items), renderers (Panel renderers and tree renderers), modes, navigation, notifications, and preferences.
 - **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
-- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or KanbanView.
+- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, Panel, renderer, tree renderer, mode, or KanbanView.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench regions, command palette, panels, and session surface from the workbench core only.
 - **Region**: a named layout target. See the Regions Overview table below.
-- **Widget contribution**: a registered view definition in the layout registry. Widgets declare a region, a `rendererId`, and optional renderer-owned `config`.
-- **Widget placement**: an opened instance of a widget contribution in a region. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
-- **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
-- **Kanban renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<KanbanRenderer>` from `@pstdio/ui`.
+- **Panel contribution**: a registered view definition in the layout registry. Panels declare a region, a `rendererId`, and optional renderer-owned `config`.
+- **Panel placement**: an opened instance of a Panel contribution in a region. Placements track active Panel, resource URI, title, pinned/closable flags, and placement ownership.
+- **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a Panel renderer with the same id so Panels place trees through `layout.registerPanel`.
+- **Kanban renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a Panel renderer with the same id so Panels place the workspace through `layout.registerPanel`. The presentational layer is `<KanbanRenderer>` from `@pstdio/ui`.
 - **Data table renderer contribution**: a dense table renderer registered under `renderers`. Provides query rows, optional column descriptors, navigation, and row actions. Extensions place it through a native view; the presentational layer is `<DataTable>` from `@pstdio/ui/data-table`.
-- **Placeholder**: an empty-state contribution rendered only when a region has no widget placements. Placeholders do not appear in tabs.
-- **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
+- **Placeholder**: an empty-state contribution rendered only when a region has no Panel placements. Placeholders do not appear in tabs.
+- **Renderer**: code that turns a Panel placement into UI. The Panel host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
-- **Resource opener**: routing logic that maps a resource to a widget placement.
+- **Resource presenter**: routing logic that maps a resource to a Panel placement.
 - **Command**: an executable action registered in the command registry. Errors raised during execution emit `workbench.commands.onDidExecuteError`.
 - **Menu path**: a stable location where commands are surfaced, such as the command palette, a region header, or a tree node context menu.
 - **Keybinding**: a keyboard shortcut bound to a command, optionally gated by a context expression.
@@ -323,11 +323,11 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 
 ## Regions Overview
 
-Workbench regions are named layout targets used by widget contributions. They describe where a widget belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
+Workbench regions are named layout targets used by Panel contributions. They describe where a Panel belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
 
-Use `layout.registerPlaceholder()` for a region empty state that should render only after all widgets in that region close. Placeholders are not widget placements, so they do not affect tab lists.
+Use `layout.registerPlaceholder()` for a region empty state that should render only after all Panels in that region close. Placeholders are not Panel placements, so they do not affect tab lists.
 
-Panels with tabs are paired with a `<panel>-header` region that the workbench renders directly above the panel. Widgets placed in a header region use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
+Panels with tabs are paired with a `<panel>-header` region that the workbench renders directly above the panel. Panels placed in a header region use a bottom border by default. Set `headerBorderBottom: false` on a Panel contribution to let that Panel own the header separation.
 
 | Region             | Workbench location                           | Typical use                                                   |
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- |

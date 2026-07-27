@@ -2,7 +2,7 @@ export const extensionsSource = `import {
   createWorkbenchCore,
   type Disposable,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 interface ExtensionDefinition {
   id: string;

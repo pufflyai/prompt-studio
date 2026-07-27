@@ -28,10 +28,10 @@ const DEMO_RESOURCE = {
 const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSidePanelMode) => {
   if (mode === "attached") {
     ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
-    ctx.layout.openWidget(ATTACHED_WIDGET_ID);
+    ctx.layout.openPanel(ATTACHED_WIDGET_ID);
   } else if (mode === "floating") {
     ctx.layout.removeWidgetPlacement(ATTACHED_WIDGET_ID);
-    ctx.layout.openWidget(BUBBLE_WIDGET_ID);
+    ctx.layout.openPanel(BUBBLE_WIDGET_ID);
   } else {
     ctx.layout.removeWidgetPlacement(ATTACHED_WIDGET_ID);
     ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
@@ -43,7 +43,7 @@ const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSid
 // the title reflects "attached" or "bubble" without remounting the subtree.
 const KeepAliveChat = () => {
   const claim = useWorkbenchClaim();
-  const channel = claim?.widget.id === BUBBLE_WIDGET_ID ? "bubble" : "attached";
+  const channel = claim?.panel.id === BUBBLE_WIDGET_ID ? "bubble" : "attached";
   return <StreamingChat channel={channel} />;
 };
 
@@ -102,7 +102,8 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       ),
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: INTRO_WIDGET_ID,
       title: "Keep-alive demo",
       region: "main",
@@ -110,7 +111,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       rendererId: INTRO_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: ATTACHED_WIDGET_ID,
       title: "Chat (attached)",
       region: "main-right-menu",
@@ -120,7 +121,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       rendererId: CHAT_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: BUBBLE_WIDGET_ID,
       title: "Chat (bubble)",
       region: "side",
@@ -163,7 +164,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_BUBBLE_COMMAND_ID, group: "keep-alive" });
     ctx.layout.registerMenuItem(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
 
-    ctx.layout.openWidget(INTRO_WIDGET_ID, { resource: DEMO_RESOURCE });
+    ctx.layout.openPanel(INTRO_WIDGET_ID, { resource: DEMO_RESOURCE });
 
     const subscription = ctx.sidePanel.onDidChange((mode) => applyChatMode(ctx, mode));
     applyChatMode(ctx, ctx.sidePanel.getMode());

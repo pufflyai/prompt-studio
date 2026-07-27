@@ -37,7 +37,7 @@ const installed = {
     fileIconThemes: [],
     menuContributions: [],
     modes: [],
-    views: [],
+    panels: [],
     routes: [],
     kanbanRenderers: [],
     treeRenderers: [],

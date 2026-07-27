@@ -60,7 +60,7 @@ export const emptyWorkbenchExtensionMetadata = {
   settingsPanels: [],
   settingsDefinitions: [],
   treeItems: [],
-  views: [],
+  panels: [],
 } satisfies WorkbenchExtensionMetadata;
 
 const defaultWorkbenchExtensionCommandId = (contribution: ExtensionMenuContribution) =>

@@ -42,7 +42,7 @@ const guideResource = (id: string): ResourceRef => {
 const describeTarget = (target: NavigationTarget): string => {
   if (target.kind === "compound") return target.targets.map(describeTarget).join(" + ");
   if (target.kind === "resource") return `resource ${target.resource.uri}`;
-  if (target.kind === "view") return `view ${target.widgetId}`;
+  if (target.kind === "panel") return `panel ${target.panelId}`;
   return `command ${target.commandId}`;
 };
 
@@ -115,7 +115,7 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
       <Stack gap="sm" maxW="760px">
         <Text textStyle="paragraph/M/regular">
           Navigation accepts incoming locations, resolves them to typed targets, then dispatches those targets through
-          resource openers, widget openers, or commands.
+          resource presenters, widget presenters, or commands.
         </Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           The tree on the left uses direct targets; these buttons use a parser or a resource navigator.
@@ -175,17 +175,17 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     );
 
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Navigation guide", icon: "FileText" });
-    ctx.resources.registerOpener({
-      id: "onboarding.navigation.guide-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.navigation.guide-presenter",
       canOpen: (resource) => resource.kind === GUIDE_KIND,
-      open: (resource) => ctx.layout.openWidget(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
+      open: (resource) => ctx.layout.openPanel(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
     });
 
     ctx.navigation.registerNavigator({
       id: "onboarding.navigation.guide-navigator",
       canNavigate: (resource) => resource.kind === GUIDE_KIND,
       createHref: (resource) => `onboarding://guide/${resource.id ?? "start"}`,
-      navigate: (resource) => ctx.layout.openWidget(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
+      navigate: (resource) => ctx.layout.openPanel(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
     });
 
     ctx.navigation.registerParser({
@@ -198,12 +198,12 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         const pathId = url.pathname.replace(/^\//, "");
 
         // onboarding://guide/start becomes a resource target. The dispatcher
-        // sends resource targets through the registered resource opener above.
+        // sends resource targets through the registered resource presenter above.
         if (url.host === "guide") return { kind: "resource", resource: guideResource(pathId || "start") };
 
         // onboarding://view/navigation becomes a view target. The dispatcher
         // reveals or opens the registered navigation tree widget.
-        if (url.host === "view") return { kind: "view", widgetId: NAVIGATION_TREE_ID };
+        if (url.host === "view") return { kind: "panel", panelId: NAVIGATION_TREE_ID };
 
         // onboarding://command/focus-main becomes a command target. The path is
         // illustrative here; this example routes to a module-owned command.
@@ -213,7 +213,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         // targets run in order, so this opens the guide and optionally reveals the tree.
         if (url.host === "open") {
           const targets: NavigationTargetItem[] = [{ kind: "resource", resource: guideResource(pathId || "review") }];
-          if (url.searchParams.get("tree") === "true") targets.push({ kind: "view", widgetId: NAVIGATION_TREE_ID });
+          if (url.searchParams.get("tree") === "true") targets.push({ kind: "panel", panelId: NAVIGATION_TREE_ID });
           return { kind: "compound", targets };
         }
         throw new Error(`Unknown onboarding navigation host: ${url.host}`);
@@ -226,7 +226,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     });
     ctx.renderers.registerRenderer({
       id: NAVIGATION_GUIDE_RENDERER_ID,
-      render: ({ placement }) => <GuideWidget resource={placement.resource} />,
+      render: ({ instance }) => <GuideWidget resource={instance.resource} />,
     });
     ctx.renderers.registerTreeRenderer({
       id: NAVIGATION_TREE_ID,
@@ -236,14 +236,15 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       getChildren: () => [],
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: NAVIGATION_HOME_WIDGET_ID,
       title: "Navigation",
       region: "main",
       singleton: true,
       rendererId: NAVIGATION_HOME_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: NAVIGATION_GUIDE_WIDGET_ID,
       title: "Navigation guide",
       region: "main",
@@ -252,7 +253,8 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       resourceKinds: [GUIDE_KIND],
       rendererId: NAVIGATION_GUIDE_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: NAVIGATION_TREE_ID,
       title: "Navigation",
       region: "sidenav",
@@ -261,7 +263,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       rendererId: NAVIGATION_TREE_ID,
     });
 
-    ctx.layout.openWidget(NAVIGATION_TREE_ID);
-    ctx.layout.openWidget(NAVIGATION_HOME_WIDGET_ID);
+    ctx.layout.openPanel(NAVIGATION_TREE_ID);
+    ctx.layout.openPanel(NAVIGATION_HOME_WIDGET_ID);
   },
 });

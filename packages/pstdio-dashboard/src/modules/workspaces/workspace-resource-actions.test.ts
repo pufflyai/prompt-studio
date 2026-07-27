@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createWorkbenchCore,
-  resourceContextMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
-} from "@pstdio/workbench/core";
+import { createWorkbenchCore, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench";
 import {
   createWorkbenchTerminalModule,
   listWorkbenchMenuItems,
@@ -73,16 +69,16 @@ describe("registerWorkspaceResourceActions", () => {
 
     const secondaryRegion = workbench.layout.getLayout().regions.secondary;
     expect(secondaryRegion.activeWidgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
-    const terminals = secondaryRegion.widgets.filter(
-      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
-    );
+    const terminals = workbench.layout
+      .listPanelInstances("secondary")
+      .filter((panel) => panel.panelId === WORKBENCH_TERMINAL_WIDGET_ID);
     expect(secondaryRegion.widgets.map((placement) => placement.contributionId)).toEqual([
       WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
       WORKBENCH_TERMINAL_WIDGET_ID,
     ]);
     expect(terminals).toEqual([
       expect.objectContaining({
-        contributionId: WORKBENCH_TERMINAL_WIDGET_ID,
+        panelId: WORKBENCH_TERMINAL_WIDGET_ID,
         mountStrategy: "keep-mounted",
         resource: workspace,
         title: "Terminal 1",

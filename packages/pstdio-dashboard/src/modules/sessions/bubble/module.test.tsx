@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -19,9 +19,10 @@ describe("createSessionBubbleModule", () => {
 
     expect(layout.regions.side.widgets).toEqual([]);
     expect(layout.regions["side-header"].widgets).toEqual([]);
-    const contribution = workbench.layout.getWidget(dashboardWidgetIds.sessionBubble);
+    const contribution = workbench.layout.getPanel(dashboardWidgetIds.sessionBubble);
     expect(contribution).toMatchObject({
-      role: "sub-panel",
+      region: "side",
+      closable: true,
       eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
       tab: {
@@ -99,8 +100,10 @@ describe("createSessionBubbleModule", () => {
       .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(placements).toHaveLength(1);
-    expect((firstPlacement as { widgetId: string }).widgetId).toBe((secondPlacement as { widgetId: string }).widgetId);
-    expect(placements[0]?.widgetId).toBe((firstPlacement as { widgetId: string }).widgetId);
+    expect((firstPlacement as { instanceId: string }).instanceId).toBe(
+      (secondPlacement as { instanceId: string }).instanceId,
+    );
+    expect(placements[0]?.widgetId).toBe((firstPlacement as { instanceId: string }).instanceId);
     expect(placements[0]?.resource?.kind).toBe("session-draft");
     expect(placements[0]?.closable).toBe(true);
   });
@@ -131,14 +134,14 @@ describe("createSessionBubbleModule", () => {
       .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(placements).toHaveLength(2);
-    expect((addedPlacement as { widgetId: string }).widgetId).not.toBe(
-      (firstPlacement as { widgetId: string }).widgetId,
+    expect((addedPlacement as { instanceId: string }).instanceId).not.toBe(
+      (firstPlacement as { instanceId: string }).instanceId,
     );
-    expect((selectedPlacement as { widgetId: string }).widgetId).toBe(
-      (addedPlacement as { widgetId: string }).widgetId,
+    expect((selectedPlacement as { instanceId: string }).instanceId).toBe(
+      (addedPlacement as { instanceId: string }).instanceId,
     );
     expect(
-      placements.find((placement) => placement.widgetId === (selectedPlacement as { widgetId: string }).widgetId),
+      placements.find((placement) => placement.widgetId === (selectedPlacement as { instanceId: string }).instanceId),
     ).toMatchObject({ resourceUri: secondSession.uri });
   });
 });
@@ -149,8 +152,9 @@ describe("createSessionBubbleModule workspace resolution", () => {
 
     workbench.registerModule(createSessionBubbleModule());
 
-    expect(workbench.layout.getWidget(dashboardWidgetIds.sessionBubble)).toMatchObject({
-      role: "sub-panel",
+    expect(workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)).toMatchObject({
+      closable: true,
+      region: "side",
       openCommandId: dashboardCommandIds.createSession,
     });
   });

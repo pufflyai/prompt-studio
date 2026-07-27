@@ -1,6 +1,6 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { SearchableMenu, type SearchableMenuItem } from "@pstdio/ui";
-import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore, resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import { createWorkbenchCore, resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
@@ -294,7 +294,7 @@ describe("createExtensionsModule command results and refresh", () => {
       getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
       await flushMicrotasks();
 
-      // The refresh fetch has not resolved yet — the tickets opener must still exist.
+      // The refresh fetch has not resolved yet — the tickets presenter must still exist.
       await workbench.resources.openResource(ticketsBoardResource);
 
       resolveRefresh?.(metadataWithTickets);

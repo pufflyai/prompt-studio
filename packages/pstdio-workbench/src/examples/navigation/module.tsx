@@ -58,7 +58,7 @@ const TicketWidget = (props: { uri: string; workbench: WorkbenchCore }) => {
 const TreeWidget = () => (
   <Stack p="md" gap="xs">
     <Text textStyle="label/S/semibold">Workspace tree</Text>
-    <Text textStyle="paragraph/S/regular">Revealed via openWidget.</Text>
+    <Text textStyle="paragraph/S/regular">Revealed via openPanel.</Text>
   </Stack>
 );
 
@@ -79,7 +79,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
       <Text textStyle="paragraph/M/regular">
         Each button below feeds <Code colorPalette="gray">workbench.navigation.navigate(...)</Code> a deep link and the
         widened parser resolves it into a <Code colorPalette="gray">NavigationTarget</Code>. The dispatcher then routes
-        to the appropriate opener.
+        to the appropriate presenter.
       </Text>
       <Box>
         <Text textStyle="label/S/semibold" mb="2xs">
@@ -141,15 +141,15 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       icon: "component",
     });
 
-    ctx.resources.registerOpener({
-      id: "navigation.example.ticket-opener",
+    ctx.resources.registerPresenter({
+      id: "navigation.example.ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource) => {
         ctx.panels.setPersistenceScope(resourceScope(resource.uri));
         ctx.layout.setPersistenceScope(resourceScope(resource.uri), {
           carryRegionState: ["sidenav"],
         });
-        ctx.layout.openWidget(TICKET_WIDGET_ID, {
+        return ctx.layout.openPanel(TICKET_WIDGET_ID, {
           resource,
           title: resource.label ?? resource.uri,
         });
@@ -163,8 +163,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
 
     ctx.renderers.registerRenderer({
       id: TICKET_RENDERER_ID,
-      render: ({ placement, workbench }) => (
-        <TicketWidget workbench={workbench} uri={placement.resource?.uri ?? placement.widgetId} />
+      render: ({ instance, workbench }) => (
+        <TicketWidget workbench={workbench} uri={instance.resource?.uri ?? instance.instanceId} />
       ),
     });
 
@@ -173,7 +173,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       render: () => <TreeWidget />,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: HOME_WIDGET_ID,
       title: "Navigation demo",
       region: "main",
@@ -181,7 +182,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       rendererId: HOME_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
@@ -191,7 +192,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       resourceKinds: [TICKET_KIND],
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: TREE_WIDGET_ID,
       title: "Workspace tree",
       region: "sidenav",
@@ -227,7 +229,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
         }
         if (url.host === "view") {
           const alias = url.searchParams.get("id") ?? "";
-          return { kind: "view", widgetId: resolveViewId(alias) };
+          return { kind: "panel", panelId: resolveViewId(alias) };
         }
         if (url.host === "command") {
           const id = url.searchParams.get("id") ?? "";
@@ -251,8 +253,8 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
                 },
               },
               {
-                kind: "view",
-                widgetId: resolveViewId(viewParam ?? "workspace-tree"),
+                kind: "panel",
+                panelId: resolveViewId(viewParam ?? "workspace-tree"),
               },
             ],
           };
@@ -268,6 +270,6 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
 
     ctx.panels.setPersistenceScope(AGGREGATE_SCOPE);
     ctx.layout.setPersistenceScope(AGGREGATE_SCOPE);
-    ctx.layout.openWidget(HOME_WIDGET_ID);
+    ctx.layout.openPanel(HOME_WIDGET_ID);
   },
 });

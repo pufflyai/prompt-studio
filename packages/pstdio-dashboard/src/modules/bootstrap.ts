@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -29,7 +29,7 @@ const openProjectSelection = (ctx: Parameters<WorkbenchModuleContribution["activ
 
 const canOpenResource = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], resource: ResourceRef) =>
   Boolean(ctx.resources.getKind(resource.kind)) &&
-  ctx.resources.listOpeners().some((opener) => opener.canOpen(resource));
+  ctx.resources.listPresenters().some((presenter) => presenter.canOpen(resource));
 
 const isSyncedRestoreResource = (resource: ResourceRef) => resource.kind === "workspace" || resource.kind === "session";
 

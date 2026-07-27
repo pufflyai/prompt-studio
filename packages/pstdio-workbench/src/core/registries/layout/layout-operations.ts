@@ -46,8 +46,7 @@ export const createUniqueWidgetId = (layout: WorkbenchLayout, contributionId: st
 export const getActivePlacement = (region: WorkbenchRegionState) =>
   region.widgets.find((placement) => placement.widgetId === region.activeWidgetId) ?? region.widgets[0];
 
-const isLocationPlacement = (placement: WorkbenchWidgetPlacement) =>
-  placement.role !== "sub-panel" && placement.role !== "panel-menu";
+const isLocationPlacement = (placement: WorkbenchWidgetPlacement) => placement.role === "location";
 
 export const locationWorkspaceKey = (placement: WorkbenchWidgetPlacement) =>
   placement.resourceUri ?? `${placement.contributionId}:${placement.widgetId}`;

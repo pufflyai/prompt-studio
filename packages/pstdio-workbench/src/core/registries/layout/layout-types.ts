@@ -60,6 +60,10 @@ export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
 
+export type WorkbenchPanelReusePolicy = WidgetReusePolicy;
+
+export type WorkbenchPanelMountStrategy = WidgetMountStrategy;
+
 export type WorkbenchFloatingPanelVisibility = "visible" | "hidden";
 
 export type WorkbenchWidgetRole = "content" | "location" | "sub-panel" | "panel-menu";
@@ -84,6 +88,8 @@ export interface WorkbenchWidgetTab {
   /** Custom actions shown when the user activates an already-active tab. */
   customMenuRendererId?: string;
 }
+
+export type WorkbenchPanelTab = WorkbenchWidgetTab;
 
 export interface WidgetContribution {
   id: string;
@@ -114,23 +120,61 @@ export interface WidgetContribution {
   canOpen?(resource: ResourceRef): boolean;
 }
 
-export type WorkbenchPanelMenuDefinition = Omit<
-  WidgetContribution,
-  "fallbackRegion" | "panelMenuOwner" | "region" | "role"
-> & {
+export interface WorkbenchPanelMenuDefinition {
+  id: string;
+  title: string;
+  icon?: string;
   side: WorkbenchPanelMenuSide;
-};
+  singleton?: boolean;
+  reuse?: WorkbenchPanelReusePolicy;
+  mountStrategy?: WorkbenchPanelMountStrategy;
+  hiddenByDefault?: boolean;
+  regionSize?: WorkbenchRegionSize;
+  regionCollapsible?: boolean;
+  headerBorderBottom?: boolean;
+  rendererId: string;
+  priority?: number;
+  config?: unknown;
+}
 
-interface WorkbenchPanelContribution {
+interface WorkbenchPanelMenusContribution {
   panelMenus?: readonly WorkbenchPanelMenuDefinition[];
 }
 
-export type WorkbenchLocationContribution = Omit<WidgetContribution, "role"> & WorkbenchPanelContribution;
+export interface WorkbenchPanelContribution {
+  id: string;
+  title: string;
+  icon?: string;
+  region: WorkbenchRegion;
+  fallbackRegion?: WorkbenchRegion;
+  rendererId: string;
+  closable: boolean;
+  singleton?: boolean;
+  reuse?: WorkbenchPanelReusePolicy;
+  mountStrategy?: WorkbenchPanelMountStrategy;
+  hiddenByDefault?: boolean;
+  regionSize?: WorkbenchRegionSize;
+  regionCollapsible?: boolean;
+  headerBorderBottom?: boolean;
+  floatingPanels?: WorkbenchFloatingPanelVisibility;
+  resourceKinds?: string[];
+  eligibleLocations?: WorkbenchLocationEligibility;
+  priority?: number;
+  openCommandId?: string;
+  tab?: WorkbenchPanelTab;
+  config?: unknown;
+  canOpen?(resource: ResourceRef): boolean;
+  ownerId?: string;
+  source?: ContributionSource;
+  panelMenus?: readonly WorkbenchPanelMenuDefinition[];
+}
+
+export type WorkbenchLocationContribution = Omit<WidgetContribution, "role"> & WorkbenchPanelMenusContribution;
 
 export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
   region: WorkbenchPanelRegion;
   fallbackRegion?: WorkbenchPanelRegion;
-} & WorkbenchPanelContribution;
+} & WorkbenchPanelMenusContribution;
 
 export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
   region: WorkbenchPanelMenuRegion;
@@ -176,6 +220,23 @@ export interface WorkbenchWidgetPlacement {
   role?: WorkbenchWidgetRole;
 }
 
+export interface WorkbenchPanelInstance {
+  instanceId: string;
+  panelId: string;
+  ownerId?: string;
+  source?: ContributionSource;
+  resource?: ResourceRef;
+  resourceUri?: string;
+  ownerResourceUri?: string;
+  title?: string;
+  pinned?: boolean;
+  closable: boolean;
+  mountStrategy?: WorkbenchPanelMountStrategy;
+  hiddenByDefault?: boolean;
+  tabRetention?: WorkbenchTabRetention;
+  tab?: WorkbenchPanelTab;
+}
+
 export interface WorkbenchRegionState {
   id: WorkbenchRegion;
   visible: boolean;
@@ -213,6 +274,23 @@ export interface OpenWidgetInput {
   tab?: WorkbenchWidgetTab;
   replaceActive?: boolean;
   replaceWidgetId?: string;
+}
+
+export type WorkbenchPanelOpenStrategy =
+  | { kind: "activate-or-open"; position?: WorkbenchTabPosition }
+  | { kind: "replace-active" }
+  | { kind: "replace-panel"; instanceId: string }
+  | { kind: "preview"; position?: WorkbenchTabPosition };
+
+export interface OpenWorkbenchPanelInput {
+  resource?: ResourceRef;
+  title?: string;
+  region?: WorkbenchRegion;
+  pinned?: boolean;
+  mountStrategy?: WorkbenchPanelMountStrategy;
+  hiddenByDefault?: boolean;
+  tab?: WorkbenchPanelTab;
+  strategy?: WorkbenchPanelOpenStrategy;
 }
 
 const createRegionState = (id: WorkbenchRegion, visible: boolean): WorkbenchRegionState => ({

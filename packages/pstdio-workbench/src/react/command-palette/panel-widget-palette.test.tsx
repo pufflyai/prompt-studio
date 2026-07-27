@@ -5,21 +5,24 @@ import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette
 describe("createWorkbenchPanelWidgetPaletteEntries", () => {
   test("shares Panel eligibility with the header add menu", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerSubPanel({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "files",
       title: "Files",
       icon: "Folder",
       region: "main",
       fallbackRegion: "side",
       rendererId: "files.renderer",
+      eligibleLocations: {},
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "preview",
       title: "Preview",
       region: "main",
       rendererId: "preview.renderer",
     });
-    workbench.layout.openWidget("preview");
+    workbench.layout.openPanel("preview");
 
     const entries = createWorkbenchPanelWidgetPaletteEntries({ workbench, onClose: () => undefined });
 

@@ -1,19 +1,19 @@
 # Extension Navigation
 
-Dashboard navigation is **resource-first**: history stores replayable domain resources, route helpers own mode activation and placement, and renderer-only data is derived at render time rather than stored as navigation identity. Extension-contributed views participate in this model through a small set of route helpers so they cannot reintroduce the navigation footguns the framework guards against (wrapper resources in history, Back/Forward tab accumulation, root/detail fallback surprises).
+Dashboard navigation is **resource-first**: history stores replayable domain resources, route helpers own mode activation and placement, and renderer-only data is derived at render time rather than stored as navigation identity. Extension-contributed Panels participate in this model through a small set of route helpers so they cannot reintroduce the navigation footguns the framework guards against (wrapper resources in history, Back/Forward tab accumulation, root/detail fallback surprises).
 
-This page describes how extension boards, resource views, and mode-layout views map onto workbench navigation, and what Back/Forward replay does for each.
+This page describes how extension boards, resource Panels, and mode-layout Panels map onto workbench navigation, and what Back/Forward replay does for each.
 
 ## The navigation model
 
 - The **primary** surface is the `main` area (it hosts the `"primary"` anchor). History records the primary area's active placement only; activating a side surface (a left tree, a side panel, a floating session) never pushes a Back/Forward entry.
-- A history entry is a **resource** entry when its placement carries a `resource` (replayed via `resources.openResource`) or a **widget** entry when it does not (replayed via `layout.openWidget`). Mode switches are recorded as **mode** entries.
+- A history entry is a **resource** entry when its placement carries a `resource` (replayed via `resources.openResource`) or a **Panel** entry when it does not (replayed via `layout.openPanel`). Mode switches are recorded as **mode** entries.
 - Replay restores the entry's mode first, then reopens the resource with `replaceActive: true`, so the primary area is replaced in place — Back/Forward never grows tabs.
 - The active primary resource is read through the anchor (`getAnchorResource(layout, "primary")`), the same signal history records. Never read the global `activeResourceUri` for navigation decisions — side-area activations pollute it.
 
 ## Route helpers
 
-Primary resource routes are registered through helpers instead of raw `registerOpener` + `openWidget`, so mode activation, replacement semantics, and the project guard live in one place.
+Primary resource routes are registered through helpers instead of raw `registerPresenter` + `openPanel`, so mode activation, replacement semantics, and the project guard live in one place.
 
 ### `registerResourceRoute`
 
@@ -25,31 +25,31 @@ Used by: sessions, workspaces (root in project mode, detail in workspace mode), 
 
 ### `registerExtensionResourceView`
 
-`packages/pstdio-dashboard/src/modules/extensions/extension-resource-view.ts`
+`packages/pstdio-dashboard/src/modules/extensions/extension-resource-Panel.ts`
 
-For extension views that declare a `resourceKind` (e.g. the tickets editor). The opener keeps the **domain** resource (`ticket`, `session`, …) as the navigable identity, mounts the primary view widget in `main`, and mounts same-kind companion views (e.g. a properties panel in `main-right`) bound to the same resource. Primary + companions are resolved from the manifest via `groupResourceEditorViews`.
+For extension Panels that declare a `resourceKind` (e.g. the tickets editor). The presenter keeps the **domain** resource (`ticket`, `session`, …) as the navigable identity, mounts the primary Panel Panel in `main`, and mounts same-kind companion Panels (e.g. a properties panel in `main-right`) bound to the same resource. Primary + companions are resolved from the manifest via `groupResourceEditorViews`.
 
-If metadata includes a mode whose `resourceKind` matches the opened resource, the opener activates that mode instead of project mode. Resource-bound mode layout entries are placement declarations: when the mode layout opens a same-kind view, the opener binds that view to the active resource and places it in the declared target. `workbench.left` means the main left sidenav; `workbench.main.left` remains the main-left workbench area.
+If metadata includes a mode whose `resourceKind` matches the opened resource, the presenter activates that mode instead of project mode. Resource-bound mode layout entries are placement declarations: when the mode layout opens a same-kind Panel, the presenter binds that Panel to the active resource and places it in the declared target. `workbench.left` means the main left sidenav; `workbench.main.left` remains the main-left workbench area.
 
-History records the domain resource URI (e.g. `dashboard-workbench://ticket/PS-10`) — never an `extension-view` wrapper. Companion side panels live in a projection area, not the primary anchor, so they are never recorded as primary history entries.
+History records the domain resource URI (e.g. `dashboard-workbench://ticket/PS-10`) — never an `extension-Panel` wrapper. Companion side panels live in a projection area, not the primary anchor, so they are never recorded as primary history entries.
 
-## Derived view metadata
+## Derived Panel metadata
 
-Renderer-only data (which extension view to mount, its `webview`, its `extensionId`) is **derived at render time** from the resource kind plus the cached extension manifest — it is never written onto `resource.metadata`, the persisted placement, or the history entry. `ExtensionViewWidget` (`components/extension-view-widget.tsx`) resolves the view by matching `extensionViewWidgetId(view.id)` against the placement's `contributionId`, and reads `projectId` from the resource's metadata to look the manifest up.
+Renderer-only data (which extension Panel to mount, its `webview`, its `extensionId`) is **derived at render time** from the resource kind plus the cached extension manifest — it is never written onto `resource.metadata`, the persisted placement, or the history entry. `ExtensionViewWidget` (`components/extension-Panel-Panel.tsx`) resolves the Panel by matching `extensionViewWidgetId(Panel.id)` against the placement's `contributionId`, and reads `projectId` from the resource's metadata to look the manifest up.
 
-This keeps history identity canonical: first open and Back/Forward replay derive the same view from the same widget id and manifest, with no transient state to carry. The only thing stored on extension resources is domain-adjacent context (`projectId`, `extensionId`).
+This keeps history identity canonical: first open and Back/Forward replay derive the same Panel from the same Panel id and manifest, with no transient state to carry. The only thing stored on extension resources is domain-adjacent context (`projectId`, `extensionId`).
 
-## Mode-layout views and replay
+## Mode-layout Panels and replay
 
-A mode can declare a layout that docks an extension view in the primary area (e.g. an extension "overview" via `{ target: "workbench.main", view: "…" }`). These are mounted as `extension-view` wrapper resources whose URI (`dashboard-workbench://project/<id>/extension-views/<viewId>`) is a stable, canonical identity derived from the view id.
+A mode can declare a layout that docks an extension Panel in the primary area (e.g. an extension "overview" via `{ region: "main", panel: "…" }`). These are mounted as `extension-Panel` wrapper resources whose URI (`dashboard-workbench://project/<id>/extension-Panels/<viewId>`) is a stable, canonical identity derived from the Panel id.
 
-Because such a placement lands in the primary anchor, it is recorded as a history landmark. The extensions module registers a **view opener** (`dashboard.extensions.view-opener`) for the `extension-view` kind so Back/Forward replay can re-derive the view from the manifest and re-place the widget. Without it, replaying that entry would silently leave the primary area desynced from the history cursor.
+Because such a placement lands in the primary anchor, it is recorded as a history landmark. The extensions module registers a **Panel presenter** (`dashboard.extensions.Panel-presenter`) for the `extension-Panel` kind so Back/Forward replay can re-derive the Panel from the manifest and re-place the Panel. Without it, replaying that entry would silently leave the primary area desynced from the history cursor.
 
-Modal views are different: they mount in the `overlay` (transient) surface and open via `layout.openWidget`, so they never become primary history entries.
+Modal Panels are different: they mount in the `overlay` (transient) surface and open via `layout.openPanel`, so they never become primary history entries.
 
 ## Project selection and history
 
-Routes are project-scoped. When the selected project is cleared (`projects/module.tsx` `clearSelectedProject`), the workbench history is cleared as well — with no project selected, replaying project-scoped entries would hit the route project guard and strand the history cursor on a view that never renders.
+Routes are project-scoped. When the selected project is cleared (`projects/module.tsx` `clearSelectedProject`), the workbench history is cleared as well — with no project selected, replaying project-scoped entries would hit the route project guard and strand the history cursor on a Panel that never renders.
 
 ## The navigation contract
 
@@ -66,9 +66,9 @@ Adding a route means adding its contract block; the suite is the guard that keep
 ## References
 
 - Route helper: `packages/pstdio-dashboard/src/shared/workbench/route-helper.ts`
-- Extension resource views: `packages/pstdio-dashboard/src/modules/extensions/extension-resource-view.ts`
-- Extension view renderer + derivation: `packages/pstdio-dashboard/src/modules/extensions/components/extension-view-widget.tsx`
-- Mode layout + view opener: `packages/pstdio-dashboard/src/modules/extensions/extension-mode-layout.ts`, `module.ts`
+- Extension resource Panels: `packages/pstdio-dashboard/src/modules/extensions/extension-resource-Panel.ts`
+- Extension Panel renderer + derivation: `packages/pstdio-dashboard/src/modules/extensions/components/extension-Panel-Panel.tsx`
+- Mode layout + Panel presenter: `packages/pstdio-dashboard/src/modules/extensions/extension-mode-layout.ts`, `module.ts`
 - Contract suite: `packages/pstdio-workbench/src/testing/navigation-contract.ts`
 - History controller: `packages/pstdio-workbench/src/core/controllers/history/history-controller.ts`
 - Related: [Extension Runtime](./extensions-runtime.md)

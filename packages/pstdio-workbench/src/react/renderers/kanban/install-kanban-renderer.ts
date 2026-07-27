@@ -8,9 +8,9 @@ const installed = new WeakSet<WorkbenchCore>();
 export const installWorkbenchKanbanRenderer = (workbench: WorkbenchCore) => {
   if (installed.has(workbench)) return;
   installed.add(workbench);
-  workbench.renderers.setKanbanRendererImplementation(({ workbench: scope, placement, kanbanRendererId }) => {
+  workbench.renderers.setKanbanRendererImplementation(({ workbench: scope, instance, kanbanRendererId }) => {
     const contribution = scope.renderers.getKanbanRenderer(kanbanRendererId);
     if (!contribution) return null;
-    return createElement(WorkbenchKanbanView, { workbench: scope, contribution, placement });
+    return createElement(WorkbenchKanbanView, { workbench: scope, contribution, placement: instance });
   });
 };

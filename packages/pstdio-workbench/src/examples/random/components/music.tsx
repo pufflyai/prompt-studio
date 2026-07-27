@@ -1,11 +1,11 @@
 import { Badge, Box, Button, Center, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { itemResource, musicWidgetIds, randomWorkbenchModes, type WorkbenchModeItem } from "../mock-data/data";
 
 const musicMode = randomWorkbenchModes.music;
 
-const findActiveItem = (input: WorkbenchWidgetRenderInput) => {
+const findActiveItem = (input: WorkbenchPanelRenderInput) => {
   const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId =
     typeof placement?.resource?.metadata?.itemId === "string" ? placement.resource.metadata.itemId : undefined;
@@ -16,15 +16,15 @@ const findActiveItem = (input: WorkbenchWidgetRenderInput) => {
   );
 };
 
-const playItem = (input: WorkbenchWidgetRenderInput, item: WorkbenchModeItem) => {
-  input.workbench.layout.openWidget(musicWidgetIds.player, {
+const playItem = (input: WorkbenchPanelRenderInput, item: WorkbenchModeItem) => {
+  input.workbench.layout.openPanel(musicWidgetIds.player, {
     resource: itemResource(musicMode.id, item),
     title: item.title,
   });
   input.refresh();
 };
 
-export const MusicTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const MusicTopBar = (props: { input: WorkbenchPanelRenderInput }) => {
   const item = findActiveItem(props.input);
   return (
     <HStack h="full" px="sm" gap="sm">
@@ -44,7 +44,7 @@ export const MusicTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const MusicPlayer = (props: { input: WorkbenchPanelRenderInput }) => {
   const item = findActiveItem(props.input);
   return (
     <ScrollArea
@@ -93,7 +93,7 @@ export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const MusicQueue = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const MusicQueue = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const activeItem = findActiveItem(input);
 

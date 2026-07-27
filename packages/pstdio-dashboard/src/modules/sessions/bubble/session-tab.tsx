@@ -6,8 +6,8 @@ import {
   type SessionCompletionStatus,
   SessionIndicator,
 } from "@pstdio/ui";
-import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelInstance } from "@pstdio/workbench";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight, MessageCircle, PenBox } from "lucide-react";
 import { useSyncExternalStore } from "react";
@@ -20,9 +20,6 @@ import {
   type DashboardSession,
   resolveDashboardSessionViewForPlacement,
 } from "../data/dashboard-sessions";
-
-const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
 const createWorkspaceResource = (input: {
   workspaceId: string | null;
@@ -47,22 +44,24 @@ const createWorkspaceResource = (input: {
   );
 };
 
-const getSessionStatus = (session: DashboardSession | undefined, placement: WorkbenchWidgetPlacement) => {
-  const status = session?.status ?? placement.resource?.metadata?.status;
+const getSessionStatus = (session: DashboardSession | undefined, instance: WorkbenchPanelInstance) => {
+  const status = session?.status ?? instance.resource?.metadata?.status;
   return typeof status === "string" ? (status as SessionCompletionStatus) : undefined;
 };
 
-const useSessionTabState = (input: WorkbenchWidgetRenderInput) => {
+const useSessionTabState = (input: WorkbenchPanelRenderInput) => {
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
   });
-  const mainRegion = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.regions.main);
-  const view = resolveDashboardSessionViewForPlacement(input.placement);
+  const activeResource = useWorkbenchStore(input.workbench.layout.store, (state) => {
+    void state.layout;
+    return input.workbench.layout.getActivePanel("main")?.resource;
+  });
+  const view = resolveDashboardSessionViewForPlacement(input.instance);
   const sessions = createDashboardSessions(projectId);
   const selectedSession = sessions.find((session) => session.id === view.sessionId);
-  const activeResource = getActivePlacement(mainRegion.widgets, mainRegion.activeWidgetId)?.resource;
   const workspace =
     activeResource?.kind === "workspace"
       ? activeResource
@@ -77,14 +76,14 @@ const useSessionTabState = (input: WorkbenchWidgetRenderInput) => {
   return {
     sessions,
     selectedSession,
-    selectedLabel: selectedSession?.title ?? input.placement.resource?.label ?? "New session",
-    selectedStatus: getSessionStatus(selectedSession, input.placement),
+    selectedLabel: selectedSession?.title ?? input.instance.resource?.label ?? "New session",
+    selectedStatus: getSessionStatus(selectedSession, input.instance),
     view,
     workspace,
   };
 };
 
-export const SessionTabContent = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const SessionTabContent = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useSessionTabState(input);
 
@@ -134,7 +133,7 @@ const SessionActionRow = (props: { id: string; icon: typeof PenBox; label: strin
   );
 };
 
-export const SessionTabMenu = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const SessionTabMenu = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useSessionTabState(input);
 
@@ -147,7 +146,7 @@ export const SessionTabMenu = (props: { input: WorkbenchWidgetRenderInput }) => 
         onSelect={() => {
           void input.workbench.commands.executeCommand(dashboardCommandIds.createSession, {
             ...(state.workspace ? { workspace: state.workspace } : {}),
-            replaceWidgetId: input.placement.widgetId,
+            replaceWidgetId: input.instance.instanceId,
           });
         }}
       />
@@ -161,7 +160,7 @@ export const SessionTabMenu = (props: { input: WorkbenchWidgetRenderInput }) => 
             onSelect={() => {
               void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
                 resource: session.resource,
-                replaceWidgetId: input.placement.widgetId,
+                replaceWidgetId: input.instance.instanceId,
               });
             }}
           />

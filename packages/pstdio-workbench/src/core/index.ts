@@ -57,6 +57,12 @@ export type {
 } from "./controllers/panels/panels-controller";
 export { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
 export type {
+  WorkbenchShellController,
+  WorkbenchShellOpenRegion,
+  WorkbenchShellRegionState,
+  WorkbenchSidePanelPresentation,
+} from "./controllers/shell/shell-controller";
+export type {
   CreateWorkbenchSidePanelControllerInput,
   WorkbenchSidePanelChangeListener,
   WorkbenchSidePanelController,
@@ -110,6 +116,7 @@ export type {
   LayoutModel,
   LayoutPersistenceAdapter,
   LayoutScope,
+  OpenWorkbenchPanelInput,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
@@ -121,12 +128,18 @@ export type {
   WorkbenchLayoutStoreState,
   WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
+  WorkbenchPanelContribution,
+  WorkbenchPanelInstance,
   WorkbenchPanelMenuContribution,
   WorkbenchPanelMenuDefinition,
   WorkbenchPanelMenuOwner,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,
+  WorkbenchPanelMountStrategy,
+  WorkbenchPanelOpenStrategy,
   WorkbenchPanelRegion,
+  WorkbenchPanelReusePolicy,
+  WorkbenchPanelTab,
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
@@ -199,8 +212,8 @@ export type {
   NavigationTargetCommand,
   NavigationTargetCompound,
   NavigationTargetItem,
+  NavigationTargetPanel,
   NavigationTargetResource,
-  NavigationTargetView,
   RegisteredNavigationParser,
   RegisteredResourceNavigator,
   ResourceNavigator,
@@ -305,10 +318,10 @@ export { createKanbanRendererRegistry } from "./registries/renderers/kanban-rend
 export type {
   CreateWorkbenchRendererRegistryInput,
   RegisteredKeepAliveHost,
+  WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
   WorkbenchRendererRegistry,
   WorkbenchRendererStoreState,
-  WorkbenchWidgetRenderInput,
 } from "./registries/renderers/renderer-registry";
 export { createWorkbenchRendererRegistry } from "./registries/renderers/renderer-registry";
 export type {
@@ -339,7 +352,7 @@ export type {
   ResourceHierarchyProvider,
   ResourceKindContribution,
   ResourceListContext,
-  ResourceOpener,
+  ResourcePresenter,
   ResourceProvider,
   ResourceRef,
   ResourceRegistry,
@@ -409,9 +422,13 @@ export type {
   CreateWorkbenchCoreInput,
   WorkbenchCore,
   WorkbenchCoreContributionContext,
+  WorkbenchHost,
   WorkbenchLayoutModel,
+  WorkbenchModuleContext,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
+  WorkbenchPersistenceAdapter,
   WorkbenchRenderers,
+  WorkbenchSnapshot,
 } from "./workbench-core";
 export { createWorkbenchCore } from "./workbench-core";

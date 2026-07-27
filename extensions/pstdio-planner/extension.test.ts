@@ -38,7 +38,7 @@ describe("pstdio planner extension contributions", () => {
       resourceKind: "ticket",
       layout: {
         panels: ["main", "secondary", "side"],
-        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+        open: [{ region: "sidenav", panel: "ticketFiles", pinned: true }],
       },
     });
   });
@@ -50,15 +50,15 @@ describe("pstdio planner extension contributions", () => {
       bodyCommand: { id: "pstdio-planner.ticket-files.tree.body" },
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     });
-    expect(extension.views?.ticketFiles).toMatchObject({
-      title: { $l10n: "views.ticketFiles.title", default: "Files" },
+    expect(extension.panels?.ticketFiles).toMatchObject({
+      title: { $l10n: "panels.ticketFiles.title", default: "Files" },
+      region: "sidenav",
+      closable: false,
       resourceKind: "ticket",
-      role: "panel-menu",
       treeRenderer: "ticketFiles",
-      hostTreeHeader: "default",
     });
-    expect(extension.views?.ticketFiles).not.toHaveProperty("target");
-    expect(extension.views?.ticketFiles).not.toHaveProperty("webview");
+    expect(extension.panels?.ticketFiles).not.toHaveProperty("target");
+    expect(extension.panels?.ticketFiles).not.toHaveProperty("webview");
   });
 
   test("contributes shared document templates and planner skills", () => {

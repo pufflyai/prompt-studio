@@ -1,11 +1,11 @@
 import { Badge, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { randomWorkbenchModes } from "../mock-data/data";
 
 const notesMode = randomWorkbenchModes.notes;
 
-const findItemFromLayout = (input: WorkbenchWidgetRenderInput) => {
+const findItemFromLayout = (input: WorkbenchPanelRenderInput) => {
   const editorPlacement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId =
     typeof editorPlacement?.resource?.metadata?.itemId === "string"
@@ -18,7 +18,7 @@ const findItemFromLayout = (input: WorkbenchWidgetRenderInput) => {
   );
 };
 
-export const NotesTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const NotesTopBar = (props: { input: WorkbenchPanelRenderInput }) => {
   const item = findItemFromLayout(props.input);
   return (
     <HStack h="full" px="sm" gap="sm">
@@ -38,7 +38,7 @@ export const NotesTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const NotesEditor = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const NotesEditor = (props: { input: WorkbenchPanelRenderInput }) => {
   const item = findItemFromLayout(props.input);
   return (
     <ScrollArea h="full" minH="0" contentProps={{ p: "md" }}>

@@ -1,4 +1,4 @@
-import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { readRuntimeConfig } from "@/lib/api";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
@@ -37,7 +37,7 @@ const helpFooterNode = (): TreeNode => ({
   menuPlacement: "top-start",
 });
 
-const registerHelpSidenav = (ctx: WorkbenchModuleContributionContext) =>
+const registerHelpSidenav = (ctx: WorkbenchModuleContext) =>
   registerSidenavContribution(ctx, {
     id: "dashboard.help.footer",
     modes: ["*"],

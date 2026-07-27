@@ -23,6 +23,7 @@ import {
   toCheckMenuContributions,
   toCheckMiddlewares,
   toCheckPaletteContributions,
+  toCheckPanels,
   toCheckRoutes,
   toCheckSchedules,
   toCheckSettingsDefinitions,
@@ -32,7 +33,6 @@ import {
   toCheckThemes,
   toCheckTreeItems,
   toCheckTreeRenderers,
-  toCheckViews,
 } from "./check-from-runtime";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { mergeCheck } from "./merge-checks";
@@ -72,7 +72,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
-  views: [],
+  panels: [],
   routes: [],
   navigation: [],
   treeItems: [],
@@ -181,7 +181,7 @@ const populateCheckFromRuntime = (
   check.artifactMounts.push(...toCheckArtifactMounts(runtime.artifactMounts));
   check.themes.push(...toCheckThemes(runtime.themes));
   check.fileIconThemes.push(...toCheckFileIconThemes(runtime.fileIconThemes));
-  check.views.push(...toCheckViews(runtime.views));
+  check.panels.push(...toCheckPanels(runtime.panels));
   check.routes.push(...toCheckRoutes(runtime.routes));
   check.treeItems.push(...toCheckTreeItems(runtime.treeItems));
   check.treeRenderers.push(...toCheckTreeRenderers(runtime.treeRenderers));

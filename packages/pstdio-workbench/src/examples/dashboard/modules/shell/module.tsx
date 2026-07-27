@@ -1,8 +1,4 @@
-import {
-  standardResourceIcons,
-  type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
-} from "../../../../core";
+import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchModuleContribution } from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
@@ -22,8 +18,9 @@ const dashboardResourceKinds = [
   { kind: "extension-route", label: "Extension route", icon: "PanelLeft" },
 ] as const;
 
-const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerChrome = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
+    closable: false,
     id: SIDENAV_HEADER_WIDGET_ID,
     title: "Project brand",
     region: "sidenav-header",
@@ -35,8 +32,9 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <DashboardSidenavHeader workbench={input.workbench} />,
   });
 
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.status,
       title: "Dashboard status",
       region: "status",
@@ -51,8 +49,9 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <StatusWidget input={input} />,
   });
 
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.extensionRoute,
       title: "Extension route",
       region: "main",
@@ -67,8 +66,8 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <ExtensionRouteWidget input={input} />,
   });
 
-  ctx.layout.openWidget(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
-  ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
+  ctx.layout.openPanel(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel(dashboardWidgetIds.status, { pinned: true });
 };
 
 // The shell slice: the project brand and status bar, the global
@@ -111,17 +110,17 @@ export const createShellModule = (): WorkbenchModuleContribution => ({
       ],
     });
 
-    ctx.resources.registerOpener({
-      id: "dashboard.shell.extension-route-opener",
+    ctx.resources.registerPresenter({
+      id: "dashboard.shell.extension-route-presenter",
       priority: 1000,
       canOpen: (resource) => resource.kind === "extension-route",
       open: (resource, input) => {
         ctx.modes.setActiveMode("project");
         setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
+        return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         });
       },
     });

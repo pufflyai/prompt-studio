@@ -1,6 +1,6 @@
 import { Box, Button, SimpleGrid, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
-import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import { text } from "pstdio-extensions/workbench";
 import type {
   ExtensionBenchFileIconThemeContribution,
@@ -105,8 +105,8 @@ const ContentContributionPanel = (props: { config: ContentContributionPanelConfi
 export const registerContentContributionWidgets = (workbench: WorkbenchCore, bench: ExtensionBenchLoadResponse) => {
   workbench.renderers.registerRenderer({
     id: rendererId,
-    render: ({ widget }) => {
-      const config = widget.config as ContentContributionPanelConfig;
+    render: ({ panel }) => {
+      const config = panel.config as ContentContributionPanelConfig;
       return <ContentContributionPanel config={config} />;
     },
   });
@@ -119,7 +119,8 @@ export const registerContentContributionWidgets = (workbench: WorkbenchCore, ben
   ];
 
   for (const config of configs) {
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: contentContributionWidgetId(config.kind, config.contribution.id),
       title: text(config.contribution.title, config.contribution.id),
       region: "main",

@@ -258,7 +258,7 @@ export default defineExtension({
       resourceKind: "note",
       layout: {
         panels: ["main", "secondary", "side"],
-        open: [{ target: "workbench.left", view: "noteTree", pinned: true }],
+        open: [{ region: "sidenav", panel: "noteTree", pinned: true }],
       },
     },
   },
@@ -278,19 +278,19 @@ export default defineExtension({
       defaultExpandedSectionIds: ["files"],
     },
   },
-  views: {
+  panels: {
     noteEditor: {
-      title: l10n("views.noteEditor.title", "Note"),
-      role: "location",
+      title: l10n("panels.noteEditor.title", "Note"),
+      region: "main",
+      closable: false,
       resourceKind: "note",
       fileRenderer: "noteContent",
     },
     noteTree: {
-      title: l10n("views.noteTree.title", "Files"),
-      role: "panel-menu",
-      panelMenuOwner: { level: "panel" },
+      title: l10n("panels.noteTree.title", "Files"),
+      region: "sidenav",
+      closable: false,
       resourceKind: "note",
-      target: "workbench.main.left",
       treeRenderer: "noteTree",
       hostTreeHeader: "default",
     },

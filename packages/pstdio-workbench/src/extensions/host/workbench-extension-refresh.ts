@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { WorkbenchModuleContributionContext, WorkbenchWidgetPlacement } from "../../core";
+import type { WorkbenchModuleContext, WorkbenchPanelInstance } from "../../core";
 
 const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set(
@@ -15,22 +15,14 @@ const kanbanRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
 const dataTableRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryCommandId));
 
-const findOpenPlacement = (
-  workbench: WorkbenchModuleContributionContext,
-  contributionId: string,
-): WorkbenchWidgetPlacement | undefined => {
-  const layout = workbench.layout.getLayout();
-
-  for (const region of Object.values(layout.regions)) {
-    const placement = region.widgets.find((candidate) => candidate.contributionId === contributionId);
-    if (placement) return placement;
-  }
+const findOpenPlacement = (workbench: WorkbenchModuleContext, panelId: string): WorkbenchPanelInstance | undefined => {
+  return workbench.layout.listPanelInstances().find((candidate) => candidate.panelId === panelId);
 };
 
-const restoreActiveWidget = (workbench: WorkbenchModuleContributionContext, widgetId: string | undefined) => {
-  if (!widgetId) return;
+const restoreActiveWidget = (workbench: WorkbenchModuleContext, panelId: string | undefined) => {
+  if (!panelId) return;
   try {
-    workbench.layout.activateWidget(widgetId);
+    workbench.layout.activatePanel(panelId);
   } catch {
     // The refreshed widget may have been closed by the command.
   }
@@ -50,18 +42,18 @@ export const shouldRefreshWorkbenchExtensionDataTableRenderers = (
 ) => !dataTableRendererQueryCommandIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
-  workbench: WorkbenchModuleContributionContext,
+  workbench: WorkbenchModuleContext,
   metadata: WorkbenchExtensionMetadata,
 ) => {
   const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
 
-  for (const view of metadata.views) {
-    if (!view.webview || view.role === "modal") continue;
-    const placement = findOpenPlacement(workbench, view.id);
+  for (const panel of metadata.panels) {
+    if (!panel.webview || panel.region === "overlay") continue;
+    const placement = findOpenPlacement(workbench, panel.id);
     if (!placement) continue;
-    workbench.layout.openWidget(view.id, {
+    workbench.layout.openPanel(panel.id, {
       resource: placement.resource,
-      title: text(view.title, placement.title),
+      title: text(panel.title, placement.title),
     });
   }
 
@@ -69,7 +61,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
     if (!route.webview) continue;
     const placement = findOpenPlacement(workbench, route.id);
     if (!placement) continue;
-    workbench.layout.openWidget(route.id, {
+    workbench.layout.openPanel(route.id, {
       resource: placement.resource,
       title: text(route.label, placement.title),
     });
@@ -79,7 +71,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
 };
 
 export const refreshWorkbenchExtensionContributions = (
-  workbench: WorkbenchModuleContributionContext,
+  workbench: WorkbenchModuleContext,
   metadata: WorkbenchExtensionMetadata,
   commandId: string,
 ) => {

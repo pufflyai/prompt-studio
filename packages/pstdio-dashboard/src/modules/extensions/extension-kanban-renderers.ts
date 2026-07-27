@@ -8,8 +8,8 @@ import {
   resourceContextMenuPath,
   standardResourceIcons,
   type TreeNode,
-  type WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+  type WorkbenchModuleContext,
+} from "@pstdio/workbench";
 import {
   registerWorkbenchExtensionKanbanRenderers,
   type WorkbenchExtensionCommandContext,
@@ -39,7 +39,7 @@ const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
 
 // Rows carry a KanbanRendererResourceRef (type/id) which we lift into a workbench
-// ResourceRef so a kind-specific opener (e.g. the ticket editor) can claim it.
+// ResourceRef so a kind-specific presenter (e.g. the ticket editor) can claim it.
 // Idempotent: a row resolved at click time is already a lifted ResourceRef, so it
 // passes through untouched rather than being re-lifted off a missing `type`.
 const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
@@ -185,7 +185,7 @@ const decorateAttribute = (input: {
 };
 
 export const registerExtensionKanbanRenderers = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: {
     metadata: DashboardExtensionMetadata;
     projectId: string;
@@ -230,7 +230,7 @@ export const registerExtensionKanbanRenderers = (
         id: `dashboard.extensions.kanban-renderer.${record.id}`,
         match: (resource) => resource.kind === "dashboard-view" && resource.id === record.id,
         mode: "project",
-        widgetId: record.id,
+        panelId: record.id,
         // Boards predate the project-selection guard; opening one without a project keeps
         // the prior behavior (an empty board in project mode) rather than redirecting.
         requiresProject: false,

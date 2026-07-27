@@ -44,7 +44,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   schedules: [],
   artifactMounts: [],
   modes: [],
-  views: [],
+  panels: [],
   routes: [],
   navigation: [],
   treeItems: [],

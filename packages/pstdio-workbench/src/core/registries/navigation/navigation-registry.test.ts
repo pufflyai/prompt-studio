@@ -9,9 +9,9 @@ const createDispatcherCollector = () => {
       calls.push({ kind: "openResource", payload: { resource, input } });
       return resource;
     },
-    openWidget: (widgetId, input) => {
-      calls.push({ kind: "openWidget", payload: { widgetId, input } });
-      return widgetId;
+    openPanel: (panelId, input) => {
+      calls.push({ kind: "openPanel", payload: { panelId, input } });
+      return panelId;
     },
     executeCommand: async (commandId, args) => {
       calls.push({ kind: "executeCommand", payload: { commandId, args } });
@@ -87,24 +87,24 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://PS-200", id: "PS-200" } },
-          { kind: "view", widgetId: "workspace-tree" },
+          { kind: "panel", panelId: "workspace-tree" },
         ],
       }),
     });
 
     await navigation.navigate("pstdio://open?resource=ticket:PS-200&view=workspace-tree");
 
-    expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openWidget"]);
+    expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openPanel"]);
   });
 
   test("compound dispatch validates every item before committing any item", async () => {
     const calls: string[] = [];
     const dispatcher: NavigationDispatcherContext = {
-      canOpenWidget: () => false,
+      canOpenPanel: () => false,
       openResource: async (resource) => {
         calls.push(`resource:${resource.uri}`);
       },
-      openWidget: () => {
+      openPanel: () => {
         calls.push("widget");
       },
       executeCommand: async () => {
@@ -118,11 +118,11 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://a" } },
-          { kind: "view", widgetId: "broken" },
+          { kind: "panel", panelId: "broken" },
           { kind: "command", commandId: "noop" },
         ],
       }),
-    ).rejects.toThrow("Cannot open navigation view target: broken");
+    ).rejects.toThrow("Cannot open navigation Panel target: broken");
     expect(calls).toEqual([]);
   });
 
@@ -139,7 +139,7 @@ describe("createNavigationRegistry", () => {
         openResource: async (resource) => {
           calls.push(`resource:${resource.uri}`);
         },
-        openWidget: () => {
+        openPanel: () => {
           calls.push("widget");
           throw new Error("widget dispatch failed");
         },
@@ -154,7 +154,7 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://a" } },
-          { kind: "view", widgetId: "broken" },
+          { kind: "panel", panelId: "broken" },
         ],
       }),
     ).rejects.toThrow("widget dispatch failed");

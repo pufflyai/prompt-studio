@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Code, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
+import type { WorkbenchModuleContribution, WorkbenchPanelRenderInput } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
 const COMMANDS_WIDGET_ID = "onboarding.commands";
@@ -9,7 +9,7 @@ const CHANGE_THEME_COMMAND_ID = "workbench.action.changeTheme";
 
 const commandIds = [CHANGE_THEME_COMMAND_ID];
 
-const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const CommandThemePanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   useWorkbenchStore(input.workbench.keybindings.store, (state) => state.keybindings);
@@ -87,7 +87,8 @@ const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
 export const createCommandKeybindingThemeModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.commands-keybindings-themes",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: COMMANDS_WIDGET_ID,
       title: "Commands",
       region: "main",
@@ -97,6 +98,6 @@ export const createCommandKeybindingThemeModule = (): WorkbenchModuleContributio
       id: COMMANDS_RENDERER_ID,
       render: (input) => <CommandThemePanel input={input} />,
     });
-    ctx.layout.openWidget(COMMANDS_WIDGET_ID);
+    ctx.layout.openPanel(COMMANDS_WIDGET_ID);
   },
 });

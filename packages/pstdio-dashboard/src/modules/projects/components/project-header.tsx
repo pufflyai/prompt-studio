@@ -1,6 +1,6 @@
 import { Avatar, Button, HStack, IconButton, Text } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { useWorkbenchStore, WorkbenchBreadcrumbView, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchBreadcrumbView, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { ChevronsUpDown } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -22,7 +22,7 @@ const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersi
   return project?.name ?? (typeof projectName === "string" ? projectName : "Projects");
 };
 
-export const ProjectHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const selectedProjectId = useWorkbenchStore(
     input.workbench.context.store,

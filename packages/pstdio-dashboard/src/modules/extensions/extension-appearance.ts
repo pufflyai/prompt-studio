@@ -1,6 +1,6 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   localizeExtensionAppearance,
   type ResolvedWorkbenchExtensionAppearance,
@@ -35,7 +35,7 @@ const toFileIconThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["
   }) satisfies FileIconThemePreferenceOption;
 
 export const registerExtensionAppearance = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   rawAppearance: ListExtensionAppearanceResponse,
 ) => {
   const translationDisposable = registerExtensionTranslationBundles(rawAppearance);

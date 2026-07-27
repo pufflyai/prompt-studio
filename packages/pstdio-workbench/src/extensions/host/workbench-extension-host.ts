@@ -9,7 +9,7 @@ import type {
   PreferenceValue,
   WorkbenchCommandExecutionContext,
   WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
+  WorkbenchModuleContext,
 } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
 import {
@@ -36,11 +36,14 @@ import {
 } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-renderer-contributions";
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
+import {
+  registerWorkbenchExtensionPanel,
+  toWorkbenchPanelEligibility,
+  toWorkbenchPanelMenus,
+} from "../contributions/panel-contributions";
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { registerWorkbenchExtensionViewWidget } from "../contributions/view-widget-contributions";
-import { resolveWorkbenchModeRegion, resolveWorkbenchViewRegion } from "../shared/workbench-targets";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -63,7 +66,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   webviewFiles?: ExtensionWebviewFileCapabilities;
-  workbench: WorkbenchModuleContributionContext;
+  workbench: WorkbenchModuleContext;
 }
 
 const routeResourceKindDefault = "extension-route";
@@ -115,7 +118,7 @@ const registerBridgeRenderer = (input: RegisterWorkbenchExtensionContributionsIn
   disposables.push(
     input.workbench.renderers.registerRenderer(
       createBridgeWebviewRenderer({
-        createHostCapabilities: createExtensionHostCapabilities(input, "view"),
+        createHostCapabilities: createExtensionHostCapabilities(input, "panel"),
         createProps: input.createWebviewProps,
         createTheme: input.createWebviewTheme,
       }),
@@ -169,7 +172,7 @@ const registerMenus = (
             id: registration.contribution.slotId,
             kind: "menu",
             projectId: input.projectId,
-            context: { contributionId: registration.contribution.id },
+            context: { panelId: registration.contribution.id },
           }),
         }),
     }),
@@ -193,7 +196,7 @@ const registerCommandPaletteContributions = (
             id: "workbench.commandPalette",
             kind: "menu",
             projectId: input.projectId,
-            context: { contributionId: registration.contribution.id },
+            context: { panelId: registration.contribution.id },
           }),
         }),
       isVisible: () => matchesResourceWhen(registration.contribution.when, input.workbench.getPrimaryResource()?.kind),
@@ -202,25 +205,25 @@ const registerCommandPaletteContributions = (
   ]);
 };
 
-const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.views.flatMap((view) => {
-    if (!view.webview) return [];
+const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.panels.flatMap((panel) => {
+    if (!panel.webview) return [];
     return [
-      registerWorkbenchExtensionViewWidget({
+      registerWorkbenchExtensionPanel({
         workbench: input.workbench,
-        role: view.role,
         contribution: {
-          id: view.id,
-          title: text(view.title, view.id),
-          region: resolveWorkbenchViewRegion(view.target),
+          id: panel.id,
+          title: text(panel.title, panel.id),
+          region: panel.region,
+          closable: panel.closable,
           rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
           singleton: true,
-          resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-          eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
-          panelMenuOwner: view.panelMenuOwner,
+          resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
+          eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
+          panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
           config: {
-            ...toBridgeWebviewConfig(view.webview),
-            ...(view.role === "modal"
+            ...toBridgeWebviewConfig(panel.webview),
+            ...(panel.region === "overlay"
               ? { size: "lg", scrollBehavior: "inside", contentHeight: "min(560px, calc(100dvh - 48px))" }
               : {}),
           },
@@ -265,8 +268,8 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
             context: {
               workbench: renderInput.workbench,
               webviewId: panel.id,
-              placement: { ...renderInput.placement, contributionId: panel.id },
-              hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.placement),
+              placement: { ...renderInput.instance, panelId: panel.id },
+              hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
             },
             createHostCapabilities: createExtensionHostCapabilities(input, "settings"),
             createProps: input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),
@@ -282,9 +285,9 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
   return disposables;
 };
 
-const registerResourceOpeners = (input: RegisterWorkbenchExtensionContributionsInput) => {
+const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const resourceKinds = new Set<string>();
-  for (const view of input.metadata.views) if (view.resourceKind) resourceKinds.add(view.resourceKind);
+  for (const panel of input.metadata.panels) if (panel.resourceKind) resourceKinds.add(panel.resourceKind);
   for (const renderer of input.metadata.kanbanRenderers ?? [])
     if (renderer.resourceKind) resourceKinds.add(renderer.resourceKind);
 
@@ -295,21 +298,24 @@ const registerResourceOpeners = (input: RegisterWorkbenchExtensionContributionsI
         input.workbench.resources.registerKind({ kind, label: kind, icon: "FileText", surface: "primary" }),
       );
     }
-    disposables.push(
-      input.workbench.resources.registerOpener({
-        id: `workbench.extension.resource.${kind}`,
-        canOpen: (resource) => resource.kind === kind,
-        open: (resource) => {
-          const views = input.metadata.views.filter((view) => view.resourceKind === kind && view.role !== "modal");
-          return views.map((view) =>
-            input.workbench.layout.openWidget(view.id, {
-              resource,
-              title: resource.label ?? resource.id ?? resource.uri,
-            }),
-          );
-        },
-      }),
-    );
+    const panels = input.metadata.panels.filter((panel) => panel.resourceKind === kind && panel.region !== "overlay");
+    if (panels.length > 0) {
+      disposables.push(
+        input.workbench.resources.registerPresenter({
+          id: `workbench.extension.resource.${kind}`,
+          canOpen: (resource) => resource.kind === kind,
+          open: (resource) => {
+            const instances = panels.map((panel) =>
+              input.workbench.layout.openPanel(panel.id, {
+                resource,
+                title: resource.label ?? resource.id ?? resource.uri,
+              }),
+            );
+            return instances.find((_instance, index) => panels[index]?.region === "main") ?? instances[0]!;
+          },
+        }),
+      );
+    }
   }
   return disposables;
 };
@@ -318,10 +324,10 @@ type WorkbenchExtensionModeRecord = WorkbenchExtensionMetadata["modes"][number];
 type WorkbenchExtensionModeLayout = NonNullable<WorkbenchExtensionModeRecord["layout"]>;
 type WorkbenchExtensionModeOpenEntry = NonNullable<WorkbenchExtensionModeLayout["open"]>[number];
 
-const openModeView = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
-  if (!entry.view) return;
-  ctx.layout.openWidget(entry.view, {
-    region: resolveWorkbenchModeRegion(entry.target),
+const openModePanel = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
+  if (!entry.panel) return;
+  ctx.layout.openPanel(entry.panel, {
+    region: entry.region,
     pinned: entry.pinned,
     title: text(entry.title),
   });
@@ -346,7 +352,7 @@ const activateModeLayout = (
   mode: WorkbenchExtensionModeRecord,
 ) => {
   for (const entry of mode.layout?.open ?? []) {
-    openModeView(ctx, entry);
+    openModePanel(ctx, entry);
     openModeResource(input, ctx, entry);
   }
 };
@@ -374,13 +380,13 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(...registerCommandPaletteContributions(input, context));
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
   disposables.push(registerWorkbenchExtensionFileRenderers(input));
-  disposables.push(...registerWebviewViews(input));
+  disposables.push(...registerWebviewPanels(input));
   disposables.push(registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? []));
   disposables.push(
     registerWorkbenchExtensionDataTableRenderers(
       context,
       input.metadata.dataTableRenderers ?? [],
-      input.metadata.views,
+      input.metadata.panels,
     ),
   );
   disposables.push(
@@ -402,7 +408,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
       workbench: input.workbench,
     }),
   );
-  disposables.push(...registerResourceOpeners(input));
+  disposables.push(...registerResourcePresenters(input));
   disposables.push(...registerModes(input));
 
   return {

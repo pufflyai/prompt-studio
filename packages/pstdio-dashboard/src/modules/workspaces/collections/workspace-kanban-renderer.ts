@@ -1,6 +1,6 @@
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { AttributeDescriptor, KanbanRendererRow, KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { createElement } from "react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -55,7 +55,7 @@ const workspaceDefaultSettings: Partial<KanbanRendererSettings> = {
   displayProperties: ["id", "type", "diffOverview"],
 };
 
-const subscribeWorkspaceData = (ctx: WorkbenchModuleContributionContext, listener: () => void) => {
+const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => void) => {
   const unsubscribeData = subscribeDashboardData(listener);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
   const unsubscribeDiffSummaries = subscribeDashboardWorkspaceDiffSummaries(listener);
@@ -70,7 +70,7 @@ const subscribeWorkspaceData = (ctx: WorkbenchModuleContributionContext, listene
 // Diff summaries load lazily over the API. We kick off the worktree requests on
 // each query and rely on the diff-summary subscription to re-run the query once
 // the totals land, so the board fills in its diff bubbles without a manual refresh.
-const executeWorkspaceQuery = (ctx: WorkbenchModuleContributionContext) => {
+const executeWorkspaceQuery = (ctx: WorkbenchModuleContext) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx));
 
   void requestDashboardWorkspaceDiffSummaries(
@@ -80,7 +80,7 @@ const executeWorkspaceQuery = (ctx: WorkbenchModuleContributionContext) => {
   return workspaces.map(toWorkspaceRow);
 };
 
-export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContributionContext) => {
+export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContext) => {
   ctx.renderers.registerKanbanRenderer<DashboardWorkspaceRow>({
     id: dashboardWidgetIds.workspaces,
     title: "Workspaces",
@@ -95,8 +95,9 @@ export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContribution
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });
-  ctx.layout.registerLocation(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
       region: "main",

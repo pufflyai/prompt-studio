@@ -7,7 +7,7 @@ import { resolveAnchorRegion } from "../core";
 // side-region activation can pollute — measures the exact signal history records, so the
 // contract asserts the user-visible navigation state.
 export const primaryPlacements = (workbench: WorkbenchCore) =>
-  workbench.layout.getLayout().regions[resolveAnchorRegion("primary")].widgets;
+  workbench.layout.listPanelInstances(resolveAnchorRegion("primary"));
 
 export const unpinnedPrimaryPlacements = (workbench: WorkbenchCore) =>
   primaryPlacements(workbench).filter((placement) => !placement.pinned);
@@ -30,7 +30,7 @@ export interface ResourceRouteContract {
   expectedMode?: string;
 }
 
-// Two microtasks settle resource activation and any opener work on the active tab.
+// Two microtasks settle resource activation and any presenter work on the active tab.
 const flush = async () => {
   await Promise.resolve();
   await Promise.resolve();
@@ -57,13 +57,13 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
       await flush();
     };
 
-    const primaryWidgetIds = () => unpinnedPrimaryPlacements(workbench).map((placement) => placement.widgetId);
+    const primaryWidgetIds = () => unpinnedPrimaryPlacements(workbench).map((placement) => placement.panelId);
 
     if (contract.rootDetailHistory === "retained") {
       test("root -> detail -> Back uses only a retained root tab", async () => {
         await open(contract.root);
         await open(contract.detail);
-        const widgetIds = primaryWidgetIds();
+        const panelIds = primaryWidgetIds();
         expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
 
         const back = workbench.history.goBack();
@@ -71,13 +71,13 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
 
         expect(activePrimaryResource(workbench)?.uri).toBe(contract.root.uri);
         expect(back?.resource?.uri).toBe(contract.root.uri);
-        expect(primaryWidgetIds()).toEqual(widgetIds);
+        expect(primaryWidgetIds()).toEqual(panelIds);
       });
 
       test("root -> detail -> Back -> Forward keeps the live tab set stable", async () => {
         await open(contract.root);
         await open(contract.detail);
-        const widgetIds = primaryWidgetIds();
+        const panelIds = primaryWidgetIds();
         expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
 
         workbench.history.goBack();
@@ -87,7 +87,7 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
 
         expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
         expect(forward?.resource?.uri).toBe(contract.detail.uri);
-        expect(primaryWidgetIds()).toEqual(widgetIds);
+        expect(primaryWidgetIds()).toEqual(panelIds);
       });
     } else {
       test("root -> detail replacement replays the prior Location through Back", async () => {
@@ -120,7 +120,7 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
         await open(contract.root);
         await open(contract.detail);
         await open(detailB);
-        const widgetIds = primaryWidgetIds();
+        const panelIds = primaryWidgetIds();
         expect(workbench.history.store.getState().cursor).toBeGreaterThan(0);
 
         const back = workbench.history.goBack();
@@ -128,7 +128,7 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
 
         expect(activePrimaryResource(workbench)?.uri).toBe(contract.detail.uri);
         expect(back?.resource?.uri).toBe(contract.detail.uri);
-        expect(primaryWidgetIds()).toEqual(widgetIds);
+        expect(primaryWidgetIds()).toEqual(panelIds);
       });
     }
 

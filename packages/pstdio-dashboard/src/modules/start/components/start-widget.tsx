@@ -5,8 +5,8 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
 } from "@pstdio/ui";
-import type { ResourceRef } from "@pstdio/workbench/core";
-import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { ResourceRef } from "@pstdio/workbench";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { GitBranch } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
@@ -202,7 +202,7 @@ export const RecentSessionRow = (props: RecentSessionRowProps) => {
   );
 };
 
-export const StartWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];

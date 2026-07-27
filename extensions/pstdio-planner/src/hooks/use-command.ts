@@ -3,7 +3,7 @@ import { type QueryKey, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { useTicketHost } from "./host-context";
 
 // Executes an extension command and unwraps its outcome, throwing on failure so
-// react-query can surface the error. This is the single place views talk to the host.
+// react-query can surface the error. This is the single place panels talk to the host.
 export const runCommand = async <TResult>(
   host: GuestHost,
   commandId: string,

@@ -42,7 +42,7 @@ const sessionNode = (session: TicketSession): TreeNode => ({
   icon: sessionStatusIcon(session.status),
   iconColor: sessionStatusColor(session.status),
   // The `sessionSurface: "side"` hint tells the dashboard to open the session in its
-  // Side Panel (keeping the ticket in view) instead of switching to sessions mode.
+  // Side Panel (keeping the ticket in panel) instead of switching to sessions mode.
   target: {
     kind: "resource",
     resource: { type: "session", id: session.id, label: session.title, metadata: { sessionSurface: "side" } },

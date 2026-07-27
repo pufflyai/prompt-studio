@@ -1,10 +1,10 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 
 export const registerExtensionResourceHierarchy = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable => {
   const hierarchyRenderers = input.metadata.kanbanRenderers?.filter((renderer) => renderer.resourceKind) ?? [];

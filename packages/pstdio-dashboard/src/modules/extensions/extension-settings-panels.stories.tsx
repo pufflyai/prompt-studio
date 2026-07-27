@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { createWorkbenchSettingsModule, settingsPanelResource, Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

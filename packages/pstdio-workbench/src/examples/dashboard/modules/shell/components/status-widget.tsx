@@ -1,9 +1,9 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "../../../../../react";
+import type { WorkbenchPanelRenderInput } from "../../../../../react";
 import { WorkbenchIcon } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 
-export const StatusWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const StatusWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (

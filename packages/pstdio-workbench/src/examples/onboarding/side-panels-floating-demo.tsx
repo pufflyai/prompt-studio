@@ -91,7 +91,9 @@ export const registerFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionCont
   ctx.renderers.registerRenderer({ id: CHECKS_RENDERER_ID, render: () => <ChecksContent /> });
   ctx.renderers.registerRenderer({ id: CHECKS_TAB_RENDERER_ID, render: () => <ChecksTab /> });
 
-  ctx.layout.registerSubPanel({
+  ctx.layout.registerPanel({
+    closable: true,
+    eligibleLocations: {},
     id: SESSION_WIDGET_ID,
     title: "Session A",
     region: "side",
@@ -101,7 +103,9 @@ export const registerFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionCont
       customMenuRendererId: SESSION_TAB_MENU_RENDERER_ID,
     },
   });
-  ctx.layout.registerSubPanel({
+  ctx.layout.registerPanel({
+    closable: true,
+    eligibleLocations: {},
     id: CHECKS_WIDGET_ID,
     title: "Checks",
     region: "side",
@@ -111,6 +115,6 @@ export const registerFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionCont
 };
 
 export const openFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionContext) => {
-  ctx.layout.openWidget(SESSION_WIDGET_ID, { pinned: true });
-  ctx.layout.openWidget(CHECKS_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel(SESSION_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel(CHECKS_WIDGET_ID, { pinned: true });
 };

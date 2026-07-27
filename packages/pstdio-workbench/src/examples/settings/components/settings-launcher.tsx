@@ -1,11 +1,11 @@
 import { Button, Center, Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../core";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID, WorkbenchIcon } from "../../../react";
 
 // The settings surface is a modal overlay; closing it leaves the main region empty.
 // This landing widget gives the lesson a way back in by re-running the built-in
 // open command — no need to know the overlay widget id.
-export const SettingsLauncher = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const SettingsLauncher = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (

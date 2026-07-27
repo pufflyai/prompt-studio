@@ -1,11 +1,11 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 
 // Search is a header row in every project-scoped mode (mirrors how the footer contributes its
 // help/settings rows). Mode "*" keeps it visible even in extension-declared modes such as ticket.
-const registerSearchHeader = (ctx: WorkbenchModuleContributionContext) => {
+const registerSearchHeader = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.sidenav.search",
     modes: ["*"],

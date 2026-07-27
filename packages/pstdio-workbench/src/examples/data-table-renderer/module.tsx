@@ -73,13 +73,14 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
         },
       ],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: rendererId,
       title: "Service health",
       region: "main",
       rendererId,
       singleton: true,
     });
-    ctx.layout.openWidget(rendererId);
+    ctx.layout.openPanel(rendererId);
   },
 });

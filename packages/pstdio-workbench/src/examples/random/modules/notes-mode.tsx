@@ -1,10 +1,5 @@
-import type {
-  Disposable,
-  TreeNode,
-  WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
-} from "../../../core";
-import type { WorkbenchWidgetRenderInput } from "../../../react";
+import type { Disposable, TreeNode, WorkbenchModeActivationContext, WorkbenchModuleContext } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../react";
 import { NotesEditor, NotesHelper, NotesRelated, NotesStatus, NotesTopBar } from "../components/notes";
 import {
   itemResource,
@@ -20,7 +15,7 @@ interface NotesWidgetSetup {
   id: string;
   title: string;
   region: "nav" | "main" | "main-right-menu" | "status" | "side";
-  render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
+  render: (input: WorkbenchPanelRenderInput) => React.ReactNode;
 }
 
 const notesWidgets: NotesWidgetSetup[] = [
@@ -56,7 +51,8 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   for (const widget of notesWidgets) {
     disposables.push(
       ctx.renderers.registerRenderer({ id: widget.id, render: widget.render }),
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: widget.id,
         title: widget.title,
         region: widget.region,
@@ -73,41 +69,42 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       getBody: () => buildNotesTreeSections(),
       getChildren: () => [],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: "notes.navigation",
       title: notesMode.label,
       region: "main-left-menu",
       rendererId: "notes.navigation",
     }),
-    ctx.resources.registerOpener({
-      id: "notes.opener",
+    ctx.resources.registerPresenter({
+      id: "notes.presenter",
       canOpen: (resource) => resource.kind === randomResourceKind && resource.metadata?.modeId === notesMode.id,
       open: (resource, input) =>
-        ctx.layout.openWidget(notesWidgetIds.editor, {
+        ctx.layout.openPanel(notesWidgetIds.editor, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     }),
   );
 
-  ctx.layout.openWidget(railWidgetId, { pinned: true });
-  ctx.layout.openWidget("notes.navigation");
+  ctx.layout.openPanel(railWidgetId, { pinned: true });
+  ctx.layout.openPanel("notes.navigation");
 
   const defaultItem = notesMode.items.find((item) => item.id === notesMode.defaultItemId) ?? notesMode.items[0];
-  ctx.layout.openWidget(notesWidgetIds.editor, {
+  ctx.layout.openPanel(notesWidgetIds.editor, {
     resource: itemResource(notesMode.id, defaultItem),
     title: defaultItem.title,
   });
   for (const widget of notesWidgets) {
     if (widget.id === notesWidgetIds.editor) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true });
+    ctx.layout.openPanel(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const registerNotesMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerNotesMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: notesMode.id,
     label: notesMode.label,

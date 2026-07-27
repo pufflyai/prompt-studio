@@ -4,7 +4,7 @@ import type {
   LocalizableString,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
-import type { ResourceBrowseEntry } from "@pstdio/workbench/core";
+import type { ResourceBrowseEntry } from "@pstdio/workbench";
 
 export type ExtensionBenchTemplateTypeContribution = {
   id: string;
@@ -75,7 +75,7 @@ export type ExtensionBenchSummary = {
   templateTypes: number;
   templates: number;
   treeRenderers: number;
-  views: number;
+  panels: number;
 };
 
 export type ExtensionBenchLoadResponse = {

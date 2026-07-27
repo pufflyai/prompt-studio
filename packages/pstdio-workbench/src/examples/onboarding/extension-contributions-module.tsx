@@ -5,7 +5,7 @@ import {
   headerTrailingMenuPath,
   type MenuPath,
   type WorkbenchModuleContribution,
-  type WorkbenchWidgetRenderInput,
+  type WorkbenchPanelRenderInput,
 } from "../../core";
 import { registerWorkbenchExtensionContributions } from "../../extensions";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
@@ -72,7 +72,7 @@ const metadata = {
       label: "Lab review",
       layout: {
         panels: ["main"],
-        open: [{ target: "workbench.main.left", view: TREE_VIEW_ID, pinned: true }],
+        open: [{ region: "main", panel: TREE_VIEW_ID, pinned: true }],
       },
     },
   ],
@@ -81,13 +81,12 @@ const metadata = {
   settingsPanels: [],
   treeItems: [],
   kanbanRenderers: [],
-  views: [
+  panels: [
     {
       id: TREE_VIEW_ID,
       extensionId: EXTENSION_ID,
-      slotId: "workbench.main.left",
-      role: "location",
-      target: "workbench.main.left",
+      region: "main",
+      closable: false,
       title: "Lab tree",
       treeRendererId: TREE_ID,
     },
@@ -144,7 +143,7 @@ const executeExtensionCommand = (ctx: Parameters<WorkbenchModuleContribution["ac
   };
 };
 
-const ExtensionContributionsPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const ExtensionContributionsPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   useWorkbenchStore(input.workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(input.workbench.layout.store, (state) => state.widgets);
@@ -194,7 +193,8 @@ const ExtensionContributionsPanel = (props: { input: WorkbenchWidgetRenderInput 
 export const createExtensionContributionsModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.extension-contributions",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: HOST_WIDGET_ID,
       title: "Extension contributions",
       region: "main",
@@ -204,7 +204,7 @@ export const createExtensionContributionsModule = (): WorkbenchModuleContributio
       id: HOST_RENDERER_ID,
       render: (input) => <ExtensionContributionsPanel input={input} />,
     });
-    ctx.layout.openWidget(HOST_WIDGET_ID);
+    ctx.layout.openPanel(HOST_WIDGET_ID);
 
     const extensionDisposable = registerWorkbenchExtensionContributions({
       executeCommand: executeExtensionCommand(ctx),
@@ -214,7 +214,7 @@ export const createExtensionContributionsModule = (): WorkbenchModuleContributio
       workbench: ctx,
     });
 
-    ctx.layout.openWidget(TREE_VIEW_ID, { pinned: true });
+    ctx.layout.openPanel(TREE_VIEW_ID, { pinned: true });
     return extensionDisposable;
   },
 });

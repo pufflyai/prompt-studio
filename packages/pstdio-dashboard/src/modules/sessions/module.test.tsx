@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -26,7 +26,7 @@ describe("createSessionsModule", () => {
       label: "Session",
       icon: "MessageCircle",
     });
-    expect(workbench.layout.getWidget(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
+    expect(workbench.layout.getPanel(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
   });
 
   test("renders the Sessions group in session and workspace modes but not the project mode", async () => {

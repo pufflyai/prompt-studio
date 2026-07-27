@@ -18,7 +18,7 @@ ctx.renderers.registerControlsRenderer({
 // A controls renderer auto-registers a widget renderer with the same id; place it
 // through the layout. Extensions declare this as a \\\`controls\\\` contribution and the
 // dashboard bridges the query/update/apply/reset command ids for you.
-ctx.layout.registerWidget({
+ctx.layout.registerPanel({
   id: "card-inspector",
   title: "Card inspector",
   region: "main-right-menu",

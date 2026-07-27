@@ -1,5 +1,5 @@
-export const settingsSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "pstdio-workbench/react";
+export const settingsSource = `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 
 // A module adds settings entries through the generic settings registry. The
 // framework knows nothing about your data or editors — it renders sections, a
@@ -53,7 +53,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       actions: [{ id: "create", label: "Create snippet", icon: "Plus", run: () => { createSnippet(); ctx.settings.refresh(); } }],
     });
 
-    // Renders the unified Settings surface (tree + dispatching panel + opener).
+    // Renders the unified Settings surface (tree + dispatching panel + presenter).
     const surface = createWorkbenchSettingsModule({
       resolveScopeId: (scope) => (scope === "project" ? activeProjectId() : undefined),
     }).activate(ctx);
@@ -68,8 +68,8 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         </button>
       ),
     });
-    ctx.layout.registerWidget({ id: "app.settings.launcher", title: "Settings", region: "main", rendererId: "app.settings.launcher.renderer" });
-    ctx.layout.openWidget("app.settings.launcher");
+    ctx.layout.registerPanel({ id: "app.settings.launcher", title: "Settings", region: "main", rendererId: "app.settings.launcher.renderer" });
+    ctx.layout.openPanel("app.settings.launcher");
 
     return surface;
   },

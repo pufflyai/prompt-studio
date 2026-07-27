@@ -1,4 +1,4 @@
-export const widgetVariantsSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+export const widgetVariantsSource = `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 const LOCATION_KIND = "docs.widget-variants";
 const NOTE_KIND = "docs.note";
@@ -25,7 +25,15 @@ const noteResource = (id: "alpha" | "beta") => ({
 export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
   id: "docs.widget-variants",
   activate(ctx) {
-    ctx.layout.registerLocation({
+    ctx.resources.registerKind({ kind: LOCATION_KIND, label: "Widget variants" });
+    ctx.resources.registerPresenter({
+      id: "docs.widget-variants.presenter",
+      canOpen: (resource) => resource.kind === LOCATION_KIND,
+      open: (resource) => ctx.layout.openPanel(LOCATION_PANEL_ID, { resource }),
+    });
+
+    ctx.layout.registerPanel({
+      closable: false,
       id: LOCATION_PANEL_ID,
       title: "Widget variants",
       region: "main",
@@ -33,7 +41,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       rendererId: RENDERER_ID,
     });
 
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: SINGLETON_SUB_PANEL_ID,
       title: "Closable singleton",
       region: "main",
@@ -41,7 +50,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       rendererId: RENDERER_ID,
     });
 
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: NOTE_SUB_PANEL_ID,
       title: "Resource Sub Panel",
       region: "main",
@@ -51,7 +61,8 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       rendererId: RENDERER_ID,
     });
 
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: SCRATCH_SUB_PANEL_ID,
       title: "Scratch",
       region: "main",
@@ -63,25 +74,24 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
 
     ctx.renderers.registerRenderer({
       id: RENDERER_ID,
-      render: ({ placement, widget }) => (
+      render: ({ instance, panel }) => (
         <article>
-          <h2>{placement.title}</h2>
+          <h2>{instance.title}</h2>
           <dl>
-            <dt>role</dt>
-            <dd>{"role" in widget ? widget.role : "placeholder"}</dd>
             <dt>closable</dt>
-            <dd>{String(placement.closable === true)}</dd>
+            <dd>{String(instance.closable)}</dd>
             <dt>reuse</dt>
-            <dd>{"reuse" in widget ? widget.reuse : "resource"}</dd>
+            <dd>{panel.reuse ?? "resource"}</dd>
           </dl>
         </article>
       ),
     });
 
-    ctx.layout.openWidget(LOCATION_PANEL_ID, { resource: locationResource });
-    ctx.layout.openWidget(SINGLETON_SUB_PANEL_ID);
-    ctx.layout.openWidget(NOTE_SUB_PANEL_ID, { resource: noteResource("alpha") });
-    ctx.layout.openWidget(NOTE_SUB_PANEL_ID, { resource: noteResource("beta") });
-    ctx.layout.openWidget(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
+    void ctx.resources.openResource(locationResource).then(() => {
+      ctx.layout.openPanel(SINGLETON_SUB_PANEL_ID);
+      ctx.layout.openPanel(NOTE_SUB_PANEL_ID, { resource: noteResource("alpha") });
+      ctx.layout.openPanel(NOTE_SUB_PANEL_ID, { resource: noteResource("beta") });
+      ctx.layout.openPanel(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
+    });
   },
 });`;

@@ -1,4 +1,4 @@
-import type { LastResourcePersistenceAdapter, ResourceRef } from "@pstdio/workbench/core";
+import type { LastResourcePersistenceAdapter, ResourceRef } from "@pstdio/workbench";
 import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "@pstdio/workbench/storage";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 

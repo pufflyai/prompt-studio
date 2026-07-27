@@ -59,15 +59,7 @@ export const selectedSubPanelsFromLayout = (layout: LayoutModel, modeId: string 
 };
 
 const locationPlacementFromLayout = (layout: LayoutModel) => {
-  const activeLocation = getActiveLocationPlacement(layout.getLayout());
-  if (activeLocation) return activeLocation;
-  const region = layout.getLayout().regions.main;
-  const active = region.widgets.find((placement) => placement.widgetId === region.activeWidgetId);
-  if (active && workbenchPlacementRole(layout, active) !== "sub-panel") return active;
-  return (
-    region.widgets.find((placement) => workbenchPlacementRole(layout, placement) === "location") ??
-    region.widgets.find((placement) => workbenchPlacementRole(layout, placement) !== "sub-panel")
-  );
+  return getActiveLocationPlacement(layout.getLayout());
 };
 
 const locationFromPlacement = (

@@ -2,7 +2,7 @@ import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "@pstdio/ui";
 import { ParamEditor, ScrollArea } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
-import type { RegisteredControlsRendererContribution, WorkbenchCore, WorkbenchWidgetPlacement } from "../../../core";
+import type { RegisteredControlsRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 
 // A resource param chip carries a serializable ref; open it as a workbench tab so
 // links (e.g. a ticket's parent/dependency) navigate like the old webview did.
@@ -23,7 +23,7 @@ const openResourceRef = (workbench: WorkbenchCore, ref: ResourceRefValue) => {
 interface WorkbenchControlsViewProps {
   workbench: WorkbenchCore;
   contribution: RegisteredControlsRendererContribution;
-  placement: WorkbenchWidgetPlacement;
+  placement: WorkbenchPanelInstance;
 }
 
 interface ControlsViewState {

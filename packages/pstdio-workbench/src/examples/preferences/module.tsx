@@ -7,7 +7,7 @@ import type {
   PreferenceScopeRef,
   PreferenceValue,
   WorkbenchModuleContribution,
-  WorkbenchWidgetRenderInput,
+  WorkbenchPanelRenderInput,
 } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
@@ -93,7 +93,7 @@ const PreferenceOptionButton = (props: { icon: string; label: string; onClick: (
   );
 };
 
-const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const PreferenceSchemasPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const schemas = useWorkbenchStore(input.workbench.preferences.store, (state) => state.schemas);
   const [, setRevision] = useState(0);
@@ -170,7 +170,7 @@ export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribut
   activate(ctx) {
     ctx.preferences.registerSchema(preferenceSchema);
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: preferencesWidgetId,
       title: "Preference schemas",
       region: "main",
@@ -183,6 +183,6 @@ export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribut
       render: (input) => <PreferenceSchemasPanel input={input} />,
     });
 
-    ctx.layout.openWidget(preferencesWidgetId, { pinned: true });
+    ctx.layout.openPanel(preferencesWidgetId, { pinned: true });
   },
 });

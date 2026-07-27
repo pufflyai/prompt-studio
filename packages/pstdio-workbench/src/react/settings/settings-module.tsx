@@ -12,8 +12,8 @@ export interface WorkbenchSettingsModuleOptions {
 }
 
 // The single overlay widget that hosts the whole settings surface. Exported so a
-// host can open settings directly (e.g. ctx.layout.openWidget(...)) or assert it
-// in tests — but hosts normally just open a settings resource and let the opener
+// host can open settings directly (e.g. ctx.layout.openPanel(...)) or assert it
+// in tests — but hosts normally just open a settings resource and let the presenter
 // below place it here.
 export const WORKBENCH_SETTINGS_WIDGET_ID = "workbench.settings";
 export const WORKBENCH_SETTINGS_NAV_WIDGET_ID = "workbench.settings.nav";
@@ -30,9 +30,9 @@ const PANEL_RENDERER_ID = "workbench.settings.panel.renderer";
 const NAV_TREE_ID = "workbench.settings.navigation";
 
 // The unified Settings surface: a full-window modal overlay containing a nav tree
-// (derived from `ctx.settings`) and a dispatching panel, plus a resource opener
+// (derived from `ctx.settings`) and a dispatching panel, plus a resource presenter
 // that pops the overlay. Contributors only call ctx.settings.registerSection/
-// registerPanel — this renders and wires everything; hosts add no mode or opener.
+// registerPanel — this renders and wires everything; hosts add no mode or presenter.
 export const createWorkbenchSettingsModule = (
   options: WorkbenchSettingsModuleOptions = {},
 ): WorkbenchModuleContribution => {
@@ -51,7 +51,8 @@ export const createWorkbenchSettingsModule = (
         getChildren: () => [],
       });
 
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
         title: `${title} navigation`,
         region: "sidenav",
@@ -59,7 +60,8 @@ export const createWorkbenchSettingsModule = (
         rendererId: NAV_TREE_ID,
       });
 
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
         title,
         region: "main",
@@ -73,7 +75,7 @@ export const createWorkbenchSettingsModule = (
         ),
       });
 
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
         id: WIDGET_ID,
         title,
         region: "overlay",
@@ -100,10 +102,10 @@ export const createWorkbenchSettingsModule = (
         label: "Settings",
         icon: standardResourceIcons.settings,
       });
-      ctx.resources.registerOpener({
-        id: "workbench.settings.opener",
+      ctx.resources.registerPresenter({
+        id: "workbench.settings.presenter",
         canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
-        open: (resource) => ctx.layout.openWidget(WIDGET_ID, { resource, title: resource.label }),
+        open: (resource) => ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label }),
       });
 
       ctx.commands.registerCommand(

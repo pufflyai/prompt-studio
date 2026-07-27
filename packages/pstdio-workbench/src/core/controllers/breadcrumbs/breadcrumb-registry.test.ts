@@ -22,11 +22,12 @@ describe("createResourceBreadcrumbItems", () => {
       canResolve: () => true,
       getParent: (resource) => parents.get(resource.uri),
     });
-    resources.registerOpener({
+    resources.registerPresenter({
       id: "docs",
       canOpen: () => true,
       open: (resource) => {
         opened.push(resource.uri);
+        return { instanceId: resource.uri, panelId: "docs", closable: false };
       },
     });
 

@@ -2,7 +2,7 @@ import type {
   DataTableRendererColumn,
   DataTableRendererQueryResult,
   DataTableRendererRow,
-  WorkbenchWidgetPlacement,
+  WorkbenchPanelInstance,
 } from "../../../core";
 
 export const resolveDataTableRendererColumns = (
@@ -25,7 +25,7 @@ export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns
   return { data, rowByData };
 };
 
-export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchWidgetPlacement) => {
+export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchPanelInstance) => {
   const resourceKey = placement.resource?.uri ?? placement.resource?.id ?? "unscoped";
-  return `pstdio:workbench:dataTableRenderer:${rendererId}:${placement.widgetId}:${resourceKey}`;
+  return `pstdio:workbench:dataTableRenderer:${rendererId}:${placement.instanceId}:${resourceKey}`;
 };

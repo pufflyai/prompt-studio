@@ -1,15 +1,15 @@
 import { Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { workbenchModes, workspaceFiles } from "../mock-data/data";
 
-const findActiveFile = (input: WorkbenchWidgetRenderInput) => {
+const findActiveFile = (input: WorkbenchPanelRenderInput) => {
   const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const fileId = typeof placement?.resource?.metadata?.fileId === "string" ? placement.resource.metadata.fileId : null;
   return workspaceFiles.find((file) => file.id === fileId) ?? workspaceFiles[0];
 };
 
-export const WorkspaceEditor = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const WorkspaceEditor = (props: { input: WorkbenchPanelRenderInput }) => {
   const file = findActiveFile(props.input);
 
   return (
@@ -56,7 +56,7 @@ export const WorkspaceEditor = (props: { input: WorkbenchWidgetRenderInput }) =>
   );
 };
 
-export const WorkspaceDiff = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const WorkspaceDiff = (props: { input: WorkbenchPanelRenderInput }) => {
   const file = findActiveFile(props.input);
 
   return (

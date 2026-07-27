@@ -5,7 +5,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { OpenWidgetInput } from "../layout/layout-types";
+import type { OpenWorkbenchPanelInput } from "../layout/layout-types";
 import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
 
 export interface NavigationTargetResource {
@@ -14,10 +14,10 @@ export interface NavigationTargetResource {
   input?: OpenResourceInput;
 }
 
-export interface NavigationTargetView {
-  kind: "view";
-  widgetId: string;
-  input?: OpenWidgetInput;
+export interface NavigationTargetPanel {
+  kind: "panel";
+  panelId: string;
+  input?: OpenWorkbenchPanelInput;
 }
 
 export interface NavigationTargetCommand {
@@ -26,7 +26,7 @@ export interface NavigationTargetCommand {
   args?: unknown;
 }
 
-export type NavigationTargetItem = NavigationTargetResource | NavigationTargetView | NavigationTargetCommand;
+export type NavigationTargetItem = NavigationTargetResource | NavigationTargetPanel | NavigationTargetCommand;
 
 export interface NavigationTargetCompound {
   kind: "compound";
@@ -54,15 +54,15 @@ export interface ResourceNavigator<TResult = unknown> {
 
 export type RegisteredResourceNavigator = Omit<ResourceNavigator, "priority"> & RegisteredContributionMetadata;
 
-// Minimal opener surface the navigation dispatcher needs; resolved through a
+// Minimal presenter surface the navigation dispatcher needs; resolved through a
 // closure to break the otherwise-circular core ↔ navigation dep.
 export interface NavigationDispatcherContext {
   canOpenResource?(resource: ResourceRef): boolean;
-  canOpenWidget?(widgetId: string): boolean;
+  canOpenPanel?(panelId: string): boolean;
   canExecuteCommand?(commandId: string): boolean;
   createCheckpoint?(): undefined | (() => void);
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
-  openWidget(widgetId: string, input?: OpenWidgetInput): unknown;
+  openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
 }
 
@@ -88,7 +88,7 @@ export interface NavigationRegistry {
 }
 
 export interface CreateNavigationRegistryInput {
-  // Returns the openers the dispatcher should call. Lazy so `createWorkbenchCore`
+  // Returns the presenters the dispatcher should call. Lazy so `createWorkbenchCore`
   // can install the navigation registry before the rest of the core is ready.
   resolveDispatcher?(): NavigationDispatcherContext;
 }
@@ -99,7 +99,7 @@ const noDispatcher = (): NavigationDispatcherContext => {
 
 const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
   if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
-  if (target.kind === "view") return dispatcher.openWidget(target.widgetId, target.input);
+  if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
   return dispatcher.executeCommand(target.commandId, target.args);
 };
 
@@ -107,8 +107,8 @@ const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispat
   if (target.kind === "resource" && dispatcher.canOpenResource?.(target.resource) === false) {
     throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
   }
-  if (target.kind === "view" && dispatcher.canOpenWidget?.(target.widgetId) === false) {
-    throw new Error(`Cannot open navigation view target: ${target.widgetId}`);
+  if (target.kind === "panel" && dispatcher.canOpenPanel?.(target.panelId) === false) {
+    throw new Error(`Cannot open navigation Panel target: ${target.panelId}`);
   }
   if (target.kind === "command" && dispatcher.canExecuteCommand?.(target.commandId) === false) {
     throw new Error(`Cannot open navigation command target: ${target.commandId}`);

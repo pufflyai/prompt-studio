@@ -31,7 +31,7 @@ const imageDataUrl = `data:image/svg+xml,${encodeURIComponent(
 const renderers = [
   {
     rendererId: "file-renderer.story.markdown",
-    widgetId: "file-renderer.story.markdown.widget",
+    panelId: "file-renderer.story.markdown.widget",
     title: "notes.md",
     load: () => ({ fileName: "notes.md", content: markdownContent }),
     save: (_resource: unknown, content: string) => {
@@ -40,7 +40,7 @@ const renderers = [
   },
   {
     rendererId: "file-renderer.story.code",
-    widgetId: "file-renderer.story.code.widget",
+    panelId: "file-renderer.story.code.widget",
     title: "example.ts",
     load: () => ({ fileName: "example.ts", content: codeContent }),
     save: (_resource: unknown, content: string) => {
@@ -49,7 +49,7 @@ const renderers = [
   },
   {
     rendererId: "file-renderer.story.image",
-    widgetId: "file-renderer.story.image.widget",
+    panelId: "file-renderer.story.image.widget",
     title: "logo.svg",
     load: () => ({ fileName: "logo.svg", mimeType: "image/svg+xml", dataUrl: imageDataUrl }),
   },
@@ -76,14 +76,16 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
         load: renderer.load,
         save: "save" in renderer ? renderer.save : undefined,
       });
-      ctx.layout.registerSubPanel({
-        id: renderer.widgetId,
+      ctx.layout.registerPanel({
+        closable: true,
+        id: renderer.panelId,
         title: renderer.title,
         region: "main",
         rendererId: renderer.rendererId,
         singleton: true,
+        eligibleLocations: {},
       });
-      ctx.layout.openWidget(renderer.widgetId, { title: renderer.title });
+      ctx.layout.openPanel(renderer.panelId, { title: renderer.title });
     }
   },
 });

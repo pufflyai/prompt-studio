@@ -91,7 +91,7 @@ describe("buildTicketPropertiesControls", () => {
     expect(tagParam.defaultValue).toBe(high.id);
   });
 
-  test("renders parent and dependencies as view-only chips that open their ticket", async () => {
+  test("renders parent and dependencies as panel-only chips that open their ticket", async () => {
     const { statuses, tags } = await seed();
     const ticket = baseTicket({ parentId: "p1", dependsOn: ["d1", "d2"] });
 

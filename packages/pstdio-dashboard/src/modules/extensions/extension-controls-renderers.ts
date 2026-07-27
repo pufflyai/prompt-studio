@@ -1,4 +1,4 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionCommandContext,
@@ -9,7 +9,7 @@ import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-w
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 export const registerExtensionControlsRenderers = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable[] => {
   const { metadata, projectId } = input;
@@ -30,7 +30,7 @@ export const registerExtensionControlsRenderers = (
     workbench: ctx,
   };
 
-  disposables.push(registerWorkbenchExtensionControlsRenderers(commandContext, records, metadata.views ?? []));
+  disposables.push(registerWorkbenchExtensionControlsRenderers(commandContext, records, metadata.panels ?? []));
 
   // Re-query a controls panel once its apply/reset command persists so the panel
   // reflects the committed state. Live-save edits already update the local draft.

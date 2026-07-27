@@ -1,5 +1,5 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
-import { registerWorkbenchExtensionViewWidget } from "@pstdio/workbench/extensions";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
+import { registerWorkbenchExtensionPanel } from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -15,97 +15,89 @@ import {
 export { extensionViewRegion } from "./extension-view-placement";
 
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
-type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
+type DashboardExtensionPanel = DashboardExtensionMetadata["panels"][number];
 type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layout"]>["open"]>[number];
 
 const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
 
 const createExtensionViewResource = (input: {
   projectId: string;
-  view: DashboardExtensionView;
+  panel: DashboardExtensionPanel;
   title?: ModeLayoutOpenEntry["title"];
 }) => ({
   kind: dashboardExtensionViewKind,
-  uri: `dashboard-workbench://project/${input.projectId}/extension-views/${input.view.id}`,
-  id: input.view.id,
+  uri: `dashboard-workbench://project/${input.projectId}/extension-views/${input.panel.id}`,
+  id: input.panel.id,
   label: input.title
-    ? resolveLocalizableString(input.title, input.view.extensionId)
-    : resolveLocalizableString(input.view.title, input.view.extensionId),
+    ? resolveLocalizableString(input.title, input.panel.extensionId)
+    : resolveLocalizableString(input.panel.title, input.panel.extensionId),
   // The renderer derives which view to mount from the resource kind + cached manifest
   // (PS-11), so the view record is not stored on the resource. projectId stays — it is
   // domain-adjacent context the renderer needs to look the manifest up.
   metadata: {
-    extensionId: input.view.extensionId,
+    extensionId: input.panel.extensionId,
     projectId: input.projectId,
   },
 });
 
-const resolveResource = (ctx: WorkbenchModuleContributionContext, resource: string) =>
+const resolveResource = (ctx: WorkbenchModuleContext, resource: string) =>
   ctx.resources.listResources("").find((entry) => entry.resource.uri === resource || entry.resource.id === resource)
     ?.resource;
 
 const seedModeEntry = (input: {
-  ctx: WorkbenchModuleContributionContext;
+  ctx: WorkbenchModuleContext;
   entry: ModeLayoutOpenEntry;
   projectId: string;
-  viewById: Map<string, DashboardExtensionView>;
+  panelById: Map<string, DashboardExtensionPanel>;
 }) => {
-  const { ctx, entry, projectId, viewById } = input;
-  const region = extensionModeLayoutRegion(entry.target);
+  const { ctx, entry, projectId, panelById } = input;
+  const region = extensionModeLayoutRegion(entry.region);
 
-  if (entry.view) {
-    const view = viewById.get(entry.view);
-    if (!view) throw new Error(`Extension mode view not found: ${entry.view}`);
-    return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
+  if (entry.panel) {
+    const panel = panelById.get(entry.panel);
+    if (!panel) throw new Error(`Extension mode panel not found: ${entry.panel}`);
+    return ctx.layout.openPanel(extensionViewWidgetIdFor(panel), {
       region,
       pinned: entry.pinned,
-      resource: createExtensionViewResource({ projectId, title: entry.title, view }),
+      resource: createExtensionViewResource({ projectId, title: entry.title, panel }),
       title: entry.title
-        ? resolveLocalizableString(entry.title, view.extensionId)
-        : resolveLocalizableString(view.title, view.extensionId),
+        ? resolveLocalizableString(entry.title, panel.extensionId)
+        : resolveLocalizableString(panel.title, panel.extensionId),
     });
   }
 
   if (!entry.resource) return undefined;
   const resource = resolveResource(ctx, entry.resource);
   if (!resource) throw new Error(`Extension mode resource not found: ${entry.resource}`);
-  if (entry.widget) {
-    return ctx.layout.openWidget(entry.widget, {
-      region,
-      pinned: entry.pinned,
-      resource,
-      title: entry.title ?? resource.label,
-    });
-  }
   return ctx.resources.openResource(resource);
 };
 
 const isResourceBoundModeEntry = (
   entry: ModeLayoutOpenEntry,
   mode: DashboardExtensionMode,
-  viewById: Map<string, DashboardExtensionView>,
-) => Boolean(entry.view && mode.resourceKind && viewById.get(entry.view)?.resourceKind === mode.resourceKind);
+  panelById: Map<string, DashboardExtensionPanel>,
+) => Boolean(entry.panel && mode.resourceKind && panelById.get(entry.panel)?.resourceKind === mode.resourceKind);
 
 export const activateExtensionModeLayout = (input: {
-  ctx: WorkbenchModuleContributionContext;
+  ctx: WorkbenchModuleContext;
   metadata: DashboardExtensionMetadata;
   mode: DashboardExtensionMode;
   projectId: string;
 }) => {
   const { ctx, metadata, mode, projectId } = input;
-  const viewById = new Map(metadata.views.map((view) => [view.id, view]));
+  const panelById = new Map(metadata.panels.map((panel) => [panel.id, panel]));
   const entries = mode.layout?.open ?? [];
 
   for (const entry of entries) {
-    if (entry.view && !viewById.has(entry.view)) throw new Error(`Extension mode view not found: ${entry.view}`);
-    if (entry.resource && !entry.widget && !resolveResource(ctx, entry.resource)) {
+    if (entry.panel && !panelById.has(entry.panel)) throw new Error(`Extension mode panel not found: ${entry.panel}`);
+    if (entry.resource && !resolveResource(ctx, entry.resource)) {
       throw new Error(`Extension mode resource not found: ${entry.resource}`);
     }
   }
 
   for (const entry of entries) {
-    if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
-    seedModeEntry({ ctx, entry, projectId, viewById });
+    if (isResourceBoundModeEntry(entry, mode, panelById)) continue;
+    seedModeEntry({ ctx, entry, projectId, panelById });
   }
 };
 
@@ -127,9 +119,9 @@ const getModeIdsByViewId = (metadata: DashboardExtensionMetadata) => {
 
   for (const mode of metadata.modes) {
     for (const entry of mode.layout?.open ?? []) {
-      if (!entry.view) continue;
-      const modeIds = modeIdsByViewId.get(entry.view) ?? [];
-      modeIdsByViewId.set(entry.view, [...modeIds, mode.modeId]);
+      if (!entry.panel) continue;
+      const modeIds = modeIdsByViewId.get(entry.panel) ?? [];
+      modeIdsByViewId.set(entry.panel, [...modeIds, mode.modeId]);
     }
   }
 
@@ -137,35 +129,48 @@ const getModeIdsByViewId = (metadata: DashboardExtensionMetadata) => {
 };
 
 const registerExtensionViews = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
 ) => {
   const disposables: Disposable[] = [];
   const modeIdsByViewId = getModeIdsByViewId(metadata);
 
-  for (const view of metadata.views) {
-    if (!view.webview) continue;
-    const modeIds = modeIdsByViewId.get(view.id);
+  for (const panel of metadata.panels) {
+    if (!panel.webview) continue;
+    const modeIds = modeIdsByViewId.get(panel.id);
+    const isModeLocation = panel.region === "main" && Boolean(modeIds?.length);
+    const eligibleModeIds = isModeLocation ? undefined : modeIds;
+    let resourceKinds: string[] | undefined;
+    if (panel.resourceKind) resourceKinds = [panel.resourceKind];
+    else if (isModeLocation) resourceKinds = [dashboardExtensionViewKind];
     disposables.push(
-      registerWorkbenchExtensionViewWidget({
+      registerWorkbenchExtensionPanel({
         workbench: ctx,
-        role: view.role,
         contribution: {
-          id: extensionViewWidgetId(view.id),
-          title: resolveLocalizableString(view.title, view.extensionId),
-          region: extensionViewRegionForPlacement(view.target),
+          id: extensionViewWidgetId(panel.id),
+          title: resolveLocalizableString(panel.title, panel.extensionId),
+          region: extensionViewRegionForPlacement(panel.region),
+          closable: panel.closable,
           rendererId: dashboardWidgetIds.extensionView,
-          config: { ...(view.role === "modal" ? modalOverlayConfig : {}), projectId },
-          resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+          config: { ...(panel.region === "overlay" ? modalOverlayConfig : {}), projectId },
+          resourceKinds,
           eligibleLocations:
-            modeIds || view.resourceKind
+            eligibleModeIds || panel.eligibleLocations
               ? {
-                  modeIds,
-                  resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+                  modeIds: eligibleModeIds,
+                  resourceKinds: panel.eligibleLocations?.resourceKinds
+                    ? [...panel.eligibleLocations.resourceKinds]
+                    : undefined,
                 }
               : undefined,
-          panelMenuOwner: view.panelMenuOwner,
+          panelMenus: panel.panelMenus?.map((menu) => ({
+            id: extensionViewWidgetId(menu.id),
+            title: resolveLocalizableString(menu.title, menu.extensionId),
+            side: menu.side,
+            rendererId: dashboardWidgetIds.extensionView,
+            config: { projectId },
+          })),
         },
       }),
     );
@@ -175,7 +180,7 @@ const registerExtensionViews = (
 };
 
 const registerExtensionModes = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
 ) => {
@@ -207,7 +212,7 @@ const registerExtensionModes = (
 };
 
 export const registerExtensionModeContributions = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
 ) => [...registerExtensionViews(ctx, metadata, projectId), ...registerExtensionModes(ctx, metadata, projectId)];

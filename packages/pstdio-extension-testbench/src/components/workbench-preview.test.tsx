@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { ContributionExplorer } from "./contribution-explorer";
@@ -24,7 +24,7 @@ const baseBench = {
     settingsPanels: [],
     treeItems: [],
     treeRenderers: [],
-    views: [],
+    panels: [],
   },
   projectId: "project-1",
   resources: [],
@@ -38,7 +38,7 @@ const baseBench = {
     templateTypes: 0,
     templates: 0,
     treeRenderers: 0,
-    views: 0,
+    panels: 0,
   },
 } satisfies ExtensionBenchLoadResponse;
 
@@ -101,7 +101,7 @@ describe("createPreviewWorkbench", () => {
 
   test("registers the host-owned terminal panel widget", () => {
     const workbench = createTestWorkbench(baseBench);
-    expect(workbench.layout.getWidget("workbench.terminal")).toMatchObject({ region: "secondary" });
+    expect(workbench.layout.getPanel("workbench.terminal")).toMatchObject({ region: "secondary" });
   });
 
   test("only registers explicitly contributed command palette entries", () => {

@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
+import type { WorkbenchModuleContribution, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { type ExtensionColorTheme, extensionColorThemes } from "./themes";
 
@@ -54,7 +54,7 @@ const ThemeCard = (props: ThemeCardProps) => {
   );
 };
 
-const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
+const ThemePackPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { themePreference, setThemePreference } = useThemePreference();
 
@@ -111,7 +111,8 @@ const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
 export const createThemePackExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-pack",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: THEME_PACK_WIDGET_ID,
       title: "Theme Pack",
       region: "main",
@@ -121,6 +122,6 @@ export const createThemePackExtension = (): WorkbenchModuleContribution => ({
       id: THEME_PACK_RENDERER_ID,
       render: (input) => <ThemePackPanel input={input} />,
     });
-    ctx.layout.openWidget(THEME_PACK_WIDGET_ID);
+    ctx.layout.openPanel(THEME_PACK_WIDGET_ID);
   },
 });

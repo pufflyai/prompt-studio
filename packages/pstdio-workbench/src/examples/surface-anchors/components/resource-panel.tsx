@@ -1,8 +1,8 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../core";
 
 interface ResourcePanelProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   anchor: string;
 }
 
@@ -11,7 +11,7 @@ interface ResourcePanelProps {
 // appear, re-scope, and disconnect as the primary changes.
 export const ResourcePanel = (props: ResourcePanelProps) => {
   const { input, anchor } = props;
-  const resource = input.placement.resource;
+  const resource = input.instance.resource;
 
   return (
     <Stack gap="2" p="4" h="full" minH="0">

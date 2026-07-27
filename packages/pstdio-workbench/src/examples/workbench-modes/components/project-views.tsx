@@ -1,6 +1,6 @@
 import { Badge, Box, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { projectFeed, projectItems, workbenchModes } from "../mock-data/data";
 
 const statusColors: Record<string, string> = {
@@ -9,13 +9,13 @@ const statusColors: Record<string, string> = {
   done: "green",
 };
 
-const findActiveItem = (input: WorkbenchWidgetRenderInput) => {
+const findActiveItem = (input: WorkbenchPanelRenderInput) => {
   const placement = input.workbench.layout.getLayout().regions.main.widgets[0];
   const itemId = typeof placement?.resource?.metadata?.itemId === "string" ? placement.resource.metadata.itemId : null;
   return projectItems.find((item) => item.id === itemId) ?? projectItems[0];
 };
 
-export const ProjectOverview = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ProjectOverview = (props: { input: WorkbenchPanelRenderInput }) => {
   const item = findActiveItem(props.input);
 
   return (

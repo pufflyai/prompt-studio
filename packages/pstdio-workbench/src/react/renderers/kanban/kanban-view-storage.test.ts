@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkbenchWidgetPlacement } from "../../../core";
+import type { WorkbenchPanelInstance } from "../../../core";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
-const ticketPlacement = (projectId: string): WorkbenchWidgetPlacement => ({
-  widgetId: "pstdio-planner.tickets",
-  contributionId: "pstdio-planner.tickets",
+const ticketPlacement = (projectId: string): WorkbenchPanelInstance => ({
+  instanceId: "pstdio-planner.tickets",
+  panelId: "pstdio-planner.tickets",
+  closable: false,
   resource: {
     kind: "dashboard-view",
     uri: "dashboard-workbench://dashboard-view/pstdio-planner.tickets",

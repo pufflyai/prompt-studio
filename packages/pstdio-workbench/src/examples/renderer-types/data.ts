@@ -29,11 +29,11 @@ export const rendererRows = [
   {
     id: reactRendererId,
     kind: "React",
-    transport: "WorkbenchWidgetRenderInput -> ReactNode",
+    transport: "WorkbenchPanelRenderInput -> ReactNode",
   },
   {
     id: bridgeRendererId,
     kind: "Bridge",
-    transport: "WorkbenchWidgetRenderInput -> iframe bridge",
+    transport: "WorkbenchPanelRenderInput -> iframe bridge",
   },
 ];

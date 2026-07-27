@@ -42,7 +42,13 @@ export const createPreviewTabsExampleModule = () =>
     activate(ctx) {
       ctx.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
-      ctx.layout.registerLocation({
+      ctx.resources.registerPresenter({
+        id: "preview-tabs.workspace-presenter",
+        canOpen: (resource) => resource.kind === "workspace",
+        open: (resource) => ctx.layout.openPanel("preview-tabs.workspace", { resource }),
+      });
+      ctx.layout.registerPanel({
+        closable: false,
         id: "preview-tabs.workspace",
         title: "Workspace",
         region: "main",
@@ -53,7 +59,8 @@ export const createPreviewTabsExampleModule = () =>
         ["preview-tabs.terminal", "Terminal", "SquareTerminal"],
         ["preview-tabs.session", "Session 42", "MessageCircle"],
       ] as const) {
-        ctx.layout.registerSubPanel({
+        ctx.layout.registerPanel({
+          eligibleLocations: {},
           id,
           title,
           icon,
@@ -70,15 +77,15 @@ export const createPreviewTabsExampleModule = () =>
         id: "preview-tabs.workspace",
         render: renderer("Workspace"),
       });
-      ctx.layout.openWidget("preview-tabs.workspace", {
-        resource: { kind: "workspace", uri: "story://workspace/alpha", label: "Workspace Alpha" },
-      });
-      ctx.layout.openWidget("preview-tabs.files", { tabRetention: "persistent" });
-      ctx.layout.openWidget("preview-tabs.terminal", { tabRetention: "persistent" });
-      ctx.layout.openWidget("preview-tabs.session", {
-        resource: { kind: "session", uri: "story://session/42", label: "Session 42" },
-        tabPosition: "start",
-        tabRetention: "preview",
-      });
+      void ctx.resources
+        .openResource({ kind: "workspace", uri: "story://workspace/alpha", label: "Workspace Alpha" })
+        .then(() => {
+          ctx.layout.openPanel("preview-tabs.files");
+          ctx.layout.openPanel("preview-tabs.terminal");
+          ctx.layout.openPanel("preview-tabs.session", {
+            resource: { kind: "session", uri: "story://session/42", label: "Session 42" },
+            strategy: { kind: "preview", position: "start" },
+          });
+        });
     },
   }) satisfies WorkbenchModuleContribution;

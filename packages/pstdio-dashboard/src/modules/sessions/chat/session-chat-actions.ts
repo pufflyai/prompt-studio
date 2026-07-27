@@ -1,5 +1,5 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -86,7 +86,7 @@ export const moveQueuedFollowUpBySteps = async (input: {
 const createSessionTitle = (prompt: string) => prompt.slice(0, 100) || "Session";
 
 export const openCreatedSessionFromDraft = (args: {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   sessionId: string;
   prompt: string;
   projectId: string;
@@ -96,10 +96,10 @@ export const openCreatedSessionFromDraft = (args: {
 
   rememberDashboardSessionResource(args.input.workbench, resource);
 
-  return args.input.workbench.layout.openWidget(args.input.placement.contributionId, {
+  return args.input.workbench.layout.openPanel(args.input.instance.panelId, {
     resource,
     title,
-    replaceWidgetId: args.input.placement.widgetId,
+    strategy: { kind: "replace-panel", instanceId: args.input.instance.instanceId },
   });
 };
 

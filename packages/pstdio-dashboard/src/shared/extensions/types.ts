@@ -3,7 +3,7 @@ import type { WorkbenchAttachmentTarget } from "@pstdio/sdk/extensions";
 
 export type DashboardExtensionMetadata = WorkbenchExtensionMetadata;
 
-export type ExtensionSlotKind = "menu" | "view" | "settings" | "renderer" | "kanbanRenderer";
+export type ExtensionSlotKind = "menu" | "panel" | "settings" | "renderer" | "kanbanRenderer";
 
 export type ExtensionRepoContext = {
   projectId: string;

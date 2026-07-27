@@ -1,13 +1,13 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, ResourceRef, WorkbenchModuleContributionContext } from "../../core";
+import type { Disposable, ResourceRef, WorkbenchModuleContext } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 
 export interface RegisterWorkbenchExtensionRoutesInput {
   metadata: WorkbenchExtensionMetadata;
   routeResourceKind: string;
-  workbench: WorkbenchModuleContributionContext;
+  workbench: WorkbenchModuleContext;
 }
 
 export const routeResource = (
@@ -39,7 +39,8 @@ export const registerWorkbenchExtensionRoutes = (input: RegisterWorkbenchExtensi
 
   for (const route of input.metadata.routes) {
     disposables.push(
-      input.workbench.layout.registerWidget({
+      input.workbench.layout.registerPanel({
+        closable: false,
         id: route.id,
         title: text(route.label, route.id),
         region: "main",
@@ -56,15 +57,14 @@ export const registerWorkbenchExtensionRoutes = (input: RegisterWorkbenchExtensi
       kind: input.routeResourceKind,
       list: () => input.metadata.routes.map((route) => ({ resource: routeResource(route, input.routeResourceKind) })),
     }),
-    input.workbench.resources.registerOpener({
+    input.workbench.resources.registerPresenter({
       id: "workbench.extension.routes",
       canOpen: (resource) =>
         resource.kind === input.routeResourceKind && Boolean(routeFromResource(input.metadata, resource)),
       open: (resource, openInput) => {
-        const route = routeFromResource(input.metadata, resource);
-        if (!route) return undefined;
-        return input.workbench.layout.openWidget(route.id, {
-          replaceActive: openInput.replaceActive,
+        const route = routeFromResource(input.metadata, resource)!;
+        return input.workbench.layout.openPanel(route.id, {
+          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           title: text(route.label, route.id),
         });
       },

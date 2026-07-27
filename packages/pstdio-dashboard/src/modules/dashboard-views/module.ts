@@ -1,9 +1,9 @@
-import { standardResourceIcons, type WorkbenchModuleContribution } from "@pstdio/workbench/core";
+import { standardResourceIcons, type WorkbenchModuleContribution } from "@pstdio/workbench";
 import { listDashboardViewEntries } from "@/shared/workbench/contributions/dashboard-view-contributions";
 
 export const createDashboardViewsModule = () =>
   ({
-    id: "dashboard.views",
+    id: "dashboard.panels",
     activate(ctx) {
       ctx.resources.registerKind({
         kind: "dashboard-view",

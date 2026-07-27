@@ -19,7 +19,7 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   fileIconThemes: [],
   menuContributions: [],
   modes: [],
-  views: [],
+  panels: [],
   routes: [],
   navigation: [],
   treeItems: [],

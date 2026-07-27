@@ -23,7 +23,7 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
     });
   } else {
     const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
-    workbench.layout.openWidget(widget.id, { region, resource: widgetResource, closable: true });
+    workbench.layout.openPanel(widget.id, { region, resource: widgetResource });
   }
 
   if (region === "secondary") {

@@ -8,7 +8,7 @@ export interface LastResourcePersistenceAdapter {
 export interface WorkbenchLastResourceController {
   get(): ResourceRef | undefined;
   set(resource: ResourceRef | undefined): void;
-  // Replays the persisted resource through the registered openers. Returns
+  // Replays the persisted resource through the registered presenters. Returns
   // `true` when the saved resource opened successfully — apps use that signal
   // to decide whether to fall back to a default landing view.
   restore(): Promise<boolean>;

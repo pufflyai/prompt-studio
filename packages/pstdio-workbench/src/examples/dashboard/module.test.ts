@@ -17,9 +17,9 @@ const createDashboardWorkbench = () => {
 // active widget in the Sidenav whose rendererId matches a registered tree
 // renderer.
 const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
-  const leftWidgets = workbench.layout.getLayout().regions.sidenav.widgets;
+  const leftWidgets = workbench.layout.listPanelInstances("sidenav");
   return leftWidgets
-    .map((placement) => workbench.layout.getWidget(placement.contributionId))
+    .map((placement) => workbench.layout.getPanel(placement.panelId))
     .filter((widget): widget is NonNullable<typeof widget> => Boolean(widget))
     .filter((widget) => workbench.renderers.getTreeRenderer(widget.rendererId))
     .map((widget) => widget.id);
@@ -28,7 +28,7 @@ const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
 const resolveRegionPlacementIds = (
   workbench: WorkbenchCore,
   region: keyof ReturnType<WorkbenchCore["layout"]["getLayout"]>["regions"],
-) => workbench.layout.getLayout().regions[region].widgets.map((placement) => placement.contributionId);
+) => workbench.layout.listPanelInstances(region).map((placement) => placement.panelId);
 
 describe("dashboard workbench navigation", () => {
   test("uses the standard resource icons", () => {
@@ -60,7 +60,7 @@ describe("dashboard workbench navigation", () => {
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
     // Closing the overlay leaves the dashboard exactly as it was.
-    workbench.layout.closeWidget(WORKBENCH_SETTINGS_WIDGET_ID);
+    workbench.layout.closePanel(WORKBENCH_SETTINGS_WIDGET_ID);
 
     expect(resolveRegionPlacementIds(workbench, "overlay")).toEqual([]);
     expect(workbench.modes.getActiveModeId()).toBe("project");

@@ -16,10 +16,6 @@ describe("workbench attachment targets", () => {
       "workbench.left.tree",
       "workbench.main.left.tree",
       "workbench.main.right.tree",
-      "workbench.main",
-      "workbench.main.left",
-      "workbench.main.right",
-      "workbench.secondary",
       "workbench.settings",
     ]);
 

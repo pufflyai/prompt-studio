@@ -20,14 +20,13 @@ const metadata = {
   settingsPanels: [],
   treeItems: [],
   kanbanRenderers: [],
-  views: [
+  panels: [
     {
       id: "lab.ticketFiles",
       extensionId: "pstdio.lab",
-      slotId: "workbench.main.left",
-      target: "workbench.main.left",
+      region: "main",
       title: "Files",
-      role: "location",
+      closable: false,
       resourceKind: "ticket",
       treeRendererId: "lab.files",
     },
@@ -53,7 +52,7 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
 });
 
 describe("registerWorkbenchExtensionTreeRenderers", () => {
-  test("registers tree renderers, tree-backed view widgets, and command-backed callbacks", async () => {
+  test("registers tree renderers, tree-backed panel widgets, and command-backed callbacks", async () => {
     const workbench = createWorkbenchCore();
     const calls: { commandId: string; body: CommandExecuteRequest }[] = [];
 
@@ -113,8 +112,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       title: "Files",
       icon: "Files",
     });
-    expect(workbench.layout.getWidget("lab.ticketFiles")).toMatchObject({
-      region: "main-left-menu",
+    expect(workbench.layout.getPanel("lab.ticketFiles")).toMatchObject({
+      region: "main",
       rendererId: "lab.files",
       resourceKinds: ["ticket"],
     });
@@ -211,17 +210,35 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(refreshCount).toBe(1);
   });
 
-  test("adds host default header and footer rows only for opted-in tree views", async () => {
+  test("adds host default header and footer rows only for opted-in tree panels", async () => {
     const workbench = createWorkbenchCore();
     const metadataWithHostDefaults = {
       ...metadata,
-      views: [
-        { ...metadata.views[0]!, hostTreeHeader: "default", hostTreeFooter: "default" },
+      panels: [
         {
-          ...metadata.views[0]!,
-          id: "lab.plainFiles",
-          hostTreeHeader: "none",
-          hostTreeFooter: "none",
+          ...metadata.panels[0]!,
+          panelMenus: [
+            {
+              id: "lab.ticketFiles.tools",
+              extensionId: "pstdio.lab",
+              ownerPanelId: "lab.ticketFiles",
+              title: "Ticket files",
+              side: "right",
+              treeRendererId: "lab.files",
+              hostTreeHeader: "default",
+              hostTreeFooter: "default",
+            },
+            {
+              id: "lab.ticketFiles.plain",
+              extensionId: "pstdio.lab",
+              ownerPanelId: "lab.ticketFiles",
+              title: "Plain files",
+              side: "left",
+              treeRendererId: "lab.files",
+              hostTreeHeader: "none",
+              hostTreeFooter: "none",
+            },
+          ],
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
@@ -232,22 +249,22 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
         if (commandId === "lab.files.footer") return success(commandId, [{ id: "new", label: "New file" }]);
         return success(commandId, []);
       },
-      getHostTreeFooterNodes: ({ view }) => [{ id: `${view.id}.settings`, label: "Settings" }],
-      getHostTreeHeaderNodes: ({ view }) => [{ id: `${view.id}.search`, label: "Search" }],
+      getHostTreeFooterNodes: ({ panel }) => [{ id: `${panel.id}.settings`, label: "Settings" }],
+      getHostTreeHeaderNodes: ({ panel }) => [{ id: `${panel.id}.search`, label: "Search" }],
       metadata: metadataWithHostDefaults,
       projectId: "project-1",
       workbench,
     });
 
-    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.ticketFiles" })).resolves.toEqual([
-      { id: "lab.ticketFiles.search", label: "Search" },
+    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.ticketFiles.tools" })).resolves.toEqual([
+      { id: "lab.ticketFiles.tools.search", label: "Search" },
     ]);
-    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.ticketFiles" })).resolves.toEqual([
+    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.ticketFiles.tools" })).resolves.toEqual([
       { id: "new", label: "New file" },
-      { id: "lab.ticketFiles.settings", label: "Settings" },
+      { id: "lab.ticketFiles.tools.settings", label: "Settings" },
     ]);
-    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.plainFiles" })).resolves.toEqual([]);
-    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.plainFiles" })).resolves.toEqual([
+    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.ticketFiles.plain" })).resolves.toEqual([]);
+    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.ticketFiles.plain" })).resolves.toEqual([
       { id: "new", label: "New file" },
     ]);
   });

@@ -97,6 +97,44 @@ describe("createLayoutModel widget placement", () => {
 });
 
 describe("createLayoutModel Location-owned placements", () => {
+  test("replaces the active Location instead of its selected Sub Panel during resource presentation", () => {
+    const layout = createLayoutModel();
+
+    layout.registerPanel({
+      closable: false,
+      id: "project.content",
+      title: "Project",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerPanel({
+      closable: true,
+      eligibleLocations: {},
+      id: "project.notes",
+      title: "Notes",
+      region: "main",
+      rendererId: "test.renderer",
+    });
+
+    const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
+    const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
+    const alpha = layout.openPanel("project.content", { resource: alphaResource });
+    layout.establishLocation(alpha.instanceId);
+    const notes = layout.openPanel("project.notes");
+
+    const beta = layout.openPanel("project.content", {
+      resource: betaResource,
+      strategy: { kind: "replace-active" },
+    });
+
+    expect(beta.instanceId).toBe(alpha.instanceId);
+    expect(layout.getLayout().regions.main.widgets).toEqual([
+      expect.objectContaining({ widgetId: beta.instanceId, resourceUri: betaResource.uri }),
+      expect.objectContaining({ widgetId: notes.instanceId, ownerResourceUri: alphaResource.uri }),
+    ]);
+  });
+
   test("keeps singleton Sub Panels scoped to their Location when switching Locations", () => {
     const layout = createLayoutModel();
 

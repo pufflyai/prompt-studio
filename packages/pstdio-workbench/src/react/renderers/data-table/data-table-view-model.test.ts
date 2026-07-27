@@ -27,8 +27,9 @@ describe("data table renderer view model", () => {
   test("scopes persisted controls to the renderer, placement, and resource", () => {
     expect(
       resolveDataTableRendererStorageKey("health", {
-        widgetId: "health:1",
-        contributionId: "health.view",
+        instanceId: "health:1",
+        panelId: "health.view",
+        closable: false,
         resource: { kind: "project", uri: "pstdio://project/one", id: "one" },
       }),
     ).toBe("pstdio:workbench:dataTableRenderer:health:health:1:pstdio://project/one");

@@ -1,12 +1,12 @@
 import { Box } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
-import type { PreferenceScope, SettingsRegistry, WorkbenchWidgetRenderInput } from "../../core";
+import type { PreferenceScope, SettingsRegistry, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchTreeView } from "../renderers/tree/tree-view";
 import { SettingsSurfacePanel } from "./settings-surface-panel";
 import { useSettingsRevision } from "./use-settings-revision";
 
 export interface SettingsOverlayProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
   navTreeId: string;
   title: string;
@@ -21,7 +21,7 @@ export interface SettingsOverlayProps {
 export const SettingsOverlay = (props: SettingsOverlayProps) => {
   const { input, settings, navTreeId, resolveScopeId } = props;
   useSettingsRevision(settings);
-  const resource = input.placement.resource;
+  const resource = input.instance.resource;
 
   const nav = (
     <Box h="full" minH="0" minW="0" w="full" bg="bg.subtle">

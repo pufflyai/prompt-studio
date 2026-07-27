@@ -47,8 +47,8 @@ export interface ControlsResetInput {
  * A reusable native control renderer backed by commands, rendered through the host's
  * ParamEditor. The query command loads the control declarations + current values; the
  * optional update/apply/reset commands persist edits (omitting both makes it read-only).
- * A `view` places the renderer into a panel via `controlsRenderer: "<id>"`, mirroring
- * `treeRenderer`/`fileRenderer` — the view owns placement (resourceKind, surface, target).
+ * A `panel` places the renderer into a panel via `controlsRenderer: "<id>"`, mirroring
+ * `treeRenderer`/`fileRenderer` — the panel owns placement (resourceKind, surface, target).
  */
 export interface ControlsRendererContribution {
   title: Localizable<string>;

@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../../../core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../../../core";
 import { createWorkbenchSettingsModule, settingsPanelResource } from "../../../../react";
 import { dashboardDefaultSettingsPanel } from "../../shared/mock-data/resources";
 import { SettingsWidget } from "./components/settings-widget";
@@ -18,7 +18,7 @@ const TEMPLATE_GROUP_LABELS: Record<DashboardTemplateType, string> = {
 // registry. Mirrors the real dashboard: a schema-driven Runtime panel, a Templates
 // collection grouped by type, and an extension-contributed custom panel. The
 // unified surface turns these into the navigation tree and dispatching panel.
-const registerSettingsContributions = (ctx: WorkbenchModuleContributionContext) => {
+const registerSettingsContributions = (ctx: WorkbenchModuleContext) => {
   ctx.preferences.registerSchema(dashboardRuntimePreferenceSchema);
 
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
@@ -98,8 +98,8 @@ const registerSettingsContributions = (ctx: WorkbenchModuleContributionContext) 
 };
 
 // The settings slice: registers settings entries against the shared workbench
-// settings surface. The surface owns the overlay, the nav, and the opener, so
-// opening a settings resource pops a full-window modal — no host mode or opener.
+// settings surface. The surface owns the overlay, the nav, and the presenter, so
+// opening a settings resource pops a full-window modal — no host mode or presenter.
 export const createSettingsModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.settings",
   activate(ctx) {

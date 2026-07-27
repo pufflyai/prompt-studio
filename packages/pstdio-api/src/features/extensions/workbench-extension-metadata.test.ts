@@ -350,7 +350,7 @@ describe("buildWorkbenchExtensionMetadata keybindings", () => {
 });
 
 describe("buildWorkbenchExtensionMetadata tree renderers", () => {
-  test("includes workbench tree renderer contributions and tree-backed views", () => {
+  test("includes workbench tree renderer contributions and tree-backed Panels", () => {
     const runtime = normalizeExtensionSources([
       {
         sourcePath: "/extension/extension.ts",
@@ -377,15 +377,13 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
               defaultExpandedSectionIds: ["files"],
             },
           },
-          views: {
+          panels: {
             ticketFiles: {
               title: "Files",
               resourceKind: "ticket",
-              target: "workbench.main.left",
-              role: "location",
+              region: "sidenav",
+              closable: false,
               treeRenderer: "files",
-              hostTreeHeader: "default",
-              hostTreeFooter: "none",
             },
           },
         },
@@ -408,17 +406,16 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
         defaultExpandedSectionIds: ["files"],
       }),
     ]);
-    expect(metadata.views).toEqual([
+    expect(metadata.panels).toEqual([
       expect.objectContaining({
         id: "planner.ticketFiles",
-        target: "workbench.main.left",
+        region: "sidenav",
+        closable: false,
         resourceKind: "ticket",
         treeRendererId: "planner.files",
-        hostTreeHeader: "default",
-        hostTreeFooter: "none",
       }),
     ]);
-    expect(metadata.views[0]).not.toHaveProperty("webview");
+    expect(metadata.panels[0]).not.toHaveProperty("webview");
   });
 });
 

@@ -1,9 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import {
-  createWorkbenchCore,
-  type WorkbenchCore,
-  type WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+import { createWorkbenchCore, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -88,9 +84,10 @@ const linkedWorkspaceResource = {
 
 const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
-  activate(ctx: WorkbenchModuleContributionContext) {
+  activate(ctx: WorkbenchModuleContext) {
     ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "FileText" });
-    ctx.layout.registerLocation({
+    ctx.layout.registerPanel({
+      closable: false,
       id: STORY_TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
@@ -100,24 +97,24 @@ const createTicketsNavigationModule = () => ({
     });
     ctx.renderers.registerRenderer({
       id: STORY_TICKET_WIDGET_ID,
-      render: (input) => <Box p="lg">{input.placement.resource?.label}</Box>,
+      render: (input) => <Box p="lg">{input.instance.resource?.label}</Box>,
     });
     ctx.resources.registerHierarchyProvider({
       id: "story.ticket-hierarchy",
       canResolve: (resource) => resource.kind === "ticket",
       getParent: (resource) => dashboardResourceParent(ctx, resource, PROJECT_ID) ?? ticketsResource,
     });
-    ctx.resources.registerOpener({
-      id: "story.ticket-opener",
+    ctx.resources.registerPresenter({
+      id: "story.ticket-presenter",
       canOpen: (resource) => resource.kind === "ticket",
       open: (resource, openInput) => {
         ctx.modes.setActiveMode("pstdio-planner.ticket");
         selectDashboardNavigationResource(ctx, resource);
         setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openWidget(STORY_TICKET_WIDGET_ID, {
+        return ctx.layout.openPanel(STORY_TICKET_WIDGET_ID, {
+          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: openInput.replaceActive,
         });
       },
     });

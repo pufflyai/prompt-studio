@@ -18,6 +18,6 @@ describe("shouldSelectTreeNodeForNavigationTarget", () => {
         resource: { kind: "ticket", uri: "pstdio://ticket/1" },
       }),
     ).toBe(true);
-    expect(shouldSelectTreeNodeForNavigationTarget({ kind: "view", widgetId: "tickets" })).toBe(true);
+    expect(shouldSelectTreeNodeForNavigationTarget({ kind: "panel", panelId: "tickets" })).toBe(true);
   });
 });

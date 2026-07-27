@@ -70,7 +70,8 @@ export const createControlsRendererModule = (): WorkbenchModuleContribution => (
       },
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: CONTROLS_ID,
       title: "Card inspector",
       region: "main",
@@ -78,6 +79,6 @@ export const createControlsRendererModule = (): WorkbenchModuleContribution => (
       singleton: true,
     });
 
-    ctx.layout.openWidget(CONTROLS_ID, { pinned: true });
+    ctx.layout.openPanel(CONTROLS_ID, { pinned: true });
   },
 });

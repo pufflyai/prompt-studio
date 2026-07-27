@@ -14,28 +14,31 @@ export const createCanonicalGeometryModule = (): WorkbenchModuleContribution => 
   activate(ctx) {
     ctx.renderers.registerRenderer({ id: canonicalGeometryRendererId, render: () => null });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: canonicalGeometryWidgetIds.mainHeader,
       title: "Main Panel header",
       region: "main-header",
       rendererId: canonicalGeometryRendererId,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: canonicalGeometryWidgetIds.secondaryHeader,
       title: "Secondary Panel header",
       region: "secondary-header",
       rendererId: canonicalGeometryRendererId,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: canonicalGeometryWidgetIds.secondary,
       title: "Secondary Panel",
       region: "secondary",
       rendererId: canonicalGeometryRendererId,
     });
 
-    ctx.layout.openWidget(canonicalGeometryWidgetIds.mainHeader, { pinned: true });
-    ctx.layout.openWidget(canonicalGeometryWidgetIds.secondaryHeader, { pinned: true });
-    ctx.layout.openWidget(canonicalGeometryWidgetIds.secondary, { pinned: true });
-    ctx.layout.openWidget(dashboardWidgetIds.session, { pinned: true });
+    ctx.layout.openPanel(canonicalGeometryWidgetIds.mainHeader, { pinned: true });
+    ctx.layout.openPanel(canonicalGeometryWidgetIds.secondaryHeader, { pinned: true });
+    ctx.layout.openPanel(canonicalGeometryWidgetIds.secondary, { pinned: true });
+    ctx.layout.openPanel(dashboardWidgetIds.session, { pinned: true });
   },
 });

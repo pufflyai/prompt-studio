@@ -24,6 +24,11 @@ import {
 } from "./controllers/panels/panels-controller";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
 import {
+  createWorkbenchShellController,
+  isWorkbenchShellOpenRegion,
+  type WorkbenchShellController,
+} from "./controllers/shell/shell-controller";
+import {
   createWorkbenchSidePanelController,
   type WorkbenchSidePanelController,
   type WorkbenchSidePanelMode,
@@ -42,6 +47,7 @@ import {
   createLayoutModel,
   type LayoutModel,
   type LayoutPersistenceAdapter,
+  type WorkbenchLayout,
   type WorkbenchRegion,
 } from "./registries/layout/layout-model";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
@@ -128,6 +134,7 @@ export interface WorkbenchCoreContributionContext {
   renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
   settings: SettingsRegistry;
+  shell: WorkbenchShellController;
   sidePanel: WorkbenchSidePanelController;
   terminal: WorkbenchTerminalController;
   themes: ThemeRegistry;
@@ -143,18 +150,40 @@ export interface WorkbenchCoreContributionContext {
   onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
 }
 
+export interface WorkbenchSnapshot {
+  layout: WorkbenchLayout;
+}
+
+export interface WorkbenchPersistenceAdapter {
+  getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
+  setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
+  flush?(): void;
+  dispose?(): void;
+}
+
+export interface WorkbenchHost {
+  getSnapshot(): WorkbenchSnapshot;
+  restoreSnapshot(snapshot: WorkbenchSnapshot): void;
+  setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;
+  getPersistenceScope(): string | undefined;
+}
+
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
+  host: WorkbenchHost;
   registerModule(module: WorkbenchModuleContribution): Disposable;
   unregisterModule(moduleId: string): void;
 }
 
-export type WorkbenchModuleContributionContext = WorkbenchCoreContributionContext;
+export type WorkbenchModuleContext = WorkbenchCoreContributionContext;
+
+export type WorkbenchModuleContributionContext = WorkbenchModuleContext;
 
 export interface CreateWorkbenchCoreInput {
   // Whether a detached anchor's resource still belongs to the active primary's scope.
   // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
+  persistence?: WorkbenchPersistenceAdapter;
   historyPersistence?: WorkbenchHistoryPersistence;
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
@@ -248,6 +277,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     lastResource: { ...core.lastResource },
     layout: {
       ...core.layout,
+      openPanel: (id, openInput) => {
+        const instance = core.layout.openPanel(id, openInput);
+        track(createDisposable(() => core.layout.removeWidgetPlacement(instance.instanceId)));
+        return instance;
+      },
       openWidget: (id, openInput) => {
         const placement = core.layout.openWidget(id, {
           ...openInput,
@@ -259,6 +293,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       },
       registerPlaceholder: (placeholder, metadata) =>
         track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
+      registerPanel: (panel, metadata) => track(core.layout.registerPanel(panel, withModuleMetadata(input, metadata))),
       registerWidget: (widget, metadata) =>
         track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
       registerLocation: (location, metadata) =>
@@ -333,7 +368,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       ...core.resources,
       registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
       registerHierarchyProvider: (provider) => track(core.resources.registerHierarchyProvider(provider)),
-      registerOpener: (opener) => track(core.resources.registerOpener(opener)),
+      registerPresenter: (presenter) => track(core.resources.registerPresenter(presenter)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
       onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),
     },
@@ -343,6 +378,10 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.settings.registerSection(section, withModuleMetadata(input, metadata))),
       registerPanel: (panel, metadata) =>
         track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
+    },
+    shell: {
+      ...core.shell,
+      onDidChange: (listener) => track(core.shell.onDidChange(listener)),
     },
     sidePanel: {
       ...core.sidePanel,
@@ -374,17 +413,28 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const dataTableRendererRegistry = createDataTableRendererRegistry({ rendererRegistry });
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
   const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
+  const locationAwareLayout = createLayoutModel({
+    defaultRegionVisibility: input.defaultPanelOpenByRegionId,
+    persistence: input.persistence
+      ? {
+          getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
+          setLayout: (nextLayout, scope) => input.persistence?.setSnapshot({ layout: nextLayout }, scope),
+          flush: input.persistence.flush,
+          dispose: input.persistence.dispose,
+        }
+      : input.layoutPersistence,
+  });
+  const { establishLocation, ...layoutModel } = locationAwareLayout;
   const layout = {
-    ...createLayoutModel({
-      defaultRegionVisibility: input.defaultPanelOpenByRegionId,
-      persistence: input.layoutPersistence,
-    }),
+    ...layoutModel,
     ...createMenuRegistry({ commands }),
   };
   const focus = createWorkbenchFocusController({
     context,
     isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
   });
+  const sidePanel = createWorkbenchSidePanelController({ initialMode: input.initialSidePanelMode });
+  const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -392,6 +442,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     commands,
     context,
     focus,
+    host: {
+      getSnapshot: () => ({ layout: layout.getLayout() }),
+      restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
+      setPersistenceScope: (scope, scopeInput = {}) =>
+        layout.setPersistenceScope(scope, { carryRegionState: scopeInput.carryRegions }),
+      getPersistenceScope: layout.getPersistenceScope,
+    },
     history: undefined as unknown as HistoryController,
     keybindings: createKeybindingRegistry({ commands, context }),
     lastResource: createWorkbenchLastResourceController({
@@ -410,24 +467,27 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         canOpenResource: (resource) => {
           const state = core.resources.store.getState();
           return Boolean(
-            state.kinds[resource.kind] && Object.values(state.openers).some((opener) => opener.canOpen(resource)),
+            state.kinds[resource.kind] &&
+              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
           );
         },
-        canOpenWidget: (widgetId) => Boolean(core.layout.getWidget(widgetId)),
+        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
-        openWidget: (widgetId, openInput) => {
-          const placement = core.layout.openWidget(widgetId, openInput);
+        openPanel: (panelId, openInput) => {
+          const instance = core.layout.openPanel(panelId, openInput);
           // Navigation is ingress — revealing the view is part of the intent.
           // The region might be hidden (panel collapsed, persisted state); make
           // sure the user can actually see the widget they navigated to.
-          const widget = core.layout.getWidget(widgetId);
-          const region = openInput?.region ?? widget?.region;
+          const panel = core.layout.getPanel(panelId);
+          const region = openInput?.region ?? panel?.region;
           if (region) {
-            core.layout.setRegionVisible(region, true);
-            if (!core.panels.isOpen(region)) core.panels.setOpen(region, true);
+            if (region === "side") core.shell.setSidePanelPresentation("attached");
+            else if (isWorkbenchShellOpenRegion(region)) {
+              core.shell.setRegionOpen(region, true);
+            }
           }
-          return placement;
+          return instance;
         },
         executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
       }),
@@ -448,9 +508,11 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources: createResourceRegistry({
       getPrimary: () => getActiveLocationPlacement(core.layout.getLayout())?.resource,
+      establishLocation: (instance) => establishLocation(instance.instanceId),
     }),
     settings: createSettingsRegistry(),
-    sidePanel: createWorkbenchSidePanelController({ initialMode: input.initialSidePanelMode }),
+    shell,
+    sidePanel,
     terminal: createWorkbenchTerminalController(),
     themes: createThemeRegistry(),
     fileIconThemes: createFileIconThemeRegistry(),
@@ -526,7 +588,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
   };
 
-  core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
+  core.modes = createWorkbenchModeRegistry({
+    establishLocation: (instanceId) => establishLocation(instanceId),
+    resolveContext: () => core,
+  });
   core.history = createHistoryController({
     layout: core.layout,
     modes: core.modes,

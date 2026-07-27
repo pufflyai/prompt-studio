@@ -1,18 +1,19 @@
-import { type WorkbenchModuleContributionContext, workbenchCommandPaletteMenuPath } from "../../../core";
+import { type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "../../../core";
 import { RandomWorkbenchRail } from "../components/rail";
 import { railWidgetId, randomResourceKind, randomWorkbenchModeOrder, randomWorkbenchModes } from "../mock-data/data";
 
 const openCommandPaletteCommandId = "random.openCommandPalette";
 const openCommandPaletteKeybinding = "mod+k";
 
-const registerRandomResources = (ctx: WorkbenchModuleContributionContext) => {
+const registerRandomResources = (ctx: WorkbenchModuleContext) => {
   ctx.resources.registerKind({ kind: randomResourceKind, label: "Item", icon: "FileText" });
 };
 
 // Registration is module-scoped; each mode re-opens the rail in its activate,
 // since resetRegions() clears all placements on mode switch.
-const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
+    closable: false,
     id: railWidgetId,
     title: "Mode rail",
     region: "activity",
@@ -25,7 +26,7 @@ const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContributionContext) =>
   });
 };
 
-const registerRandomCommands = (ctx: WorkbenchModuleContributionContext) => {
+const registerRandomCommands = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     {
       id: openCommandPaletteCommandId,
@@ -63,7 +64,7 @@ const registerRandomCommands = (ctx: WorkbenchModuleContributionContext) => {
   }
 };
 
-export const registerRandomWorkbenchContributions = (ctx: WorkbenchModuleContributionContext) => {
+export const registerRandomWorkbenchContributions = (ctx: WorkbenchModuleContext) => {
   registerRandomResources(ctx);
   registerRandomWorkbenchRail(ctx);
   registerRandomCommands(ctx);

@@ -16,10 +16,10 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
   });
 
-  test("registers the host terminal surface and API session opener", () => {
+  test("registers the host terminal surface and API session presenter", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
+    expect(workbench.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
       title: "Terminal",
       closable: true,
@@ -27,7 +27,7 @@ describe("createDashboardWorkbench", () => {
       reuse: "none",
       singleton: false,
     });
-    expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
+    expect(workbench.layout.getPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
       region: "secondary",
       hiddenByDefault: true,
       title: "Terminal",

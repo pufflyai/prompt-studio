@@ -8,8 +8,8 @@ import {
 } from "./workbench-extension-refresh";
 
 const webview = {
-  entry: { kind: "package-asset" as const, baseUrl: "file:///extension.ts", path: "./view.tsx" },
-  moduleUrl: "/view.js",
+  entry: { kind: "package-asset" as const, baseUrl: "file:///extension.ts", path: "./panel.tsx" },
+  moduleUrl: "/panel.js",
   runtimeUrl: "/runtime.html",
 };
 
@@ -50,13 +50,13 @@ const metadata = {
       title: "Files",
     },
   ],
-  views: [
+  panels: [
     {
       id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
-      slotId: "workbench.left",
       title: "Lab sidenav",
-      role: "location",
+      region: "sidenav",
+      closable: false,
       webview,
     },
   ],
@@ -90,39 +90,45 @@ describe("shouldRefreshWorkbenchExtensionTrees", () => {
 });
 
 describe("refreshOpenWorkbenchExtensionWebviews", () => {
-  test("refreshes only already-open webview routes and views while preserving the active widget", () => {
+  test("refreshes only already-open webview routes and panels while preserving the active widget", () => {
     const workbench = createWorkbenchCore();
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "extension-lab.labPage",
       title: "Old route",
       region: "main",
       rendererId: "webview:bridge",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "extension-lab.faultyPage",
       title: "Faulty",
       region: "main",
       rendererId: "webview:bridge",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "extension-lab.labSidenav",
       title: "Old sidenav",
       region: "sidenav",
       rendererId: "webview:bridge",
     });
 
-    workbench.layout.openWidget("extension-lab.labPage", { title: "Old route" });
-    workbench.layout.openWidget("extension-lab.labSidenav", { title: "Old sidenav" });
-    workbench.layout.activateWidget("extension-lab.labPage");
+    workbench.layout.openPanel("extension-lab.labPage", { title: "Old route" });
+    workbench.layout.openPanel("extension-lab.labSidenav", { title: "Old sidenav" });
+    workbench.layout.activatePanel("extension-lab.labPage");
 
     refreshOpenWorkbenchExtensionWebviews(workbench, metadata);
 
     const layout = workbench.layout.getLayout();
     expect(layout.activeWidgetId).toBe("extension-lab.labPage");
     expect(layout.regions.main.widgets).toHaveLength(1);
-    expect(layout.regions.main.widgets[0]).toMatchObject({ contributionId: "extension-lab.labPage", title: "Lab" });
-    expect(layout.regions.sidenav.widgets[0]).toMatchObject({
-      contributionId: "extension-lab.labSidenav",
+    expect(workbench.layout.listPanelInstances("main")[0]).toMatchObject({
+      panelId: "extension-lab.labPage",
+      title: "Lab",
+    });
+    expect(workbench.layout.listPanelInstances("sidenav")[0]).toMatchObject({
+      panelId: "extension-lab.labSidenav",
       title: "Lab sidenav",
     });
   });

@@ -1,10 +1,10 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardSessions, type DashboardSession } from "../data/dashboard-sessions";
 
-type DashboardSessionSelectionContext = Pick<WorkbenchModuleContributionContext, "context">;
+type DashboardSessionSelectionContext = Pick<WorkbenchModuleContext, "context">;
 
-const selectedSessionByWorkbench = new WeakMap<WorkbenchModuleContributionContext["context"]["store"], string>();
+const selectedSessionByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], string>();
 
 export const rememberDashboardSession = (ctx: DashboardSessionSelectionContext, session: DashboardSession) => {
   selectedSessionByWorkbench.set(ctx.context.store, session.id);

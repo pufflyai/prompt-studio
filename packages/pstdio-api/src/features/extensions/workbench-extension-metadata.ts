@@ -88,7 +88,7 @@ export const buildWorkbenchExtensionMetadata = (
     ...metadata,
     keybindings: metadata.keybindings,
     kanbanRenderers: (metadata.kanbanRenderers ?? []).map((renderer) => enrichInstallMetadata(renderer, input)),
-    views: metadata.views.map((view) => enrichInstallMetadata(view, input)),
+    panels: metadata.panels.map((panel) => enrichInstallMetadata(panel, input)),
     routes: metadata.routes.map((route) => enrichInstallMetadata(route, input)),
     settingsPanels: metadata.settingsPanels.map((panel) => enrichInstallMetadata(panel, input)),
   };

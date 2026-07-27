@@ -21,7 +21,7 @@ const modeTargetRegions: Record<string, WorkbenchRegion> = {
   "workbench.secondary": "secondary",
 };
 
-export const resolveWorkbenchViewRegion = (target: string | undefined): WorkbenchRegion =>
+export const resolveWorkbenchPanelRegion = (target: string | undefined): WorkbenchRegion =>
   target ? (viewTargetRegions[target] ?? "main") : "main";
 
 export const resolveWorkbenchTreeRegion = (target: string | undefined): WorkbenchRegion =>

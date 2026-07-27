@@ -26,6 +26,22 @@ interface CreateWidgetOpenersInput {
   ): WorkbenchWidgetPlacement;
 }
 
+const openOwnedPanelMenus = (input: {
+  openWidget(id: string, openInput?: OpenWidgetInput): WorkbenchWidgetPlacement;
+  placement: WorkbenchWidgetPlacement;
+  requireWidget(id: string): RegisteredWidgetContribution;
+  widget: RegisteredWidgetContribution;
+}) => {
+  for (const panelMenuId of input.widget.ownedPanelMenuIds ?? []) {
+    const panelMenu = input.requireWidget(panelMenuId);
+    input.openWidget(panelMenuId, {
+      pinned: true,
+      resource: input.placement.resource,
+      title: panelMenu.region === "main-left-menu" ? input.placement.resource?.label : panelMenu.title,
+    });
+  }
+};
+
 const findReusablePlacement = (
   widget: RegisteredWidgetContribution,
   layout: WorkbenchLayout,
@@ -66,7 +82,11 @@ const findReplacementIndex = (
     return region.widgets.findIndex((placement) => placement.tabRetention === "preview");
   }
   if (!openInput.replaceActive) return -1;
-  return region.widgets.findIndex((placement) => placement.widgetId === activeWidgetId && !placement.pinned);
+  const replacementWidgetId =
+    regionId === "main" && openInput.resource && layout.activeLocationWidgetId
+      ? layout.activeLocationWidgetId
+      : activeWidgetId;
+  return region.widgets.findIndex((placement) => placement.widgetId === replacementWidgetId && !placement.pinned);
 };
 
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
@@ -217,9 +237,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
       placement = insertWidget(widget, regionId, replacementIndex, openInput);
     }
 
-    for (const panelMenuId of widget.ownedPanelMenuIds ?? []) {
-      openWidget(panelMenuId, { pinned: true });
-    }
+    openOwnedPanelMenus({ openWidget, placement, requireWidget, widget });
     return applyAndActivate(getLayout(), previewContent?.regionId ?? regionId, placement);
   };
 

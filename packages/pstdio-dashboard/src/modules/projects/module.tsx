@@ -1,9 +1,9 @@
 import {
   standardResourceIcons,
+  type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { clearDashboardNavigationState, syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
@@ -25,7 +25,7 @@ interface CreateProjectsModuleInput {
 }
 
 type DashboardProjectSelectionContext = {
-  context: Pick<WorkbenchModuleContributionContext["context"], "delete" | "set">;
+  context: Pick<WorkbenchModuleContext["context"], "delete" | "set">;
 };
 
 const projectSelectionContentRegions = [
@@ -44,7 +44,7 @@ const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.createProject,
 ]);
 
-const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
+const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContext) => {
   const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;
 
   for (const placement of overlayWidgets) {
@@ -55,7 +55,7 @@ const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) 
 };
 
 const resetProjectModeOnProjectChange = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   previousProjectId: string | undefined,
   nextProjectId: string,
 ) => {
@@ -64,7 +64,7 @@ const resetProjectModeOnProjectChange = (
   ctx.modes.setActiveMode(undefined);
 };
 
-const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContributionContext) => {
+const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
   let currentProjectId = getDashboardSelectedProjectId(ctx);
 
   const syncScope = () => {
@@ -89,7 +89,7 @@ const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContributionContext) 
 };
 
 const clearSelectedProject = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -102,7 +102,7 @@ const clearSelectedProject = (
 };
 
 const selectPersistedProject = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   const projectId = persistence?.getSelectedProjectId();
@@ -117,7 +117,7 @@ const selectPersistedProject = (
 };
 
 const registerPersistedProjectSelection = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   if (!persistence?.getSelectedProjectId()) return undefined;
@@ -136,7 +136,7 @@ const registerPersistedProjectSelection = (
 };
 
 const registerSelectedProjectDeletionSync = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -179,7 +179,7 @@ const registerSelectedProjectDeletionSync = (
 };
 
 const selectOnlySyncedProject = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -199,7 +199,7 @@ const selectOnlySyncedProject = (
 };
 
 const registerSingleProjectSelectionSync = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -213,8 +213,8 @@ const registerSingleProjectSelectionSync = (
   return { dispose: unsubscribeDashboardData };
 };
 
-const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
     id: dashboardWidgetIds.projectPicker,
     title: "Projects",
     region: "overlay",
@@ -229,7 +229,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <ProjectPickerWidget input={input} />,
   });
 
-  ctx.layout.registerWidget({
+  ctx.layout.registerPanel({
     id: dashboardWidgetIds.createProject,
     title: "Create project",
     region: "overlay",
@@ -244,7 +244,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) => {
+const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
@@ -252,13 +252,13 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) =
     activate: () => undefined,
     seed(modeCtx) {
       for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
-      modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" });
     },
   });
 };
 
 const registerProjects = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -285,8 +285,8 @@ const registerProjects = (
     },
   });
 
-  ctx.resources.registerOpener({
-    id: "dashboard.projects.opener",
+  ctx.resources.registerPresenter({
+    id: "dashboard.projects.presenter",
     priority: 1000,
     canOpen: (resource) => resource.kind === "project",
     open: (resource) => {
@@ -306,13 +306,16 @@ const registerProjects = (
       // landing flow (restore the project's last view or fall back to start),
       // so selecting a different project leaves the per-project decision to
       // bootstrap. Re-selecting the same project stays on the current view.
-      return undefined;
+      return (
+        ctx.layout.getActivePanel("main") ??
+        ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" })
+      );
     },
   });
 };
 
 const registerProjectCommands = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
@@ -339,13 +342,13 @@ const registerProjectCommands = (
           return undefined;
         }
 
-        return ctx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects" });
+        return ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" });
       },
     },
   );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.createProject, label: "Create project", category: "Dashboard", icon: "Plus" },
-    { execute: () => ctx.layout.openWidget(dashboardWidgetIds.createProject, { title: "Create project" }) },
+    { execute: () => ctx.layout.openPanel(dashboardWidgetIds.createProject, { title: "Create project" }) },
   );
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: dashboardCommandIds.openProjects,

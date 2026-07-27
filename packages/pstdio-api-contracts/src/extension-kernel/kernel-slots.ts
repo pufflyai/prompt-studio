@@ -71,7 +71,7 @@ export interface ConflictPayload {
 }
 
 export const projectSlots = {
-  sidenav: defineSlot<Struct, "view">("project.sidenav", { kind: "view" }),
+  sidenav: defineSlot<Struct, "panel">("project.sidenav", { kind: "panel" }),
   headerPrimary: defineSlot<Struct, "menu">("project.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("project.headerOverflow", { kind: "menu" }),
   settingsPanels: defineSlot<Struct, "settings">("project.settingsPanels", { kind: "settings" }),
@@ -86,7 +86,7 @@ export const sessionSlots = {
 export const workspaceSlots = {
   headerPrimary: defineSlot<Struct, "menu">("workspace.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("workspace.headerOverflow", { kind: "menu" }),
-  sidenav: defineSlot<Struct, "view">("workspace.sidenav", { kind: "view" }),
+  sidenav: defineSlot<Struct, "panel">("workspace.sidenav", { kind: "panel" }),
 };
 
 export const projectEvents = {

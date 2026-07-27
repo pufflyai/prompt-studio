@@ -1,22 +1,22 @@
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import {
   createDashboardExtensionRouteResource,
   dashboardExtensionRouteKind,
 } from "@/shared/extensions/workbench-extension-contributions";
 
-const restoreActiveWidget = (ctx: WorkbenchModuleContributionContext, widgetId: string | undefined) => {
-  if (!widgetId) return;
+const restoreActiveWidget = (ctx: WorkbenchModuleContext, panelId: string | undefined) => {
+  if (!panelId) return;
 
   try {
-    ctx.layout.activateWidget(widgetId);
+    ctx.layout.activatePanel(panelId);
   } catch {
     // Metadata refresh can race with the user closing the active widget.
   }
 };
 
 export const refreshOpenExtensionRoutes = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   metadata: ResolvedWorkbenchExtensionMetadata,
   projectId: string,
 ) => {
@@ -36,7 +36,7 @@ export const refreshOpenExtensionRoutes = (
       if (!route) continue;
 
       const nextResource = createDashboardExtensionRouteResource({ icon: resource.icon, projectId, route });
-      ctx.layout.openWidget(placement.contributionId, {
+      ctx.layout.openPanel(placement.contributionId, {
         resource: nextResource,
         title: nextResource.label,
       });

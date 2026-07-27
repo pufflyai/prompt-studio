@@ -2,14 +2,14 @@ import { documentRendererSource } from "./document-renderer-source";
 import { kanbanRendererSource } from "./kanban-renderer-source";
 
 export const onboardingSources = {
-  emptyWorkbench: `import { createWorkbenchCore } from "pstdio-workbench/core";
-import { Workbench } from "pstdio-workbench/react";
+  emptyWorkbench: `import { createWorkbenchCore } from "@pstdio/workbench";
+import { Workbench } from "@pstdio/workbench/react";
 
 const workbench = createWorkbenchCore();
 
 export const EmptyWorkbench = () => <Workbench workbench={workbench} />;`,
 
-  placeholder: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+  placeholder: `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 const EMPTY_MAIN_RENDERER_ID = "docs.empty-main.renderer";
 
@@ -35,7 +35,7 @@ export const createPlaceholderModule = (): WorkbenchModuleContribution => ({
   },
 });`,
 
-  rendererAndWidget: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+  rendererAndWidget: `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 const GUIDE_WIDGET_ID = "docs.guide";
 const GUIDE_RENDERER_ID = "docs.guide.renderer";
@@ -43,7 +43,7 @@ const GUIDE_RENDERER_ID = "docs.guide.renderer";
 export const createGuideModule = (): WorkbenchModuleContribution => ({
   id: "docs.guide-module",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: GUIDE_WIDGET_ID,
       title: "Guide",
       region: "main",
@@ -61,7 +61,7 @@ export const createGuideModule = (): WorkbenchModuleContribution => ({
       ),
     });
 
-    ctx.layout.openWidget(GUIDE_WIDGET_ID, { title: "First widget" });
+    ctx.layout.openPanel(GUIDE_WIDGET_ID, { title: "First widget" });
   },
 });`,
 
@@ -69,7 +69,7 @@ export const createGuideModule = (): WorkbenchModuleContribution => ({
   headerTrailingMenuPath,
   workbenchCommandPaletteMenuPath,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const GUIDE_WIDGET_ID = "docs.guide";
 const OPEN_GUIDE_COMMAND_ID = "docs.open-guide";
@@ -86,7 +86,7 @@ export const createCommandModule = (): WorkbenchModuleContribution => ({
       },
       {
         execute: () =>
-          ctx.layout.openWidget(GUIDE_WIDGET_ID, {
+          ctx.layout.openPanel(GUIDE_WIDGET_ID, {
             title: "Opened from command",
           }),
       },
@@ -106,7 +106,7 @@ export const createCommandModule = (): WorkbenchModuleContribution => ({
   },
 });`,
 
-  treeViews: `import type { TreeNode, WorkbenchModuleContribution } from "pstdio-workbench/core";
+  treeViews: `import type { TreeNode, WorkbenchModuleContribution } from "@pstdio/workbench";
 
 export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
   id: "docs.tree-views",
@@ -165,14 +165,14 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
       ],
       getChildren: () => [],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.tree",
       title: "Docs",
       region: "sidenav",
       regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: "docs.tree",
     });
-    ctx.layout.openWidget("docs.tree");
+    ctx.layout.openPanel("docs.tree");
   },
 });`,
 
@@ -180,7 +180,7 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
   ResourceRef,
   TreeNode,
   WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const GUIDE_KIND = "docs.guide";
 const GUIDE_WIDGET_ID = "docs.guide";
@@ -201,7 +201,7 @@ const guideResource = (guide: (typeof guides)[number]): ResourceRef => ({
 export const createResourcesModule = (): WorkbenchModuleContribution => ({
   id: "docs.resources",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: GUIDE_WIDGET_ID,
       title: "Guide",
       region: "main",
@@ -225,11 +225,11 @@ export const createResourcesModule = (): WorkbenchModuleContribution => ({
       icon: "BookOpen",
     });
 
-    ctx.resources.registerOpener({
-      id: "docs.guide-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.guide-presenter",
       canOpen: (resource) => resource.kind === GUIDE_KIND,
       open: (resource) =>
-        ctx.layout.openWidget(GUIDE_WIDGET_ID, {
+        ctx.layout.openPanel(GUIDE_WIDGET_ID, {
           resource,
           title: resource.label,
         }),
@@ -256,19 +256,19 @@ export const createResourcesModule = (): WorkbenchModuleContribution => ({
       ],
       getChildren: () => [],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.tree",
       title: "Docs",
       region: "sidenav",
       rendererId: "docs.tree",
     });
-    ctx.layout.openWidget("docs.tree");
+    ctx.layout.openPanel("docs.tree");
 
     void ctx.resources.openResource(guideResource(guides[0]));
   },
 });`,
 
-  modes: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+  modes: `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 export const createModesModule = (): WorkbenchModuleContribution => ({
   id: "docs.modes",
@@ -284,13 +284,13 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
           getBody: () => [{ id: "guides", nodes: [] }],
           getChildren: () => [],
         });
-        modeCtx.layout.registerWidget({
+        modeCtx.layout.registerPanel({
           id: "docs.tree",
           title: "Docs",
           region: "sidenav",
           rendererId: "docs.tree",
         });
-        modeCtx.layout.openWidget("docs.tree");
+        modeCtx.layout.openPanel("docs.tree");
       },
     });
 
@@ -299,7 +299,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
       label: "Review",
       panels: ["main"],
       activate(modeCtx) {
-        modeCtx.layout.registerWidget({
+        modeCtx.layout.registerPanel({
           id: "docs.review",
           title: "Review queue",
           region: "main",
@@ -317,7 +317,7 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
 
   documentRenderer: documentRendererSource,
 
-  commandsKeybindingsThemes: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+  commandsKeybindingsThemes: `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 const OPEN_THEME_COMMAND_ID = "docs.open-theme";
 

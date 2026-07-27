@@ -1,4 +1,4 @@
-export const documentRendererSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+export const documentRendererSource = `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 let notes = [
   "# Document renderer",
@@ -29,7 +29,8 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       region: "main",
       rendererId: "docs.documents",
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: "docs.notes",
       title: "notes.md",
       region: "main",
@@ -37,6 +38,6 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       singleton: true,
     });
 
-    ctx.layout.openWidget("docs.notes");
+    ctx.layout.openPanel("docs.notes");
   },
 });`;

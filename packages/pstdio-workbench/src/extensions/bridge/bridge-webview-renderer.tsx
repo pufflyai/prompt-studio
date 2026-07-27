@@ -6,9 +6,9 @@ import type {
 import { createHostEventPublisher, ExtensionFrame, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
+  WorkbenchPanelInstance,
+  WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
-  WorkbenchWidgetPlacement,
-  WorkbenchWidgetRenderInput,
 } from "../../core";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
@@ -25,7 +25,7 @@ const logWebviewError = (webviewId: string, message: string) => {
 export interface BridgeWebviewRenderContext {
   workbench: WorkbenchCore;
   webviewId: string;
-  placement: WorkbenchWidgetPlacement;
+  placement: WorkbenchPanelInstance;
   /** Channel for pushing host events (e.g. terminal output) into this webview. */
   hostEvents: HostEventPublisher;
 }
@@ -70,14 +70,14 @@ const createLightTheme: CreateBridgeWebviewTheme = () => "light";
 
 const hostEventPublishersByWorkbench = new WeakMap<WorkbenchCore, Map<string, HostEventPublisher>>();
 
-export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
+export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, instance: WorkbenchPanelInstance) => {
   let hostEventsByWidget = hostEventPublishersByWorkbench.get(workbench);
   if (!hostEventsByWidget) {
     hostEventsByWidget = new Map();
     hostEventPublishersByWorkbench.set(workbench, hostEventsByWidget);
   }
 
-  const key = placement.widgetId;
+  const key = instance.instanceId;
   let hostEvents = hostEventsByWidget.get(key);
   if (!hostEvents) {
     hostEvents = createHostEventPublisher();
@@ -129,27 +129,27 @@ export const renderBridgeWebviewFrame = (input: {
 };
 
 const renderBridgeWebview = (
-  input: WorkbenchWidgetRenderInput,
+  input: WorkbenchPanelRenderInput,
   createHostCapabilities: CreateBridgeWebviewHostCapabilities,
   createProps: CreateBridgeWebviewProps,
   createTheme: CreateBridgeWebviewTheme,
 ) => {
-  const { workbench, widget, placement } = input;
-  const webview = isBridgeWebviewConfig(widget.config) ? widget.config : null;
+  const { workbench, panel, instance } = input;
+  const webview = isBridgeWebviewConfig(panel.config) ? panel.config : null;
   if (!webview) return null;
 
   return renderBridgeWebviewFrame({
     context: {
       workbench,
-      webviewId: placement.contributionId,
-      placement,
-      hostEvents: getBridgeWebviewHostEventPublisher(workbench, placement),
+      webviewId: instance.panelId,
+      placement: instance,
+      hostEvents: getBridgeWebviewHostEventPublisher(workbench, instance),
     },
     createHostCapabilities,
     createProps,
     createTheme,
-    ownerId: widget.ownerId,
-    title: widget.title,
+    ownerId: "ownerId" in panel ? panel.ownerId : undefined,
+    title: panel.title,
     webview,
   });
 };

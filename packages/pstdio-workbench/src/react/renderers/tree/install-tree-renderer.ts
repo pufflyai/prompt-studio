@@ -33,15 +33,15 @@ export const installWorkbenchTreeRenderer = (
     onSidenavContextActionsChange: input.onSidenavContextActionsChange,
   };
   installed.set(workbench, installation);
-  workbench.renderers.setTreeRendererImplementation(({ workbench: scope, placement, treeId }) =>
+  workbench.renderers.setTreeRendererImplementation(({ workbench: scope, instance, treeId }) =>
     createElement(WorkbenchTreeView, {
       workbench: scope,
       treeViewId: treeId,
-      resource: placement.resource,
-      viewId: placement.contributionId,
+      resource: instance.resource,
+      viewId: instance.panelId,
       renderParamField: installation.renderParamField,
       onSidenavContextActionsChange:
-        scope.layout.getWidget(placement.contributionId)?.region === "sidenav"
+        scope.layout.getPanel(instance.panelId)?.region === "sidenav"
           ? installation.onSidenavContextActionsChange
           : undefined,
     }),

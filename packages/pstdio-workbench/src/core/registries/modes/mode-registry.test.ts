@@ -264,6 +264,73 @@ describe("mode panel layouts", () => {
     expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
   });
 
+  test("establishes the seeded primary Panel as the mode Location", () => {
+    const layout = createLayoutModel();
+    layout.registerPanel({
+      id: "review",
+      title: "Review",
+      region: "main",
+      rendererId: "review",
+      closable: false,
+    });
+    const established: string[] = [];
+    const registry = createWorkbenchModeRegistry({
+      establishLocation: (instanceId) => established.push(instanceId),
+      resolveContext: () => createContext(layout),
+    });
+    registry.registerMode({
+      id: "review",
+      activate: () => undefined,
+      seed: (ctx) => {
+        ctx.layout.openPanel("review");
+      },
+    });
+
+    registry.setActiveMode("review");
+
+    expect(established).toEqual(["review"]);
+  });
+
+  test("establishes the mode Location before seeded supporting Panels open", () => {
+    const layout = createLayoutModel();
+    const resource = { kind: "review", uri: "pstdio://review/one" };
+    layout.registerPanel({
+      id: "review",
+      title: "Review",
+      region: "main",
+      rendererId: "review",
+      closable: false,
+    });
+    layout.registerPanel({
+      id: "checks",
+      title: "Checks",
+      region: "secondary",
+      rendererId: "checks",
+      closable: true,
+      eligibleLocations: { modeIds: ["review"] },
+    });
+    const registry = createWorkbenchModeRegistry({
+      establishLocation: (instanceId) => {
+        layout.establishLocation(instanceId);
+      },
+      resolveContext: () => createContext(layout),
+    });
+    registry.registerMode({
+      id: "review",
+      activate: () => undefined,
+      seed: (ctx) => {
+        ctx.layout.openPanel("review", { resource });
+        ctx.layout.openPanel("checks");
+      },
+    });
+
+    registry.setActiveMode("review");
+
+    expect(layout.getLayout().regions.secondary.widgets).toEqual([
+      expect.objectContaining({ contributionId: "checks", ownerResourceUri: resource.uri }),
+    ]);
+  });
+
   test("defers seeding until the caller establishes the persistence scope", () => {
     const layout = createLayoutModel();
     const seededScopes: (string | undefined)[] = [];

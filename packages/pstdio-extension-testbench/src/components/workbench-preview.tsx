@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,

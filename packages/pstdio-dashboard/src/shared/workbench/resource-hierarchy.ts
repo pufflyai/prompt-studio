@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 
 export interface ExtensionResourceReference {
   type: string;
@@ -34,7 +34,7 @@ export const normalizeExtensionResourceReference = (value: unknown): ExtensionRe
 };
 
 export const dashboardResourceFromExtensionReference = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   reference: ExtensionResourceReference,
   projectId: string,
 ): ResourceRef => ({
@@ -49,11 +49,7 @@ export const dashboardResourceFromExtensionReference = (
   },
 });
 
-export const dashboardResourceParent = (
-  ctx: WorkbenchModuleContributionContext,
-  resource: ResourceRef,
-  projectId: string,
-) => {
+export const dashboardResourceParent = (ctx: WorkbenchModuleContext, resource: ResourceRef, projectId: string) => {
   const reference = normalizeExtensionResourceReference(resource.metadata?.resourceParent);
   return reference ? dashboardResourceFromExtensionReference(ctx, reference, projectId) : undefined;
 };

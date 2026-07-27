@@ -16,17 +16,17 @@ export const createTicketsModule = (): WorkbenchModuleContribution => ({
 
     registerTicketKanbanRenderer(ctx);
 
-    ctx.resources.registerOpener({
-      id: "dashboard.tickets.opener",
+    ctx.resources.registerPresenter({
+      id: "dashboard.tickets.presenter",
       priority: 1000,
       canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === "tickets",
       open: (resource, input) => {
         ctx.modes.setActiveMode("project");
         setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openWidget(dashboardWidgetIds.tickets, {
+        return ctx.layout.openPanel(dashboardWidgetIds.tickets, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         });
       },
     });

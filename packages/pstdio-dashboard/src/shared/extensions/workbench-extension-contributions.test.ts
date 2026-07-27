@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import { resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,
@@ -101,7 +101,7 @@ const metadata = {
   ],
   modes: [],
   settingsPanels: [],
-  views: [],
+  panels: [],
 } satisfies DashboardExtensionMetadata;
 
 const labRouteWhenExpression = [

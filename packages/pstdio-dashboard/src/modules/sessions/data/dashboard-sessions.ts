@@ -1,5 +1,5 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import type { ResourceRef, WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import {
@@ -162,13 +162,13 @@ const getSessionIdFromResourceUri = (resourceUri: string | undefined) => {
   return resourceUri.slice(sessionResourceUriPrefix.length);
 };
 
-const resolveDashboardSessionPlacementId = (placement: Pick<WorkbenchWidgetPlacement, "resource" | "resourceUri">) => {
+const resolveDashboardSessionPlacementId = (placement: Pick<WorkbenchPanelInstance, "resource" | "resourceUri">) => {
   if (placement.resource?.kind === "session") return placement.resource.id;
   return getSessionIdFromResourceUri(placement.resourceUri);
 };
 
 export const resolveDashboardSessionViewForPlacement = (
-  placement: Pick<WorkbenchWidgetPlacement, "resource" | "resourceUri">,
+  placement: Pick<WorkbenchPanelInstance, "resource" | "resourceUri">,
 ) => {
   const sessionId = resolveDashboardSessionPlacementId(placement);
   if (sessionId) return resolveDashboardSessionView(sessionId);

@@ -9,11 +9,11 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     const openAssistant = () => {
       ctx.sidePanel.setMode("attached");
-      ctx.layout.openWidget(assistantWidgetId);
+      ctx.layout.openPanel(assistantWidgetId);
     };
 
     ctx.renderers.registerRenderer({ id: assistantWidgetId, render: () => <AssistantWidget /> });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: assistantWidgetId,
       title: "Assistant",
       region: "side",

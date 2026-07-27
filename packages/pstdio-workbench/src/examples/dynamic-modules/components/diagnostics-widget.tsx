@@ -1,10 +1,10 @@
 import { Badge, Box, Button, Grid, HStack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import type { WorkbenchWidgetRenderInput } from "../../../core";
+import type { WorkbenchPanelRenderInput } from "../../../core";
 import { WorkbenchIcon } from "../../../react";
 import { diagnosticsCommandId } from "../data";
 
-export const DiagnosticsWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const DiagnosticsWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (

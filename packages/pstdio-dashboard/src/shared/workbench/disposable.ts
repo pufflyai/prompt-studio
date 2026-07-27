@@ -1,4 +1,4 @@
-import type { Disposable } from "@pstdio/workbench/core";
+import type { Disposable } from "@pstdio/workbench";
 
 export type MaybeDisposable = Disposable | readonly Disposable[] | undefined;
 

@@ -14,7 +14,7 @@ import type {
   RegisteredKanbanRendererContribution,
   ResourceRef,
   WorkbenchCore,
-  WorkbenchWidgetPlacement,
+  WorkbenchPanelInstance,
 } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { createKanbanViewQuerySequencer, executeKanbanViewQuery } from "./kanban-view-query";
@@ -23,7 +23,7 @@ import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
   contribution: RegisteredKanbanRendererContribution;
-  placement: WorkbenchWidgetPlacement;
+  placement: WorkbenchPanelInstance;
 }
 
 interface WorkbenchKanbanViewFrameProps {

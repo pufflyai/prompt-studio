@@ -1,17 +1,17 @@
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { disposeAll, type MaybeDisposable, toDisposables } from "../disposable";
 
 interface ModeChromeContribution {
   id: string;
-  activate(ctx: WorkbenchModuleContributionContext): MaybeDisposable;
+  activate(ctx: WorkbenchModuleContext): MaybeDisposable;
 }
 
-type ModeChromeContext = Pick<WorkbenchModuleContributionContext, "context">;
+type ModeChromeContext = Pick<WorkbenchModuleContext, "context">;
 
 const allModesKey = "*";
 
 const contributionsByWorkbench = new WeakMap<
-  WorkbenchModuleContributionContext["context"]["store"],
+  WorkbenchModuleContext["context"]["store"],
   Map<string, ModeChromeContribution[]>
 >();
 
@@ -33,7 +33,7 @@ export const registerModeChromeContribution = (
   getContributionMap(ctx).set(modeId, contributions);
 };
 
-export const activateModeChromeContributions = (ctx: WorkbenchModuleContributionContext, modeId: string) => {
+export const activateModeChromeContributions = (ctx: WorkbenchModuleContext, modeId: string) => {
   const contributionMap = getContributionMap(ctx);
   const contributions = [...(contributionMap.get(allModesKey) ?? []), ...(contributionMap.get(modeId) ?? [])];
   const disposables = contributions

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
@@ -22,15 +22,24 @@ const metadata = {
     { id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" },
     { id: "pstdio.pstdio-planner", name: "pstdio-planner", displayName: "Planner", sourcePath: "" },
   ],
-  views: [
+  panels: [
     {
       id: "extension-lab.stale-sidebar",
       extensionId: "pstdio.extension-lab",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "sidenav",
+      closable: false,
       title: "Stale Lab sidebar",
-      role: "panel-menu",
       webview: stubWebview("stale-lab-sidebar"),
+      panelMenus: [
+        {
+          id: "extension-lab.stale-sidebar-menu",
+          extensionId: "pstdio.extension-lab",
+          ownerPanelId: "extension-lab.stale-sidebar",
+          title: "Invalid Sidenav menu",
+          side: "left",
+          webview: stubWebview("stale-lab-sidebar-menu"),
+        },
+      ],
     },
   ],
   settingsPanels: [

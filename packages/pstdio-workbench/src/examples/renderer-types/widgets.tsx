@@ -1,12 +1,12 @@
 import { Badge, Box, Button, Code, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { WorkbenchWidgetRenderInput } from "../../core";
+import type { WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { bridgeResource, bridgeWidgetId, rendererRows } from "./data";
 
 interface RendererWidgetProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
 }
 
 const RendererPanel = (props: { title: string; children: ReactNode }) => {
@@ -53,8 +53,8 @@ export const ReactRendererWidget = (props: RendererWidgetProps) => {
               <Badge alignSelf="flex-start" colorPalette="green" variant="subtle">
                 React
               </Badge>
-              <RendererRow icon="Component" label="Renderer id" value={input.widget.rendererId} />
-              <RendererRow icon="PanelTop" label="Placement" value={input.placement.contributionId} />
+              <RendererRow icon="Component" label="Renderer id" value={input.panel.rendererId} />
+              <RendererRow icon="PanelTop" label="Placement" value={input.instance.panelId} />
             </Stack>
           </RendererPanel>
           <RendererPanel title="Workbench state">
@@ -62,7 +62,7 @@ export const ReactRendererWidget = (props: RendererWidgetProps) => {
               <RendererRow
                 icon="PanelsTopLeft"
                 label="Registered widgets"
-                value={String(input.workbench.layout.listWidgets().length)}
+                value={String(input.workbench.layout.listPanels().length)}
               />
               <RendererRow icon="Component" label="Registered renderers" value={String(rendererIds.length)} />
             </Stack>
@@ -89,7 +89,7 @@ export const ReactRendererWidget = (props: RendererWidgetProps) => {
           <Button
             size="sm"
             variant="subtle"
-            onClick={() => input.workbench.layout.openWidget(bridgeWidgetId, { resource: bridgeResource })}
+            onClick={() => input.workbench.layout.openPanel(bridgeWidgetId, { resource: bridgeResource })}
           >
             <WorkbenchIcon name="Cable" />
             Bridge renderer

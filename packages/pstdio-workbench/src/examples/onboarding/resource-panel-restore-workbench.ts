@@ -35,7 +35,7 @@ const createMemoryPersistence = () => {
 
 const openPanelTabs = (workbench: ReturnType<typeof createWorkbenchCore>, suffix: "notes" | "reports") => {
   for (const region of ["main", "secondary", "side"] as const) {
-    workbench.layout.openWidget(`onboarding.panel-composition.${region}.${suffix}`);
+    workbench.layout.openPanel(`onboarding.panel-composition.${region}.${suffix}`);
   }
 };
 
@@ -64,8 +64,8 @@ export const createResourceIsolatedPanelCompositionWorkbench = () => {
     carryRegionState: projectOwnedRegions,
   });
   void workbench.resources.openResource(beta);
-  workbench.layout.openWidget("onboarding.panel-composition.main.notes");
-  workbench.layout.openWidget("onboarding.panel-composition.secondary.reports");
+  workbench.layout.openPanel("onboarding.panel-composition.main.notes");
+  workbench.layout.openPanel("onboarding.panel-composition.secondary.reports");
   workbench.layout.setRegionSize("secondary", 360);
   workbench.panels.setOpen("secondary", false);
 

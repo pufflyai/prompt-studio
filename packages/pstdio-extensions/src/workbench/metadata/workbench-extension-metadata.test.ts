@@ -40,7 +40,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               id: "pstdio.lab.review",
               label: "Review",
               resourceKind: "ticket",
-              layout: { panels: ["main"], open: [{ target: "workbench.main", view: "ticketPanel" }] },
+              layout: { panels: ["main"], open: [{ region: "main", panel: "ticketPanel" }] },
             },
           },
           routes: {
@@ -70,18 +70,17 @@ describe("createWorkbenchExtensionMetadata", () => {
           treeRenderers: {
             files: { title: "Files", bodyCommand: "treeBody" },
           },
-          views: {
+          panels: {
             files: {
               title: "Files",
-              role: "location",
-              target: "workbench.main.left",
+              region: "main",
+              closable: false,
               treeRenderer: "files",
-              hostTreeHeader: "default",
-              hostTreeFooter: "none",
             },
             ticketPanel: {
               title: "Ticket",
-              role: "location",
+              region: "main",
+              closable: false,
               resourceKind: "ticket",
               webview: { entry: webviewAsset("./ticket.tsx") },
             },
@@ -111,7 +110,7 @@ describe("createWorkbenchExtensionMetadata", () => {
         when: { resourceType: ["ticket"] },
       }),
     ]);
-    expect(metadata.views).toEqual(
+    expect(metadata.panels).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "lab.ticketPanel",
@@ -121,8 +120,6 @@ describe("createWorkbenchExtensionMetadata", () => {
         expect.objectContaining({
           id: "lab.files",
           treeRendererId: "lab.files",
-          hostTreeHeader: "default",
-          hostTreeFooter: "none",
         }),
       ]),
     );
@@ -145,7 +142,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.review",
       resourceKind: "ticket",
-      layout: { panels: ["main"], open: [{ target: "workbench.main", view: "lab.ticketPanel" }] },
+      layout: { panels: ["main"], open: [{ region: "main", panel: "lab.ticketPanel" }] },
     });
   });
 
@@ -305,7 +302,7 @@ describe("createWorkbenchExtensionMetadata kanban renderers", () => {
 });
 
 describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
-  test("resolves a Sub Panel view reference to its contribution id", () => {
+  test("resolves a Sub Panel panel reference to its contribution id", () => {
     const runtime = normalizeExtensionSources([
       {
         sourcePath,
@@ -321,19 +318,19 @@ describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
           enginesPstdio: "^1.0.0",
         },
         definition: {
-          views: {
+          panels: {
             notes: {
               title: "Notes",
-              role: "sub-panel",
-              target: "workbench.main",
+              region: "main",
+              closable: true,
               webview: { entry: webviewAsset("./notes.tsx") },
-            },
-            notesTools: {
-              title: "Notes tools",
-              role: "panel-menu",
-              target: "workbench.main.right",
-              panelMenuOwner: { level: "sub-panel", view: "notes" },
-              webview: { entry: webviewAsset("./notes-tools.tsx") },
+              panelMenus: {
+                tools: {
+                  title: "Notes tools",
+                  side: "right",
+                  webview: { entry: webviewAsset("./notes-tools.tsx") },
+                },
+              },
             },
           },
         },
@@ -350,17 +347,26 @@ describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
       }),
     });
 
-    expect(metadata.views).toContainEqual(
+    expect(metadata.panels).toContainEqual(
       expect.objectContaining({
-        id: "lab.notesTools",
-        panelMenuOwner: { level: "sub-panel", contributionId: "lab.notes" },
+        id: "lab.notes",
+        panelMenus: [
+          expect.objectContaining({
+            id: "lab.notes.tools",
+            ownerPanelId: "lab.notes",
+            webview: expect.objectContaining({
+              runtimeUrl: "/runtime/lab.notes.tools.html",
+              moduleUrl: "/modules/lab.notes.tools.js",
+            }),
+          }),
+        ],
       }),
     );
   });
 });
 
 describe("createWorkbenchExtensionMetadata data table renderers", () => {
-  test("maps table contributions and table-backed views", () => {
+  test("maps table contributions and table-backed panels", () => {
     const runtime = normalizeExtensionSources([
       {
         sourcePath,
@@ -380,8 +386,8 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
           dataTableRenderers: {
             health: { title: "Health", queryCommand: "queryTable", columns: [{ id: "score", label: "Score" }] },
           },
-          views: {
-            health: { title: "Health", role: "location", target: "workbench.main", dataTableRenderer: "health" },
+          panels: {
+            health: { title: "Health", region: "main", closable: false, dataTableRenderer: "health" },
           },
         },
       },
@@ -394,7 +400,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
       queryCommandId: "lab.queryTable",
       columns: [{ id: "score", label: "Score" }],
     });
-    expect(metadata.views[0]).toMatchObject({ id: "lab.health", dataTableRendererId: "lab.health" });
+    expect(metadata.panels[0]).toMatchObject({ id: "lab.health", dataTableRendererId: "lab.health" });
   });
 });
 

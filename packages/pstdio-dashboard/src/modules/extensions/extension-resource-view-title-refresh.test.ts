@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
@@ -20,7 +20,6 @@ const metadata = {
       resourceKind: "ticket",
       layout: {
         panels: ["main", "secondary", "side"],
-        open: [{ target: "workbench.main.left", view: "tickets.files", pinned: true }],
       },
     },
   ],
@@ -38,26 +37,25 @@ const metadata = {
     },
   ],
   treeRenderers: [],
-  views: [
+  panels: [
     {
       id: "tickets.editor",
       extensionId: "tickets",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "main",
+      closable: false,
       title: "Ticket",
-      role: "location",
       resourceKind: "ticket",
       fileRendererId: "tickets.content",
-    },
-    {
-      id: "tickets.files",
-      extensionId: "tickets",
-      slotId: "workbench.main.left",
-      target: "workbench.main.left",
-      title: "Files",
-      role: "panel-menu",
-      resourceKind: "ticket",
-      treeRendererId: "tickets.files",
+      panelMenus: [
+        {
+          id: "tickets.files",
+          extensionId: "tickets",
+          ownerPanelId: "tickets.editor",
+          title: "Files",
+          side: "left",
+          treeRendererId: "tickets.files",
+        },
+      ],
     },
   ],
 } satisfies DashboardExtensionMetadata;
@@ -76,21 +74,24 @@ describe("registerExtensionResourceView title refresh", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.modes.registerMode({ id: "tickets.ticket", label: "Ticket", activate: () => undefined });
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "tickets.editor",
       title: "Ticket",
       region: "main",
       rendererId: "tickets.content",
       resourceKinds: ["ticket"],
+      panelMenus: [
+        {
+          id: "tickets.files",
+          title: "Files",
+          side: "left",
+          rendererId: "tickets.files",
+        },
+      ],
     });
-    workbench.layout.registerWidget({
-      id: "tickets.files",
-      title: "Files",
-      region: "main-left-menu",
-      rendererId: "tickets.files",
-      resourceKinds: ["ticket"],
-    });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: true,
       id: "left.scratch",
       title: "Scratch",
       region: "sidenav",
@@ -113,7 +114,7 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(beforeSave?.resource?.id).toBe("ticket-1");
       expect(companionBeforeSave?.resource?.id).toBe("ticket-1");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
-      const scratch = workbench.layout.openWidget("left.scratch", { title: "Scratch" });
+      const scratch = workbench.layout.openPanel("left.scratch", { title: "Scratch" });
 
       publishExtensionCommandEvent({
         commandId: "other.save",
@@ -123,7 +124,7 @@ describe("registerExtensionResourceView title refresh", () => {
 
       expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("T-1 Old title");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.instanceId);
 
       publishExtensionCommandEvent({
         commandId: "tickets.save",
@@ -144,8 +145,8 @@ describe("registerExtensionResourceView title refresh", () => {
         companionBeforeSave?.resource,
       );
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.resource?.label).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().regions.sidenav.widgets[0]?.widgetId).toBe(scratch.widgetId);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().regions.sidenav.widgets[0]?.widgetId).toBe(scratch.instanceId);
+      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.instanceId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {
       disposable.dispose();

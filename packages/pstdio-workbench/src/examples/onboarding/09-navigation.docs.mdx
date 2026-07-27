@@ -16,9 +16,9 @@ turns the string into a target the workbench knows how to dispatch.
 
 A parser returns one of:
 
-- `{ kind: "resource", resource }` — open a resource (uses your openers from
+- `{ kind: "resource", resource }` — open a resource (uses your presenters from
   story 5).
-- `{ kind: "view", widgetId, region?, resource? }` — reveal a specific widget.
+- `{ kind: "panel", widgetId, region?, resource? }` — reveal a specific widget.
 - `{ kind: "command", commandId, args? }` — run a command.
 - `{ kind: "compound", targets }` — apply multiple targets together. If any
   one fails, the layout is rolled back, so a deep link either applies fully

@@ -62,7 +62,7 @@ const metadata = {
       label: "Review",
       layout: {
         panels: ["main"],
-        open: [{ target: "workbench.main", view: "lab.ticketPanel", pinned: true }],
+        open: [{ region: "main", panel: "lab.ticketPanel", pinned: true }],
       },
     },
   ],
@@ -109,24 +109,22 @@ const metadata = {
       updateAttributeCommandId: "lab.updateRow",
     },
   ],
-  views: [
+  panels: [
     {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
-      slotId: "workbench.main",
-      target: "workbench.main",
+      region: "main",
       title: "Ticket",
-      role: "location",
+      closable: false,
       resourceKind: "ticket",
       webview,
     },
     {
       id: "lab.ticketModal",
       extensionId: "pstdio.lab",
-      slotId: "workbench.modal",
-      target: "workbench.main",
+      region: "overlay",
       title: "Ticket modal",
-      role: "modal",
+      closable: true,
       resourceKind: "ticket",
       webview: { ...webview, moduleUrl: "/ticket-modal.js" },
     },
@@ -156,21 +154,18 @@ describe("registerWorkbenchExtensionContributions", () => {
     });
 
     expect(workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)).toBeDefined();
-    expect(workbench.layout.getWidget("lab.ticketPanel")).toMatchObject({
+    expect(workbench.layout.getPanel("lab.ticketPanel")).toMatchObject({
       region: "main",
       rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
       resourceKinds: ["ticket"],
       config: expect.objectContaining({ moduleUrl: "/ticket.js" }),
     });
-    expect(workbench.layout.getWidget("lab.ticketModal")).toMatchObject({
+    expect(workbench.layout.getPanel("lab.ticketModal")).toMatchObject({
       region: "overlay",
       rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
       resourceKinds: ["ticket"],
       config: expect.objectContaining({
         moduleUrl: "/ticket-modal.js",
-        size: "lg",
-        scrollBehavior: "inside",
-        contentHeight: "min(560px, calc(100dvh - 48px))",
       }),
     });
     expect(workbench.commands.getCommand("lab.create")?.command.params).toEqual({
@@ -186,7 +181,7 @@ describe("registerWorkbenchExtensionContributions", () => {
 
     const renderer = workbench.renderers.getKanbanRenderer("lab.rows");
     expect(renderer).toMatchObject({ id: "lab.rows", title: "Rows" });
-    expect(workbench.layout.getWidget("lab.rows")).toMatchObject({
+    expect(workbench.layout.getPanel("lab.rows")).toMatchObject({
       region: "main",
       rendererId: "lab.rows",
       resourceKinds: ["ticket"],
@@ -232,11 +227,11 @@ describe("registerWorkbenchExtensionContributions", () => {
       uri: "workbench://extension-route/lab.details",
       id: "lab.details",
     });
-    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({ contributionId: "lab.details" });
+    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.details" });
 
     workbench.modes.setActiveMode("lab.review");
-    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({
-      contributionId: "lab.ticketPanel",
+    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({
+      panelId: "lab.ticketPanel",
       pinned: true,
     });
   });
@@ -270,17 +265,18 @@ describe("registerWorkbenchExtensionContributions", () => {
     });
 
     const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID);
-    const widget = workbench.layout.getWidget("lab.ticketPanel")!;
+    const widget = workbench.layout.getPanel("lab.ticketPanel")!;
     const element = renderer?.keepAlive
       ? null
       : (renderer?.render({
           refresh: () => {},
-          widget,
+          panel: widget,
           workbench,
-          placement: {
-            contributionId: "lab.ticketPanel",
+          instance: {
+            instanceId: "lab.ticketPanel",
             resource: { kind: "ticket", uri: "pstdio://ticket/PS-16", id: "PS-16", label: "Ticket PS-16" },
-            widgetId: "lab.ticketPanel",
+            panelId: "lab.ticketPanel",
+            closable: false,
           },
         }) as { props?: { capabilities?: Record<string, (params: unknown) => unknown> } } | null);
 
@@ -296,7 +292,7 @@ describe("registerWorkbenchExtensionContributions", () => {
         params: { source: "webview" },
         projectId: "project-1",
         resource: { type: "ticket", id: "PS-16", label: "Ticket PS-16" },
-        slot: { id: "lab.ticketPanel", kind: "view" },
+        slot: { id: "lab.ticketPanel", kind: "panel" },
         source: "dashboard",
       },
     });
@@ -335,17 +331,18 @@ describe("registerWorkbenchExtensionContributions", () => {
     });
 
     const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID);
-    const widget = workbench.layout.getWidget("lab.ticketPanel")!;
+    const widget = workbench.layout.getPanel("lab.ticketPanel")!;
     const element = renderer?.keepAlive
       ? null
       : (renderer?.render({
           refresh: () => {},
-          widget,
+          panel: widget,
           workbench,
-          placement: {
-            contributionId: "lab.ticketPanel",
+          instance: {
+            instanceId: "lab.ticketPanel",
             resource: { kind: "ticket", uri: "pstdio://ticket/PS-16", id: "PS-16", label: "Ticket PS-16" },
-            widgetId: "lab.ticketPanel",
+            panelId: "lab.ticketPanel",
+            closable: false,
           },
         }) as { props?: { capabilities?: Record<string, (params: unknown) => unknown> } } | null);
 

@@ -7,13 +7,18 @@ import type {
   WorkbenchExtensionKanbanRendererRecord,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
-import type { PackageAssetDescriptor, WebviewContribution } from "@pstdio/sdk/extensions";
+import type {
+  PackageAssetDescriptor,
+  PanelContribution,
+  PanelMenuContribution,
+  WebviewContribution,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
-type WorkbenchExtensionWebview = NonNullable<WorkbenchExtensionMetadata["views"][number]["webview"]>;
+type WorkbenchExtensionWebview = NonNullable<WorkbenchExtensionMetadata["panels"][number]["webview"]>;
 
 export interface ResolveWorkbenchExtensionWebviewInput {
   extensionId: string;
@@ -83,9 +88,6 @@ const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][nu
 const legacySettingsSlotId = (panel: ExtensionRuntime["settingsPanels"][number]["contribution"]) =>
   slotIdOf(panel.slot) ?? (panel.scope === "global" ? "global.settingsPanels" : "project.settingsPanels");
 
-const legacyViewSlotId = (view: ExtensionRuntime["views"][number]["contribution"]) =>
-  slotIdOf(view.slot) ?? view.target ?? "unknown";
-
 const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]) => ({
   id: extension.id,
   name: extension.name,
@@ -141,53 +143,84 @@ const resolveWebview = (
   );
 };
 
-const toViewRecord = (
+const toPanelBody = (
   input: CreateWorkbenchExtensionMetadataInput,
-  view: ExtensionRuntime["views"][number],
-): WorkbenchExtensionMetadata["views"][number] | null => {
+  panel: ExtensionRuntime["panels"][number],
+  contribution: PanelContribution | PanelMenuContribution,
+  webviewId = panel.id,
+) => {
   const treeRendererId =
-    typeof view.contribution.treeRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.treeRenderer)
+    typeof contribution.treeRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.treeRenderer)
       : undefined;
   const fileRendererId =
-    typeof view.contribution.fileRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.fileRenderer)
+    typeof contribution.fileRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.fileRenderer)
       : undefined;
   const controlsRendererId =
-    typeof view.contribution.controlsRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.controlsRenderer)
+    typeof contribution.controlsRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.controlsRenderer)
       : undefined;
   const dataTableRendererId =
-    typeof view.contribution.dataTableRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.dataTableRenderer)
+    typeof contribution.dataTableRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.dataTableRenderer)
       : undefined;
-  const webview = resolveWebview(input, view, view.contribution.webview) ?? undefined;
+  const webview = resolveWebview(input, { ...panel, id: webviewId }, contribution.webview) ?? undefined;
   if (!treeRendererId && !fileRendererId && !controlsRendererId && !dataTableRendererId && !webview) return null;
 
   return {
-    id: view.id,
-    extensionId: view.extensionId,
-    slotId: legacyViewSlotId(view.contribution),
-    target: view.contribution.target,
-    title: view.contribution.title,
-    role: view.contribution.role,
-    panelMenuOwner:
-      view.contribution.panelMenuOwner?.level === "sub-panel"
-        ? {
-            level: "sub-panel",
-            contributionId: resolveContributionId(view.name, view.contribution.panelMenuOwner.view),
-          }
-        : view.contribution.panelMenuOwner,
-    group: view.contribution.group,
-    placement: view.contribution.placement,
-    resourceKind: view.contribution.resourceKind,
-    hostTreeHeader: view.contribution.hostTreeHeader,
-    hostTreeFooter: view.contribution.hostTreeFooter,
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
     ...(fileRendererId ? { fileRendererId } : {}),
     ...(controlsRendererId ? { controlsRendererId } : {}),
     ...(dataTableRendererId ? { dataTableRendererId } : {}),
+  };
+};
+
+const toPanelRecord = (
+  input: CreateWorkbenchExtensionMetadataInput,
+  panel: ExtensionRuntime["panels"][number],
+): WorkbenchExtensionMetadata["panels"][number] | null => {
+  const body = toPanelBody(input, panel, panel.contribution);
+  if (!body) return null;
+  const panelMenus = Object.entries(panel.contribution.panelMenus ?? {}).flatMap(([localId, menu]) => {
+    const menuId = `${panel.id}.${localId}`;
+    const menuBody = toPanelBody(input, panel, menu, menuId);
+    return menuBody
+      ? [
+          {
+            id: menuId,
+            extensionId: panel.extensionId,
+            ownerPanelId: panel.id,
+            title: menu.title,
+            side: menu.side,
+            group: menu.group,
+            placement: menu.placement,
+            hostTreeHeader: menu.hostTreeHeader,
+            hostTreeFooter: menu.hostTreeFooter,
+            ...menuBody,
+          },
+        ]
+      : [];
+  });
+  return {
+    id: panel.id,
+    extensionId: panel.extensionId,
+    title: panel.contribution.title,
+    region: panel.contribution.region,
+    closable: panel.contribution.closable,
+    group: panel.contribution.group,
+    placement: panel.contribution.placement,
+    resourceKind: panel.contribution.resourceKind,
+    eligibleLocations: panel.contribution.eligibleLocations
+      ? {
+          resourceKinds: panel.contribution.eligibleLocations.resourceKinds
+            ? [...panel.contribution.eligibleLocations.resourceKinds]
+            : undefined,
+        }
+      : undefined,
+    panelMenus: panelMenus.length > 0 ? panelMenus : undefined,
+    ...body,
   };
 };
 
@@ -465,7 +498,7 @@ export const createWorkbenchExtensionMetadata = (
     menuContributions: toMenuContributions(input.runtime.commands),
     commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands),
     modes: modes.modes,
-    views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),
+    panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
     navigation: [],
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),

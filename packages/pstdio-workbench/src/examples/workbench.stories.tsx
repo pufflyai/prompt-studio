@@ -114,7 +114,7 @@ hostTerminalWorkbench.registerModule({
     });
     ctx.terminal.setSessionOpener((request) => scriptedTerminal.openSession(request));
     const terminalDisposables = createWorkbenchTerminalModule().activate(ctx);
-    const notesWidget = ctx.layout.registerWidget({
+    const notesWidget = ctx.layout.registerPanel({
       id: hostTerminalNotesWidgetId,
       title: "notes.md",
       region: "secondary",
@@ -137,7 +137,7 @@ hostTerminalWorkbench.registerModule({
     });
     openWorkbenchTerminal(ctx);
     openWorkbenchTerminal(ctx);
-    ctx.layout.openWidget(hostTerminalNotesWidgetId, { title: "notes.md" });
+    ctx.layout.openPanel(hostTerminalNotesWidgetId, { title: "notes.md" });
     return [
       ...(Array.isArray(terminalDisposables) ? terminalDisposables : terminalDisposables ? [terminalDisposables] : []),
       notesWidget,

@@ -74,10 +74,8 @@ describe("extension-lab workbench attachments", () => {
       layout: {
         panels: ["main", "secondary", "side"],
         open: [
-          { target: "workbench.main", view: "labOverview" },
-          { target: "workbench.main.left", view: "labTools", pinned: true },
-          { target: "workbench.main.right", view: "labInspector", pinned: true },
-          { target: "workbench.secondary", view: "labConsole" },
+          { region: "main", panel: "labOverview" },
+          { region: "secondary", panel: "labConsole" },
         ],
       },
     });
@@ -85,11 +83,7 @@ describe("extension-lab workbench attachments", () => {
       id: "pstdio.extension-lab.design",
       layout: {
         panels: ["main", "side"],
-        open: [
-          { target: "workbench.main", view: "labCanvas" },
-          { target: "workbench.main.left", view: "labPalette", pinned: true },
-          { target: "workbench.main.right", view: "labInspector", pinned: true },
-        ],
+        open: [{ region: "main", panel: "labCanvas" }],
       },
     });
     expect(extension.modes?.labReview).toMatchObject({
@@ -97,9 +91,8 @@ describe("extension-lab workbench attachments", () => {
       layout: {
         panels: ["main", "secondary", "side"],
         open: [
-          { target: "workbench.main", view: "labReview" },
-          { target: "workbench.main.right", view: "labInspector", pinned: true },
-          { target: "workbench.secondary", view: "labChecks" },
+          { region: "main", panel: "labReview" },
+          { region: "secondary", panel: "labChecks" },
         ],
       },
     });
@@ -107,24 +100,26 @@ describe("extension-lab workbench attachments", () => {
       id: "pstdio.extension-lab.focus",
       layout: {
         panels: ["main"],
-        open: [{ target: "workbench.main", view: "labFocus" }],
+        open: [{ region: "main", panel: "labFocus" }],
       },
     });
-    expect(extension.views).not.toHaveProperty("labSidenav");
-    expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
-    expect(extension.views?.labTools?.webview.entry.path).toBe("./src/views/lab-tools.tsx");
-    expect(extension.views?.labInspector?.webview.entry.path).toBe("./src/views/lab-inspector.tsx");
-    expect(extension.views?.labConsole?.webview.entry.path).toBe("./src/views/lab-console.tsx");
-    expect(extension.views?.labPalette?.webview.entry.path).toBe("./src/views/lab-palette.tsx");
-    expect(extension.views?.labCanvas?.webview.entry.path).toBe("./src/views/lab-canvas.tsx");
-    expect(extension.views?.labReview?.webview.entry.path).toBe("./src/views/lab-review.tsx");
-    expect(extension.views?.labChecks?.webview.entry.path).toBe("./src/views/lab-checks.tsx");
-    expect(extension.views?.labFocus?.webview.entry.path).toBe("./src/views/lab-focus.tsx");
-    expect(extension.views?.labOverview?.webview.capabilities).toContain("commands.execute");
-    expect(extension.views?.labCanvas?.webview.capabilities).toBeUndefined();
-    expect(extension.views?.labReview?.webview.capabilities).toBeUndefined();
-    expect(extension.views?.labFocus?.webview.capabilities).toBeUndefined();
-    expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");
+    expect(extension.panels).not.toHaveProperty("labSidenav");
+    expect(extension.panels?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
+    expect(extension.panels?.labOverview?.panelMenus?.tools?.webview.entry.path).toBe("./src/views/lab-tools.tsx");
+    expect(extension.panels?.labOverview?.panelMenus?.inspector?.webview.entry.path).toBe(
+      "./src/views/lab-inspector.tsx",
+    );
+    expect(extension.panels?.labConsole?.webview.entry.path).toBe("./src/views/lab-console.tsx");
+    expect(extension.panels?.labCanvas?.panelMenus?.palette?.webview.entry.path).toBe("./src/views/lab-palette.tsx");
+    expect(extension.panels?.labCanvas?.webview.entry.path).toBe("./src/views/lab-canvas.tsx");
+    expect(extension.panels?.labReview?.webview.entry.path).toBe("./src/views/lab-review.tsx");
+    expect(extension.panels?.labChecks?.webview.entry.path).toBe("./src/views/lab-checks.tsx");
+    expect(extension.panels?.labFocus?.webview.entry.path).toBe("./src/views/lab-focus.tsx");
+    expect(extension.panels?.labOverview?.webview.capabilities).toContain("commands.execute");
+    expect(extension.panels?.labCanvas?.webview.capabilities).toBeUndefined();
+    expect(extension.panels?.labReview?.webview.capabilities).toBeUndefined();
+    expect(extension.panels?.labFocus?.webview.capabilities).toBeUndefined();
+    expect(extension.panels?.labOverview?.webview.capabilities).toContain("notification.action");
     expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
     expect(extension.routes).not.toHaveProperty("labTerminalPage");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({

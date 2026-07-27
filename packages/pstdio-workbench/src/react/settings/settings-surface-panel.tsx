@@ -1,17 +1,12 @@
 import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
-import type {
-  CollectionSettingsPanel,
-  PreferenceScope,
-  SettingsRegistry,
-  WorkbenchWidgetRenderInput,
-} from "../../core";
+import type { CollectionSettingsPanel, PreferenceScope, SettingsRegistry, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
 import { useSettingsRevision } from "./use-settings-revision";
 
 export interface SettingsSurfacePanelProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
   resolveScopeId?: (scope: PreferenceScope) => string | undefined;
 }
@@ -35,7 +30,7 @@ const ScrollableSettingsContent = (props: { children: ReactNode }) => (
 const CollectionItemView = (props: {
   panel: CollectionSettingsPanel;
   itemId: string;
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
 }) => {
   const { panel, itemId, input } = props;
   const [state, setState] = useState<{ status: "loading" | "ready" | "missing"; item?: unknown }>({
@@ -75,7 +70,7 @@ const CollectionItemView = (props: {
 export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const { input, settings, resolveScopeId } = props;
   const revision = useSettingsRevision(settings);
-  const resource = input.placement.resource;
+  const resource = input.instance.resource;
   const panelId = typeof resource?.metadata?.panelId === "string" ? resource.metadata.panelId : undefined;
   const itemId = typeof resource?.metadata?.itemId === "string" ? resource.metadata.itemId : undefined;
   const panel = panelId ? settings.getPanel(panelId) : undefined;

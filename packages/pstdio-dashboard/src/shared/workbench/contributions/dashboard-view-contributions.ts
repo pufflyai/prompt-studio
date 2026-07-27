@@ -1,4 +1,4 @@
-import type { ResourceBrowseEntry, ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { ResourceBrowseEntry, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 
 interface DashboardViewContribution {
   resource: ResourceRef;
@@ -6,10 +6,10 @@ interface DashboardViewContribution {
   order?: number;
 }
 
-type DashboardViewContext = Pick<WorkbenchModuleContributionContext, "context">;
+type DashboardViewContext = Pick<WorkbenchModuleContext, "context">;
 
 const dashboardViewsByWorkbench = new WeakMap<
-  WorkbenchModuleContributionContext["context"]["store"],
+  WorkbenchModuleContext["context"]["store"],
   DashboardViewContribution[]
 >();
 

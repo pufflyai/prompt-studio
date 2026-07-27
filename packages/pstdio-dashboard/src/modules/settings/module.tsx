@@ -1,9 +1,9 @@
 import {
   standardResourceIcons,
+  type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import {
   createWorkbenchSettingsModule,
   settingsPanelResource,
@@ -24,7 +24,7 @@ const createSettingsFooterNode = () => ({
   resource: settingsRootResource,
 });
 
-const registerSettingsSidenavs = (ctx: WorkbenchModuleContributionContext) => {
+const registerSettingsSidenavs = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.settings.footer",
     modes: ["*"],
@@ -36,7 +36,7 @@ const registerSettingsSidenavs = (ctx: WorkbenchModuleContributionContext) => {
 
 // The settings slice registers the dashboard's settings entries against the
 // shared workbench settings surface. The surface owns the full-window overlay,
-// its navigation, and the opener — the dashboard only adds project scope, the
+// its navigation, and the presenter — the dashboard only adds project scope, the
 // sidenav entry points, and a command to open it.
 export const createSettingsModule = () =>
   ({

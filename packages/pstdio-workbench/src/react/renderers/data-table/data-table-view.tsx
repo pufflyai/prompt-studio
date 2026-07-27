@@ -12,7 +12,7 @@ import type {
   DataTableRendererQueryResult,
   RegisteredDataTableRendererContribution,
   WorkbenchCore,
-  WorkbenchWidgetPlacement,
+  WorkbenchPanelInstance,
 } from "../../../core";
 import {
   buildDataTableRendererData,
@@ -23,7 +23,7 @@ import {
 interface WorkbenchDataTableViewProps {
   workbench: WorkbenchCore;
   contribution: RegisteredDataTableRendererContribution;
-  placement: WorkbenchWidgetPlacement;
+  placement: WorkbenchPanelInstance;
 }
 
 const initialResult: DataTableRendererQueryResult = { rows: [] };

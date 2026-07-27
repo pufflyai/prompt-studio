@@ -1,5 +1,5 @@
 import { expect, mock, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   getDashboardActiveCollection,
   getDashboardSelectedResource,

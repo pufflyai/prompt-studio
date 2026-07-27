@@ -15,12 +15,12 @@ import { registerKanbanRenderers } from "./kanban-renderers";
 import { registerKeybindings } from "./keybindings";
 import { registerMiddlewares } from "./middlewares";
 import { registerModes } from "./modes";
+import { registerPanelContributions } from "./panels";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
 import { registerTranslations } from "./translations";
 import { registerTreeRenderers } from "./tree-renderers";
-import { registerViewLikeContributions } from "./views";
 import { registerWebviewValidation } from "./webview-validation";
 
 type NormalizeExtensionSourcesOptions = {
@@ -98,7 +98,7 @@ export const normalizeExtensionSources = (
     registerFileRenderers(ext, source, runtime, index);
     registerControlsRenderers(ext, source, runtime, index);
     registerDataTableRenderers(ext, source, runtime, index);
-    registerViewLikeContributions(ext, source, runtime);
+    registerPanelContributions(ext, source, runtime);
     registerKanbanRenderers(ext, source, runtime, index);
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);

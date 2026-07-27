@@ -29,26 +29,28 @@ export const createRendererTypesExampleModule = (
     const bridgeDocument = input.createBridgeDocument();
 
     ctx.resources.registerKind({ kind: rendererExampleKind, label: "Renderer example", icon: "Component" });
-    ctx.resources.registerOpener({
-      id: "renderer-types.opener",
+    ctx.resources.registerPresenter({
+      id: "renderer-types.presenter",
       priority: 100,
       canOpen: (resource) => resource.kind === rendererExampleKind,
       open: (resource, input) =>
-        ctx.layout.openWidget(resolveWidgetId(resource), {
+        ctx.layout.openPanel(resolveWidgetId(resource), {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: reactWidgetId,
       title: "React renderer",
       region: "main",
       rendererId: reactRendererId,
       singleton: true,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: bridgeWidgetId,
       title: "Bridge renderer",
       region: "main",
@@ -68,26 +70,26 @@ export const createRendererTypesExampleModule = (
     ctx.renderers.registerRenderer(
       createBridgeWebviewRenderer({
         createProps: ({ placement }) => ({
-          placementId: placement.contributionId,
+          placementId: placement.panelId,
           rendererId: bridgeRendererId,
           resource: placement.resource?.uri,
           title: placement.title ?? "Bridge renderer",
-          widgetId: bridgeWidgetId,
+          panelId: bridgeWidgetId,
         }),
       }),
     );
 
     ctx.commands.registerCommand(
       { id: openReactCommandId, label: "Open React renderer", category: "Renderer types", icon: "Component" },
-      { execute: () => ctx.layout.openWidget(reactWidgetId, { resource: reactResource }) },
+      { execute: () => ctx.layout.openPanel(reactWidgetId, { resource: reactResource }) },
     );
     ctx.commands.registerCommand(
       { id: openBridgeCommandId, label: "Open bridge renderer", category: "Renderer types", icon: "Cable" },
-      { execute: () => ctx.layout.openWidget(bridgeWidgetId, { resource: bridgeResource }) },
+      { execute: () => ctx.layout.openPanel(bridgeWidgetId, { resource: bridgeResource }) },
     );
 
-    ctx.layout.openWidget(reactWidgetId, { resource: reactResource });
-    ctx.layout.openWidget(bridgeWidgetId, { resource: bridgeResource });
+    ctx.layout.openPanel(reactWidgetId, { resource: reactResource });
+    ctx.layout.openPanel(bridgeWidgetId, { resource: bridgeResource });
 
     return { dispose: () => bridgeDocument.dispose() };
   },

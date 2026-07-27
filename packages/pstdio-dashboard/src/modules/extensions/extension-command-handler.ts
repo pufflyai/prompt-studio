@@ -4,11 +4,7 @@ import type {
   ExtensionMenuContribution,
 } from "@pstdio/sdk/api";
 import { matchesResourceWhen } from "@pstdio/sdk/extensions";
-import type {
-  ResourceRef,
-  WorkbenchCommandExecutionContext,
-  WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -90,14 +86,14 @@ const toSessionCommandResult = (value: unknown): SessionCommandResult | undefine
   };
 };
 
-const refreshSessionTrees = (ctx: WorkbenchModuleContributionContext) => {
+const refreshSessionTrees = (ctx: WorkbenchModuleContext) => {
   if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
     ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   }
 };
 
 const openSessionCommandResult = async (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   projectId: string,
   response: CommandExecuteResponse,
 ) => {
@@ -117,7 +113,7 @@ const openSessionCommandResult = async (
 };
 
 export const createExtensionMenuCommandHandler = (input: {
-  ctx: WorkbenchModuleContributionContext;
+  ctx: WorkbenchModuleContext;
   contribution: ExtensionMenuContribution;
   executeCommand: ExecuteDashboardExtensionCommand;
   getActiveResource: () => ResourceRef | undefined;
@@ -164,7 +160,7 @@ export const createExtensionMenuCommandHandler = (input: {
 };
 
 export const createExtensionCommandPaletteCommandHandler = (input: {
-  ctx: WorkbenchModuleContributionContext;
+  ctx: WorkbenchModuleContext;
   contribution: ExtensionCommandPaletteContribution;
   executeCommand: ExecuteDashboardExtensionCommand;
   getActiveResource: () => ResourceRef | undefined;

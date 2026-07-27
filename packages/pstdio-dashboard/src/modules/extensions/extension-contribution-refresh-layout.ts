@@ -2,8 +2,8 @@ import {
   getWorkbenchModePanelForRegion,
   isWorkbenchModePanelAvailable,
   type WorkbenchLayout,
-  type WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
+  type WorkbenchModuleContext,
+} from "@pstdio/workbench";
 
 interface ExtensionContributionRefreshLayout {
   activeModeId: string | undefined;
@@ -11,20 +11,20 @@ interface ExtensionContributionRefreshLayout {
 }
 
 export const captureExtensionContributionRefreshLayout = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
 ): ExtensionContributionRefreshLayout => ({
   activeModeId: ctx.modes.getActiveModeId(),
   layout: ctx.layout.getLayout(),
 });
 
-const sanitizeLayout = (ctx: WorkbenchModuleContributionContext, snapshot: ExtensionContributionRefreshLayout) => {
+const sanitizeLayout = (ctx: WorkbenchModuleContext, snapshot: ExtensionContributionRefreshLayout) => {
   const mode = snapshot.activeModeId ? ctx.modes.getMode(snapshot.activeModeId) : undefined;
   const regions = Object.fromEntries(
     Object.entries(snapshot.layout.regions).map(([regionId, region]) => {
       const modePanel = getWorkbenchModePanelForRegion(region.id);
       const available = !modePanel || isWorkbenchModePanelAvailable(mode, modePanel);
       const widgets = available
-        ? region.widgets.filter((placement) => Boolean(ctx.layout.getWidget(placement.contributionId)))
+        ? region.widgets.filter((placement) => Boolean(ctx.layout.getPanel(placement.contributionId)))
         : [];
       return [
         regionId,
@@ -40,8 +40,8 @@ const sanitizeLayout = (ctx: WorkbenchModuleContributionContext, snapshot: Exten
     }),
   ) as WorkbenchLayout["regions"];
   const placements = Object.values(regions).flatMap((region) => region.widgets);
-  const hasPlacement = (widgetId: string | undefined) =>
-    Boolean(widgetId && placements.some((placement) => placement.widgetId === widgetId));
+  const hasPlacement = (panelId: string | undefined) =>
+    Boolean(panelId && placements.some((placement) => placement.widgetId === panelId));
   const retainedWidgetIds = new Set(placements.map((placement) => placement.widgetId));
   const locationSubPanelSelections = Object.fromEntries(
     Object.entries(snapshot.layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
@@ -63,7 +63,7 @@ const sanitizeLayout = (ctx: WorkbenchModuleContributionContext, snapshot: Exten
 };
 
 export const restoreExtensionContributionRefreshLayout = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   snapshot: ExtensionContributionRefreshLayout,
 ) => {
   const activeModeWasRemoved =

@@ -6,7 +6,7 @@ import type { CommandParamSchema } from "../commands/command-registry";
 import type { MenuPath } from "../menus/menu-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
-import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
+import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface TreeContext {
   filter?: string;
@@ -125,7 +125,7 @@ export interface TreeRendererPersistenceAdapter {
 // The React layer supplies the actual rendering for a tree id when a widget
 // references it. Set once on workbench mount via setTreeRendererImplementation
 // so registerTreeRenderer can auto-register a renderer entry with the same id.
-export type TreeRendererImplementation = (input: WorkbenchWidgetRenderInput & { treeId: string }) => unknown;
+export type TreeRendererImplementation = (input: WorkbenchPanelRenderInput & { treeId: string }) => unknown;
 
 export interface CreateTreeRendererRegistryInput {
   rendererRegistry: WorkbenchRendererRegistry;

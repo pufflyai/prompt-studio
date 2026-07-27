@@ -7,7 +7,14 @@ const PANEL_WIDGET_ID = "onboarding.palette-resources.panel";
 const PANEL_RENDERER_ID = "onboarding.palette-resources.panel.renderer";
 const TICKET_WIDGET_ID = "onboarding.palette-resources.ticket";
 const TICKET_RENDERER_ID = "onboarding.palette-resources.ticket.renderer";
+const PALETTE_KIND = "onboarding.palette";
 const TICKET_KIND = "onboarding.palette.ticket";
+const paletteResource: ResourceRef = {
+  kind: PALETTE_KIND,
+  uri: `${PALETTE_KIND}:resources`,
+  id: "resources",
+  label: "Palette resources",
+};
 
 const tickets = [
   { id: "PS-101", label: "PS-101 Palette resource providers", status: "Ready", keywords: ["palette", "search"] },
@@ -81,15 +88,21 @@ const TicketPanel = (props: { resource?: ResourceRef }) => {
 export const createPaletteResourcesModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.palette-resources",
   activate(ctx) {
+    ctx.resources.registerKind({ kind: PALETTE_KIND, label: "Palette resources", icon: "Search" });
     ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "Ticket" });
-    ctx.resources.registerOpener({
-      id: "onboarding.palette-resources.ticket-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.palette-resources.presenter",
+      canOpen: (resource) => resource.kind === PALETTE_KIND,
+      open: (resource) => ctx.layout.openPanel(PANEL_WIDGET_ID, { resource }),
+    });
+    ctx.resources.registerPresenter({
+      id: "onboarding.palette-resources.ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource, input) =>
-        ctx.layout.openWidget(TICKET_WIDGET_ID, {
+        ctx.layout.openPanel(TICKET_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.id ?? resource.label,
-          replaceActive: input.replaceActive,
         }),
     });
 
@@ -107,16 +120,18 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
     });
     ctx.renderers.registerRenderer({
       id: TICKET_RENDERER_ID,
-      render: ({ placement }) => <TicketPanel resource={placement.resource} />,
+      render: ({ instance }) => <TicketPanel resource={instance.resource} />,
     });
 
-    ctx.layout.registerLocation({
+    ctx.layout.registerPanel({
+      closable: false,
       id: PANEL_WIDGET_ID,
       title: "Palette resources",
       region: "main",
       rendererId: PANEL_RENDERER_ID,
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
@@ -165,6 +180,6 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
       },
     });
 
-    ctx.layout.openWidget(PANEL_WIDGET_ID);
+    void ctx.resources.openResource(paletteResource);
   },
 });

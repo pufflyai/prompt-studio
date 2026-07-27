@@ -17,20 +17,12 @@ interface HistoryHomeProps {
 const renderEntry = (entry: HistoryEntry) => {
   if (entry.kind === "resource") return `resource:${entry.resource?.uri}`;
   if (entry.kind === "mode") return `mode:${entry.modeId ?? "none"}`;
-  return `widget:${entry.widgetId}`;
+  return `panel:${entry.widgetId}`;
 };
 
 const getClosableActiveWidgetId = (workbench: Pick<WorkbenchCore, "layout">) => {
-  const layout = workbench.layout.getLayout();
-  const activeWidgetId = layout.activeWidgetId;
-  if (!activeWidgetId) return undefined;
-
-  for (const region of Object.values(layout.regions)) {
-    const placement = region.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-    if (placement?.closable) return placement.widgetId;
-  }
-
-  return undefined;
+  const activePanel = workbench.layout.getActivePanel();
+  return activePanel?.closable ? activePanel.instanceId : undefined;
 };
 
 const HistoryHome = (props: HistoryHomeProps) => {
@@ -134,17 +126,15 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
       {
         execute: () => {
           const widgetId = getClosableActiveWidgetId(ctx);
-          if (widgetId) ctx.layout.closeWidget(widgetId);
+          if (widgetId) ctx.layout.closePanel(widgetId);
         },
         isEnabled: () => getClosableActiveWidgetId(ctx) !== undefined,
       },
     );
-    ctx.resources.registerOpener({
-      id: "history.example.ticket-opener",
+    ctx.resources.registerPresenter({
+      id: "history.example.ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: (resource) => {
-        ctx.layout.openWidget(TICKET_WIDGET_ID, { resource, title: resource.label ?? resource.uri });
-      },
+      open: (resource) => ctx.layout.openPanel(TICKET_WIDGET_ID, { resource, title: resource.label ?? resource.uri }),
     });
 
     ctx.renderers.registerRenderer({
@@ -154,10 +144,11 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
 
     ctx.renderers.registerRenderer({
       id: TICKET_RENDERER_ID,
-      render: ({ placement }) => <TicketPanel title={placement.title} uri={placement.resource?.uri} />,
+      render: ({ instance }) => <TicketPanel title={instance.title} uri={instance.resource?.uri} />,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: HOME_WIDGET_ID,
       title: "History demo",
       region: "secondary",
@@ -166,7 +157,7 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
       rendererId: HOME_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
@@ -176,7 +167,7 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
       resourceKinds: [TICKET_KIND],
     });
 
-    ctx.layout.openWidget(HOME_WIDGET_ID);
+    ctx.layout.openPanel(HOME_WIDGET_ID);
     // The home widget is part of the demo chrome, not user-opened content;
     // drop it from history so goBack/goPrevious only walks user-opened tickets.
     ctx.history.clear();

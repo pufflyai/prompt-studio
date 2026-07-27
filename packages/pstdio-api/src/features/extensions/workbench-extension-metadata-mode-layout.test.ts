@@ -30,21 +30,23 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               layout: {
                 panels: ["main"],
                 open: [
-                  { target: "workbench.left", view: "sidenav", pinned: true },
-                  { target: "workbench.main", view: "overview" },
+                  { region: "sidenav", panel: "sidenav", pinned: true },
+                  { region: "main", panel: "overview" },
                 ],
               },
             },
           },
-          views: {
+          panels: {
             sidenav: {
               title: "Lab sidenav",
-              role: "location",
+              region: "sidenav",
+              closable: false,
               webview: { entry: asset("./src/sidenav.tsx") },
             },
             overview: {
               title: "Lab overview",
-              role: "location",
+              region: "main",
+              closable: false,
               webview: { entry: asset("./src/overview.tsx") },
             },
           },
@@ -59,15 +61,15 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
     });
 
     expect(metadata.diagnostics).toEqual([]);
-    expect(metadata.views.map((view) => view.id)).toEqual(["lab.sidenav", "lab.overview"]);
+    expect(metadata.panels.map((panel) => panel.id)).toEqual(["lab.sidenav", "lab.overview"]);
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.mode",
       resourceKind: "ticket",
       layout: {
         panels: ["main"],
         open: [
-          { target: "workbench.left", view: "lab.sidenav", pinned: true },
-          { target: "workbench.main", view: "lab.overview" },
+          { region: "sidenav", panel: "lab.sidenav", pinned: true },
+          { region: "main", panel: "lab.overview" },
         ],
       },
     });
@@ -136,7 +138,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               label: "Bad",
               layout: {
                 panels: ["secondary"],
-                open: [{ target: "workbench.main", resource: "lab" }],
+                open: [{ region: "main", resource: "lab" }],
               },
             },
           },
@@ -157,7 +159,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
         extensionId: "pstdio.lab",
         metadata: expect.objectContaining({
           modeId: "pstdio.lab.bad",
-          unavailableOpenTargets: ["workbench.main"],
+          unavailableOpenRegions: ["main"],
         }),
       }),
     ]);

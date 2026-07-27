@@ -1,5 +1,5 @@
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../../../core";
+import type { ResourceRef, WorkbenchModuleContext } from "../../../../../core";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
@@ -95,7 +95,7 @@ const toWorkspaceRow = (ticket: DashboardTicket): DashboardWorkspaceRow => ({
   },
 });
 
-export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContributionContext) => {
+export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContext) => {
   ctx.renderers.registerKanbanRenderer<DashboardWorkspaceRow>({
     id: dashboardWidgetIds.workspaces,
     title: "Workspaces",
@@ -113,8 +113,9 @@ export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContribution
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
       region: "main",

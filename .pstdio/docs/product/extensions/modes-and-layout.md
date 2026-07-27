@@ -28,7 +28,7 @@ export default defineExtension({
 - Mode identity comes from the contribution record.
 - `label` is required and is the user-facing name.
 - `icon` is optional and should use the dashboard icon naming convention.
-- `resourceKind` is optional. When present, dashboard resource openers use the mode for matching resource details.
+- `resourceKind` is optional. When present, dashboard resource presenters use the mode for matching resource details.
 - `layout.reset: true` clears all mode-layout areas before opening mode content. A reset array can target specific areas.
 - `layout.open` can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
 - Mode-specific visibility belongs in `when.mode` on the UI contribution.

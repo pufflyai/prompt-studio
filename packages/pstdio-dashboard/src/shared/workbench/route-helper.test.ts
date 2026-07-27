@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { describeResourceRouteContract, type RouteContractHarness } from "@pstdio/workbench/testing";
 import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -26,7 +26,8 @@ const setup = (): RouteContractHarness => {
     id: "route-test.module",
     activate(ctx) {
       ctx.modes.registerMode({ id: MODE, label: "Route test", activate: () => undefined });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: "route-test-root",
         title: "Root",
         region: "main",
@@ -34,7 +35,8 @@ const setup = (): RouteContractHarness => {
         rendererId: "noop",
         resourceKinds: ["dashboard-view"],
       });
-      ctx.layout.registerWidget({
+      ctx.layout.registerPanel({
+        closable: false,
         id: "route-test-detail",
         title: "Detail",
         region: "main",
@@ -46,13 +48,13 @@ const setup = (): RouteContractHarness => {
         id: "route-test.root",
         match: (resource) => resource.uri === ROOT.uri,
         mode: MODE,
-        widgetId: "route-test-root",
+        panelId: "route-test-root",
       });
       registerResourceRoute(ctx, {
         id: "route-test.detail",
         match: (resource) => resource.kind === DETAIL_KIND,
         mode: MODE,
-        widgetId: "route-test-detail",
+        panelId: "route-test-detail",
       });
       return undefined;
     },
@@ -100,7 +102,8 @@ describe("registerResourceRoute navigation state", () => {
         activationScopes.push(workbench.layout.getPersistenceScope());
       },
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "route-test-detail",
       title: "Detail",
       region: "main",
@@ -111,7 +114,7 @@ describe("registerResourceRoute navigation state", () => {
       id: "route-test.detail",
       match: (resource) => resource.kind === DETAIL_KIND,
       mode: MODE,
-      widgetId: "route-test-detail",
+      panelId: "route-test-detail",
     });
 
     await workbench.resources.openResource({
@@ -139,7 +142,8 @@ describe("registerResourceRoute navigation state", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Route test" });
     workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
     workbench.modes.registerMode({ id: MODE, activate: () => undefined });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "route-test-detail",
       title: "Detail",
       region: "main",
@@ -150,7 +154,7 @@ describe("registerResourceRoute navigation state", () => {
       id: "route-test.detail",
       match: (resource) => resource.kind === DETAIL_KIND,
       mode: MODE,
-      widgetId: "route-test-detail",
+      panelId: "route-test-detail",
     });
     const resourceA = { kind: DETAIL_KIND, uri: "route-test://detail/a", id: "a" };
     const resourceB = { kind: DETAIL_KIND, uri: "route-test://detail/b", id: "b" };

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type LastResourcePersistenceAdapter, type ResourceRef } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type LastResourcePersistenceAdapter, type ResourceRef } from "@pstdio/workbench";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import {
@@ -33,17 +33,18 @@ const registerDashboardViewOpeners = (workbench: ReturnType<typeof createWorkben
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
     const widgetId = `test.${resource.id}`;
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: widgetId,
       title: resource.label ?? resource.id,
       region: "main",
       rendererId: widgetId,
       singleton: true,
     });
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: widgetId,
       canOpen: (candidate) => candidate.uri === resource.uri,
-      open: (candidate) => workbench.layout.openWidget(widgetId, { resource: candidate }),
+      open: (candidate) => workbench.layout.openPanel(widgetId, { resource: candidate }),
     });
   }
 };
@@ -114,7 +115,7 @@ describe("createBootstrapModule project persistence", () => {
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     registerDashboardViewOpeners(workbench);
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: "test.blocked-workspaces",
       priority: 1000,
       canOpen: (candidate) => candidate.uri === dashboardResources.workspaces.uri,
@@ -124,7 +125,7 @@ describe("createBootstrapModule project persistence", () => {
             blockedWorkspaceOpen = resolve;
           });
         }
-        return workbench.layout.openWidget("test.workspaces", { resource: candidate });
+        return workbench.layout.openPanel("test.workspaces", { resource: candidate });
       },
     });
     selectDashboardProject(workbench, { id: "project-a", name: "Project A" });
@@ -165,7 +166,7 @@ describe("createBootstrapModule project persistence", () => {
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     registerDashboardViewOpeners(workbench);
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: "test.blocked-workspaces",
       priority: 1000,
       canOpen: (candidate) => candidate.uri === dashboardResources.workspaces.uri,
@@ -175,7 +176,7 @@ describe("createBootstrapModule project persistence", () => {
             blockedWorkspaceOpen = resolve;
           });
         }
-        return workbench.layout.openWidget("test.workspaces", { resource: candidate });
+        return workbench.layout.openPanel("test.workspaces", { resource: candidate });
       },
     });
     selectDashboardProject(workbench, { id: "project-a", name: "Project A" });
@@ -202,7 +203,7 @@ describe("createBootstrapModule project persistence", () => {
     }
   });
 
-  test("selecting a project through the opener restores that project's landing view", async () => {
+  test("selecting a project through the presenter restores that project's landing view", async () => {
     const storage = createStorage();
     const projectSelectionPersistence = createDashboardProjectSelectionPersistence({ namespace: "test", storage });
     projectSelectionPersistence.setSelectedProjectId("project-a");

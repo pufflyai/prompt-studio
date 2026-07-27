@@ -1,7 +1,7 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -44,7 +44,7 @@ import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 type QueuedFollowUpMoveDirection = "up" | "down";
 
 interface DashboardSessionChatPanelProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   view: DashboardSessionView;
   emptyStateTitle: string;
   emptyStateDescription: string;
@@ -74,7 +74,7 @@ const createSessionWorkspaceResource = (view: SessionWorkspaceReviewView, projec
 };
 
 export const openReviewWorkspace = (
-  input: Pick<WorkbenchWidgetRenderInput, "workbench">,
+  input: Pick<WorkbenchPanelRenderInput, "workbench">,
   view: SessionWorkspaceReviewView,
 ) => {
   const resource = createSessionWorkspaceResource(view, getDashboardSelectedProjectId(input.workbench));
@@ -84,7 +84,7 @@ export const openReviewWorkspace = (
 };
 
 export const openSelectedWorkspace = (
-  input: Pick<WorkbenchWidgetRenderInput, "workbench">,
+  input: Pick<WorkbenchPanelRenderInput, "workbench">,
   workspace: DashboardWorkspaceOption,
   projectId: string | undefined,
 ) =>
@@ -122,7 +122,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const pendingIdRef = useRef(0);
   const previousSelectedAgentRef = useRef(selectedAgent);
   const previousViewRef = useRef(view);
-  const openWorkspaceOnSelection = input.widget.region !== "side";
+  const openWorkspaceOnSelection = input.panel.region !== "side";
 
   useEffect(() => {
     const previous = previousViewRef.current;
@@ -297,7 +297,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   );
 };
 
-export const ReviewChangesAction = (props: { input: WorkbenchWidgetRenderInput; view: SessionWorkspaceReviewView }) => {
+export const ReviewChangesAction = (props: { input: WorkbenchPanelRenderInput; view: SessionWorkspaceReviewView }) => {
   const { input, view } = props;
 
   return (

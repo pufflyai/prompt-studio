@@ -70,9 +70,9 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
     runDefault: () => Promise<void>;
   }) => void | Promise<void>;
   /**
-   * Override the row click handler. When unset the view layer falls back to
+   * Override the row click handler. When unset the panel layer falls back to
    * opening the row's resource via `ctx.resources.openResource` — set this to
-   * intercept the click (e.g. swallow rejections when no opener exists yet).
+   * intercept the click (e.g. swallow rejections when no presenter exists yet).
    */
   onRowClick?: (input: {
     record: WorkbenchExtensionKanbanRendererRecord;
@@ -276,7 +276,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     );
 
     disposables.push(
-      context.workbench.layout.registerLocation({
+      context.workbench.layout.registerPanel({
+        closable: false,
         id: record.id,
         title: localize(record.title, record.id),
         region: "main",

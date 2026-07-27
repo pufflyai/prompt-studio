@@ -3,7 +3,7 @@ import { byContributionPriority, normalizeContributionMetadata } from "../../sha
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { ResourceRef } from "../resources/resource-registry";
-import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
+import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface DataTableRendererThemeColor {
   light: string;
@@ -88,7 +88,7 @@ export interface DataTableRendererRefreshEvent {
 }
 
 export type DataTableRendererImplementation = (
-  input: WorkbenchWidgetRenderInput & { dataTableRendererId: string },
+  input: WorkbenchPanelRenderInput & { dataTableRendererId: string },
 ) => unknown;
 
 export interface DataTableRendererRegistry {

@@ -1,9 +1,4 @@
-import type {
-  Disposable,
-  TreeNode,
-  WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
-} from "../../../core";
+import type { Disposable, TreeNode, WorkbenchModeActivationContext, WorkbenchModuleContext } from "../../../core";
 import { ProjectFeed, ProjectOverview } from "../components/project-views";
 import {
   activityBarWidgetId,
@@ -29,7 +24,8 @@ const buildProjectTreeSections = () =>
 
 const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: projectWidgetIds.overview,
       title: "Project overview",
       region: "main",
@@ -37,7 +33,8 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
       rendererId: projectWidgetIds.overview,
       resourceKinds: [projectResourceKind],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: projectWidgetIds.feed,
       title: "Activity feed",
       region: "secondary",
@@ -59,20 +56,21 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
       getBody: () => buildProjectTreeSections(),
       getChildren: () => [],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: "workbench-modes.project.navigation",
       title: workbenchModes.project.label,
       region: "sidenav",
       rendererId: "workbench-modes.project.navigation",
     }),
-    ctx.resources.registerOpener({
-      id: "workbench-modes.project.opener",
+    ctx.resources.registerPresenter({
+      id: "workbench-modes.project.presenter",
       canOpen: (resource) => resource.kind === projectResourceKind,
       open: (resource, input) =>
-        ctx.layout.openWidget(projectWidgetIds.overview, {
+        ctx.layout.openPanel(projectWidgetIds.overview, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     }),
   ];
@@ -81,13 +79,13 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
 };
 
 const seedProjectMode = (ctx: WorkbenchModeActivationContext) => {
-  ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
-  ctx.layout.openWidget("workbench-modes.project.navigation");
-  ctx.layout.openWidget(projectWidgetIds.feed, { pinned: true });
-  ctx.layout.openWidget(projectWidgetIds.overview, { resource: projectItemResource(projectItems[0]) });
+  ctx.layout.openPanel(activityBarWidgetId, { pinned: true });
+  ctx.layout.openPanel("workbench-modes.project.navigation");
+  ctx.layout.openPanel(projectWidgetIds.feed, { pinned: true });
+  ctx.layout.openPanel(projectWidgetIds.overview, { resource: projectItemResource(projectItems[0]) });
 };
 
-export const registerProjectMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerProjectMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: workbenchModes.project.id,
     label: workbenchModes.project.label,

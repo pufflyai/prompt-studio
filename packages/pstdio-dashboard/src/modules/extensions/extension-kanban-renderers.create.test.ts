@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
@@ -69,11 +69,19 @@ describe("registerExtensionKanbanRenderers create form", () => {
             return { id: "file-1", name: file.name };
           },
         }),
-        ctx.resources.registerOpener({
-          id: "test.ticket-opener",
+        ctx.layout.registerPanel({
+          id: "test.ticket",
+          title: "Ticket",
+          region: "main",
+          rendererId: "test",
+          closable: false,
+        }),
+        ctx.resources.registerPresenter({
+          id: "test.ticket-presenter",
           canOpen: (resource) => resource.kind === "ticket",
           open: (resource) => {
             openedResources.push(resource);
+            return ctx.layout.openPanel("test.ticket", { resource });
           },
         }),
       ],

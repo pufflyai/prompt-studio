@@ -1,4 +1,4 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -7,7 +7,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 // in the dashboard settings tree, rendering each as its bridged webview. Project-scoped
 // panels go under the Project section; global ones under Workbench.
 export const registerExtensionSettingsPanels = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ) => {
   const { metadata, projectId } = input;

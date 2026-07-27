@@ -34,6 +34,16 @@ const sessionResource: ResourceRef = {
   uri: "dashboard-workbench://session/session-1",
 };
 
+const openPrimaryWorkspace = async (workbench: ReturnType<typeof setup>, panelId: string, resource: ResourceRef) => {
+  workbench.resources.registerKind({ kind: resource.kind, label: "Workspace" });
+  workbench.resources.registerPresenter({
+    id: `${panelId}.presenter`,
+    canOpen: (candidate) => candidate.kind === resource.kind,
+    open: (candidate) => workbench.layout.openPanel(panelId, { resource: candidate }),
+  });
+  await workbench.resources.openResource(resource);
+};
+
 describe("createWorkbenchTerminalModule", () => {
   test("registers the host-owned terminal widget in the secondary region", () => {
     const workbench = setup();
@@ -51,7 +61,7 @@ describe("createWorkbenchTerminalModule", () => {
     });
   });
 
-  test("does not register a global top-header terminal opener", () => {
+  test("does not register a global top-header terminal panel", () => {
     const workbench = setup();
 
     expect(
@@ -61,7 +71,7 @@ describe("createWorkbenchTerminalModule", () => {
     ).toBe(false);
   });
 
-  test("exposes the terminal opener to the secondary add menu", () => {
+  test("exposes the terminal panel to the secondary add menu", () => {
     const workbench = setup();
 
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
@@ -136,7 +146,7 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
 
     const firstTerminal = await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
-    workbench.layout.updateWidgetPlacement((firstTerminal as { widgetId: string }).widgetId, { title: "zsh" });
+    workbench.layout.updatePanel((firstTerminal as { instanceId: string }).instanceId, { title: "zsh" });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -151,7 +161,7 @@ describe("createWorkbenchTerminalModule", () => {
 
     const firstTerminal = await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
-    workbench.layout.closeWidget((firstTerminal as { widgetId: string }).widgetId);
+    workbench.layout.closePanel((firstTerminal as { instanceId: string }).instanceId);
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -165,7 +175,7 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
-    workbench.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, { title: "Terminal 10" });
+    workbench.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, { title: "Terminal 10" });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -179,7 +189,7 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
 
     const firstTerminal = openWorkbenchTerminal(workbench);
-    workbench.layout.closeWidget(firstTerminal.widgetId);
+    workbench.layout.closePanel(firstTerminal.instanceId);
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -191,13 +201,14 @@ describe("createWorkbenchTerminalModule", () => {
 
   test("the open command inherits the active workspace resource", async () => {
     const workbench = setup();
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.workspace",
       title: "Workspace",
       region: "main",
       rendererId: "test.workspace",
     });
-    workbench.layout.openWidget("test.workspace", { resource: workspaceResource });
+    await openPrimaryWorkspace(workbench, "test.workspace", workspaceResource);
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -209,20 +220,22 @@ describe("createWorkbenchTerminalModule", () => {
 
   test("the open command prefers the active workspace over the primary workspace", async () => {
     const workbench = setup();
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",
       rendererId: "test.primary-workspace",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.active-workspace",
       title: "Active Workspace",
       region: "side",
       rendererId: "test.active-workspace",
     });
-    workbench.layout.openWidget("test.primary-workspace", { resource: workspaceResource });
-    workbench.layout.openWidget("test.active-workspace", { resource: activeWorkspaceResource });
+    await openPrimaryWorkspace(workbench, "test.primary-workspace", workspaceResource);
+    workbench.layout.openPanel("test.active-workspace", { resource: activeWorkspaceResource });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -234,20 +247,22 @@ describe("createWorkbenchTerminalModule", () => {
 
   test("the open command keeps the primary workspace when the active resource has no workspace path", async () => {
     const workbench = setup();
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",
       rendererId: "test.primary-workspace",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.active-session",
       title: "Active Session",
       region: "side",
       rendererId: "test.active-session",
     });
-    workbench.layout.openWidget("test.primary-workspace", { resource: workspaceResource });
-    workbench.layout.openWidget("test.active-session", { resource: sessionResource });
+    await openPrimaryWorkspace(workbench, "test.primary-workspace", workspaceResource);
+    workbench.layout.openPanel("test.active-session", { resource: sessionResource });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -259,13 +274,14 @@ describe("createWorkbenchTerminalModule", () => {
 
   test("the open command ignores command context resources without a workspace path", async () => {
     const workbench = setup();
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",
       rendererId: "test.primary-workspace",
     });
-    workbench.layout.openWidget("test.primary-workspace", { resource: workspaceResource });
+    workbench.layout.openPanel("test.primary-workspace", { resource: workspaceResource });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID, undefined, {
       resource: sessionResource,

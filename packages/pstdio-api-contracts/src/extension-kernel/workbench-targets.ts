@@ -6,6 +6,21 @@ export const workbenchTreeTargets = [
   "workbench.main.right.tree",
 ] as const;
 
+export const workbenchRegions = [
+  "nav",
+  "activity",
+  "sidenav-header",
+  "sidenav",
+  "main-header",
+  "main",
+  "secondary-header",
+  "secondary",
+  "side-header",
+  "side",
+  "status",
+  "overlay",
+] as const;
+
 export const workbenchViewTargets = [
   "workbench.main",
   "workbench.main.left",
@@ -29,6 +44,7 @@ export const workbenchModeLayoutTargets = [
 
 export type WorkbenchMenuTarget = (typeof workbenchMenuTargets)[number];
 export type WorkbenchTreeTarget = (typeof workbenchTreeTargets)[number];
+export type WorkbenchRegion = (typeof workbenchRegions)[number];
 export type WorkbenchViewTarget = (typeof workbenchViewTargets)[number];
 export type WorkbenchSettingsTarget = (typeof workbenchSettingsTargets)[number];
 export type WorkbenchSettingsScope = (typeof workbenchSettingsScopes)[number];
@@ -64,7 +80,7 @@ export type WorkbenchAttachmentTarget =
   | WorkbenchViewTarget
   | WorkbenchSettingsTarget;
 
-export type WorkbenchContributionKind = "menu" | "treeItem" | "view" | "settings";
+export type WorkbenchContributionKind = "menu" | "treeItem" | "panel" | "settings";
 
 export type WorkbenchTargetGranularity = "surface" | "area" | "areaTree";
 
@@ -105,30 +121,6 @@ export const workbenchTargets = [
     allowedKinds: ["treeItem"],
     granularity: "areaTree",
     rationale: "Tree entries for the active tree renderer mounted in the main-right area.",
-  },
-  {
-    id: "workbench.main",
-    allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the main area.",
-  },
-  {
-    id: "workbench.main.left",
-    allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the main-left area.",
-  },
-  {
-    id: "workbench.main.right",
-    allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the main-right area.",
-  },
-  {
-    id: "workbench.secondary",
-    allowedKinds: ["view"],
-    granularity: "area",
-    rationale: "Direct extension view placement in the secondary area.",
   },
   {
     id: "workbench.settings",

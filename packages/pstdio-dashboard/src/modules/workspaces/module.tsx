@@ -1,10 +1,5 @@
-import type {
-  ResourceRef,
-  TreeNode,
-  WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
-} from "@pstdio/workbench/core";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import type { ResourceRef, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
@@ -25,22 +20,22 @@ import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
-const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
+const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
     ctx.modes.setActiveMode("project-selection");
     return;
   }
 
-  return ctx.layout.openWidget(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
+  return ctx.layout.openPanel(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
 };
 
 // The unified sidenav is mode-reactive (it opens and recomposes itself on mode change), so the
 // dashboard modes only activate their own chrome (e.g. the session bubble) here.
-const enterProjectSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
+const enterProjectSidenavChrome = (modeCtx: WorkbenchModuleContext) =>
   activateModeChromeContributions(modeCtx, "project");
 
-const enterWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContributionContext) =>
+const enterWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContext) =>
   activateModeChromeContributions(modeCtx, "workspace");
 
 const workspaceNavigationNode = (): TreeNode => ({
@@ -60,7 +55,7 @@ const workspaceNavigationNode = (): TreeNode => ({
   ],
 });
 
-const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContributionContext) => {
+const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
     modes: ["*"],
@@ -75,7 +70,7 @@ const metadataString = (resource: ResourceRef, key: string) => {
   return typeof value === "string" ? value : undefined;
 };
 
-const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const workspaceId = resource.id ?? metadataString(resource, "workspaceId");
   if (!workspaceId) return undefined;
 
@@ -84,7 +79,7 @@ const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContributionConte
   )?.resource;
 };
 
-const openFirstWorkspaceSession = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+const openFirstWorkspaceSession = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
 
   const session = findFirstWorkspaceSessionResource(ctx, resource);
@@ -101,7 +96,7 @@ const openFirstWorkspaceSession = (ctx: WorkbenchModuleContributionContext, reso
 // A rename streams back through the synced rows, but the breadcrumb was built from the
 // resource captured when the workspace opened. Re-apply it whenever the open workspace's
 // synced name changes so the new name shows in the breadcrumb trail too.
-const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContributionContext) => {
+const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContext) => {
   let shownLabel: string | undefined;
 
   const sync = () => {
@@ -132,8 +127,8 @@ const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
     region: "overlay",
@@ -147,7 +142,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
     render: (input) => <CreateWorkspaceWidget input={input} />,
   });
 
-  ctx.layout.registerWidget({
+  ctx.layout.registerPanel({
     id: dashboardWidgetIds.renameWorkspace,
     title: "Rename workspace",
     region: "overlay",
@@ -161,8 +156,9 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
     render: (input) => <RenameWorkspaceWidget input={input} />,
   });
 
-  ctx.layout.registerLocation(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
       region: "main",
@@ -261,20 +257,20 @@ export const createWorkspacesModule = () =>
       });
 
       registerResourceRoute(ctx, {
-        id: "dashboard.workspaces.opener",
+        id: "dashboard.workspaces.presenter",
         match: (resource) => resource.kind === "dashboard-view" && resource.id === "workspaces",
         mode: "project",
-        widgetId: dashboardWidgetIds.workspaces,
+        panelId: dashboardWidgetIds.workspaces,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
           setDashboardSidenavSelection(ctx, resource.uri);
         },
       });
       registerResourceRoute(ctx, {
-        id: "dashboard.workspace.opener",
+        id: "dashboard.workspace.presenter",
         match: (resource) => resource.kind === "workspace",
         mode: "workspace",
-        widgetId: dashboardWidgetIds.workspace,
+        panelId: dashboardWidgetIds.workspace,
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
@@ -283,7 +279,7 @@ export const createWorkspacesModule = () =>
         afterOpen: ({ resource, placement }) => {
           openFirstWorkspaceSession(ctx, resource);
           ensureWorkspaceTerminalResource(ctx, resource);
-          ctx.layout.activateWidget(placement.widgetId);
+          ctx.layout.activatePanel(placement.instanceId);
         },
       });
     },

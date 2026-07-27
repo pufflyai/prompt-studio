@@ -1,8 +1,4 @@
-import {
-  type Disposable,
-  type WorkbenchModuleContributionContext,
-  workbenchCommandPaletteMenuPath,
-} from "@pstdio/workbench/core";
+import { type Disposable, type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
   registerWorkbenchExtensionCommandPaletteResources,
   registerWorkbenchExtensionFileRenderers,
@@ -38,7 +34,7 @@ export const disposeExtensionContributions = (disposables: Disposable[]) => {
 };
 
 interface RegisterExtensionContributionsInput {
-  ctx: WorkbenchModuleContributionContext;
+  ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
   projectId: string;
@@ -74,7 +70,7 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     settingsPanels: scoped(metadata.settingsPanels) ?? [],
     settingsDefinitions: scoped(metadata.settingsDefinitions),
     treeItems: scoped(metadata.treeItems),
-    views: scoped(metadata.views) ?? [],
+    panels: scoped(metadata.panels) ?? [],
   } satisfies ResolvedWorkbenchExtensionMetadata;
 };
 
@@ -98,7 +94,7 @@ const registerSingleExtensionContributions = (
   try {
     const treeRendererMetadata = {
       ...metadata,
-      views: metadata.views.filter((view) => !isExtensionResourceSidenavView(metadata, view)),
+      panels: metadata.panels.filter((view) => !isExtensionResourceSidenavView(metadata, view)),
     };
 
     for (const registration of buildDashboardExtensionMenuRegistrations(metadata)) {

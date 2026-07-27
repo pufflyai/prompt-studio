@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ResourceRef } from "@pstdio/workbench/core";
+import type { ResourceRef } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DashboardSession } from "./data/dashboard-sessions";
 import { buildSessionsSidenavSections } from "./sessions-sidenav-tree";

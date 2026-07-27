@@ -69,9 +69,6 @@ const legacySettingsSlotId = (panel: ExtensionRuntime["settingsPanels"][number][
   return panel.scope === "global" ? "global.settingsPanels" : "project.settingsPanels";
 };
 
-const legacyViewSlotId = (view: ExtensionRuntime["views"][number]["contribution"]) =>
-  refIdOf(view.slot) ?? view.target ?? "unknown";
-
 const compact = <T>(items: Array<T | null | undefined>) => items.filter((item): item is T => item != null);
 
 export const toCheckCommands = (commands: ExtensionRuntime["commands"]) => commands.map(toCommandRecord);
@@ -161,49 +158,62 @@ export const toCheckRoutes = (routes: ExtensionRuntime["routes"]): ExtensionRout
     webview: route.contribution.webview as ExtensionRouteRecord["webview"],
   }));
 
-const toViewRecord = (view: ExtensionRuntime["views"][number]) => ({
-  id: view.id,
-  extensionId: view.extensionId,
-  slotId: legacyViewSlotId(view.contribution),
-  target: view.contribution.target,
-  title: view.contribution.title,
-  group: view.contribution.group,
-  placement: view.contribution.placement,
-  resourceKind: view.contribution.resourceKind,
-  role: view.contribution.role,
-  panelMenuOwner:
-    view.contribution.panelMenuOwner?.level === "sub-panel"
-      ? {
-          level: "sub-panel" as const,
-          contributionId: resolveContributionId(view.name, view.contribution.panelMenuOwner.view),
-        }
-      : view.contribution.panelMenuOwner,
-  hostTreeHeader: view.contribution.hostTreeHeader,
-  hostTreeFooter: view.contribution.hostTreeFooter,
-  webview: view.contribution.webview,
+type RuntimePanelContribution = ExtensionRuntime["panels"][number]["contribution"];
+type RuntimePanelMenuContribution = NonNullable<RuntimePanelContribution["panelMenus"]>[string];
+
+const toPanelBody = (
+  panel: ExtensionRuntime["panels"][number],
+  contribution: RuntimePanelContribution | RuntimePanelMenuContribution,
+) => ({
+  webview: contribution.webview,
   treeRendererId:
-    typeof view.contribution.treeRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.treeRenderer)
+    typeof contribution.treeRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.treeRenderer)
       : undefined,
   fileRendererId:
-    typeof view.contribution.fileRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.fileRenderer)
+    typeof contribution.fileRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.fileRenderer)
       : undefined,
   controlsRendererId:
-    typeof view.contribution.controlsRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.controlsRenderer)
+    typeof contribution.controlsRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.controlsRenderer)
       : undefined,
   dataTableRendererId:
-    typeof view.contribution.dataTableRenderer === "string"
-      ? resolveContributionId(view.name, view.contribution.dataTableRenderer)
+    typeof contribution.dataTableRenderer === "string"
+      ? resolveContributionId(panel.name, contribution.dataTableRenderer)
       : undefined,
 });
 
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
 
-export const toCheckViews = (views: ExtensionRuntime["views"]) =>
-  views.map(toViewRecord) as ExtensionsCheckResponse["views"];
+const toPanelRecord = (panel: ExtensionRuntime["panels"][number]) => ({
+  id: panel.id,
+  extensionId: panel.extensionId,
+  title: panel.contribution.title,
+  region: panel.contribution.region,
+  closable: panel.contribution.closable,
+  group: panel.contribution.group,
+  placement: panel.contribution.placement,
+  resourceKind: panel.contribution.resourceKind,
+  eligibleLocations: panel.contribution.eligibleLocations,
+  panelMenus: Object.entries(panel.contribution.panelMenus ?? {}).map(([localId, menu]) => ({
+    id: `${panel.id}.${localId}`,
+    extensionId: panel.extensionId,
+    ownerPanelId: panel.id,
+    title: menu.title,
+    side: menu.side,
+    group: menu.group,
+    placement: menu.placement,
+    hostTreeHeader: menu.hostTreeHeader,
+    hostTreeFooter: menu.hostTreeFooter,
+    ...toPanelBody(panel, menu),
+  })),
+  ...toPanelBody(panel, panel.contribution),
+});
+
+export const toCheckPanels = (panels: ExtensionRuntime["panels"]) =>
+  panels.map(toPanelRecord) as ExtensionsCheckResponse["panels"];
 
 export const toCheckSettingsPanels = (panels: ExtensionRuntime["settingsPanels"]): ExtensionSettingsPanelRecord[] =>
   panels.map((panel) => ({

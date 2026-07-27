@@ -1,13 +1,13 @@
 import type {
   ResourceRef,
-  WorkbenchModuleContributionContext,
+  WorkbenchModuleContext,
   WorkbenchTabPosition,
   WorkbenchTabRetention,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
-type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "context" | "layout">;
+type SessionBubbleContext = Pick<WorkbenchModuleContext, "context" | "layout">;
 
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
@@ -17,15 +17,19 @@ interface OpenSessionBubbleWidgetsInput {
   tabRetention?: WorkbenchTabRetention;
 }
 
+const sessionOpenStrategy = (input: OpenSessionBubbleWidgetsInput) => {
+  if (input.replaceWidgetId) return { kind: "replace-panel" as const, instanceId: input.replaceWidgetId };
+  if (input.tabRetention === "preview") return { kind: "preview" as const, position: input.tabPosition };
+  return { kind: "activate-or-open" as const, position: input.tabPosition };
+};
+
 export const openSessionBubbleWidgets = (ctx: SessionBubbleContext, input: OpenSessionBubbleWidgetsInput = {}) => {
   rememberDashboardSessionResource(ctx, input.resource);
 
-  const bubble = ctx.layout.openWidget(dashboardWidgetIds.sessionBubble, {
+  const bubble = ctx.layout.openPanel(dashboardWidgetIds.sessionBubble, {
     resource: input.resource,
     title: input.title ?? input.resource?.label,
-    replaceWidgetId: input.replaceWidgetId,
-    tabPosition: input.tabPosition,
-    tabRetention: input.tabRetention,
+    strategy: sessionOpenStrategy(input),
   });
 
   return { bubble };

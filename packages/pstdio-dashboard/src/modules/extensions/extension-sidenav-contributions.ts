@@ -1,4 +1,4 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   buildDashboardExtensionTreeSections,
@@ -17,7 +17,7 @@ const extensionNavigationMetadata = (state: ExtensionSidenavContributionState) =
   getCachedDashboardExtensionMetadata(state.projectId) ?? state.metadata;
 
 export const registerExtensionSidenavContributions = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   getState: () => ExtensionSidenavContributionState,
 ) => {
   registerSidenavContribution(ctx, {
@@ -61,7 +61,7 @@ export const registerExtensionSidenavContributions = (
 };
 
 export const registerExtensionKanbanRendererSidenavContribution = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ) =>
   registerSidenavContribution(ctx, {
@@ -74,20 +74,20 @@ export const registerExtensionKanbanRendererSidenavContribution = (
 
 const resourceSidenavModeId = (
   metadata: DashboardExtensionMetadata,
-  view: DashboardExtensionMetadata["views"][number],
+  panel: DashboardExtensionMetadata["panels"][number],
 ) => {
-  const mode = metadata.modes.find((candidate) => candidate.resourceKind === view.resourceKind);
-  const modeTarget = mode?.layout?.open?.find((entry) => entry.view === view.id)?.target;
-  return (modeTarget ?? view.target) === "workbench.left" ? (mode?.modeId ?? "project") : undefined;
+  const mode = metadata.modes.find((candidate) => candidate.resourceKind === panel.resourceKind);
+  const modeRegion = mode?.layout?.open?.find((entry) => entry.panel === panel.id)?.region;
+  return (modeRegion ?? panel.region) === "sidenav" ? (mode?.modeId ?? "project") : undefined;
 };
 
 export const isExtensionResourceSidenavView = (
   metadata: DashboardExtensionMetadata,
-  view: DashboardExtensionMetadata["views"][number],
-) => Boolean(view.resourceKind && view.treeRendererId && resourceSidenavModeId(metadata, view));
+  panel: DashboardExtensionMetadata["panels"][number],
+) => Boolean(panel.resourceKind && panel.treeRendererId && resourceSidenavModeId(metadata, panel));
 
 const mirrorResourceTreeSelection = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   input: { modeId: string; treeRendererId: string },
 ) => {
   const unsubscribe = ctx.renderers.treeStore.subscribeSelector(
@@ -103,13 +103,13 @@ const mirrorResourceTreeSelection = (
 };
 
 export const registerExtensionResourceSidenavContributions = (
-  ctx: WorkbenchModuleContributionContext,
+  ctx: WorkbenchModuleContext,
   metadata: DashboardExtensionMetadata,
 ) => {
   const disposables: Disposable[] = [];
   const sidenavTreeIds = new Set<string>();
 
-  for (const [index, view] of metadata.views.entries()) {
+  for (const [index, view] of metadata.panels.entries()) {
     if (!isExtensionResourceSidenavView(metadata, view) || !view.resourceKind || !view.treeRendererId) continue;
     const treeRendererId = view.treeRendererId;
     const modeId = resourceSidenavModeId(metadata, view);

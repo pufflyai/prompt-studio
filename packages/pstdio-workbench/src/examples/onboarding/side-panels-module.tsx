@@ -171,15 +171,15 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       icon: "FileText",
       surface: "primary",
     });
-    ctx.resources.registerOpener({
-      id: "onboarding.side-panels.item-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.side-panels.item-presenter",
       canOpen: (resource) => resource.kind === SIDE_PANEL_ITEM_KIND,
       open: (resource, input) => {
         ctx.breadcrumbs.setItems([{ title: resource.label ?? "Resource", icon: resource.icon, resource }]);
-        return ctx.layout.openWidget(DETAIL_WIDGET_ID, {
+        return ctx.layout.openPanel(DETAIL_WIDGET_ID, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         });
       },
     });
@@ -194,7 +194,7 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
     });
     ctx.renderers.registerRenderer({
       id: DETAIL_RENDERER_ID,
-      render: ({ workbench, placement }) => <ResourceDetail workbench={workbench} resource={placement.resource} />,
+      render: ({ workbench, instance }) => <ResourceDetail workbench={workbench} resource={instance.resource} />,
     });
     ctx.renderers.registerRenderer({
       id: INSPECTOR_RENDERER_ID,
@@ -211,7 +211,8 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
     });
     if (input.floatingDemo) registerFloatingSidePanelDemo(ctx);
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: RESOURCE_PICKER_WIDGET_ID,
       title: "Resources",
       region: "sidenav",
@@ -220,7 +221,8 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       rendererId: RESOURCE_PICKER_RENDERER_ID,
     });
     registerSidePanelMenuExamples(ctx);
-    ctx.layout.registerLocation({
+    ctx.layout.registerPanel({
+      closable: false,
       id: DETAIL_WIDGET_ID,
       title: "Resource",
       region: "main",
@@ -240,7 +242,9 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
         ...sidePanelMenuDefinitions.location,
       ],
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
+      eligibleLocations: {},
       id: INSPECTOR_WIDGET_ID,
       title: "Inspector",
       region: "side",
@@ -249,7 +253,9 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       rendererId: INSPECTOR_RENDERER_ID,
       panelMenus: sidePanelMenuDefinitions.inspector,
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
+      eligibleLocations: {},
       id: ACTIVITY_WIDGET_ID,
       title: "Activity",
       region: "secondary",
@@ -262,22 +268,28 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
         customMenuRendererId: ACTIVITY_TAB_CUSTOM_MENU_RENDERER_ID,
       },
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
       id: PREVIEW_WIDGET_ID,
       title: "Preview",
       icon: "Eye",
       region: "main",
       resourceKinds: [SIDE_PANEL_ITEM_KIND],
+      eligibleLocations: {},
       rendererId: DETAIL_RENDERER_ID,
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
+      eligibleLocations: {},
       id: PROBLEMS_WIDGET_ID,
       title: "Problems",
       icon: "CircleAlert",
       region: "secondary",
       rendererId: ACTIVITY_RENDERER_ID,
     });
-    ctx.layout.registerSubPanel({
+    ctx.layout.registerPanel({
+      closable: true,
+      eligibleLocations: {},
       id: FILES_WIDGET_ID,
       title: "Files",
       icon: "Folder",
@@ -287,10 +299,10 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
 
     // Context demonstrates a Main Panel menu while Inspector demonstrates the independent
     // Side Panel. Their logical identities do not depend on their rendered edges.
-    ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
+    ctx.layout.openPanel(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     void ctx.resources.openResource(sidePanelItemResource(sidePanelItems[0])).then(() => {
-      ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
-      ctx.layout.openWidget(ACTIVITY_WIDGET_ID, { pinned: true });
+      ctx.layout.openPanel(INSPECTOR_WIDGET_ID, { pinned: true });
+      ctx.layout.openPanel(ACTIVITY_WIDGET_ID, { pinned: true });
       if (input.floatingDemo) openFloatingSidePanelDemo(ctx);
     });
   },

@@ -27,7 +27,12 @@ export const classifyWebviewEntry = (asset: PackageAssetDescriptor): WebviewEntr
   return { extension, kind: "unsupported" };
 };
 
-const contributionMaps = ["activityRenderers", "routes", "sessionAnchorRenderers", "settingsPanels", "views"] as const;
+const contributionMaps = ["activityRenderers", "panels", "routes", "sessionAnchorRenderers", "settingsPanels"] as const;
+
+const collectWebview = (webviews: WebviewContributionRecord[], id: string, contribution: Record<string, unknown>) => {
+  if (!isRecord(contribution.webview) || !isPackageAssetDescriptor(contribution.webview.entry)) return;
+  webviews.push({ id, entry: contribution.webview.entry });
+};
 
 export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definition" | "metadata">) => {
   const webviews: WebviewContributionRecord[] = [];
@@ -37,12 +42,13 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
     if (!isRecord(contributions)) continue;
 
     for (const [key, contribution] of Object.entries(contributions)) {
-      if (!isRecord(contribution) || !isRecord(contribution.webview)) continue;
-      if (!isPackageAssetDescriptor(contribution.webview.entry)) continue;
-      webviews.push({
-        id: `${loaded.metadata.name}.${key}`,
-        entry: contribution.webview.entry,
-      });
+      if (!isRecord(contribution)) continue;
+      const contributionId = `${loaded.metadata.name}.${key}`;
+      collectWebview(webviews, contributionId, contribution);
+      if (mapKey !== "panels" || !isRecord(contribution.panelMenus)) continue;
+      for (const [menuId, menu] of Object.entries(contribution.panelMenus)) {
+        if (isRecord(menu)) collectWebview(webviews, `${contributionId}.${menuId}`, menu);
+      }
     }
   }
 

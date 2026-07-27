@@ -32,12 +32,11 @@ const setupWorkbench = () => {
     rendererId: "noop",
   });
 
-  workbench.resources.registerOpener({
-    id: "ticket-opener",
+  workbench.resources.registerPresenter({
+    id: "ticket-presenter",
     canOpen: (resource) => resource.kind === TICKET_KIND,
-    open: (resource) => {
-      workbench.layout.openWidget("ticket-viewer", { resource, title: resource.label ?? resource.uri });
-    },
+    open: (resource) =>
+      workbench.layout.openPanel("ticket-viewer", { resource, title: resource.label ?? resource.uri }),
   });
 
   return workbench;
@@ -102,17 +101,18 @@ describe("createHistoryController resource transactions", () => {
       rendererId: "noop",
       resourceKinds: [workspace.kind],
     });
-    workbench.resources.registerOpener({
-      id: "history.test.ticket-opener",
+    workbench.resources.registerPresenter({
+      id: "history.test.ticket-presenter",
       canOpen: (resource) => resource.kind === ticket.kind,
-      open: (resource) => workbench.layout.openWidget("history.test.ticket-location", { resource }),
+      open: (resource) => workbench.layout.openPanel("history.test.ticket-location", { resource }),
     });
-    workbench.resources.registerOpener({
-      id: "history.test.workspace-opener",
+    workbench.resources.registerPresenter({
+      id: "history.test.workspace-presenter",
       canOpen: (resource) => resource.kind === workspace.kind,
       open: (resource) => {
-        workbench.layout.openWidget("history.test.workspace-location", { resource });
-        workbench.layout.openWidget("history.test.workspace-companion", { resource });
+        const location = workbench.layout.openPanel("history.test.workspace-location", { resource });
+        workbench.layout.openPanel("history.test.workspace-companion", { resource });
+        return location;
       },
     });
 
@@ -138,14 +138,13 @@ describe("createHistoryController resource transactions", () => {
       rendererId: "noop",
       resourceKinds: [TICKET_KIND],
     });
-    workbench.resources.registerOpener({
-      id: "async-ticket-opener",
+    workbench.resources.registerPresenter({
+      id: "async-ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource) =>
-        new Promise<void>((resolve) => {
+        new Promise<ReturnType<typeof workbench.layout.openPanel>>((resolve) => {
           completions.set(resource.id!, () => {
-            workbench.layout.openWidget("async-ticket-viewer", { resource, title: resource.label });
-            resolve();
+            resolve(workbench.layout.openPanel("async-ticket-viewer", { resource, title: resource.label }));
           });
         }),
     });
@@ -195,13 +194,16 @@ describe("createHistoryController navigation", () => {
       rendererId: "noop",
       resourceKinds: [TICKET_KIND],
     });
-    workbench.resources.registerOpener({
-      id: "ticket-opener",
+    workbench.resources.registerPresenter({
+      id: "ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: async (resource) => {
         await Promise.resolve();
         opened.push(resource.uri);
-        workbench.layout.openWidget("ticket-viewer", { resource, title: resource.label ?? resource.uri });
+        return workbench.layout.openPanel("ticket-viewer", {
+          resource,
+          title: resource.label ?? resource.uri,
+        });
       },
     });
 
@@ -224,22 +226,6 @@ describe("createHistoryController navigation", () => {
     expect(snapshot.cursor).toBe(1);
   });
 
-  test("ignores resource opens that do not activate a tab", async () => {
-    const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.resources.registerOpener({
-      id: "metadata-opener",
-      canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: () => "opened",
-    });
-
-    await openTicket(workbench, "PS-1");
-
-    const snapshot = workbench.history.store.getState();
-    expect(snapshot.entries).toEqual([]);
-    expect(snapshot.cursor).toBe(-1);
-  });
-
   test("opening after goBack truncates the forward history", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");
@@ -255,7 +241,7 @@ describe("createHistoryController navigation", () => {
     expect(snapshot.cursor).toBe(1);
   });
 
-  test("does not recreate a replaced tab through Back or Forward", async () => {
+  test("replays a replaced Location through Back and Forward without growing the tab set", async () => {
     const workbench = createWorkbenchCore();
     const board = { kind: "history.test.board", uri: "history.test.board:tickets", label: "Tickets" };
     const ticket = { kind: TICKET_KIND, uri: `${TICKET_KIND}:PS-1`, id: "PS-1", label: "Ticket PS-1" };
@@ -276,24 +262,24 @@ describe("createHistoryController navigation", () => {
       singleton: true,
       rendererId: "noop",
     });
-    workbench.resources.registerOpener({
-      id: "board-opener",
+    workbench.resources.registerPresenter({
+      id: "board-presenter",
       canOpen: (resource) => resource.kind === "history.test.board",
       open: (resource, input) =>
-        workbench.layout.openWidget("board-view", {
+        workbench.layout.openPanel("board-view", {
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         }),
     });
-    workbench.resources.registerOpener({
-      id: "ticket-editor-opener",
+    workbench.resources.registerPresenter({
+      id: "ticket-editor-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource, input) =>
-        workbench.layout.openWidget("ticket-editor", {
+        workbench.layout.openPanel("ticket-editor", {
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         }),
     });
 
@@ -304,15 +290,23 @@ describe("createHistoryController navigation", () => {
       "ticket-editor",
     ]);
 
-    expect(workbench.history.goBack()).toBeUndefined();
-    expect(workbench.history.goForward()).toBeUndefined();
+    expect(workbench.history.goBack()?.resource?.uri).toBe(board.uri);
+    await Promise.resolve();
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      "board-view",
+    ]);
+    expect(workbench.history.goForward()?.resource?.uri).toBe(ticket.uri);
+    await Promise.resolve();
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
-    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([ticket.uri]);
+    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([
+      board.uri,
+      ticket.uri,
+    ]);
   });
 
-  test("Back and Forward replay existing resource openers without changing the tab set", async () => {
+  test("Back and Forward replay existing resource presenters without changing the tab set", async () => {
     const workbench = createWorkbenchCore();
     const opened: string[] = [];
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
@@ -324,15 +318,15 @@ describe("createHistoryController navigation", () => {
       rendererId: "noop",
       resourceKinds: [TICKET_KIND],
     });
-    workbench.resources.registerOpener({
-      id: "ticket-editor-opener",
+    workbench.resources.registerPresenter({
+      id: "ticket-editor-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource, input) => {
         opened.push(resource.uri);
-        return workbench.layout.openWidget("ticket-editor", {
+        return workbench.layout.openPanel("ticket-editor", {
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         });
       },
     });
@@ -366,51 +360,6 @@ describe("createHistoryController navigation", () => {
       `${TICKET_KIND}:PS-1`,
       `${TICKET_KIND}:PS-2`,
     ]);
-  });
-});
-
-describe("createHistoryController cleanup", () => {
-  test("closing visited tabs compacts duplicate history for the remaining tab", async () => {
-    const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
-      id: "palette",
-      title: "Palette resources",
-      region: "main",
-      rendererId: "noop",
-    });
-    workbench.layout.registerWidget({
-      id: "ticket-editor",
-      title: "Ticket",
-      region: "main",
-      singleton: false,
-      rendererId: "noop",
-      resourceKinds: [TICKET_KIND],
-    });
-    workbench.resources.registerOpener({
-      id: "ticket-editor-opener",
-      canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: (resource) => workbench.layout.openWidget("ticket-editor", { resource, title: resource.label }),
-    });
-
-    const palette = workbench.layout.openWidget("palette");
-    for (const id of ["PS-1", "PS-2", "PS-3"]) {
-      workbench.layout.activateWidget(palette.widgetId);
-      await openTicket(workbench, id);
-    }
-
-    const ticketWidgetIds = workbench.layout
-      .getLayout()
-      .regions.main.widgets.filter((widget) => widget.contributionId === "ticket-editor")
-      .map((widget) => widget.widgetId)
-      .reverse();
-    for (const widgetId of ticketWidgetIds) workbench.layout.closeWidget(widgetId);
-
-    const snapshot = workbench.history.store.getState();
-    expect(snapshot.entries.map((entry) => entry.widgetId)).toEqual([palette.widgetId]);
-    expect(snapshot.cursor).toBe(0);
-    expect(workbench.history.goBack()).toBeUndefined();
-    expect(workbench.history.goForward()).toBeUndefined();
   });
 });
 
@@ -448,24 +397,24 @@ describe("createHistoryController mode-aware navigation", () => {
       rendererId: "noop",
       resourceKinds: ["history.test.workspace-file"],
     });
-    workbench.resources.registerOpener({
-      id: "project-opener",
+    workbench.resources.registerPresenter({
+      id: "project-presenter",
       canOpen: (resource) => resource.kind === "history.test.project-item",
       open: (resource, input) =>
-        workbench.layout.openWidget("project-viewer", {
+        workbench.layout.openPanel("project-viewer", {
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         }),
     });
-    workbench.resources.registerOpener({
-      id: "workspace-opener",
+    workbench.resources.registerPresenter({
+      id: "workspace-presenter",
       canOpen: (resource) => resource.kind === "history.test.workspace-file",
       open: (resource, input) =>
-        workbench.layout.openWidget("workspace-viewer", {
+        workbench.layout.openPanel("workspace-viewer", {
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         }),
     });
     workbench.modes.registerMode({
@@ -473,7 +422,6 @@ describe("createHistoryController mode-aware navigation", () => {
       activate: () => undefined,
       seed: (ctx) => {
         ctx.layout.clearRegion("main");
-        ctx.layout.openWidget("project-viewer", { resource: projectItem, title: projectItem.label });
       },
     });
     workbench.modes.registerMode({
@@ -481,12 +429,13 @@ describe("createHistoryController mode-aware navigation", () => {
       activate: () => undefined,
       seed: (ctx) => {
         ctx.layout.clearRegion("main");
-        ctx.layout.openWidget("workspace-viewer", { resource: workspaceFile, title: workspaceFile.label });
       },
     });
 
     workbench.modes.setActiveMode("project");
+    await workbench.resources.openResource(projectItem);
     workbench.modes.setActiveMode("workspace");
+    await workbench.resources.openResource(workspaceFile);
 
     const back = workbench.history.goBack();
     await Promise.resolve();
@@ -549,12 +498,15 @@ describe("createHistoryController mode-aware navigation", () => {
         ctx.layout.openWidget("ticket-sidenav");
       },
     });
-    workbench.resources.registerOpener({
-      id: "ticket-location-opener",
+    workbench.resources.registerPresenter({
+      id: "ticket-location-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource) => {
         workbench.modes.setActiveMode(resource.id === root.id ? "project" : "ticket");
-        return workbench.layout.openWidget("ticket-location", { resource, replaceActive: true });
+        return workbench.layout.openPanel("ticket-location", {
+          resource,
+          strategy: { kind: "replace-active" },
+        });
       },
     });
 
@@ -577,19 +529,6 @@ describe("createHistoryController widget history", () => {
 
     const previous = workbench.history.goPrevious();
     expect(previous?.resource?.id).toBe("PS-2");
-  });
-
-  test("records and replays distinct non-singleton widget placements", () => {
-    const workbench = setupWorkbench();
-    const first = workbench.layout.openWidget("scratch");
-    const second = workbench.layout.openWidget("scratch");
-
-    expect(first.widgetId).not.toBe(second.widgetId);
-
-    const back = workbench.history.goBack();
-
-    expect(back?.widgetId).toBe(first.widgetId);
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
   });
 
   test("does not record activations outside the main region", async () => {
@@ -626,6 +565,15 @@ describe("createHistoryController widget history", () => {
 
     workbench.history.reopenLastClosed();
     expect(workbench.layout.getLayout().regions.main.widgets.map((p) => p.widgetId)).toContain("scratch");
+  });
+
+  test("removes a closed Location from navigation history", async () => {
+    const workbench = setupWorkbench();
+    const location = await openTicket(workbench, "PS-1");
+
+    workbench.layout.closePanel(location.instanceId);
+
+    expect(workbench.history.store.getState()).toMatchObject({ entries: [], cursor: -1 });
   });
 
   test("history caps entries to maxEntries", async () => {
@@ -824,12 +772,16 @@ describe("createHistoryController history hydration", () => {
     });
     const second = createWorkbenchCore({ historyPersistence, layoutPersistence });
     registerSnapshotFixtures(second);
-    second.resources.registerOpener({
-      id: "snapshot.location.opener",
+    second.resources.registerPresenter({
+      id: "snapshot.location.presenter",
       canOpen: (resource) => resource.kind === "snapshot.location",
       open: async (resource) => {
-        second.layout.openWidget("snapshot.location", { resource, replaceActive: true });
+        const location = second.layout.openPanel("snapshot.location", {
+          resource,
+          strategy: { kind: "replace-active" },
+        });
         await replayGate;
+        return location;
       },
     });
     second.history.setPersistenceScope("project-one");
@@ -879,12 +831,16 @@ describe("createHistoryController history hydration", () => {
     });
     const second = createWorkbenchCore({ historyPersistence, layoutPersistence });
     registerSnapshotFixtures(second);
-    second.resources.registerOpener({
-      id: "snapshot.location.opener",
+    second.resources.registerPresenter({
+      id: "snapshot.location.presenter",
       canOpen: (resource) => resource.kind === "snapshot.location",
       open: async (resource) => {
-        second.layout.openWidget("snapshot.location", { resource, replaceActive: true });
+        const location = second.layout.openPanel("snapshot.location", {
+          resource,
+          strategy: { kind: "replace-active" },
+        });
         await firstReplayGate;
+        return location;
       },
     });
 

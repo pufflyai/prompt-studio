@@ -3,7 +3,7 @@ import { byContributionPriority, normalizeContributionMetadata } from "../../sha
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { ResourceRef } from "../resources/resource-registry";
-import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
+import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 // What a file renderer's load resolves to. The React layer dispatches to a
 // markdown editor, a code editor, or an image preview based on `fileName` /
@@ -43,7 +43,7 @@ export type FileRendererRefreshListener = (event: FileRendererRefreshEvent) => v
 // The React layer supplies the rendering for a file-renderer widget. Set once on
 // workbench mount via setFileRendererImplementation so registerFileRenderer can
 // auto-register a widget renderer with the same id.
-export type FileRendererImplementation = (input: WorkbenchWidgetRenderInput & { fileRendererId: string }) => unknown;
+export type FileRendererImplementation = (input: WorkbenchPanelRenderInput & { fileRendererId: string }) => unknown;
 
 export interface CreateFileRendererRegistryInput {
   rendererRegistry: WorkbenchRendererRegistry;

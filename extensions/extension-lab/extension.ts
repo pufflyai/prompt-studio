@@ -5,9 +5,9 @@ import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
 import {
+  createLabPanels,
   createLabRoutes,
   createLabSettingsPanels,
-  createLabViews,
   labKanbanRenderers,
   labModes,
   labTreeItems,
@@ -28,7 +28,7 @@ const extension = defineExtension({
   harnesses: labHarnesses,
 
   modes: labModes,
-  views: createLabViews(import.meta.url),
+  panels: createLabPanels(import.meta.url),
   routes: createLabRoutes(import.meta.url),
   treeItems: labTreeItems,
   kanbanRenderers: labKanbanRenderers,

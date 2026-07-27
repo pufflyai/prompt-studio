@@ -1,7 +1,7 @@
 export const paletteResourcesSource = `import type {
   CommandPaletteResourceResult,
   WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const tickets = [
   { id: "PS-101", label: "Palette resource providers" },

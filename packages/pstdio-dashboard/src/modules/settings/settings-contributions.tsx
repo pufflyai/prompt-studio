@@ -1,4 +1,4 @@
-import { standardResourceIcons, type WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { standardResourceIcons, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { settingsPanelResource } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
@@ -34,7 +34,7 @@ const nextTemplateName = (existingNames: string[]) => {
 // Registers the dashboard's settings sections and panels against the workbench
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
-export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContributionContext) => {
+export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
 

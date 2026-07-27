@@ -102,8 +102,8 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `views`, `treeItems`                    | Custom webview pages, view widgets, and route or command navigation entries.      |
-| `kanbanRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidenav entry.       |
+| `routes`, `panels`, `treeItems`                   | Custom webview pages, Workbench Panels, and route or command navigation entries.  |
+| `kanbanRenderers`                                 | Native dashboard data surfaces; each renderer gets a project-sidenav entry.       |
 | `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
 | `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
 | `controlsRenderers`                               | Reusable inspector/property renderers (ParamEditor, command-backed), placed by a view. |
@@ -167,7 +167,7 @@ inside the extension package. Skill assets may point at a directory containing `
 
 ## Webviews
 
-Routes, views, settings panels, and renderers point at webview entries with `packageAsset()`. Declare only the
+Routes, Panels, settings panels, and renderers point at webview entries with `packageAsset()`. Declare only the
 capabilities the webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`,
 and `preferences.set`.
 
@@ -178,14 +178,14 @@ Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/exten
 Use native renderers when the host should own the editor or tree chrome instead of loading a custom webview. A native
 resource detail screen usually has:
 
-- A `modes` contribution with `resourceKind` and a `layout.open` entry that pins supporting views.
+- A `modes` contribution with `resourceKind` and a `layout.open` entry that pins supporting Panels.
 - A `fileRenderers` contribution for the main document/file content.
 - A `treeRenderers` contribution for side-panel navigation or file lists.
-- `views` that bind the mode/resource to those renderers.
+- `panels` that bind the mode/resource to those renderers.
 
 Each view must declare exactly one of `webview`, `treeRenderer`, or `fileRenderer`. A view needs a `target`, `slot`,
 `resourceKind`, or a reference from a mode layout so the host can reach it. For resource detail screens, set
-`resourceKind` on the editor and panel views, then let `modes.<mode>.layout.open` pin auxiliary views such as the tree.
+`resourceKind` on the editor and auxiliary Panels, then let `modes.<mode>.layout.open` pin Panels such as the tree.
 
 `fileRenderers` need `title` and a valid `loadCommand`; `saveCommand` is optional and makes text content editable.
 Load commands return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -202,16 +202,15 @@ creates the project-sidenav entry from the kanban renderer; do not add a `treeIt
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
 `action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
-Use this for custom webview pages only; native resource screens should use `modes`, `views`, `fileRenderers`, and
+Use this for custom webview pages only; native resource screens should use `modes`, `panels`, `fileRenderers`, and
 `treeRenderers`.
 
-For an editable inspector/property panel, define a `controlsRenderers` renderer with a `queryCommand` (returns
+For an editable inspector/property Panel, define a `controlsRenderers` renderer with a `queryCommand` (returns
 `{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `updateValueCommand`, `applyCommand`,
-and `resetCommand`, then place it with a `view` — `{ resourceKind, role: "panel-menu", target: "workbench.main.right",
-panelMenuOwner: { level: "panel" }, controlsRenderer: "<id>" }` — exactly like `treeRenderer`/`fileRenderer` views.
-Panel ownership is the default and keeps the menu available while Sub Panel tabs change. To make the menu specific to
-one Sub Panel, use `panelMenuOwner: { level: "sub-panel", view: "<sub-panel-view-id>" }`; the menu then follows that
-tab and retains its own attached or collapsed state. The view companions its `resourceKind`; omitting both
+and `resetCommand`. Nest the menu under its owning Panel:
+`panelMenus: { properties: { title: "Properties", side: "right", controlsRenderer: "<id>" } }`.
+The active owner instance determines when the menu is available, and it retains its attached or collapsed state.
+The Panel companions its `resourceKind`; omitting both
 `updateValueCommand` and `applyCommand` makes it read-only. Command payloads must be JSON — commit file metadata or
 data URLs, never live `File` objects.
 

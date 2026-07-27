@@ -118,8 +118,8 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
       renderItem: (m) => [`    ${m.localId} -> ${m.fullPath}`],
     }),
     ...renderSubsection({
-      title: "Views",
-      items: runtime.views.filter((v) => v.extensionId === ext.id),
+      title: "Panels",
+      items: runtime.panels.filter((v) => v.extensionId === ext.id),
       renderItem: (v) => [`    ${v.id}`],
     }),
     ...renderSubsection({

@@ -1,9 +1,9 @@
 import { IconButton, Stack } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
+import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "../../../react";
 import { type WorkbenchModeId, workbenchModeOrder, workbenchModes } from "../mock-data/data";
 
-export const WorkbenchModesActivityBar = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const WorkbenchModesActivityBar = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const activeModeId = input.workbench.modes.getActiveModeId() as WorkbenchModeId | undefined;
 

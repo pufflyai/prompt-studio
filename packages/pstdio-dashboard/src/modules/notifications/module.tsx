@@ -1,6 +1,6 @@
 import { Badge } from "@chakra-ui/react";
-import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
@@ -11,7 +11,7 @@ import { countPendingNotifications } from "./data/dashboard-notifications";
 
 export const DASHBOARD_NOTIFICATIONS_KEYBINDING = "Alt+Shift+N";
 
-const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNode => {
+const createNotificationNode = (ctx: WorkbenchModuleContext): TreeNode => {
   const count = countPendingNotifications(getDashboardSelectedProjectId(ctx));
   return {
     id: "dashboard.notifications.sidenav",
@@ -27,7 +27,7 @@ const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNo
   };
 };
 
-const registerNotificationSidenav = (ctx: WorkbenchModuleContributionContext) => {
+const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.notifications.sidenav-nav",
     modes: ["*"],
@@ -37,14 +37,14 @@ const registerNotificationSidenav = (ctx: WorkbenchModuleContributionContext) =>
   });
 };
 
-const refreshSidenavs = (ctx: WorkbenchModuleContributionContext) => {
+const refreshSidenavs = (ctx: WorkbenchModuleContext) => {
   if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
     ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   }
 };
 
-const registerNotificationWidget = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
     id: dashboardWidgetIds.notificationsModal,
     title: "Notifications",
     region: "overlay",
@@ -79,9 +79,8 @@ export const createNotificationsModule = () =>
         },
         {
           execute: () =>
-            ctx.layout.openWidget(dashboardWidgetIds.notificationsModal, {
+            ctx.layout.openPanel(dashboardWidgetIds.notificationsModal, {
               title: "Notifications",
-              closable: true,
             }),
         },
       );

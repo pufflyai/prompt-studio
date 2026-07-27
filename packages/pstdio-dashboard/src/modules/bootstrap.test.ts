@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -17,17 +17,18 @@ describe("createBootstrapModule", () => {
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
       const widgetId = `test.${resource.id}`;
-      workbench.layout.registerWidget({
+      workbench.layout.registerPanel({
+        closable: false,
         id: widgetId,
         title: resource.label ?? resource.id,
         region: "main",
         rendererId: widgetId,
         singleton: true,
       });
-      workbench.resources.registerOpener({
+      workbench.resources.registerPresenter({
         id: widgetId,
         canOpen: (candidate) => candidate.uri === resource.uri,
-        open: (candidate) => workbench.layout.openWidget(widgetId, { resource: candidate }),
+        open: (candidate) => workbench.layout.openPanel(widgetId, { resource: candidate }),
       });
     }
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -43,7 +44,7 @@ describe("createBootstrapModule", () => {
     }
   });
 
-  test("restores an extension resource after extension metadata has registered its opener", async () => {
+  test("restores an extension resource after extension metadata has registered its presenter", async () => {
     const ticket = {
       kind: "ticket",
       uri: "dashboard-workbench://ticket/PS-10",
@@ -67,17 +68,18 @@ describe("createBootstrapModule", () => {
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerPanel({
+      closable: false,
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
       region: "main",
       rendererId: "test.workspaces",
       singleton: true,
     });
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: "test.workspaces",
       canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === dashboardResources.workspaces.id,
-      open: (resource) => workbench.layout.openWidget(dashboardWidgetIds.workspaces, { resource }),
+      open: (resource) => workbench.layout.openPanel(dashboardWidgetIds.workspaces, { resource }),
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const extensions = workbench.registerModule(

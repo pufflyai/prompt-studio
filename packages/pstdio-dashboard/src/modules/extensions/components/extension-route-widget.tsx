@@ -1,5 +1,5 @@
 import { Center, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionRoute } from "@/shared/extensions/workbench-extension-contributions";
@@ -12,9 +12,9 @@ const readProjectId = (metadata: Record<string, unknown> | undefined) => {
   return typeof value === "string" ? value : undefined;
 };
 
-export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const ExtensionRouteWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const route = readRoute(input.placement.resource?.metadata);
+  const route = readRoute(input.instance.resource?.metadata);
 
   if (!route) {
     return (
@@ -29,7 +29,7 @@ export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput 
   return (
     <ExtensionWebviewFrame
       extensionId={route.extensionId}
-      projectId={readProjectId(input.placement.resource?.metadata)}
+      projectId={readProjectId(input.instance.resource?.metadata)}
       terminal={input.workbench.terminal}
       title={resolveLocalizableString(route.label, route.extensionId)}
       webview={route.webview}

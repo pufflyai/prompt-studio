@@ -11,7 +11,7 @@ const webviewContributionMaps = [
   "routes",
   "sessionAnchorRenderers",
   "settingsPanels",
-  "views",
+  "panels",
 ] as const;
 
 type WebviewMapKey = (typeof webviewContributionMaps)[number];

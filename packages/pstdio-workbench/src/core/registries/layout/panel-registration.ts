@@ -3,6 +3,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import type {
   WidgetContribution,
   WorkbenchLocationContribution,
+  WorkbenchPanelContribution,
   WorkbenchPanelMenuContribution,
   WorkbenchPanelMenuDefinition,
   WorkbenchPanelRegion,
@@ -11,14 +12,16 @@ import type {
 } from "./layout-types";
 import { workbenchPanelMenuRegions, workbenchPanelRegions } from "./layout-types";
 
-type WorkbenchPanelContribution = WorkbenchLocationContribution | WorkbenchSubPanelContribution;
-type WorkbenchPanelRole = Extract<WorkbenchWidgetRole, "location" | "sub-panel">;
+type LegacyWorkbenchPanelContribution = WorkbenchLocationContribution | WorkbenchSubPanelContribution;
+type RegisteredPanelInput = LegacyWorkbenchPanelContribution | WorkbenchPanelContribution;
+type WorkbenchPanelRole = Extract<WorkbenchWidgetRole, "content" | "location" | "sub-panel">;
 
 interface RegisterPanelContributionInput {
   metadata?: ContributionMetadata;
-  panel: WorkbenchPanelContribution;
+  panel: RegisteredPanelInput;
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): Disposable;
   role: WorkbenchPanelRole;
+  closable?: boolean;
 }
 
 interface CreatePanelRegistrationsInput {
@@ -26,7 +29,7 @@ interface CreatePanelRegistrationsInput {
 }
 
 const panelMenuContribution = (
-  panel: WorkbenchPanelContribution,
+  panel: RegisteredPanelInput,
   menu: WorkbenchPanelMenuDefinition,
   role: WorkbenchPanelRole,
 ): WidgetContribution => {
@@ -38,7 +41,7 @@ const panelMenuContribution = (
     region: workbenchPanelMenuRegions[region][side],
     fallbackRegion: fallbackRegion ? workbenchPanelMenuRegions[fallbackRegion][side] : undefined,
     panelMenuOwner: {
-      level: role === "location" ? "panel" : "sub-panel",
+      level: role === "sub-panel" ? "sub-panel" : "panel",
       contributionId: panel.id,
     },
     role: "panel-menu",
@@ -46,7 +49,7 @@ const panelMenuContribution = (
 };
 
 export const registerPanelContribution = (input: RegisterPanelContributionInput) => {
-  const { metadata, panel, registerWidget, role } = input;
+  const { closable, metadata, panel, registerWidget, role } = input;
   const { panelMenus = [], ...panelContribution } = panel;
   const registrations: Disposable[] = [];
 
@@ -57,7 +60,7 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
   try {
     const registeredPanel: WidgetContribution & { ownedPanelMenuIds: readonly string[] } = {
       ...panelContribution,
-      closable: role === "sub-panel",
+      closable: closable ?? role === "sub-panel",
       ownedPanelMenuIds: panelMenus.map((menu) => menu.id),
       role,
     };
@@ -76,6 +79,21 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
 };
 
 export const createPanelRegistrations = (input: CreatePanelRegistrationsInput) => {
+  const panelRole = (panel: WorkbenchPanelContribution): WorkbenchPanelRole => {
+    if (panel.eligibleLocations) return "sub-panel";
+    return "content";
+  };
+
+  const registerPanel = (panel: WorkbenchPanelContribution, metadata?: ContributionMetadata) => {
+    return registerPanelContribution({
+      panel,
+      role: panelRole(panel),
+      closable: panel.closable,
+      metadata,
+      registerWidget: input.registerWidget,
+    });
+  };
+
   const registerLocation = (location: WorkbenchLocationContribution, metadata?: ContributionMetadata) =>
     registerPanelContribution({ panel: location, role: "location", metadata, registerWidget: input.registerWidget });
 
@@ -85,5 +103,5 @@ export const createPanelRegistrations = (input: CreatePanelRegistrationsInput) =
   const registerPanelMenu = (panelMenu: WorkbenchPanelMenuContribution, metadata?: ContributionMetadata) =>
     input.registerWidget({ ...panelMenu, role: "panel-menu" }, metadata);
 
-  return { registerLocation, registerSubPanel, registerPanelMenu };
+  return { registerPanel, registerLocation, registerSubPanel, registerPanelMenu };
 };

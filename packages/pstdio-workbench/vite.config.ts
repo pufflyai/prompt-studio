@@ -25,7 +25,6 @@ export default defineConfig({
     lib: {
       entry: {
         index: path.resolve(import.meta.dirname, "src/index.ts"),
-        core: path.resolve(import.meta.dirname, "src/core/index.ts"),
         react: path.resolve(import.meta.dirname, "src/react/index.ts"),
         storage: path.resolve(import.meta.dirname, "src/storage/index.ts"),
         extensions: path.resolve(import.meta.dirname, "src/extensions/index.ts"),

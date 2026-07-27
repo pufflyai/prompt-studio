@@ -1,10 +1,10 @@
 import {
   type ResourceRef,
   resourceContextMenuPath,
-  type WorkbenchModuleContributionContext,
+  type WorkbenchModuleContext,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import {
   openWorkbenchTerminal,
   WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
@@ -14,9 +14,9 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 
-const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContributionContext, Set<string>>();
+const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContext, Set<string>>();
 
-const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContributionContext) => {
+const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContext) => {
   let uris = autoOpenedWorkspaceTerminalUris.get(ctx);
   if (!uris) {
     uris = new Set();
@@ -34,7 +34,7 @@ const workspaceLabel = (resource: ResourceRef) => {
 // action, so a workspace behaves identically wherever it is surfaced. The board
 // listens to synced rows, so an archived/deleted workspace disappears once the write
 // streams back — the action just fires the call.
-export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
 
   try {
@@ -49,7 +49,7 @@ export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContributionC
   }
 };
 
-export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
 
   try {
@@ -64,22 +64,22 @@ export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContributionCo
   }
 };
 
-export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
 
-  ctx.layout.openWidget(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
+  ctx.layout.openPanel(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
 };
 
-export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
   return openWorkbenchTerminal(ctx, { resource });
 };
 
-export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
   const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
   const existing = ctx.layout
@@ -89,7 +89,7 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
         placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
     );
   if (!existing && autoOpenedUris.has(resource.uri)) {
-    return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
+    return ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
       hiddenByDefault: true,
       pinned: true,
       title: "Terminal",
@@ -120,7 +120,7 @@ const workspaceTerminalAction = {
 } as const;
 const workspaceActionGroup = "kernel";
 
-export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributionContext) => {
+export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     {
       id: dashboardCommandIds.openWorkspaceTerminal,

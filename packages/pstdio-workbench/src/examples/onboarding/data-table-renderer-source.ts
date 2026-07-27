@@ -1,4 +1,4 @@
-export const dataTableRendererSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+export const dataTableRendererSource = `import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 
 export const healthModule: WorkbenchModuleContribution = {
   id: "docs.health",
@@ -18,12 +18,12 @@ export const healthModule: WorkbenchModuleContribution = {
       }),
       onRowClick: (row) => console.log(row.id),
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.health.view",
       title: "Service health",
       region: "main",
       rendererId: "docs.health.table",
     });
-    ctx.layout.openWidget("docs.health.view");
+    ctx.layout.openPanel("docs.health.view");
   },
 };`;

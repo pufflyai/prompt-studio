@@ -6,8 +6,8 @@ import {
   type ResourceRef,
   type TreeNode,
   type WorkbenchCore,
+  type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { useWorkbenchStore } from "../../react";
@@ -47,7 +47,7 @@ const guides = [
     id: "start",
     label: "Getting started",
     description: "Create the shell, then contribute UI through modules.",
-    body: "A resource opener maps this guide resource to the main guide widget.",
+    body: "A resource presenter maps this guide resource to the main guide widget.",
   },
   {
     id: "commands",
@@ -78,7 +78,7 @@ export const createWorkbench = (module?: WorkbenchModuleContribution) => {
   return workbench;
 };
 
-const registerEmptyMain = (ctx: WorkbenchModuleContributionContext) => {
+const registerEmptyMain = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPlaceholder({
     id: MAIN_PLACEHOLDER_ID,
     title: "Empty main",
@@ -100,8 +100,8 @@ const registerEmptyMain = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-const registerGuideWidget = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerGuideWidget = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
     id: GUIDE_WIDGET_ID,
     title: "Guide",
     region: "main",
@@ -112,11 +112,11 @@ const registerGuideWidget = (ctx: WorkbenchModuleContributionContext) => {
   });
   ctx.renderers.registerRenderer({
     id: GUIDE_RENDERER_ID,
-    render: ({ placement }) => (
-      <LessonPanel title={placement.resource?.label ?? "Guide"}>
+    render: ({ instance }) => (
+      <LessonPanel title={instance.resource?.label ?? "Guide"}>
         <Text textStyle="paragraph/M/regular">
-          {typeof placement.resource?.metadata?.body === "string"
-            ? placement.resource.metadata.body
+          {typeof instance.resource?.metadata?.body === "string"
+            ? instance.resource.metadata.body
             : "This widget was opened by the module."}
         </Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -139,7 +139,7 @@ const guideTreeNode = (guide: (typeof guides)[number], options: { resourceBacked
   };
 };
 
-const registerDocsTree = (ctx: WorkbenchModuleContributionContext, options: { resourceBacked?: boolean } = {}) => {
+const registerDocsTree = (ctx: WorkbenchModuleContext, options: { resourceBacked?: boolean } = {}) => {
   ctx.renderers.registerTreeRenderer({
     id: DOCS_TREE_ID,
     title: "Docs",
@@ -153,14 +153,15 @@ const registerDocsTree = (ctx: WorkbenchModuleContributionContext, options: { re
     ],
     getChildren: () => [],
   });
-  ctx.layout.registerWidget({
+  ctx.layout.registerPanel({
+    closable: false,
     id: DOCS_TREE_ID,
     title: "Docs",
     region: "sidenav",
     regionSize: { defaultPx: 260, minPx: 220 },
     rendererId: DOCS_TREE_ID,
   });
-  ctx.layout.openWidget(DOCS_TREE_ID);
+  ctx.layout.openPanel(DOCS_TREE_ID);
 };
 
 export const createPlaceholderModule = (): WorkbenchModuleContribution => ({
@@ -175,7 +176,7 @@ export const createWidgetModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     registerEmptyMain(ctx);
     registerGuideWidget(ctx);
-    ctx.layout.openWidget(GUIDE_WIDGET_ID, { title: "First widget" });
+    ctx.layout.openPanel(GUIDE_WIDGET_ID, { title: "First widget" });
   },
 });
 
@@ -186,7 +187,7 @@ export const createCommandModule = (): WorkbenchModuleContribution => ({
     registerGuideWidget(ctx);
     ctx.commands.registerCommand(
       { id: OPEN_GUIDE_COMMAND_ID, label: "Open guide", category: "Onboarding", icon: "Plus" },
-      { execute: () => ctx.layout.openWidget(GUIDE_WIDGET_ID, { title: "Opened from command" }) },
+      { execute: () => ctx.layout.openPanel(GUIDE_WIDGET_ID, { title: "Opened from command" }) },
     );
     ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
       commandId: OPEN_GUIDE_COMMAND_ID,
@@ -212,14 +213,15 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
       getBody: () => onboardingTreeSections,
       getChildren: () => [],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: DOCS_TREE_ID,
       title: "Docs",
       region: "sidenav",
       regionSize: { defaultPx: 260, minPx: 220 },
       rendererId: DOCS_TREE_ID,
     });
-    ctx.layout.openWidget(DOCS_TREE_ID);
+    ctx.layout.openPanel(DOCS_TREE_ID);
   },
 });
 
@@ -229,11 +231,11 @@ export const createResourcesModule = (options: { openFirst?: boolean } = {}): Wo
     registerEmptyMain(ctx);
     registerGuideWidget(ctx);
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Guide", icon: "BookOpen" });
-    ctx.resources.registerOpener({
-      id: "onboarding.guide-opener",
+    ctx.resources.registerPresenter({
+      id: "onboarding.guide-presenter",
       canOpen: (resource) => resource.kind === GUIDE_KIND,
       open: (resource) =>
-        ctx.layout.openWidget(GUIDE_WIDGET_ID, {
+        ctx.layout.openPanel(GUIDE_WIDGET_ID, {
           resource,
           title: resource.label,
         }),
@@ -273,7 +275,8 @@ const ModeSwitcher = (props: { workbench: WorkbenchCore }) => {
 export const createModesModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.modes",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: MODE_SWITCHER_WIDGET_ID,
       title: "Modes",
       region: "activity",
@@ -296,7 +299,8 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
       panels: ["main"],
       activate(modeCtx) {
         registerEmptyMain(modeCtx);
-        modeCtx.layout.registerWidget({
+        modeCtx.layout.registerPanel({
+          closable: false,
           id: "onboarding.review.widget",
           title: "Review queue",
           region: "main",
@@ -314,10 +318,10 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
             </LessonPanel>
           ),
         });
-        modeCtx.layout.openWidget("onboarding.review.widget");
+        modeCtx.layout.openPanel("onboarding.review.widget");
       },
     });
-    ctx.layout.openWidget(MODE_SWITCHER_WIDGET_ID, { pinned: true });
+    ctx.layout.openPanel(MODE_SWITCHER_WIDGET_ID, { pinned: true });
     ctx.modes.setActiveMode("docs");
   },
 });

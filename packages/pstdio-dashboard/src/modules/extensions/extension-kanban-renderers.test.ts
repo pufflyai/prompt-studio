@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import {
@@ -45,9 +45,9 @@ describe("registerExtensionKanbanRenderers", () => {
     });
 
     expect(workbench.resources.getKind("ticket")).toBeDefined();
-    expect(workbench.layout.getWidget("pstdio-core-tickets.tickets")).toMatchObject({
+    expect(workbench.layout.getPanel("pstdio-core-tickets.tickets")).toMatchObject({
       region: "main",
-      role: "location",
+      closable: false,
       rendererId: "pstdio-core-tickets.tickets",
       singleton: true,
     });
@@ -61,11 +61,19 @@ describe("registerExtensionKanbanRenderers", () => {
       id: "test.extensions",
       activate: (ctx) => [
         ...registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
-        ctx.resources.registerOpener({
-          id: "test.ticket-opener",
+        ctx.layout.registerPanel({
+          id: "test.ticket",
+          title: "Ticket",
+          region: "main",
+          rendererId: "test",
+          closable: false,
+        }),
+        ctx.resources.registerPresenter({
+          id: "test.ticket-presenter",
           canOpen: (resource) => resource.kind === "ticket",
           open: (resource) => {
             openedResources.push(resource);
+            return ctx.layout.openPanel("test.ticket", { resource });
           },
         }),
       ],
@@ -92,19 +100,27 @@ describe("registerExtensionKanbanRenderers", () => {
       id: "test.extensions",
       activate: (ctx) => [
         ...registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
-        ctx.resources.registerOpener({
-          id: "test.ticket-opener",
+        ctx.layout.registerPanel({
+          id: "test.ticket",
+          title: "Ticket",
+          region: "main",
+          rendererId: "test",
+          closable: false,
+        }),
+        ctx.resources.registerPresenter({
+          id: "test.ticket-presenter",
           canOpen: (resource) => resource.kind === "ticket",
           open: (resource) => {
             openedResources.push(resource);
+            return ctx.layout.openPanel("test.ticket", { resource });
           },
         }),
       ],
     });
 
-    // The data view re-resolves the row's resource on click, but by then the query
+    // The kanban view re-resolves the row's resource on click, but by then the query
     // has already lifted it into a workbench ResourceRef. The click must not re-lift
-    // an already-lifted resource (which would drop its kind and match no opener).
+    // an already-lifted resource (which would drop its kind and match no presenter).
     workbench.renderers.getKanbanRenderer("pstdio-core-tickets.tickets")?.onRowClick?.({
       id: "t1",
       title: "T-1",

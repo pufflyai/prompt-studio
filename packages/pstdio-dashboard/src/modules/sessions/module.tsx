@@ -1,9 +1,10 @@
 import {
   type ResourceRef,
+  type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
+  type WorkbenchPanelInstance,
   workbenchCommandPaletteMenuPath,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import { SessionViewWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,
@@ -22,9 +23,10 @@ import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
 
-const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerLocation(
+const registerSessionWidgets = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.session,
       title: "Session",
       region: "main",
@@ -41,7 +43,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+const setSessionsBreadcrumb = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (resource.kind !== "session" && resource.kind !== "session-draft") {
     ctx.breadcrumbs.setItems([
       {
@@ -70,14 +72,14 @@ const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource
   ]);
 };
 
-const openSessionsNavigation = (ctx: WorkbenchModuleContributionContext) => {
+const openSessionsNavigation = (ctx: WorkbenchModuleContext) => {
   const lastOpenedSession = getDashboardSelectedSession(ctx);
   return ctx.resources.openResource(lastOpenedSession?.resource ?? dashboardResources.sessions, {
     replaceActive: true,
   });
 };
 
-const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
+const hydrateOpenSessionsView = (ctx: WorkbenchModuleContext) => {
   if (ctx.modes.getActiveModeId() !== "sessions") return;
 
   const activeSessionPlacement = ctx.layout
@@ -103,7 +105,7 @@ const createSessionsNavigationNode = () => ({
   target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
 });
 
-const registerSidenavSessions = (ctx: WorkbenchModuleContributionContext) => {
+const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.sessions.project-nav",
     modes: ["*"],
@@ -173,13 +175,13 @@ export const createSessionsModule = () =>
       });
 
       registerResourceRoute(ctx, {
-        id: "dashboard.sessions.opener",
+        id: "dashboard.sessions.presenter",
         match: (resource) =>
           (resource.kind === "dashboard-view" && resource.id === "sessions") ||
           resource.kind === "session" ||
           resource.kind === "session-draft",
         mode: "sessions",
-        widgetId: dashboardWidgetIds.session,
+        panelId: dashboardWidgetIds.session,
         title: (resource) =>
           resource.kind === "session" ? (findDashboardSession(resource.id)?.title ?? resource.label) : resource.label,
         beforeOpen: ({ resource }) => {
@@ -199,17 +201,16 @@ export const createSessionsModule = () =>
       // `sessionSurface: "side"` hint. Honor it by opening the Side Panel session and
       // keeping the host view (the ticket) in place, instead of switching to sessions mode. Higher
       // priority than the default session route so the hint wins; unhinted sessions fall through.
-      ctx.resources.registerOpener({
-        id: "dashboard.sessions.side-opener",
+      ctx.resources.registerPresenter({
+        id: "dashboard.sessions.side-presenter",
         priority: 1100,
         canOpen: (resource) => resource.kind === "session" && resource.metadata?.sessionSurface === "side",
-        open: (resource) => {
-          void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+        open: async (resource) => {
+          return (await ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
             resource,
             tabPosition: "start",
             tabRetention: "preview",
-          });
-          return undefined;
+          })) as WorkbenchPanelInstance;
         },
       });
 

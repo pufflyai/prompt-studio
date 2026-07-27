@@ -3,7 +3,7 @@ import { dashboardResources } from "../shared/mock-data/resources";
 
 // Runs last to bring the dashboard to its opening state. `setActiveMode` is
 // synchronous so the project navigation tree is ready immediately; opening the
-// tickets resource routes through the tickets slice's opener.
+// tickets resource routes through the tickets slice's presenter.
 export const createBootstrapModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.bootstrap",
   activate(ctx) {

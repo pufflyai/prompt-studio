@@ -1,9 +1,9 @@
 import {
-  type WorkbenchModuleContributionContext,
+  type WorkbenchModuleContext,
   workbenchResourceIdContextKey,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
-} from "@pstdio/workbench/core";
+} from "@pstdio/workbench";
 import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
@@ -13,7 +13,7 @@ import {
 const isContextPrimitive = (value: unknown) =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 
-export const syncActiveResourceContext = (ctx: WorkbenchModuleContributionContext) => {
+export const syncActiveResourceContext = (ctx: WorkbenchModuleContext) => {
   const activeMetadataKeys = new Set<string>();
 
   const clearMetadataContext = () => {

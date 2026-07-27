@@ -47,7 +47,7 @@ export type TreeNodeTarget =
       resource: TreeRendererResourceRef;
     }
   | {
-      kind: "view";
+      kind: "panel";
       widgetId: string;
     };
 

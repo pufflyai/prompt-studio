@@ -16,7 +16,8 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     ctx.resources.registerKind({ kind: fileKind, label: "File", icon: "FileText" });
     ctx.renderers.registerRenderer({ id: explorerWidgetId, render: () => <FilePreviewWidget /> });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: explorerWidgetId,
       title: "File preview",
       region: "main-left-menu",
@@ -24,15 +25,15 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
       rendererId: explorerWidgetId,
       regionSize: { defaultPx: 300, minPx: 220, maxPx: 460 },
     });
-    ctx.resources.registerOpener({
-      id: `${explorerModuleId}.opener`,
+    ctx.resources.registerPresenter({
+      id: `${explorerModuleId}.presenter`,
       priority: 100,
       canOpen: (resource) => resource.kind === fileKind,
       open: (resource, input) =>
-        ctx.layout.openWidget(explorerWidgetId, {
+        ctx.layout.openPanel(explorerWidgetId, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     });
     ctx.renderers.registerTreeRenderer({
@@ -48,13 +49,14 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
       ],
       getChildren: () => [],
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: explorerTreeId,
       title: "Explorer",
       region: "sidenav",
       rendererId: explorerTreeId,
     });
-    ctx.layout.openWidget(explorerTreeId);
+    ctx.layout.openPanel(explorerTreeId);
     ctx.commands.registerCommand(
       { id: explorerCommandId, label: "Open README", category: "Dynamic modules", icon: "FileText" },
       { execute: () => ctx.resources.openResource(readmeResource) },

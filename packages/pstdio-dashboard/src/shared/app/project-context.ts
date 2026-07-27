@@ -1,12 +1,12 @@
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 export const dashboardSelectedProjectIdContextKey = "dashboard.project.id";
 export const dashboardSelectedProjectNameContextKey = "dashboard.project.name";
 
-type DashboardProjectContext = Pick<WorkbenchModuleContributionContext, "context">;
+type DashboardProjectContext = Pick<WorkbenchModuleContext, "context">;
 type DashboardProjectSelectionContext = {
-  context: Pick<WorkbenchModuleContributionContext["context"], "delete" | "set">;
+  context: Pick<WorkbenchModuleContext["context"], "delete" | "set">;
 };
 type DashboardProjectSelection = { id: string; name: string };
 

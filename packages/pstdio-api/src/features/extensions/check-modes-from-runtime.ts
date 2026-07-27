@@ -9,11 +9,11 @@ import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./
 // validates layout via the host's `extension-mode-layout`, and flags
 // duplicates within the single source being checked.
 export const collectCheckModes = (check: ExtensionsCheckResponse, runtime: ExtensionRuntime) => {
-  const viewIdsByName = new Map<string, Map<string, string>>();
-  for (const view of runtime.views) {
-    const entry = viewIdsByName.get(view.name) ?? new Map<string, string>();
-    entry.set(view.localId, view.id);
-    viewIdsByName.set(view.name, entry);
+  const panelIdsByName = new Map<string, Map<string, string>>();
+  for (const panel of runtime.panels) {
+    const entry = panelIdsByName.get(panel.name) ?? new Map<string, string>();
+    entry.set(panel.localId, panel.id);
+    panelIdsByName.set(panel.name, entry);
   }
   const seenModeIds = new Set<string>();
   for (const mode of runtime.modes) {
@@ -39,7 +39,7 @@ export const collectCheckModes = (check: ExtensionsCheckResponse, runtime: Exten
       layout: mode.contribution.layout,
       modeId,
       sourcePath: mode.sourcePath,
-      viewIdsByLocalId: viewIdsByName.get(mode.name) ?? new Map<string, string>(),
+      panelIdsByLocalId: panelIdsByName.get(mode.name) ?? new Map<string, string>(),
     });
     if (normalized.diagnostic) {
       addDiagnostic(check, normalized.diagnostic);

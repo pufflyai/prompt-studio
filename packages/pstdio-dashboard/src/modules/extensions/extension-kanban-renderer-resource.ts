@@ -1,4 +1,4 @@
-import { standardResourceIcons } from "@pstdio/workbench/core";
+import { standardResourceIcons } from "@pstdio/workbench";
 import { createDashboardResource } from "@/shared/app/resources";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -15,7 +15,7 @@ export const kanbanRendererResourceKindIcon = (record: ExtensionKanbanRendererRe
   record.resourceKind === "ticket" ? ticketResourceIcon : standardResourceIcons.kanbanRenderer;
 
 // Each extension kanban renderer is browsable like a built-in dashboard view, so it
-// shows up in the project sidenav and opens its widget through the shared opener.
+// shows up in the project sidenav and opens its Panel through the shared presenter.
 export const createExtensionKanbanRendererResource = (record: ExtensionKanbanRendererRecord, projectId: string) =>
   createDashboardResource(
     "dashboard-view",

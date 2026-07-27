@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ListRow } from "@pstdio/ui";
 import { type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -29,7 +30,12 @@ const WorkbenchTabRenderer = (props: {
   const renderer = useWorkbenchStore(workbench.renderers.store, (state) => state.renderers[rendererId]);
 
   if (!widget || !renderer || renderer.keepAlive) return null;
-  return renderer.render({ workbench, widget, placement, refresh: noopRefresh }) as ReactNode;
+  return renderer.render({
+    workbench,
+    panel: toPanelContribution(widget),
+    instance: toPanelInstance(placement),
+    refresh: noopRefresh,
+  }) as ReactNode;
 };
 
 const useRegionTabBehavior = (input: WorkbenchRegionTabProps) => {
@@ -61,11 +67,11 @@ const useRegionTabBehavior = (input: WorkbenchRegionTabProps) => {
     if (!sortable || disabled || !event.altKey) return;
     if (event.key === "ArrowLeft" && previousWidgetId) {
       event.preventDefault();
-      workbench.layout.reorderWidget(placement.widgetId, { beforeWidgetId: previousWidgetId });
+      workbench.layout.reorderPanel(placement.widgetId, { beforeWidgetId: previousWidgetId });
     }
     if (event.key === "ArrowRight" && nextWidgetId) {
       event.preventDefault();
-      workbench.layout.reorderWidget(placement.widgetId, { afterWidgetId: nextWidgetId });
+      workbench.layout.reorderPanel(placement.widgetId, { afterWidgetId: nextWidgetId });
     }
   };
   return {
@@ -132,8 +138,8 @@ const WorkbenchRegionTabContextMenu = (props: {
           label="Keep Open"
           icon={<WorkbenchIcon name="pin" size={14} />}
           onActivate={() =>
-            workbench.layout.updateWidgetPlacement(placement.widgetId, {
-              tabRetention: "persistent",
+            workbench.layout.updatePanel(placement.widgetId, {
+              strategy: { kind: "activate-or-open" },
             })
           }
         />
@@ -197,7 +203,7 @@ const WorkbenchRegionTabCloseButton = (props: {
       onClick={(event) => {
         event.stopPropagation();
         if (disabled) return;
-        workbench.layout.closeWidget(placement.widgetId);
+        workbench.layout.closePanel(placement.widgetId);
       }}
     />
   );

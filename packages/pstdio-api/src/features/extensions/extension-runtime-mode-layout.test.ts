@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("extension mode layout validation", () => {
-  test("reports targets outside the declared frame", async () => {
+  test("reports regions outside the declared frame", async () => {
     const root = createExtension(
       "bad-mode-layout",
       `export default {
@@ -47,7 +47,7 @@ describe("extension mode layout validation", () => {
             label: "Lab",
             layout: {
               panels: ["secondary"],
-              open: [{ target: "workbench.main", resource: "lab" }],
+              open: [{ region: "main", resource: "lab" }],
             },
           },
         },
@@ -63,7 +63,7 @@ describe("extension mode layout validation", () => {
       extensionId: "pstdio.bad-mode-layout",
       metadata: expect.objectContaining({
         modeId: "pstdio.bad-mode-layout.lab",
-        unavailableOpenTargets: ["workbench.main"],
+        unavailableOpenRegions: ["main"],
       }),
     });
   });

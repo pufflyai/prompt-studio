@@ -2,7 +2,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { WorkbenchWidgetRenderInput } from "../renderers/renderer-registry";
+import type { WorkbenchPanelRenderInput } from "../renderers/renderer-registry";
 
 /** Settings are stored either per-user (global) or per-project. Projectless surfaces show only global entries. */
 export type SettingsScope = "global" | "project";
@@ -55,7 +55,7 @@ export interface SchemaSettingsPanel extends SettingsPanelBase {
  */
 export interface CustomSettingsPanel extends SettingsPanelBase {
   kind: "custom";
-  render(input: WorkbenchWidgetRenderInput): unknown;
+  render(input: WorkbenchPanelRenderInput): unknown;
 }
 
 export interface SettingsCollectionGroupBy<TItem> {
@@ -76,7 +76,7 @@ export interface CollectionSettingsPanel<TItem = unknown> extends SettingsPanelB
   itemLabel(item: TItem): string;
   itemIcon?(item: TItem): string | undefined;
   groupBy?: SettingsCollectionGroupBy<TItem>;
-  renderItem(item: TItem, input: WorkbenchWidgetRenderInput): unknown;
+  renderItem(item: TItem, input: WorkbenchPanelRenderInput): unknown;
   actions?: SettingsAction[];
 }
 

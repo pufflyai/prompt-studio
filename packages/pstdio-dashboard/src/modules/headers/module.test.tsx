@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
@@ -9,10 +9,9 @@ describe("createHeadersModule", () => {
 
     workbench.registerModule(createHeadersModule());
 
-    const layout = workbench.layout.getLayout();
-    expect(layout.regions.nav.widgets).toContainEqual(
+    expect(workbench.layout.listPanelInstances("nav")).toContainEqual(
       expect.objectContaining({
-        contributionId: dashboardWidgetIds.projectHeader,
+        panelId: dashboardWidgetIds.projectHeader,
         pinned: true,
       }),
     );

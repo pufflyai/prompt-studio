@@ -2,7 +2,7 @@ import { Box, Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
 import { useEffect, useRef, useState } from "react";
-import type { ResourceRef, WorkbenchCore, WorkbenchTerminalController, WorkbenchWidgetPlacement } from "../../core";
+import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 interface ControllerTerminalBridgeOptions {
@@ -49,7 +49,7 @@ export const createControllerTerminalBridge = (
 });
 
 interface WorkbenchTerminalPanelProps {
-  placement: WorkbenchWidgetPlacement;
+  placement: WorkbenchPanelInstance;
   workbench: WorkbenchCore;
 }
 
@@ -79,13 +79,13 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   );
   const active = useWorkbenchStore(workbench.layout.store, (state) => {
     const region = state.layout.regions.secondary;
-    return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.widgetId;
+    return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.instanceId;
   });
 
   useEffect(() => {
     if (!sessionId || !processTitle) return;
-    workbench.layout.updateWidgetPlacement(placement.widgetId, { title: processTitle });
-  }, [sessionId, processTitle, placement.widgetId, workbench.layout]);
+    workbench.layout.updatePanel(placement.instanceId, { title: processTitle });
+  }, [sessionId, processTitle, placement.instanceId, workbench.layout]);
 
   if (!workbench.terminal.isAvailable()) {
     return (

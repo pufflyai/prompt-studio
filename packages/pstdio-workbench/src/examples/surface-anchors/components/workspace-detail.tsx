@@ -1,9 +1,9 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "../../../react";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "../../../react";
 import { SESSION_KIND, surfaceWorkspaces, TERMINAL_KIND, workspaceResource } from "../mock-data";
 
 interface CandidateListProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
   title: string;
   kind: string;
 }
@@ -38,7 +38,7 @@ const CandidateList = (props: CandidateListProps) => {
 
 // The primary (main) widget: switch the active workspace and open its scoped sessions /
 // terminals. Everything else in the example reacts to what happens here.
-export const WorkspaceDetail = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const WorkspaceDetail = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { workbench } = input;
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);

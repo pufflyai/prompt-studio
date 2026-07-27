@@ -17,8 +17,8 @@ the workbench how to open that kind of resource.
 Three pieces:
 
 - `resources.registerKind({ kind, label, icon })` — declares the type once.
-- `resources.registerOpener({ canOpen, open })` — says "for resources of this
-  kind, open this widget with the resource attached".
+- `resources.registerPresenter({ canOpen, open })` — maps a Resource to the
+  Panel instance that presents it.
 - Attach `resource: { kind, uri, label }` to each tree node.
 
 Standard icon names for shared resource concepts:
@@ -32,9 +32,14 @@ Standard icon names for shared resource concepts:
 | Kanban renderer | `square-kanban`           |
 | Settings      | `settings`                |
 
-Now clicking a node calls `resources.openResource` for you, which routes
-through the opener and opens a tab. Click the same node twice — the existing
-tab activates instead of duplicating, because the resource URI matches.
+Now clicking a node calls `resources.openResource`. The resource service selects
+a presenter, waits for it to return a Panel, and then makes that Panel the active
+navigation Location. History, breadcrumbs, and resource scope follow that
+successful navigation.
+
+Calling `layout.openPanel` directly only displays a Panel. It does not create a
+Location or history entry. Use that direct operation for supporting Panels whose
+definitions declare `eligibleLocations`.
 
 Build your features around resources whenever there's a "thing you can open".
 History and navigation both speak resource refs, so your tree rows, command

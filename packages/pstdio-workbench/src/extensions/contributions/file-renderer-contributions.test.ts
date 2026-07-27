@@ -29,7 +29,7 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
 const resource = { kind: "ticket", uri: "pstdio://ticket/ticket-1", id: "ticket-1", label: "PS-1" };
 
 describe("registerWorkbenchExtensionFileRenderers", () => {
-  test("registers an editable file renderer + view widget and wires load/save commands", async () => {
+  test("registers an editable file renderer + panel widget and wires load/save commands", async () => {
     const workbench = createWorkbenchCore();
     const calls: { commandId: string; body: CommandExecuteRequest }[] = [];
 
@@ -45,16 +45,25 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           saveCommandId: "lab.ticket.save",
         },
       ],
-      views: [
+      panels: [
         {
           id: "lab.ticketEditor",
           extensionId: "pstdio.lab",
-          slotId: "workbench.main",
-          target: "workbench.main",
+          region: "main",
           title: "Ticket",
-          role: "location",
+          closable: false,
           resourceKind: "ticket",
           fileRendererId: "lab.ticketContent",
+          panelMenus: [
+            {
+              id: "lab.ticketProperties",
+              extensionId: "pstdio.lab",
+              ownerPanelId: "lab.ticketEditor",
+              title: "Properties",
+              side: "right",
+              controlsRendererId: "lab.ticketProperties",
+            },
+          ],
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
@@ -72,10 +81,14 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
 
     const contribution = workbench.renderers.getFileRenderer("lab.ticketContent");
     expect(contribution).toMatchObject({ id: "lab.ticketContent", title: "Ticket", resourceKind: "ticket" });
-    expect(workbench.layout.getWidget("lab.ticketEditor")).toMatchObject({
+    expect(workbench.layout.getPanel("lab.ticketEditor")).toMatchObject({
       region: "main",
       rendererId: "lab.ticketContent",
       resourceKinds: ["ticket"],
+    });
+    expect(workbench.layout.getPanel("lab.ticketProperties")).toMatchObject({
+      region: "main-right-menu",
+      rendererId: "lab.ticketProperties",
     });
 
     const loaded = await contribution!.load(resource);
@@ -103,7 +116,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
       fileRenderers: [
         { id: "lab.readonly", extensionId: "pstdio.lab", title: "Read only", loadCommandId: "lab.ticket.load" },
       ],
-      views: [],
+      panels: [],
     } satisfies WorkbenchExtensionMetadata;
 
     registerWorkbenchExtensionFileRenderers({

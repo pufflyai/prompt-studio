@@ -1,5 +1,5 @@
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
 import { createWorkbenchTerminalModule } from "../../react/terminal/terminal-module";
 import { WorkbenchModesActivityBar } from "./components/activity-bar";
 import { activityBarWidgetId, type WorkbenchModeId, workbenchModes } from "./mock-data/data";
@@ -7,8 +7,9 @@ import { registerProjectMode } from "./modules/project-mode";
 import { registerSettingsMode } from "./modules/settings-mode";
 import { registerWorkspaceMode } from "./modules/workspace-mode";
 
-const registerActivityBar = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerActivityBar = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
+    closable: false,
     id: activityBarWidgetId,
     title: "Mode switcher",
     region: "activity",

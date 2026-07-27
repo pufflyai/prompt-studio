@@ -3,7 +3,7 @@ export const breadcrumbSource = `import {
   resourceContextMenuPath,
   type ResourceRef,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const DOCS_KIND = "docs.root";
 const SECTION_KIND = "docs.section";
@@ -47,35 +47,35 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
           : sectionResource(String(resource.metadata?.sectionId ?? "concepts"), "Concepts"),
     });
 
-    ctx.resources.registerOpener({
-      id: "docs.root-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.root-presenter",
       canOpen: (resource) => resource.kind === DOCS_KIND,
       open: (resource) => {
         ctx.breadcrumbs.setItems(createResourceBreadcrumbItems(ctx.resources, resource));
-        ctx.layout.openWidget("docs.home", { resource });
+        ctx.layout.openPanel("docs.home", { resource });
       },
     });
 
-    ctx.resources.registerOpener({
-      id: "docs.section-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.section-presenter",
       canOpen: (resource) => resource.kind === SECTION_KIND,
       open: (resource) => {
         ctx.breadcrumbs.setItems(createResourceBreadcrumbItems(ctx.resources, resource));
-        ctx.layout.openWidget("docs.section", { resource, title: resource.label });
+        ctx.layout.openPanel("docs.section", { resource, title: resource.label });
       },
     });
 
-    ctx.resources.registerOpener({
-      id: "docs.page-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.page-presenter",
       canOpen: (resource) => resource.kind === PAGE_KIND,
       open: (resource) => {
         ctx.breadcrumbs.setItems(createResourceBreadcrumbItems(ctx.resources, resource));
-        ctx.layout.openWidget("docs.page", { resource, title: resource.label });
+        ctx.layout.openPanel("docs.page", { resource, title: resource.label });
       },
     });
   },
 });
 
 // The default Workbench top header renders the breadcrumb controller. Each
-// opener performs one hierarchy walk; generated ancestors navigate through
+// presenter performs one hierarchy walk; generated ancestors navigate through
 // resources.openResource(...) and the selected leaf remains inert.`;

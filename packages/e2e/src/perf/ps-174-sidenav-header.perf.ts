@@ -118,7 +118,7 @@ test("PS-174 navigates global collections within the interaction budget", async 
     });
   }
 
-  // Warm each registered opener so the sample measures persistent-header navigation,
+  // Warm each registered presenter so the sample measures persistent-header navigation,
   // not first-use module hydration after extension bootstrap.
   for (const collection of collections) {
     await collectionRow(page, collection).click();

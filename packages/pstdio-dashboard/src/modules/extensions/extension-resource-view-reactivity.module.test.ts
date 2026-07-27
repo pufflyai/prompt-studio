@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "@pstdio/workbench";
 import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -89,13 +89,15 @@ describe("createExtensionsModule ticket reactivity", () => {
     const { workbench, disposable } = mountTicketWorkbench(metadataWithTicketActions);
 
     try {
-      workbench.layout.registerWidget({
+      workbench.layout.registerPanel({
+        closable: false,
         id: "test.global-header",
         title: "Global header",
         region: "nav",
         rendererId: "test.global-header",
       });
-      workbench.layout.registerWidget({
+      workbench.layout.registerPanel({
+        closable: false,
         id: "test.dashboard-view",
         title: "Dashboard view",
         region: "main",
@@ -105,7 +107,7 @@ describe("createExtensionsModule ticket reactivity", () => {
       await flushMicrotasks();
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
-      workbench.layout.openWidget("test.global-header");
+      workbench.layout.openPanel("test.global-header");
       await flushMicrotasks();
 
       expect(workbench.context.get("workbench.resource.kind")).toBe("ticket");
@@ -114,7 +116,7 @@ describe("createExtensionsModule ticket reactivity", () => {
       });
       expect(resourceActions.map((item) => item.label)).toContain("Run attempt");
 
-      workbench.layout.openWidget("test.dashboard-view", {
+      workbench.layout.openPanel("test.dashboard-view", {
         resource: { kind: "dashboard-view", uri: "dashboard-workbench://project/project-1/tickets", id: "tickets" },
       });
       const nonTicketResourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("dashboard-view"), {

@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "./project-context";
 
 export type DashboardCollection = "sessions" | "workspaces" | "tickets";
@@ -6,13 +6,10 @@ export type DashboardCollection = "sessions" | "workspaces" | "tickets";
 export const dashboardActiveCollectionContextKey = "dashboard.navigation.activeCollection";
 export const dashboardSelectedResourceContextKey = "dashboard.navigation.selectedResource";
 
-type DashboardNavigationContext = Pick<WorkbenchModuleContributionContext, "context" | "layout" | "modes" | "panels">;
+type DashboardNavigationContext = Pick<WorkbenchModuleContext, "context" | "layout" | "modes" | "panels">;
 
-const activeCollectionByWorkbench = new WeakMap<
-  WorkbenchModuleContributionContext["context"]["store"],
-  DashboardCollection
->();
-const selectedResourceByWorkbench = new WeakMap<WorkbenchModuleContributionContext["context"]["store"], ResourceRef>();
+const activeCollectionByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], DashboardCollection>();
+const selectedResourceByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], ResourceRef>();
 const projectOwnedRegions = [
   "nav",
   "activity",

@@ -45,7 +45,7 @@ export const SortableRegionTabList = (props: SortableRegionTabListProps) => {
     ) {
       return;
     }
-    workbench.layout.reorderWidget(
+    workbench.layout.reorderPanel(
       String(active.id),
       activeIndex < overIndex ? { afterWidgetId: target.widgetId } : { beforeWidgetId: target.widgetId },
     );

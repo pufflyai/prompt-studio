@@ -1,9 +1,10 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { ProjectHeader } from "../projects/components/project-header";
 
-const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerHeaders = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
+    closable: false,
     id: dashboardWidgetIds.projectHeader,
     title: "Project selector",
     region: "nav",
@@ -16,7 +17,7 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <ProjectHeader input={input} />,
   });
 
-  ctx.layout.openWidget(dashboardWidgetIds.projectHeader, { pinned: true });
+  ctx.layout.openPanel(dashboardWidgetIds.projectHeader, { pinned: true });
 };
 
 export const createHeadersModule = () =>

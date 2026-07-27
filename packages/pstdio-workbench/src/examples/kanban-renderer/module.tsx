@@ -1,9 +1,5 @@
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import {
-  headerTrailingMenuPath,
-  type WorkbenchModuleContribution,
-  type WorkbenchModuleContributionContext,
-} from "../../core";
+import { headerTrailingMenuPath, type WorkbenchModuleContext, type WorkbenchModuleContribution } from "../../core";
 import { AttributeEditor } from "./attribute-editor";
 import {
   kanbanRendererStoryEditorWidgetId,
@@ -75,8 +71,8 @@ const createStoryRowsStore = () => {
   };
 };
 
-const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerWidget({
+const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel({
     id: kanbanRendererStoryEditorWidgetId,
     title: "Configure attributes",
     region: "overlay",
@@ -98,7 +94,7 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
       icon: "settings",
     },
     {
-      execute: () => ctx.layout.openWidget(kanbanRendererStoryEditorWidgetId),
+      execute: () => ctx.layout.openPanel(kanbanRendererStoryEditorWidgetId),
     },
   );
   ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
@@ -128,13 +124,14 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
 
     registerSchemaEditor(ctx);
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: kanbanRendererStoryWidgetId,
       title: "Rows",
       region: "main",
       rendererId: kanbanRendererStoryRendererId,
       singleton: true,
     });
-    ctx.layout.openWidget(kanbanRendererStoryWidgetId, { title: "Rows" });
+    ctx.layout.openPanel(kanbanRendererStoryWidgetId, { title: "Rows" });
   },
 });

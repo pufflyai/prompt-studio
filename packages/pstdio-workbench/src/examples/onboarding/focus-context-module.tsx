@@ -2,9 +2,9 @@ import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react"
 import { ScrollArea } from "@pstdio/ui";
 import type {
   WorkbenchCore,
+  WorkbenchModuleContext,
   WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
-  WorkbenchWidgetRenderInput,
+  WorkbenchPanelRenderInput,
 } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
@@ -20,8 +20,8 @@ const REVIEW_READY_CONTEXT_KEY = "onboarding.reviewReady";
 const SELECTED_GUIDE_CONTEXT_VALUE = "guide";
 
 interface FocusContextPanelProps {
-  input: WorkbenchWidgetRenderInput;
-  context: WorkbenchModuleContributionContext["context"];
+  input: WorkbenchPanelRenderInput;
+  context: WorkbenchModuleContext["context"];
 }
 
 interface ContextStatusProps {
@@ -33,12 +33,12 @@ interface ActionAvailabilityProps {
   markCommandAvailable: boolean;
 }
 
-const setSelectedGuide = (context: WorkbenchModuleContributionContext["context"]) => {
+const setSelectedGuide = (context: WorkbenchModuleContext["context"]) => {
   context.set(SELECTED_KIND_CONTEXT_KEY, SELECTED_GUIDE_CONTEXT_VALUE);
   context.set(REVIEW_READY_CONTEXT_KEY, true);
 };
 
-const clearSelectedGuide = (context: WorkbenchModuleContributionContext["context"]) => {
+const clearSelectedGuide = (context: WorkbenchModuleContext["context"]) => {
   context.delete(SELECTED_KIND_CONTEXT_KEY);
   context.set(REVIEW_READY_CONTEXT_KEY, false);
 };
@@ -217,28 +217,32 @@ const FocusContextSidenav = (props: ContextStatusProps) => {
 export const createFocusContextModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.focus-context",
   activate(ctx) {
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: FOCUS_CONTEXT_MAIN_WIDGET_ID,
       title: "Focus and context",
       region: "main",
       singleton: true,
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: FOCUS_CONTEXT_SIDENAV_WIDGET_ID,
       title: "Focus",
       region: "sidenav",
       regionSize: { defaultPx: 250, minPx: 220 },
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: FOCUS_CONTEXT_PANEL_WIDGET_ID,
       title: "Context",
       region: "secondary",
       regionSize: { defaultPx: 220, minPx: 160 },
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: FOCUS_CONTEXT_STATUS_WIDGET_ID,
       title: "Focus status",
       region: "status",
@@ -248,10 +252,10 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.renderers.registerRenderer({
       id: FOCUS_CONTEXT_RENDERER_ID,
       render: (input) => {
-        if (input.widget.id === FOCUS_CONTEXT_SIDENAV_WIDGET_ID)
+        if (input.panel.id === FOCUS_CONTEXT_SIDENAV_WIDGET_ID)
           return <FocusContextSidenav workbench={input.workbench} />;
-        if (input.widget.id === FOCUS_CONTEXT_PANEL_WIDGET_ID) return <ContextSnapshot workbench={input.workbench} />;
-        if (input.widget.id === FOCUS_CONTEXT_STATUS_WIDGET_ID) return <ContextStatus workbench={input.workbench} />;
+        if (input.panel.id === FOCUS_CONTEXT_PANEL_WIDGET_ID) return <ContextSnapshot workbench={input.workbench} />;
+        if (input.panel.id === FOCUS_CONTEXT_STATUS_WIDGET_ID) return <ContextStatus workbench={input.workbench} />;
         return <FocusContextPanel input={input} context={ctx.context} />;
       },
     });
@@ -274,10 +278,10 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.context.set(REVIEW_READY_CONTEXT_KEY, false);
-    ctx.layout.openWidget(FOCUS_CONTEXT_SIDENAV_WIDGET_ID, { pinned: true });
-    ctx.layout.openWidget(FOCUS_CONTEXT_MAIN_WIDGET_ID);
-    ctx.layout.openWidget(FOCUS_CONTEXT_PANEL_WIDGET_ID);
-    ctx.layout.openWidget(FOCUS_CONTEXT_STATUS_WIDGET_ID, { pinned: true });
+    ctx.layout.openPanel(FOCUS_CONTEXT_SIDENAV_WIDGET_ID, { pinned: true });
+    ctx.layout.openPanel(FOCUS_CONTEXT_MAIN_WIDGET_ID);
+    ctx.layout.openPanel(FOCUS_CONTEXT_PANEL_WIDGET_ID);
+    ctx.layout.openPanel(FOCUS_CONTEXT_STATUS_WIDGET_ID, { pinned: true });
     ctx.focus.setActiveRegion("main");
   },
 });

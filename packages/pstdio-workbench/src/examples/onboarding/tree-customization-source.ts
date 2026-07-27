@@ -2,7 +2,7 @@ export const treeCustomizationSource = `import type {
   TreeNode,
   TreeViewSection,
   WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const treeBody = (): TreeViewSection[] => [
   {
@@ -43,13 +43,13 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
       getChildren: () => [],
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
       id: "docs.customizable-tree",
       title: "Tree",
       region: "sidenav",
       rendererId: "docs.customizable-tree",
     });
 
-    ctx.layout.openWidget("docs.customizable-tree");
+    ctx.layout.openPanel("docs.customizable-tree");
   },
 });`;

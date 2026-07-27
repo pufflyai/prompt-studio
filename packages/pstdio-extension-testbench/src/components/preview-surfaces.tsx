@@ -1,5 +1,5 @@
 import { Box, SimpleGrid, Text } from "@chakra-ui/react";
-import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "@pstdio/workbench/core";
+import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "@pstdio/workbench";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 
@@ -43,7 +43,7 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
             Views
           </Text>
           <Text as="dd" fontSize="sm" m="0">
-            {bench.summary.views}
+            {bench.summary.panels}
           </Text>
         </Box>
         <Box bg="bg" borderColor="border.subtle" borderRadius="sm" borderWidth="1px" minW="0" p="3">
@@ -76,8 +76,8 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
 };
 
 const findTreeView = (bench: ExtensionBenchLoadResponse, resource: ResourceRef) =>
-  bench.metadata.views.find((view) => view.treeRendererId && view.resourceKind === resource.kind) ??
-  bench.metadata.views.find((view) => view.treeRendererId);
+  bench.metadata.panels.find((view) => view.treeRendererId && view.resourceKind === resource.kind) ??
+  bench.metadata.panels.find((view) => view.treeRendererId);
 
 export const registerResourceKinds = (
   workbench: WorkbenchCore,
@@ -85,7 +85,7 @@ export const registerResourceKinds = (
   resource: ResourceRef,
 ) => {
   const kinds = new Set([resource.kind]);
-  for (const view of bench.metadata.views) {
+  for (const view of bench.metadata.panels) {
     if (view.resourceKind) kinds.add(view.resourceKind);
   }
 
@@ -107,33 +107,33 @@ export const openPrimaryResource = (
 ) => {
   workbench.renderers.registerRenderer({
     id: primaryRendererId,
-    render: ({ placement }) => <PrimaryPanel bench={bench} resource={placement.resource} />,
+    render: ({ instance }) => <PrimaryPanel bench={bench} resource={instance.resource} />,
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: true,
     id: primaryWidgetId,
     title: "Preview",
     region: "main",
     rendererId: primaryRendererId,
     singleton: false,
   });
-  workbench.resources.registerOpener({
-    id: "extension-testbench.resource-opener",
+  workbench.resources.registerPresenter({
+    id: "extension-testbench.resource-presenter",
     canOpen: (candidate) => candidate.kind === resource.kind,
-    open: (candidate, input) =>
-      workbench.layout.openWidget(primaryWidgetId, {
-        replaceActive: input.replaceActive,
+    open: (candidate) =>
+      workbench.layout.openPanel(primaryWidgetId, {
         resource: candidate,
         title: candidate.label ?? candidate.id ?? candidate.uri,
       }),
   });
-  workbench.layout.openWidget(primaryWidgetId, { pinned: true, resource, title: resource.label });
+  workbench.layout.openPanel(primaryWidgetId, { pinned: true, resource, title: resource.label });
 };
 
 export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchLoadResponse, resource: ResourceRef) => {
   const view = findTreeView(bench, resource);
 
   if (view) {
-    workbench.layout.openWidget(view.id, {
+    workbench.layout.openPanel(view.id, {
       pinned: true,
       resource,
       title: text(view.title, view.id),
@@ -144,14 +144,15 @@ export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchL
   const renderer = bench.metadata.treeRenderers?.[0];
   if (!renderer) return;
 
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: syntheticTreeWidgetId,
     title: text(renderer.title, renderer.id),
     region: "main-left-menu",
     rendererId: renderer.id,
     resourceKinds: [resource.kind],
   });
-  workbench.layout.openWidget(syntheticTreeWidgetId, {
+  workbench.layout.openPanel(syntheticTreeWidgetId, {
     pinned: true,
     resource,
     title: text(renderer.title, renderer.id),

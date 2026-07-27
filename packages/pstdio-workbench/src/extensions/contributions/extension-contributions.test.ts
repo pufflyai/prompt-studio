@@ -24,7 +24,7 @@ const metadata = {
     {
       id: "extension-lab.labPage",
       extensionId: "pstdio.extension-lab",
-      slotId: "legacy.projectSidenavNav",
+      slotId: "workbench.navigation",
       group: "Lab",
       label: "Lab",
       route: "lab",
@@ -46,7 +46,7 @@ const metadata = {
   ],
   modes: [],
   settingsPanels: [],
-  views: [],
+  panels: [],
 } satisfies WorkbenchExtensionMetadata;
 
 const createResource = ({ route }: { route: WorkbenchExtensionMetadata["routes"][number] }) => ({

@@ -1,6 +1,6 @@
 import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,18 +21,18 @@ import { RepoPickerDialog } from "./repo-picker-dialog";
 
 const emptyAgentInfo: AgentInfo[] = [];
 
-const isPlacementOpen = (input: WorkbenchWidgetRenderInput) =>
+const isPlacementOpen = (input: WorkbenchPanelRenderInput) =>
   Object.values(input.workbench.layout.getLayout().regions).some((region) =>
-    region.widgets.some((placement) => placement.widgetId === input.placement.widgetId),
+    region.widgets.some((placement) => placement.widgetId === input.instance.instanceId),
   );
 
-const closeCurrentPlacement = (input: WorkbenchWidgetRenderInput) => {
-  if (input.placement.closable === true && isPlacementOpen(input)) {
-    input.workbench.layout.closeWidget(input.placement.widgetId);
+const closeCurrentPlacement = (input: WorkbenchPanelRenderInput) => {
+  if (input.instance.closable === true && isPlacementOpen(input)) {
+    input.workbench.layout.closePanel(input.instance.instanceId);
   }
 };
 
-export const CreateProjectWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { t } = useTranslation(["projects", "common"]);
   const agentsQuery = useAgents();

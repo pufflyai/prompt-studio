@@ -1,7 +1,7 @@
 export type {
+  WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
   WorkbenchRendererRegistry,
-  WorkbenchWidgetRenderInput,
 } from "../core";
 export { createWorkbenchRendererRegistry } from "../core";
 export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";

@@ -19,6 +19,7 @@ import type {
   KeybindingContribution,
   MenuContribution,
   ModeContribution,
+  PanelContribution,
   RendererContribution,
   RouteContribution,
   SettingsPanelContribution,
@@ -27,7 +28,6 @@ import type {
   TemplateTypeContribution,
   ThemeContribution,
   TreeItemContribution,
-  ViewContribution,
 } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
@@ -117,7 +117,7 @@ export interface LocalExtensionSource {
 
 export type ExtensionLoadScope = "user" | "repo";
 
-/** Validated view of an extension's package.json identity fields. */
+/** Validated panel of an extension's package.json identity fields. */
 export interface PackageManifest {
   /** Extension package name. Matches `^[a-z][a-z0-9-]*$`. */
   name: string;
@@ -146,7 +146,7 @@ export interface PackageManifest {
 export interface UiContributions {
   modes?: Record<string, ModeContribution>;
   routes?: Record<string, RouteContribution>;
-  views?: Record<string, ViewContribution>;
+  panels?: Record<string, PanelContribution>;
   treeItems?: Record<string, TreeItemContribution>;
   treeRenderers?: Record<string, TreeRendererContribution>;
   fileRenderers?: Record<string, FileRendererContribution>;

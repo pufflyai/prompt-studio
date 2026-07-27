@@ -186,6 +186,7 @@ const restoreModeLayout = (context: WorkbenchModeActivationContext, layout: Work
 };
 
 export interface CreateWorkbenchModeRegistryInput {
+  establishLocation?(instanceId: string): void;
   resolveContext(): WorkbenchModeActivationContext;
 }
 
@@ -216,8 +217,29 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const availableLayout = applyModePanelAvailability(currentLayout, panelsForMode(mode));
     restoreModeLayout(context, availableLayout);
     if (seededScopes.has(scopeKey)) return;
-    mode.seed?.(context);
-    seededScopes.add(scopeKey);
+
+    let locationEstablished = false;
+    let unsubscribeMainPanel: () => void = () => undefined;
+    const establishSeededLocation = () => {
+      if (locationEstablished) return;
+      const primary = context.layout.getActivePanel("main");
+      if (!primary) return;
+      locationEstablished = true;
+      unsubscribeMainPanel();
+      input.establishLocation?.(primary.instanceId);
+    };
+
+    unsubscribeMainPanel = context.layout.store.subscribeSelector(
+      (state) => state.layout.regions.main,
+      establishSeededLocation,
+    );
+    try {
+      mode.seed?.(context);
+      establishSeededLocation();
+      seededScopes.add(scopeKey);
+    } finally {
+      unsubscribeMainPanel();
+    }
   };
 
   const disposeActive = () => {

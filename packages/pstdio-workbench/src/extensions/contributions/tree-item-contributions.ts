@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, NavigationTarget, TreeNode, WorkbenchModuleContributionContext } from "../../core";
+import type { Disposable, NavigationTarget, TreeNode, WorkbenchModuleContext } from "../../core";
 import { resolveWorkbenchTreeRegion } from "../shared/workbench-targets";
 import { routeResource } from "./route-contributions";
 
@@ -10,7 +10,7 @@ export interface RegisterWorkbenchExtensionTreeItemsInput {
   metadata: WorkbenchExtensionMetadata;
   openHref?: (href: string) => unknown;
   routeResourceKind: string;
-  workbench: WorkbenchModuleContributionContext;
+  workbench: WorkbenchModuleContext;
 }
 
 const asParams = (value: unknown): Record<string, unknown> | undefined =>
@@ -20,7 +20,7 @@ const targetForTreeAction = (
   input: RegisterWorkbenchExtensionTreeItemsInput,
   item: TreeItem,
 ): NavigationTarget | undefined => {
-  if (item.action.kind === "kanbanRenderer") return { kind: "view", widgetId: item.action.kanbanRendererId };
+  if (item.action.kind === "kanbanRenderer") return { kind: "panel", panelId: item.action.kanbanRendererId };
   const action = item.action;
   if (action.kind === "route") {
     const route = input.metadata.routes.find((candidate) => candidate.id === action.route);
@@ -61,7 +61,8 @@ export const registerWorkbenchExtensionTreeItems = (input: RegisterWorkbenchExte
           },
         ],
       }),
-      input.workbench.layout.registerWidget({
+      input.workbench.layout.registerPanel({
+        closable: false,
         id: rendererId,
         title: "Extensions",
         region: resolveWorkbenchTreeRegion(target),

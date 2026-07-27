@@ -9,7 +9,7 @@ export * from "./execute";
 export * from "./install";
 export * from "./kanban-renderer";
 export * from "./keybindings";
+export * from "./panels";
 export * from "./renderers";
 export * from "./settings";
 export * from "./targets";
-export * from "./views";

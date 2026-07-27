@@ -11,14 +11,16 @@ export const createDynamicModulesHostModule = (
   id: hostModuleId,
   activate(ctx) {
     ctx.sidePanel.setMode("attached");
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: topControlsWidgetId,
       title: "Runtime modules",
       region: "nav",
       singleton: true,
       rendererId: topControlsWidgetId,
     });
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: inventoryWidgetId,
       title: "Module inventory",
       region: "main",
@@ -35,10 +37,10 @@ export const createDynamicModulesHostModule = (
     });
     ctx.commands.registerCommand(
       { id: openInventoryCommandId, label: "Open module inventory", category: "Dynamic modules", icon: "Boxes" },
-      { execute: () => ctx.layout.openWidget(inventoryWidgetId) },
+      { execute: () => ctx.layout.openPanel(inventoryWidgetId) },
     );
     ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: openInventoryCommandId, order: 10 });
-    ctx.layout.openWidget(topControlsWidgetId, { pinned: true });
-    ctx.layout.openWidget(inventoryWidgetId);
+    ctx.layout.openPanel(topControlsWidgetId, { pinned: true });
+    ctx.layout.openPanel(inventoryWidgetId);
   },
 });

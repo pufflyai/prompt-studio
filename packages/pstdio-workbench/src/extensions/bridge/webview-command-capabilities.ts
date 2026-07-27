@@ -65,7 +65,7 @@ export const createExtensionWebviewHostCapabilities =
             id: context.webviewId,
             kind: input.slotKind,
             projectId: input.projectId,
-            context: { contributionId: context.webviewId },
+            context: { panelId: context.webviewId },
           }),
           source: "dashboard",
         });

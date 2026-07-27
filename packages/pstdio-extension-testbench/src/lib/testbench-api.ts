@@ -7,7 +7,7 @@ import type {
   JsonObject,
   WorkbenchAttachmentInvocationContext,
 } from "@pstdio/sdk/extensions";
-import type { ResourceBrowseEntry, ResourceRef } from "@pstdio/workbench/core";
+import type { ResourceBrowseEntry, ResourceRef } from "@pstdio/workbench";
 import {
   createCommandRunner,
   type ExtensionRuntime,
@@ -194,7 +194,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
       templateTypes: runtime.templateTypes.length,
       templates: runtime.templates.length,
       treeRenderers: runtime.treeRenderers.length,
-      views: runtime.views.length,
+      panels: runtime.panels.length,
     },
   };
 };

@@ -7,9 +7,9 @@ const installed = new WeakSet<WorkbenchCore>();
 export const installWorkbenchDataTableRenderer = (workbench: WorkbenchCore) => {
   if (installed.has(workbench)) return;
   installed.add(workbench);
-  workbench.renderers.setDataTableRendererImplementation(({ workbench: scope, placement, dataTableRendererId }) => {
+  workbench.renderers.setDataTableRendererImplementation(({ workbench: scope, instance, dataTableRendererId }) => {
     const contribution = scope.renderers.getDataTableRenderer(dataTableRendererId);
     if (!contribution) return null;
-    return createElement(WorkbenchDataTableView, { workbench: scope, contribution, placement });
+    return createElement(WorkbenchDataTableView, { workbench: scope, contribution, placement: instance });
   });
 };

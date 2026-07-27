@@ -4,8 +4,8 @@ import type {
   LayoutPersistenceAdapter,
   WorkbenchCore,
   WorkbenchHistoryPersistence,
+  WorkbenchModuleContext,
   WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
   WorkbenchPanelMenuDefinition,
   WorkbenchRegion,
 } from "../../core";
@@ -191,73 +191,87 @@ const compositionFlags = (kind: CompositionKind) => ({
           : [],
 });
 
+const collapseMenu = (
+  workbench: Pick<WorkbenchCore, "layout" | "panels">,
+  menuRegion: "main" | "secondary",
+  panelId: string,
+) => {
+  const menu = workbench.layout.listPanelInstances(`${menuRegion}-left-menu`).find((p) => p.panelId === panelId);
+  if (menu) workbench.panels.setOpen(`panel-menu:${menu.instanceId}`, false);
+};
+
+const applyLocationSwitch = async (
+  workbench: Pick<WorkbenchCore, "layout" | "panels" | "resources">,
+  alphaLocation: { instanceId: string },
+) => {
+  collapseMenu(workbench, "main", locationMenuId);
+  const notesMenu = workbench.layout
+    .listPanelInstances("main-right-menu")
+    .find((panel) => panel.panelId === "onboarding.panel-composition.main.notes.tools");
+  if (notesMenu) workbench.panels.setOpen(`panel-menu:${notesMenu.instanceId}`, false);
+  await workbench.resources.openResource(resources[1]);
+  workbench.layout.openPanel("onboarding.panel-composition.main.reports");
+  workbench.layout.activatePanel(alphaLocation.instanceId);
+  const alphaNotes = workbench.layout
+    .listPanelInstances("main")
+    .find(
+      (panel) =>
+        panel.panelId === "onboarding.panel-composition.main.notes" && panel.ownerResourceUri === resources[0].uri,
+    );
+  if (alphaNotes) workbench.layout.activatePanel(alphaNotes.instanceId);
+};
+
 const openPanelCompositionScenario = (
-  workbench: Pick<WorkbenchCore, "history" | "layout" | "panels" | "resources">,
+  workbench: Pick<WorkbenchCore, "layout" | "panels" | "resources">,
   kind: CompositionKind,
 ) => {
   const flags = compositionFlags(kind);
-  void workbench.resources.openResource(resources[0]);
-  for (const region of flags.openRegions) {
-    workbench.layout.openWidget(`onboarding.panel-composition.${region}.notes`);
-  }
-  if (kind === "cross-panel-history") {
-    for (const region of panelRegions) workbench.layout.openWidget(`onboarding.panel-composition.${region}.reports`);
-  }
-  if (kind === "collapsed-menu") {
-    const menu = workbench.layout
-      .getLayout()
-      .regions["main-left-menu"].widgets.find((placement) => placement.contributionId === locationMenuId);
-    if (menu) workbench.panels.setOpen(`panel-menu:${menu.widgetId}`, false);
-  }
-  if (kind === "location-switch") {
-    const locationMenu = workbench.layout
-      .getLayout()
-      .regions["main-left-menu"].widgets.find((placement) => placement.contributionId === locationMenuId);
-    if (locationMenu) workbench.panels.setOpen(`panel-menu:${locationMenu.widgetId}`, false);
-    const notesMenu = workbench.layout
-      .getLayout()
-      .regions["main-right-menu"].widgets.find(
-        (placement) => placement.contributionId === "onboarding.panel-composition.main.notes.tools",
-      );
-    if (notesMenu) workbench.panels.setOpen(`panel-menu:${notesMenu.widgetId}`, false);
-    void workbench.resources.openResource(resources[1], {
-      replaceActive: true,
-    });
-    workbench.layout.openWidget("onboarding.panel-composition.main.reports");
-    workbench.history.goBack();
-    workbench.history.goBack();
-  }
+  void workbench.resources.openResource(resources[0]).then(async (alphaLocation) => {
+    for (const region of flags.openRegions) {
+      workbench.layout.openPanel(`onboarding.panel-composition.${region}.notes`);
+    }
+    if (kind === "cross-panel-history") {
+      for (const region of panelRegions) workbench.layout.openPanel(`onboarding.panel-composition.${region}.reports`);
+    }
+    if (kind === "collapsed-menu") {
+      collapseMenu(workbench, "main", locationMenuId);
+    }
+    if (kind === "location-switch") {
+      await applyLocationSwitch(workbench, alphaLocation);
+    }
+  });
 };
 
-const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
+const registerPanelFixture = (ctx: WorkbenchModuleContext, kind: CompositionKind) => {
   ctx.resources.registerKind({
     kind: LOCATION_KIND,
     label: "Location",
     icon: "Folder",
     surface: "primary",
   });
-  ctx.resources.registerOpener({
-    id: `onboarding.panel-composition.${kind}.opener`,
+  ctx.resources.registerPresenter({
+    id: `onboarding.panel-composition.${kind}.presenter`,
     canOpen: (resource) => resource.kind === LOCATION_KIND,
     open: (resource, input) => {
       ctx.breadcrumbs.setItems([{ title: resource.label ?? "Location", icon: resource.icon, resource }]);
-      return ctx.layout.openWidget(LOCATION_ID, {
+      return ctx.layout.openPanel(LOCATION_ID, {
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
         resource,
         title: resource.label,
-        replaceActive: input.replaceActive,
       });
     },
   });
   ctx.renderers.registerRenderer({
     id: RENDERER_ID,
-    render: ({ placement, workbench }) => {
-      const title = placement.title ?? "Panel composition";
-      if (placement.role === "panel-menu") return <PanelMenuContent title={title} />;
-      if (placement.role === "sub-panel") return <SubPanelContent title={title} />;
+    render: ({ instance, panel, workbench }) => {
+      const title = instance.title ?? "Panel composition";
+      if ("panelMenus" in panel && panel.panelMenus) return <PanelMenuContent title={title} />;
+      if ("eligibleLocations" in panel && panel.eligibleLocations) return <SubPanelContent title={title} />;
       return <CompositionContent workbench={workbench} title={title} />;
     },
   });
-  ctx.layout.registerLocation({
+  ctx.layout.registerPanel({
+    closable: false,
     id: LOCATION_ID,
     title: "Location",
     region: "main",
@@ -269,16 +283,18 @@ const registerLocationFixture = (ctx: WorkbenchModuleContributionContext, kind: 
   });
 };
 
-const registerSubPanelFixtures = (ctx: WorkbenchModuleContributionContext, kind: CompositionKind) => {
+const registerEligiblePanelFixtures = (ctx: WorkbenchModuleContext, kind: CompositionKind) => {
   for (const region of panelRegions) {
     for (const definition of subPanelDefinitions(kind)) {
-      ctx.layout.registerSubPanel({
+      ctx.layout.registerPanel({
+        closable: true,
         id: `onboarding.panel-composition.${region}.${definition.id}`,
         title: definition.title,
         icon: definition.icon,
         region,
         singleton: true,
         rendererId: RENDERER_ID,
+        eligibleLocations: { resourceKinds: [LOCATION_KIND] },
         panelMenus: definition.panelMenus.map(({ key, ...menu }) => ({
           ...menu,
           id: `onboarding.panel-composition.${region}.${definition.id}.${key}`,
@@ -295,8 +311,8 @@ export const createPanelCompositionModule = (
   id: `onboarding.panel-composition.${kind}`,
   activate(ctx) {
     const flags = compositionFlags(kind);
-    registerLocationFixture(ctx, kind);
-    if (flags.hasEligible) registerSubPanelFixtures(ctx, kind);
+    registerPanelFixture(ctx, kind);
+    if (flags.hasEligible) registerEligiblePanelFixtures(ctx, kind);
 
     if (openInitial) openPanelCompositionScenario(ctx, kind);
   },

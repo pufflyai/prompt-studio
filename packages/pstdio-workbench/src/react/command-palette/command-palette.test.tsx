@@ -206,12 +206,20 @@ describe("createWorkbenchResourcePaletteEntries", () => {
   test("activating a resource entry opens the resource through the registry", async () => {
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
     const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: "tickets",
       canOpen: (resource) => resource.kind === "ticket",
       open: (resource, input) => {
         opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
+        return workbench.layout.openPanel("ticket", { resource });
       },
     });
     workbench.resources.registerProvider({
@@ -236,12 +244,20 @@ describe("createWorkbenchResourcePaletteEntries", () => {
       label: "Workspace",
       paletteOpenInput: { replaceActive: true },
     });
+    workbench.layout.registerPanel({
+      id: "workspace",
+      title: "Workspace",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
     const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
-    workbench.resources.registerOpener({
+    workbench.resources.registerPresenter({
       id: "workspaces",
       canOpen: (resource) => resource.kind === "workspace",
       open: (resource, input) => {
         opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
+        return workbench.layout.openPanel("workspace", { resource });
       },
     });
     workbench.resources.registerProvider({

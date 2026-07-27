@@ -5,8 +5,8 @@ export const extensionContributionsSource = `import type {
 import {
   headerTrailingMenuPath,
   type WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
-import { registerWorkbenchExtensionContributions } from "pstdio-workbench/extensions";
+} from "@pstdio/workbench";
+import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
 
 const metadata = {
   extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "" }],
@@ -42,13 +42,13 @@ const metadata = {
       defaultExpandedSectionIds: ["workflows"],
     },
   ],
-  views: [
+  panels: [
     {
-      id: "lab.treeView",
+      id: "lab.treePanel",
       extensionId: "pstdio.lab",
-      slotId: "workbench.main.left",
-      target: "workbench.main.left",
       title: "Lab tree",
+      region: "sidenav",
+      closable: false,
       treeRendererId: "lab.tree",
     },
   ],

@@ -17,13 +17,19 @@ describe("installWorkbenchControlsRenderer", () => {
     const renderer = workbench.renderers.getRenderer("ticket.controls");
     const rendered = renderer?.render({
       workbench,
-      widget: workbench.layout.registerWidget({
+      panel: workbench.layout.registerPanel({
+        closable: false,
         id: "ticket.controls",
         title: "Ticket controls",
         region: "main-right-menu",
         rendererId: "ticket.controls",
       }) as never,
-      placement: { widgetId: "ticket.controls", contributionId: "ticket.controls", title: "Ticket controls" },
+      instance: {
+        instanceId: "ticket.controls",
+        panelId: "ticket.controls",
+        closable: false,
+        title: "Ticket controls",
+      },
       refresh: () => undefined,
     }) as { type?: unknown; props?: { contribution?: { id: string } } };
 

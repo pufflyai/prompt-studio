@@ -12,7 +12,6 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  getActiveWorkbenchLocationPanel,
   listEligibleSubPanels,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
@@ -59,7 +58,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const registeredWidgets = layoutState.widgets;
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  const placements = regionState.widgets.filter(
+  const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
       (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "sub-panel" &&
       isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
@@ -70,11 +69,21 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const tabStore = useTabVisibilityStore(visibilityKey, (state) => state);
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
-  const visibleSubPanels = filterVisibleTabs(placements, tabOverrides, getKey);
-  const activeLocationPanel = getActiveWorkbenchLocationPanel(workbench.layout.getLayout());
+  const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabOverrides, getKey);
+  const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
+  const locationPanels =
+    region === "main"
+      ? regionState.widgets.filter(
+          (placement) => (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location",
+        )
+      : [];
   const visiblePlacements =
-    region === "main" && visibleSubPanels.length > 0 && activeLocationPanel
-      ? [activeLocationPanel, ...visibleSubPanels]
+    locationPanels.length + visibleSubPanels.length > 1
+      ? regionState.widgets.filter(
+          (placement) =>
+            locationPanels.some((location) => location.widgetId === placement.widgetId) ||
+            visibleSubPanelIds.has(placement.widgetId),
+        )
       : visibleSubPanels;
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -88,7 +97,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   };
 
   const menuActions = buildTabVisibilityMenuActions(
-    placements,
+    subPanelPlacements,
     tabOverrides,
     {
       onToggleTab: (key, hiddenByDefault) => tabStore.toggleTab(key, hiddenByDefault),
@@ -205,7 +214,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
           workbench.layout.setRegionActiveWidget(region, placement.widgetId);
           return;
         }
-        workbench.layout.activateWidget(details.value);
+        workbench.layout.activatePanel(details.value);
       }}
       variant="subtle"
       colorPalette="gray"

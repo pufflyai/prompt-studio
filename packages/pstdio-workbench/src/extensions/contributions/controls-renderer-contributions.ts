@@ -3,10 +3,13 @@ import { text } from "pstdio-extensions/workbench";
 import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
-import { resolveWorkbenchViewRegion } from "../shared/workbench-targets";
-import { registerWorkbenchExtensionViewWidget } from "./view-widget-contributions";
+import {
+  registerWorkbenchExtensionPanel,
+  toWorkbenchPanelEligibility,
+  toWorkbenchPanelMenus,
+} from "./panel-contributions";
 
-type ControlsViewRecord = WorkbenchExtensionMetadata["views"][number];
+type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
 
@@ -49,41 +52,41 @@ const registerControlsRenderer = (
   });
 };
 
-// A view that references a controls renderer places it into a panel — the widget is
-// keyed by the view id and rendered by the referenced controls renderer, mirroring
-// tree/file renderer view widgets.
-const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, view: ControlsViewRecord) => {
-  if (!view.controlsRendererId) return undefined;
-  return registerWorkbenchExtensionViewWidget({
+// A panel that references a controls renderer places it into a panel — the widget is
+// keyed by the panel id and rendered by the referenced controls renderer, mirroring
+// tree/file renderer panel widgets.
+const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, panel: ControlsViewRecord) => {
+  if (!panel.controlsRendererId) return undefined;
+  return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
-    role: view.role,
     contribution: {
-      id: view.id,
-      title: text(view.title, view.id),
-      region: resolveWorkbenchViewRegion(view.target),
-      rendererId: view.controlsRendererId,
+      id: panel.id,
+      title: text(panel.title, panel.id),
+      region: panel.region,
+      closable: panel.closable,
+      rendererId: panel.controlsRendererId,
       singleton: true,
-      resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-      eligibleLocations: view.resourceKind ? { resourceKinds: [view.resourceKind] } : undefined,
-      panelMenuOwner: view.panelMenuOwner,
+      resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
+      eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
+      panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
     },
   });
 };
 
 // Bridges serializable controls renderer metadata into live workbench controls renderers
 // (wiring each query/update/apply/reset command id to command execution), and registers a
-// panel widget for every view that places one.
+// panel widget for every panel that places one.
 export const registerWorkbenchExtensionControlsRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: WorkbenchExtensionControlsRendererRecord[],
-  views: ControlsViewRecord[],
+  panels: ControlsViewRecord[],
   adapter: WorkbenchExtensionControlsAdapter = {},
 ): Disposable => {
   const disposables: Disposable[] = [];
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
-  for (const view of views) {
-    const disposable = registerControlsViewWidget(context, view);
+  for (const panel of panels) {
+    const disposable = registerControlsViewWidget(context, panel);
     if (disposable) disposables.push(disposable);
   }
 

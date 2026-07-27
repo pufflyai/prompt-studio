@@ -1,9 +1,4 @@
-import type {
-  Disposable,
-  TreeNode,
-  WorkbenchModeActivationContext,
-  WorkbenchModuleContributionContext,
-} from "../../../core";
+import type { Disposable, TreeNode, WorkbenchModeActivationContext, WorkbenchModuleContext } from "../../../core";
 import { WORKBENCH_TERMINAL_WIDGET_ID } from "../../../react/terminal/terminal-module";
 import { WorkspaceDiff, WorkspaceEditor, WorkspaceMainHeader } from "../components/workspace-views";
 import {
@@ -30,14 +25,16 @@ const MAIN_HEADER_WIDGET_ID = "workbench-modes.workspace.mainHeader";
 
 const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: MAIN_HEADER_WIDGET_ID,
       title: "Workspace mode header",
       region: "main-header",
       singleton: true,
       rendererId: MAIN_HEADER_WIDGET_ID,
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: workspaceWidgetIds.editor,
       title: "Editor",
       region: "main",
@@ -45,7 +42,8 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       rendererId: workspaceWidgetIds.editor,
       resourceKinds: [workspaceResourceKind],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: workspaceWidgetIds.diff,
       title: "Diff",
       region: "main-right-menu",
@@ -72,20 +70,21 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       getBody: () => buildWorkspaceTreeSections(),
       getChildren: () => [],
     }),
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: "workbench-modes.workspace.files",
       title: "Files",
       region: "main-left-menu",
       rendererId: "workbench-modes.workspace.files",
     }),
-    ctx.resources.registerOpener({
-      id: "workbench-modes.workspace.opener",
+    ctx.resources.registerPresenter({
+      id: "workbench-modes.workspace.presenter",
       canOpen: (resource) => resource.kind === workspaceResourceKind,
       open: (resource, input) =>
-        ctx.layout.openWidget(workspaceWidgetIds.editor, {
+        ctx.layout.openPanel(workspaceWidgetIds.editor, {
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
           resource,
           title: resource.label,
-          replaceActive: input.replaceActive,
         }),
     }),
   ];
@@ -94,17 +93,17 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
 };
 
 const seedWorkspaceMode = (ctx: WorkbenchModeActivationContext) => {
-  ctx.layout.openWidget(activityBarWidgetId, { pinned: true });
-  ctx.layout.openWidget(MAIN_HEADER_WIDGET_ID, { pinned: true });
-  ctx.layout.openWidget("workbench-modes.workspace.files");
-  ctx.layout.openWidget(workspaceWidgetIds.diff, { pinned: true });
+  ctx.layout.openPanel(activityBarWidgetId, { pinned: true });
+  ctx.layout.openPanel(MAIN_HEADER_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel("workbench-modes.workspace.files");
+  ctx.layout.openPanel(workspaceWidgetIds.diff, { pinned: true });
   // The terminal panel is the host-owned surface registered by
   // createWorkbenchTerminalModule — workspace mode only opens it.
-  ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, { pinned: true });
-  ctx.layout.openWidget(workspaceWidgetIds.editor, { resource: workspaceFileResource(workspaceFiles[0]) });
+  ctx.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel(workspaceWidgetIds.editor, { resource: workspaceFileResource(workspaceFiles[0]) });
 };
 
-export const registerWorkspaceMode = (ctx: WorkbenchModuleContributionContext) => {
+export const registerWorkspaceMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: workbenchModes.workspace.id,
     label: workbenchModes.workspace.label,

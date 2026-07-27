@@ -4,10 +4,10 @@ import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contr
 import { createWorkbenchCore } from "../../core";
 import { registerWorkbenchExtensionDataTableRenderers } from "./data-table-renderer-contributions";
 
-type ViewRecord = WorkbenchExtensionMetadata["views"][number];
+type ViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionDataTableRenderers", () => {
-  test("adapts query rows and columns, places the view, and executes row actions", async () => {
+  test("adapts query rows and columns, places the panel, and executes row actions", async () => {
     const workbench = createWorkbenchCore();
     const calls: Array<{ commandId: string; body: CommandExecuteRequest }> = [];
     const record = {
@@ -18,13 +18,12 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       columns: [{ id: "name", label: "Service" }],
       rowActions: [{ id: "restart", label: "Restart", commandId: "lab.restart" }],
     } satisfies WorkbenchExtensionDataTableRendererRecord;
-    const view = {
+    const panel = {
       id: "lab.healthView",
       extensionId: "pstdio.lab",
-      slotId: "health",
       title: "Health",
-      role: "location",
-      target: "workbench.main",
+      closable: false,
+      region: "main",
       dataTableRendererId: "lab.health",
     } satisfies ViewRecord;
 
@@ -49,10 +48,10 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
         },
       },
       [record],
-      [view],
+      [panel],
     );
 
-    expect(workbench.layout.getWidget("lab.healthView")).toMatchObject({
+    expect(workbench.layout.getPanel("lab.healthView")).toMatchObject({
       region: "main",
       rendererId: "lab.health",
     });

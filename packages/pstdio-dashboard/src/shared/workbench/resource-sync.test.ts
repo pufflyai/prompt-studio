@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { setResourceBreadcrumb } from "./resource-sync";
 
 test("derives a breadcrumb with one hierarchy walk", () => {

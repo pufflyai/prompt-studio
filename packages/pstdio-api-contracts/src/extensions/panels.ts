@@ -8,9 +8,9 @@ import {
   localizableStringSchema,
   workbenchExtensionWebviewSchema,
 } from "./common";
-import { workbenchModeLayoutTargetSchema, workbenchTreeTargetSchema, workbenchViewTargetSchema } from "./targets";
+import { workbenchRegionSchema, workbenchTreeTargetSchema } from "./targets";
 
-const hasSingleViewBody = (value: {
+const hasSinglePanelBody = (value: {
   webview?: unknown;
   treeRendererId?: unknown;
   fileRendererId?: unknown;
@@ -25,38 +25,51 @@ const hasSingleViewBody = (value: {
     value.dataTableRendererId,
   ].filter(Boolean).length === 1;
 
-const singleViewBodyMessage =
-  "Extension views must declare exactly one body: webview, treeRendererId, fileRendererId, controlsRendererId, or dataTableRendererId";
+const singlePanelBodyMessage =
+  "Extension panels must declare exactly one body: webview, treeRendererId, fileRendererId, controlsRendererId, or dataTableRendererId";
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
-const workbenchPanelMenuOwnerSchema = z.discriminatedUnion("level", [
-  z.object({ level: z.literal("panel") }),
-  z.object({ level: z.literal("sub-panel"), contributionId: z.string() }),
-]);
-
-const extensionViewRecordBaseSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  slotId: z.string(),
-  target: workbenchViewTargetSchema.optional(),
-  title: localizableStringSchema,
-  role: z.enum(["location", "sub-panel", "panel-menu", "modal"]),
-  panelMenuOwner: workbenchPanelMenuOwnerSchema.optional(),
-  group: z.string().optional(),
-  placement: extensionPlacementSchema.optional(),
-  /** When set, the host opens this view's webview for resources of this kind. */
-  resourceKind: z.string().optional(),
+const panelBodySchema = {
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),
   controlsRendererId: z.string().optional(),
   dataTableRendererId: z.string().optional(),
-  hostTreeHeader: hostTreeDefaultSchema.optional(),
-  hostTreeFooter: hostTreeDefaultSchema.optional(),
+};
+const extensionPanelMenuRecordSchema = z
+  .object({
+    id: z.string(),
+    extensionId: z.string(),
+    ownerPanelId: z.string(),
+    title: localizableStringSchema,
+    side: z.enum(["left", "right"]),
+    group: z.string().optional(),
+    placement: extensionPlacementSchema.optional(),
+    hostTreeHeader: hostTreeDefaultSchema.optional(),
+    hostTreeFooter: hostTreeDefaultSchema.optional(),
+    ...panelBodySchema,
+  })
+  .refine(hasSinglePanelBody, { message: singlePanelBodyMessage });
+const workbenchExtensionPanelMenuRecordSchema = extensionPanelMenuRecordSchema
+  .safeExtend({ webview: workbenchExtensionWebviewSchema.optional() })
+  .refine(hasSinglePanelBody, { message: singlePanelBodyMessage });
+
+const extensionPanelRecordBaseSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  region: workbenchRegionSchema,
+  closable: z.boolean(),
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  resourceKind: z.string().optional(),
+  eligibleLocations: z.object({ resourceKinds: z.array(z.string()).optional() }).optional(),
+  panelMenus: z.array(extensionPanelMenuRecordSchema).optional(),
+  ...panelBodySchema,
 });
 
-export const extensionViewRecordSchema = extensionViewRecordBaseSchema.refine(hasSingleViewBody, {
-  message: singleViewBodyMessage,
+export const extensionPanelRecordSchema = extensionPanelRecordBaseSchema.refine(hasSinglePanelBody, {
+  message: singlePanelBodyMessage,
 });
 
 export const extensionRouteRecordSchema = z.object({
@@ -107,15 +120,14 @@ export const extensionTreeItemContributionSchema = z.object({
 
 const modeTargetContributionRecordSchema = z
   .object({
-    target: workbenchModeLayoutTargetSchema,
-    view: z.string().optional(),
+    panel: z.string().optional(),
     resource: z.string().optional(),
-    widget: z.string().optional(),
+    region: workbenchRegionSchema.optional(),
     title: localizableStringSchema.optional(),
     pinned: z.boolean().optional(),
   })
-  .refine((value) => value.view || value.resource, {
-    message: "Mode layout entries must declare a view or resource",
+  .refine((value) => value.panel || value.resource, {
+    message: "Mode layout entries must declare a panel or resource",
   });
 
 export const modeLayoutContributionRecordSchema = z.object({
@@ -133,15 +145,16 @@ export const extensionModeRecordSchema = z.object({
   layout: modeLayoutContributionRecordSchema.optional(),
 });
 
-export const workbenchExtensionViewRecordSchema = extensionViewRecordBaseSchema
+export const workbenchExtensionPanelRecordSchema = extensionPanelRecordBaseSchema
   .extend({
     extensionInstanceId: z.string().optional(),
     installedExtensionId: z.string().optional(),
     installName: z.string().optional(),
     webview: workbenchExtensionWebviewSchema.optional(),
+    panelMenus: z.array(workbenchExtensionPanelMenuRecordSchema).optional(),
   })
-  .refine(hasSingleViewBody, {
-    message: singleViewBodyMessage,
+  .refine(hasSinglePanelBody, {
+    message: singlePanelBodyMessage,
   });
 
 export const workbenchExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
@@ -156,11 +169,11 @@ export const extensionViewLikeSchema = z.object({
   extensionId: z.string(),
 });
 
-export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
+export type ExtensionPanelRecord = z.infer<typeof extensionPanelRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
 export type ExtensionTreeItemContribution = z.infer<typeof extensionTreeItemContributionSchema>;
 export type ModeLayoutContributionRecord = z.infer<typeof modeLayoutContributionRecordSchema>;
 export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
-export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionViewRecordSchema>;
+export type WorkbenchExtensionPanelRecord = z.infer<typeof workbenchExtensionPanelRecordSchema>;
 export type WorkbenchExtensionRouteRecord = z.infer<typeof workbenchExtensionRouteRecordSchema>;

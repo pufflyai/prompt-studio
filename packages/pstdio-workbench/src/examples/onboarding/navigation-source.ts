@@ -2,7 +2,7 @@ export const navigationSource = `import type {
   NavigationTargetItem,
   ResourceRef,
   WorkbenchModuleContribution,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench";
 
 const GUIDE_KIND = "docs.guide";
 const GUIDE_WIDGET_ID = "docs.guide";
@@ -26,11 +26,11 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
 
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Guide", icon: "FileText" });
 
-    ctx.resources.registerOpener({
-      id: "docs.guide-opener",
+    ctx.resources.registerPresenter({
+      id: "docs.guide-presenter",
       canOpen: (resource) => resource.kind === GUIDE_KIND,
       open: (resource) =>
-        ctx.layout.openWidget(GUIDE_WIDGET_ID, {
+        ctx.layout.openPanel(GUIDE_WIDGET_ID, {
           resource,
           title: resource.label,
         }),
@@ -41,7 +41,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       canNavigate: (resource) => resource.kind === GUIDE_KIND,
       createHref: (resource) => \`docs://guide/\${resource.id ?? "start"}\`,
       navigate: (resource) =>
-        ctx.layout.openWidget(GUIDE_WIDGET_ID, {
+        ctx.layout.openPanel(GUIDE_WIDGET_ID, {
           resource,
           title: resource.label,
         }),
@@ -57,7 +57,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         const pathId = url.pathname.replace(/^\\//, "");
 
         // docs://guide/start becomes a resource target. The dispatcher sends
-        // resource targets through the registered resource opener above.
+        // resource targets through the registered resource presenter above.
         if (url.host === "guide") {
           return { kind: "resource", resource: guideResource(pathId || "start") };
         }
@@ -65,7 +65,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         // docs://view/navigation becomes a view target. The dispatcher reveals
         // or opens the registered navigation tree widget.
         if (url.host === "view") {
-          return { kind: "view", widgetId: TREE_WIDGET_ID };
+          return { kind: "panel", panelId: TREE_WIDGET_ID };
         }
 
         // docs://command/focus-main becomes a command target. The path is
@@ -81,7 +81,7 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
             { kind: "resource", resource: guideResource(pathId || "review") },
           ];
           if (url.searchParams.get("tree") === "true") {
-            targets.push({ kind: "view", widgetId: TREE_WIDGET_ID });
+            targets.push({ kind: "panel", panelId: TREE_WIDGET_ID });
           }
           return { kind: "compound", targets };
         }

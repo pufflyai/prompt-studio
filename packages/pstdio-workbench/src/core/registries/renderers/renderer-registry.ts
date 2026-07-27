@@ -2,27 +2,28 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core";
 import type {
+  PlaceholderContribution,
   RegisteredPlaceholderContribution,
-  RegisteredWidgetContribution,
-  WorkbenchWidgetPlacement,
+  WorkbenchPanelContribution,
+  WorkbenchPanelInstance,
 } from "../layout/layout-model";
 
-export interface WorkbenchWidgetRenderInput {
+export interface WorkbenchPanelRenderInput {
   workbench: WorkbenchCore;
-  widget: RegisteredWidgetContribution | RegisteredPlaceholderContribution;
-  placement: WorkbenchWidgetPlacement;
+  panel: WorkbenchPanelContribution | PlaceholderContribution | RegisteredPlaceholderContribution;
+  instance: WorkbenchPanelInstance;
   refresh: () => void;
 }
 
 // Keep-alive renderers are invoked exactly once into a persistent host and
 // reparented across widget mounts via DOM moves. They cannot read the per-widget
-// `WorkbenchWidgetRenderInput` from their render args — the subtree subscribes
+// `WorkbenchPanelRenderInput` from their render args — the subtree subscribes
 // to the current claim through `useWorkbenchClaim()` (React layer) instead.
 export type WorkbenchRendererRegistration =
   | {
       id: string;
       keepAlive?: false;
-      render: (input: WorkbenchWidgetRenderInput) => unknown;
+      render: (input: WorkbenchPanelRenderInput) => unknown;
     }
   | {
       id: string;
@@ -41,7 +42,7 @@ export interface RegisteredKeepAliveHost {
 export interface WorkbenchRendererStoreState {
   renderers: Record<string, WorkbenchRendererRegistration>;
   hosts: Record<string, RegisteredKeepAliveHost>;
-  claims: Record<string, WorkbenchWidgetRenderInput>;
+  claims: Record<string, WorkbenchPanelRenderInput>;
 }
 
 export interface WorkbenchRendererRegistry {
@@ -50,9 +51,9 @@ export interface WorkbenchRendererRegistry {
   getRenderer(id: string): WorkbenchRendererRegistration | undefined;
   listRenderers(): WorkbenchRendererRegistration[];
   onDidChange(listener: WorkbenchRendererChangeListener): Disposable;
-  claim(rendererId: string, slot: HTMLElement, input: WorkbenchWidgetRenderInput): Disposable;
+  claim(rendererId: string, slot: HTMLElement, input: WorkbenchPanelRenderInput): Disposable;
   getHost(rendererId: string): HTMLElement | undefined;
-  getClaim(rendererId: string): WorkbenchWidgetRenderInput | undefined;
+  getClaim(rendererId: string): WorkbenchPanelRenderInput | undefined;
 }
 
 export interface CreateWorkbenchRendererRegistryInput {

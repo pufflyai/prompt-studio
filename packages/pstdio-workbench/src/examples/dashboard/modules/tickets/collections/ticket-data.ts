@@ -1,5 +1,5 @@
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../../../core";
+import type { ResourceRef, WorkbenchModuleContext } from "../../../../../core";
 import { dashboardStatusColumns, dashboardTickets, dashboardTicketTags } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
@@ -80,7 +80,7 @@ const toTicketRow = (ticket: (typeof dashboardTickets)[number]): TicketRow => {
 
 // The tickets board is a workbench kanban renderer so filter, grouping, and
 // display controls stay local to the widget.
-export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContributionContext) => {
+export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContext) => {
   ctx.renderers.registerKanbanRenderer<TicketRow>({
     id: dashboardWidgetIds.tickets,
     title: "Tickets",
@@ -116,8 +116,9 @@ export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContributionCon
       ctx.notifications.show({ level: "info", title: `Create ticket in ${submission.columnId}` });
     },
   });
-  ctx.layout.registerWidget(
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.tickets,
       title: "Tickets",
       region: "main",

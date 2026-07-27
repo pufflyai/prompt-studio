@@ -78,8 +78,8 @@ const extension = defineExtension({
       layout: {
         panels: ["main"],
         open: [
-          { target: "workbench.left", view: "labSidenav", pinned: true },
-          { target: "workbench.main", view: "labOverview" },
+          { region: "sidenav", panel: "labSidenav", pinned: true },
+          { region: "main", panel: "labOverview" },
         ],
       },
     },
@@ -87,7 +87,7 @@ const extension = defineExtension({
       label: "Lab focus",
       layout: {
         panels: ["main"],
-        open: [{ target: "workbench.main", view: "labOverview" }],
+        open: [{ region: "main", panel: "labOverview" }],
       },
     },
     unsafe: {
@@ -99,23 +99,25 @@ const extension = defineExtension({
         ],
         open: [
           {
-            // @ts-expect-error mode layout open targets are limited to safe content areas
-            target: "workbench.overlay",
-            view: "labOverview",
+            // @ts-expect-error mode layout regions use the declared Workbench regions
+            region: "workbench.overlay",
+            panel: "labOverview",
           },
         ],
       },
     },
   },
-  views: {
+  panels: {
     labSidenav: {
       title: "Lab sidenav",
-      role: "location",
+      region: "sidenav",
+      closable: false,
       webview: { entry: packageAsset("./lab-sidenav.tsx", import.meta.url) },
     },
     labOverview: {
       title: "Lab overview",
-      role: "location",
+      region: "main",
+      closable: false,
       webview: { entry: packageAsset("./lab-overview.tsx", import.meta.url) },
     },
   },

@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -17,6 +17,53 @@ import {
 } from "./module-test-fixtures";
 
 describe("createExtensionsModule mode layout", () => {
+  test("attaches Panel Menus to the Location established by mode navigation", async () => {
+    const overviewId = "extension-lab.labOverview";
+    const menuId = "extension-lab.labTools";
+    const loadMetadata = mock(async () => ({
+      ...metadataWithLabMode,
+      panels: metadataWithLabMode.panels.map((panel) =>
+        panel.id === overviewId
+          ? {
+              ...panel,
+              panelMenus: [
+                {
+                  id: menuId,
+                  extensionId: panel.extensionId,
+                  ownerPanelId: overviewId,
+                  title: "Coding tools",
+                  side: "left" as const,
+                  webview: panel.webview,
+                },
+              ],
+            }
+          : panel,
+      ),
+    }));
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+      );
+      expect(
+        workbench.layout.getLayout().regions["main-left-menu"].widgets.map((panel) => panel.contributionId),
+      ).toEqual(["dashboard-workbench.extension-view.extension-lab.labTools"]);
+      expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.ownerResourceUri).toBe(
+        workbench.getPrimaryResource()?.uri,
+      );
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
   test("registers extension-lab modes and mounts their extension views", async () => {
     const loadMetadata = mock(async () => metadataWithLabMode);
     const workbench = createWorkbenchCore();
@@ -43,11 +90,14 @@ describe("createExtensionsModule mode layout", () => {
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+      );
       expect(
-        workbench.layout.getWidget("dashboard-workbench.extension-view.extension-lab.labOverview")?.eligibleLocations,
-      ).toEqual({ modeIds: ["pstdio.extension-lab.lab"] });
+        workbench.layout.getPanel("dashboard-workbench.extension-view.extension-lab.labOverview")?.eligibleLocations,
+      ).toBeUndefined();
       expect(
-        workbench.layout.getWidget("dashboard-workbench.extension-view.extension-lab.labSidenav")?.eligibleLocations,
+        workbench.layout.getPanel("dashboard-workbench.extension-view.extension-lab.labSidenav")?.eligibleLocations,
       ).toEqual({ modeIds: ["pstdio.extension-lab.lab"] });
     } finally {
       projectsDisposable.dispose();
@@ -72,9 +122,9 @@ describe("createExtensionsModule mode layout", () => {
 
       nextMetadata = {
         ...metadataWithLabMode,
-        views: metadataWithLabMode.views.map((view) => ({
-          ...view,
-          webview: { ...view.webview, moduleUrl: `${view.webview.moduleUrl}?h=2` },
+        panels: metadataWithLabMode.panels.map((panel) => ({
+          ...panel,
+          webview: { ...panel.webview, moduleUrl: `${panel.webview.moduleUrl}?h=2` },
         })),
       };
       getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
@@ -115,9 +165,9 @@ describe("createExtensionsModule mode layout", () => {
       expect(mainResource?.kind).toBe("extension-view");
 
       // Navigate the primary region away, then replay the extension-view entry the way history
-      // goBack/goForward does (openResource with replaceActive). Before the view opener existed,
-      // this rejected with "No opener registered for resource kind: extension-view".
-      workbench.layout.openWidget(dashboardWidgetIds.extensionRoute, { replaceActive: true });
+      // goBack/goForward does (openResource with replaceActive). Before the view presenter existed,
+      // this rejected with "No presenter registered for resource kind: extension-view".
+      workbench.layout.openPanel(dashboardWidgetIds.extensionRoute, { strategy: { kind: "replace-active" } });
       await workbench.resources.openResource(mainResource!, { replaceActive: true });
 
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([

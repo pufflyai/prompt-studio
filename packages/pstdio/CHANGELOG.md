@@ -337,7 +337,7 @@ _2026-06-01_
 - f6ec9d8: Update ticket list status badges when custom status colors change.
 - f6ec9d8: Fix extension setting upserts and source path prefix lookups.
 - 88327db: Bundle installed extension entries before importing them in the packaged binary so extensions that depend on `@pstdio/sdk` (or any dependency exposed through an `exports` subpath) load correctly; first-project creation no longer fails with an internal server error.
-- f6ec9d8: Group main header side panel opener buttons on the right.
+- f6ec9d8: Group main header side panel presenter buttons on the right.
 - 88327db: Surface local API error messages, clearer API startup diagnostics, and add `pstdio logs`.
 - f6ec9d8: Resolve local extension dependencies when using skip install.
 - f6ec9d8: Cache extension runtime imports under pstdio home and stop resolving extension SDK imports to the workspace SDK.

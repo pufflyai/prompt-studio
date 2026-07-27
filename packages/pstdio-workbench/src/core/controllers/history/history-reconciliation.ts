@@ -41,7 +41,7 @@ const reconcileEntry = (input: {
       ? Boolean(entry.modeId && modes?.getMode(entry.modeId))
       : Boolean(
           (contribution && contribution.role !== "panel-menu" && contribution.role !== "sub-panel") ||
-            (entry.resource && resources.listOpeners().some((opener) => opener.canOpen(entry.resource!))),
+            (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
         );
   if (!hasLocation) return undefined;
 

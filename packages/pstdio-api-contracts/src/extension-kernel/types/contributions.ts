@@ -3,10 +3,10 @@ import type {
   WorkbenchMenuTarget,
   WorkbenchModeLayoutTarget,
   WorkbenchModePanel,
+  WorkbenchRegion,
   WorkbenchSettingsScope,
   WorkbenchSettingsTarget,
   WorkbenchTreeTarget,
-  WorkbenchViewTarget,
 } from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
 import type { EventRef } from "./events";
@@ -75,17 +75,17 @@ export type WorkbenchLayoutTarget = WorkbenchModeLayoutTarget;
 
 export type ModeTargetContribution =
   | {
-      target: WorkbenchLayoutTarget;
-      view: string;
+      panel: string;
       title?: Localizable<string>;
       resource?: string;
+      region?: WorkbenchRegion;
       pinned?: boolean;
     }
   | {
-      target: WorkbenchLayoutTarget;
       resource: string;
-      widget?: string;
+      panel?: string;
       title?: Localizable<string>;
+      region?: WorkbenchRegion;
       pinned?: boolean;
     };
 
@@ -109,67 +109,74 @@ export interface WebviewContribution {
 }
 
 export type HostTreeDefault = "default" | "none";
-export type WorkbenchViewRole = "location" | "sub-panel" | "panel-menu" | "modal";
-export type PanelMenuOwner = { level: "panel" } | { level: "sub-panel"; view: string };
+export interface WorkbenchLocationEligibility {
+  resourceKinds?: readonly string[];
+}
 
-export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
+export interface PanelContributionBase {
   title: Localizable<string>;
-  role: WorkbenchViewRole;
-  panelMenuOwner?: PanelMenuOwner;
-  target?: WorkbenchViewTarget;
-  slot?: SlotRef<TSlotContext, "view"> | string;
+  region: WorkbenchRegion;
+  closable: boolean;
   group?: string;
   placement?: "first" | "default" | "last";
   /**
-   * Marks this view as the editor for resources of the given kind. The host opens
-   * the view's webview as a widget (bound to the resource) whenever a resource of
+   * Marks this Panel as the editor for resources of the given kind. The host opens
+   * the Panel (bound to the resource) whenever a resource of
    * this kind is opened — e.g. a `ticket` kanban-renderer row opening the editor.
    */
   resourceKind?: string;
-  /** Opts tree-backed views into host-owned default header rows such as dashboard Search. */
+  eligibleLocations?: WorkbenchLocationEligibility;
+  panelMenus?: Record<string, PanelMenuContribution>;
+}
+
+interface PanelMenuContributionBase {
+  title: Localizable<string>;
+  side: "left" | "right";
+  group?: string;
+  placement?: "first" | "default" | "last";
   hostTreeHeader?: HostTreeDefault;
-  /** Opts tree-backed views into host-owned default footer rows such as dashboard Settings. */
   hostTreeFooter?: HostTreeDefault;
 }
 
-export type ViewContribution<TSlotContext extends Struct = Struct> = ViewContributionBase<TSlotContext> &
-  (
-    | {
-        webview: WebviewContribution;
-        treeRenderer?: never;
-        fileRenderer?: never;
-        controlsRenderer?: never;
-        dataTableRenderer?: never;
-      }
-    | {
-        treeRenderer: string;
-        webview?: never;
-        fileRenderer?: never;
-        controlsRenderer?: never;
-        dataTableRenderer?: never;
-      }
-    | {
-        fileRenderer: string;
-        webview?: never;
-        treeRenderer?: never;
-        controlsRenderer?: never;
-        dataTableRenderer?: never;
-      }
-    | {
-        controlsRenderer: string;
-        webview?: never;
-        treeRenderer?: never;
-        fileRenderer?: never;
-        dataTableRenderer?: never;
-      }
-    | {
-        dataTableRenderer: string;
-        webview?: never;
-        treeRenderer?: never;
-        fileRenderer?: never;
-        controlsRenderer?: never;
-      }
-  );
+type PanelBody =
+  | {
+      webview: WebviewContribution;
+      treeRenderer?: never;
+      fileRenderer?: never;
+      controlsRenderer?: never;
+      dataTableRenderer?: never;
+    }
+  | {
+      treeRenderer: string;
+      webview?: never;
+      fileRenderer?: never;
+      controlsRenderer?: never;
+      dataTableRenderer?: never;
+    }
+  | {
+      fileRenderer: string;
+      webview?: never;
+      treeRenderer?: never;
+      controlsRenderer?: never;
+      dataTableRenderer?: never;
+    }
+  | {
+      controlsRenderer: string;
+      webview?: never;
+      treeRenderer?: never;
+      fileRenderer?: never;
+      dataTableRenderer?: never;
+    }
+  | {
+      dataTableRenderer: string;
+      webview?: never;
+      treeRenderer?: never;
+      fileRenderer?: never;
+      controlsRenderer?: never;
+    };
+
+export type PanelMenuContribution = PanelMenuContributionBase & PanelBody;
+export type PanelContribution = PanelContributionBase & PanelBody;
 
 export interface RouteContribution {
   path: string;

@@ -8,6 +8,7 @@ import type { CreateLayoutModelInput, LayoutModel, LayoutScope } from "./layout-
 import {
   activateInLayout,
   closeWidgetInLayout,
+  findPlacementByWidgetId,
   getActiveLocationPlacement,
   removePlacementsForContribution,
   setLocationSubPanelSelection,
@@ -22,8 +23,10 @@ import {
 import { withoutPreviewTabs } from "./layout-tab-lifecycle";
 import {
   mergeWithDefaultRegions,
+  type RegisteredWidgetContribution,
   type WorkbenchLayout,
   type WorkbenchLayoutStoreState,
+  type WorkbenchPanelInstance,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   type WorkbenchRegionState,
@@ -31,6 +34,7 @@ import {
   workbenchPanelRegions,
 } from "./layout-types";
 import { createWidgetOpeners } from "./layout-widget-openers";
+import { createPanelLayoutMethods } from "./panel-layout-methods";
 import { createPanelRegistrations } from "./panel-registration";
 
 export type {
@@ -41,6 +45,7 @@ export type {
 } from "./layout-model-types";
 export type {
   OpenWidgetInput,
+  OpenWorkbenchPanelInput,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
@@ -52,12 +57,18 @@ export type {
   WorkbenchLayoutStoreState,
   WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
+  WorkbenchPanelContribution,
+  WorkbenchPanelInstance,
   WorkbenchPanelMenuContribution,
   WorkbenchPanelMenuDefinition,
   WorkbenchPanelMenuOwner,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,
+  WorkbenchPanelMountStrategy,
+  WorkbenchPanelOpenStrategy,
   WorkbenchPanelRegion,
+  WorkbenchPanelReusePolicy,
+  WorkbenchPanelTab,
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
@@ -76,7 +87,64 @@ export {
   workbenchRegions,
 } from "./layout-types";
 
-export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
+interface LocationAwareLayoutModel extends LayoutModel {
+  establishLocation(instanceId: string): WorkbenchPanelInstance;
+}
+
+interface CreateLocationEstablisherInput {
+  applyAndActivate(
+    layout: WorkbenchLayout,
+    regionId: WorkbenchRegion,
+    placement: WorkbenchWidgetPlacement,
+  ): WorkbenchWidgetPlacement;
+  getLayout(): WorkbenchLayout;
+  getWidget(id: string): RegisteredWidgetContribution | undefined;
+  panelMethods: Pick<LayoutModel, "activatePanel" | "getActivePanel">;
+}
+
+const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (instanceId: string) => {
+  const layout = input.getLayout();
+  const found = findPlacementByWidgetId(layout, instanceId);
+  if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
+  if (found.regionId !== "main") return input.panelMethods.activatePanel(instanceId);
+
+  const placement = { ...found.placement, role: "location" as const };
+  const ownedPanelMenuIds = new Set(input.getWidget(placement.contributionId)?.ownedPanelMenuIds ?? []);
+  const regions = Object.fromEntries(
+    Object.entries(layout.regions).map(([regionId, region]) => [
+      regionId,
+      {
+        ...region,
+        widgets: region.widgets.map((candidate) => {
+          if (candidate.widgetId === instanceId) return placement;
+          if (!ownedPanelMenuIds.has(candidate.contributionId)) return candidate;
+          if (candidate.resourceUri !== placement.resourceUri) return candidate;
+          return { ...candidate, ownerResourceUri: placement.resourceUri };
+        }),
+      },
+    ]),
+  ) as WorkbenchLayout["regions"];
+  input.applyAndActivate(
+    {
+      ...layout,
+      regions,
+    },
+    "main",
+    placement,
+  );
+  return input.panelMethods.getActivePanel("main")!;
+};
+
+const requireRegisteredWidget = (
+  widgets: WorkbenchLayoutStoreState["widgets"],
+  id: string,
+): RegisteredWidgetContribution => {
+  const widget = widgets[id];
+  if (!widget) throw new Error(`Widget not registered: ${id}`);
+  return widget;
+};
+
+export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationAwareLayoutModel => {
   let currentScope: LayoutScope | undefined;
   const willChangeScope = createScopeEvent<LayoutScope | undefined>();
   const didChangeScope = createScopeEvent<LayoutScope | undefined>();
@@ -97,11 +165,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
   const persistLayout = () => input.persistence?.setLayout(withoutPreviewTabs(getLayout()), currentScope);
 
-  const requireWidget = (id: string) => {
-    const widget = getWidgets()[id];
-    if (!widget) throw new Error(`Widget not registered: ${id}`);
-    return widget;
-  };
+  const requireWidget = (id: string) => requireRegisteredWidget(getWidgets(), id);
 
   const setLayout = (layout: WorkbenchLayout) => {
     const snapshot = store.getState();
@@ -145,6 +209,21 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     persistLayout,
     applyAndActivate,
   });
+  const panelMethods = createPanelLayoutMethods({
+    getLayout,
+    getWidgets,
+    listWidgets: contributionLists.listWidgets,
+    persistLayout,
+    placementMethods,
+    setLayout,
+    widgetOpeners,
+  });
+  const establishLocation = createLocationEstablisher({
+    applyAndActivate,
+    getLayout,
+    getWidget: requireWidget,
+    panelMethods,
+  });
 
   return {
     store,
@@ -185,9 +264,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
+    ...panelMethods,
     openWidget: widgetOpeners.openWidget,
 
     ...placementMethods,
+
+    establishLocation,
 
     setRegionActiveWidget(regionId, widgetId) {
       const layout = getLayout();

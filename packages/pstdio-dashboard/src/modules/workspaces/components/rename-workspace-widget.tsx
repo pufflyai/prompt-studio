@@ -1,19 +1,19 @@
 import { Button, Dialog, Input, Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { renameDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 
-const closeCurrentPlacement = (input: WorkbenchWidgetRenderInput) => {
-  input.workbench.layout.removeWidgetPlacement(input.placement.widgetId);
+const closeCurrentPlacement = (input: WorkbenchPanelRenderInput) => {
+  input.workbench.layout.removeWidgetPlacement(input.instance.instanceId);
 };
 
 const workspaceNameLimit = 120;
 
-export const RenameWorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const RenameWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const workspaceId = input.placement.resource?.id ?? "";
-  const initialName = input.placement.resource?.label ?? "";
+  const workspaceId = input.instance.resource?.id ?? "";
+  const initialName = input.instance.resource?.label ?? "";
   const [name, setName] = useState(initialName);
   const [error, setError] = useState("");
   const renameWorkspaceMutation = useMutation({

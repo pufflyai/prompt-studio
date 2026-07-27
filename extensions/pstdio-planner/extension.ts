@@ -81,7 +81,7 @@ export default defineExtension({
   },
 
   // Reusable properties renderer: serializable params rendered natively through the host
-  // ParamEditor; status/tags edit live and references render as resource tags. A view
+  // ParamEditor; status/tags edit live and references render as resource tags. A panel
   // (below) places it into the right panel for the open ticket.
   controlsRenderers: {
     ticketProperties: {
@@ -196,7 +196,7 @@ export default defineExtension({
       resourceKind: "ticket",
       layout: {
         panels: ["main", "secondary", "side"],
-        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+        open: [{ region: "sidenav", panel: "ticketFiles", pinned: true }],
       },
     },
   },
@@ -212,32 +212,29 @@ export default defineExtension({
     },
   },
 
-  views: {
+  panels: {
     ticketEditor: {
-      title: l10n("views.ticketEditor.title", "Ticket"),
-      role: "location",
+      title: l10n("panels.ticketEditor.title", "Ticket"),
+      region: "main",
+      closable: false,
       resourceKind: "ticket",
       fileRenderer: "ticketContent",
+      panelMenus: {
+        properties: {
+          title: l10n("panels.ticketProperties.title", "Properties"),
+          side: "right",
+          controlsRenderer: "ticketProperties",
+        },
+      },
     },
     // Files tree in the selected ticket's Sidenav resource section. Selecting a node
     // swaps the editor's document in place (it runs select-ticket-document).
     ticketFiles: {
-      title: l10n("views.ticketFiles.title", "Files"),
-      role: "panel-menu",
-      panelMenuOwner: { level: "panel" },
+      title: l10n("panels.ticketFiles.title", "Files"),
+      region: "sidenav",
+      closable: false,
       resourceKind: "ticket",
       treeRenderer: "ticketFiles",
-      hostTreeHeader: "default",
-    },
-    // Properties panel, pinned in the right panel for the open ticket, backed by the
-    // ticketProperties controls renderer.
-    ticketProperties: {
-      title: l10n("views.ticketProperties.title", "Properties"),
-      role: "panel-menu",
-      panelMenuOwner: { level: "panel" },
-      resourceKind: "ticket",
-      target: "workbench.main.right",
-      controlsRenderer: "ticketProperties",
     },
   },
 

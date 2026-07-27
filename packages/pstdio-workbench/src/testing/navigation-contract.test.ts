@@ -6,7 +6,7 @@ const ROOT_KIND = "contract-root";
 const DETAIL_KIND = "contract-detail";
 const MODE = "contract-mode";
 
-// A correct resource-first route: the opener activates the route mode and opens the DOMAIN
+// A correct resource-first route: the presenter activates the route mode and opens the DOMAIN
 // resource into the primary region. The shared contract keeps each route tab live while
 // Back and Forward move between existing placements.
 const setup = (): RouteContractHarness => {
@@ -31,27 +31,27 @@ const setup = (): RouteContractHarness => {
     rendererId: "noop",
     resourceKinds: [DETAIL_KIND],
   });
-  workbench.resources.registerOpener({
-    id: "contract-root-opener",
+  workbench.resources.registerPresenter({
+    id: "contract-root-presenter",
     canOpen: (resource) => resource.kind === ROOT_KIND,
     open: (resource, input) => {
       workbench.modes.setActiveMode(MODE);
-      return workbench.layout.openWidget("contract-root-view", {
+      return workbench.layout.openPanel("contract-root-view", {
         resource,
         title: resource.label,
-        replaceActive: input.replaceActive,
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
       });
     },
   });
-  workbench.resources.registerOpener({
-    id: "contract-detail-opener",
+  workbench.resources.registerPresenter({
+    id: "contract-detail-presenter",
     canOpen: (resource) => resource.kind === DETAIL_KIND,
     open: (resource, input) => {
       workbench.modes.setActiveMode(MODE);
-      return workbench.layout.openWidget("contract-detail-view", {
+      return workbench.layout.openPanel("contract-detail-view", {
         resource,
         title: resource.label,
-        replaceActive: input.replaceActive,
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
       });
     },
   });
@@ -70,7 +70,7 @@ describeResourceRouteContract({
   expectedMode: MODE,
 });
 
-test("the active-URI invariant catches a wrapper-identity opener", async () => {
+test("the active-URI invariant catches a wrapper-identity presenter", async () => {
   const workbench = createWorkbenchCore();
   workbench.resources.registerKind({ kind: "wrap-detail", label: "Detail" });
   workbench.layout.registerWidget({
@@ -80,16 +80,16 @@ test("the active-URI invariant catches a wrapper-identity opener", async () => {
     singleton: true,
     rendererId: "noop",
   });
-  workbench.resources.registerOpener({
-    id: "wrap-opener",
+  workbench.resources.registerPresenter({
+    id: "wrap-presenter",
     canOpen: (resource) => resource.kind === "wrap-detail",
     // Wraps the domain resource in a synthetic URI — the footgun that makes history replay
     // the wrapper instead of the resource the user navigated to.
     open: (resource, input) =>
-      workbench.layout.openWidget("wrap-view", {
+      workbench.layout.openPanel("wrap-view", {
         resource: { ...resource, uri: `wrapper://${resource.uri}` },
         title: resource.label,
-        replaceActive: input.replaceActive,
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
       }),
   });
 

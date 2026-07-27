@@ -14,7 +14,7 @@ import type {
   KanbanRendererSettings,
   ResourceContextAction,
 } from "./kanban-renderer-contracts";
-import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
+import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface KanbanRendererQueryState {
   settings: KanbanRendererSettings;
@@ -88,11 +88,11 @@ export interface KanbanRendererRefreshEvent {
 
 export type KanbanRendererRefreshListener = (event: KanbanRendererRefreshEvent) => void;
 
-// The React layer supplies the rendering for a kanban-renderer widget. Set once on
+// The React layer supplies the rendering for a kanban-renderer Panel. Set once on
 // workbench mount via setKanbanRendererImplementation so registerKanbanRenderer can
-// auto-register a widget renderer with the same id.
+// auto-register a Panel renderer with the same id.
 export type KanbanRendererImplementation = (
-  input: WorkbenchWidgetRenderInput & { kanbanRendererId: string },
+  input: WorkbenchPanelRenderInput & { kanbanRendererId: string },
 ) => unknown;
 
 export interface CreateKanbanRendererRegistryInput {
@@ -152,7 +152,7 @@ export const createKanbanRendererRegistry = (input: CreateKanbanRendererRegistry
         "registerKanbanRenderer",
       );
 
-      // Auto-register a widget renderer with the same id; the React-side
+      // Auto-register a Panel renderer with the same id; the React-side
       // implementation looks up the contribution by id and renders the
       // WorkbenchKanbanView component.
       const rendererDisposable = rendererRegistry.registerRenderer({

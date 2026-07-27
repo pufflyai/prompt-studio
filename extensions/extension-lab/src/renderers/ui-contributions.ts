@@ -8,10 +8,8 @@ export const labModes = {
     layout: {
       panels: ["main", "secondary", "side"],
       open: [
-        { target: "workbench.main", view: "labOverview" },
-        { target: "workbench.main.left", view: "labTools", pinned: true },
-        { target: "workbench.main.right", view: "labInspector", pinned: true },
-        { target: "workbench.secondary", view: "labConsole" },
+        { region: "main", panel: "labOverview" },
+        { region: "secondary", panel: "labConsole" },
       ],
     },
   },
@@ -21,11 +19,7 @@ export const labModes = {
     icon: "palette",
     layout: {
       panels: ["main", "side"],
-      open: [
-        { target: "workbench.main", view: "labCanvas" },
-        { target: "workbench.main.left", view: "labPalette", pinned: true },
-        { target: "workbench.main.right", view: "labInspector", pinned: true },
-      ],
+      open: [{ region: "main", panel: "labCanvas" }],
     },
   },
   labReview: {
@@ -35,9 +29,8 @@ export const labModes = {
     layout: {
       panels: ["main", "secondary", "side"],
       open: [
-        { target: "workbench.main", view: "labReview" },
-        { target: "workbench.main.right", view: "labInspector", pinned: true },
-        { target: "workbench.secondary", view: "labChecks" },
+        { region: "main", panel: "labReview" },
+        { region: "secondary", panel: "labChecks" },
       ],
     },
   },
@@ -47,17 +40,17 @@ export const labModes = {
     icon: "panel-top",
     layout: {
       panels: ["main"],
-      open: [{ target: "workbench.main", view: "labFocus" }],
+      open: [{ region: "main", panel: "labFocus" }],
     },
   },
 } satisfies NonNullable<ExtensionDefinition["modes"]>;
 
-export const createLabViews = (baseUrl: string) =>
+export const createLabPanels = (baseUrl: string) =>
   ({
     labOverview: {
-      title: l10n("views.labOverview.title", "Lab overview"),
-      role: "location",
-      target: "workbench.main",
+      title: l10n("panels.labOverview.title", "Lab overview"),
+      region: "main",
+      closable: false,
       webview: {
         entry: packageAsset("./src/views/lab-overview.tsx", baseUrl),
         capabilities: [
@@ -68,59 +61,69 @@ export const createLabViews = (baseUrl: string) =>
           "preferences.set",
         ],
       },
-    },
-    labTools: {
-      title: l10n("views.labTools.title", "Coding tools"),
-      role: "panel-menu",
-      target: "workbench.main.left",
-      panelMenuOwner: { level: "panel" },
-      webview: { entry: packageAsset("./src/views/lab-tools.tsx", baseUrl) },
-    },
-    labInspector: {
-      title: l10n("views.labInspector.title", "Inspector"),
-      role: "panel-menu",
-      target: "workbench.main.right",
-      panelMenuOwner: { level: "panel" },
-      webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
+      panelMenus: {
+        tools: {
+          title: l10n("panels.labTools.title", "Coding tools"),
+          side: "left",
+          webview: { entry: packageAsset("./src/views/lab-tools.tsx", baseUrl) },
+        },
+        inspector: {
+          title: l10n("panels.labInspector.title", "Inspector"),
+          side: "right",
+          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
+        },
+      },
     },
     labConsole: {
-      title: l10n("views.labConsole.title", "Experiment console"),
-      role: "sub-panel",
-      target: "workbench.secondary",
+      title: l10n("panels.labConsole.title", "Experiment console"),
+      region: "secondary",
+      closable: true,
       webview: { entry: packageAsset("./src/views/lab-console.tsx", baseUrl) },
     },
-    labPalette: {
-      title: l10n("views.labPalette.title", "Design palette"),
-      role: "panel-menu",
-      target: "workbench.main.left",
-      panelMenuOwner: { level: "panel" },
-      webview: { entry: packageAsset("./src/views/lab-palette.tsx", baseUrl) },
-    },
     labCanvas: {
-      title: l10n("views.labCanvas.title", "Prototype canvas"),
-      role: "location",
-      target: "workbench.main",
+      title: l10n("panels.labCanvas.title", "Prototype canvas"),
+      region: "main",
+      closable: false,
       webview: { entry: packageAsset("./src/views/lab-canvas.tsx", baseUrl) },
+      panelMenus: {
+        palette: {
+          title: l10n("panels.labPalette.title", "Design palette"),
+          side: "left",
+          webview: { entry: packageAsset("./src/views/lab-palette.tsx", baseUrl) },
+        },
+        inspector: {
+          title: l10n("panels.labInspector.title", "Inspector"),
+          side: "right",
+          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
+        },
+      },
     },
     labReview: {
-      title: l10n("views.labReview.title", "Change review"),
-      role: "location",
-      target: "workbench.main",
+      title: l10n("panels.labReview.title", "Change review"),
+      region: "main",
+      closable: false,
       webview: { entry: packageAsset("./src/views/lab-review.tsx", baseUrl) },
+      panelMenus: {
+        inspector: {
+          title: l10n("panels.labInspector.title", "Inspector"),
+          side: "right",
+          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
+        },
+      },
     },
     labChecks: {
-      title: l10n("views.labChecks.title", "Review checks"),
-      role: "sub-panel",
-      target: "workbench.secondary",
+      title: l10n("panels.labChecks.title", "Review checks"),
+      region: "secondary",
+      closable: true,
       webview: { entry: packageAsset("./src/views/lab-checks.tsx", baseUrl) },
     },
     labFocus: {
-      title: l10n("views.labFocus.title", "Focus"),
-      role: "location",
-      target: "workbench.main",
+      title: l10n("panels.labFocus.title", "Focus"),
+      region: "main",
+      closable: false,
       webview: { entry: packageAsset("./src/views/lab-focus.tsx", baseUrl) },
     },
-  }) satisfies NonNullable<ExtensionDefinition["views"]>;
+  }) satisfies NonNullable<ExtensionDefinition["panels"]>;
 
 export const createLabRoutes = (baseUrl: string) =>
   ({

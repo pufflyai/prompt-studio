@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
-import { createWorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
+import { createWorkbenchCore, type WorkbenchPanelInstance } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID, createBridgeWebviewRenderer } from "./bridge-webview-renderer";
 
 const setupWebviewWidget = () => {
   const workbench = createWorkbenchCore();
 
-  workbench.layout.registerWidget({
+  workbench.layout.registerPanel({
+    closable: false,
     id: "lab.page",
     title: "Lab page",
     region: "main",
@@ -18,8 +19,8 @@ const setupWebviewWidget = () => {
     },
   });
 
-  const widget = workbench.layout.getWidget("lab.page")!;
-  const placement: WorkbenchWidgetPlacement = { widgetId: "lab.page", contributionId: "lab.page" };
+  const widget = workbench.layout.getPanel("lab.page")!;
+  const placement: WorkbenchPanelInstance = { instanceId: "lab.page", panelId: "lab.page", closable: false };
 
   return { workbench, widget, placement };
 };
@@ -37,7 +38,7 @@ describe("createBridgeWebviewRenderer", () => {
       },
     });
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { capabilities: unknown };
     };
 
@@ -51,7 +52,7 @@ describe("createBridgeWebviewRenderer", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     const renderer = createBridgeWebviewRenderer();
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { capabilities: HostCapabilityRegistry };
     };
 
@@ -65,7 +66,7 @@ describe("createBridgeWebviewRenderer", () => {
       createProps: (context) => ({ marker: "custom", webviewId: context.webviewId }),
     });
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { props: unknown };
     };
 
@@ -78,7 +79,7 @@ describe("createBridgeWebviewRenderer", () => {
       createTheme: () => "dark",
     });
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { theme: unknown };
     };
 
@@ -89,7 +90,7 @@ describe("createBridgeWebviewRenderer", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     const renderer = createBridgeWebviewRenderer();
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { props: unknown };
     };
 
@@ -100,7 +101,7 @@ describe("createBridgeWebviewRenderer", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     const renderer = createBridgeWebviewRenderer();
 
-    const element = renderer.render({ workbench, widget, placement, refresh: () => undefined }) as {
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
       props: { view: { webview: unknown } };
     };
 
@@ -122,8 +123,8 @@ describe("createBridgeWebviewRenderer", () => {
       },
     });
 
-    renderer.render({ workbench, widget, placement, refresh: () => undefined });
-    renderer.render({ workbench, widget, placement, refresh: () => undefined });
+    renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined });
+    renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined });
 
     expect(hostEvents).toHaveLength(2);
     expect(hostEvents[1]).toBe(hostEvents[0]);

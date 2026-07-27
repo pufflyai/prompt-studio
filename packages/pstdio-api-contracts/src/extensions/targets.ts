@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   workbenchMenuTargets,
   workbenchModeLayoutTargets,
+  workbenchRegions,
   workbenchSettingsScopes,
   workbenchSettingsTargets,
   workbenchTreeTargets,
@@ -10,6 +11,7 @@ import {
 
 export const workbenchMenuTargetSchema = z.enum(workbenchMenuTargets);
 export const workbenchTreeTargetSchema = z.enum(workbenchTreeTargets);
+export const workbenchRegionSchema = z.enum(workbenchRegions);
 export const workbenchViewTargetSchema = z.enum(workbenchViewTargets);
 export const workbenchSettingsTargetSchema = z.enum(workbenchSettingsTargets);
 export const workbenchModeLayoutTargetSchema = z.enum(workbenchModeLayoutTargets);

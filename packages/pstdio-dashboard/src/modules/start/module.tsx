@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
@@ -6,9 +6,10 @@ import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
 
-const registerStartWidget = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.layout.registerLocation(
+const registerStartWidget = (ctx: WorkbenchModuleContext) => {
+  ctx.layout.registerPanel(
     {
+      closable: false,
       id: dashboardWidgetIds.start,
       title: "Start",
       region: "main",
@@ -30,10 +31,10 @@ export const createStartModule = () =>
     activate(ctx) {
       registerStartWidget(ctx);
       registerResourceRoute(ctx, {
-        id: "dashboard.start.opener",
+        id: "dashboard.start.presenter",
         match: (resource) => resource.kind === "dashboard-view" && resource.id === dashboardResources.start.id,
         mode: "project",
-        widgetId: dashboardWidgetIds.start,
+        panelId: dashboardWidgetIds.start,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
           setDashboardSidenavSelection(ctx, undefined);

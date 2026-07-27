@@ -143,7 +143,8 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       render: () => <SidenavPanel />,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: PANEL_WIDGET_ID,
       title: "Scope switcher",
       region: "main",
@@ -151,7 +152,8 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       rendererId: PANEL_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: SIDENAV_WIDGET_ID,
       title: "Project Sidenav",
       region: "sidenav",
@@ -159,7 +161,8 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       rendererId: SIDENAV_RENDERER_ID,
     });
 
-    ctx.layout.registerWidget({
+    ctx.layout.registerPanel({
+      closable: false,
       id: SECONDARY_WIDGET_ID,
       title: "Resource details",
       region: "secondary",
@@ -180,9 +183,9 @@ export const createLayoutScopeExampleWorkbench = () => {
   const seedScope = (scope: LayoutScope, secondarySize: number, secondaryOpen: boolean) => {
     workbench.panels.setPersistenceScope(scope);
     workbench.layout.setPersistenceScope(scope);
-    workbench.layout.openWidget(PANEL_WIDGET_ID);
-    workbench.layout.openWidget(SIDENAV_WIDGET_ID, { pinned: true });
-    workbench.layout.openWidget(SECONDARY_WIDGET_ID);
+    workbench.layout.openPanel(PANEL_WIDGET_ID);
+    workbench.layout.openPanel(SIDENAV_WIDGET_ID, { pinned: true });
+    workbench.layout.openPanel(SECONDARY_WIDGET_ID);
     workbench.layout.setRegionSize("secondary", secondarySize);
     setSecondaryOpen(workbench, secondaryOpen);
   };

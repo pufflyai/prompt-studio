@@ -3,10 +3,10 @@ import type { WorkbenchExtensionControlsRendererRecord, WorkbenchExtensionMetada
 import { createWorkbenchCore } from "../../core";
 import { registerWorkbenchExtensionControlsRenderers } from "./controls-renderer-contributions";
 
-type ControlsViewRecord = WorkbenchExtensionMetadata["views"][number];
+type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionControlsRenderers", () => {
-  test("wires query/update/reset commands and registers a widget for the controls view", async () => {
+  test("wires query/update/reset commands and registers a widget for the controls panel", async () => {
     const workbench = createWorkbenchCore();
     const executed: string[] = [];
     const record = {
@@ -18,14 +18,13 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       resetCommandId: "image-tools.reset",
     } satisfies WorkbenchExtensionControlsRendererRecord;
 
-    const view = {
+    const panel = {
       id: "inspector-panel",
       extensionId: "acme.image-tools",
-      slotId: "inspector-panel",
       title: "Inspector",
-      role: "panel-menu",
+      closable: false,
       resourceKind: "image",
-      target: "workbench.main.right",
+      region: "main",
       controlsRendererId: "inspector",
     } satisfies ControlsViewRecord;
 
@@ -42,15 +41,15 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         },
       },
       [record],
-      [view],
+      [panel],
     );
 
     const renderer = workbench.renderers.getControlsRenderer("inspector");
     expect(renderer).toBeDefined();
 
-    // The view places the renderer into a right-panel widget keyed by the view id.
-    expect(workbench.layout.getWidget("inspector-panel")).toMatchObject({
-      region: "main-right-menu",
+    // The Panel places the renderer in its declared region.
+    expect(workbench.layout.getPanel("inspector-panel")).toMatchObject({
+      region: "main",
       rendererId: "inspector",
       resourceKinds: ["image"],
     });

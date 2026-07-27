@@ -5,19 +5,19 @@ export const parameters = {
   layout: "padded",
 };
 
-<Meta of={OnboardingStories} name="2. Renderer and widget" parameters={{ layout: "padded" }} />
+<Meta of={OnboardingStories} name="2. Renderer and Panel" parameters={{ layout: "padded" }} />
 
-# 2. Add Your First Widget
+# 2. Add Your First Panel
 
-A widget is a panel you can open in an region. Two pieces are needed: a renderer
-(the React content) and a `layout.registerWidget` call (the panel's id,
+A Panel is content you can open in a region. Two pieces are needed: a renderer
+(the React content) and a `layout.registerPanel` call (the panel's id,
 title, and region).
 
 <Canvas of={OnboardingStories.RendererAndWidget} sourceState="shown" />
 
 <Source of={OnboardingStories.RendererAndWidget} />
 
-`registerWidget` only declares the panel — it doesn't appear until something
-opens it. This story calls `layout.openWidget("guide")` at module activation
+`registerPanel` only declares the Panel — it doesn't appear until something
+opens it. This story calls `layout.openPanel("guide")` at module activation
 so it shows up on first render. The next story replaces that with a header
 button.

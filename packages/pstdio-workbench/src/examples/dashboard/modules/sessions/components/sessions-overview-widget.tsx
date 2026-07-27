@@ -1,11 +1,11 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { ChevronDown, GitBranch } from "lucide-react";
-import type { WorkbenchWidgetRenderInput } from "../../../../../react";
+import type { WorkbenchPanelRenderInput } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 import { dashboardMockChatMessages } from "../mock-data/sessions";
 
-export const SessionsOverviewWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const SessionsOverviewWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (

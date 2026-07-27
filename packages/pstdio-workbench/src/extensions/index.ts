@@ -39,14 +39,13 @@ export {
   type WorkbenchExtensionKanbanRendererAdapter,
 } from "./contributions/kanban-renderer-contributions";
 export {
+  type RegisterWorkbenchExtensionPanelInput,
+  registerWorkbenchExtensionPanel,
+} from "./contributions/panel-contributions";
+export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
 } from "./contributions/tree-renderer-contributions";
-export {
-  type RegisterWorkbenchExtensionViewWidgetInput,
-  registerWorkbenchExtensionViewWidget,
-  type WorkbenchExtensionViewRole,
-} from "./contributions/view-widget-contributions";
 export type { WorkbenchExtensionCommandContext } from "./host/workbench-extension-command";
 export {
   type RegisterWorkbenchExtensionContributionsInput,

@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 import { type Diff, DiffViewer } from "@pstdio/ui/diff";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
@@ -57,11 +57,11 @@ const useWorkspaceDiffs = (workspaceId: string | undefined) => {
   return { diffs, loading };
 };
 
-const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
+const WorkspaceChangesTab = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const workspaceId = resolveWorkspaceForkPointDiffWorkspaceId({
-    resourceId: input.placement.resource?.id,
-    metadata: input.placement.resource?.metadata,
+    resourceId: input.instance.resource?.id,
+    metadata: input.instance.resource?.metadata,
   });
   const { diffs, loading } = useWorkspaceDiffs(workspaceId);
   const changedFilePaths = diffs.map(getDiffPath);
@@ -83,7 +83,7 @@ const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-export const WorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+export const WorkspaceWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
 
   return (

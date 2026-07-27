@@ -18,22 +18,22 @@ import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
 import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
+import {
+  extensionModeRecordSchema,
+  extensionNavigationRecordSchema,
+  extensionPanelRecordSchema,
+  extensionRouteRecordSchema,
+  extensionTreeItemContributionSchema,
+  extensionViewLikeSchema,
+  workbenchExtensionPanelRecordSchema,
+  workbenchExtensionRouteRecordSchema,
+} from "./panels";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import {
   extensionSettingDefinitionRecordSchema,
   extensionSettingsPanelRecordSchema,
   workbenchExtensionSettingsPanelRecordSchema,
 } from "./settings";
-import {
-  extensionModeRecordSchema,
-  extensionNavigationRecordSchema,
-  extensionRouteRecordSchema,
-  extensionTreeItemContributionSchema,
-  extensionViewLikeSchema,
-  extensionViewRecordSchema,
-  workbenchExtensionRouteRecordSchema,
-  workbenchExtensionViewRecordSchema,
-} from "./views";
 
 export const extensionsCheckResponseSchema = z.object({
   extensionsRoot: z.string(),
@@ -51,7 +51,7 @@ export const extensionsCheckResponseSchema = z.object({
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema),
   modes: z.array(extensionModeRecordSchema),
-  views: z.array(extensionViewRecordSchema),
+  panels: z.array(extensionPanelRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema),
@@ -75,7 +75,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(extensionModeRecordSchema),
-  views: z.array(workbenchExtensionViewRecordSchema),
+  panels: z.array(workbenchExtensionPanelRecordSchema),
   routes: z.array(workbenchExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),

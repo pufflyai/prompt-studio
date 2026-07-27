@@ -1,7 +1,7 @@
 import { Text } from "@chakra-ui/react";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
-import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
 import { useSyncExternalStore } from "react";
@@ -15,7 +15,7 @@ import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webv
 import { createDashboardNotifications, toWorkbenchResource } from "../data/dashboard-notifications";
 
 interface NotificationCenterWidgetProps {
-  input: WorkbenchWidgetRenderInput;
+  input: WorkbenchPanelRenderInput;
 }
 
 const formatRelativeTime = (iso: string) => {
@@ -74,7 +74,7 @@ const markRead = async (notification: Notification) => {
   await apiRequest(notificationPath(notification, "read"), { method: "POST" });
 };
 
-const showError = (input: WorkbenchWidgetRenderInput, title: string, error: unknown) => {
+const showError = (input: WorkbenchPanelRenderInput, title: string, error: unknown) => {
   input.workbench.notifications.show({
     level: "error",
     title,
@@ -83,7 +83,7 @@ const showError = (input: WorkbenchWidgetRenderInput, title: string, error: unkn
 };
 
 export const surfaceNotificationCommandResponse = (
-  input: Pick<WorkbenchWidgetRenderInput, "workbench">,
+  input: Pick<WorkbenchPanelRenderInput, "workbench">,
   response: CommandExecuteResponse,
 ) => {
   for (const commandNotification of collectExtensionCommandNotifications(response)) {
@@ -107,7 +107,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
   const notifications = createDashboardNotifications(projectId);
   const items = notifications.map(toCenterItem);
 
-  const close = () => input.workbench.layout.closeWidget(input.placement.widgetId);
+  const close = () => input.workbench.layout.closePanel(input.instance.instanceId);
 
   const runAction = async (notification: Notification, action: NotificationAction | undefined) => {
     try {

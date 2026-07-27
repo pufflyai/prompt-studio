@@ -11,91 +11,68 @@ export const parameters = {
   parameters={{ layout: "padded" }}
 />
 
-# 14. Locations, Panels, Sub Panels, and Panel Menus
+# 14. Resources, Locations, and Panels
 
-The Workbench uses one domain-neutral hierarchy. A navigated Location is the active Panel; Main, Secondary, and Side
-are the surfaces through which that Panel presents its workspace:
+These terms describe different things:
 
-```text
-Breadcrumb
-└── Location Panel
-    ├── fixed Location content
-    ├── Main / Secondary / Side surfaces
-    │   └── tabbed Sub Panels
-    └── left/right Panel Menus
-        ├── owned by the Location Panel
-        └── or owned by one Sub Panel
-```
+- A **Resource** is domain identity: ticket `PS-199`, workspace `alpha`, or a settings page.
+- A **Panel** is a UI instance that presents content in `main`, `secondary`, `side`, or another region.
+- A **Location** is navigation state: the active Resource plus the Main Panel returned by its presenter.
 
-A **Location Panel** is the navigated subject represented by the breadcrumb. Its content renders directly while no
-Sub Panels are open. Once a Sub Panel opens, the Location Panel becomes the first, uncloseable tab so the user can
-select its content again. A **Sub Panel** is removable tabbed content inside that Location Panel. A **Panel Menu** is
-supporting content attached to either the Location Panel or one specific Sub Panel; it never becomes a tab or an
-Add-panel entry.
-
-## Registration and ownership
-
-Native Workbench modules declare menus on the Panel that owns them. The registration derives the left/right region,
-records the exact owner contribution, opens the menus with the Panel, and disposes them with the Panel. A reusable
-Panel factory therefore carries its menus everywhere that Panel is registered; there is no separate owner ID to keep
-in sync.
+A Panel definition is never declared as a Location. The navigation operation establishes that relationship:
 
 ```ts
-const notesMenus = (prefix: string) => [
-  {
-    id: `${prefix}.tools`,
-    title: "Notes tools",
-    icon: "FileText",
-    side: "right" as const,
-    rendererId: "notes.tools.renderer",
-  },
-];
-
-ctx.layout.registerLocation({
-  id: "notes.location",
-  title: "Notes",
-  region: "main",
-  rendererId: "notes.renderer",
-  panelMenus: notesMenus("notes.location"),
+ctx.resources.registerPresenter({
+  id: "tickets.presenter",
+  canOpen: (resource) => resource.kind === "ticket",
+  open: (resource) => ctx.layout.openPanel("tickets.editor", { resource }),
 });
 
-ctx.layout.registerSubPanel({
-  id: "notes.secondary",
-  title: "Notes",
+await ctx.resources.openResource(ticket);
+```
+
+After the presenter returns, `openResource` makes that Panel instance the Location and records navigation. Opening the
+same definition with `layout.openPanel` directly displays a Panel without changing Location, history, or breadcrumbs.
+A mode likewise establishes the first Main Panel it seeds as that mode's Location before it opens supporting Panels.
+
+## Supporting Panels
+
+`eligibleLocations` explicitly marks a Panel as subordinate and controls where it can appear:
+
+```ts
+ctx.layout.registerPanel({
+  id: "tickets.editor",
+  title: "Ticket",
+  region: "main",
+  rendererId: "tickets.editor.renderer",
+  resourceKinds: ["ticket"],
+  closable: false,
+  panelMenus: [
+    {
+      id: "tickets.properties",
+      title: "Properties",
+      side: "right",
+      rendererId: "tickets.properties.renderer",
+    },
+  ],
+});
+
+ctx.layout.registerPanel({
+  id: "tickets.terminal",
+  title: "Terminal",
   region: "secondary",
-  rendererId: "notes.renderer",
-  panelMenus: notesMenus("notes.secondary"),
+  rendererId: "terminal.renderer",
+  closable: true,
+  eligibleLocations: { resourceKinds: ["ticket"] },
 });
 ```
 
-`registerPanelMenu` is the lower-level integration seam used by the extension adapter for independently declared
-`panel-menu` roles. Native modules should prefer ownership through `panelMenus`.
+`resourceKinds` is renderer input: it says which Resources the Panel can present. It does not make the Panel a
+Location. `eligibleLocations` says the Panel is supporting content and limits the Locations that may own it. Neither
+`region` nor `closable` carries navigation meaning.
 
-## Header and ownership rules
-
-The Panel Header is shown when the Panel has at least one open Sub Panel, one eligible closed Sub Panel, one attached
-or collapsed Panel Menu, or a header action. When Sub Panels are open, the tab strip begins with the uncloseable
-Location Panel and continues with the removable Sub Panels. `Add panel` renders only when an eligible closed Sub Panel
-exists. Therefore a Location with no subordinate UI has no header, while a Panel containing only a Panel Menu retains
-its header without emitting an empty ARIA tab list.
-
-Sub Panels and Panel Menus can declare Location eligibility by mode, resource kind, resource id, or an
-`eligibleLocations.canOpen` predicate. Resource-backed Sub Panels validate their own resource separately from this
-Location eligibility. Menu ownership is exclusive to the selected tab: selecting the Location Panel shows only
-Location-owned menus, while selecting a Sub Panel shows only that Sub Panel's menus. Each menu placement retains its
-own attached or collapsed state. Clicking a collapsed menu's distinct, tooltipped icon opens the menu's live content
-in a contained, portal-positioned dropdown. Its header identifies the menu and contains the action that attaches it to
-the correct side again. Attach is disabled when the Panel cannot preserve the menu minimum, resize handles, existing
-attached menus, and minimum content width.
-
-Each Location owns its open Sub Panel placements and selection. Switching Locations does not close those tabs:
-returning by a Location action, Back, or Forward restores that Location's previous open tabs and active selection.
-Contributions that are not eligible for the active Location remain out of its tabs, Add-panel menu, and menu layout.
-Every Sub Panel offered by `Add panel` is removable and becomes eligible again after closing.
-
-A Location or selected Sub Panel can set `floatingPanels: "hidden"` when floating Panel chrome would cover important
-content. This suppresses both the floating Panel and its recovery bubble without changing the saved Panel mode;
-attached recovery controls remain available when that Location still has eligible or open subordinate content.
+Panel Menus are nested under their owning Panel through `panelMenus`. They follow the selected instance and never
+become tabs or Add-panel entries.
 
 <Canvas of={OnboardingStories.LocationContentOnly} />
 
@@ -115,18 +92,11 @@ attached recovery controls remain available when that Location still has eligibl
 
 <Canvas of={OnboardingStories.BubbleFreeLocation} />
 
-## Navigation and persistence
+## History and persistence
 
-Selecting the Location Panel or a Sub Panel in Main, Secondary, or Side records one navigation entry. The entry
-snapshots the Location and the selected Sub Panel, if any, in every Panel. Back and Forward replay the complete
-snapshot without adding another entry;
-navigating after Back truncates Forward entries. Closing a Sub Panel removes its selection from older snapshots so
-history cannot recreate it implicitly.
-
-History remains project-scoped, while each resource or aggregate page owns its Main/Secondary Panel persistence
-scope. Layout and Panel-open state rotate together before opening the next resource. The host carries project-owned
-Nav Chrome, Sidenav, Side Panel, and Status Bar state between those scopes, so unchanged chrome stays mounted.
-Returning to a resource restores its open Sub Panels, active Location, visibility, sizes, and Panel Menu state.
+Each successful Resource navigation records its Location and the selected supporting Panel in every Panel region.
+Back and Forward restore that snapshot without adding another entry. Each Location owns its supporting Panel
+placements and selection, so returning to it restores the same tabs, menus, sizes, and open state.
 
 <Canvas of={OnboardingStories.CrossPanelHistory} />
 
@@ -136,45 +106,34 @@ Returning to a resource restores its open Sub Panels, active Location, visibilit
 
 <Canvas of={OnboardingStories.ResourcePanelRestore} />
 
-## Extension roles
+## Extensions use the same contract
 
-Extension views declare their relationship explicitly:
+Extensions declare `panels`, not presentation roles:
 
 ```ts
-views: {
-  overview: {
-    title: "Overview",
-    role: "location",
-    webview: { entry: packageAsset("./overview.tsx", import.meta.url) },
+panels: {
+  ticket: {
+    title: "Ticket",
+    region: "main",
+    closable: false,
+    resourceKind: "ticket",
+    webview: { entry: packageAsset("./ticket.tsx", import.meta.url) },
+    panelMenus: {
+      properties: {
+        title: "Properties",
+        side: "right",
+        controlsRenderer: "ticketProperties",
+      },
+    },
   },
   report: {
     title: "Report",
-    role: "sub-panel",
-    target: "workbench.secondary",
+    region: "secondary",
+    closable: true,
+    eligibleLocations: { resourceKinds: ["ticket"] },
     webview: { entry: packageAsset("./report.tsx", import.meta.url) },
-  },
-  inspector: {
-    title: "Inspector",
-    role: "panel-menu",
-    target: "workbench.main.right",
-    panelMenuOwner: { level: "panel" },
-    controlsRenderer: "inspectorControls",
-  },
-  reportTools: {
-    title: "Report tools",
-    role: "panel-menu",
-    target: "workbench.secondary.right",
-    panelMenuOwner: { level: "sub-panel", view: "report" },
-    controlsRenderer: "reportToolsControls",
-  },
-  createItem: {
-    title: "New item",
-    role: "modal",
-    webview: { entry: packageAsset("./create-item.tsx", import.meta.url) },
   },
 }
 ```
 
-Product concepts stay outside `@pstdio/workbench`: a host decides which routes are Locations, which resource-owned
-views are Sub Panels, and which attached tools are Panel Menus. For example, a dashboard can bind a Properties controls
-renderer to a ticket Location as an anonymous generic Panel Menu without adding ticket or planner logic to Workbench.
+The host normalizes this into the same `registerPanel` contract used by native modules.

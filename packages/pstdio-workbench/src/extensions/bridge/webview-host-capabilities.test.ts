@@ -13,12 +13,19 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
       { execute: (params) => ({ params, status: "ok" }) },
     );
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.resources.registerOpener({
-      id: "ticket-opener",
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.resources.registerPresenter({
+      id: "ticket-presenter",
       canOpen: (resource) => resource.kind === "ticket",
       open: (resource, input) => {
         openedResources.push({ input, resource });
-        return { opened: resource.uri };
+        return workbench.layout.openPanel("ticket", { resource });
       },
     });
     workbench.preferences.registerSchema({
@@ -47,7 +54,10 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
         input: { replaceActive: true },
         resource: { kind: "ticket", uri: "pstdio://ticket/PS-276" },
       }),
-    ).resolves.toEqual({ opened: "pstdio://ticket/PS-276" });
+    ).resolves.toMatchObject({
+      panelId: "ticket",
+      resourceUri: "pstdio://ticket/PS-276",
+    });
 
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
