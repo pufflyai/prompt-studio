@@ -66,6 +66,6 @@ export const resolveDashboardStreamEndMessages = (
   streamedMessages: SessionMessage[],
   hydratedMessages: SessionMessage[],
 ) => {
-  if (streamedMessages.length > 0) return streamedMessages;
+  if (streamedMessages.length >= hydratedMessages.length) return streamedMessages;
   return hydratedMessages;
 };

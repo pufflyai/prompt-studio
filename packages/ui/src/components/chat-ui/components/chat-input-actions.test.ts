@@ -6,6 +6,7 @@ describe("chat input actions", () => {
     expect(
       resolveChatInputKeyboardAction({
         canInterrupt: true,
+        hasQuestionPrompt: false,
         isDisabled: false,
         streaming: true,
         text: "stop",
@@ -17,6 +18,7 @@ describe("chat input actions", () => {
     expect(
       resolveChatInputButtonAction({
         canInterrupt: true,
+        hasQuestionPrompt: false,
         isDisabled: false,
         streaming: true,
         text: "stop",
@@ -24,9 +26,23 @@ describe("chat input actions", () => {
     ).toBe("interrupt");
   });
 
+  it("submits a question answer while the provider stream waits for the response", () => {
+    const input = {
+      canInterrupt: false,
+      hasQuestionPrompt: true,
+      isDisabled: false,
+      streaming: true,
+      text: "Which project?: Prompt Studio",
+    };
+
+    expect(resolveChatInputKeyboardAction(input)).toBe("submit");
+    expect(resolveChatInputButtonAction(input)).toBe("submit");
+  });
+
   it("submits non-empty messages when not streaming", () => {
     const input = {
       canInterrupt: false,
+      hasQuestionPrompt: false,
       isDisabled: false,
       streaming: false,
       text: "hello",

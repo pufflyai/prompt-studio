@@ -82,7 +82,9 @@ pst workspaces delete --id <ws-id>                     # Force-remove workspace
 Status rule:
 
 - During creation/planning, `pst tickets update --status ...` is valid.
-- During and after implementation, avoid direct ticket status updates — ticket transitions are derived from live session state (see `pstdio-planner.workspace-activity`).
+- During implementation, move the ticket to the configured in-progress status.
+- When implementation is ready for review or blocked, update the ticket to the configured review or blocked status.
+- Use `pst statuses list` to discover project-specific names and `pst tickets update --id <id> --status <status>` to apply them.
 
 ## Reports
 

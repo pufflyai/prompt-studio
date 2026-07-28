@@ -3,6 +3,7 @@ import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import type { ReferenceItem } from "@/components/rich-text";
+import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";
@@ -255,8 +256,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
   );
   const emptyContent = showLoadingState ? loaderComponent : (emptyStateContent ?? defaultEmptyContent);
   const hasWorkspaceHub = Boolean(workspaceHub);
-  const hideActiveQuestionForms = Boolean(chatInputQuestionPrompt);
-  const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing;
+  const activeQuestionPrompt = chatInputQuestionPrompt ?? resolveActiveQuestionPrompt(messages);
+  const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
+  const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
   const queuedComposer = useQueuedFollowUpComposer({
     queuedFollowUps,
@@ -309,7 +311,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         attachmentList={attachmentList}
         chatInputAutoFocus={chatInputAutoFocus}
         chatInputPlaceholder={chatInputPlaceholder}
-        chatInputQuestionPrompt={chatInputQuestionPrompt}
+        chatInputQuestionPrompt={activeQuestionPrompt}
         chatInputReferences={chatInputReferences}
         hasWorkspaceHub={hasWorkspaceHub}
         inputDisabled={inputDisabled}

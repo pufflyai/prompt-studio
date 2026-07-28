@@ -43,4 +43,10 @@ describe("dashboard workbench session messages", () => {
   test("keeps hydrated messages when a stream ends without patches", () => {
     expect(resolveDashboardStreamEndMessages([], [message("hydrated")])).toEqual([message("hydrated")]);
   });
+
+  test("keeps the fuller hydrated conversation when stream replay is partial", () => {
+    const hydratedMessages = [message("user"), message("pending-question")];
+
+    expect(resolveDashboardStreamEndMessages([message("user")], hydratedMessages)).toEqual(hydratedMessages);
+  });
 });

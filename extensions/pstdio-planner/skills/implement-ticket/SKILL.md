@@ -2,23 +2,26 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.6
+  version: 0.0.7
 ---
 
-Implement planner tickets inside a workspace (a git worktree). Progress is reported by this session itself: ticket movement is derived from live session state, not from a stored workspace status.
+Implement planner tickets inside a workspace (a git worktree). Report implementation progress on the ticket itself; workspace attempt statuses no longer exist.
 
 ## Workflow
 
 1. **Identify the ticket.** You are given the ticket's shorthand (e.g. `PS-12`). Pass it to `--id` — commands resolve it. If the ticket is missing or ambiguous, ask the user to confirm it.
    - For "implement the next ticket", pick the first ready ticket: `pst tickets list --status <ready-status>` (see `pst statuses list` for the project's status names).
    - Read the full ticket body first: `pst tickets view --id <shorthand>`.
-2. **Implement the change**, scoped to the ticket, following the host repo's own contributor conventions (its build, test, and style rules).
-3. **Produce a validation report** (see below) that proves the work is correct.
-4. **Report through the session, not by editing the ticket status:**
-   - Done and ready for review: finish the session with the validation report saved — a completed session hands the ticket onward.
-   - Blocked: ask the user for the input you need; a session awaiting input flags the ticket as blocked.
-   - Do **not** run `pst tickets update --status` during or after implementation — ticket transitions are derived from session state.
-5. **Attach the review link when you open one.** If you create a pull request or merge request for the ticket, run `pst tickets link-review --id <shorthand> --url <review-url>`.
+2. **Move the ticket into implementation.**
+   - Run `pst statuses list` because status names are project-configurable.
+   - Move the ticket to the configured in-progress status with `pst tickets update --id <shorthand> --status "<status>"` unless it is already there.
+3. **Implement the change**, scoped to the ticket, following the host repo's own contributor conventions (its build, test, and style rules).
+4. **Produce a validation report** (see below) that proves the work is correct.
+5. **Update the ticket status before finishing:**
+   - Done and ready for review: move the ticket to the configured review status (the default is `In Review`).
+   - Blocked: move the ticket to the configured blocked status and include `--blocked-reason "<reason>"`.
+   - Use `pst tickets update --id <shorthand> --status "<status>"`; workspace-level attempt status commands are obsolete.
+6. **Attach the review link when you open one.** If you create a pull request or merge request for the ticket, run `pst tickets link-review --id <shorthand> --url <review-url>`.
 
 ## Validation Report
 

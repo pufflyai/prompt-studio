@@ -166,7 +166,6 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const canInterrupt = streaming && Boolean(onInterrupt);
   const responseText = questionPrompt
     ? buildQuestionResponse(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion)
     : text.trim();
@@ -176,13 +175,13 @@ export const ChatInput = (props: ChatInputProps) => {
     customAnswersByQuestion,
   );
   const actionState = {
-    canInterrupt,
+    canInterrupt: streaming && !questionPrompt && Boolean(onInterrupt),
+    hasQuestionPrompt: Boolean(questionPrompt),
     isDisabled: isDisabled || hasMissingRequiredSelection,
     streaming,
     text: responseText,
   };
   const buttonAction = resolveChatInputButtonAction(actionState);
-
   const submitMessage = () => {
     if (!responseText) return;
 
@@ -313,9 +312,9 @@ export const ChatInput = (props: ChatInputProps) => {
           {actions}
           <Spacer />
           <SendButton
-            canInterrupt={canInterrupt}
-            title={canInterrupt ? "Stop Response" : (submitTitle ?? "Send message")}
-            shortcut={streaming ? undefined : "Enter"}
+            canInterrupt={buttonAction === "interrupt"}
+            title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? "Send message")}
+            shortcut={streaming && !questionPrompt ? undefined : "Enter"}
             onClick={handleButtonClick}
             disabled={buttonAction === "none"}
           />
