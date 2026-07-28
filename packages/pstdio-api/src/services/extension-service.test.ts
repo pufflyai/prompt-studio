@@ -239,14 +239,18 @@ describe("extensionService reload", () => {
 
       const result = await reloadingService.reloadInstalledSource("reload");
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(result.installedSource.id);
+      const reloadEvent = reloadEvents.at(-1);
 
       expect(result.installedSource.status).toBe("loaded");
       expect(result.installedSource.display_name).toBe("Reloaded Extension");
       expect(result.installedSource.version).toBe("1.1.0");
       expect(result.installedSource.manifest_json).toMatchObject({ templates: ["second"] });
       expect(result.installedSource.source_hash).not.toBe("old-hash");
+      expect(result.installedSource.loaded_revision).toBeString();
       expect(result.installedSource.last_error_json).toBeNull();
-      expect(reloadEvents.at(-1)?.status).toBe("success");
+      expect(reloadEvent?.status).toBe("success");
+      expect(reloadEvent?.previous_revision).toBeNull();
+      expect(reloadEvent?.next_revision).toBe(result.installedSource.loaded_revision);
       expect(events.some((event) => event.table === "installed_extension_sources" && event.op === "set")).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });

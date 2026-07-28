@@ -47,9 +47,11 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       throw Object.assign(new Error("Extension validation failed"), { diagnostics: result.check.diagnostics });
     }
 
+    const nextRevision = crypto.randomUUID();
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
       display_name: result.loaded.metadata.displayName,
       extension_id: result.loaded.metadata.id,
+      loaded_revision: nextRevision,
       manifest_json: result.loaded.manifest,
       source_hash: nextSourceHash,
       status: "loaded",
@@ -64,7 +66,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       previous_source_hash: existing.source_hash,
       next_source_hash: nextSourceHash,
       previous_revision: existing.loaded_revision,
-      next_revision: existing.loaded_revision,
+      next_revision: nextRevision,
       status: "success",
     });
 
