@@ -6,6 +6,14 @@ export const healthModule: WorkbenchModuleContribution = {
     ctx.renderers.registerDataTableRenderer({
       id: "docs.health.table",
       title: "Service health",
+      selectionMode: "multiple",
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          run: (rows) => restartServices(rows.map((row) => row.id)),
+        },
+      ],
       columns: [
         { id: "service", label: "Service" },
         { id: "status", label: "Status", stat: { type: "top-values" } },

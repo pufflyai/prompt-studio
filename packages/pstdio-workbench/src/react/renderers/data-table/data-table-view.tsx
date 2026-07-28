@@ -17,6 +17,7 @@ import type {
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
+  resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
 } from "./data-table-view-model";
 
@@ -88,6 +89,10 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       if (row) void action.run(row);
     },
   }));
+  const selectionActions = resolveDataTableRendererSelectionActions(
+    contribution.selectionActions ?? [],
+    model.rowByData,
+  );
   const openRow = (data: RowData) => {
     const row = model.rowByData.get(data);
     if (!row) return;
@@ -125,6 +130,8 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         columnRenderers={renderers}
         initialPageSize={contribution.initialPageSize}
         pageSizeOptions={contribution.pageSizeOptions}
+        selectionMode={contribution.selectionMode}
+        selectionActions={selectionActions}
         rowActions={rowActions}
         onRowClick={openRow}
         isRowInteractive={(data) => {

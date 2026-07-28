@@ -45,6 +45,7 @@ export type {
   DataTableRendererRegistry,
   DataTableRendererRow,
   DataTableRendererRowAction,
+  DataTableRendererSelectionAction,
   DataTableRendererThemeColor,
   Disposable,
   EnumOption,

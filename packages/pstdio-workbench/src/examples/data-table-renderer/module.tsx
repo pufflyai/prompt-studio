@@ -28,6 +28,7 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
       title: "Service health",
       initialPageSize: 10,
       pageSizeOptions: [5, 10, 20],
+      selectionMode: "multiple",
       columns: [
         { id: "service", label: "Service", icon: <WorkbenchIcon name="Server" size={14} /> },
         {
@@ -62,6 +63,16 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
       ],
       executeQuery: () => ({ rows }),
       onRowClick: (row) => ctx.notifications.show({ title: `Opened ${row.values.service}`, level: "info" }),
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          icon: <WorkbenchIcon name="RotateCcw" size={16} />,
+          run: (selectedRows) => {
+            ctx.notifications.show({ title: `Restarting ${selectedRows.length} services`, level: "info" });
+          },
+        },
+      ],
       rowActions: [
         {
           id: "inspect",

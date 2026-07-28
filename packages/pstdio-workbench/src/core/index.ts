@@ -266,6 +266,7 @@ export type {
   DataTableRendererRegistry,
   DataTableRendererRow,
   DataTableRendererRowAction,
+  DataTableRendererSelectionAction,
   DataTableRendererStoreState,
   DataTableRendererThemeColor,
   RegisteredDataTableRendererContribution,

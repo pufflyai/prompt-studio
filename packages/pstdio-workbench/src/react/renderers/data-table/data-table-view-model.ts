@@ -1,7 +1,10 @@
+import type { DataTableSelectionAction, RowData } from "@pstdio/ui/data-table";
+import type { ReactNode } from "react";
 import type {
   DataTableRendererColumn,
   DataTableRendererQueryResult,
   DataTableRendererRow,
+  DataTableRendererSelectionAction,
   WorkbenchPanelInstance,
 } from "../../../core";
 
@@ -24,6 +27,23 @@ export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns
   });
   return { data, rowByData };
 };
+
+export const resolveDataTableRendererSelectionActions = (
+  actions: DataTableRendererSelectionAction[],
+  rowByData: WeakMap<RowData, DataTableRendererRow>,
+): DataTableSelectionAction[] =>
+  actions.map((action) => ({
+    label: action.label,
+    icon: action.icon as ReactNode,
+    destructive: action.destructive,
+    onSelect: (data) => {
+      const rows = data.flatMap((row) => {
+        const rendererRow = rowByData.get(row);
+        return rendererRow ? [rendererRow] : [];
+      });
+      void action.run(rows);
+    },
+  }));
 
 export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchPanelInstance) => {
   const resourceKey = placement.resource?.uri ?? placement.resource?.id ?? "unscoped";
