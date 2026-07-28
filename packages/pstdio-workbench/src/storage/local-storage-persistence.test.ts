@@ -150,6 +150,7 @@ describe("local storage workbench persistence", () => {
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
     persistence.historyPersistence.setHistory(history, "project:one");
+    persistence.sidePanelPersistence.setMode("attached");
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
       JSON.stringify({ version: 2, layout }),
@@ -164,6 +165,10 @@ describe("local storage workbench persistence", () => {
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
     expect(persistence.historyPersistence.getHistory("project:one")).toEqual(history);
     expect(persistence.historyPersistence.getHistory("project:two")).toBeUndefined();
+    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "side-panel", "project:one"))).toBe(
+      JSON.stringify({ version: 1, mode: "attached" }),
+    );
+    expect(persistence.sidePanelPersistence.getMode()).toBe("attached");
   });
 });
 

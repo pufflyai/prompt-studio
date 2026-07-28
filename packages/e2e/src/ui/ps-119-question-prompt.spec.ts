@@ -47,11 +47,12 @@ test("PS-119 answers a hydrated question tool call from the session composer", a
 
   await page.reload();
 
-  const answerOption = page.getByRole("radio", { name: "TypeScript" });
-  const sendButton = page.getByTestId("send-message-button");
+  const sessionComposer = page.getByRole("main");
+  const answerOption = sessionComposer.getByRole("radio", { name: "TypeScript" });
+  const sendButton = sessionComposer.getByTestId("send-message-button");
   await expect(answerOption).toBeEnabled();
   await expect(sendButton).toBeDisabled();
-  await page.getByText("TypeScript", { exact: true }).click();
+  await sessionComposer.getByText("TypeScript", { exact: true }).click();
   await expect(sendButton).toBeEnabled();
 
   const followUpRequestPromise = page.waitForRequest(

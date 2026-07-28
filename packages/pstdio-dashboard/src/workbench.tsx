@@ -14,6 +14,8 @@ import { createNotificationsModule } from "./modules/notifications/module";
 import { createProjectsModule } from "./modules/projects/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
+import { configureDashboardSessionSelectionPersistence } from "./modules/sessions/state/session-selection";
+import { createDashboardSessionSelectionPersistence } from "./modules/sessions/state/session-selection-persistence";
 import { createSettingsModule } from "./modules/settings/module";
 import { createSidenavModule } from "./modules/sidenav/module";
 import { createStartModule } from "./modules/start/module";
@@ -77,6 +79,10 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
   });
+  const sessionSelectionPersistence = createDashboardSessionSelectionPersistence({
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+  });
 
   const workbench = createWorkbenchCore({
     initialSidePanelMode: "closed",
@@ -91,6 +97,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
       projectSelection: projectSelectionPersistence,
     }),
   });
+  configureDashboardSessionSelectionPersistence(workbench, sessionSelectionPersistence);
 
   for (const module of createDashboardModules({ projectSelectionPersistence })) workbench.registerModule(module);
 

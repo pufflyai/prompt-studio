@@ -32,4 +32,22 @@ describe("createWorkbenchSidePanelController", () => {
 
     expect(controller.getMode()).toBe("attached");
   });
+
+  test("restores and persists real mode transitions", () => {
+    let savedMode: "floating" | "closed" | "attached" | undefined;
+    const persistence = {
+      getMode: () => savedMode,
+      setMode: (mode: "floating" | "closed" | "attached") => {
+        savedMode = mode;
+      },
+    };
+    const first = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
+
+    first.setMode("attached");
+    first.setMode("attached");
+    const restored = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
+
+    expect(savedMode).toBe("attached");
+    expect(restored.getMode()).toBe("attached");
+  });
 });

@@ -1,5 +1,6 @@
 import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardResources } from "@/shared/app/resources";
@@ -11,6 +12,7 @@ import { dashboardExtensionRouteKind } from "@/shared/extensions/workbench-exten
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { dashboardExtensionViewKind } from "./extensions/extension-view-placement";
 import { createDashboardSessions } from "./sessions/data/dashboard-sessions";
+import { forgetDashboardSession, getDashboardSelectedSessionId } from "./sessions/state/session-selection";
 import { createDashboardWorkspaces } from "./workspaces/data/dashboard-workspaces";
 
 interface CreateBootstrapModuleInput {
@@ -160,6 +162,38 @@ const openSelectedProjectLandingWhenReady = (
   return { dispose };
 };
 
+const restoreSelectedProjectSessionWhenReady = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  const sessionId = getDashboardSelectedSessionId(ctx);
+  if (!projectId || !sessionId) return undefined;
+
+  const restore = () => {
+    if (!isInitialCollectionsSyncComplete()) return false;
+
+    const session = createDashboardSessions(projectId).find((candidate) => candidate.id === sessionId);
+    if (!session) {
+      forgetDashboardSession(ctx);
+      return true;
+    }
+    if (getDashboardSelectedProjectId(ctx) !== projectId) return true;
+
+    void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      preservePanelMode: true,
+      resource: session.resource,
+      selectWorkspaceSidenav: false,
+    });
+    return true;
+  };
+
+  if (restore()) return undefined;
+
+  const unsubscribeDashboardData = subscribeDashboardData(() => {
+    if (!restore()) return;
+    unsubscribeDashboardData();
+  });
+  return { dispose: unsubscribeDashboardData };
+};
+
 // Boots the dashboard into the last-opened resource (handled by the workbench
 // core's `lastResource` controller) and falls back to the project start
 // view when nothing is saved. Also re-runs the landing flow whenever the
@@ -171,6 +205,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       ctx.context.set("project.open", true);
 
       let landingDisposable: { dispose(): void } | undefined;
+      let sessionRestoreDisposable: { dispose(): void } | undefined;
       let initialSyncWaitUnsubscribe: (() => void) | undefined;
       let landingRunId = 0;
       let currentExpectedResource: ResourceRef | undefined;
@@ -178,6 +213,11 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       const disposeLanding = () => {
         landingDisposable?.dispose();
         landingDisposable = undefined;
+      };
+
+      const disposeSessionRestore = () => {
+        sessionRestoreDisposable?.dispose();
+        sessionRestoreDisposable = undefined;
       };
 
       const cancelInitialSyncWait = () => {
@@ -201,12 +241,19 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         });
       };
 
+      const runProjectRestoration = () => {
+        runLanding();
+        disposeSessionRestore();
+        sessionRestoreDisposable = restoreSelectedProjectSessionWhenReady(ctx);
+      };
+
       const onSelectionChanged = () => {
         cancelInitialSyncWait();
         disposeLanding();
+        disposeSessionRestore();
 
         if (getDashboardSelectedProjectId(ctx)) {
-          runLanding();
+          runProjectRestoration();
           return;
         }
 
@@ -216,7 +263,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       const persistedProjectId = input.projectSelectionPersistence?.getSelectedProjectId();
 
       if (getDashboardSelectedProjectId(ctx)) {
-        runLanding();
+        runProjectRestoration();
       } else if (!persistedProjectId || isInitialCollectionsSyncComplete()) {
         openProjectSelection(ctx);
       } else {
@@ -229,7 +276,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             return;
           }
 
-          runLanding();
+          runProjectRestoration();
         });
       }
 
@@ -240,6 +287,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           unsubscribeProject();
           cancelInitialSyncWait();
           disposeLanding();
+          disposeSessionRestore();
         },
       };
     },
