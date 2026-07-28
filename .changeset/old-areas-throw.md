@@ -1,5 +1,5 @@
 ---
-"@pstdio/workbench": major
+"@pstdio/workbench": minor
 "@pstdio/ui": patch
 "pstdio": minor
 "pstdio-planner": patch
