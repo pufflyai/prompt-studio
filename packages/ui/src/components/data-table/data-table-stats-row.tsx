@@ -5,6 +5,27 @@ import { buildHistogramStat, buildTopValuesStat, countUniqueStatValues } from ".
 import type { DataTableColumnStat, RowData } from "./types";
 
 const formatNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format;
+const STAT_CHART_COLOR = "vis.categorical.1";
+
+interface SingleValueStatProps {
+  value: string;
+  count: number;
+}
+
+const SingleValueStat = (props: SingleValueStatProps) => {
+  const { value, count } = props;
+
+  return (
+    <Flex data-single-value-stat direction="column" gap="2xs" alignItems="flex-start" minWidth="0">
+      <Text textStyle="label/L/medium" lineHeight="1" maxWidth="100%" truncate>
+        {value}
+      </Text>
+      <Text textStyle="label/XS" color="fg.muted">
+        {formatNumber(count)} {count === 1 ? "value" : "values"}
+      </Text>
+    </Flex>
+  );
+};
 
 interface UniqueStatProps {
   rows: RowData[];
@@ -45,12 +66,17 @@ const HistogramStat = (props: HistogramStatProps) => {
     );
   }
 
+  const valueCount = histogram.bins.reduce((total, bin) => total + bin.count, 0);
+  if (histogram.min === histogram.max) {
+    return <SingleValueStat value={formatNumber(histogram.min)} count={valueCount} />;
+  }
+
   return (
     <Flex direction="column" width="100%" gap="2xs">
       <DataTableStatChart
         data={histogram.bins}
         dataKey="count"
-        color="vis.categorical.1"
+        color={STAT_CHART_COLOR}
         height="40px"
         ariaLabel={`Distribution for ${columnId}`}
         tooltipLabel={(bin) => `${formatNumber(bin.start)} – ${formatNumber(bin.end)}`}
@@ -79,6 +105,10 @@ const TopValuesStat = (props: TopValuesStatProps) => {
   const { rows, columnId, limit } = props;
   const groups = buildTopValuesStat(rows, columnId, limit);
 
+  if (groups.length === 1 && groups[0]) {
+    return <SingleValueStat value={groups[0].label} count={groups[0].count} />;
+  }
+
   return (
     <Flex direction="column" width="100%" gap="2xs">
       {groups.map((group) => (
@@ -87,7 +117,7 @@ const TopValuesStat = (props: TopValuesStatProps) => {
             data={[group]}
             dataKey="percentage"
             categoryKey="label"
-            color="vis.sequential.blue.low-3"
+            color={STAT_CHART_COLOR}
             height="18px"
             ariaLabel={`${group.label}: ${group.percentage}%`}
             layout="vertical"
@@ -105,10 +135,10 @@ const TopValuesStat = (props: TopValuesStatProps) => {
             gap="xs"
             pointerEvents="none"
           >
-            <Text textStyle="label/XS/regular" truncate>
+            <Text textStyle="label/2XS" color="fg.inverted" truncate>
               {group.label}
             </Text>
-            <Text textStyle="label/XS/medium" color="fg.muted">
+            <Text textStyle="label/2XS/medium" color="fg.muted">
               {group.percentage}%
             </Text>
           </Flex>

@@ -2227,7 +2227,7 @@
       },
       "fontSizes": {
         "2xs": {
-          "value": "0.625rem"
+          "value": "0.5rem"
         },
         "xs": {
           "value": "0.625rem"
@@ -14256,6 +14256,24 @@
           "letterSpacing": "0.1px"
         }
       },
+      "label/2XS": {
+        "value": {
+          "fontFamily": "label",
+          "fontSize": "2xs",
+          "fontWeight": "400",
+          "lineHeight": "150%",
+          "letterSpacing": "0.08px"
+        }
+      },
+      "label/2XS/medium": {
+        "value": {
+          "fontFamily": "label",
+          "fontSize": "2xs",
+          "fontWeight": "500",
+          "lineHeight": "150%",
+          "letterSpacing": "0.08px"
+        }
+      },
       "mono/XS": {
         "value": {
           "fontFamily": "mono",
@@ -14437,6 +14455,17 @@
       },
       "none": {
         "value": {}
+      },
+      "floatingBar": {
+        "value": {
+          "paddingInline": "sm",
+          "paddingBlock": "2xs",
+          "borderRadius": "md",
+          "bg": "bg.elevated",
+          "border": "1px solid",
+          "borderColor": "border",
+          "boxShadow": "lg"
+        }
       },
       "modal": {
         "value": {
