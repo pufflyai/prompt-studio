@@ -1,5 +1,52 @@
 # pstdio
 
+## 0.25.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- 488d0cb: Add vertical split resizing, persistent Secondary Panel state, and terminal tab restoration
+- ec66e9e: add resource preview tabs and project-stable Side Panel arrangements
+- fdec3b2: Derive ticket and workspace breadcrumbs from canonical hierarchy edges with atomic linked-resource history.
+- 7e9c33b: Add a first-class workbench data table renderer for modules and extensions
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- 397e448: Generalize the Side Panel controller and preserve its live host across attached, floating, and closed modes.
+- da4ea62: Keep global collections persistent and show selected-resource trees in the Sidenav
+- 336b8be: Place resource actions beside rows and selected breadcrumbs
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- 73bc10c: Preserve mode-owned layouts while switching panels without resetting project chrome.
+- 1525fed: Restore resource-owned panel layouts across navigation scopes
+- aaf9e96: Match the canonical desktop workbench geometry and migrate layout contracts to Region terminology
+- d5455b0: Render create forms from the full param vocabulary and the resource's own editable attributes: add markdown and files field types, localize field and chrome copy, and reject unsupported param types instead of dropping them.
+- 0e8df32: Add composable Panel tabs and shared add-panel discovery.
+- b4b601b: Unify Workbench panel authoring, presentation, navigation, and persistence APIs
+- 2cd0050: Extract planner automation into a repository extension and derive work activity from live sessions.
+- 920fdb7: Keep the full-height Side Panel live while it closes and reopens from Nav Chrome.
+- ac90b19: Put navigation history, breadcrumbs, and region controls in persistent Nav Chrome
+- 9c5337a: formalize extension roles and persist project-scoped workbench navigation
+
+### Patch Changes
+
+- b22eff8: Persist the Secondary Panel state and keep it closed on first dashboard open.
+- 39de767: Restore ticket interactions and settings, add renderer-owned create forms, and refresh local extension modes.
+- f0c6bbf: Fix OpenCode skill status guidance and interactive question responses
+- da4ea62: Move the project selector from the Sidenav into the global navigation header.
+- 7497fd4: Show complete workspace IDs and add JSON output to workspace listings.
+- 7e9c33b: Fix multi-step queued follow-up reordering across queue position gaps
+- 8b9e6de: Refuse concurrent PGlite database openers with an owned process lock
+- d9e33d5: Show active keyboard shortcuts when hovering sidebar rows
+- 39de767: Prevent the project picker from reopening after switching projects
+- 3acfedb: Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, concrete model defaults, and isolated dev seeding.
+- 7e9c33b: Improve chat transcript rendering, queued follow-up display, and DataTable interactions.
+- 5141b36: Migrate the chat UI to the latest design system. Sync the dark-mode neutral and status-border color tokens (and a new `bg.elevated`) to the Pencil source of truth and make the primary accent mode-independent; rebuild the composer so the model, attach, and send controls share one 28px row with the editor; move the workspace hub to wrap the composer with the workspace selector, an open-workspace icon action, and ready/setting-up/failed states; replace the "Working…" label with an elapsed-run-time indicator; and add a `ConversationBrowse` scrubber. Breaking: `ChatPanel`/`ChatInput` drop the `repoMenu` prop and `ChatWorkspaceHub` replaces `changesLabel` with `workspaceControl`.
+- 8f4b5f8: Keep the workspace terminal opener available after closing an auto-opened terminal.
+- 09043c8: Add session creation to expanded Sidenav Sessions groups
+- 3acfedb: Validate harness select params before registration.
+- 0e8df32: Fix workbench navigation, panel menu placement, terminal actions, and extension webview scrolling
+- 7e9c33b: Add DataTable renderers for Param Editor-backed JSON, theme-aware color scales, categorical colors, and visualization palettes
+- 1014f2f: Carry recovery and validation steps in shipped messages and skills instead of pointing at repository-only files
+
 ## 0.24.0
 
 _2026-07-09_

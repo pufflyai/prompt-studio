@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/workbench",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -63,8 +63,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@pstdio/sdk": "^0.15.0",
-    "@pstdio/ui": "^0.16.0",
+    "@pstdio/sdk": "^0.16.0",
+    "@pstdio/ui": "^0.17.0",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.556.0",
     "rimless": "0.8.2",

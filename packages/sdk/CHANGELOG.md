@@ -1,5 +1,24 @@
 # @pstdio/sdk
 
+## 0.16.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- 7e9c33b: Add a first-class workbench data table renderer for modules and extensions
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- 39de767: Restore ticket interactions and settings, add renderer-owned create forms, and refresh local extension modes.
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- 73bc10c: Preserve mode-owned layouts while switching panels without resetting project chrome.
+- d5455b0: Render create forms from the full param vocabulary and the resource's own editable attributes: add markdown and files field types, localize field and chrome copy, and reject unsupported param types instead of dropping them.
+- b4b601b: Unify Workbench panel authoring, presentation, navigation, and persistence APIs
+- 9c5337a: formalize extension roles and persist project-scoped workbench navigation
+
+### Patch Changes
+
+- 3acfedb: Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, concrete model defaults, and isolated dev seeding.
+
 ## 0.15.0
 
 _2026-07-09_

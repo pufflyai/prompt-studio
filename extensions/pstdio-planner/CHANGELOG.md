@@ -1,5 +1,30 @@
 # pstdio-planner
 
+## 0.8.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- fdec3b2: Derive ticket and workspace breadcrumbs from canonical hierarchy edges with atomic linked-resource history.
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- da4ea62: Keep global collections persistent and show selected-resource trees in the Sidenav
+- 336b8be: Place resource actions beside rows and selected breadcrumbs
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- d5455b0: Render create forms from the full param vocabulary and the resource's own editable attributes: add markdown and files field types, localize field and chrome copy, and reject unsupported param types instead of dropping them.
+- b4b601b: Unify Workbench panel authoring, presentation, navigation, and persistence APIs
+- 2cd0050: Extract planner automation into a repository extension and derive work activity from live sessions.
+- 9c5337a: formalize extension roles and persist project-scoped workbench navigation
+
+### Patch Changes
+
+- 39de767: Restore ticket interactions and settings, add renderer-owned create forms, and refresh local extension modes.
+- f0c6bbf: Fix OpenCode skill status guidance and interactive question responses
+- 73bc10c: Preserve mode-owned layouts while switching panels without resetting project chrome.
+- aaf9e96: Match the canonical desktop workbench geometry and migrate layout contracts to Region terminology
+- 8d7d899: Rename the default "Ready" board status to "TODO" and color it purple
+- Updated internal dependencies: `@pstdio/ui@0.17.0`, `@pstdio/sdk@0.16.0`
+
 ## 0.7.0
 
 _2026-07-09_

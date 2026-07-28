@@ -1,6 +1,6 @@
 {
   "name": "harness-codex",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "displayName": "Codex",
   "description": "Contributes the Codex agent harness.",
   "publisher": "pstdio",
@@ -20,7 +20,7 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.15.0"
+    "@pstdio/sdk": "^0.16.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

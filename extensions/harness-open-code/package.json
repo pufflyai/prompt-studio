@@ -1,6 +1,6 @@
 {
   "name": "harness-open-code",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "displayName": "OpenCode",
   "description": "Contributes the OpenCode agent harness.",
   "publisher": "pstdio",
@@ -20,7 +20,7 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.15.0"
+    "@pstdio/sdk": "^0.16.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

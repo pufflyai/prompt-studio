@@ -1,5 +1,14 @@
 # harness-claude-code
 
+## 0.3.4
+
+_2026-07-28_
+
+### Patch Changes
+
+- 3acfedb: Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, concrete model defaults, and isolated dev seeding.
+- Updated internal dependencies: `@pstdio/sdk@0.16.0`
+
 ## 0.3.3
 
 _2026-07-09_

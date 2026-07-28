@@ -1,5 +1,32 @@
 # @pstdio/ui
 
+## 0.17.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- 488d0cb: Add vertical split resizing, persistent Secondary Panel state, and terminal tab restoration
+- 7e9c33b: Add a first-class workbench data table renderer for modules and extensions
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- 39de767: Restore ticket interactions and settings, add renderer-owned create forms, and refresh local extension modes.
+- 336b8be: Place resource actions beside rows and selected breadcrumbs
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- 9c5337a: add independently attachable menus to every workbench panel
+- d5455b0: Render create forms from the full param vocabulary and the resource's own editable attributes: add markdown and files field types, localize field and chrome copy, and reject unsupported param types instead of dropping them.
+- 0e8df32: Add composable Panel tabs and shared add-panel discovery.
+- 5141b36: Migrate the chat UI to the latest design system. Sync the dark-mode neutral and status-border color tokens (and a new `bg.elevated`) to the Pencil source of truth and make the primary accent mode-independent; rebuild the composer so the model, attach, and send controls share one 28px row with the editor; move the workspace hub to wrap the composer with the workspace selector, an open-workspace icon action, and ready/setting-up/failed states; replace the "Working…" label with an elapsed-run-time indicator; and add a `ConversationBrowse` scrubber. Breaking: `ChatPanel`/`ChatInput` drop the `repoMenu` prop and `ChatWorkspaceHub` replaces `changesLabel` with `workspaceControl`.
+
+### Patch Changes
+
+- f0c6bbf: Fix OpenCode skill status guidance and interactive question responses
+- 7e9c33b: Add configurable sticky column statistics and described headers to DataTable
+- aaf9e96: Match the canonical desktop workbench geometry and migrate layout contracts to Region terminology
+- 7e9c33b: Improve chat transcript rendering, queued follow-up display, and DataTable interactions.
+- ac90b19: Put navigation history, breadcrumbs, and region controls in persistent Nav Chrome
+- 8f4b5f8: Hide pinned infrastructure tabs from tab visibility menus.
+- 7e9c33b: Add DataTable renderers for Param Editor-backed JSON, theme-aware color scales, categorical colors, and visualization palettes
+
 ## 0.16.0
 
 _2026-07-09_

@@ -1,5 +1,25 @@
 # Prompt Studio Skills
 
+## 0.3.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- b4b601b: Unify Workbench panel authoring, presentation, navigation, and persistence APIs
+
+### Patch Changes
+
+- f0c6bbf: Fix OpenCode skill status guidance and interactive question responses
+- 73bc10c: Preserve mode-owned layouts while switching panels without resetting project chrome.
+- 2cd0050: Extract planner automation into a repository extension and derive work activity from live sessions.
+- 8d7d899: Rename the default "Ready" board status to "TODO" and color it purple
+- 9c5337a: formalize extension roles and persist project-scoped workbench navigation
+- 1014f2f: Carry recovery and validation steps in shipped messages and skills instead of pointing at repository-only files
+- Updated internal dependencies: `@pstdio/sdk@0.16.0`
+
 ## 0.2.5
 
 _2026-07-09_

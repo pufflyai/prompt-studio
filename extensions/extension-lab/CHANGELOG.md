@@ -1,5 +1,22 @@
 # extension-lab
 
+## 0.7.0
+
+_2026-07-28_
+
+### Minor Changes
+
+- 43a57b9: Rename the data renderer API to kanban renderer and adopt the saved-view Kanban design.
+- da4ea62: Rename Sidebar to Sidenav and add persistent Sidenav visibility and ordering
+- b4b601b: Unify Workbench panel authoring, presentation, navigation, and persistence APIs
+
+### Patch Changes
+
+- 39de767: Restore ticket interactions and settings, add renderer-owned create forms, and refresh local extension modes.
+- 73bc10c: Preserve mode-owned layouts while switching panels without resetting project chrome.
+- 9c5337a: formalize extension roles and persist project-scoped workbench navigation
+- Updated internal dependencies: `@pstdio/ui@0.17.0`, `@pstdio/sdk@0.16.0`
+
 ## 0.6.0
 
 _2026-07-09_
