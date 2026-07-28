@@ -8511,7 +8511,7 @@
             "color": "fg",
             "maxHeight": "var(--available-height)",
             "--menu-z-index": "zIndex.popover",
-            "zIndex": "dropdown",
+            "zIndex": "calc(var(--menu-z-index) + var(--layer-index, 0))",
             "borderRadius": "xs",
             "overflow": "hidden",
             "overflowY": "auto",

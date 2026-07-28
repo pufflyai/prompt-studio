@@ -112,8 +112,6 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
   };
 };
 
-const portalledMenuLayerZIndex = "calc(var(--chakra-z-index-popover) + 2)";
-
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
     trigger,
@@ -261,7 +259,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
   ) : null;
 
   const menuPositioner = (
-    <Menu.Positioner pointerEvents="auto">
+    <Menu.Positioner>
       <Menu.Content w={width} bg="bg" gap="0" p="0">
         {resolvedHeader}
         {searchInput}
@@ -311,15 +309,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       onSelect={hasParentList ? handleMenuItemSelect : undefined}
     >
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
-      <Portal disabled={!portalled}>
-        {portalled ? (
-          <Box position="fixed" inset="0" pointerEvents="none" zIndex={portalledMenuLayerZIndex}>
-            {menuPositioner}
-          </Box>
-        ) : (
-          menuPositioner
-        )}
-      </Portal>
+      <Portal disabled={!portalled}>{menuPositioner}</Portal>
     </Menu.Root>
   );
 };
