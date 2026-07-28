@@ -1,6 +1,7 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { HarnessParamControls, type HarnessParamValues } from "./harness-param-controls";
 
 const codexSchema = {
@@ -102,4 +103,45 @@ export const Narrow: Story = {
       </Box>
     ),
   ],
+};
+
+// The run attempt modal renders these controls inside a dialog; their portalled menus have to
+// stay on top of it, otherwise every option click lands on the dialog instead.
+export const InsideDialog: Story = {
+  parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <Dialog.Root open modal size="lg">
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Run attempt</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Stack gap="md">
+                  <Text textStyle="label/S/medium">Model</Text>
+                  <Story />
+                </Stack>
+              </Dialog.Body>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    ),
+  ],
+  play: async () => {
+    const body = within(document.body);
+
+    await userEvent.click(body.getByRole("button", { name: "Reasoning effort: Medium" }));
+
+    const option = await body.findByRole("menuitem", { name: "High" });
+    const bounds = option.getBoundingClientRect();
+    const topMostElement = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    await expect(option.contains(topMostElement)).toBe(true);
+
+    await userEvent.click(option);
+    await expect(body.getByRole("button", { name: "Reasoning effort: High" })).toBeVisible();
+  },
 };

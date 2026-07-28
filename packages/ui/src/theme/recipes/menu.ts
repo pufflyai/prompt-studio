@@ -82,7 +82,6 @@ export const menuSlotRecipe = defineSlotRecipe({
       borderWidth: "1px",
       borderStyle: "solid",
       borderColor: "border",
-      zIndex: "dropdown",
       textStyle: "label/M/regular",
     },
   },
