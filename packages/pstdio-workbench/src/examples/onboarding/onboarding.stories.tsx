@@ -2,7 +2,6 @@ import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "storybook/test";
 import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
-import { createDataTableRendererStoryModule } from "../data-table-renderer/module";
 import { createExtensionThemesWorkbench } from "../extension-themes/module";
 import { createFileRendererStoryModule } from "../file-renderer/module";
 import { createKanbanRendererStoryModule } from "../kanban-renderer/module";
@@ -13,7 +12,6 @@ import { breadcrumbSource } from "./breadcrumb-source";
 import { createCommandKeybindingThemeModule } from "./command-theme-module";
 import { createControlsRendererModule } from "./controls-renderer-module";
 import { controlsRendererSource } from "./controls-renderer-source";
-import { dataTableRendererSource } from "./data-table-renderer-source";
 import { createExtensionContributionsModule } from "./extension-contributions-module";
 import { extensionContributionsSource } from "./extension-contributions-source";
 import { extensionsSource } from "./extensions-source";
@@ -120,7 +118,6 @@ const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule
 const paletteResourcesWorkbench = createWorkbench(createPaletteResourcesModule());
 const extensionContributionsWorkbench = createWorkbench(createExtensionContributionsModule());
 const controlsRendererWorkbench = createWorkbench(createControlsRendererModule());
-const dataTableRendererWorkbench = createWorkbench(createDataTableRendererStoryModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -341,10 +338,4 @@ export const ControlsRenderer: Story = {
   name: "20. Controls renderer",
   parameters: sourceParameters(controlsRendererSource),
   render: () => <WorkbenchFrame workbench={controlsRendererWorkbench} />,
-};
-
-export const DataTableRenderer: Story = {
-  name: "21. Data table renderer",
-  parameters: sourceParameters(dataTableRendererSource),
-  render: () => <WorkbenchFrame workbench={dataTableRendererWorkbench} />,
 };

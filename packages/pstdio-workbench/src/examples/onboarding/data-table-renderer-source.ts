@@ -11,7 +11,7 @@ export const healthModule: WorkbenchModuleContribution = {
         {
           id: "restart",
           label: "Restart selected",
-          run: (rows) => restartServices(rows.map((row) => row.id)),
+          run: (rows) => console.log("Restart services", rows.map((row) => row.id)),
         },
       ],
       columns: [
@@ -22,6 +22,8 @@ export const healthModule: WorkbenchModuleContribution = {
       executeQuery: () => ({
         rows: [
           { id: "api", values: { service: "API", status: "healthy", details: { region: "eu" } } },
+          { id: "worker", values: { service: "Worker", status: "degraded", details: { region: "us" } } },
+          { id: "queue", values: { service: "Queue", status: "healthy", details: { region: "eu" } } },
         ],
       }),
       onRowClick: (row) => console.log(row.id),
