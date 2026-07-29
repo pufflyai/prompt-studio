@@ -14,6 +14,17 @@
         "lerna": "9.0.7",
       },
     },
+    ".pstdio/extensions/pstdio-planner-loops": {
+      "name": "pstdio-planner-loops",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.13",
+        "typescript": "6.0.2",
+      },
+    },
     "clients/landing-page": {
       "name": "@pstdio/landing-page",
       "dependencies": {
@@ -3276,6 +3287,8 @@
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 
     "pstdio-planner": ["pstdio-planner@workspace:extensions/pstdio-planner"],
+
+    "pstdio-planner-loops": ["pstdio-planner-loops@workspace:.pstdio/extensions/pstdio-planner-loops"],
 
     "pstdio-reports": ["pstdio-reports@workspace:extensions/pstdio-reports"],
 

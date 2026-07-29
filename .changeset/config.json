@@ -20,6 +20,7 @@
     "pstdio-file-types",
     "pstdio-logging",
     "pstdio-paths",
+    "pstdio-planner-loops",
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
