@@ -54,6 +54,7 @@
     "clients/*",
     "packages/*",
     "extensions/*",
+    ".pstdio/extensions/pstdio-planner-loops",
     "scripts"
   ],
   "devDependencies": {

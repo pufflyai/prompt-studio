@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs } from "./helpers";
 import {
@@ -108,6 +110,11 @@ describe("planner automations", () => {
       const repo = createInitializedRepo(ctx, "planner-automations");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "planner-automations-repo");
+
+      // The materialized repo-local extension must resolve @pstdio/sdk from the
+      // workspace, never from the npm registry — registry coupling here breaks
+      // every branch whose sdk range lags the latest published version.
+      expect(existsSync(join(repo, ".pstdio/extensions/pstdio-planner-loops/node_modules/@pstdio/sdk"))).toBe(true);
 
       const ticket = JSON.parse(run(`tickets create --content "# Workspace activity proof"`, repo)) as {
         id: string;
