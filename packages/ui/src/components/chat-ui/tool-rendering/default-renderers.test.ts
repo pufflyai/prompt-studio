@@ -6,6 +6,27 @@ const renderInvocation = (invocation: ToolPart) => {
   return buildTimelineDocFromInvocations([invocation]).items[0];
 };
 
+describe("shell renderer", () => {
+  it("renders the command in the title and only output in the disclosure", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "completed",
+      state: {
+        status: "completed",
+        input: { command: "bun run validate" },
+        output: "Validated 42 projects",
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      { kind: "text", text: "bun run validate", muted: true },
+    ]);
+    expect(item.blocks).toEqual([{ type: "code", language: "text", code: "Validated 42 projects" }]);
+  });
+});
+
 describe("todowrite renderer", () => {
   it("renders Claude TodoWrite payloads with the shared readonly todo list", () => {
     const item = renderInvocation({

@@ -113,6 +113,28 @@ export const ClaudeCodeTools: Story = {
   ),
 };
 
+const codexShellInvocations: ToolPart[] = [
+  {
+    type: "tool",
+    tool: "shell",
+    status: "completed",
+    state: {
+      status: "completed",
+      input: { command: "bun run --cwd packages/ui test tool-rendering" },
+      output:
+        "26 [chromium] › src/ui/workspaces.spec.ts:192:3 › Workspace diff › fork_point resolves\n27 [chromium] › src/ui/workspaces.spec.ts:223:3 › Workspace diff › fork_point handles rebase\n28 [chromium] › src/ui/workspaces.spec.ts:273:3 › Workspace rename › renames the branch\n\n3 skipped\n25 passed (34.1s)",
+    },
+  },
+];
+
+export const CodexShell: Story = {
+  render: () => (
+    <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <ToolInvocationTimeline invocations={codexShellInvocations} />
+    </Box>
+  ),
+};
+
 const questionAndTodoInvocations: ToolPart[] = [
   {
     type: "tool",
