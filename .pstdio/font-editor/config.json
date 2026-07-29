@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "packages/ui/public/font/prompt-studio-icons.ttf",
+  "outputDir": "packages/ui/public/font",
+  "cssFile": "css/prompt-studio-icons.css",
+  "family": "prompt-studio-icons",
+  "fileName": "prompt-studio-icons",
+  "cssPrefix": "icon-",
+  "fontsUrl": "$fonts",
+  "formats": ["eot", "svg", "ttf", "woff", "woff2"],
+  "startCodepoint": "U+E800",
+  "endCodepoint": "U+F8FF",
+  "cacheBust": "content-hash"
+}
