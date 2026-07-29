@@ -52,6 +52,7 @@ describe("ticketToRow", () => {
       created: "2026-01-01T00:00:00.000Z",
       updated: "2026-01-02T00:00:00.000Z",
       id: "T-1",
+      parent: "",
       workspace: "",
       workspaceItems: [],
     });
@@ -74,6 +75,22 @@ describe("ticketToRow", () => {
         label: "T-1 Fix the thing",
         metadata: { shorthand: "T-1" },
       },
+    });
+    expect(row.attributes).toMatchObject({
+      id: "T-1 / T-2",
+      parent: "T-1",
+    });
+  });
+
+  test("maps the complete root-first shorthand ancestry and direct parent", () => {
+    const parent = { ...ticket, id: "t2", shorthand: "T-2", parentId: ticket.id };
+    const child = { ...ticket, id: "t3", shorthand: "T-3", parentId: parent.id };
+
+    const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, parent, child]));
+
+    expect(row.attributes).toMatchObject({
+      id: "T-1 / T-2 / T-3",
+      parent: "T-2",
     });
   });
 
@@ -134,6 +151,17 @@ describe("buildTicketAttributes", () => {
       type: { kind: "date" },
       sortable: true,
       displayable: true,
+    });
+  });
+
+  test("exposes parent as a filter-only string attribute", () => {
+    const parentAttribute = buildTicketAttributes([]).find((attribute) => attribute.id === "parent");
+
+    expect(parentAttribute).toEqual({
+      id: "parent",
+      label: { $l10n: "displayMenu.propertyOptions.parent", default: "Parent" },
+      type: { kind: "string" },
+      filterable: true,
     });
   });
 

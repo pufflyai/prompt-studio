@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   linkedResourceParentMetadata,
+  resolveTicketHierarchy,
   ticketResourceHierarchyMetadata,
   ticketResourceReference,
 } from "./ticket-resource-hierarchy";
@@ -20,6 +21,38 @@ const storedTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
 });
 
 describe("ticket resource hierarchy", () => {
+  test("resolves root-first lineage, breadcrumb, and immediate parent from one traversal", () => {
+    const root = storedTicket({ id: "root", shorthand: "PS-1", title: "Root" });
+    const parent = storedTicket({ id: "parent", shorthand: "PS-2", parentId: root.id });
+    const child = storedTicket({ id: "child", shorthand: "PS-3", parentId: parent.id });
+    const tickets = new Map([
+      [root.id, root],
+      [parent.id, parent],
+      [child.id, child],
+    ]);
+
+    const hierarchy = resolveTicketHierarchy(child, tickets);
+
+    expect(hierarchy.lineage.map((ticket) => ticket.id)).toEqual(["root", "parent", "child"]);
+    expect(hierarchy.breadcrumb).toBe("PS-1 / PS-2 / PS-3");
+    expect(hierarchy.parent).toBe(parent);
+  });
+
+  test("stops lineage at missing parents and repeated tickets", () => {
+    const missingParent = storedTicket({ id: "orphan", shorthand: "PS-3", parentId: "missing" });
+    const child = storedTicket({ id: "child", shorthand: "PS-2", parentId: "parent" });
+    const parent = storedTicket({ id: "parent", shorthand: "PS-1", parentId: "child" });
+    const tickets = new Map([
+      [parent.id, parent],
+      [child.id, child],
+    ]);
+
+    expect(resolveTicketHierarchy(missingParent, tickets).breadcrumb).toBe("PS-3");
+    expect(resolveTicketHierarchy(missingParent, tickets).parent).toBeUndefined();
+    expect(resolveTicketHierarchy(child, tickets).lineage.map((ticket) => ticket.id)).toEqual(["parent", "child"]);
+    expect(resolveTicketHierarchy(child, tickets).breadcrumb).toBe("PS-1 / PS-2");
+  });
+
   test("serializes a three-level chain as canonical parent resource edges", () => {
     const root = storedTicket({ id: "root", shorthand: "PS-1", title: "Root" });
     const parent = storedTicket({

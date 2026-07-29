@@ -8,11 +8,10 @@ import type {
 import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import {
-  linkedResourceParentMetadata,
+  resolveTicketHierarchy,
   type TicketParentLookup,
   type TicketResourceReference,
   ticketDisplayTitle,
-  ticketResourceHierarchyMetadata,
 } from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
@@ -110,9 +109,9 @@ export const createTicketWorkspaceLookup = (workspaces: ExtensionWorkspace[] = [
 const ticketWorkspaceValues = (
   ticket: StoredTicket,
   workspaceLookup: TicketWorkspaceLookup,
-  parentLookup: TicketParentLookup,
+  resourceReference: TicketResourceReference,
 ) => {
-  const parentMetadata = linkedResourceParentMetadata(ticket, parentLookup);
+  const parentMetadata = { resourceParent: resourceReference };
   const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({ ...item, ...parentMetadata }));
   return {
     [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
@@ -127,10 +126,12 @@ const ticketToRowWithTags = (
   workspaceLookup: TicketWorkspaceLookup,
   parentLookup: TicketParentLookup,
 ) => {
+  const hierarchy = resolveTicketHierarchy(ticket, parentLookup);
+
   return {
     id: ticket.id,
-    // Card/list rows show the bare title; the shorthand stays available as the "id"
-    // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
+    // Card/list rows show the bare title; shorthand ancestry stays in the "id"
+    // attribute while the resource label remains the navigation title.
     title: ticket.title || ticket.shorthand,
     resource: {
       type: TICKET_RESOURCE_KIND,
@@ -138,14 +139,15 @@ const ticketToRowWithTags = (
       projectId,
       label: ticketDisplayTitle(ticket),
       icon: TICKET_RESOURCE_ICON,
-      metadata: ticketResourceHierarchyMetadata(ticket, parentLookup),
+      metadata: hierarchy.resourceReference.metadata,
     },
     attributes: {
       status: ticket.statusId ?? "",
       created: ticket.createdAt,
       updated: ticket.updatedAt,
-      id: ticket.shorthand,
-      ...ticketWorkspaceValues(ticket, workspaceLookup, parentLookup),
+      id: hierarchy.breadcrumb,
+      parent: hierarchy.parent?.shorthand ?? "",
+      ...ticketWorkspaceValues(ticket, workspaceLookup, hierarchy.resourceReference),
       ...ticketTagValues(ticket, tagOptions),
     },
   };
@@ -222,6 +224,12 @@ export const buildTicketAttributes = (
     displayable: true,
   },
   { id: "id", label: l10n("displayMenu.orderingOptions.shorthand", "ID"), type: { kind: "string" }, displayable: true },
+  {
+    id: "parent",
+    label: l10n("displayMenu.propertyOptions.parent", "Parent"),
+    type: { kind: "string" },
+    filterable: true,
+  },
   {
     id: TICKET_WORKSPACE_ATTRIBUTE_ID,
     label: l10n("displayMenu.propertyOptions.workspace", "Workspace"),
