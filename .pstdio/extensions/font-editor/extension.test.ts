@@ -7,7 +7,7 @@ describe("font editor extension", () => {
       path: "font-editor",
       webview: {
         entry: { path: "./src/views/main.tsx" },
-        capabilities: ["commands.execute", "files.upload", "files.delete", "notification.show"],
+        capabilities: ["commands.execute", "notification.show"],
       },
     });
     expect(extension.treeItems?.fontEditor).toMatchObject({
@@ -63,6 +63,47 @@ describe("font editor extension", () => {
         command: "font-editor.internal.inspect",
         invocation: {
           params: {},
+          repoId: "repo-1",
+          repoPath: "/repo",
+        },
+      },
+    ]);
+  });
+
+  test("routes inline SVG content through the default repository", async () => {
+    const calls: unknown[] = [];
+    const svg = '<svg viewBox="0 0 10 10"><path d="M0 0h10v10H0z"/></svg>';
+    const command = extension.commands?.["glyph.add"];
+
+    expect(command?.params).toHaveProperty("svg");
+
+    await command?.run({
+      params: { name: "square", svg },
+      repos: {
+        getDefault: async () => ({
+          projectId: "project-1",
+          repoId: "repo-1",
+          path: "/repo",
+          role: "default",
+        }),
+      },
+      commands: {
+        execute: async (commandId: string, invocation: unknown) => {
+          calls.push({ commandId, invocation });
+          return {
+            ok: true,
+            status: "success",
+            value: { glyphCount: 221 },
+          };
+        },
+      },
+    } as never);
+
+    expect(calls).toEqual([
+      {
+        commandId: "font-editor.internal.glyph.add",
+        invocation: {
+          params: { name: "square", svg },
           repoId: "repo-1",
           repoPath: "/repo",
         },

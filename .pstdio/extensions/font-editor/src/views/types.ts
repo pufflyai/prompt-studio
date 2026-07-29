@@ -32,3 +32,9 @@ export interface FontConfigView {
   endCodepoint: string;
   cacheBust: "content-hash";
 }
+
+export interface FontOperationView {
+  glyphCount: number;
+  formats: string[];
+  glyph?: GlyphView;
+}

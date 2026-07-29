@@ -7,7 +7,7 @@ interface AddGlyphDialogProps {
   busy: boolean;
   files: WebviewFilesClient;
   onClose: () => void;
-  onAdd: (input: { fileId: string; name: string; codepoint?: string }) => Promise<void>;
+  onAdd: (input: { svg: string; name: string; codepoint?: string }) => Promise<void>;
 }
 
 export const AddGlyphDialog = (props: AddGlyphDialogProps) => {
@@ -30,21 +30,11 @@ export const AddGlyphDialog = (props: AddGlyphDialogProps) => {
 
   const submit = async () => {
     if (!file || !name) return;
-    const uploaded = await files.upload({
-      name: file.name,
-      data: await file.arrayBuffer(),
-      mimeType: file.type || "image/svg+xml",
-      scope: { type: "project" },
-    });
-    try {
-      await onAdd({ fileId: uploaded.id, name, codepoint: codepoint || undefined });
-      setFile(undefined);
-      setName("");
-      setCodepoint("");
-      onClose();
-    } finally {
-      await files.delete(uploaded.id);
-    }
+    await onAdd({ svg: await file.text(), name, codepoint: codepoint || undefined });
+    setFile(undefined);
+    setName("");
+    setCodepoint("");
+    onClose();
   };
 
   return (

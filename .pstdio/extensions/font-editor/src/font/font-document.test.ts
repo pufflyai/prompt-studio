@@ -21,41 +21,47 @@ const normalizedSource = async () => {
   const [font, css] = await Promise.all([source(), readFile(cssPath, "utf8")]);
   return normalizeFontGlyphs(font, parseCssGlyphNames(css, "icon-"));
 };
+const currentCssNames = async () => parseCssGlyphNames(await readFile(cssPath, "utf8"), "icon-");
+const nextUnusedCodepoint = (glyphs: Awaited<ReturnType<typeof inspectFont>>["glyphs"]) => {
+  const used = new Set(glyphs.map((glyph) => glyph.unicode));
+  for (let codepoint = 0xe800; codepoint <= 0xf8ff; codepoint += 1) {
+    if (!used.has(codepoint)) return `U+${codepoint.toString(16).toUpperCase()}`;
+  }
+  throw new Error("No unused codepoint in the configured range.");
+};
 
 describe("font document", () => {
   test("inspects the existing Prompt Studio icon font", async () => {
     const result = await inspectFont(await normalizedSource());
+    const cssNames = await currentCssNames();
 
-    expect(result.glyphs).toHaveLength(220);
-    expect(result.glyphs).toContainEqual(
-      expect.objectContaining({
-        name: "data-intiger",
-        codepoint: "U+E805",
-      }),
-    );
+    expect(result.glyphs.map((glyph) => [glyph.unicode, glyph.name])).toEqual([...cssNames]);
+    expect(result.glyphs.every((glyph) => glyph.codepoint.startsWith("U+"))).toBe(true);
   });
 
   test("renames a glyph without changing its codepoint or contours", async () => {
     const input = await normalizedSource();
     const before = await inspectFont(input, { includeContours: true });
-    const updated = await renameGlyph(input, "data-intiger", "data-integer");
+    const oldGlyph = before.glyphs[0];
+    if (!oldGlyph) throw new Error("Expected the font to contain a glyph.");
+    const updated = await renameGlyph(input, oldGlyph.name, "test-renamed-glyph");
     const after = await inspectFont(updated, { includeContours: true });
 
-    const oldGlyph = before.glyphs.find((glyph) => glyph.name === "data-intiger");
-    const newGlyph = after.glyphs.find((glyph) => glyph.name === "data-integer");
-    expect(newGlyph?.codepoint).toBe("U+E805");
-    expect(newGlyph?.contours).toEqual(oldGlyph?.contours);
-    expect(after.glyphs.some((glyph) => glyph.name === "data-intiger")).toBe(false);
+    const newGlyph = after.glyphs.find((glyph) => glyph.name === "test-renamed-glyph");
+    expect(newGlyph?.codepoint).toBe(oldGlyph.codepoint);
+    expect(newGlyph?.contours).toEqual(oldGlyph.contours);
+    expect(after.glyphs.some((glyph) => glyph.name === oldGlyph.name)).toBe(false);
   });
 
   test("adds, moves, and removes an SVG glyph", async () => {
     const input = await normalizedSource();
+    const before = await inspectFont(input);
     const svg = '<svg viewBox="0 0 1000 1000"><path d="M100 100H900V900H100Z"/></svg>';
     const added = await addGlyph(input, { name: "agent-spark", svg });
     const inspected = await inspectFont(added);
     const glyph = inspected.glyphs.find((candidate) => candidate.name === "agent-spark");
 
-    expect(glyph?.codepoint).toBe("U+E825");
+    expect(glyph?.codepoint).toBe(nextUnusedCodepoint(before.glyphs));
 
     const moved = await setGlyphCodepoint(added, "agent-spark", "U+F100");
     expect((await inspectFont(moved)).glyphs).toContainEqual(
@@ -67,7 +73,8 @@ describe("font document", () => {
   });
 
   test("builds and verifies every shipped font format and CSS mapping", async () => {
-    const artifacts = await buildFontArtifacts(await normalizedSource(), defaultFontEditorConfig);
+    const input = await normalizedSource();
+    const artifacts = await buildFontArtifacts(input, defaultFontEditorConfig);
     const verified = await verifyFontArtifacts(artifacts, defaultFontEditorConfig);
 
     expect(Object.keys(artifacts).sort()).toEqual([
@@ -78,16 +85,18 @@ describe("font document", () => {
       "prompt-studio-icons.woff",
       "prompt-studio-icons.woff2",
     ]);
-    expect(verified.glyphCount).toBe(220);
+    expect(verified.glyphCount).toBe((await inspectFont(input)).glyphs.length);
     expect(verified.formats).toEqual(["eot", "svg", "ttf", "woff", "woff2"]);
   });
 
   test("rejects duplicate names and codepoints", async () => {
     const input = await normalizedSource();
+    const [existing] = (await inspectFont(input)).glyphs;
+    if (!existing) throw new Error("Expected the font to contain a glyph.");
     const svg = '<svg viewBox="0 0 1000 1000"><path d="M100 100H900V900H100Z"/></svg>';
 
-    await expect(addGlyph(input, { name: "data-intiger", svg })).rejects.toThrow("already exists");
-    await expect(addGlyph(input, { name: "agent-spark", svg, codepoint: "U+E805" })).rejects.toThrow(
+    await expect(addGlyph(input, { name: existing.name, svg })).rejects.toThrow("already exists");
+    await expect(addGlyph(input, { name: "agent-spark", svg, codepoint: existing.codepoint })).rejects.toThrow(
       "already assigned",
     );
   });

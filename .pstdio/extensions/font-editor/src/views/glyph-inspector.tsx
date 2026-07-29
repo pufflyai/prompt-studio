@@ -1,4 +1,4 @@
-import { Box, Button, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { GlyphView } from "./types";
@@ -16,10 +16,12 @@ export const GlyphInspector = (props: GlyphInspectorProps) => {
   const { glyph, family, busy, onRename, onCodepoint, onRemove } = props;
   const [name, setName] = useState("");
   const [codepoint, setCodepoint] = useState("");
+  const [removeOpen, setRemoveOpen] = useState(false);
 
   useEffect(() => {
     setName(glyph?.name ?? "");
     setCodepoint(glyph?.codepoint ?? "");
+    setRemoveOpen(false);
   }, [glyph]);
 
   if (!glyph) {
@@ -73,19 +75,42 @@ export const GlyphInspector = (props: GlyphInspectorProps) => {
             </Button>
           </Field.Root>
           <HStack justify="end">
-            <Button
-              colorPalette="red"
-              variant="outline"
-              loading={busy}
-              onClick={() => {
-                if (window.confirm(`Remove ${glyph.name} from the font?`)) void onRemove(glyph);
-              }}
-            >
+            <Button colorPalette="red" variant="outline" loading={busy} onClick={() => setRemoveOpen(true)}>
               Remove glyph
             </Button>
           </HStack>
         </VStack>
       </SimpleCardBody>
+      <Dialog.Root open={removeOpen} onOpenChange={(details) => setRemoveOpen(details.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content maxWidth="sm">
+            <Dialog.Header>
+              <Dialog.Title>Remove {glyph.name}?</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text>This removes the glyph and rebuilds every generated font and CSS file.</Text>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <HStack>
+                <Button variant="ghost" disabled={busy} onClick={() => setRemoveOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  colorPalette="red"
+                  loading={busy}
+                  onClick={async () => {
+                    await onRemove(glyph);
+                    setRemoveOpen(false);
+                  }}
+                >
+                  Remove and build
+                </Button>
+              </HStack>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </SimpleCard>
   );
 };

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { defaultFontEditorConfig, FONT_EDITOR_CONFIG_PATH } from "../config";
+import { parseCssGlyphNames } from "../font/font-document";
 import {
   buildRepositoryFont,
   inspectRepositoryFont,
@@ -71,20 +72,23 @@ describe("font repository", () => {
   test("inspects all semantic glyph mappings from the current font and CSS", async () => {
     const mount = await createMount();
     const result = await inspectRepositoryFont(mount);
+    const cssNames = parseCssGlyphNames(await readFile(cssPath, "utf8"), defaultFontEditorConfig.cssPrefix);
 
-    expect(result.glyphs).toHaveLength(220);
-    expect(result.glyphs).toContainEqual(expect.objectContaining({ name: "text", codepoint: "U+EB1F" }));
+    expect(result.glyphs.map((glyph) => [glyph.unicode, glyph.name])).toEqual([...cssNames]);
     expect(mount.writes).toEqual([]);
   });
 
   test("commits a rename only after every generated artifact verifies", async () => {
     const mount = await createMount();
-    const result = await renameRepositoryGlyph(mount, "data-intiger", "data-integer");
+    const before = await inspectRepositoryFont(mount);
+    const original = before.glyphs[0];
+    if (!original) throw new Error("Expected the font to contain a glyph.");
+    const result = await renameRepositoryGlyph(mount, original.name, "test-renamed-glyph");
 
-    expect(result.glyph.name).toBe("data-integer");
+    expect(result.glyph.name).toBe("test-renamed-glyph");
     expect(mount.writes).toContain(FONT_EDITOR_CONFIG_PATH);
     expect(await verifyRepositoryFont(mount)).toEqual({
-      glyphCount: 220,
+      glyphCount: before.glyphs.length,
       formats: ["eot", "svg", "ttf", "woff", "woff2"],
     });
   });
@@ -92,8 +96,10 @@ describe("font repository", () => {
   test("leaves every output unchanged when an edit is invalid", async () => {
     const mount = await createMount();
     const before = new Map(mount.files);
+    const [first, second] = (await inspectRepositoryFont(mount)).glyphs;
+    if (!first || !second) throw new Error("Expected the font to contain at least two glyphs.");
 
-    await expect(renameRepositoryGlyph(mount, "data-intiger", "data-object")).rejects.toThrow("already exists");
+    await expect(renameRepositoryGlyph(mount, first.name, second.name)).rejects.toThrow("already exists");
     expect(mount.writes).toEqual([]);
     expect(mount.files).toEqual(before);
   });
@@ -113,11 +119,13 @@ describe("font repository", () => {
 
   test("builds the current source without changing glyph identities", async () => {
     const mount = await createMount();
+    const before = await inspectRepositoryFont(mount);
     const result = await buildRepositoryFont(mount);
+    const after = await inspectRepositoryFont(mount);
 
-    expect(result.glyphCount).toBe(220);
-    expect((await inspectRepositoryFont(mount)).glyphs).toContainEqual(
-      expect.objectContaining({ name: "home-2", codepoint: "U+E9AA" }),
+    expect(result.glyphCount).toBe(before.glyphs.length);
+    expect(after.glyphs.map(({ name, codepoint }) => ({ name, codepoint }))).toEqual(
+      before.glyphs.map(({ name, codepoint }) => ({ name, codepoint })),
     );
   });
 });

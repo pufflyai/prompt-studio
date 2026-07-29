@@ -61,15 +61,17 @@ const glyphParams = {
 
 const addParams = {
   name: params.text({ required: true, label: "Glyph name" }),
+  svg: params.longText({ label: "Inline SVG markup" }),
   svgPath: params.text({ label: "Repository-relative SVG path" }),
   fileId: params.text({ label: "Uploaded SVG file id" }),
   codepoint: params.text({ label: "Codepoint" }),
 };
 
-const readSvg = async (ctx: ExtensionContextBase, input: { svgPath?: string; fileId?: string }) => {
+const readSvg = async (ctx: ExtensionContextBase, input: { svg?: string; svgPath?: string; fileId?: string }) => {
+  if (input.svg) return input.svg;
   if (input.fileId) return ctx.files.readText(input.fileId);
   if (input.svgPath) return requireRepoFiles(ctx).readText(input.svgPath);
-  throw new Error("Provide svgPath or fileId.");
+  throw new Error("Provide svg, svgPath, or fileId.");
 };
 
 const addInternal = defineCommand({

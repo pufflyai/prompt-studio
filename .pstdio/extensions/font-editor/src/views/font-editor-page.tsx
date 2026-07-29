@@ -7,7 +7,7 @@ import { executeFontCommand, loadFontEditor, showError } from "./font-editor-api
 import { GlyphCard } from "./glyph-card";
 import { GlyphInspector } from "./glyph-inspector";
 import { SettingsDialog } from "./settings-dialog";
-import type { FontConfigView, FontInspectionView, FontPreviewView, GlyphView } from "./types";
+import type { FontConfigView, FontInspectionView, FontOperationView, FontPreviewView, GlyphView } from "./types";
 
 interface FontEditorPageProps {
   host: GuestHost;
@@ -23,6 +23,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [success, setSuccess] = useState<string>();
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -51,13 +52,21 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
     };
   }, [host]);
 
-  const run = async <TResult,>(commandId: string, params?: Record<string, unknown>, nextSelection?: string) => {
+  const run = async <TResult,>(
+    commandId: string,
+    params: Record<string, unknown> | undefined,
+    successMessage: (result: TResult) => string,
+    nextSelection?: string | null,
+  ) => {
     setBusy(true);
     setError(undefined);
+    setSuccess(undefined);
     try {
       const result = await executeFontCommand<TResult>(host, commandId, params);
       await reload();
-      setSelectedName(nextSelection);
+      if (nextSelection === null) setSelectedName(undefined);
+      else if (nextSelection) setSelectedName(nextSelection);
+      setSuccess(successMessage(result));
       return result;
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "The font operation failed.";
@@ -117,10 +126,30 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
           aria-label="Search glyphs"
         />
         <HStack>
-          <Button variant="outline" loading={busy} onClick={() => run("font-editor.verify")}>
+          <Button
+            variant="outline"
+            loading={busy}
+            onClick={() =>
+              run<FontOperationView>(
+                "font-editor.verify",
+                undefined,
+                (result) => `Verified ${result.glyphCount} glyphs across ${result.formats.length} font formats.`,
+              )
+            }
+          >
             Verify
           </Button>
-          <Button variant="outline" loading={busy} onClick={() => run("font-editor.build")}>
+          <Button
+            variant="outline"
+            loading={busy}
+            onClick={() =>
+              run<FontOperationView>(
+                "font-editor.build",
+                undefined,
+                (result) => `Built ${result.glyphCount} glyphs and regenerated every font and CSS output.`,
+              )
+            }
+          >
             Build
           </Button>
           <Button variant="outline" onClick={() => setSettingsOpen(true)}>
@@ -133,6 +162,11 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
       {error ? (
         <Box paddingX="lg" paddingTop="md">
           <AlertMessage status="error">{error}</AlertMessage>
+        </Box>
+      ) : null}
+      {success ? (
+        <Box paddingX="lg" paddingTop="md">
+          <AlertMessage status="success">{success}</AlertMessage>
         </Box>
       ) : null}
 
@@ -160,13 +194,28 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             family={preview.family}
             busy={busy}
             onRename={async (glyph: GlyphView, name: string) => {
-              await run("font-editor.glyph.rename", { glyph: glyph.name, name }, name);
+              await run<FontOperationView>(
+                "font-editor.glyph.rename",
+                { glyph: glyph.name, name },
+                () => `Renamed ${glyph.name} to ${name} and rebuilt every output.`,
+                name,
+              );
             }}
             onCodepoint={async (glyph: GlyphView, codepoint: string) => {
-              await run("font-editor.glyph.codepoint", { glyph: glyph.name, codepoint }, glyph.name);
+              await run<FontOperationView>(
+                "font-editor.glyph.codepoint",
+                { glyph: glyph.name, codepoint },
+                () => `Moved ${glyph.name} to ${codepoint.toUpperCase()} and rebuilt every output.`,
+                glyph.name,
+              );
             }}
             onRemove={async (glyph: GlyphView) => {
-              await run("font-editor.glyph.remove", { glyph: glyph.name });
+              await run<FontOperationView>(
+                "font-editor.glyph.remove",
+                { glyph: glyph.name },
+                (result) => `Removed ${glyph.name}. ${result.glyphCount} glyphs remain.`,
+                null,
+              );
             }}
           />
           <Box padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="md" background="bg.panel">
@@ -186,7 +235,12 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         files={files}
         onClose={() => setAddOpen(false)}
         onAdd={async (input) => {
-          await run("font-editor.glyph.add", input, input.name);
+          await run<FontOperationView>(
+            "font-editor.glyph.add",
+            input,
+            () => `Added ${input.name} and rebuilt every output.`,
+            input.name,
+          );
         }}
       />
       <SettingsDialog
@@ -195,16 +249,20 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         config={config}
         onClose={() => setSettingsOpen(false)}
         onSave={async (next) => {
-          await run("font-editor.config.set", {
-            family: next.family,
-            fileName: next.fileName,
-            cssPrefix: next.cssPrefix,
-            fontsUrl: next.fontsUrl,
-            outputDir: next.outputDir,
-            cssFile: next.cssFile,
-            startCodepoint: next.startCodepoint,
-            endCodepoint: next.endCodepoint,
-          });
+          await run<FontConfigView>(
+            "font-editor.config.set",
+            {
+              family: next.family,
+              fileName: next.fileName,
+              cssPrefix: next.cssPrefix,
+              fontsUrl: next.fontsUrl,
+              outputDir: next.outputDir,
+              cssFile: next.cssFile,
+              startCodepoint: next.startCodepoint,
+              endCodepoint: next.endCodepoint,
+            },
+            () => "Saved font settings and rebuilt every output.",
+          );
           setSettingsOpen(false);
         }}
       />

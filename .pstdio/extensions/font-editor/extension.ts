@@ -9,7 +9,7 @@ const extension = defineExtension({
       label: l10n("routes.fontEditor.label", "Font editor"),
       webview: {
         entry: packageAsset("./src/views/main.tsx", import.meta.url),
-        capabilities: ["commands.execute", "files.upload", "files.delete", "notification.show"],
+        capabilities: ["commands.execute", "notification.show"],
       },
     },
   },

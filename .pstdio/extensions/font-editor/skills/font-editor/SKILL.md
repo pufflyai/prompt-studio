@@ -38,6 +38,12 @@ To request a codepoint:
 pst font-editor glyph add --name agent-spark --svg-path path/to/agent-spark.svg --codepoint U+F100 --json
 ```
 
+API callers and agents that already have SVG markup may pass it directly:
+
+```sh
+pst font-editor glyph add --name agent-spark --svg '<svg viewBox="0 0 24 24">...</svg>' --json
+```
+
 ## Rename, move, or remove
 
 ```sh
