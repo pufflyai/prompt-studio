@@ -82,8 +82,22 @@ export default defineExtension({
           renderer: {
             type: "categorical-color",
             categories: [
-              { value: "healthy", color: { light: "green.100", dark: "green.900" } },
-              { value: "degraded", color: { light: "orange.100", dark: "orange.900" } },
+              {
+                value: "healthy",
+                color: {
+                  light: "#dcfce7",
+                  dark: "#14532d",
+                  foreground: { light: "#166534", dark: "#dcfce7" },
+                },
+              },
+              {
+                value: "degraded",
+                color: {
+                  light: "#ffedd5",
+                  dark: "#7c2d12",
+                  foreground: { light: "#9a3412", dark: "#ffedd5" },
+                },
+              },
             ],
           },
         },

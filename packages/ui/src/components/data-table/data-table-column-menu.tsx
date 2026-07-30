@@ -2,7 +2,7 @@ import { Box, HStack, Icon, IconButton, Input, Popover, Portal, Stack, Text } fr
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, Columns3, GripVertical, Search } from "lucide-react";
+import { Check, GripVertical, Search, Settings2 } from "lucide-react";
 import { useState } from "react";
 
 import { Checkbox } from "@/components/primitives/checkbox";
@@ -16,8 +16,11 @@ interface DataTableColumnMenuColumn {
 interface DataTableColumnMenuProps {
   columns: DataTableColumnMenuColumn[];
   visibleColumnIds: Set<string>;
+  showStats: boolean;
+  statsAvailable: boolean;
   onColumnToggle: (columnId: string) => void;
   onColumnReorder: (activeColumnId: string, overColumnId: string) => void;
+  onStatsVisibilityChange: (showStats: boolean) => void;
 }
 
 interface DataTableColumnMenuRowProps {
@@ -66,7 +69,15 @@ const DataTableColumnMenuRow = (props: DataTableColumnMenuRowProps) => {
 };
 
 export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
-  const { columns, visibleColumnIds, onColumnToggle, onColumnReorder } = props;
+  const {
+    columns,
+    visibleColumnIds,
+    showStats,
+    statsAvailable,
+    onColumnToggle,
+    onColumnReorder,
+    onStatsVisibilityChange,
+  } = props;
   const [query, setQuery] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const normalizedQuery = query.trim().toLowerCase();
@@ -84,14 +95,31 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
   return (
     <Popover.Root positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}>
       <Popover.Trigger asChild>
-        <IconButton aria-label="Manage columns" variant="ghost" size="sm">
-          <Icon as={Columns3} boxSize="14px" />
+        <IconButton aria-label="Display settings" variant="ghost" size="sm">
+          <Icon as={Settings2} boxSize="14px" />
         </IconButton>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content width="min(320px, calc(100vw - 32px))" p="0" bg="bg" overflow="hidden">
             <Stack gap="0">
+              {statsAvailable ? (
+                <Stack gap="2xs" borderBottomWidth="1px" borderColor="border.subtle" padding="xs">
+                  <Text textStyle="label/XS/medium" color="fg.muted">
+                    DISPLAY
+                  </Text>
+                  <Checkbox
+                    checked={showStats}
+                    size="sm"
+                    icon={<Icon as={Check} boxSize="12px" strokeWidth="3" />}
+                    onCheckedChange={(details) => onStatsVisibilityChange(details.checked === true)}
+                  >
+                    <Text as="span" textStyle="label/S/regular">
+                      Statistics
+                    </Text>
+                  </Checkbox>
+                </Stack>
+              ) : null}
               <HStack borderBottomWidth="1px" borderColor="border.subtle" padding="xs" gap="2xs">
                 <Icon as={Search} boxSize="14px" color="fg.muted" />
                 <Input

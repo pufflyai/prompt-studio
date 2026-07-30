@@ -166,6 +166,14 @@ export const ColumnStats = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+    const displayMenu = within(document.body);
+    await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
+    await expect(canvasElement.querySelector(".data-table-stats-row")).not.toBeInTheDocument();
+  },
 };
 
 export const SingleValueStats = {

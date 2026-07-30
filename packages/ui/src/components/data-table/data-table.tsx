@@ -64,6 +64,7 @@ export const DataTable = (props: DataTableProps) => {
     pageSize: resolveInitialPageSize({ initialPageSize }),
   }));
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [showStats, setShowStats] = useState(true);
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const propHiddenColumnsSet = new Set(hiddenColumns ?? []);
     return Object.keys(data[0] || {}).filter((key) => !propHiddenColumnsSet.has(key));
@@ -147,6 +148,8 @@ export const DataTable = (props: DataTableProps) => {
         label: compactHeaders?.[columnId] ?? columnId,
       }))}
       visibleColumnIds={visibleColumnIds}
+      showStats={showStats}
+      statsAvailable={Boolean(columnStats)}
       onColumnToggle={(columnId) =>
         setHiddenColumnMenuIds((current) => {
           const next = new Set(current);
@@ -163,6 +166,7 @@ export const DataTable = (props: DataTableProps) => {
           reorderDataTableColumns(resolveDataTableColumnOrder(baseColumnKeys, current), activeColumnId, overColumnId),
         )
       }
+      onStatsVisibilityChange={setShowStats}
     />
   );
 
@@ -199,7 +203,7 @@ export const DataTable = (props: DataTableProps) => {
                       />
                     ))}
                   </Table.Row>
-                  {columnStats ? (
+                  {columnStats && showStats ? (
                     <DataTableStatsRow
                       headerGroup={headerGroup}
                       rows={filteredData}
