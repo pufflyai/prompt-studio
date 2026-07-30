@@ -1,6 +1,13 @@
 .git
 .github
 .pstdio
+!.pstdio/
+.pstdio/*
+!.pstdio/extensions/
+.pstdio/extensions/*
+!.pstdio/extensions/pstdio-planner-loops/
+.pstdio/extensions/pstdio-planner-loops/*
+!.pstdio/extensions/pstdio-planner-loops/package.json
 .nx
 .vscode
 .idea

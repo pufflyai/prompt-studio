@@ -224,6 +224,52 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
       },
     ]);
   });
+
+  test("includes DataTable multi-selection contributions", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local_path",
+        packagePath: "/extension",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: {
+            query: { title: "Query rows", run: async () => ({ rows: [] }) },
+            restart: { title: "Restart rows", run: async () => undefined },
+          },
+          dataTableRenderers: {
+            services: {
+              title: "Services",
+              queryCommand: "query",
+              selectionMode: "multiple",
+              selectionActions: [{ id: "restart", label: "Restart selected", command: "restart" }],
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = buildWorkbenchExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.dataTableRenderers).toHaveLength(1);
+    expect(metadata.dataTableRenderers?.[0]).toMatchObject({
+      id: "lab.services",
+      selectionMode: "multiple",
+      selectionActions: [{ id: "restart", label: "Restart selected", commandId: "lab.restart" }],
+    });
+  });
 });
 
 describe("buildWorkbenchExtensionMetadata kanban renderers", () => {

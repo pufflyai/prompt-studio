@@ -69,11 +69,21 @@ export interface DataTableRendererRowAction<TParams extends Struct = Struct> {
   command: CommandRef<TParams, unknown> | string;
 }
 
+export interface DataTableRendererSelectionAction<TParams extends Struct = Struct> {
+  id: string;
+  label: Localizable<string>;
+  icon?: string;
+  destructive?: boolean;
+  command: CommandRef<TParams, unknown> | string;
+}
+
 export interface DataTableRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
   columns?: DataTableRendererColumn[];
   queryCommand: CommandRef<DataTableRendererQueryParams, DataTableRendererQueryResult> | string;
+  selectionMode?: "none" | "multiple";
+  selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];
   initialPageSize?: number;
   pageSizeOptions?: number[];

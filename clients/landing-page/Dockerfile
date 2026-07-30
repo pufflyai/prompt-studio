@@ -7,6 +7,7 @@ COPY package.json bun.lock tsconfig.base.json ./
 COPY packages packages
 COPY clients clients
 COPY extensions extensions
+COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json
 COPY scripts scripts
 
 RUN bun install --frozen-lockfile --ignore-scripts

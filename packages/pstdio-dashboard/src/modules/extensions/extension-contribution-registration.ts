@@ -1,6 +1,7 @@
 import { type Disposable, type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
   registerWorkbenchExtensionCommandPaletteResources,
+  registerWorkbenchExtensionDataTableRenderers,
   registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionTreeRenderers,
 } from "@pstdio/workbench/extensions";
@@ -132,6 +133,17 @@ const registerSingleExtensionContributions = (
     }
 
     disposables.push(...registerExtensionKanbanRenderers(ctx, { executeCommand, metadata, projectId }));
+    disposables.push(
+      registerWorkbenchExtensionDataTableRenderers(
+        {
+          executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
+          projectId,
+          workbench: ctx,
+        },
+        metadata.dataTableRenderers ?? [],
+        metadata.panels,
+      ),
+    );
     disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
     disposables.push(

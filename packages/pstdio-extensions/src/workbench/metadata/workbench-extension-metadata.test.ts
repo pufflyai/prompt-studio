@@ -382,9 +382,24 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
           enginesPstdio: "^1.0.0",
         },
         definition: {
-          commands: { queryTable: { title: "Query table", run: async () => ({ rows: [] }) } },
+          commands: {
+            queryTable: { title: "Query table", run: async () => ({ rows: [] }) },
+            restartRows: { title: "Restart rows", run: async () => undefined },
+          },
           dataTableRenderers: {
-            health: { title: "Health", queryCommand: "queryTable", columns: [{ id: "score", label: "Score" }] },
+            health: {
+              title: "Health",
+              queryCommand: "queryTable",
+              columns: [{ id: "score", label: "Score" }],
+              selectionMode: "multiple",
+              selectionActions: [
+                {
+                  id: "restart",
+                  label: "Restart selected",
+                  command: "restartRows",
+                },
+              ],
+            },
           },
           panels: {
             health: { title: "Health", region: "main", closable: false, dataTableRenderer: "health" },
@@ -399,6 +414,14 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
       id: "lab.health",
       queryCommandId: "lab.queryTable",
       columns: [{ id: "score", label: "Score" }],
+      selectionMode: "multiple",
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          commandId: "lab.restartRows",
+        },
+      ],
     });
     expect(metadata.panels[0]).toMatchObject({ id: "lab.health", dataTableRendererId: "lab.health" });
   });
