@@ -171,6 +171,15 @@ export const ColumnStats = {
 
     await userEvent.click(canvas.getByLabelText("Display settings"));
     const displayMenu = within(document.body);
+    const invoiceCheckbox = displayMenu.getByRole("checkbox", { name: "Invoice" });
+    await userEvent.click(invoiceCheckbox);
+    await expect(invoiceCheckbox).not.toBeChecked();
+    await expect(canvas.queryByRole("columnheader", { name: "Invoice" })).not.toBeInTheDocument();
+
+    await userEvent.click(invoiceCheckbox);
+    await expect(invoiceCheckbox).toBeChecked();
+    await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
+
     await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
     await expect(canvasElement.querySelector(".data-table-stats-row")).not.toBeInTheDocument();
   },

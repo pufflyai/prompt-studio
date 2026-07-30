@@ -1,10 +1,11 @@
-import { Box, HStack, Icon, IconButton, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, GripVertical, Search, Settings2 } from "lucide-react";
-import { useState } from "react";
+import { Check, GripVertical, Settings2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
+import { SearchableMenuInput } from "@/components/overlays/searchable-menu-input";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
@@ -18,7 +19,7 @@ interface DataTableColumnMenuProps {
   visibleColumnIds: Set<string>;
   showStats: boolean;
   statsAvailable: boolean;
-  onColumnToggle: (columnId: string) => void;
+  onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
   onColumnReorder: (activeColumnId: string, overColumnId: string) => void;
   onStatsVisibilityChange: (showStats: boolean) => void;
 }
@@ -26,11 +27,11 @@ interface DataTableColumnMenuProps {
 interface DataTableColumnMenuRowProps {
   column: DataTableColumnMenuColumn;
   checked: boolean;
-  onColumnToggle: (columnId: string) => void;
+  onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
 }
 
 const DataTableColumnMenuRow = (props: DataTableColumnMenuRowProps) => {
-  const { column, checked, onColumnToggle } = props;
+  const { column, checked, onColumnVisibilityChange } = props;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.id });
 
   const style = {
@@ -58,7 +59,7 @@ const DataTableColumnMenuRow = (props: DataTableColumnMenuRowProps) => {
         checked={checked}
         size="sm"
         icon={<Icon as={Check} boxSize="12px" strokeWidth="3" />}
-        onCheckedChange={() => onColumnToggle(column.id)}
+        onCheckedChange={(details) => onColumnVisibilityChange(column.id, details.checked === true)}
       >
         <Text as="span" textStyle="label/S/regular" truncate>
           {column.label}
@@ -74,10 +75,13 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
     visibleColumnIds,
     showStats,
     statsAvailable,
-    onColumnToggle,
+    onColumnVisibilityChange,
     onColumnReorder,
     onStatsVisibilityChange,
   } = props;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const normalizedQuery = query.trim().toLowerCase();
@@ -92,16 +96,54 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
     onColumnReorder(String(active.id), String(over.id));
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (contentRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+
+      setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    document.addEventListener("keydown", closeOnEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+      document.removeEventListener("keydown", closeOnEscape, true);
+    };
+  }, [open]);
+
   return (
-    <Popover.Root positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}>
+    <Popover.Root
+      open={open}
+      closeOnInteractOutside={false}
+      positioning={{
+        placement: "bottom-end",
+        offset: { mainAxis: 8 },
+        getAnchorElement: () => triggerRef.current,
+      }}
+    >
       <Popover.Trigger asChild>
-        <IconButton aria-label="Display settings" variant="ghost" size="sm">
+        <IconButton
+          ref={triggerRef}
+          aria-label="Display settings"
+          variant="ghost"
+          size="sm"
+          onClick={() => setOpen((current) => !current)}
+        >
           <Icon as={Settings2} boxSize="14px" />
         </IconButton>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="min(320px, calc(100vw - 32px))" p="0" bg="bg" overflow="hidden">
+          <Popover.Content ref={contentRef} width="min(320px, calc(100vw - 32px))" p="0" bg="bg" overflow="hidden">
             <Stack gap="0">
               {statsAvailable ? (
                 <Stack gap="2xs" borderBottomWidth="1px" borderColor="border.subtle" padding="xs">
@@ -120,16 +162,7 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
                   </Checkbox>
                 </Stack>
               ) : null}
-              <HStack borderBottomWidth="1px" borderColor="border.subtle" padding="xs" gap="2xs">
-                <Icon as={Search} boxSize="14px" color="fg.muted" />
-                <Input
-                  size="xs"
-                  variant="flushed"
-                  placeholder="Search columns"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-              </HStack>
+              <SearchableMenuInput value={query} placeholder="Search columns" onValueChange={setQuery} />
               <ScrollArea maxH="280px" viewportProps={{ overscrollBehavior: "contain" }}>
                 <Box padding="2xs">
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -140,7 +173,7 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
                             key={column.id}
                             column={column}
                             checked={visibleColumnIds.has(column.id)}
-                            onColumnToggle={onColumnToggle}
+                            onColumnVisibilityChange={onColumnVisibilityChange}
                           />
                         ))}
                       </Stack>

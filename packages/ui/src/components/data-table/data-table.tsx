@@ -150,10 +150,10 @@ export const DataTable = (props: DataTableProps) => {
       visibleColumnIds={visibleColumnIds}
       showStats={showStats}
       statsAvailable={Boolean(columnStats)}
-      onColumnToggle={(columnId) =>
+      onColumnVisibilityChange={(columnId, visible) =>
         setHiddenColumnMenuIds((current) => {
           const next = new Set(current);
-          if (next.has(columnId)) {
+          if (visible) {
             next.delete(columnId);
           } else {
             next.add(columnId);

@@ -2,4 +2,4 @@
 "@pstdio/ui": patch
 ---
 
-Allow DataTable users to hide column statistics from display settings
+Improve DataTable display settings with persistent visibility controls and borderless search
