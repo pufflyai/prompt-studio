@@ -1,10 +1,12 @@
 export { ActionInput } from "./inputs/action-input";
 export { ANCHOR_GRID_VALUES, isAnchorGridValue } from "./inputs/anchor-grid";
 export { AnchorGridInput } from "./inputs/anchor-grid-input";
+export { BooleanInput } from "./inputs/boolean-input";
 export { ColorInput } from "./inputs/color-input";
 export { DateInput } from "./inputs/date-input";
-export { FileDropInput } from "./inputs/file-drop-input";
+export { FileUploadInput } from "./inputs/file-upload-input";
 export { HorizontalTextInput } from "./inputs/horizontal-text-input";
+export { MarkdownInput } from "./inputs/markdown-input";
 export { NumberInput } from "./inputs/number-input";
 export { RangeInput } from "./inputs/range-input";
 export { ResourceInput } from "./inputs/resource-input";
@@ -20,11 +22,14 @@ export type {
   AnchorGridParam,
   AnchorGridValue,
   BaseParam,
+  BooleanParam,
   ColorParam,
   DateParam,
-  FileDropParam,
-  FileDropValue,
+  FileUploadParam,
+  FileUploadStatus,
+  FileUploadValue,
   InputGroup,
+  MarkdownParam,
   NumberParam,
   Param,
   ParamEditorReadOnlyContent,
@@ -51,6 +56,7 @@ export { ParamEditorField } from "./param-editor-field";
 export { ParamEditorFieldLabel } from "./param-editor-field-label";
 export { ParamEditorInlineGroup } from "./param-editor-inline-group";
 export { ParamEditorLabel } from "./param-editor-label";
+export { isParamEditorRichControl } from "./param-editor-presentation";
 export { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 export { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 export { ParamEditorSection } from "./param-editor-section";

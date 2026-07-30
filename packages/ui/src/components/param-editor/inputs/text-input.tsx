@@ -13,6 +13,7 @@ interface TextInputProps {
   singleLine?: boolean;
   hideLabel?: boolean;
   fullWidth?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const TextInput = (props: TextInputProps) => {
@@ -26,6 +27,7 @@ export const TextInput = (props: TextInputProps) => {
     singleLine = true,
     hideLabel = false,
     fullWidth = false,
+    size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,7 +81,7 @@ export const TextInput = (props: TextInputProps) => {
             readOnly={readOnly}
             flex="1"
             maxW="12.5rem"
-            size="sm"
+            size={size}
             type="text"
             placeholder={hideLabel ? name : undefined}
             value={value}
@@ -103,7 +105,7 @@ export const TextInput = (props: TextInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               width="100%"
-              size="sm"
+              size={size}
               type="text"
               placeholder={hideLabel ? name : undefined}
               value={value}
@@ -119,7 +121,7 @@ export const TextInput = (props: TextInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               width="100%"
-              size="sm"
+              size={size}
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}

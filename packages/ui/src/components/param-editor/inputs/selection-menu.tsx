@@ -1,4 +1,4 @@
-import { Button, Flex, Icon, Menu } from "@chakra-ui/react";
+import { Button, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
@@ -11,6 +11,7 @@ export interface SelectionMenuOption {
   /** Palette key (e.g. "blue") applied to the option's icon. */
   color?: string;
   description?: string;
+  disabled?: boolean;
 }
 
 export interface SelectionMenuProps {
@@ -20,6 +21,9 @@ export interface SelectionMenuProps {
   multiSelect: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  triggerVariant?: "button" | "icon";
+  triggerAriaLabel?: string;
+  size?: "xs" | "sm";
   onToggle: (optionId: string) => void;
 }
 
@@ -49,38 +53,55 @@ export const selectionOptionIcon = (option: SelectionMenuOption | undefined, box
  * row would read as just another value to choose.
  */
 export const SelectionMenu = (props: SelectionMenuProps) => {
-  const { triggerLabel, options, selectedIds, multiSelect, disabled, fullWidth, onToggle } = props;
+  const {
+    triggerLabel,
+    options,
+    selectedIds,
+    multiSelect,
+    disabled,
+    fullWidth,
+    triggerVariant = "button",
+    triggerAriaLabel,
+    size = "sm",
+    onToggle,
+  } = props;
+  const trigger =
+    triggerVariant === "icon" ? (
+      <IconButton aria-label={triggerAriaLabel ?? "Open options"} size="2xs" variant="ghost" disabled={disabled}>
+        {triggerLabel}
+      </IconButton>
+    ) : (
+      <Button
+        size={size}
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        disabled={disabled}
+        textStyle={size === "xs" ? "label/XS" : "label/S/regular"}
+        width={fullWidth ? "100%" : undefined}
+        _hover={{ bg: "bg.hover", borderColor: "border.accent-light" }}
+        _active={{ bg: "bg.active", borderColor: "border.accent-light" }}
+        _expanded={{ bg: "bg.active", borderColor: "border.accent-light" }}
+        _focusVisible={{ borderColor: "border.accent-light", outline: "none", boxShadow: "none" }}
+      >
+        <Flex alignItems="center" justifyContent="space-between" gap="xs" w={fullWidth ? "full" : undefined}>
+          <Flex alignItems="center" gap="xs">
+            {triggerLabel}
+          </Flex>
+          <ChevronDown size={14} />
+        </Flex>
+      </Button>
+    );
 
   return (
     <Menu.Root closeOnSelect={!multiSelect}>
-      <Menu.Trigger asChild>
-        <Button
-          size="sm"
-          borderWidth="1px"
-          borderStyle="solid"
-          borderColor="border"
-          disabled={disabled}
-          textStyle="label/S/regular"
-          width={fullWidth ? "100%" : undefined}
-          _hover={{ bg: "bg.hover", borderColor: "border.accent-light" }}
-          _active={{ bg: "bg.active", borderColor: "border.accent-light" }}
-          _expanded={{ bg: "bg.active", borderColor: "border.accent-light" }}
-          _focusVisible={{ borderColor: "border.accent-light", outline: "none", boxShadow: "none" }}
-        >
-          <Flex alignItems="center" justifyContent="space-between" gap="xs" w={fullWidth ? "full" : undefined}>
-            <Flex alignItems="center" gap="xs">
-              {triggerLabel}
-            </Flex>
-            <ChevronDown size={14} />
-          </Flex>
-        </Button>
-      </Menu.Trigger>
+      <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content>
           {options.map((option) => {
             const selected = selectedIds.includes(option.id);
             return (
-              <Menu.Item key={option.id} value={option.id} asChild>
+              <Menu.Item key={option.id} value={option.id} disabled={option.disabled} asChild>
                 <ListRow
                   asChild
                   variant="full-width"
@@ -90,6 +111,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                   label={option.name}
                   icon={selectionOptionIcon(option, "16px")}
                   tooltip={option.description}
+                  disabled={option.disabled}
                   isSelected={selected}
                   endContent={selectionIndicator(multiSelect, selected)}
                   onActivate={() => onToggle(option.id)}

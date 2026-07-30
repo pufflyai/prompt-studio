@@ -98,6 +98,7 @@ const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "
             onOpenResource={onOpenResource}
             readOnly={readOnly}
             fullWidth={fullWidth}
+            size={variant === "small" ? "xs" : "sm"}
           />
         </Box>
       ))}

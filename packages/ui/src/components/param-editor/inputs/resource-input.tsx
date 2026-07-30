@@ -1,4 +1,4 @@
-import { Box, Flex, Icon } from "@chakra-ui/react";
+import { Box, Flex, Icon, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +22,8 @@ interface ResourceInputProps {
   placeholder?: string;
   emptyText?: string;
   fullWidth?: boolean;
+  presentation?: "stacked" | "horizontal";
+  size?: "xs" | "sm";
 }
 
 const toIds = (value: string | string[]) => {
@@ -34,8 +36,24 @@ const resolveOptions = (ids: string[], options: ResourceOption[]) =>
     .map((id) => options.find((option) => option.id === id))
     .filter((option): option is ResourceOption => Boolean(option));
 
-const FieldShell = (props: { fullWidth: boolean; label: ReactNode; control: ReactNode }) => {
-  const { fullWidth, label, control } = props;
+interface FieldShellProps {
+  fullWidth: boolean;
+  label: ReactNode;
+  control: ReactNode;
+  presentation: "stacked" | "horizontal";
+}
+
+const FieldShell = (props: FieldShellProps) => {
+  const { fullWidth, label, control, presentation } = props;
+
+  if (presentation === "horizontal") {
+    return (
+      <Stack gap="2xs" alignItems="start" minW="0">
+        {label}
+        {control}
+      </Stack>
+    );
+  }
 
   if (fullWidth) {
     return (
@@ -59,13 +77,16 @@ interface ResourceSelectMenuProps {
   options: ResourceOption[];
   selectedIds: string[];
   multiSelect: boolean;
+  triggerVariant?: "button" | "icon";
+  triggerAriaLabel?: string;
+  size?: "xs" | "sm";
   onToggle: (optionId: string) => void;
 }
 
 // Resource params share the editor's one dropdown, so a ticket property and a
 // command param cannot drift into two looks.
 const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
-  const { triggerLabel, options, selectedIds, multiSelect, onToggle } = props;
+  const { triggerLabel, options, selectedIds, multiSelect, triggerVariant, triggerAriaLabel, size, onToggle } = props;
 
   return (
     <SelectionMenu
@@ -73,6 +94,9 @@ const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
       options={options}
       selectedIds={selectedIds}
       multiSelect={multiSelect}
+      triggerVariant={triggerVariant}
+      triggerAriaLabel={triggerAriaLabel}
+      size={size}
       onToggle={onToggle}
     />
   );
@@ -93,6 +117,8 @@ export const ResourceInput = (props: ResourceInputProps) => {
     placeholder,
     emptyText,
     fullWidth = false,
+    presentation = "stacked",
+    size = "sm",
   } = props;
 
   const [value, setValue] = useState(defaultValue);
@@ -117,13 +143,14 @@ export const ResourceInput = (props: ResourceInputProps) => {
   const selectedOptions = resolveOptions(selectedIds, options);
   const interactive = editable && !readOnly;
 
-  const label = <ParamEditorLabel name={name} description={description} />;
+  const label = <ParamEditorLabel name={name} description={description} compact={presentation === "horizontal"} />;
 
   if (!interactive) {
     return (
       <FieldShell
         fullWidth={fullWidth}
         label={label}
+        presentation={presentation}
         control={<ResourceChipList options={selectedOptions} onOpenResource={onOpenResource} emptyText={emptyText} />}
       />
     );
@@ -152,7 +179,7 @@ export const ResourceInput = (props: ResourceInputProps) => {
 
   if (multiSelect) {
     const control = (
-      <Flex direction="column" gap="2xs" align="flex-start" minW="0">
+      <Flex gap="2xs" alignItems="center" flexWrap="wrap" minW="0">
         {selectedOptions.length > 0 ? (
           <ResourceChipList
             options={selectedOptions}
@@ -162,21 +189,19 @@ export const ResourceInput = (props: ResourceInputProps) => {
           />
         ) : null}
         <ResourceSelectMenu
-          triggerLabel={
-            <Flex align="center" gap="2xs">
-              <Icon as={Plus} boxSize="12px" />
-              {placeholder ?? "Add"}
-            </Flex>
-          }
+          triggerLabel={<Icon as={Plus} boxSize="12px" />}
           options={options}
           selectedIds={selectedIds}
           multiSelect
+          triggerVariant="icon"
+          triggerAriaLabel={placeholder ?? `Add ${name}`}
+          size={size}
           onToggle={toggleOption}
         />
       </Flex>
     );
 
-    return <FieldShell fullWidth={fullWidth} label={label} control={control} />;
+    return <FieldShell fullWidth={fullWidth} label={label} control={control} presentation={presentation} />;
   }
 
   const selected = selectedOptions[0];
@@ -197,12 +222,14 @@ export const ResourceInput = (props: ResourceInputProps) => {
     <FieldShell
       fullWidth={fullWidth}
       label={label}
+      presentation={presentation}
       control={
         <ResourceSelectMenu
           triggerLabel={triggerLabel}
           options={options}
           selectedIds={selectedIds}
           multiSelect={false}
+          size={size}
           onToggle={toggleOption}
         />
       }

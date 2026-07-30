@@ -4,6 +4,8 @@ export type { BreadcrumbItem } from "./breadcrumb";
 export { Breadcrumb } from "./breadcrumb";
 export type { CheckboxProps } from "./checkbox";
 export { Checkbox } from "./checkbox";
+export type { ChipProps } from "./chip";
+export { Chip } from "./chip";
 export { ContentPlaceholder, Label as ContentPlaceholderLabel } from "./content-placeholder";
 export type { EmptyStateProps } from "./empty-state";
 export { EmptyState } from "./empty-state";

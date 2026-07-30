@@ -73,9 +73,14 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
       border: "0",
       borderInlineStartWidth: "0",
       borderRadius: "0",
+      outline: "none",
       boxShadow: "none",
       _hover: {
         bg: "bg.hover",
+      },
+      _focusVisible: {
+        outline: "none",
+        boxShadow: "none",
       },
     },
     content: {
@@ -96,5 +101,26 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
         outlineColor: interactiveBorderColor,
       },
     },
+  },
+  variants: {
+    size: {
+      xs: {
+        control: {
+          h: "1.75rem",
+        },
+        channelInput: {
+          px: "xs",
+          textStyle: "label/XS",
+        },
+        trigger: {
+          minW: "1.75rem",
+          px: "2xs",
+        },
+      },
+      sm: {},
+    },
+  },
+  defaultVariants: {
+    size: "sm",
   },
 });

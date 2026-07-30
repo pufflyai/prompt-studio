@@ -37,7 +37,7 @@ const VectorAxisField = (props: VectorAxisFieldProps) => {
   const { label, fieldId, value, min, max, step, onCommit } = props;
 
   return (
-    <Flex alignItems="center" gap="1" flex="1" minW="0">
+    <Flex alignItems="center" gap="1" flexShrink={0}>
       <Text textStyle="label/XS/regular" color="fg.muted" width="1rem" flexShrink={0}>
         {label}
       </Text>
@@ -51,7 +51,6 @@ const VectorAxisField = (props: VectorAxisFieldProps) => {
         step={step}
         hideLabel
         hideSlider
-        fullWidth
         onChange={(_, next) => onCommit(next)}
       />
     </Flex>

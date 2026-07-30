@@ -21,6 +21,7 @@ interface SelectionInputProps {
   clearable?: boolean;
   /** Inert, but still rendered as a control. */
   disabled?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const SelectionInput = (props: SelectionInputProps) => {
@@ -38,6 +39,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
     fullWidth = false,
     clearable = false,
     disabled = false,
+    size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,6 +125,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
       multiSelect={multiSelect}
       disabled={disabled}
       fullWidth={fullWidth}
+      size={size}
       onToggle={handleToggle}
     />
   );

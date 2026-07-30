@@ -1,20 +1,20 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { ActionInput } from "./inputs/action-input";
-import { AnchorGridInput } from "./inputs/anchor-grid-input";
+import { BooleanInput } from "./inputs/boolean-input";
 import { ColorInput } from "./inputs/color-input";
 import { DateInput } from "./inputs/date-input";
-import { FileDropInput } from "./inputs/file-drop-input";
+import { HorizontalTextInput } from "./inputs/horizontal-text-input";
+import { MarkdownInput } from "./inputs/markdown-input";
 import { NumberInput } from "./inputs/number-input";
-import { RangeInput } from "./inputs/range-input";
 import { ResourceInput } from "./inputs/resource-input";
-import { SegmentedInput } from "./inputs/segmented-input";
 import { SelectionInput } from "./inputs/selection-input";
 import { TextInput } from "./inputs/text-input";
-import { VectorInput } from "./inputs/vector-input";
 import type { Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
+import { ParamEditorAdvancedField } from "./param-editor-advanced-field";
 import { ParamEditorLabel } from "./param-editor-label";
+import { isParamEditorRichControl } from "./param-editor-presentation";
 import { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
+import { resolveParamValue } from "./resolve-param-value";
 
 interface ParamEditorFieldProps {
   param: Param;
@@ -23,11 +23,9 @@ interface ParamEditorFieldProps {
   onOpenResource?: (ref: ResourceRefValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
+  presentation?: "stacked" | "horizontal";
+  size?: "xs" | "sm";
 }
-
-const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
-  return defaultValues[paramId] === undefined ? fallback : (defaultValues[paramId] as T);
-};
 
 const PropertyField = (props: { param: Extract<Param, { type: "property" }>; fullWidth?: boolean }) => {
   const { param, fullWidth } = props;
@@ -52,8 +50,25 @@ const PropertyField = (props: { param: Extract<Param, { type: "property" }>; ful
 };
 
 export const ParamEditorField = (props: ParamEditorFieldProps) => {
-  const { param, defaultValues, onChange, onOpenResource, readOnly, fullWidth = false } = props;
-  const common = { id: param.id, readOnly, onChange, fullWidth };
+  const {
+    param,
+    defaultValues,
+    onChange,
+    onOpenResource,
+    readOnly,
+    fullWidth = false,
+    presentation = "stacked",
+    size = "sm",
+  } = props;
+  const horizontal = presentation === "horizontal";
+  const richControl = isParamEditorRichControl(param);
+  const common = {
+    id: param.id,
+    readOnly: readOnly || param.readOnly,
+    onChange,
+    fullWidth: horizontal ? richControl : fullWidth,
+    size,
+  };
 
   switch (param.type) {
     case "number":
@@ -62,20 +77,57 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           {...common}
           name={param.name}
           description={param.description || ""}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
           min={param.min}
           max={param.max}
           step={param.step}
+          hideLabel={horizontal}
+          hideSlider={horizontal}
+        />
+      );
+    case "boolean":
+      return (
+        <BooleanInput
+          {...common}
+          name={param.name}
+          description={param.description}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
+          hideLabel={horizontal}
         />
       );
     case "text":
+      if (horizontal) {
+        return (
+          <HorizontalTextInput
+            {...common}
+            name={param.name}
+            description={param.description || ""}
+            defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
+            hideLabel
+          />
+        );
+      }
       return (
         <TextInput
           {...common}
           name={param.name}
           description={param.description || ""}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
           singleLine={param.singleLine}
+        />
+      );
+    case "markdown":
+      return (
+        <MarkdownInput
+          id={param.id}
+          name={param.name}
+          description={param.description}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
+          placeholder={param.placeholder}
+          readOnly={common.readOnly}
+          presentation={presentation}
+          size={size}
+          onChange={onChange}
         />
       );
     case "selection":
@@ -84,12 +136,13 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           {...common}
           name={param.name}
           description={param.description || ""}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
           options={param.options}
           multiSelect={param.multiSelect}
           placeholder={param.placeholder}
           clearable={param.clearable}
           disabled={param.disabled}
+          hideLabel={horizontal}
         />
       );
     case "date":
@@ -98,9 +151,10 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           {...common}
           name={param.name}
           description={param.description || ""}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
           min={param.min}
           max={param.max}
+          hideLabel={horizontal}
         />
       );
     case "color":
@@ -109,95 +163,44 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           {...common}
           name={param.name}
           description={param.description || ""}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
+          hideLabel={horizontal}
         />
       );
     case "property":
-      return <PropertyField param={param} fullWidth={fullWidth} />;
+      return <PropertyField param={param} fullWidth={horizontal ? false : fullWidth} />;
     case "readOnly":
-      return <ParamEditorReadOnlyField param={param} fullWidth={fullWidth} />;
+      return <ParamEditorReadOnlyField param={param} fullWidth={horizontal ? false : fullWidth} />;
     case "resource":
       return (
         <ResourceInput
           {...common}
           name={param.name}
           description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}
           options={param.options}
           multiSelect={param.multiSelect}
           editable={param.editable}
           placeholder={param.placeholder}
           emptyText={param.emptyText}
           onOpenResource={onOpenResource}
+          presentation={presentation}
         />
       );
     case "range":
-      return (
-        <RangeInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-          min={param.min}
-          max={param.max}
-          step={param.step}
-          unit={param.unit}
-          markerCount={param.markerCount}
-        />
-      );
     case "segmented":
-      return (
-        <SegmentedInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-          options={param.options}
-          variant={param.variant}
-        />
-      );
     case "actions":
-      return (
-        <ActionInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-          options={param.options}
-        />
-      );
     case "anchorGrid":
-      return (
-        <AnchorGridInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-        />
-      );
     case "vector":
+    case "fileUpload":
       return (
-        <VectorInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-          xLabel={param.xLabel}
-          yLabel={param.yLabel}
-          min={param.min}
-          max={param.max}
-          step={param.step}
-        />
-      );
-    case "fileDrop":
-      return (
-        <FileDropInput
-          {...common}
-          name={param.name}
-          description={param.description}
-          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-          accept={param.accept}
-          assetKind={param.assetKind}
+        <ParamEditorAdvancedField
+          param={param}
+          defaultValues={defaultValues}
+          onChange={onChange}
+          readOnly={readOnly}
+          fullWidth={fullWidth}
+          presentation={presentation}
         />
       );
     default:

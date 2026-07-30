@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
-  title: "Components/Inputs/Param Editor/Inspector",
+  title: "Patterns/Param Editor/Inspector",
   component: ParamEditor,
   parameters: {
     layout: "fullscreen",

@@ -4049,6 +4049,14 @@
               "color": "colorPalette.fg",
               "borderRadius": "2xs",
               "justifyContent": "center"
+            },
+            "chip": {
+              "bg": "bg.subtle",
+              "color": "fg.muted",
+              "borderWidth": "1px",
+              "borderColor": "border",
+              "borderRadius": "xs",
+              "fontWeight": "normal"
             }
           },
           "size": {
@@ -11762,11 +11770,11 @@
             "flexShrink": 0,
             "justifyContent": "flex-start",
             "cursor": "switch",
-            "borderRadius": "full",
+            "borderRadius": "md",
             "position": "relative",
             "width": "var(--switch-width)",
             "height": "var(--switch-height)",
-            "transition": "backgrounds",
+            "transition": "border-color 0.2s ease-in-out, background-color 0.2s ease-in-out",
             "_disabled": {
               "opacity": "0.5",
               "cursor": "not-allowed"
@@ -11775,6 +11783,33 @@
               "outline": "2px solid",
               "outlineColor": "border.error",
               "outlineOffset": "2px"
+            },
+            "alignItems": "center",
+            "bg": "bg.muted",
+            "borderWidth": "1px",
+            "borderColor": "border",
+            "color": "fg",
+            "boxShadow": "none",
+            "_hover": {
+              "borderColor": "border.accent-light"
+            },
+            "_active": {
+              "borderColor": "border.accent-light"
+            },
+            "_focusVisible": {
+              "borderColor": "border.accent-light",
+              "outline": "none",
+              "boxShadow": "none"
+            },
+            "_checked": {
+              "bg": "bg.inverted",
+              "borderColor": "bg.inverted",
+              "_hover": {
+                "borderColor": "bg.inverted"
+              },
+              "_active": {
+                "borderColor": "bg.inverted"
+              }
             }
           },
           "thumb": {
@@ -11784,10 +11819,13 @@
             "flexShrink": 0,
             "transitionProperty": "translate",
             "transitionDuration": "fast",
-            "borderRadius": "inherit",
+            "borderRadius": "full",
             "_checked": {
-              "translate": "var(--switch-x) 0"
-            }
+              "translate": "var(--switch-x) 0",
+              "bg": "fg.inverted"
+            },
+            "bg": "bg",
+            "borderColor": "border"
           }
         },
         "variants": {
@@ -11798,7 +11836,8 @@
                 "bg": "bg.emphasized",
                 "focusVisibleRing": "outside",
                 "_checked": {
-                  "bg": "colorPalette.solid"
+                  "bg": "bg.inverted",
+                  "borderColor": "bg.inverted"
                 }
               },
               "thumb": {
@@ -11807,7 +11846,7 @@
                 "height": "var(--switch-height)",
                 "scale": "0.8",
                 "_checked": {
-                  "bg": "colorPalette.contrast"
+                  "bg": "fg.inverted"
                 }
               }
             },
@@ -13259,9 +13298,14 @@
             "border": "0",
             "borderInlineStartWidth": "0",
             "borderRadius": "0",
+            "outline": "none",
             "boxShadow": "none",
             "_hover": {
               "bg": "bg.hover"
+            },
+            "_focusVisible": {
+              "outline": "none",
+              "boxShadow": "none"
             }
           },
           "content": {
@@ -13427,15 +13471,17 @@
             },
             "xs": {
               "channelInput": {
-                "textStyle": "xs",
-                "px": "2",
+                "textStyle": "label/XS",
+                "px": "xs",
                 "--input-height": "sizes.8"
               },
               "swatch": {
                 "--swatch-size": "sizes.5"
               },
               "trigger": {
-                "--input-height": "sizes.8"
+                "--input-height": "sizes.8",
+                "minW": "1.75rem",
+                "px": "2xs"
               },
               "area": {
                 "--thumb-size": "sizes.3.5"
@@ -13443,6 +13489,9 @@
               "channelSlider": {
                 "--slider-height": "sizes.3.5",
                 "--thumb-size": "sizes.3.5"
+              },
+              "control": {
+                "h": "1.75rem"
               }
             },
             "sm": {
@@ -13576,7 +13625,7 @@
           }
         },
         "defaultVariants": {
-          "size": "md",
+          "size": "sm",
           "variant": "outline"
         }
       },

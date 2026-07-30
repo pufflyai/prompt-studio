@@ -19,6 +19,7 @@ import { numberInputSlotRecipe } from "./recipes/number-input";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { skeletonRecipe } from "./recipes/skeleton";
+import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
 import { timelineSlotRecipe } from "./recipes/timeline";
@@ -72,6 +73,7 @@ const config = defineConfig({
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
+      switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,
     },

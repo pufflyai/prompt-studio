@@ -14,6 +14,7 @@ import {
   Flag,
   Flame,
   Gauge,
+  GitPullRequest,
   Layers,
   Lightbulb,
   Scale,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Star,
   Tag,
+  Ticket,
   Wrench,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -65,7 +67,9 @@ export const optionIcons = [
   { value: "clock", label: "clock", icon: Clock },
   { value: "check-circle", label: "check circle", icon: CheckCircle },
   { value: "tag", label: "tag", icon: Tag },
+  { value: "ticket", label: "ticket", icon: Ticket },
   { value: "code", label: "code", icon: Code },
+  { value: "git-pull-request", label: "git pull request", icon: GitPullRequest },
   { value: "chart-column-increasing", label: "chart column increasing", icon: ChartColumnIncreasing },
   { value: "circle-question-mark", label: "circle question mark", icon: CircleQuestionMark },
   { value: "shield-alert", label: "shield alert", icon: ShieldAlert },

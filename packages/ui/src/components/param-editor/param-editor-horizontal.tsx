@@ -1,154 +1,125 @@
-import { HStack, Stack, Text, VStack } from "@chakra-ui/react";
-import { ColorInput } from "./inputs/color-input";
-import { DateInput } from "./inputs/date-input";
-import { HorizontalTextInput } from "./inputs/horizontal-text-input";
-import { NumberInput } from "./inputs/number-input";
-import { SelectionInput } from "./inputs/selection-input";
-import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
-import { ParamEditorLabel } from "./param-editor-label";
-import { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
-import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
+import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
+import { ParamEditorField } from "./param-editor-field";
+import { isParamEditorHorizontalControl, isParamEditorRichControl } from "./param-editor-presentation";
 
 export interface ParamEditorHorizontalProps {
   params?: Param[];
   groups?: InputGroup[];
   defaultValues: ParamValueMap;
   onChange: (id: string, value: ParamValue) => void;
+  onOpenResource?: (ref: ResourceRefValue) => void;
   readOnly?: boolean;
-  fullWidth?: boolean; // This option doesn't do anything in horizontal mode
   variant?: "default" | "small";
 }
 
-const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
-  return defaultValues[paramId] === undefined ? fallback : (defaultValues[paramId] as T);
+interface HorizontalGroupProps {
+  group: InputGroup;
+  params: Param[];
+  renderParam: (param: Param) => React.ReactNode;
+  variant: "default" | "small";
+  width?: "auto" | "full";
+}
+
+const HorizontalGroupTitle = (props: { children: string }) => {
+  const { children } = props;
+
+  return (
+    <Text
+      minH="0.75rem"
+      textStyle="label/XS"
+      color="fg.muted"
+      lineHeight="1"
+      letterSpacing="0.08em"
+      textTransform="uppercase"
+    >
+      {children}
+    </Text>
+  );
+};
+
+const HorizontalGroup = (props: HorizontalGroupProps) => {
+  const { group, params, renderParam, variant, width = "auto" } = props;
+
+  return (
+    <VStack
+      as="section"
+      aria-label={group.title}
+      gap={variant === "small" ? "2xs" : "xs"}
+      alignItems="start"
+      minW="0"
+      width={width}
+    >
+      <HorizontalGroupTitle>{group.title}</HorizontalGroupTitle>
+      <HStack gap={variant === "small" ? "2xs" : "xs"} flexWrap="wrap" alignItems="start" minW="0" width={width}>
+        {params.map(renderParam)}
+      </HStack>
+    </VStack>
+  );
 };
 
 export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
-  const { params = [], groups = [], defaultValues, onChange, readOnly, variant = "default" } = props;
-  const isReadOnly = (param: Param) => readOnly || param.readOnly;
-
-  const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
-    <NumberInput
-      hideLabel
-      hideSlider
-      readOnly={isReadOnly(param)}
-      id={param.id}
+  const { params = [], groups = [], defaultValues, onChange, onOpenResource, readOnly, variant = "default" } = props;
+  const horizontalParams = params.filter(isParamEditorHorizontalControl);
+  const horizontalGroups = groups.map((group) => ({
+    ...group,
+    params: group.params.filter(isParamEditorHorizontalControl),
+  }));
+  const renderParam = (param: Param) => (
+    <ParamEditorField
       key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      step={param.step}
+      param={param}
+      defaultValues={defaultValues}
       onChange={onChange}
-      tooltipPlacement="top"
+      onOpenResource={onOpenResource}
+      readOnly={readOnly}
+      presentation="horizontal"
+      size={variant === "small" ? "xs" : "sm"}
     />
   );
-
-  const renderTextParam = (param: Extract<Param, { type: "text" }>) => (
-    <HorizontalTextInput
-      hideLabel
-      readOnly={isReadOnly(param)}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderSelectionParam = (param: Extract<Param, { type: "selection" }>) => (
-    <SelectionInput
-      hideLabel
-      readOnly={isReadOnly(param)}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      options={param.options}
-      onChange={onChange}
-      multiSelect={param.multiSelect}
-      tooltipPlacement="top"
-      placeholder={param.placeholder}
-      clearable={param.clearable}
-      disabled={param.disabled}
-    />
-  );
-
-  const renderDateParam = (param: Extract<Param, { type: "date" }>) => (
-    <DateInput
-      hideLabel
-      readOnly={isReadOnly(param)}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderColorParam = (param: Extract<Param, { type: "color" }>) => (
-    <ColorInput
-      hideLabel
-      readOnly={isReadOnly(param)}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => (
-    <HStack key={param.id} gap="xs" alignItems="center">
-      <ParamEditorLabel name={param.name} description={param.description} />
-      <ParamEditorReadOnlyValue>{param.value}</ParamEditorReadOnlyValue>
-    </HStack>
-  );
-
-  const renderParam = (param: Param) => {
-    switch (param.type) {
-      case "number":
-        return renderNumberParam(param);
-      case "text":
-        return renderTextParam(param);
-      case "selection":
-        return renderSelectionParam(param);
-      case "date":
-        return renderDateParam(param);
-      case "color":
-        return renderColorParam(param);
-      case "property":
-        return renderPropertyParam(param);
-      case "readOnly":
-        return <ParamEditorReadOnlyField key={param.id} param={param} />;
-      default:
-        return null;
-    }
-  };
+  const compactParams = horizontalParams.filter((param) => !isParamEditorRichControl(param));
+  const richParams = horizontalParams.filter(isParamEditorRichControl);
+  const compactGroups = horizontalGroups
+    .map((group) => ({ group, params: group.params.filter((param) => !isParamEditorRichControl(param)) }))
+    .filter(({ params: groupParams }) => groupParams.length > 0);
+  const richGroups = horizontalGroups
+    .map((group) => ({ group, params: group.params.filter(isParamEditorRichControl) }))
+    .filter(({ params: groupParams }) => groupParams.length > 0);
+  const gap = variant === "small" ? "xs" : "sm";
+  const hasCompactControls = compactParams.length > 0 || compactGroups.length > 0;
 
   return (
-    <Stack direction="row" flex="1" maxW="full" gap={variant === "small" ? "xs" : "sm"} flexWrap="wrap">
-      {/* Render standalone params */}
-      {params.map(renderParam)}
+    <Stack flex="1" maxW="full" gap={gap} minW="0">
+      {hasCompactControls ? (
+        <HStack gap={gap} flexWrap="wrap" alignItems="start" minW="0">
+          {compactParams.map(renderParam)}
+          {compactGroups.map(({ group, params: groupParams }) => (
+            <HorizontalGroup
+              key={group.id}
+              group={group}
+              params={groupParams}
+              renderParam={renderParam}
+              variant={variant}
+            />
+          ))}
+        </HStack>
+      ) : null}
 
-      {/* Render grouped params */}
-      {groups.map((group) => (
-        <VStack key={group.id} gap={variant === "small" ? "2xs" : "xs"} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="fg.muted">
-            {group.title}
-          </Text>
-          <HStack gap={variant === "small" ? "2xs" : "xs"}>{group.params.map(renderParam)}</HStack>
-        </VStack>
+      {richParams.map((param) => (
+        <Box key={param.id} width="full" minW="0">
+          {renderParam(param)}
+        </Box>
+      ))}
+
+      {richGroups.map(({ group, params: groupParams }) => (
+        <HorizontalGroup
+          key={`${group.id}-rich`}
+          group={group}
+          params={groupParams}
+          renderParam={renderParam}
+          variant={variant}
+          width="full"
+        />
       ))}
     </Stack>
   );

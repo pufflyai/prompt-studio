@@ -28,6 +28,14 @@ export const badgeRecipe = defineRecipe({
         borderRadius: "2xs",
         justifyContent: "center",
       },
+      chip: {
+        bg: "bg.subtle",
+        color: "fg.muted",
+        borderWidth: "1px",
+        borderColor: "border",
+        borderRadius: "xs",
+        fontWeight: "normal",
+      },
       outline: {
         color: "colorPalette.fg",
         "--outline-shadow-legacy": "colors.colorPalette.muted",

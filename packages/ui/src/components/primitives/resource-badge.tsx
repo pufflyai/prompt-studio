@@ -9,35 +9,37 @@ import { getFileTypeIcon } from "@/utils/get-file-type-icon";
 const SIZE_STYLES = {
   sm: {
     container: {
-      height: "20px",
-      lineHeight: { base: "20px" },
-      px: "2xs",
+      height: "5",
+      lineHeight: { base: "5" },
+      px: "xs",
     },
     iconSize: 12,
-    textStyle: "xs",
+    textStyle: "label/XS",
   },
   md: {
     container: {
-      height: "24px",
-      lineHeight: { base: "24px" },
+      height: "6",
+      lineHeight: { base: "6" },
       px: "xs",
     },
     iconSize: 14,
-    textStyle: "sm",
+    textStyle: "label/S/regular",
   },
 } as const;
 
 const TONE_STYLES = {
   neutral: {
-    color: "color.primary",
-    bg: "bg.muted",
+    color: "fg",
+    bg: "bg.subtle",
+    borderColor: "border",
     _hover: {
-      bg: "bg.emphasized",
+      bg: "bg.hover",
     },
   },
   accent: {
     color: "var(--schub-foreground-accent)",
     bg: "var(--schub-accent-subtle)",
+    borderColor: "var(--schub-accent-subtle)",
     _hover: {
       bg: "var(--schub-accent-subtle)",
     },
@@ -125,7 +127,8 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       display="flex"
       flexDirection="row"
       alignItems="center"
-      borderRadius="9999px"
+      borderWidth="1px"
+      borderRadius="xs"
       gap="2xs"
       cursor={onSelect ? "pointer" : "default"}
       {...toneStyles}
@@ -136,7 +139,7 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       }}
       {...rest}
     >
-      <chakra.span mr="xs" display="inline-flex">
+      <chakra.span display="inline-flex" flexShrink={0}>
         {icon ?? <IconComp size={sizeStyles.iconSize} />}
       </chakra.span>
       <Tooltip content={fileName}>
@@ -150,12 +153,10 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
           {fileName}
         </Text>
       </Tooltip>
-      <Spacer />
       {onRemove && (
         <IconButton
           aria-label={`Remove ${fileName}`}
           size="2xs"
-          ml="xs"
           variant="ghost"
           _hover={{
             bg: "transparent",

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
 const meta = {
-  title: "Components/Inputs/Param Editor Horizontal",
+  title: "Patterns/Param Editor/Param Editor Horizontal",
   component: ParamEditorHorizontal,
   parameters: {
     layout: "fullscreen",

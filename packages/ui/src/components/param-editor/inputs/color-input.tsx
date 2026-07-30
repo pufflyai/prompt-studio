@@ -13,10 +13,21 @@ interface ColorInputProps {
   hideLabel?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
   fullWidth?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const ColorInput = (props: ColorInputProps) => {
-  const { id, defaultValue, name, onChange, description, readOnly, hideLabel = false, fullWidth = false } = props;
+  const {
+    id,
+    defaultValue,
+    name,
+    onChange,
+    description,
+    readOnly,
+    hideLabel = false,
+    fullWidth = false,
+    size = "sm",
+  } = props;
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -114,7 +125,7 @@ export const ColorInput = (props: ColorInputProps) => {
   };
 
   const picker = (
-    <ColorPicker.Root ref={rootRef} {...rootProps} size="sm" width={fullWidth ? "100%" : "8.75rem"} maxW="100%">
+    <ColorPicker.Root ref={rootRef} {...rootProps} size={size} width={fullWidth ? "100%" : "8.75rem"} maxW="100%">
       <ColorPicker.HiddenInput />
       <ColorPicker.Label srOnly>{name}</ColorPicker.Label>
       <ColorPicker.Control>

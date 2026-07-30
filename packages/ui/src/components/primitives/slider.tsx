@@ -13,11 +13,11 @@ export const Slider = React.forwardRef<HTMLDivElement, SliderProps>(function Sli
           <ChakraSlider.Range bg="fg" />
         </ChakraSlider.Track>
         <ChakraSlider.Thumbs
-          boxSize="0.625rem"
+          boxSize="0.5rem"
           bg="fg"
           borderWidth="1px"
           borderColor="bg"
-          borderRadius="2xs"
+          borderRadius="none"
           boxShadow="none"
           transition="width 0.12s ease, height 0.12s ease, border-color 0.2s ease-in-out"
           _hover={{ boxSize: "0.75rem", borderColor: "border.accent-light" }}

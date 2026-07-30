@@ -1,12 +1,12 @@
 @font-face {
   font-family: "prompt-studio-icons";
-  src: url("$fonts/prompt-studio-icons.eot?13230be9");
+  src: url("$fonts/prompt-studio-icons.eot?e46cc65b");
   src:
-    url("$fonts/prompt-studio-icons.eot?13230be9#iefix") format("embedded-opentype"),
-    url("$fonts/prompt-studio-icons.woff2?13230be9") format("woff2"),
-    url("$fonts/prompt-studio-icons.woff?13230be9") format("woff"),
-    url("$fonts/prompt-studio-icons.ttf?13230be9") format("truetype"),
-    url("$fonts/prompt-studio-icons.svg?13230be9#prompt-studio-icons") format("svg");
+    url("$fonts/prompt-studio-icons.eot?e46cc65b#iefix") format("embedded-opentype"),
+    url("$fonts/prompt-studio-icons.woff2?e46cc65b") format("woff2"),
+    url("$fonts/prompt-studio-icons.woff?e46cc65b") format("woff"),
+    url("$fonts/prompt-studio-icons.ttf?e46cc65b") format("truetype"),
+    url("$fonts/prompt-studio-icons.svg?e46cc65b#prompt-studio-icons") format("svg");
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -46,7 +46,7 @@
 .icon-data-object::before {
   content: "\e804";
 }
-.icon-data-intiger::before {
+.icon-data-integer::before {
   content: "\e805";
 }
 .icon-data-double::before {
@@ -66,9 +66,6 @@
 }
 .icon-data-array::before {
   content: "\e80b";
-}
-.icon-heatmap::before {
-  content: "\e80c";
 }
 .icon-metrics::before {
   content: "\e80d";

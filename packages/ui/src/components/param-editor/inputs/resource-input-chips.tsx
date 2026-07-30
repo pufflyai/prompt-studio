@@ -1,4 +1,5 @@
 import { Icon, Text, Wrap } from "@chakra-ui/react";
+import { Chip } from "../../primitives/chip";
 import { getIconComponent } from "../../primitives/icon-color-picker";
 import { ResourceBadge } from "../../primitives/resource-badge";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
@@ -21,6 +22,11 @@ interface ResourceChipProps {
 // copies its text to the clipboard — whichever the option declares.
 export const ResourceChip = (props: ResourceChipProps) => {
   const { option, onOpenResource, onRemove } = props;
+  const isReference = Boolean(option.href || option.ref || option.copyText);
+
+  if (!isReference) {
+    return <Chip>{option.name}</Chip>;
+  }
 
   const handleSelect =
     option.href && option.href.length > 0
@@ -35,7 +41,7 @@ export const ResourceChip = (props: ResourceChipProps) => {
     <ResourceBadge
       fileName={option.name}
       icon={optionIcon(option)}
-      size="sm"
+      size="md"
       onSelect={handleSelect ? () => handleSelect() : undefined}
       onRemove={onRemove ? () => onRemove() : undefined}
     />
