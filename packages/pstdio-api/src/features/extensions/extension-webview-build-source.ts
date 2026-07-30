@@ -90,10 +90,7 @@ export const prepareManagedWebviewBuildSource = (input: PrepareManagedWebviewBui
   const manifest = readPackageJson(input.packagePath);
   const dependencyNames = packageDependencyNames(manifest);
   if (canBuildFromPackagePath(input.packagePath, dependencyNames)) {
-    return {
-      cwd: input.packagePath,
-      entryPath: input.entryPath,
-    };
+    return { entryPath: input.entryPath };
   }
 
   const dependencyNodeModules = resolveFallbackDependencyNodeModules(
@@ -107,8 +104,5 @@ export const prepareManagedWebviewBuildSource = (input: PrepareManagedWebviewBui
   mirrorPackageSource(input.packagePath, input.shellDir);
   if (dependencyNodeModules) symlinkPackageChild(dependencyNodeModules, join(input.shellDir, "node_modules"));
 
-  return {
-    cwd: input.shellDir,
-    entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)),
-  };
+  return { entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)) };
 };

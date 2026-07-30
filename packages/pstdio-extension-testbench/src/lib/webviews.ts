@@ -3,7 +3,10 @@ import { extname, resolve, sep } from "node:path";
 import { resolvePackageAssetPath } from "pstdio-extensions";
 import { getExtensionRuntimeScript } from "pstdio-extensions/bridge/webview-runtime";
 import { renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
-import type { ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
+import type {
+  ResolveWorkbenchExtensionWebview,
+  ResolveWorkbenchExtensionWebviewInput,
+} from "pstdio-extensions/workbench";
 
 const mimeTypes: Record<string, string> = {
   ".css": "text/css",
@@ -21,6 +24,7 @@ const mimeTypes: Record<string, string> = {
 interface PreviewWebviewHostInput {
   apiOrigin?: string | (() => string | undefined);
   apiPrefix: string;
+  buildWebview?: (input: { distDir: string; entryPath: string }) => Promise<string | undefined>;
   cacheRoot: string;
 }
 
@@ -36,34 +40,27 @@ const safeResolve = (root: string, requestedPath: string) => {
   return resolvedPath;
 };
 
-const buildWebview = (input: { distDir: string; entryPath: string }) => {
+const buildWebview = async (input: { distDir: string; entryPath: string }) => {
   rmSync(input.distDir, { recursive: true, force: true });
   mkdirSync(input.distDir, { recursive: true });
 
-  const result = Bun.spawnSync({
-    cmd: [
-      process.execPath,
-      "build",
-      input.entryPath,
-      "--outdir",
-      input.distDir,
-      "--target",
-      "browser",
-      "--format",
-      "esm",
-      "--entry-naming",
-      "module.[ext]",
-      "--asset-naming",
-      "[name]-[hash].[ext]",
-      "--no-clear-screen",
-    ],
-    env: process.env,
-    stderr: "pipe",
-    stdout: "pipe",
-  });
+  try {
+    const result = await Bun.build({
+      entrypoints: [input.entryPath],
+      outdir: input.distDir,
+      target: "browser",
+      format: "esm",
+      naming: {
+        entry: "module.[ext]",
+        asset: "[name]-[hash].[ext]",
+      },
+    });
 
-  if (result.exitCode === 0) return undefined;
-  return result.stderr.toString().trim() || result.stdout.toString().trim() || "Webview build failed.";
+    if (result.success) return undefined;
+    return result.logs.map(String).join("\n") || "Webview build failed.";
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
 };
 
 const webviewHeaders = (contentType: string) => ({
@@ -78,6 +75,7 @@ const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
 export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
   const builds = new Map<string, WebviewBuildRecord>();
+  const runBuild = input.buildWebview ?? buildWebview;
   const apiOrigin = () => {
     const value = typeof input.apiOrigin === "function" ? input.apiOrigin() : input.apiOrigin;
     return value ? trimTrailingSlash(value) : undefined;
@@ -87,15 +85,13 @@ export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
     return origin ? `${origin}${path}` : path;
   };
 
-  const resolveWebview: ResolveWorkbenchExtensionWebview = ({ id, sourcePath, webview }) => {
-    const entryPath = resolvePackageAssetPath(webview.entry, { sourcePath });
-    const distDir = resolve(input.cacheRoot, encodeURIComponent(id));
-    const error = buildWebview({ distDir, entryPath });
-    builds.set(id, { distDir, error });
+  const resolveWebview: ResolveWorkbenchExtensionWebview = ({ id, webview }) => {
+    const build = builds.get(id);
+    if (!build) return null;
 
-    const styles = error
+    const styles = build.error
       ? []
-      : readdirSync(distDir)
+      : readdirSync(build.distDir)
           .filter((file) => file.endsWith(".css"))
           .map((file) => assetUrl(`${input.apiPrefix}/webviews/${encodeURIComponent(id)}/${encodeURIComponent(file)}`));
 
@@ -105,6 +101,28 @@ export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
       moduleUrl: assetUrl(`${input.apiPrefix}/webviews/${encodeURIComponent(id)}/module.js`),
       styles,
     };
+  };
+
+  const prepareWebviews = async (webviews: ResolveWorkbenchExtensionWebviewInput[]) => {
+    const buildsByEntryPath = new Map<string, Promise<WebviewBuildRecord>>();
+    const prepared = await Promise.all(
+      webviews.map(async (webview) => {
+        const entryPath = resolvePackageAssetPath(webview.webview.entry, { sourcePath: webview.sourcePath });
+        let pendingBuild = buildsByEntryPath.get(entryPath);
+        if (!pendingBuild) {
+          const distDir = resolve(input.cacheRoot, encodeURIComponent(webview.id));
+          pendingBuild = runBuild({ distDir, entryPath }).then((error) => ({
+            distDir,
+            error: error || undefined,
+          }));
+          buildsByEntryPath.set(entryPath, pendingBuild);
+        }
+        return { id: webview.id, build: await pendingBuild };
+      }),
+    );
+
+    builds.clear();
+    for (const { id, build } of prepared) builds.set(id, build);
   };
 
   const handleRequest = (url: URL) => {
@@ -138,6 +156,7 @@ export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
   return {
     cleanup: () => rmSync(input.cacheRoot, { recursive: true, force: true }),
     handleRequest,
+    prepareWebviews,
     resolveWebview,
   };
 };

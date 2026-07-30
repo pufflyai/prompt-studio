@@ -2,6 +2,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { stopChildProcess } from "../scripts/child-process";
 
 const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
 
@@ -120,16 +121,20 @@ export const startStorybook = async (
       stdio: "pipe",
     },
   );
+  storybook.stdout.resume();
+  storybook.stderr.resume();
 
   try {
     await waitForStorybook(baseUrl, storybook, probeStoryId);
   } catch (error) {
-    storybook.kill();
+    await stopChildProcess(storybook);
     throw error;
   }
 
   return { baseUrl, storybook };
 };
+
+export const stopStorybook = stopChildProcess;
 
 export const storyUrl = (baseUrl: string, storyId: string) => `${baseUrl}/iframe.html?id=${storyId}`;
 

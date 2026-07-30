@@ -11,7 +11,7 @@ type SourceWatcher = {
   close: () => void;
 };
 
-const defaultDebounceMs = 1000;
+const defaultDebounceMs = 100;
 
 // Watch registration walks the source tree itself, so it must never descend into
 // dependency or VCS trees: node_modules symlinks back into the monorepo store,

@@ -66,9 +66,8 @@ const writeTwoWebviewExtension = (root: string) => {
   );
 };
 
-const writeManagedBuildOutput = (args: readonly string[]) => {
-  const outdir = args[args.indexOf("--outdir") + 1];
-  if (outdir) mkdirSync(outdir, { recursive: true });
+const writeManagedBuildOutput = (input: { outdir: string }) => {
+  mkdirSync(input.outdir, { recursive: true });
 };
 
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
@@ -91,7 +90,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         concurrent++;
         maxConcurrent = Math.max(maxConcurrent, concurrent);
         arrived++;
@@ -99,8 +98,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         // Serial builds never let `arrived` reach 2, so fall back after a short wait.
         await Promise.race([allArrived, Bun.sleep(200)]);
         concurrent--;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -144,8 +143,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async (_file, args) => {
-        const entryPath = args[1] ?? "";
+      buildWebview: async (input) => {
+        const { entryPath } = input;
         if (entryPath.endsWith("first.tsx")) {
           firstStarted();
           await firstBuildReleased;
@@ -153,8 +152,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
           secondStarted();
           await secondBuildReleased;
         }
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -194,11 +193,11 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         await buildUnblocked;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -243,12 +242,12 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         if (runCount === 1) await firstReleased;
         else await secondReleased;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -295,11 +294,11 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async () => {
         reports.push("success");
       },
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         await buildUnblocked;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });

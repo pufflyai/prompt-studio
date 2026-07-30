@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const projectStoryId = "pstdio-workbench-examples--workbench-modes";
 const workspaceStoryId = "pstdio-workbench-examples--workbench-modes-workspace";
@@ -15,8 +15,8 @@ test.beforeAll(async () => {
   storybookBaseUrl = started.baseUrl;
 });
 
-test.afterAll(() => {
-  storybook?.kill();
+test.afterAll(async () => {
+  await stopStorybook(storybook);
 });
 
 test("PS-175 restores each mode frame without rebuilding project chrome", async ({ page }) => {

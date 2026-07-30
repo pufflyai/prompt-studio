@@ -1,11 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createExtensionWebviewBuildManager,
-  resolveManagedWebviewBuildCommand,
-} from "./extension-webview-build-manager";
+import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
 const writeExtension = (root: string, entries: Record<string, string>) => {
   mkdirSync(join(root, "src"), { recursive: true });
@@ -43,27 +40,9 @@ const writeExtension = (root: string, entries: Record<string, string>) => {
   );
 };
 
-const writeManagedBuildOutput = (args: readonly string[]) => {
-  const outdir = args[args.indexOf("--outdir") + 1];
-  if (outdir) mkdirSync(outdir, { recursive: true });
+const writeManagedBuildOutput = (input: { outdir: string }) => {
+  mkdirSync(input.outdir, { recursive: true });
 };
-
-describe("resolveManagedWebviewBuildCommand", () => {
-  test("uses the compiled pstdio binary as Bun in packaged mode", () => {
-    const resolved = resolveManagedWebviewBuildCommand({
-      args: ["build", "/extension/src/main.tsx", "--outdir", "/cache/dist"],
-      bunCacheDir: "/tmp/pstdio-bun-cache",
-      env: {},
-      isPackaged: true,
-      processExecPath: "/Applications/Prompt Studio.app/pstdio",
-    });
-
-    expect(resolved.file).toBe("/Applications/Prompt Studio.app/pstdio");
-    expect(resolved.args).toEqual(["build", "/extension/src/main.tsx", "--outdir", "/cache/dist"]);
-    expect(resolved.env.BUN_BE_BUN).toBe("1");
-    expect(resolved.env.BUN_INSTALL_CACHE_DIR).toBe("/tmp/pstdio-bun-cache");
-  });
-});
 
 describe("createExtensionWebviewBuildManager", () => {
   test("builds source webviews into cache with a one-shot build", async () => {
@@ -71,7 +50,7 @@ describe("createExtensionWebviewBuildManager", () => {
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
-    const runCommands: { file: string; args: string[]; cwd: string }[] = [];
+    const builds: { entryPath: string; outdir: string }[] = [];
     const successes: { installName: string; webviewId: string }[] = [];
 
     const manager = createExtensionWebviewBuildManager({
@@ -86,10 +65,10 @@ describe("createExtensionWebviewBuildManager", () => {
       reportBuildSuccess: async (installName, webviewId) => {
         successes.push({ installName, webviewId });
       },
-      runCommand: async (file, args, options) => {
-        runCommands.push({ file, args: [...args], cwd: options.cwd });
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+      buildWebview: async (input) => {
+        builds.push({ entryPath: input.entryPath, outdir: input.outdir });
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: cacheRoot,
     });
@@ -99,31 +78,12 @@ describe("createExtensionWebviewBuildManager", () => {
       await manager.refresh();
 
       const distPath = join(cacheRoot, "extension-lab", "lab.labPage", "dist");
-      const tailArgs = [
-        "--outdir",
-        distPath,
-        "--target",
-        "browser",
-        "--format",
-        "esm",
-        "--entry-naming",
-        "module.[ext]",
-        "--asset-naming",
-        "[name]-[hash].[ext]",
-      ];
-
-      expect(runCommands).toHaveLength(1);
-      expect(runCommands[0]?.file).toBe("bun");
-      expect(runCommands[0]?.cwd).toBe(sourcePath);
+      expect(builds).toHaveLength(1);
       // Bun's path resolution sometimes canonicalizes macOS `/var/...` to `/private/var/...`.
       // Match the entry path tail rather than the full prefix.
-      expect(runCommands[0]?.args[0]).toBe("build");
-      expect(runCommands[0]?.args[1]).toMatch(/\/src\/main\.tsx$/);
-      expect(runCommands[0]?.args.slice(2)).toEqual([
-        "--outdir",
-        expect.stringMatching(/\/dist\.staging-[^/]+$/),
-        ...tailArgs.slice(2),
-      ]);
+      expect(builds[0]?.entryPath).toMatch(/\/src\/main\.tsx$/);
+      expect(builds[0]?.outdir).toMatch(/\/dist\.staging-[^/]+$/);
+      expect(existsSync(distPath)).toBe(true);
 
       expect(successes).toEqual([{ installName: "extension-lab", webviewId: "lab.labPage" }]);
     } finally {
@@ -144,9 +104,9 @@ describe("createExtensionWebviewBuildManager", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      buildWebview: async () => {
         runCommands.push({});
-        return { exitCode: 0, stderr: "", stdout: "" };
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -167,7 +127,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-restart-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
-    const runCommands: string[][] = [];
+    const builtEntries: string[] = [];
     let sourceHash = "hash-1";
 
     const manager = createExtensionWebviewBuildManager({
@@ -176,10 +136,10 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
-        runCommands.push([...args]);
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+      buildWebview: async (input) => {
+        builtEntries.push(input.entryPath);
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -187,13 +147,12 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     try {
       await manager.refresh();
       await manager.refresh();
-      expect(runCommands).toHaveLength(2);
+      expect(builtEntries).toHaveLength(2);
 
       sourceHash = "hash-2";
       await manager.refresh();
 
-      expect(runCommands).toHaveLength(4);
-      expect(runCommands.every((args) => !args.includes("--watch"))).toBe(true);
+      expect(builtEntries).toHaveLength(4);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -214,7 +173,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
         failures.push({ installName, webviewId, error });
       },
       reportBuildSuccess: async () => {},
-      runCommand: async () => ({ exitCode: 1, stderr: "build failed", stdout: "" }),
+      buildWebview: async () => ({ success: false, details: "build failed" }),
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -247,9 +206,9 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
         failures.push(webviewId);
       },
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      buildWebview: async () => {
         runCount++;
-        return { exitCode: 1, stderr: "build failed", stdout: "" };
+        return { success: false, details: "build failed" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -287,10 +246,10 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       },
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -326,7 +285,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
         failures.push({ installName, webviewId, error });
       },
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      buildWebview: async () => {
         throw Object.assign(new Error("ENFILE: file table overflow"), { code: "ENFILE" });
       },
       webviewCacheRoot: join(root, "cache"),
@@ -364,10 +323,10 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         await buildUnblocked;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });

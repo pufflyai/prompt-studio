@@ -1,23 +1,15 @@
 import { renameSync, rmSync } from "node:fs";
 import { loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
-import { type BuildCommandRunner, type CommandResult, defaultRunCommand } from "./extension-webview-build-command";
-import {
-  buildArgs,
-  defaultBunCacheDir,
-  defaultWebviewCacheRoot,
-  resolveIsPackaged,
-  resolveManagedWebviewBuildCommand,
-} from "./extension-webview-build-command-resolver";
+import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
 import { prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import { buildExtensionWebview, type ExtensionWebviewBuilder } from "./extension-webview-builder";
 import {
   classifyWebviewEntry,
   collectExtensionWebviews,
   resolveManagedWebviewPaths,
   resolvePackageAssetFile,
 } from "./extension-webviews";
-
-export { resolveManagedWebviewBuildCommand } from "./extension-webview-build-command-resolver";
 
 type InstalledSourceWithManifest = {
   install_name: string;
@@ -31,12 +23,9 @@ type ExpectedWebviewBuildSource = {
 };
 
 export type CreateExtensionWebviewBuildManagerInput = {
-  bunCacheDir?: string;
-  env?: NodeJS.ProcessEnv;
-  isPackaged?: boolean;
+  buildWebview?: ExtensionWebviewBuilder;
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
   onError?: (error: unknown) => void;
-  processExecPath?: string;
   reportBuildFailure: (
     installName: string,
     webviewId: string,
@@ -48,7 +37,6 @@ export type CreateExtensionWebviewBuildManagerInput = {
     webviewId: string,
     expectedSource: ExpectedWebviewBuildSource,
   ) => Promise<unknown>;
-  runCommand?: BuildCommandRunner;
   webviewCacheRoot?: string;
 };
 
@@ -92,12 +80,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const activeBuilds = new Set<AbortController>();
   let disposed = false;
   let refreshQueue = Promise.resolve();
-  const env = input.env ?? process.env;
-  const runCommand = input.runCommand ?? defaultRunCommand;
-  const bunCacheDir = input.bunCacheDir ?? defaultBunCacheDir(env);
-  const isPackaged = resolveIsPackaged(input.isPackaged);
-  const processExecPath = input.processExecPath ?? process.execPath;
-  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(env);
+  const buildWebview = input.buildWebview ?? buildExtensionWebview;
+  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
 
   const reportFailure = async (
     installName: string,
@@ -122,24 +106,14 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
   };
 
-  const managedCommand = (args: string[]) =>
-    resolveManagedWebviewBuildCommand({ args, bunCacheDir, env, isPackaged, processExecPath });
-
-  const buildOnce = async (
-    row: InstalledSourceWithManifest,
-    webviewId: string,
-    entryPath: string,
-    distDir: string,
-    cwd: string,
-  ) => {
+  const buildOnce = async (row: InstalledSourceWithManifest, webviewId: string, entryPath: string, distDir: string) => {
     if (disposed) return false;
 
-    const command = managedCommand(buildArgs(entryPath, distDir));
     const controller = new AbortController();
     activeBuilds.add(controller);
-    let result: CommandResult;
+    let result: Awaited<ReturnType<ExtensionWebviewBuilder>>;
     try {
-      result = await runCommand(command.file, command.args, { cwd, env: command.env, signal: controller.signal });
+      result = await buildWebview({ entryPath, outdir: distDir, signal: controller.signal });
     } catch (error) {
       if (!disposed) {
         await reportFailure(
@@ -157,13 +131,12 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       activeBuilds.delete(controller);
     }
 
-    if (result.exitCode === 0) {
+    if (result.success) {
       return true;
     }
 
-    const details = result.stderr.trim() || result.stdout.trim();
     if (!disposed) {
-      await reportFailure(row.install_name, webviewId, buildFailure(row.install_name, webviewId, details), {
+      await reportFailure(row.install_name, webviewId, buildFailure(row.install_name, webviewId, result.details), {
         sourceHash: row.source_hash,
         sourcePath: row.source_path,
       });
@@ -200,7 +173,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       packagePath: row.source_path,
       shellDir: paths.shellDir,
     });
-    const builtSuccessfully = await buildOnce(row, webview.id, buildSource.entryPath, stageDir, buildSource.cwd);
+    const builtSuccessfully = await buildOnce(row, webview.id, buildSource.entryPath, stageDir);
     if (!builtSuccessfully || disposed) {
       if (!disposed) backoff.recordBuildFailure(key, signature);
       rmSync(stageDir, { recursive: true, force: true });

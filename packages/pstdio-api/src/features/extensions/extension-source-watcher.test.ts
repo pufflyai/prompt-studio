@@ -95,7 +95,7 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
-  test("waits one second by default before reloading changed sources", async () => {
+  test("briefly debounces changed sources by default", async () => {
     const sourcePath = join(root, "watched");
     mkdirSync(sourcePath, { recursive: true });
     const watchers: FakeWatcher[] = [];
@@ -115,10 +115,10 @@ describe("createExtensionSourceWatcher", () => {
 
     try {
       watchers[0]?.listener("change", "extension.ts");
-      await delay(150);
+      await delay(50);
       expect(reloaded).toEqual([]);
 
-      await delay(1100);
+      await delay(150);
       expect(reloaded).toEqual([sourcePath]);
     } finally {
       watcher.dispose();
