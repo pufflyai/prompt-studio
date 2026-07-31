@@ -59,12 +59,11 @@ export const MultipleSelection: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const rowSelector = (index: number) =>
-      canvasElement.querySelectorAll<HTMLLabelElement>('label[aria-label="Select row"]')[index]!;
+    const rowSelectors = canvas.getAllByLabelText("Select row");
 
-    await userEvent.click(rowSelector(0));
+    await userEvent.click(rowSelectors[0]!);
     await expect(canvas.getByText("1 rows selected")).toBeInTheDocument();
-    await userEvent.click(rowSelector(1));
+    await userEvent.click(rowSelectors[1]!);
 
     await expect(canvas.getByText("2 rows selected")).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "Restart selected" })).toBeInTheDocument();

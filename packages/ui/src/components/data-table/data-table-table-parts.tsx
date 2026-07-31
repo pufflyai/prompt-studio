@@ -63,7 +63,7 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
     >
       <Tooltip content={tooltipContent} disabled={hasDescription}>
         <Flex className="group" alignItems="center" justifyContent="space-between" gap="1" flex="1" minW="0">
-          <Text textStyle="label/S/medium" lineHeight="1.2" truncate>
+          <Text as="div" textStyle="label/S/medium" lineHeight="1.2" truncate>
             {flexRender(header.column.columnDef.header, header.getContext())}
           </Text>
           {canSortColumn && (

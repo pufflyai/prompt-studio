@@ -202,7 +202,9 @@ export const SingleValueStats = {
   play: async ({ canvasElement }: PlayContext) => {
     const canvas = within(canvasElement);
 
-    await expect(canvas.getByText("1,200")).toBeInTheDocument();
+    await expect(
+      canvas.getByText(new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(1200)),
+    ).toBeInTheDocument();
     await expect(canvas.getByText("Paid", { selector: "[data-single-value-stat] *" })).toBeInTheDocument();
     await expect(canvas.queryByLabelText("Distribution for Amount")).not.toBeInTheDocument();
     await expect(canvas.queryByLabelText("Paid: 100%")).not.toBeInTheDocument();
@@ -262,16 +264,17 @@ export const SelectableRows = {
   play: async ({ canvasElement }: PlayContext) => {
     const canvas = within(canvasElement);
     const header = canvas.getByTestId("kanban-renderer-header");
-    const rowSelector = (index: number) =>
-      canvasElement.querySelectorAll<HTMLLabelElement>('label[aria-label="Select row"]')[index]!;
+    const rowSelectors = canvas.getAllByLabelText("Select row");
 
     await expect(within(header).queryByText("48 rows")).not.toBeInTheDocument();
-    await userEvent.click(rowSelector(0));
-    await userEvent.click(rowSelector(1));
+    await userEvent.click(rowSelectors[0]!);
+    await userEvent.click(rowSelectors[1]!);
 
-    const selectionBar = canvas.getByLabelText("Selection actions");
+    const selectionBar = canvas.getByRole("toolbar", { name: "Selection actions" });
+    const selectionOverlay = selectionBar.parentElement;
     await expect(selectionBar).toHaveTextContent("2 rows selected");
-    await expect(getComputedStyle(selectionBar).position).toBe("absolute");
+    await expect(selectionOverlay).not.toBeNull();
+    await expect(getComputedStyle(selectionOverlay!).position).toBe("absolute");
     await expect(within(header).getByText("All")).toBeInTheDocument();
   },
 };

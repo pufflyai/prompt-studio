@@ -5,6 +5,7 @@ import {
   registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionTreeRenderers,
 } from "@pstdio/workbench/extensions";
+import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
@@ -136,7 +137,18 @@ const registerSingleExtensionContributions = (
     disposables.push(
       registerWorkbenchExtensionDataTableRenderers(
         {
-          executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
+          executeCommand: async (commandId, body) => {
+            const response = await executeCommand(projectId, commandId, body);
+            for (const notification of collectExtensionCommandNotifications(response)) {
+              ctx.notifications.show({
+                level: notification.level,
+                title: notification.title,
+                message: notification.message,
+                metadata: notification.metadata,
+              });
+            }
+            return response;
+          },
           projectId,
           workbench: ctx,
         },

@@ -17,16 +17,10 @@ export function SelectionToolbar(props: SelectionToolbarProps) {
   const actionLabel = actions.length === 1 ? actions[0]?.label : "Actions";
 
   return (
-    <Flex
-      aria-label="Selection actions"
-      position="absolute"
-      insetX="sm"
-      bottom="sm"
-      zIndex="popover"
-      justifyContent="center"
-      pointerEvents="none"
-    >
+    <Flex position="absolute" insetX="sm" bottom="sm" zIndex="popover" justifyContent="center" pointerEvents="none">
       <Stack
+        role="toolbar"
+        aria-label="Selection actions"
         direction="row"
         alignItems="center"
         layerStyle="floatingBar"
