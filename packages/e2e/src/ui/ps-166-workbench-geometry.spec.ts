@@ -151,7 +151,7 @@ test.describe("PS-166 canonical workbench Storybook frame", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(dashboardWorkbenchStoryId, "pstdio-workbench"));

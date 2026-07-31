@@ -9,7 +9,7 @@ test.describe("PS-176 floating Side Panel", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(floatingStoryId, "pstdio-workbench"));

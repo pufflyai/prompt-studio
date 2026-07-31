@@ -45,7 +45,7 @@ test.describe("PS-178 responsive Panel menus", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(storyId, "pstdio-workbench"));

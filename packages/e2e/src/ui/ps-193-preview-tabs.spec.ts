@@ -14,7 +14,7 @@ test.describe("PS-193 preview tabs", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(previewTabsStoryId, "pstdio-workbench"));

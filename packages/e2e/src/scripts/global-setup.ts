@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { startSharedStorybooks } from "./storybook-server";
 
 // Runtime workspaces can run `bun install` with `@pstdio/sdk@latest` on the
 // request path. On a cold CI runner this network fetch blows past the 30s test
@@ -31,4 +32,5 @@ export default async function globalSetup() {
   mkdirSync(cacheDir, { recursive: true });
   primeBunCache();
   process.env.BUN_INSTALL_CACHE_DIR = cacheDir;
+  return startSharedStorybooks();
 }
