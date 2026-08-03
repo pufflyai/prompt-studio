@@ -1,4 +1,5 @@
 import { Stack } from "@chakra-ui/react";
+import { ParamEditor, type SelectionOption, type SelectionParam } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
@@ -14,9 +15,8 @@ import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection"
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
-import { ParamFieldLabel, parseParamRecord, serializeParamRecord } from "./param-field-shared";
+import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
 import {
   readRecentHarnessSelection,
   resolveInitialHarnessSelection,
@@ -141,19 +141,55 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     );
   };
 
+  const modelSelectionOptions: SelectionOption[] = modelOptions.map((option) => ({
+    id: option.value,
+    name: option.label,
+    description: option.description,
+    icon: "Cpu",
+  }));
+  if (modelsQuery.isLoading && modelSelectionOptions.length === 0) {
+    modelSelectionOptions.push({ id: "model-loading", name: "Loading models…", icon: "Cpu", disabled: true });
+  }
+  const modelParam: SelectionParam = {
+    id: "model",
+    name: `${entry.label}${entry.required ? " *" : ""}`,
+    description: entry.description,
+    type: "selection",
+    defaultValue: model,
+    options: modelSelectionOptions,
+    placeholder: "Select model",
+    searchable: modelOptions.length > 5,
+    searchPlaceholder: "Search models…",
+    emptyText: "No models available",
+    disabled: disabled || (agents.length === 0 && !isAgentsLoading),
+    group: {
+      id: "harnessId",
+      name: "Harness",
+      defaultValue: isResolvedAgent ? harnessId : "",
+      options: agentOptions.map((option) => ({
+        id: option.value,
+        name: option.label,
+        icon: "Terminal",
+        disabled: option.disabled,
+      })),
+      placeholder: isAgentsLoading ? "Loading harnesses…" : "Select harness",
+      searchable: agentOptions.length > 10,
+      searchPlaceholder: "Search harnesses…",
+      emptyText: "No harnesses available",
+      disabled: disabled || isAgentsLoading || agentOptions.length <= 1,
+    },
+  };
+
   return (
-    <Stack gap="2xs">
-      <ParamFieldLabel entry={entry} />
-      <WorkspaceAgentMenu
-        agentOptions={agentOptions}
-        selectedAgent={isResolvedAgent ? harnessId : ""}
-        onSelectAgent={handleSelectAgent}
-        modelOptions={isResolvedAgent ? modelOptions : []}
-        selectedModel={isResolvedAgent ? model : ""}
-        onSelectModel={handleSelectModel}
-        isDisabled={disabled}
-        isAgentsLoading={isAgentsLoading}
-        isModelsLoading={modelsQuery.isLoading}
+    <Stack gap="0">
+      <ParamEditor
+        params={[modelParam]}
+        defaultValues={{ model, harnessId: isResolvedAgent ? harnessId : "" }}
+        onChange={(id, nextValue) => {
+          if (typeof nextValue !== "string") return;
+          if (id === "harnessId") handleSelectAgent(nextValue);
+          if (id === "model") handleSelectModel(nextValue);
+        }}
       />
       <HarnessParamEditor
         schema={effectiveParamSchema ?? undefined}

@@ -1,4 +1,5 @@
-import { Box, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
+import { ParamEditor, type SelectionParam } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
@@ -32,6 +33,59 @@ const codexSchema = {
     label: "Dry run",
     defaultValue: false,
   },
+};
+
+const runAttemptSelections: SelectionParam[] = [
+  {
+    id: "model",
+    name: "Model",
+    type: "selection",
+    defaultValue: "gpt-5.3-codex",
+    searchable: true,
+    searchPlaceholder: "Search models…",
+    options: [
+      { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", icon: "Cpu" },
+      { id: "gpt-5.2-codex", name: "GPT-5.2 Codex", icon: "Cpu" },
+    ],
+    group: {
+      id: "harness",
+      name: "Harness",
+      defaultValue: "codex",
+      options: [
+        { id: "codex", name: "Codex", icon: "Terminal" },
+        { id: "claude-code", name: "Claude Code", icon: "Terminal" },
+      ],
+    },
+  },
+  {
+    id: "workspace",
+    name: "Workspace",
+    type: "selection",
+    defaultValue: "PS-10_A1",
+    searchable: true,
+    searchPlaceholder: "Search workspaces…",
+    options: [
+      { id: "PS-10_A1", name: "PS-10_A1", icon: "GitBranch" },
+      { id: "PS-9_A1", name: "PS-9_A1", icon: "GitBranch" },
+    ],
+    group: {
+      id: "repository",
+      name: "Repository",
+      defaultValue: "prompt-studio",
+      options: [{ id: "prompt-studio", name: "prompt-studio", icon: "FolderGit2" }],
+    },
+  },
+];
+
+const runAttemptMode: SelectionParam = {
+  id: "mode",
+  name: "Mode",
+  type: "selection",
+  defaultValue: "worktree",
+  options: [
+    { id: "worktree", name: "Worktree", icon: "GitFork" },
+    { id: "current_branch", name: "Current branch", icon: "GitBranch" },
+  ],
 };
 
 const HarnessParamEditorStory = (props: {
@@ -121,9 +175,18 @@ export const InsideDialog: Story = {
                 <Dialog.Title>Run attempt</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Stack gap="md">
-                  <Text textStyle="label/S/medium">Model</Text>
+                <Stack gap="0">
+                  <ParamEditor
+                    params={runAttemptSelections}
+                    defaultValues={{
+                      model: "gpt-5.3-codex",
+                      harness: "codex",
+                      workspace: "PS-10_A1",
+                      repository: "prompt-studio",
+                    }}
+                  />
                   <Story />
+                  <ParamEditor params={[runAttemptMode]} defaultValues={{ mode: "worktree" }} />
                 </Stack>
               </Dialog.Body>
             </Dialog.Content>
@@ -134,6 +197,9 @@ export const InsideDialog: Story = {
   ],
   play: async () => {
     const body = within(document.body);
+
+    await expect(body.getByRole("button", { name: "GPT-5.3 Codex" })).toBeVisible();
+    await expect(body.getByRole("button", { name: "PS-10_A1" })).toBeVisible();
 
     await userEvent.click(body.getByRole("button", { name: "Medium" }));
 

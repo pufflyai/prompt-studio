@@ -45,6 +45,8 @@ export type {
   ResourceRefValue,
   SegmentedOption,
   SegmentedParam,
+  SelectionGroup,
+  SelectionOption,
   SelectionParam,
   TextParam,
   VectorParam,

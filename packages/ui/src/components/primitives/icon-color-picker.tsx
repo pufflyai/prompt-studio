@@ -1,19 +1,27 @@
 import { Grid, GridItem, Icon, IconButton, Popover, Text } from "@chakra-ui/react";
 import {
   AlertTriangle,
+  AlignLeft,
   BookOpen,
+  Brain,
   Bug,
   ChartColumnIncreasing,
   CheckCircle,
   Circle,
+  CircleDot,
   CircleQuestionMark,
   Clock,
   Code,
+  Cpu,
   Eye,
   Feather,
+  FileText,
   Flag,
   Flame,
+  FolderGit2,
   Gauge,
+  GitBranch,
+  GitFork,
   GitPullRequest,
   Layers,
   Lightbulb,
@@ -23,8 +31,10 @@ import {
   Sparkles,
   Star,
   Tag,
+  Terminal,
   Ticket,
   Wrench,
+  Zap,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -49,6 +59,9 @@ export const optionColors = [
 
 export const optionIcons = [
   { value: "circle", label: "circle", icon: Circle },
+  { value: "circle-dot", label: "circle dot", icon: CircleDot },
+  { value: "brain", label: "brain", icon: Brain },
+  { value: "zap", label: "zap", icon: Zap },
   { value: "bug", label: "bug", icon: Bug },
   { value: "sparkles", label: "sparkles", icon: Sparkles },
   { value: "book-open", label: "book open", icon: BookOpen },
@@ -61,6 +74,13 @@ export const optionIcons = [
   { value: "star", label: "star", icon: Star },
   { value: "flag", label: "flag", icon: Flag },
   { value: "flame", label: "flame", icon: Flame },
+  { value: "align-left", label: "align left", icon: AlignLeft },
+  { value: "file-text", label: "file text", icon: FileText },
+  { value: "cpu", label: "CPU", icon: Cpu },
+  { value: "terminal", label: "terminal", icon: Terminal },
+  { value: "folder-git-2", label: "git folder", icon: FolderGit2 },
+  { value: "git-branch", label: "git branch", icon: GitBranch },
+  { value: "git-fork", label: "git fork", icon: GitFork },
   { value: "lightbulb", label: "lightbulb", icon: Lightbulb },
   { value: "shield", label: "shield", icon: Shield },
   { value: "eye", label: "eye", icon: Eye },
@@ -79,7 +99,11 @@ export const getIconComponent = (
   name: string | null | undefined,
   iconOptions: readonly IconColorPickerIconOption[] = optionIcons,
 ): ComponentType => {
-  const entry = iconOptions.find((icon) => icon.value === (name ?? "circle"));
+  const normalizedName = (name ?? "circle")
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
+    .toLowerCase();
+  const entry = iconOptions.find((icon) => icon.value === normalizedName);
   return entry?.icon ?? Circle;
 };
 

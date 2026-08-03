@@ -1,6 +1,5 @@
-import { Button, HStack, Input, Menu, Stack, Text, Textarea } from "@chakra-ui/react";
-import { Checkbox } from "@pstdio/ui";
-import { ChevronDown, Circle, CircleDot } from "lucide-react";
+import { Input, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Checkbox, ParamEditor, type SelectionParam } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCommandExecutionContext } from "../../core";
 import type { CommandParamEntry, CommandParamValue } from "./command-palette-params";
@@ -79,38 +78,29 @@ const LongTextParamField = (props: BuiltInParamFieldProps) => (
 
 const SelectParamField = (props: BuiltInParamFieldProps) => {
   const value = getStringValue(props.value);
-  const selectedLabel = props.entry.options?.find((option) => option.value === value)?.label ?? value;
 
   if (!props.entry.options?.length) return <TextParamField {...props} />;
 
+  const param: SelectionParam = {
+    id: props.entry.key,
+    name: `${props.entry.label}${props.entry.required ? " *" : ""}`,
+    description: props.entry.description,
+    type: "selection",
+    defaultValue: value,
+    options: props.entry.options.map((option) => ({
+      id: option.value,
+      name: option.label,
+      icon: option.icon,
+    })),
+    disabled: props.disabled,
+  };
+
   return (
-    <Stack gap="2xs">
-      <FieldLabel entry={props.entry} />
-      <Menu.Root>
-        <Menu.Trigger asChild>
-          <Button size="sm" variant="outline" justifyContent="space-between" disabled={props.disabled}>
-            {selectedLabel || "Select..."}
-            <ChevronDown size={14} aria-hidden="true" />
-          </Button>
-        </Menu.Trigger>
-        <Menu.Positioner>
-          <Menu.Content>
-            {props.entry.options.map((option) => (
-              <Menu.Item key={option.value} value={option.value} onClick={() => props.onChange(option.value)}>
-                <HStack gap="2" minW="0">
-                  {value === option.value ? (
-                    <CircleDot size={14} aria-hidden="true" />
-                  ) : (
-                    <Circle size={14} aria-hidden="true" />
-                  )}
-                  <Text truncate>{option.label}</Text>
-                </HStack>
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Menu.Root>
-    </Stack>
+    <ParamEditor
+      params={[param]}
+      defaultValues={{ [props.entry.key]: value }}
+      onChange={(_id, nextValue) => typeof nextValue === "string" && props.onChange(nextValue)}
+    />
   );
 };
 
