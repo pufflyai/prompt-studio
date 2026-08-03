@@ -6,9 +6,12 @@ import {
   createProjectViaApi,
   deleteAllProjects,
   expectOrderedConversationBlocks,
-  extractSessionIdFromUrl,
   getRenderedConversationBlocks,
+  openNewSessionPanel,
+  openRecentSession,
   registerRepoViaApi,
+  setProjectAgentDefaults,
+  submitInitialMessage,
   submitMessage,
   waitForRenderedConversationBlock,
   waitForSessionStatus,
@@ -34,6 +37,7 @@ test.describe("Claude follow-up ordering repro", () => {
     });
     const project = await createProjectViaApi(request, "Claude Follow-up Ordering Repro");
     projectId = project.id;
+    await setProjectAgentDefaults(request, projectId, claudeAgentId);
     const repo = await registerRepoViaApi(request, projectId, "claude-follow-up-ordering-repo", repoDir);
     repoId = repo.id;
   });
@@ -50,17 +54,14 @@ test.describe("Claude follow-up ordering repro", () => {
     const followUpPrompt = "Reply with exactly SECOND DONE and nothing else.";
 
     await bypassOnboarding(page, { projectId, repoId, branch: "main", agentId: claudeAgentId });
-    await page.goto(`/projects/${projectId}/sessions`);
-
-    await submitMessage(page, firstPrompt);
-    await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
-
-    const sessionId = extractSessionIdFromUrl(page.url());
+    await openNewSessionPanel(page, projectId);
+    const { sessionId } = await submitInitialMessage(page, firstPrompt);
 
     await waitForRenderedConversationBlock(page, "FIRST DONE");
     await waitForSessionStatus(request, sessionId, "completed");
 
     await submitMessage(page, followUpPrompt);
+    await waitForSessionStatus(request, sessionId, "completed");
     await waitForRenderedConversationBlock(page, "SECOND DONE");
 
     const beforeRefreshBlocks = await getRenderedConversationBlocks(page);
@@ -71,8 +72,8 @@ test.describe("Claude follow-up ordering repro", () => {
       followUpPrompt,
       label: "before refresh",
     });
-
     await page.reload();
+    await openRecentSession(page, firstPrompt);
     await waitForRenderedConversationBlock(page, "SECOND DONE");
 
     const afterRefreshBlocks = await getRenderedConversationBlocks(page);

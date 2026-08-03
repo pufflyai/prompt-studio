@@ -41,6 +41,18 @@ export const createProjectViaApi = async (request: APIRequestContext, name: stri
   return (await response.json()) as { id: string; name: string };
 };
 
+export const setProjectAgentDefaults = async (
+  request: APIRequestContext,
+  projectId: string,
+  agentId: string,
+  model?: string,
+) => {
+  const response = await request.patch(`${apiBase}/v1/projects/${projectId}`, {
+    data: { default_agent_id: agentId, default_agent_model: model ?? null },
+  });
+  expect(response.ok()).toBe(true);
+};
+
 export const registerRepoViaApi = async (request: APIRequestContext, projectId: string, name: string, path: string) => {
   const response = await request.post(`${apiBase}/v1/projects/${projectId}/repos`, {
     data: { name, path },
@@ -76,6 +88,11 @@ export const bypassOnboarding = async (page: Page, input: BypassOnboardingInput)
     }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", agentId);
+      localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+      localStorage.setItem(
+        `pstdio-dashboard:command-params:recent-harness:${projectId}`,
+        JSON.stringify({ harnessId: agentId, ...(models[0] ? { model: models[0] } : {}) }),
+      );
       localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
         JSON.stringify({
@@ -104,13 +121,25 @@ export const submitMessage = async (page: Page, text: string) => {
   await page.locator("[data-testid='send-message-button']").click();
 };
 
-export const extractSessionIdFromUrl = (url: string) => {
-  const match = url.match(/\/sessions\/([^/?#]+)/);
-  if (!match) {
-    throw new Error(`Could not extract session id from URL: ${url}`);
-  }
+export const openNewSessionPanel = async (page: Page, projectId: string) => {
+  await page.goto(`/projects/${projectId}/`);
+  await page.getByRole("button", { name: "Show Side Panel" }).click();
+  await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+};
 
-  return match[1];
+export const openRecentSession = async (page: Page, title: string) => {
+  await page.getByLabel("Main").getByRole("button").filter({ hasText: title }).first().click();
+};
+
+export const submitInitialMessage = async (page: Page, text: string) => {
+  const responsePromise = page.waitForResponse(
+    (response) => response.request().method() === "POST" && response.url().endsWith("/v1/sessions"),
+  );
+  await submitMessage(page, text);
+  const response = await responsePromise;
+  const session = (await response.json()) as { id: string };
+
+  return { request: response.request(), sessionId: session.id };
 };
 
 export const waitForSessionStatus = async (
@@ -143,7 +172,7 @@ export const getRenderedConversationBlocks = async (page: Page) => {
 };
 
 export const getExactMatchIndices = (blocks: string[], expected: string) =>
-  blocks.flatMap((block, index) => (block === expected ? [index] : []));
+  blocks.flatMap((block, index) => (block === normalizeWhitespace(expected) ? [index] : []));
 
 export const expectOrderedConversationBlocks = (
   blocks: string[],

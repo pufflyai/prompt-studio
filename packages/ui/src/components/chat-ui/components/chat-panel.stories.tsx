@@ -37,6 +37,38 @@ const longPromptMessages: SessionMessage[] = [
   },
 ];
 
+const overflowingFollowUpMessages: SessionMessage[] = [
+  {
+    id: "initial-user-prompt",
+    role: "user",
+    parts: [{ type: "text", text: "Summarize the rollout status." }],
+  },
+  {
+    id: "initial-assistant-response",
+    role: "assistant",
+    parts: [{ type: "text", text: "The rollout is healthy and ready for the next verification pass." }],
+  },
+  {
+    id: "follow-up-user-prompt",
+    role: "user",
+    parts: [{ type: "text", text: "Show me the detailed verification results." }],
+  },
+  {
+    id: "follow-up-assistant-response",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: Array.from(
+          { length: 18 },
+          (_, index) =>
+            `Verification ${index + 1}: the service checks passed, latency stayed within budget, and no rollback signal was triggered.`,
+        ).join("\n\n"),
+      },
+    ],
+  },
+];
+
 const meta: Meta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel",
   component: ChatPanel,
@@ -542,6 +574,18 @@ export const LongStickyUserPrompt: Story = {
   args: {
     ...Empty.args,
     messages: longPromptMessages,
+  },
+};
+
+export const OverflowingFollowUp: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles}>
+      <MockChatPanelRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Empty.args,
+    messages: overflowingFollowUpMessages,
   },
 };
 
