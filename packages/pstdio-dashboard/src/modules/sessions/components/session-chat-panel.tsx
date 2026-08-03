@@ -34,7 +34,7 @@ import {
 } from "../hooks/use-queued-follow-up-actions";
 import { useStopSession } from "../hooks/use-stop-session";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
-import type { HarnessParamValues } from "./harness-param-controls";
+import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionModelControls } from "./session-model-controls";

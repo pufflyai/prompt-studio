@@ -2,7 +2,8 @@ import { Box, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { HarnessParamControls, type HarnessParamValues } from "./harness-param-controls";
+import { HarnessParamEditor } from "./harness-param-editor";
+import type { HarnessParamValues } from "./harness-param-values";
 
 const codexSchema = {
   model_reasoning_effort: {
@@ -33,7 +34,7 @@ const codexSchema = {
   },
 };
 
-const HarnessParamControlsStory = (props: {
+const HarnessParamEditorStory = (props: {
   initial?: HarnessParamValues;
   defaults?: HarnessParamValues;
   schema?: typeof codexSchema;
@@ -42,7 +43,7 @@ const HarnessParamControlsStory = (props: {
 
   return (
     <Box maxW="640px" p="4" bg="bg" borderWidth="1px" borderColor="border.subtle">
-      <HarnessParamControls
+      <HarnessParamEditor
         schema={props.schema ?? codexSchema}
         defaults={
           props.defaults ?? { model_reasoning_effort: "medium", model_reasoning_summary: "auto", dryRun: false }
@@ -54,14 +55,14 @@ const HarnessParamControlsStory = (props: {
   );
 };
 
-const meta: Meta<typeof HarnessParamControlsStory> = {
-  title: "Sessions/HarnessParamControls",
-  component: HarnessParamControlsStory,
+const meta: Meta<typeof HarnessParamEditorStory> = {
+  title: "Sessions/HarnessParamEditor",
+  component: HarnessParamEditorStory,
 };
 
 export default meta;
 
-type Story = StoryObj<typeof HarnessParamControlsStory>;
+type Story = StoryObj<typeof HarnessParamEditorStory>;
 
 export const Defaults: Story = {};
 
@@ -105,8 +106,8 @@ export const Narrow: Story = {
   ],
 };
 
-// The run attempt modal renders these controls inside a dialog; their portalled menus have to
-// stay on top of it, otherwise every option click lands on the dialog instead.
+// The run attempt modal renders this editor inside a dialog, so its options must remain
+// clickable there as well as in a standalone form.
 export const InsideDialog: Story = {
   parameters: { layout: "fullscreen" },
   decorators: [
@@ -134,14 +135,14 @@ export const InsideDialog: Story = {
   play: async () => {
     const body = within(document.body);
 
-    await userEvent.click(body.getByRole("button", { name: "Reasoning effort: Medium" }));
+    await userEvent.click(body.getByRole("button", { name: "Medium" }));
 
-    const option = await body.findByRole("menuitem", { name: "High" });
+    const option = await body.findByRole("menuitemradio", { name: "High" });
     const bounds = option.getBoundingClientRect();
     const topMostElement = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
     await expect(option.contains(topMostElement)).toBe(true);
 
     await userEvent.click(option);
-    await expect(body.getByRole("button", { name: "Reasoning effort: High" })).toBeVisible();
+    await expect(body.getByRole("button", { name: "High" })).toBeVisible();
   },
 };
