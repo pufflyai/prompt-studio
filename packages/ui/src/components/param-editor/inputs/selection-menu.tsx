@@ -2,7 +2,9 @@ import { Button, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
+import { SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
 import { getIconComponent } from "../../primitives";
+import type { SelectionGroup } from "../param-editor.types";
 
 export interface SelectionMenuOption {
   id: string;
@@ -20,11 +22,16 @@ export interface SelectionMenuProps {
   selectedIds: string[];
   multiSelect: boolean;
   disabled?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  group?: SelectionGroup;
   fullWidth?: boolean;
   triggerVariant?: "button" | "icon";
   triggerAriaLabel?: string;
   size?: "xs" | "sm";
   onToggle: (optionId: string) => void;
+  onGroupChange?: (optionId: string) => void;
 }
 
 export const selectionIndicator = (multiSelect: boolean, selected: boolean) => {
@@ -59,11 +66,16 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     selectedIds,
     multiSelect,
     disabled,
+    searchable = false,
+    searchPlaceholder = "Search options…",
+    emptyText = "No options found",
+    group,
     fullWidth,
     triggerVariant = "button",
     triggerAriaLabel,
     size = "sm",
     onToggle,
+    onGroupChange,
   } = props;
   const trigger =
     triggerVariant === "icon" ? (
@@ -92,6 +104,69 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         </Flex>
       </Button>
     );
+
+  if (searchable || group) {
+    const items: SearchableMenuItem[] = options.map((option) => ({
+      id: option.id,
+      label: option.name,
+      searchText: [option.id, option.description].filter(Boolean).join(" "),
+      secondaryLabel: option.description,
+      icon: getIconComponent(option.icon),
+      isDisabled: option.disabled,
+      isSelected: selectedIds.includes(option.id),
+      onSelect: () => onToggle(option.id),
+    }));
+    const selectedGroup = group?.options.find((option) => option.id === group.defaultValue);
+
+    return (
+      <SearchableMenu
+        trigger={trigger}
+        items={items}
+        listId={group?.defaultValue}
+        showSearch={searchable}
+        searchPlaceholder={searchPlaceholder}
+        closeOnSelect={!multiSelect}
+        emptyState={
+          <Menu.Item value="empty" disabled asChild>
+            <ListRow asChild variant="full-width" id="empty" label={emptyText} disabled />
+          </Menu.Item>
+        }
+        parentList={
+          group
+            ? {
+                items: group.options.map((option) => ({
+                  id: option.id,
+                  label: option.name,
+                  searchText: [option.id, option.description].filter(Boolean).join(" "),
+                  secondaryLabel: option.description,
+                  icon: getIconComponent(option.icon),
+                  isDisabled: option.disabled,
+                  isSelected: option.id === group.defaultValue,
+                })),
+                selectedLabel: selectedGroup?.name ?? group.placeholder ?? `Select ${group.name.toLowerCase()}`,
+                selectedIcon: selectedGroup ? getIconComponent(selectedGroup.icon) : undefined,
+                ariaLabel: group.name,
+                disabled: group.disabled || group.options.length <= 1,
+                showSearch: group.searchable,
+                searchPlaceholder: group.searchPlaceholder ?? `Search ${group.name.toLowerCase()}…`,
+                emptyState: (
+                  <Menu.Item value="group-empty" disabled asChild>
+                    <ListRow
+                      asChild
+                      variant="full-width"
+                      id="group-empty"
+                      label={group.emptyText ?? `No ${group.name.toLowerCase()} found`}
+                      disabled
+                    />
+                  </Menu.Item>
+                ),
+                onSelect: (item) => onGroupChange?.(item.id),
+              }
+            : undefined
+        }
+      />
+    );
+  }
 
   return (
     <Menu.Root closeOnSelect={!multiSelect}>

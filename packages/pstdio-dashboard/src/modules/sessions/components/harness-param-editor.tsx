@@ -57,7 +57,6 @@ export const HarnessParamEditor = (props: HarnessParamEditorProps) => {
     <ParamEditor
       params={params}
       defaultValues={values}
-      fullWidth
       readOnly={disabled}
       onChange={(key, value) => {
         if (typeof value !== "string" && typeof value !== "boolean") return;

@@ -1,14 +1,14 @@
 import { Stack } from "@chakra-ui/react";
+import { ParamEditor, type SelectionOption, type SelectionParam } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { RepoBrowser } from "@/shared/components/repo-browser";
 import type { ProjectRepository, RepoBranch } from "@/shared/projects/project-types";
 import { useProject } from "@/shared/projects/use-project";
 import { useRepoBranches } from "@/shared/projects/use-repo-branches";
-import { ParamFieldLabel, parseParamRecord, serializeParamRecord } from "./param-field-shared";
+import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
 
 interface RepoParamFieldProps extends CommandParamFieldProps {
   workbench: WorkbenchCore;
@@ -75,20 +75,49 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   const handleSelectRepository = (repository: string) => onChange(serializeParamRecord({ repoId: repository }));
   const handleSelectBranch = (selected: string) => onChange(serializeParamRecord({ repoId, branch: selected }));
 
+  const workspaceOptions: SelectionOption[] = branchOptions.map((option) => ({
+    id: option.value,
+    name: option.label,
+    icon: "GitBranch",
+  }));
+  if (isBranchesLoading && workspaceOptions.length === 0) {
+    workspaceOptions.push({ id: "branch-loading", name: "Loading workspaces…", icon: "GitBranch", disabled: true });
+  }
+  const workspaceParam: SelectionParam = {
+    id: "branch",
+    name: `${entry.label}${entry.required ? " *" : ""}`,
+    description: entry.description,
+    type: "selection",
+    defaultValue: branch,
+    options: workspaceOptions,
+    placeholder: "Select workspace",
+    searchable: branchOptions.length > 10,
+    searchPlaceholder: "Search workspaces…",
+    emptyText: "No workspaces available",
+    disabled: disabled || (repositories.length === 0 && !isProjectLoading),
+    group: {
+      id: "repoId",
+      name: "Repository",
+      defaultValue: repoId,
+      options: repositoryOptions.map((option) => ({ id: option.value, name: option.label, icon: "FolderGit2" })),
+      placeholder: isProjectLoading ? "Loading repositories…" : "Select repository",
+      searchable: repositoryOptions.length > 10,
+      searchPlaceholder: "Search repositories…",
+      emptyText: "No repositories linked",
+      disabled: disabled || isProjectLoading || repositoryOptions.length <= 1,
+    },
+  };
+
   return (
-    <Stack gap="2xs">
-      <ParamFieldLabel entry={entry} />
-      <RepoBrowser
-        repositoryOptions={repositoryOptions}
-        selectedRepository={repoId}
-        onSelectRepository={handleSelectRepository}
-        branchOptions={branchOptions}
-        selectedBranch={branch}
-        onSelectBranch={handleSelectBranch}
-        isDisabled={disabled}
-        isReposLoading={isProjectLoading}
-        isBranchesLoading={isBranchesLoading}
-        maxListHeight="26rem"
+    <Stack gap="0">
+      <ParamEditor
+        params={[workspaceParam]}
+        defaultValues={{ branch, repoId }}
+        onChange={(id, nextValue) => {
+          if (typeof nextValue !== "string") return;
+          if (id === "repoId") handleSelectRepository(nextValue);
+          if (id === "branch") handleSelectBranch(nextValue);
+        }}
       />
     </Stack>
   );

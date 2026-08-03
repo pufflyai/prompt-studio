@@ -27,8 +27,8 @@ describe("runAttemptCommand", () => {
       required: false,
       defaultValue: "worktree",
       options: [
-        { label: "Worktree", value: "worktree" },
-        { label: "Current branch", value: "current_branch" },
+        { label: "Worktree", value: "worktree", icon: "GitFork" },
+        { label: "Current branch", value: "current_branch", icon: "GitBranch" },
       ],
     });
   });

@@ -142,6 +142,17 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           placeholder={param.placeholder}
           clearable={param.clearable}
           disabled={param.disabled}
+          searchable={param.searchable}
+          searchPlaceholder={param.searchPlaceholder}
+          emptyText={param.emptyText}
+          group={
+            param.group
+              ? {
+                  ...param.group,
+                  defaultValue: resolveParamValue(defaultValues, param.group.id, param.group.defaultValue),
+                }
+              : undefined
+          }
           hideLabel={horizontal}
         />
       );

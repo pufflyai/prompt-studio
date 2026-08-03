@@ -1,5 +1,5 @@
 {
-  "version": "2.14",
+  "version": "2.15",
   "children": [
     {
       "type": "frame",
@@ -3133,6 +3133,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3205,6 +3206,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3277,6 +3279,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3349,6 +3352,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3421,6 +3425,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3493,6 +3498,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3565,6 +3571,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3637,6 +3644,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -3709,6 +3717,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 24,
                       "padding": [
                         18,
@@ -15686,7 +15695,7 @@
                       "type": "frame",
                       "id": "clw66",
                       "name": "cmp/SelectorTrigger",
-                      "context": "Chakra Button variant='ghost' size='sm' used as the SearchableMenu trigger. h 32, px 8, gap 7, radius $btn-radius. Label label/S/medium 13/500; icons 14px inherit the button fg. Leading is EITHER the Mark (project identity square — enable for project/workspace switchers) OR the Icon (generic lucide glyph) — never both. Workspace trigger: GitBranch icon + Text ml 4 (LabelWrap pl) + chevron, and the chevron is REMOVED when disabled. Model trigger: no icon, no mark, LabelWrap pl 0, chevron KEPT when disabled. trig theme axis: default | hover | open | disabled.",
+                      "context": "Default selection trigger. The optional leading icon represents the selected item (for example CPU for a model, GitBranch for a workspace, Brain for reasoning effort, or GitFork for worktree mode).",
                       "theme": {
                         "trig": "default"
                       },
@@ -15806,6 +15815,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -15924,7 +15934,7 @@
                       "type": "frame",
                       "id": "w2HlI",
                       "name": "cmp/ModelMenu",
-                      "context": "WorkspaceAgentMenu (pstdio-dashboard/src/shared/components/workspace-agent-menu.tsx). SearchableMenu width 260 with a parentList. NOT a model-only menu: the sticky header (Header variant='narrow', h 32, px 0, 1px border.subtle bottom) is a harness switcher that swaps the body between the model list and the harness list in place. Header chevron disappears when the harness switch is disabled (single harness or existing session). Model rows: no icon, label + description. Harness rows: TerminalIcon, no description. Search only when modelOptions.length > 5; the harness list never shows search.",
+                      "context": "Searchable grouped model selector. The harness header opens the parent group list; each child model row includes a CPU icon and model identifier description.",
                       "reusable": true,
                       "clip": true,
                       "width": 260,
@@ -15946,6 +15956,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "center",
                           "children": [
                             {
@@ -15982,6 +15993,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -16036,7 +16048,8 @@
                               },
                               "descendants": {
                                 "UEgTp": {
-                                  "enabled": false
+                                  "enabled": true,
+                                  "icon": "cpu"
                                 },
                                 "UTbhN": {
                                   "content": "Opus 4.8"
@@ -16063,7 +16076,8 @@
                               },
                               "descendants": {
                                 "UEgTp": {
-                                  "enabled": false
+                                  "enabled": true,
+                                  "icon": "cpu"
                                 },
                                 "UTbhN": {
                                   "content": "Sonnet 5"
@@ -16090,7 +16104,8 @@
                               },
                               "descendants": {
                                 "UEgTp": {
-                                  "enabled": false
+                                  "enabled": true,
+                                  "icon": "cpu"
                                 },
                                 "UTbhN": {
                                   "content": "Haiku 4.5"
@@ -16117,7 +16132,8 @@
                               },
                               "descendants": {
                                 "UEgTp": {
-                                  "enabled": false
+                                  "enabled": true,
+                                  "icon": "cpu"
                                 },
                                 "UTbhN": {
                                   "content": "Fable 5"
@@ -16802,6 +16818,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         0,
@@ -16943,6 +16960,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "children": [
                         {
@@ -17120,6 +17138,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 6,
                           "padding": [
                             0,
@@ -20936,6 +20955,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21003,6 +21023,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21099,6 +21120,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21167,6 +21189,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21263,6 +21286,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21330,6 +21354,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21426,6 +21451,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -21558,6 +21584,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             16
@@ -21772,6 +21799,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             16
@@ -26270,6 +26298,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 10,
                               "padding": [
                                 0,
@@ -26771,6 +26800,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
@@ -26804,6 +26834,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "padding": [
                                     0,
                                     16
@@ -32006,6 +32037,7 @@
       "x": 8052,
       "y": 11666,
       "name": "Selectors · pstdio-dashboard",
+      "context": "Canonical selector patterns for searchable grouped ParamEditor selections, including workspace/repository and model/harness parent-child menus.",
       "theme": {
         "mode": "dark"
       },
@@ -32043,7 +32075,7 @@
               "id": "nOvBc",
               "name": "Title",
               "fill": "$ds-fg",
-              "content": "Workspace & model selectors",
+              "content": "Searchable grouped workspace & model selectors",
               "lineHeight": 1.05,
               "fontFamily": "$font-display",
               "fontSize": 44,
@@ -32056,7 +32088,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 760,
-              "content": "Ported from pstdio-dashboard: SessionWorkspaceMenu and WorkspaceAgentMenu, both built on SearchableMenu + ListRow.",
+              "content": "ParamEditor selections support search and one parent group: repositories group workspace branches, while harnesses group their available models.",
               "fontFamily": "$font-body",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -32076,7 +32108,7 @@
               "id": "WUETC",
               "name": "Section Title",
               "fill": "$ds-fg",
-              "content": "Workspace selector · SessionWorkspaceMenu",
+              "content": "Workspace selector · searchable branch + repository group",
               "fontFamily": "$font-heading",
               "fontSize": 13,
               "fontWeight": "600"
@@ -32324,7 +32356,7 @@
                   "id": "xrXy4",
                   "name": "Card Title",
                   "fill": "$ds-fg",
-                  "content": "Menu · 280px",
+                  "content": "Menu · searchable branches · repository group",
                   "fontFamily": "$font-heading",
                   "fontSize": 12,
                   "fontWeight": "600"
@@ -32462,7 +32494,7 @@
               "id": "Y73kbG",
               "name": "Section Title",
               "fill": "$ds-fg",
-              "content": "Model selector · WorkspaceAgentMenu (harness + model)",
+              "content": "Model selector · searchable model + harness group",
               "fontFamily": "$font-heading",
               "fontSize": 13,
               "fontWeight": "600"
@@ -32486,7 +32518,7 @@
                   "id": "jomZL",
                   "name": "Card Title",
                   "fill": "$ds-fg",
-                  "content": "Trigger · no leading icon, chevron kept when disabled",
+                  "content": "Trigger · selected model icon and label",
                   "fontFamily": "$font-heading",
                   "fontSize": 12,
                   "fontWeight": "600"
@@ -32525,7 +32557,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32567,7 +32600,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32609,7 +32643,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32651,7 +32686,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32693,7 +32729,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32735,7 +32772,8 @@
                           },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "cpu"
                             },
                             "l7dix": {
                               "padding": 0
@@ -32773,7 +32811,7 @@
                   "id": "oB2Ne",
                   "name": "Card Title",
                   "fill": "$ds-fg",
-                  "content": "Menu · 260px · harness header swaps the list in place",
+                  "content": "Menu · searchable child models · harness group swaps in place",
                   "fontFamily": "$font-heading",
                   "fontSize": 12,
                   "fontWeight": "600"
@@ -34634,6 +34672,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 6,
                               "padding": [
@@ -34775,6 +34814,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": 9,
@@ -34879,6 +34919,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -35064,6 +35105,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "justifyContent": "center",
@@ -35119,6 +35161,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -35890,7 +35933,8 @@
                               "strokeWidth": {
                                 "right": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -35912,6 +35956,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -36095,7 +36140,8 @@
                               "strokeWidth": {
                                 "right": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -36117,6 +36163,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -36349,7 +36396,8 @@
                               "strokeWidth": {
                                 "right": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -36371,6 +36419,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -36505,6 +36554,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -36568,7 +36618,8 @@
                               "strokeWidth": {
                                 "right": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -36590,6 +36641,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -36724,6 +36776,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -36871,7 +36924,8 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
-                                      "strokeAlignment": "inner"
+                                      "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round"
                                     },
                                     {
                                       "type": "frame",
@@ -36909,6 +36963,7 @@
                                     "left": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "children": [
                                     {
@@ -36922,6 +36977,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         0,
                                         6
@@ -37062,7 +37118,8 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
-                                      "strokeAlignment": "inner"
+                                      "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round"
                                     },
                                     {
                                       "type": "frame",
@@ -37100,6 +37157,7 @@
                                     "left": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "children": [
                                     {
@@ -37113,6 +37171,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         0,
                                         6
@@ -37599,6 +37658,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -37690,6 +37750,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -37737,6 +37798,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -37858,6 +37920,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -37902,6 +37965,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 7,
                           "padding": [
                             0,
@@ -38005,6 +38069,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -38104,6 +38169,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -38187,6 +38253,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -38231,6 +38298,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 7,
                           "padding": [
                             0,
@@ -38421,6 +38489,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -38529,6 +38598,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -38681,6 +38751,7 @@
                                     "left": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -38811,6 +38882,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -38945,6 +39017,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -39145,6 +39218,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -39831,7 +39905,8 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -40660,6 +40735,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -40774,6 +40850,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -40810,6 +40887,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -40909,6 +40987,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -40940,6 +41019,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -41008,6 +41088,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -41083,6 +41164,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 2,
                                   "padding": 8,
@@ -42356,6 +42438,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -42466,6 +42549,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -42502,6 +42586,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -42601,6 +42686,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -42643,6 +42729,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -42709,6 +42796,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 10,
                               "padding": [
                                 0,
@@ -44322,6 +44410,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 10,
                           "padding": [
                             0,
@@ -44568,6 +44657,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12
@@ -44812,6 +44902,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12
@@ -44922,6 +45013,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 6,
                           "padding": [
                             0,
@@ -45382,6 +45474,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12
@@ -45538,6 +45631,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12
@@ -46139,6 +46233,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12
@@ -46303,6 +46398,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -46316,6 +46412,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 12
@@ -46398,6 +46495,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 9,
                               "padding": [
                                 0,
@@ -46807,6 +46905,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 14
@@ -47011,6 +47110,7 @@
                                     "left": 2
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 8,
                                   "padding": 14,
@@ -47095,6 +47195,7 @@
                                 "top": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 14
@@ -47637,6 +47738,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 4,
                       "padding": [
@@ -47756,6 +47858,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 3,
                       "padding": [
@@ -47885,7 +47988,8 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         },
                         {
                           "type": "frame",
@@ -48256,6 +48360,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -48352,6 +48457,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 2,
                                   "padding": 10,
@@ -48508,6 +48614,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -48638,6 +48745,7 @@
                         "left": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "children": [
                         {
@@ -48651,6 +48759,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 4,
                           "padding": [
                             0,
@@ -48884,6 +48993,7 @@
                     "top": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     0,
@@ -49165,6 +49275,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -49253,6 +49364,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -49300,6 +49412,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -49391,6 +49504,7 @@
                                             "bottom": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "gap": 4,
                                           "padding": [
                                             0,
@@ -49546,6 +49660,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -49590,6 +49705,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -49735,6 +49851,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -49831,6 +49948,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -49922,6 +50040,7 @@
                                             "bottom": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "gap": 4,
                                           "padding": [
                                             0,
@@ -50039,6 +50158,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -50083,6 +50203,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -50237,6 +50358,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -50325,6 +50447,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -50372,6 +50495,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -50484,6 +50608,7 @@
                                             "bottom": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "gap": 4,
                                           "padding": [
                                             0,
@@ -50601,6 +50726,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 3,
                               "justifyContent": "center",
@@ -50645,6 +50771,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -50790,6 +50917,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -50886,6 +51014,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 6,
                                   "padding": [
                                     0,
@@ -50977,6 +51106,7 @@
                                             "bottom": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "gap": 4,
                                           "padding": [
                                             0,
@@ -51093,6 +51223,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 6
@@ -51147,6 +51278,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             8
@@ -51271,6 +51403,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 6,
                       "padding": [
@@ -51434,6 +51567,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -51470,6 +51604,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             0,
@@ -51531,6 +51666,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -51561,6 +51697,7 @@
                         "left": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -51592,6 +51729,7 @@
                     "top": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     10
@@ -51660,6 +51798,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         0,
@@ -51745,6 +51884,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": 12,
@@ -55653,6 +55793,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 2,
                   "padding": [
@@ -56385,6 +56526,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         14
@@ -56492,6 +56634,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         14
@@ -58656,6 +58799,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -58818,6 +58962,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -58854,6 +58999,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -58915,6 +59061,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -58945,6 +59092,7 @@
                     "left": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -58976,6 +59124,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 10
@@ -59044,6 +59193,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 10,
                   "padding": [
                     0,
@@ -59125,6 +59275,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 3,
                       "padding": 12,
@@ -59511,6 +59662,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 8,
                           "padding": [
                             12,
@@ -59601,6 +59753,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 4,
                           "padding": [
                             0,
@@ -59686,6 +59839,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 16,
                                   "padding": [
                                     11,
@@ -59817,6 +59971,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 16,
                                   "padding": [
                                     11,
@@ -59916,6 +60071,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 16,
                                   "padding": [
                                     11,
@@ -60285,6 +60441,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         0,
@@ -60376,6 +60533,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         10,
@@ -60469,6 +60627,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 4,
                       "padding": [
                         0,
@@ -60645,6 +60804,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60697,6 +60857,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60749,6 +60910,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60801,6 +60963,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60853,6 +61016,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60905,6 +61069,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -60957,6 +61122,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61009,6 +61175,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61117,6 +61284,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61225,6 +61393,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61277,6 +61446,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61329,6 +61499,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61437,6 +61608,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61489,6 +61661,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61597,6 +61770,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61649,6 +61823,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61701,6 +61876,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61753,6 +61929,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61861,6 +62038,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61913,6 +62091,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -61965,6 +62144,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -62073,6 +62253,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -62125,6 +62306,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -62233,6 +62415,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 12,
                                   "alignItems": "center",
                                   "children": [
@@ -62364,6 +62547,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 10,
                           "padding": [
                             0,
@@ -62456,6 +62640,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 7,
                           "padding": [
@@ -62568,6 +62753,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 4,
                           "padding": [
                             0,
@@ -64552,6 +64738,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -64784,6 +64971,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -64967,6 +65155,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -65199,6 +65388,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -65673,6 +65863,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -65720,6 +65911,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -67052,6 +67244,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "children": [
                         {
@@ -67325,6 +67518,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "children": [
                         {
@@ -67377,6 +67571,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -67475,6 +67670,7 @@
                                         "right": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 7,
                                       "padding": 10,
@@ -67638,6 +67834,7 @@
                                         "left": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 7,
                                       "padding": 10,
@@ -67791,6 +67988,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -67889,6 +68087,7 @@
                                         "right": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 7,
                                       "padding": 10,
@@ -68052,6 +68251,7 @@
                                         "left": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 7,
                                       "padding": 10,
@@ -68201,6 +68401,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -68378,6 +68579,7 @@
                     "top": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     0,
@@ -68581,6 +68783,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -68679,6 +68882,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -68842,6 +69046,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -69014,6 +69219,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -69112,6 +69318,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -69275,6 +69482,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -69447,6 +69655,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -69545,6 +69754,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -69708,6 +69918,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -70092,6 +70303,7 @@
                                     "top": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -70125,6 +70337,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -70334,6 +70547,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -70401,6 +70615,7 @@
                                     "top": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -70620,6 +70835,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -70681,6 +70897,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -70890,6 +71107,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -70929,6 +71147,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -71253,7 +71472,8 @@
                           "strokeWidth": {
                             "left": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         }
                       ]
                     }
@@ -71479,6 +71699,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 5,
                       "padding": [
                         0,
@@ -71620,6 +71841,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 5,
                       "padding": [
                         0,
@@ -71761,6 +71983,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 5,
                       "padding": [
                         0,
@@ -71922,6 +72145,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 5,
                       "padding": [
                         0,
@@ -72399,6 +72623,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -72658,6 +72883,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -72926,6 +73152,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -73034,6 +73261,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -73186,6 +73414,7 @@
                                     "left": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -73316,6 +73545,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -73443,6 +73673,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 3,
                                   "padding": 7,
@@ -73643,6 +73874,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 4,
                               "padding": [
                                 0,
@@ -74096,6 +74328,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -74432,6 +74665,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -74616,6 +74850,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -75022,6 +75257,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -75134,6 +75370,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -75246,6 +75483,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -75442,6 +75680,7 @@
                             "top": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -75678,6 +75917,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "children": [
                                 {
@@ -75692,6 +75932,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -75947,6 +76188,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 5,
                               "padding": [
                                 0,
@@ -76616,7 +76858,8 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         },
                         {
                           "type": "frame",
@@ -76819,7 +77062,8 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         },
                         {
                           "type": "frame",
@@ -77166,7 +77410,8 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         },
                         {
                           "type": "frame",
@@ -77935,6 +78180,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 8,
@@ -78096,6 +78342,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -78178,6 +78425,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78220,6 +78468,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78262,6 +78511,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78304,6 +78554,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78349,6 +78600,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "children": [
                                 {
@@ -78363,6 +78615,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "padding": [
                                     0,
                                     8
@@ -78535,6 +78788,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 8,
@@ -78696,6 +78950,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 5,
                                   "padding": [
                                     0,
@@ -78778,6 +79033,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78820,6 +79076,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78862,6 +79119,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78904,6 +79162,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 7,
                                       "padding": [
                                         0,
@@ -78949,6 +79208,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "children": [
                                 {
@@ -78963,6 +79223,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "padding": [
                                     0,
                                     8
@@ -79247,6 +79508,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -79534,6 +79796,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -79797,6 +80060,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -80060,6 +80324,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -80337,6 +80602,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -80624,6 +80890,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -80935,6 +81202,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -81222,6 +81490,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 4,
                               "padding": 7,
@@ -81451,6 +81720,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": [
@@ -81580,7 +81850,8 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -81726,6 +81997,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -81778,6 +82050,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -81876,6 +82149,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -82039,6 +82313,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -82192,6 +82467,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -82290,6 +82566,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -82453,6 +82730,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -82602,6 +82880,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 5,
                               "padding": [
                                 0,
@@ -82779,6 +83058,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 14,
                       "padding": [
                         0,
@@ -82960,6 +83240,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": [
@@ -83089,7 +83370,8 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -83235,6 +83517,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -83299,6 +83582,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -83432,6 +83716,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 10,
                                           "padding": 10,
@@ -83837,6 +84122,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -83935,6 +84221,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -84098,6 +84385,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -84247,6 +84535,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 5,
                               "padding": [
                                 0,
@@ -84421,6 +84710,7 @@
                             "left": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 4,
                           "padding": [
@@ -84567,6 +84857,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 14,
                       "padding": [
                         0,
@@ -84745,6 +85036,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": [
@@ -84874,7 +85166,8 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -85020,6 +85313,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -85219,6 +85513,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -85317,6 +85612,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -85480,6 +85776,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -85629,6 +85926,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 5,
                               "padding": [
                                 0,
@@ -85924,6 +86222,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 14,
                       "padding": [
                         0,
@@ -86105,6 +86404,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": [
@@ -86234,7 +86534,8 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
-                              "strokeAlignment": "inner"
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round"
                             },
                             {
                               "type": "frame",
@@ -86380,6 +86681,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -86450,6 +86752,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -86548,6 +86851,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -86711,6 +87015,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -86867,6 +87172,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "gap": 5,
                                       "padding": [
                                         0,
@@ -86965,6 +87271,7 @@
                                             "right": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -87128,6 +87435,7 @@
                                             "left": 1
                                           },
                                           "strokeAlignment": "inner",
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 7,
                                           "padding": 10,
@@ -87280,6 +87588,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 5,
                               "padding": [
                                 0,
@@ -87457,6 +87766,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 14,
                       "padding": [
                         0,
@@ -87717,6 +88027,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         0,
                                         10
@@ -87782,6 +88093,7 @@
                                 "top": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 10
@@ -87839,6 +88151,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -87887,6 +88200,7 @@
                                     "right": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "layout": "vertical",
                                   "gap": 9,
                                   "padding": 12,
@@ -88072,6 +88386,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         0,
                                         10
@@ -88137,6 +88452,7 @@
                                 "top": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 10
@@ -88194,6 +88510,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -88402,6 +88719,7 @@
                                         "bottom": 1
                                       },
                                       "strokeAlignment": "inner",
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         0,
                                         10
@@ -88467,6 +88785,7 @@
                                 "top": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 10
@@ -88524,6 +88843,7 @@
                                 "bottom": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -88792,6 +89112,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 7,
                   "padding": [
@@ -88984,7 +89305,8 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
-                      "strokeAlignment": "inner"
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round"
                     },
                     {
                       "type": "text",
@@ -89455,6 +89777,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -89547,6 +89870,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 8,
                               "padding": 10,
@@ -89624,6 +89948,7 @@
                                     "bottom": 1
                                   },
                                   "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round",
                                   "gap": 7,
                                   "padding": [
                                     0,
@@ -90011,6 +90336,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 10,
                               "padding": 12,
@@ -90162,6 +90488,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "children": [
                         {
@@ -90176,6 +90503,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "gap": 5,
                           "padding": [
                             0,
@@ -90268,6 +90596,7 @@
                                 "right": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -90321,6 +90650,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 7,
                               "padding": 10,
@@ -90357,6 +90687,7 @@
                     "left": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "children": [
                     {
@@ -90371,6 +90702,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 5,
                       "padding": [
                         0,
@@ -90549,6 +90881,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 14,
               "padding": [
                 0,
@@ -96888,6 +97221,7 @@
                       "strokeWidth": {
                         "left": 2
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         0,
@@ -96918,6 +97252,7 @@
                       "strokeWidth": {
                         "left": 2
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         0,
@@ -96948,6 +97283,7 @@
                       "strokeWidth": {
                         "left": 2
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         0,
@@ -97124,6 +97460,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -97579,6 +97916,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -97667,6 +98005,7 @@
               "strokeWidth": {
                 "right": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 8,
               "padding": 12,
@@ -97963,6 +98302,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -98042,6 +98382,7 @@
               "strokeWidth": {
                 "right": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 9,
               "padding": 12,
@@ -98435,6 +98776,7 @@
                   "strokeWidth": {
                     "top": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 5,
                   "padding": [
@@ -99090,6 +99432,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -99545,6 +99888,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -99624,6 +99968,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 9,
                           "padding": 12,
@@ -100017,6 +100362,7 @@
                               "strokeWidth": {
                                 "top": 1
                               },
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 5,
                               "padding": [
@@ -100101,6 +100447,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -100189,6 +100536,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 8,
                           "padding": 12,
@@ -100507,6 +100855,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -100850,6 +101199,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 8,
                                   "padding": [
                                     0,
@@ -101397,6 +101747,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 8,
                                   "padding": [
                                     0,
@@ -101485,6 +101836,7 @@
                                       "strokeWidth": {
                                         "right": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 8,
                                       "padding": 12,
@@ -101906,6 +102258,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 8,
                                   "padding": [
                                     0,
@@ -101985,6 +102338,7 @@
                                       "strokeWidth": {
                                         "right": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 9,
                                       "padding": 12,
@@ -102378,6 +102732,7 @@
                                           "strokeWidth": {
                                             "top": 1
                                           },
+                                          "strokeLinejoin": "round",
                                           "layout": "vertical",
                                           "gap": 5,
                                           "padding": [
@@ -102554,6 +102909,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 8,
                                   "padding": [
                                     0,
@@ -102633,6 +102989,7 @@
                                       "strokeWidth": {
                                         "right": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "layout": "vertical",
                                       "gap": 13,
                                       "padding": [
@@ -107238,6 +107595,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         0,
@@ -113176,6 +113534,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -113378,6 +113737,7 @@
               "strokeWidth": {
                 "right": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "children": [
                 {
@@ -114142,6 +114502,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 22,
                           "padding": [
@@ -114570,6 +114931,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -115257,6 +115619,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 17,
                           "padding": [
@@ -115392,6 +115755,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -115537,6 +115901,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 12,
                                       "padding": [
                                         0,
@@ -115922,6 +116287,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 8,
                                       "padding": [
                                         0,
@@ -116447,6 +116813,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 8,
                           "padding": [
@@ -116810,6 +117177,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -116943,6 +117311,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 8,
                                       "padding": [
                                         0,
@@ -117060,6 +117429,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 8,
                                       "padding": [
                                         0,
@@ -117089,6 +117459,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 10,
                                       "padding": [
                                         0,
@@ -117138,6 +117509,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 10,
                                       "padding": [
                                         0,
@@ -117187,6 +117559,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 10,
                                       "padding": [
                                         0,
@@ -117236,6 +117609,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 10,
                                       "padding": [
                                         0,
@@ -117285,6 +117659,7 @@
                                       "strokeWidth": {
                                         "bottom": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "gap": 10,
                                       "padding": [
                                         0,
@@ -117341,6 +117716,7 @@
                           "strokeWidth": {
                             "left": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -117353,6 +117729,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -117772,6 +118149,7 @@
                           "strokeWidth": {
                             "right": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 12,
                           "padding": [
@@ -118464,6 +118842,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -119171,6 +119550,7 @@
                           "strokeWidth": {
                             "left": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "children": [
                             {
@@ -119183,6 +119563,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 8,
                               "padding": [
                                 0,
@@ -119696,6 +120077,7 @@
               "strokeWidth": {
                 "left": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "children": [
                 {
@@ -119709,6 +120091,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 5,
                   "padding": [
                     0,
@@ -120121,6 +120504,7 @@
           "strokeWidth": {
             "top": 1
           },
+          "strokeLinejoin": "round",
           "gap": 14,
           "padding": [
             0,
@@ -120202,6 +120586,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 10,
           "padding": [
             0,
@@ -120504,6 +120889,7 @@
               "strokeWidth": {
                 "right": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "children": [
                 {
@@ -120613,6 +120999,7 @@
                       "strokeWidth": {
                         "left": 2
                       },
+                      "strokeLinejoin": "round",
                       "gap": 9,
                       "padding": [
                         0,
@@ -121017,6 +121404,7 @@
                   "strokeWidth": {
                     "top": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 10,
                   "padding": [
@@ -121119,6 +121507,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 8,
                   "padding": [
                     0,
@@ -121635,6 +122024,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 9,
                               "padding": [
                                 0,
@@ -121752,6 +122142,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 14,
                                   "padding": [
                                     12,
@@ -121880,6 +122271,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 14,
                                   "padding": [
                                     12,
@@ -122008,6 +122400,7 @@
                                   "strokeWidth": {
                                     "bottom": 1
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 14,
                                   "padding": [
                                     12,
@@ -122227,6 +122620,7 @@
                                     "bottom": 1,
                                     "left": 2
                                   },
+                                  "strokeLinejoin": "round",
                                   "gap": 14,
                                   "padding": [
                                     12,
@@ -122357,6 +122751,7 @@
                               "strokeWidth": {
                                 "top": 1
                               },
+                              "strokeLinejoin": "round",
                               "layout": "vertical",
                               "gap": 9,
                               "padding": [
@@ -122522,6 +122917,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "gap": 9,
                               "padding": [
                                 0,
@@ -123577,6 +123973,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -123627,6 +124024,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -127798,6 +128196,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 8,
                   "padding": 4,
                   "justifyContent": "space_between",
@@ -127883,6 +128282,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 8,
                   "padding": [
                     0,
@@ -127945,6 +128345,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "alignItems": "center",
                   "children": [
                     {
@@ -127957,7 +128358,8 @@
                       "strokeWidth": {
                         "right": 1
                       },
-                      "strokeAlignment": "inner"
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round"
                     },
                     {
                       "type": "frame",
@@ -127969,7 +128371,8 @@
                       "strokeWidth": {
                         "right": 1
                       },
-                      "strokeAlignment": "inner"
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round"
                     },
                     {
                       "type": "frame",
@@ -127982,6 +128385,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": 10,
                       "alignItems": "center",
                       "children": [
@@ -128027,6 +128431,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": 10,
                       "alignItems": "center",
                       "children": [
@@ -128147,6 +128552,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": 10,
                       "alignItems": "center",
                       "children": [
@@ -128285,6 +128691,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": 10,
                       "alignItems": "center",
                       "children": [
@@ -128344,6 +128751,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "alignItems": "center",
                   "children": [
                     {
@@ -128358,6 +128766,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
@@ -128384,6 +128793,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
@@ -128447,6 +128857,7 @@
                         "right": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         14
@@ -128541,6 +128952,7 @@
                     "top": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 8,
                   "padding": [
                     8,
@@ -128793,6 +129205,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -128805,7 +129218,8 @@
                           "strokeWidth": {
                             "right": 1
                           },
-                          "strokeAlignment": "inner"
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round"
                         },
                         {
                           "type": "frame",
@@ -128818,6 +129232,7 @@
                             "right": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -129138,6 +129553,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "alignItems": "center",
                   "children": [
                     {
@@ -129615,6 +130031,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 12,
                   "padding": [
                     0,
@@ -129957,6 +130374,7 @@
               "type": "frame",
               "id": "BoSir",
               "name": "Patterns / Param Editor / Param Editor Vertical",
+              "context": "Canonical ParamEditor default layout: left-aligned labels and right-aligned controls. Selection controls display the selected option icon before its label.",
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 12,
@@ -129980,7 +130398,7 @@
                       "id": "P1GhO",
                       "name": "Title",
                       "fill": "$ds-fg",
-                      "content": "Param Editor Vertical",
+                      "content": "Param Editor · Run attempt",
                       "fontFamily": "$font-heading",
                       "fontSize": 13,
                       "fontWeight": "600"
@@ -129992,7 +130410,7 @@
                       "fill": "#8B9099",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Seven parameters arranged as labelled rows, with range sliders and multiline text given the space they need.",
+                      "content": "Run-attempt parameters use the default labelled-row layout. Icon selections show model, workspace, reasoning-effort, and mode semantics consistently.",
                       "lineHeight": 1.45,
                       "fontFamily": "Inter",
                       "fontSize": 11,
@@ -130267,7 +130685,7 @@
                         {
                           "type": "frame",
                           "id": "A9wHWj",
-                          "name": "Role",
+                          "name": "Reasoning effort",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "alignItems": "center",
@@ -130277,7 +130695,7 @@
                               "id": "RLv2P",
                               "name": "Label",
                               "fill": "#8B9099",
-                              "content": "Role",
+                              "content": "Reasoning effort",
                               "fontFamily": "Inter",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -130285,8 +130703,8 @@
                             {
                               "type": "frame",
                               "id": "X9EhKl",
-                              "name": "Role selection",
-                              "width": 92,
+                              "name": "Reasoning effort selection",
+                              "width": 112,
                               "height": 32,
                               "fill": "#07090E",
                               "cornerRadius": 4,
@@ -130301,14 +130719,33 @@
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "n67AiR",
-                                  "name": "Value",
-                                  "fill": "#F7F8F8",
-                                  "content": "User",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "TfEjT",
+                                  "name": "Selected effort",
+                                  "gap": 6,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "J71Fg",
+                                      "name": "Reasoning effort icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "brain",
+                                      "library": "lucide",
+                                      "fill": "#AEB8C8"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "guuX9",
+                                      "name": "Value",
+                                      "fill": "#F7F8F8",
+                                      "content": "Medium",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "icon",
@@ -130417,6 +130854,7 @@
                                 "left": 1
                               },
                               "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
                               "padding": [
                                 0,
                                 10
@@ -130737,6 +131175,7 @@
                             "left": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             10
@@ -131279,6 +131718,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         4,
                         8
@@ -131623,6 +132063,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 14,
                       "padding": [
@@ -131785,6 +132226,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 14,
                       "padding": [
@@ -132098,6 +132540,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         12,
                         0
@@ -132869,7 +133312,8 @@
                     {
                       "type": "frame",
                       "id": "CmjXR",
-                      "name": "Icon selection examples",
+                      "name": "Run attempt · icon selection form",
+                      "context": "Complete Run attempt form composed from default ParamEditor labelled rows. Model and workspace selections are searchable and grouped; every selected item uses an appropriate Lucide icon.",
                       "width": "fill_container",
                       "fill": "#07090E",
                       "cornerRadius": 8,
@@ -132883,7 +133327,7 @@
                         {
                           "type": "frame",
                           "id": "lXJuB",
-                          "name": "User Role selection row",
+                          "name": "Model selection row",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "alignItems": "center",
@@ -132891,16 +133335,16 @@
                             {
                               "type": "frame",
                               "id": "H7eus5",
-                              "name": "User Role label",
+                              "name": "Model label",
                               "gap": 5,
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "p59BZN",
-                                  "name": "User Role label text",
+                                  "name": "Model label text",
                                   "fill": "#9BA1AB",
-                                  "content": "User Role",
+                                  "content": "Model",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -132908,7 +133352,7 @@
                                 {
                                   "type": "icon",
                                   "id": "BS8rP",
-                                  "name": "User Role help",
+                                  "name": "Model help icon",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "circle-help",
@@ -132920,7 +133364,8 @@
                             {
                               "type": "frame",
                               "id": "BvMD6",
-                              "name": "User Role trigger",
+                              "name": "Model trigger",
+                              "width": 136,
                               "height": 32,
                               "fill": "#0D1017",
                               "cornerRadius": 4,
@@ -132937,19 +133382,19 @@
                                 {
                                   "type": "icon",
                                   "id": "ppa2o",
-                                  "name": "User Role selected icon",
+                                  "name": "Model selected icon",
                                   "width": 14,
                                   "height": 14,
-                                  "icon": "bot",
+                                  "icon": "cpu",
                                   "library": "lucide",
                                   "fill": "#AEB8C8"
                                 },
                                 {
                                   "type": "text",
                                   "id": "fpD7S",
-                                  "name": "User Role selected value",
+                                  "name": "Model selected value",
                                   "fill": "#E8EAED",
-                                  "content": "Assistant",
+                                  "content": "GPT-5.3 Codex",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -132957,7 +133402,7 @@
                                 {
                                   "type": "icon",
                                   "id": "tshNN",
-                                  "name": "User Role chevron",
+                                  "name": "Model chevron",
                                   "width": 13,
                                   "height": 13,
                                   "icon": "chevron-down",
@@ -132971,7 +133416,7 @@
                         {
                           "type": "frame",
                           "id": "x9iZD6",
-                          "name": "Programming Languages selection row",
+                          "name": "Workspace selection row",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "alignItems": "center",
@@ -132979,16 +133424,16 @@
                             {
                               "type": "frame",
                               "id": "BV5Av",
-                              "name": "Programming Languages label",
+                              "name": "Workspace label",
                               "gap": 5,
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "qoz4b",
-                                  "name": "Programming Languages label text",
+                                  "name": "Workspace label text",
                                   "fill": "#9BA1AB",
-                                  "content": "Programming Languages",
+                                  "content": "Workspace",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -132996,7 +133441,7 @@
                                 {
                                   "type": "icon",
                                   "id": "Nb231",
-                                  "name": "Programming Languages help",
+                                  "name": "Workspace help icon",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "circle-help",
@@ -133008,7 +133453,8 @@
                             {
                               "type": "frame",
                               "id": "WQB13",
-                              "name": "Programming Languages trigger",
+                              "name": "Workspace trigger",
+                              "width": 120,
                               "height": 32,
                               "fill": "#0D1017",
                               "cornerRadius": 4,
@@ -133025,19 +133471,19 @@
                                 {
                                   "type": "icon",
                                   "id": "jI4Hm",
-                                  "name": "Programming Languages selected icon",
+                                  "name": "Workspace selected icon",
                                   "width": 14,
                                   "height": 14,
-                                  "icon": "code-2",
+                                  "icon": "git-branch",
                                   "library": "lucide",
                                   "fill": "#AEB8C8"
                                 },
                                 {
                                   "type": "text",
                                   "id": "dQP51",
-                                  "name": "Programming Languages selected value",
+                                  "name": "Workspace selected value",
                                   "fill": "#E8EAED",
-                                  "content": "JavaScript, TypeScript",
+                                  "content": "PS-10_A1",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -133045,7 +133491,7 @@
                                 {
                                   "type": "icon",
                                   "id": "QZN21",
-                                  "name": "Programming Languages chevron",
+                                  "name": "Workspace chevron",
                                   "width": 13,
                                   "height": 13,
                                   "icon": "chevron-down",
@@ -133059,7 +133505,7 @@
                         {
                           "type": "frame",
                           "id": "uT0NC",
-                          "name": "Navigation Section selection row",
+                          "name": "Reasoning effort selection row",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "alignItems": "center",
@@ -133067,16 +133513,16 @@
                             {
                               "type": "frame",
                               "id": "o0agc",
-                              "name": "Navigation Section label",
+                              "name": "Reasoning effort label",
                               "gap": 5,
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "ejFBx",
-                                  "name": "Navigation Section label text",
+                                  "name": "Reasoning effort label text",
                                   "fill": "#9BA1AB",
-                                  "content": "Navigation Section",
+                                  "content": "Reasoning effort",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -133084,7 +133530,7 @@
                                 {
                                   "type": "icon",
                                   "id": "FAVPC",
-                                  "name": "Navigation Section help",
+                                  "name": "Reasoning effort help icon",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "circle-help",
@@ -133096,7 +133542,8 @@
                             {
                               "type": "frame",
                               "id": "aW82Z",
-                              "name": "Navigation Section trigger",
+                              "name": "Reasoning effort trigger",
+                              "width": 105,
                               "height": 32,
                               "fill": "#0D1017",
                               "cornerRadius": 4,
@@ -133113,19 +133560,19 @@
                                 {
                                   "type": "icon",
                                   "id": "hjN7O",
-                                  "name": "Navigation Section selected icon",
+                                  "name": "Reasoning effort selected icon",
                                   "width": 14,
                                   "height": 14,
-                                  "icon": "folder",
+                                  "icon": "brain",
                                   "library": "lucide",
                                   "fill": "#AEB8C8"
                                 },
                                 {
                                   "type": "text",
                                   "id": "h71Ffh",
-                                  "name": "Navigation Section selected value",
+                                  "name": "Reasoning effort selected value",
                                   "fill": "#E8EAED",
-                                  "content": "Projects",
+                                  "content": "Medium",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -133133,7 +133580,96 @@
                                 {
                                   "type": "icon",
                                   "id": "k70bu",
-                                  "name": "Navigation Section chevron",
+                                  "name": "Reasoning effort chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S5FkW",
+                          "name": "Mode selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "S1QXX",
+                              "name": "Mode label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lMtWP",
+                                  "name": "Mode label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Mode",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "I6dAt",
+                                  "name": "Mode help icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "v9H1TC",
+                              "name": "Mode trigger",
+                              "width": 108,
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ppRVh",
+                                  "name": "Mode selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "git-fork",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vrQ36",
+                                  "name": "Mode selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "Worktree",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "h7bJu",
+                                  "name": "Mode chevron",
                                   "width": 13,
                                   "height": 13,
                                   "icon": "chevron-down",
@@ -134802,6 +135338,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -134935,6 +135472,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -135068,6 +135606,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -135201,6 +135740,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -135334,6 +135874,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -135467,6 +136008,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -135600,6 +136142,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
