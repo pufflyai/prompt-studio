@@ -3,8 +3,12 @@ import type { WorkbenchCore } from "@pstdio/workbench";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useEffect } from "react";
-import { HarnessParamControls, type HarnessParamValues } from "@/modules/sessions/components/harness-param-controls";
-import { filterHarnessParamValues, harnessParamValuesEqual } from "@/modules/sessions/components/harness-param-values";
+import { HarnessParamEditor } from "@/modules/sessions/components/harness-param-editor";
+import {
+  filterHarnessParamValues,
+  type HarnessParamValues,
+  harnessParamValuesEqual,
+} from "@/modules/sessions/components/harness-param-values";
 import { useHarnessParamDefaults } from "@/modules/sessions/hooks/use-harness-param-defaults";
 import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
@@ -151,7 +155,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
         isAgentsLoading={isAgentsLoading}
         isModelsLoading={modelsQuery.isLoading}
       />
-      <HarnessParamControls
+      <HarnessParamEditor
         schema={effectiveParamSchema ?? undefined}
         defaults={effectiveParamDefaults}
         overrides={effectiveParams}

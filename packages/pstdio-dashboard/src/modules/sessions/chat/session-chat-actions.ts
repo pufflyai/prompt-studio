@@ -3,7 +3,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
-import type { HarnessParamValues } from "../components/harness-param-controls";
+import type { HarnessParamValues } from "../components/harness-param-values";
 import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
   assignPendingFollowUpSession,

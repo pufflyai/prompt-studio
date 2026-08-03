@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Keep portalled menus above dialogs so harness run params can be changed in the run attempt modal
+Keep harness run parameter menus interactive above dialogs and render form parameters with the standard editor layout
