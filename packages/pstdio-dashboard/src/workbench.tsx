@@ -25,6 +25,8 @@ import { createWorkspacesModule } from "./modules/workspaces/module";
 const dashboardWorkbenchStorageNamespace = "dashboard-wb";
 
 interface CreateDashboardWorkbenchInput {
+  persistenceDebounceMs?: number;
+  persistenceEventTarget?: Parameters<typeof createLocalStorageWorkbenchPersistence>[0]["eventTarget"];
   storage?: WorkbenchStorageLike;
 }
 
@@ -50,12 +52,13 @@ const resolveDashboardWorkbenchStorage = (storage: WorkbenchStorageLike | undefi
 
 type CreateDashboardModulesInput = {
   projectSelectionPersistence?: ReturnType<typeof createDashboardProjectSelectionPersistence>;
+  storage?: WorkbenchStorageLike;
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
   createDashboardViewsModule(),
   createSidenavModule(),
-  createWorkspacesModule(),
+  createWorkspacesModule({ storage: input.storage }),
   createExtensionsModule(),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
   createHeadersModule(),
@@ -88,6 +91,8 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     ...createLocalStorageWorkbenchPersistence({
+      debounceMs: input.persistenceDebounceMs,
+      eventTarget: input.persistenceEventTarget,
       namespace: dashboardWorkbenchStorageNamespace,
       storage,
     }),
@@ -99,7 +104,8 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
   configureDashboardSessionSelectionPersistence(workbench, sessionSelectionPersistence);
 
-  for (const module of createDashboardModules({ projectSelectionPersistence })) workbench.registerModule(module);
+  for (const module of createDashboardModules({ projectSelectionPersistence, storage }))
+    workbench.registerModule(module);
 
   return workbench;
 };

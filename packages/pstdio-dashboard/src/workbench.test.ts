@@ -26,6 +26,22 @@ const createStorage = (): WorkbenchStorageLike => {
   };
 };
 
+const createPersistenceEventTarget = () => {
+  const listeners = new Set<() => void>();
+
+  return {
+    addEventListener: (_type: "pagehide", listener: () => void) => {
+      listeners.add(listener);
+    },
+    dispatchPagehide: () => {
+      for (const listener of listeners) listener();
+    },
+    removeEventListener: (_type: "pagehide", listener: () => void) => {
+      listeners.delete(listener);
+    },
+  };
+};
+
 describe("createDashboardWorkbench", () => {
   test("starts the eligible Side Panel closed", () => {
     const workbench = createDashboardWorkbench();
@@ -123,7 +139,148 @@ describe("createDashboardWorkbench", () => {
       getWriter("sessions")?.truncateAndWrite([]);
     }
   });
+});
 
+describe("createDashboardWorkbench Side Panel sessions", () => {
+  test("restores multiple user-created Side Panel session tabs after reconstruction", async () => {
+    const storage = createStorage();
+    const persistenceEventTarget = createPersistenceEventTarget();
+    const project = { id: "project-1", name: "Prompt Studio" };
+    const workspaceId = "workspace-1";
+    const firstSession = createDashboardResource("session", "session-1", "Session one", "MessageCircle", project.id, {
+      status: "completed",
+      workspaceId,
+    });
+    getWriter("projects")?.truncateAndWrite([
+      { id: project.id, name: project.name, created_at: "2026-07-28T08:00:00.000Z" },
+    ]);
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: workspaceId,
+        project_id: project.id,
+        name: "Dashboard workbench datalayer",
+        branch: "workspace/PS-8_A1",
+        worktree_path: "/repo/.pstdio/workspaces/PS-8_A1",
+        archived: false,
+        workspace_shorthand: "PS-8_A1",
+        setup_error: null,
+        created_at: "2026-07-28T09:00:00.000Z",
+        updated_at: "2026-07-28T09:00:00.000Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("sessions")?.truncateAndWrite([
+      {
+        id: firstSession.id,
+        project_id: project.id,
+        title: firstSession.label,
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        created_at: "2026-07-28T10:00:00.000Z",
+        updated_at: "2026-07-28T10:00:00.000Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("workspace_sessions")?.truncateAndWrite([
+      { id: "workspace-session-1", workspace_id: workspaceId, session_id: firstSession.id },
+    ]);
+    markInitialCollectionsSyncComplete();
+
+    try {
+      const first = createDashboardWorkbench({ persistenceEventTarget, storage });
+      const projectSelectionPersistence = createDashboardProjectSelectionPersistence({
+        namespace: "dashboard-wb",
+        storage,
+      });
+      selectDashboardProject(first, project, projectSelectionPersistence);
+      const workspace = first.resources.listResources("").find((entry) => entry.resource.id === workspaceId)?.resource;
+      await first.resources.openResource(workspace!, { replaceActive: true });
+      await first.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+      await first.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+      first.sidePanel.setMode("attached");
+      expect(
+        first.layout
+          .listPanelInstances("side")
+          .filter((panel) => panel.panelId === dashboardWidgetIds.sessionBubble)
+          .map((panel) => panel.tabRetention),
+      ).toEqual(["preview", "persistent", "persistent"]);
+      persistenceEventTarget.dispatchPagehide();
+      const workspaceLayoutKey = workbenchStoragePersistenceKey(
+        "dashboard-wb",
+        "layout",
+        `project/${project.id}/mode/workspace/resource/dashboard-workbench://workspace/${workspaceId}`,
+      );
+      const persistedWorkspaceLayout = JSON.parse(storage.getItem(workspaceLayoutKey)!);
+      expect(
+        persistedWorkspaceLayout.layout.regions.side.widgets.map(
+          (widget: {
+            ownerResourceUri?: string;
+            resource?: { kind?: string };
+            role?: string;
+            tabRetention?: string;
+          }) => ({
+            kind: widget.resource?.kind,
+            owner: widget.ownerResourceUri,
+            role: widget.role,
+            retention: widget.tabRetention,
+          }),
+        ),
+      ).toEqual([
+        {
+          kind: "session-draft",
+          owner: `dashboard-workbench://workspace/${workspaceId}`,
+          role: "sub-panel",
+          retention: "persistent",
+        },
+        {
+          kind: "session-draft",
+          owner: `dashboard-workbench://workspace/${workspaceId}`,
+          role: "sub-panel",
+          retention: "persistent",
+        },
+      ]);
+
+      const restored = createDashboardWorkbench({ persistenceEventTarget, storage });
+      await flushMicrotasks();
+
+      const restoredSessionPanels = restored.layout
+        .listPanelInstances("side")
+        .filter((panel) => panel.panelId === dashboardWidgetIds.sessionBubble);
+
+      expect(restored.sidePanel.getMode()).toBe("attached");
+      expect(restored.getPrimaryResource()?.uri).toBe(`dashboard-workbench://workspace/${workspaceId}`);
+      expect(restored.layout.getPersistenceScope()).toBe(
+        `project/${project.id}/mode/workspace/resource/dashboard-workbench://workspace/${workspaceId}`,
+      );
+      expect(
+        restoredSessionPanels.map((panel) => ({
+          kind: panel.resource?.kind,
+          retention: panel.tabRetention,
+        })),
+      ).toEqual([
+        { kind: "session", retention: "preview" },
+        { kind: "session-draft", retention: "persistent" },
+        { kind: "session-draft", retention: "persistent" },
+      ]);
+      expect(restoredSessionPanels).toHaveLength(3);
+      expect(restoredSessionPanels.map((panel) => panel.resource?.kind)).toEqual([
+        "session",
+        "session-draft",
+        "session-draft",
+      ]);
+      expect(restoredSessionPanels.map((panel) => panel.tabRetention)).toEqual(["preview", "persistent", "persistent"]);
+    } finally {
+      getWriter("projects")?.truncateAndWrite([]);
+      getWriter("workspaces")?.truncateAndWrite([]);
+      getWriter("sessions")?.truncateAndWrite([]);
+      getWriter("workspace_sessions")?.truncateAndWrite([]);
+    }
+  });
+});
+
+describe("createDashboardWorkbench session selection", () => {
   test("clears a persisted session that is missing from the selected project", async () => {
     const storage = createStorage();
     const project = { id: "project-1", name: "Prompt Studio" };

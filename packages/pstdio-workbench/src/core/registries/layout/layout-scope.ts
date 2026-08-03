@@ -5,7 +5,40 @@ import {
   mergeWithDefaultRegions,
   type WorkbenchLayout,
   type WorkbenchRegion,
+  type WorkbenchRegionState,
+  type WorkbenchWidgetPlacement,
 } from "./layout-types";
+
+const isPreviewTab = (placement: WorkbenchWidgetPlacement) => placement.tabRetention === "preview";
+
+const carriedActiveWidgetId = (
+  current: WorkbenchRegionState,
+  incoming: WorkbenchRegionState,
+  widgets: readonly WorkbenchWidgetPlacement[],
+) => {
+  const widgetIds = new Set(widgets.map((placement) => placement.widgetId));
+  if (incoming.activeWidgetId && widgetIds.has(incoming.activeWidgetId)) return incoming.activeWidgetId;
+  if (current.activeWidgetId && widgetIds.has(current.activeWidgetId)) return current.activeWidgetId;
+  return widgets[0]?.widgetId;
+};
+
+const carryPersistentRegionTabs = (current: WorkbenchRegionState, incoming: WorkbenchRegionState) => {
+  const currentPersistentTabs = current.widgets.filter((placement) => !isPreviewTab(placement));
+  if (currentPersistentTabs.length === 0) return incoming;
+
+  const incomingPreviewTabs = incoming.widgets.filter(isPreviewTab);
+  const incomingPreviewIds = new Set(incomingPreviewTabs.map((placement) => placement.widgetId));
+  const widgets = [
+    ...incomingPreviewTabs,
+    ...currentPersistentTabs.filter((placement) => !incomingPreviewIds.has(placement.widgetId)),
+  ];
+
+  return {
+    ...current,
+    widgets,
+    activeWidgetId: carriedActiveWidgetId(current, incoming, widgets),
+  };
+};
 
 export const carryPinnedWorkbenchChrome = (current: WorkbenchLayout, incoming: WorkbenchLayout) => {
   const regions = { ...incoming.regions };
@@ -34,7 +67,12 @@ export const carryWorkbenchRegionState = (
 ) => {
   if (regionIds.length === 0) return incoming;
   const regions = { ...incoming.regions };
-  for (const regionId of regionIds) regions[regionId] = current.regions[regionId];
+  for (const regionId of regionIds) {
+    regions[regionId] =
+      incoming.regions[regionId].widgets.length > 0
+        ? carryPersistentRegionTabs(current.regions[regionId], incoming.regions[regionId])
+        : current.regions[regionId];
+  }
   return { ...incoming, regions };
 };
 

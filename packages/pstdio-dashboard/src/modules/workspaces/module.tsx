@@ -1,5 +1,6 @@
 import type { ResourceRef, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "@pstdio/workbench/storage";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
@@ -19,6 +20,12 @@ import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+
+const dashboardWorkbenchStorageNamespace = "dashboard-wb";
+
+interface CreateWorkspacesModuleInput {
+  storage?: WorkbenchStorageLike;
+}
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
@@ -79,18 +86,81 @@ const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContext, resource
   )?.resource;
 };
 
-const openFirstWorkspaceSession = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+const readPersistedSessionPanels = (ctx: WorkbenchModuleContext, storage: WorkbenchStorageLike | undefined) => {
+  const scope = ctx.layout.getPersistenceScope();
+  if (!scope || !storage) return [];
+
+  const raw = storage.getItem(workbenchStoragePersistenceKey(dashboardWorkbenchStorageNamespace, "layout", scope));
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      layout?: {
+        regions?: {
+          side?: {
+            widgets?: Array<{
+              contributionId?: string;
+              resource?: ResourceRef;
+              resourceUri?: string;
+              tabRetention?: string;
+              title?: string;
+            }>;
+          };
+        };
+      };
+    };
+    return (
+      parsed.layout?.regions?.side?.widgets?.filter(
+        (widget) =>
+          widget.contributionId === dashboardWidgetIds.sessionBubble &&
+          widget.tabRetention === "persistent" &&
+          widget.resource,
+      ) ?? []
+    );
+  } catch {
+    return [];
+  }
+};
+
+const restorePersistedSessionPanels = (ctx: WorkbenchModuleContext, storage: WorkbenchStorageLike | undefined) => {
+  const existingResourceUris = new Set(
+    ctx.layout
+      .listPanelInstances("side")
+      .filter((panel) => panel.panelId === dashboardWidgetIds.sessionBubble)
+      .map((panel) => panel.resourceUri),
+  );
+
+  for (const panel of readPersistedSessionPanels(ctx, storage)) {
+    if (!panel.resource || existingResourceUris.has(panel.resource.uri)) continue;
+    ctx.layout.openPanel(dashboardWidgetIds.sessionBubble, {
+      resource: panel.resource,
+      title: panel.title,
+      strategy: { kind: "activate-or-open" },
+    });
+    existingResourceUris.add(panel.resource.uri);
+  }
+};
+
+const openFirstWorkspaceSession = (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  input: CreateWorkspacesModuleInput,
+) => {
   if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
 
   const session = findFirstWorkspaceSessionResource(ctx, resource);
   if (!session) return;
 
   void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-    preservePanelMode: true,
     resource: session,
     tabPosition: "start",
     tabRetention: "preview",
   });
+  restorePersistedSessionPanels(ctx, input.storage);
+  const preview = ctx.layout
+    .listPanelInstances("side")
+    .find((panel) => panel.panelId === dashboardWidgetIds.sessionBubble && panel.resourceUri === session.uri);
+  if (preview) ctx.layout.activatePanel(preview.instanceId);
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -176,7 +246,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
 
 // The workspaces slice owns the project navigation shell, the workspaces board,
 // and the workspace-detail chrome used when a workspace resource opens.
-export const createWorkspacesModule = () =>
+export const createWorkspacesModule = (input: CreateWorkspacesModuleInput = {}) =>
   ({
     id: "dashboard.workspaces",
     activate(ctx) {
@@ -277,9 +347,9 @@ export const createWorkspacesModule = () =>
           showDashboardSidenav(ctx, { selectedNode: null });
         },
         afterOpen: ({ resource, placement }) => {
-          openFirstWorkspaceSession(ctx, resource);
           ensureWorkspaceTerminalResource(ctx, resource);
           ctx.layout.activatePanel(placement.instanceId);
+          queueMicrotask(() => openFirstWorkspaceSession(ctx, resource, input));
         },
       });
     },

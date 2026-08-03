@@ -62,7 +62,7 @@ describe("createWorkspacesModule", () => {
     expect(sidenavNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
-  test("opens the last active linked session in the Side Panel when a workspace opens", async () => {
+  test("opens the last active linked session as the Side Panel preview when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSidenavModule());
@@ -132,11 +132,12 @@ describe("createWorkspacesModule", () => {
       .find((panel) => panel.resource?.uri === "dashboard-workbench://session/session-older");
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
+    expect(workbench.getPrimaryResource()?.uri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(floatingSession?.tabRetention).toBe("preview");
+    expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(floatingSession!.instanceId);
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.instanceId);
-    expect(workbench.sidePanel.getMode()).toBe("closed");
+    expect(workbench.sidePanel.getMode()).toBe("floating");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );

@@ -548,7 +548,105 @@ describe("createLayoutModel persistence", () => {
     layout.setPersistenceScope("project:b");
     expect(layout.getLayout().regions["sidenav-header"].widgets).toHaveLength(1);
   });
+});
 
+describe("createLayoutModel scope carry", () => {
+  test("does not carry empty project-owned regions over persisted scoped widgets", () => {
+    const saved = new Map<string, WorkbenchLayout>();
+    const persistence = {
+      getLayout: (scope?: string) => saved.get(scope ?? "__global__"),
+      setLayout: (layoutState: WorkbenchLayout, scope?: string) => {
+        saved.set(scope ?? "__global__", structuredClone(layoutState));
+      },
+    };
+    const resourceScope = "project:a/mode/workspace/resource/pstdio://workspace/1";
+    const layout = createLayoutModel({ persistence });
+    registerTestWidget(layout, {
+      id: "dashboard.session",
+      title: "Session",
+      region: "side",
+      singleton: false,
+    });
+
+    layout.setPersistenceScope(resourceScope);
+    layout.openWidget("dashboard.session", {
+      resource: { kind: "session-draft", uri: "pstdio://session-draft/1", label: "Draft 1" },
+    });
+    layout.openWidget("dashboard.session", {
+      resource: { kind: "session-draft", uri: "pstdio://session-draft/2", label: "Draft 2" },
+    });
+    layout.setPersistenceScope("project:a/mode/project/aggregate/workspaces");
+    layout.clearRegion("side");
+
+    layout.setPersistenceScope(resourceScope, { carryRegionState: ["side"] });
+
+    expect(layout.getLayout().regions.side.widgets.map((placement) => placement.title)).toEqual(["Draft 1", "Draft 2"]);
+  });
+
+  test("carries current persistent tabs over stale carried-region widgets", () => {
+    const saved = new Map<string, WorkbenchLayout>();
+    const persistence = {
+      getLayout: (scope?: string) => saved.get(scope ?? "__global__"),
+      setLayout: (layoutState: WorkbenchLayout, scope?: string) => {
+        saved.set(scope ?? "__global__", structuredClone(layoutState));
+      },
+    };
+    const ticketsScope = "project:a/mode/project/aggregate/tickets";
+    const workspaceScope = "project:a/mode/workspace/resource/pstdio://workspace/1";
+    const staleWorkspaceLayout = createDefaultWorkbenchLayout();
+    staleWorkspaceLayout.regions.side = {
+      ...staleWorkspaceLayout.regions.side,
+      activeWidgetId: "stale-draft",
+      widgets: [
+        {
+          widgetId: "stale-draft",
+          contributionId: "dashboard.session",
+          resource: { kind: "session-draft", uri: "pstdio://session-draft/stale", label: "Stale draft" },
+          resourceUri: "pstdio://session-draft/stale",
+          title: "Stale draft",
+          tabRetention: "persistent",
+        },
+      ],
+    };
+    saved.set(workspaceScope, staleWorkspaceLayout);
+    const layout = createLayoutModel({ persistence });
+    registerTestWidget(layout, {
+      id: "dashboard.session",
+      title: "Session",
+      region: "side",
+      singleton: false,
+    });
+
+    layout.setPersistenceScope(ticketsScope);
+    layout.openWidget("dashboard.session", {
+      resource: { kind: "session-draft", uri: "pstdio://session-draft/current-1", label: "Current draft 1" },
+      tabRetention: "persistent",
+    });
+    layout.openWidget("dashboard.session", {
+      resource: { kind: "session-draft", uri: "pstdio://session-draft/current-2", label: "Current draft 2" },
+      tabRetention: "persistent",
+    });
+
+    layout.setPersistenceScope(workspaceScope, { carryRegionState: ["side"] });
+    layout.openWidget("dashboard.session", {
+      resource: { kind: "session", uri: "pstdio://session/preview", label: "Workspace preview" },
+      tabRetention: "preview",
+    });
+
+    expect(
+      layout.getLayout().regions.side.widgets.map((placement) => ({
+        retention: placement.tabRetention,
+        title: placement.title,
+      })),
+    ).toEqual([
+      { retention: "preview", title: "Workspace preview" },
+      { retention: "persistent", title: "Current draft 1" },
+      { retention: "persistent", title: "Current draft 2" },
+    ]);
+  });
+});
+
+describe("createLayoutModel global persistence", () => {
   test("scope === undefined falls back to global behavior", () => {
     const saved = new Map<string, WorkbenchLayout>();
     const persistence = {
