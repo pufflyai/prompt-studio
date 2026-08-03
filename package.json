@@ -24,7 +24,7 @@
     "lint": "lerna run lint",
     "format": "biome check --write .",
     "format:check": "biome check .",
-    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
+    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache -o -name storybook-static \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
     "reset": "bun run clean && bun install && bun run build",
     "knip": "knip --no-config-hints",
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
