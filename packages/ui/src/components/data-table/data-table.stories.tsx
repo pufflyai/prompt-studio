@@ -181,7 +181,10 @@ export const ColumnStats = {
     await expect(columnMenu.getByRole("checkbox", { name: "Invoice" })).toBeChecked();
     await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
 
+    const statisticsSwitch = columnMenu.getByRole("switch", { name: "Statistics" });
+    await expect(statisticsSwitch).toBeChecked();
     await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
+    await expect(statisticsSwitch).not.toBeChecked();
     await expect(canvasElement.querySelector(".data-table-stats-row")).not.toBeInTheDocument();
   },
 };

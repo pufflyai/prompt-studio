@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { SearchableMenuInput } from "@/components/overlays/searchable-menu-input";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { Switch } from "@/components/primitives/switch";
 
 interface DataTableColumnMenuColumn {
   id: string;
@@ -57,6 +58,11 @@ const DataTableColumnMenuRow = (props: DataTableColumnMenuRowProps) => {
       </Box>
       <Checkbox
         checked={checked}
+        flex="1"
+        minW="0"
+        width="full"
+        flexDirection="row-reverse"
+        justifyContent="space-between"
         size="sm"
         icon={<Icon as={Check} boxSize="12px" strokeWidth="3" />}
         onCheckedChange={(details) => onColumnVisibilityChange(column.id, details.checked === true)}
@@ -146,21 +152,20 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
           <Popover.Content ref={contentRef} width="min(320px, calc(100vw - 32px))" p="0" bg="bg" overflow="hidden">
             <Stack gap="0">
               {statsAvailable ? (
-                <Stack gap="2xs" borderBottomWidth="1px" borderColor="border.subtle" padding="xs">
-                  <Text textStyle="label/XS/medium" color="fg.muted">
-                    DISPLAY
-                  </Text>
-                  <Checkbox
+                <Box borderBottomWidth="1px" borderColor="border.subtle" padding="xs">
+                  <Switch
                     checked={showStats}
-                    size="sm"
-                    icon={<Icon as={Check} boxSize="12px" strokeWidth="3" />}
+                    inputProps={{ role: "switch" }}
+                    width="full"
+                    flexDirection="row-reverse"
+                    justifyContent="space-between"
                     onCheckedChange={(details) => onStatsVisibilityChange(details.checked === true)}
                   >
                     <Text as="span" textStyle="label/S/regular">
                       Statistics
                     </Text>
-                  </Checkbox>
-                </Stack>
+                  </Switch>
+                </Box>
               ) : null}
               <SearchableMenuInput value={query} placeholder="Search columns" onValueChange={setQuery} />
               <ScrollArea maxH="280px" viewportProps={{ overscrollBehavior: "contain" }}>
