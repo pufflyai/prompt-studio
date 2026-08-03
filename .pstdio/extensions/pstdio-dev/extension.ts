@@ -11,12 +11,19 @@ const BUILD_COMMAND = ["bun", "run", "build"];
 // Chained via a shell because spawnDetached runs a single executable (no shell operators).
 const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_COMMAND.join(" ")}`];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
-const FIND_CHORE_IMPROVEMENTS_COMMAND = commandRef("pstdio-dev.chore.findImprovements");
-const CHORE_DISCOVERY_PROMPT = [
-  "Inspect this repository for chore improvements worth tracking.",
-  "Look for maintenance, cleanup, test, documentation, or developer-experience work that should be tracked separately.",
-  "Choose one high-signal chore, then create a planner ticket for it with the `pst tickets` CLI.",
-  "If you draft the ticket locally first, run `pst tickets save` before finishing.",
+const DISCOVER_HIGH_IMPACT_ISSUES_COMMAND = commandRef("pstdio-dev.issues.discoverHighImpact");
+const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
+  "Inspect this repository for one high-impact user-facing bug, reliability failure, data-loss risk, security weakness, or material violation of its documented architecture.",
+  "Read the applicable AGENTS.md files and relevant documents under .pstdio/docs/architecture/. Run `bun run verify:boundaries`, then inspect documented ownership, layering, dependency direction, public/private package boundaries, and declared sources of truth. Treat only those documents and architecture checks as authoritative; do not invent architecture rules or propose preference-based rewrites.",
+  "Apply these gates in order:",
+  "1. Identify a plausible high-impact bug, security, reliability, data-integrity, or documented architecture-conformance issue. Reject routine maintenance, cleanup, documentation, test-only, dependency-hygiene, cosmetic, and developer-experience chores unless they demonstrate a material architecture violation.",
+  "2. Check existing open and archived planner tickets. Stop if an equivalent issue is already tracked, was archived after being addressed, or was previously rejected; use the archived ticket's history and rejection rationale instead of recreating it.",
+  "3. Reproduce the candidate safely with a focused existing test, diagnostic command, deterministic steps, failing architecture check, or a concrete code trace against a documented rule. Do not perform destructive, production-facing, or exploitative security validation. An unverified hypothesis does not qualify.",
+  "4. Establish material impact and actionability for users, security, data integrity, reliability, or architecture before creating anything.",
+  "5. Only when every gate passes, create exactly one evidence-backed planner ticket with the `pst tickets` CLI and save it with `pst tickets save`.",
+  "For a reproduced defect, record the reproduction steps or failing command, observed result, expected result, material impact, relevant code area, and validation direction.",
+  "For an architecture infraction, cite the governing rule, offending dependency or code path, concrete evidence, architectural risk, and intended boundary to restore.",
+  "If any gate fails or no valuable reproduced fix is found, report that outcome and create no ticket. A no-ticket result is a successful run.",
   "Do not make source changes in this session.",
 ].join("\n");
 
@@ -43,12 +50,12 @@ const workspaceIdFrom = (ctx: { params: { workspaceId?: string }; resource?: { t
 
 export default defineExtension({
   commands: {
-    "chore.findImprovements": defineCommand({
-      title: "Find chore improvements",
+    "issues.discoverHighImpact": defineCommand({
+      title: "Discover high-impact issues",
       async run(ctx) {
         const session = await ctx.sessions.create({
-          title: "Find chore improvements",
-          prompt: CHORE_DISCOVERY_PROMPT,
+          title: "Discover high-impact issues",
+          prompt: HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT,
         });
 
         return { sessionId: session.id };
@@ -145,10 +152,10 @@ export default defineExtension({
     }),
   },
   schedules: {
-    dailyChoreDiscovery: {
-      title: "Daily chore discovery",
+    dailyIssueDiscovery: {
+      title: "Daily high-impact issue discovery",
       cron: "0 12 * * *",
-      command: FIND_CHORE_IMPROVEMENTS_COMMAND,
+      command: DISCOVER_HIGH_IMPACT_ISSUES_COMMAND,
     },
   },
   hooks: {

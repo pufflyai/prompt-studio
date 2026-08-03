@@ -2,29 +2,43 @@ import { describe, expect, test } from "bun:test";
 import extension, { browserOpenCommand } from "./extension";
 
 describe("pstdio dev extension", () => {
-  test("schedules daily chore discovery at noon", async () => {
+  test("schedules evidence-gated high-impact issue discovery at noon", async () => {
     const sessions: unknown[] = [];
 
-    const result = await extension.commands?.["chore.findImprovements"]?.run({
+    const result = await extension.commands?.["issues.discoverHighImpact"]?.run({
       sessions: {
         create: async (input: unknown) => {
           sessions.push(input);
-          return { type: "session", id: "session-1", title: "Find chore improvements", status: "in_progress" };
+          return { type: "session", id: "session-1", title: "Discover high-impact issues", status: "in_progress" };
         },
       },
     } as never);
 
-    expect(extension.schedules?.dailyChoreDiscovery).toMatchObject({
-      title: "Daily chore discovery",
+    expect(extension.schedules?.dailyIssueDiscovery).toMatchObject({
+      title: "Daily high-impact issue discovery",
       cron: "0 12 * * *",
-      command: { id: "pstdio-dev.chore.findImprovements" },
+      command: { id: "pstdio-dev.issues.discoverHighImpact" },
     });
     expect(result).toEqual({ sessionId: "session-1" });
     expect(sessions).toHaveLength(1);
+    const prompt = (sessions[0] as { prompt: unknown }).prompt;
+
     expect(sessions[0]).toMatchObject({
-      title: "Find chore improvements",
-      prompt: expect.any(String),
+      title: "Discover high-impact issues",
     });
+    expect(prompt).toBeString();
+    expect(prompt).toContain("AGENTS.md");
+    expect(prompt).toContain(".pstdio/docs/architecture/");
+    expect(prompt).toContain("bun run verify:boundaries");
+    expect(prompt).toMatch(/existing .*tickets/i);
+    expect(prompt).toMatch(/archived .*tickets/i);
+    expect(prompt).toMatch(/previously rejected/i);
+    expect(prompt).toMatch(/reproduce .* safely/i);
+    expect(prompt).toMatch(/material impact/i);
+    expect(prompt).toMatch(/exactly one .*ticket/i);
+    expect(prompt).toMatch(/governing rule/i);
+    expect(prompt).toMatch(/no ticket/i);
+    expect(prompt).toMatch(/do not make source changes/i);
   });
 
   test("opens the selected workspace worktree in VS Code", async () => {
