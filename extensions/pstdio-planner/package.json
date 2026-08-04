@@ -1,6 +1,6 @@
 {
   "name": "pstdio-planner",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "displayName": "Prompt Studio Planner",
   "description": "Built-in Prompt Studio planner: tickets, workspace statuses, and templates.",
   "publisher": "pstdio",
@@ -18,7 +18,7 @@
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
     "@pstdio/sdk": "^0.16.0",
-    "@pstdio/ui": "^0.17.0",
+    "@pstdio/ui": "^0.18.0",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.556.0",
     "react": "^19.0.0",

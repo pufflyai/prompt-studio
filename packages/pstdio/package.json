@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.25.1",
+  "version": "0.25.2",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -38,12 +38,12 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.25.1",
-    "@pstdio/cli-darwin-x64": "0.25.1",
-    "@pstdio/cli-linux-x64": "0.25.1",
-    "@pstdio/cli-linux-arm64": "0.25.1",
-    "@pstdio/cli-win-x64": "0.25.1",
-    "@pstdio/cli-win-arm64": "0.25.1"
+    "@pstdio/cli-darwin-arm64": "0.25.2",
+    "@pstdio/cli-darwin-x64": "0.25.2",
+    "@pstdio/cli-linux-x64": "0.25.2",
+    "@pstdio/cli-linux-arm64": "0.25.2",
+    "@pstdio/cli-win-x64": "0.25.2",
+    "@pstdio/cli-win-arm64": "0.25.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
