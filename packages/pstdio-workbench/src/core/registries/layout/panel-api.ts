@@ -4,17 +4,25 @@ import type {
   RegisteredWidgetContribution,
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
+  WorkbenchTabRetention,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
 
-export const toOpenWidgetInput = (input: OpenWorkbenchPanelInput = {}): OpenWidgetInput => {
+// Without a `defaultTabRetention` the retention of an existing placement is left alone,
+// so updating a panel's title never promotes a preview tab.
+export const toOpenWidgetInput = (
+  input: OpenWorkbenchPanelInput = {},
+  defaultTabRetention?: WorkbenchTabRetention,
+): OpenWidgetInput => {
   const { strategy, ...shared } = input;
-  if (!strategy) return { ...shared, tabRetention: "persistent" };
-  if (strategy.kind === "activate-or-open") {
+  if (!strategy) return { ...shared, tabRetention: defaultTabRetention };
+  if (strategy.kind === "persistent") {
     return { ...shared, tabPosition: strategy.position, tabRetention: "persistent" };
   }
   if (strategy.kind === "replace-active") return { ...shared, replaceActive: true };
-  if (strategy.kind === "replace-panel") return { ...shared, replaceWidgetId: strategy.instanceId };
+  if (strategy.kind === "replace-panel") {
+    return { ...shared, replaceWidgetId: strategy.instanceId, tabRetention: strategy.retention };
+  }
   return { ...shared, tabRetention: "preview", tabPosition: strategy.position };
 };
 

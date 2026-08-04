@@ -139,7 +139,7 @@ const WorkbenchRegionTabContextMenu = (props: {
           icon={<WorkbenchIcon name="pin" size={14} />}
           onActivate={() =>
             workbench.layout.updatePanel(placement.widgetId, {
-              strategy: { kind: "activate-or-open" },
+              strategy: { kind: "persistent" },
             })
           }
         />

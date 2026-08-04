@@ -80,7 +80,7 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       canOpen: (resource) => resource.kind === randomResourceKind && resource.metadata?.modeId === mailMode.id,
       open: (resource, input) =>
         ctx.layout.openPanel(mailWidgetIds.reader, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         }),

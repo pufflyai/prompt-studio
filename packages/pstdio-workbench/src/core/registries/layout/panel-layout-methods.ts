@@ -1,12 +1,25 @@
 import type { LayoutModel } from "./layout-model-types";
 import { closeWidgetInLayout, findPlacementByWidgetId } from "./layout-operations";
-import type {
-  OpenWorkbenchPanelInput,
-  WorkbenchLayout,
-  WorkbenchLayoutStoreState,
-  WorkbenchRegion,
+import {
+  type OpenWorkbenchPanelInput,
+  type RegisteredWidgetContribution,
+  type WorkbenchLayout,
+  type WorkbenchLayoutStoreState,
+  type WorkbenchPanelRegion,
+  type WorkbenchRegion,
+  workbenchPanelRegions,
 } from "./layout-types";
 import { toOpenWidgetInput, toPanelContribution, toPanelInstance } from "./panel-api";
+
+// A programmatic open into a tabbed region is a peek: it lands as a preview tab that the
+// next peek replaces. Chrome regions and pinned placements are structure, so they stay put.
+const defaultPanelTabRetention = (widget: RegisteredWidgetContribution, openInput: OpenWorkbenchPanelInput) => {
+  if (openInput.pinned) return "persistent" as const;
+  const region = openInput.region ?? widget.region ?? widget.fallbackRegion ?? "main";
+  return workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
+    ? ("preview" as const)
+    : ("persistent" as const);
+};
 
 interface CreatePanelLayoutMethodsInput {
   getLayout: () => WorkbenchLayout;
@@ -47,8 +60,11 @@ export const createPanelLayoutMethods = (input: CreatePanelLayoutMethodsInput) =
   },
 
   openPanel(id: string, openInput: OpenWorkbenchPanelInput = {}) {
-    if (!input.getWidgets()[id]) throw new Error(`Panel not registered: ${id}`);
-    return toPanelInstance(input.widgetOpeners.openWidget(id, toOpenWidgetInput(openInput)));
+    const widget = input.getWidgets()[id];
+    if (!widget) throw new Error(`Panel not registered: ${id}`);
+    return toPanelInstance(
+      input.widgetOpeners.openWidget(id, toOpenWidgetInput(openInput, defaultPanelTabRetention(widget, openInput))),
+    );
   },
 
   updatePanel(instanceId: string, update: OpenWorkbenchPanelInput) {

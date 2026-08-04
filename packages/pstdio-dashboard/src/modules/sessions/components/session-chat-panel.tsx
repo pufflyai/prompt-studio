@@ -7,6 +7,7 @@ import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
+import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import {
   createDashboardWorkspaceOptionResource,
@@ -39,6 +40,7 @@ import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionModelControls } from "./session-model-controls";
 import { SessionWorkspaceControl } from "./session-workspace-control";
+import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
 type QueuedFollowUpMoveDirection = "up" | "down";
@@ -49,6 +51,7 @@ interface DashboardSessionChatPanelProps {
   emptyStateTitle: string;
   emptyStateDescription: string;
   workspaceAction: ReactNode;
+  drafts?: DashboardSessionDraftPersistence;
 }
 
 type SessionWorkspaceReviewView = Pick<
@@ -95,7 +98,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -118,6 +121,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
   const [harnessParamOverrides, setHarnessParamOverrides] = useState<HarnessParamValues>({});
   const draftAttachments = useSessionDraftAttachments(projectId);
+  const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const previousSelectedAgentRef = useRef(selectedAgent);
@@ -214,6 +218,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           emptyStateDescription={emptyStateDescription}
           loaderComponent={<ChatSkeleton />}
           chatInputPlaceholder="Reply to the agent..."
+          chatInputDefaultValue={chatDraft.seed}
+          onChatInputChange={chatDraft.change}
           attachedResources={attachedResources}
           actions={
             <>
@@ -267,6 +273,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           }
           onSubmitMessage={(text, _attachments, questionResponse) => {
             const submittedAttachments = draftAttachments.attachments;
+            chatDraft.clear();
             submitSessionMessage({
               sessionId,
               projectId,

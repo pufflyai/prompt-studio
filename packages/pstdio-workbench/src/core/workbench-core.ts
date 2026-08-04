@@ -32,6 +32,7 @@ import {
   createWorkbenchSidePanelController,
   type WorkbenchSidePanelController,
   type WorkbenchSidePanelMode,
+  type WorkbenchSidePanelPersistenceAdapter,
 } from "./controllers/side-panel/side-panel-controller";
 import {
   createWorkbenchTerminalController,
@@ -190,6 +191,7 @@ export interface CreateWorkbenchCoreInput {
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
   defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   lastResourcePersistence?: LastResourcePersistenceAdapter;
+  sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
   initialSidePanelMode?: WorkbenchSidePanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
 }
@@ -433,7 +435,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     context,
     isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
   });
-  const sidePanel = createWorkbenchSidePanelController({ initialMode: input.initialSidePanelMode });
+  const sidePanel = createWorkbenchSidePanelController({
+    initialMode: input.initialSidePanelMode,
+    persistence: input.sidePanelPersistence,
+  });
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const core: WorkbenchCore = {

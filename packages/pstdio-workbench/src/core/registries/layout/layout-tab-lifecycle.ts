@@ -88,6 +88,3 @@ export const expirePreviewTabsInLayout = (layout: WorkbenchLayout, ownerResource
       placement.tabRetention === "preview" &&
       (ownerResourceUri === undefined || placement.ownerResourceUri !== ownerResourceUri),
   );
-
-export const withoutPreviewTabs = (layout: WorkbenchLayout) =>
-  removePlacements(layout, (placement) => placement.tabRetention === "preview");

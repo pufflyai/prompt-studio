@@ -8,6 +8,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
+import { findResourceAnchor } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 
 export interface DashboardSession {
@@ -21,11 +22,15 @@ export interface DashboardSession {
   workspaceId: string | null;
   workspaceBranch: string | null;
   workspaceShorthand: string;
+  // The ticket this session belongs to, either anchored directly (refine, break down) or
+  // inherited from the workspace it runs in (an attempt).
+  ticketId: string | null;
   resource: ResourceRef;
 }
 
 export interface DashboardSessionView {
   id: string;
+  draftKey: string;
   sessionId: string | undefined;
   workspaceTitle: string;
   workspaceId: string | null;
@@ -59,6 +64,9 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceId: (workspace?.id as string | undefined) ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
+    ticketId:
+      findResourceAnchor(session, "ticket")?.id ??
+      (workspace ? (findResourceAnchor(workspace, "ticket")?.id ?? null) : null),
     resource: createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
       status: (session.status as string) ?? "unknown",
     }),
@@ -94,6 +102,7 @@ export const draftSessionViewId = "draft";
 
 const draftSessionView: DashboardSessionView = {
   id: draftSessionViewId,
+  draftKey: draftSessionViewId,
   sessionId: undefined,
   workspaceTitle: "",
   workspaceId: null,
@@ -113,6 +122,7 @@ const metadataString = (resource: ResourceRef | undefined, key: string) => {
 
 const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSessionView => ({
   ...draftSessionView,
+  draftKey: resource?.id ?? resource?.uri ?? draftSessionViewId,
   workspaceTitle: metadataString(resource, "workspaceTitle") ?? "",
   workspaceId: metadataString(resource, "workspaceId") ?? null,
   workspaceBranch: metadataString(resource, "workspaceBranch") ?? null,
@@ -122,6 +132,7 @@ const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSes
 const createUnsyncedSessionView = (sessionId: string): DashboardSessionView => ({
   ...draftSessionView,
   id: sessionId,
+  draftKey: sessionId,
   sessionId,
 });
 
@@ -142,6 +153,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
 
   return {
     id: session.id,
+    draftKey: session.id,
     sessionId: session.id,
     workspaceTitle: (workspace?.name as string | null) ?? (workspace?.workspace_shorthand as string | undefined) ?? "",
     workspaceId: workspace?.id ?? null,

@@ -32,4 +32,33 @@ describe("createWorkbenchSidePanelController", () => {
 
     expect(controller.getMode()).toBe("attached");
   });
+
+  test("prefers a persisted mode over the initial mode", () => {
+    const persistence = { getMode: () => "attached" as const, setMode: () => undefined };
+
+    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
+
+    expect(controller.getMode()).toBe("attached");
+  });
+
+  test("falls back to the initial mode when nothing is persisted", () => {
+    const persistence = { getMode: () => undefined, setMode: () => undefined };
+
+    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
+
+    expect(controller.getMode()).toBe("closed");
+  });
+
+  test("writes only real mode transitions", () => {
+    const written: string[] = [];
+    const persistence = { getMode: () => undefined, setMode: (mode: string) => void written.push(mode) };
+    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
+
+    controller.setMode("closed");
+    controller.setMode("attached");
+    controller.setMode("attached");
+    controller.setMode("floating");
+
+    expect(written).toEqual(["attached", "floating"]);
+  });
 });

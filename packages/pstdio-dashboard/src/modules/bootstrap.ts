@@ -1,8 +1,10 @@
 import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardResources } from "@/shared/app/resources";
+import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
@@ -15,6 +17,7 @@ import { createDashboardWorkspaces } from "./workspaces/data/dashboard-workspace
 
 interface CreateBootstrapModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 }
 
 interface LandingRunGuard {
@@ -119,6 +122,27 @@ const openSelectedProjectLanding = async (
   return guard.isCurrent() ? { status: "opened" } : { resource: dashboardResources.start, status: "stale" };
 };
 
+// The Side Panel session is restored after the landing view, so the primary resource and the
+// layout scope it selects are already in place and the session lands in the right scope. A
+// session that no longer exists is simply skipped.
+const restoreSelectedSession = async (
+  ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
+  sessionId: string | undefined,
+) => {
+  if (!sessionId || !ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
+
+  const session = createDashboardSessions(getDashboardSelectedProjectId(ctx)).find(
+    (candidate) => candidate.id === sessionId,
+  );
+  if (!session) return;
+
+  await ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+    preservePanelMode: true,
+    resource: session.resource,
+    tabPosition: "start",
+  });
+};
+
 const openSelectedProjectLandingWhenReady = (
   ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
   guard: LandingRunGuard,
@@ -134,9 +158,12 @@ const openSelectedProjectLandingWhenReady = (
   const open = () => {
     void openSelectedProjectLanding(ctx, guard).then((result) => {
       if (result === "pending") return;
-      guard.onSettled();
       dispose();
-      if (result.status === "stale") guard.onStale(result.resource);
+      if (result.status === "stale") {
+        guard.onStale(result.resource);
+        return;
+      }
+      guard.onSettled();
     });
   };
 
@@ -188,6 +215,9 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       const runLanding = () => {
         const runId = ++landingRunId;
         const projectId = getDashboardSelectedProjectId(ctx);
+        // Read before landing: opening the landing resource auto-opens its own session, which
+        // overwrites the stored selection this run is meant to restore.
+        const selectedSessionId = input.sessionSelectionPersistence?.getSelectedSessionId();
         currentExpectedResource = ctx.lastResource.get();
         disposeLanding();
         landingDisposable = openSelectedProjectLandingWhenReady(ctx, {
@@ -197,7 +227,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             if (currentExpectedResource?.uri !== resource?.uri) ctx.lastResource.set(currentExpectedResource);
             runLanding();
           },
-          onSettled: () => undefined,
+          onSettled: () => void restoreSelectedSession(ctx, selectedSessionId),
         });
       };
 

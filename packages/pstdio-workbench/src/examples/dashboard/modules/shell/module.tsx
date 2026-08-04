@@ -118,7 +118,7 @@ export const createShellModule = (): WorkbenchModuleContribution => ({
         ctx.modes.setActiveMode("project");
         setResourceBreadcrumb(ctx, resource);
         return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

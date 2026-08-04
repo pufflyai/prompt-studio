@@ -177,7 +177,7 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       open: (resource, input) => {
         ctx.breadcrumbs.setItems([{ title: resource.label ?? "Resource", icon: resource.icon, resource }]);
         return ctx.layout.openPanel(DETAIL_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

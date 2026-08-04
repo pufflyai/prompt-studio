@@ -35,7 +35,7 @@ export const createRendererTypesExampleModule = (
       canOpen: (resource) => resource.kind === rendererExampleKind,
       open: (resource, input) =>
         ctx.layout.openPanel(resolveWidgetId(resource), {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         }),

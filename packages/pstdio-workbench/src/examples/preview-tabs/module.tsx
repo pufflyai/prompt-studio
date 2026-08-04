@@ -45,7 +45,8 @@ export const createPreviewTabsExampleModule = () =>
       ctx.resources.registerPresenter({
         id: "preview-tabs.workspace-presenter",
         canOpen: (resource) => resource.kind === "workspace",
-        open: (resource) => ctx.layout.openPanel("preview-tabs.workspace", { resource }),
+        open: (resource) =>
+          ctx.layout.openPanel("preview-tabs.workspace", { resource, strategy: { kind: "persistent" } }),
       });
       ctx.layout.registerPanel({
         closable: false,
@@ -80,8 +81,8 @@ export const createPreviewTabsExampleModule = () =>
       void ctx.resources
         .openResource({ kind: "workspace", uri: "story://workspace/alpha", label: "Workspace Alpha" })
         .then(() => {
-          ctx.layout.openPanel("preview-tabs.files");
-          ctx.layout.openPanel("preview-tabs.terminal");
+          ctx.layout.openPanel("preview-tabs.files", { strategy: { kind: "persistent" } });
+          ctx.layout.openPanel("preview-tabs.terminal", { strategy: { kind: "persistent" } });
           ctx.layout.openPanel("preview-tabs.session", {
             resource: { kind: "session", uri: "story://session/42", label: "Session 42" },
             strategy: { kind: "preview", position: "start" },

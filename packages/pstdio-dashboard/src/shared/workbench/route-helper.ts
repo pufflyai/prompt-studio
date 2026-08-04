@@ -45,7 +45,7 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContext, input: Regist
       input.beforeOpen?.({ resource });
 
       const placement = ctx.layout.openPanel(input.panelId, {
-        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         resource,
         region,
         title: input.title?.(resource) ?? resource.label,

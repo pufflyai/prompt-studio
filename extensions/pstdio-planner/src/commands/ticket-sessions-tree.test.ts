@@ -17,7 +17,7 @@ describe("buildSessionsSection", () => {
       session({ id: "c", title: "Unanchored" }),
     ];
 
-    const section = buildSessionsSection(sessions, "ticket-1");
+    const section = buildSessionsSection({ sessions, ticketId: "ticket-1" });
 
     expect(section?.id).toBe("sessions");
     expect(section?.nodes.map((node) => node.id)).toEqual(["session-a"]);
@@ -29,13 +29,38 @@ describe("buildSessionsSection", () => {
       session({ id: "new", anchors_json: [ticketAnchor("ticket-1")], last_request_ended: "2026-02-01T00:00:00.000Z" }),
     ];
 
-    const section = buildSessionsSection(sessions, "ticket-1");
+    const section = buildSessionsSection({ sessions, ticketId: "ticket-1" });
 
     expect(section?.nodes.map((node) => node.id)).toEqual(["session-new", "session-old"]);
   });
 
+  test("includes the sessions of every workspace linked to the ticket", () => {
+    const sessions = [
+      session({ id: "refine", anchors_json: [ticketAnchor("ticket-1")], updated_at: "2026-01-02T00:00:00.000Z" }),
+    ];
+    const workspaceSessions = [
+      session({ id: "attempt-1", updated_at: "2026-01-03T00:00:00.000Z" }),
+      session({ id: "attempt-2", updated_at: "2026-01-01T00:00:00.000Z" }),
+    ];
+
+    const section = buildSessionsSection({ sessions, ticketId: "ticket-1", workspaceSessions });
+
+    expect(section?.nodes.map((node) => node.id)).toEqual(["session-attempt-1", "session-refine", "session-attempt-2"]);
+  });
+
+  test("lists a session anchored to the ticket and run in its workspace only once", () => {
+    const shared = session({ id: "shared", anchors_json: [ticketAnchor("ticket-1")] });
+
+    const section = buildSessionsSection({ sessions: [shared], ticketId: "ticket-1", workspaceSessions: [shared] });
+
+    expect(section?.nodes.map((node) => node.id)).toEqual(["session-shared"]);
+  });
+
   test("returns an empty row when the ticket has no sessions", () => {
-    const section = buildSessionsSection([session({ id: "a", anchors_json: [ticketAnchor("other")] })], "ticket-1");
+    const section = buildSessionsSection({
+      sessions: [session({ id: "a", anchors_json: [ticketAnchor("other")] })],
+      ticketId: "ticket-1",
+    });
 
     expect(section).toEqual({
       id: "sessions",
@@ -56,7 +81,7 @@ describe("buildSessionsSection", () => {
   test("opens each session in the Side Panel via a hinted session resource", () => {
     const sessions = [session({ id: "a", title: "Refine ticket: PS-1", anchors_json: [ticketAnchor("ticket-1")] })];
 
-    const node = buildSessionsSection(sessions, "ticket-1")?.nodes[0];
+    const node = buildSessionsSection({ sessions, ticketId: "ticket-1" })?.nodes[0];
 
     expect(node?.target).toEqual({
       kind: "resource",

@@ -116,7 +116,8 @@ export const createWorkbenchSettingsModule = (
       ctx.resources.registerPresenter({
         id: "workbench.settings.presenter",
         canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
-        open: (resource) => ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label }),
+        open: (resource) =>
+          ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label, strategy: { kind: "persistent" } }),
       });
 
       ctx.commands.registerCommand(

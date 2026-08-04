@@ -108,7 +108,7 @@ describe("createSessionBubbleModule", () => {
     expect(placements[0]?.closable).toBe(true);
   });
 
-  test("creates another Session Sub Panel only for an Add Panel request", async () => {
+  test("keeps an Add Panel session as its own tab while later sessions reuse the preview", async () => {
     const workbench = createWorkbenchCore();
     const firstSession = createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1");
     const secondSession = createDashboardResource(
@@ -138,11 +138,34 @@ describe("createSessionBubbleModule", () => {
       (firstPlacement as { instanceId: string }).instanceId,
     );
     expect((selectedPlacement as { instanceId: string }).instanceId).toBe(
-      (addedPlacement as { instanceId: string }).instanceId,
+      (firstPlacement as { instanceId: string }).instanceId,
     );
     expect(
       placements.find((placement) => placement.widgetId === (selectedPlacement as { instanceId: string }).instanceId),
-    ).toMatchObject({ resourceUri: secondSession.uri });
+    ).toMatchObject({ resourceUri: secondSession.uri, tabRetention: "preview" });
+    expect(
+      placements.find((placement) => placement.widgetId === (addedPlacement as { instanceId: string }).instanceId),
+    ).toMatchObject({ tabRetention: "persistent" });
+  });
+
+  test("turns a persistent session tab back into a preview when the picker replaces it", async () => {
+    const workbench = createWorkbenchCore();
+    const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1");
+    workbench.registerModule(createSessionBubbleModule());
+
+    const persistentPlacement = await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, {
+      source: "panel-add",
+    });
+    const replacement = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: session,
+      replaceWidgetId: (persistentPlacement as { instanceId: string }).instanceId,
+    });
+
+    expect(replacement).toMatchObject({
+      instanceId: (persistentPlacement as { instanceId: string }).instanceId,
+      resourceUri: session.uri,
+      tabRetention: "preview",
+    });
   });
 });
 

@@ -1,5 +1,4 @@
 import { createDisposable } from "../../shared/disposable";
-import { withoutPreviewTabs } from "./layout-tab-lifecycle";
 import {
   createDefaultWorkbenchLayout,
   mergeWithDefaultRegions,
@@ -43,7 +42,7 @@ export const resolveScopedLayout = (
   persisted: WorkbenchLayout | undefined,
 ) =>
   persisted
-    ? mergeWithDefaultRegions(withoutPreviewTabs(persisted), defaultRegionVisibility)
+    ? mergeWithDefaultRegions(persisted, defaultRegionVisibility)
     : createDefaultWorkbenchLayout(defaultRegionVisibility);
 
 export const createScopeEvent = <T>() => {
