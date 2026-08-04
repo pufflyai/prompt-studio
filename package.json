@@ -54,6 +54,7 @@
     "clients/*",
     "packages/*",
     "extensions/*",
+    ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-planner-loops",
     "scripts"
   ],
