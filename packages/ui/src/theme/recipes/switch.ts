@@ -40,6 +40,10 @@ export const switchSlotRecipe = defineSlotRecipe({
     variant: {
       solid: {
         control: {
+          // The switch track radius is "md" — never "full", which breaks the look.
+          // Chakra's default solid variant pins "full", so the design radius must
+          // be restated here for the merge to keep it.
+          borderRadius: "md",
           _checked: {
             bg: "bg.inverted",
             borderColor: "bg.inverted",

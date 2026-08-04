@@ -5,6 +5,7 @@ import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
 import {
   createActivityEventsDBService,
   createDb,
+  createExtensionAutomationPreferencesDBService,
   createExtensionFilesDBService,
   createExtensionInstancesDBService,
   createExtensionSettingsDBService,
@@ -154,9 +155,8 @@ export const createApp = async (options: AppOptions) => {
   const extensionFilesService = createExtensionFilesDBService(db);
   const extensionTemplatePreferencesDBService = createExtensionTemplatePreferencesDBService(db);
   const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
-  const projectTemplateDefaultsDBService = createProjectTemplateDefaultsDBService(db);
+  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesDBService(db);
   const extensionStorageService = createExtensionStorageDBService(db);
-  const extensionUserDataService = createExtensionUserDataDBService(db);
   const extensionSettingsDBService = createExtensionSettingsDBService(db);
 
   // --- storage services ---
@@ -182,7 +182,7 @@ export const createApp = async (options: AppOptions) => {
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
-    extensionUserDataService,
+    extensionUserDataService: createExtensionUserDataDBService(db),
     eventBus,
     onInstalledSourcesChanged: async () => {
       // An in-place source reload keeps the same paths, so the registry's path-set
@@ -217,7 +217,7 @@ export const createApp = async (options: AppOptions) => {
     extensionService,
     extensionTemplatePreferencesDBService,
     fileService,
-    projectTemplateDefaultsDBService,
+    projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
     templatesDBService,
   });
   const skillService = createSkillService({
@@ -233,6 +233,7 @@ export const createApp = async (options: AppOptions) => {
   const sessionHookDeps = (): SessionHookDeps => ({
     activityEventsService,
     eventBus,
+    extensionAutomationPreferencesService,
     extensionFilesService,
     extensionInstancesService,
     extensionService,
@@ -302,6 +303,7 @@ export const createApp = async (options: AppOptions) => {
     notificationService,
     installedExtensionSourcesService,
     extensionInstancesService,
+    extensionAutomationPreferencesService,
     extensionFilesService,
     extensionSettingsDBService,
     extensionService,

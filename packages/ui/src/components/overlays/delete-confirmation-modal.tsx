@@ -1,4 +1,4 @@
-import { Button, CloseButton, Dialog, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
 
 interface DeleteConfirmationModalProps {
@@ -32,32 +32,43 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.Header>
-            <Text textStyle="heading/M">{headline}</Text>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Header>
-          <Dialog.Body>
-            <Stack gap="3">
-              {notificationText ? <Text>{notificationText}</Text> : null}
-              {children}
-            </Stack>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Stack direction="row" gap="1">
-              <Button onClick={onClose}>Close</Button>
-              <Button loading={isDeleting} variant="destructive" onClick={handleDelete}>
-                {buttonText}
-              </Button>
-            </Stack>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
+    // Destructive confirmations dismiss only through their explicit controls —
+    // outside interactions must never cancel them, and when nested inside another
+    // overlay (e.g. the settings dialog) a portal keeps the layers cooperating.
+    <Dialog.Root
+      open={open}
+      onOpenChange={(details) => {
+        if (!details.open) onClose();
+      }}
+      closeOnInteractOutside={false}
+    >
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Text textStyle="heading/M">{headline}</Text>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Stack gap="3">
+                {notificationText ? <Text>{notificationText}</Text> : null}
+                {children}
+              </Stack>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Stack direction="row" gap="1">
+                <Button onClick={onClose}>Close</Button>
+                <Button loading={isDeleting} variant="destructive" onClick={handleDelete}>
+                  {buttonText}
+                </Button>
+              </Stack>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
     </Dialog.Root>
   );
 };

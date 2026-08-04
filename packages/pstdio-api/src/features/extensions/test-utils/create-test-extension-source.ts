@@ -29,6 +29,35 @@ export const createTestExtensionSource = (fields: {
   return sourcePath;
 };
 
+export const createTestScheduledExtensionSource = (fields: {
+  displayName: string;
+  installName: string;
+  name: string;
+  root: string;
+  scheduleDisabled?: boolean;
+  version?: string | null;
+}) => {
+  const sourcePath = createTestExtensionSource(fields);
+  writeFileSync(
+    join(sourcePath, "extension.ts"),
+    `export default {
+  commands: {
+    heartbeat: { title: "Heartbeat", async run() {} },
+  },
+  schedules: {
+    heartbeat: {
+      title: "Heartbeat",
+      cron: "0 3 * * *",
+      commandId: ${JSON.stringify(`${fields.name}.heartbeat`)},${fields.scheduleDisabled ? "\n      disabled: true," : ""}
+    },
+  },
+};
+`,
+    "utf8",
+  );
+  return sourcePath;
+};
+
 export const createTestSkillExtensionSource = (fields: {
   displayName: string;
   installName: string;

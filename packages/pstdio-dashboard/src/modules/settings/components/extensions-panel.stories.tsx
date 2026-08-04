@@ -1,4 +1,8 @@
-import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type {
+  ExtensionDiagnostic,
+  ProjectExtensionInstance,
+  WorkbenchExtensionAutomationRecord,
+} from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ExtensionsPanelView } from "./extensions-panel";
 
@@ -10,10 +14,13 @@ const installedExtensions: ProjectExtensionInstance[] = [
     installedExtensionId: "installed-planner",
     installName: "pstdio-planner",
     name: "pstdio-planner",
-    displayName: "pstdio-planner",
+    displayName: "Prompt Studio Planner",
     version: "0.4.2",
     description: "Plan and track tickets across workspaces.",
-    sourcePath: "extensions/pstdio-planner",
+    sourcePath: "/repo/.pstdio/extensions/pstdio-planner",
+    scope: "repo",
+    status: "loaded",
+    lastLoadedAt: "2026-08-04T09:14:00.000Z",
     enabled: true,
     config: {},
   },
@@ -24,10 +31,17 @@ const installedExtensions: ProjectExtensionInstance[] = [
     installedExtensionId: "installed-core-tickets",
     installName: "pstdio-core-tickets",
     name: "pstdio-core-tickets",
-    displayName: "pstdio-core-tickets",
+    displayName: "Core Tickets",
     version: "1.0.0",
     description: "Ticket data and command surface.",
-    sourcePath: "extensions/pstdio-core-tickets",
+    sourcePath: "/home/user/.pstdio/extensions/pstdio-core-tickets",
+    scope: "global",
+    status: "error",
+    lastLoadedAt: "2026-08-04T08:02:00.000Z",
+    lastError: {
+      code: "extension_import_failed",
+      message: "Cannot find module './features/loops/index.js' — imported from extension.js.",
+    },
     enabled: true,
     config: {},
   },
@@ -38,24 +52,41 @@ const installedExtensions: ProjectExtensionInstance[] = [
     installedExtensionId: "installed-lab",
     installName: "extension-lab",
     name: "extension-lab",
-    displayName: "extension-lab",
+    displayName: "Extension Lab",
     version: "0.1.0",
     description: "Demo and experimental commands.",
-    sourcePath: "extensions/extension-lab",
+    sourcePath: "/home/user/.pstdio/extensions/extension-lab",
+    scope: "global",
+    status: "disabled",
     enabled: false,
     config: {},
   },
 ];
 
-const diagnostics: ExtensionDiagnostic[] = [
+const automations: WorkbenchExtensionAutomationRecord[] = [
   {
-    code: "missing-command",
-    severity: "error",
-    message: "Command contribution references a command that is not registered.",
+    id: "pstdio-planner.refine-tickets",
+    localId: "refine-tickets",
     extensionId: "pstdio.planner",
-    commandId: "tickets.refine",
-    sourcePath: "commands/refine-ticket.ts",
+    extensionInstanceId: "planner-instance",
+    title: "Refine open tickets",
+    cron: "0 6 * * *",
+    commandId: "pstdio-planner.refine",
+    enabled: true,
   },
+  {
+    id: "pstdio-planner.stuck-work-sweep",
+    localId: "stuck-work-sweep",
+    extensionId: "pstdio.planner",
+    extensionInstanceId: "planner-instance",
+    title: "Sweep stuck work",
+    cron: "*/30 * * * *",
+    commandId: "pstdio-planner.sweep",
+    enabled: false,
+  },
+];
+
+const diagnostics: ExtensionDiagnostic[] = [
   {
     code: "stale-template",
     severity: "warning",
@@ -63,33 +94,12 @@ const diagnostics: ExtensionDiagnostic[] = [
     extensionId: "pstdio.planner",
     sourcePath: "templates/ticket.md",
   },
-  {
-    code: "optional-menu-target",
-    severity: "info",
-    message: "Optional menu contribution is hidden until a workspace is selected.",
-    extensionId: "pstdio.planner",
-    commandId: "tickets.show-context",
-  },
-  {
-    code: "slow-query",
-    severity: "warning",
-    message: "Slow query over large projects.",
-    extensionId: "pstdio.core-tickets",
-    commandId: "query-tickets",
-    sourcePath: "commands/query-tickets.ts",
-  },
-  {
-    code: "project-only",
-    severity: "info",
-    message: "Project-level diagnostic without a matching installed extension.",
-    sourcePath: "extensions/project.ts",
-  },
 ];
 
 const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
-  parameters: { layout: "padded" },
+  parameters: { layout: "fullscreen" },
 };
 
 export default meta;
@@ -99,7 +109,8 @@ type Story = StoryObj<typeof ExtensionsPanelView>;
 export const Populated: Story = {
   args: {
     extensions: installedExtensions,
-    diagnostics: [],
+    diagnostics,
+    automations,
   },
 };
 
@@ -107,6 +118,7 @@ export const Empty: Story = {
   args: {
     extensions: [],
     diagnostics: [],
+    automations: [],
   },
 };
 
@@ -114,28 +126,18 @@ export const Mutating: Story = {
   args: {
     extensions: installedExtensions,
     diagnostics: [],
+    automations,
     togglingInstanceId: "planner-instance",
-    uninstallingInstanceId: "core-tickets-instance",
   },
 };
 
-export const CardDiagnosticsCollapsed: Story = {
+export const HealthPopoverOpen: Story = {
   args: {
     extensions: installedExtensions,
     diagnostics,
-  },
-};
-
-export const CardDiagnosticsExpanded: Story = {
-  args: {
-    extensions: installedExtensions,
-    diagnostics,
+    automations,
   },
   play: async ({ canvasElement }) => {
-    canvasElement
-      .querySelectorAll<HTMLButtonElement>('[data-testid="extension-diagnostics-trigger"]')
-      .forEach((trigger) => {
-        trigger.click();
-      });
+    canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
   },
 };

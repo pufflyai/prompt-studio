@@ -8,7 +8,7 @@ const errorSchema = z.object({ error: z.string() });
 export const uninstallProjectExtensionRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/extensions/{instanceId}",
-  description: "Uninstall an extension source and remove it from the project.",
+  description: "Delete the extension's files and remove it from the project.",
   tags: ["Extensions"],
   request: {
     params: z

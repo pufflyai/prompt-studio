@@ -1,5 +1,5 @@
 import { rmSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   createExtensionInstancesDBService,
   createExtensionUserDataDBService,
@@ -30,8 +30,17 @@ const isManagedInstalledSourcePath = (sourcePath: string) => {
   return relativePath.length > 0 && !relativePath.startsWith("..") && !isAbsolute(relativePath);
 };
 
+// Repo-local extensions live in `<repo>/.pstdio/extensions/<name>`; deleting the folder is the
+// only removal that sticks, since repo sync re-registers any folder it finds there.
+const isRepoLocalSourcePath = (sourcePath: string) => {
+  const resolvedSourcePath = resolve(sourcePath);
+  const marker = `${sep}.pstdio${sep}extensions${sep}`;
+  const markerIndex = resolvedSourcePath.indexOf(marker);
+  return markerIndex > 0 && resolvedSourcePath.length > markerIndex + marker.length;
+};
+
 const removeInstalledSourceFiles = (sourcePath: string) => {
-  if (!isManagedInstalledSourcePath(sourcePath)) return;
+  if (!isManagedInstalledSourcePath(sourcePath) && !isRepoLocalSourcePath(sourcePath)) return;
   rmSync(sourcePath, { recursive: true, force: true });
 };
 

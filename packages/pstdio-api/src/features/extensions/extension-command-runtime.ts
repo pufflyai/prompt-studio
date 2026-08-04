@@ -33,6 +33,18 @@ export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, pro
   };
 };
 
+// Loads one installed source's runtime regardless of its enabled state, so the
+// dashboard can document what a disabled extension would contribute.
+export const loadInstalledSourceRuntime = async (installedSource: {
+  source_path: string;
+  source_kind: "local_path" | "git" | "registry";
+}) => {
+  const loaded = await loadExtensionSources({
+    extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
+  });
+  return normalizeExtensionSources(loaded.sources, loaded.diagnostics, { repoRoots: [] });
+};
+
 export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommandRecord => ({
   id: command.id,
   extensionId: command.extensionId,

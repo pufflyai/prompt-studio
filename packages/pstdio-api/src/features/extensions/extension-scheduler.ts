@@ -9,6 +9,7 @@ import {
 } from "pstdio-scheduler";
 import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "./deps";
+import { instanceIdsByExtensionId, isAutomationEnabled, loadAutomationPreferences } from "./extension-automations";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
 const EXTENSION_SCHEDULE_TIMEOUT_MS = 15_000;
@@ -43,7 +44,10 @@ const extensionLogger: ExtensionLoggerApi = {
 };
 
 const isExtensionChangeEvent = (event: { table: string }) =>
-  event.table === "extension_instances" || event.table === "installed_extension_sources" || event.table === "projects";
+  event.table === "extension_instances" ||
+  event.table === "installed_extension_sources" ||
+  event.table === "extension_automation_preferences" ||
+  event.table === "projects";
 
 const scheduleTitle = (title: Localizable<string>) =>
   typeof title === "string" ? title : (title.default ?? title.$l10n);
@@ -82,8 +86,11 @@ export const createExtensionScheduler = (input: Input) => {
 
       for (const projectId of await input.listProjectIds()) {
         let runtime: Awaited<ReturnType<typeof loadProjectExtensionRuntime>>["runtime"];
+        let instanceIds: Map<string, string>;
         try {
-          runtime = (await loadProjectExtensionRuntime(input.deps, projectId)).runtime;
+          const loaded = await loadProjectExtensionRuntime(input.deps, projectId);
+          runtime = loaded.runtime;
+          instanceIds = instanceIdsByExtensionId(loaded.enabledSources);
         } catch (err) {
           apiLogger.error(
             { err, event: "extension.schedule.project.load.error", projectId },
@@ -92,8 +99,10 @@ export const createExtensionScheduler = (input: Input) => {
           continue;
         }
 
+        const preferences = await loadAutomationPreferences(input.deps, projectId);
+
         for (const schedule of runtime.schedules) {
-          if (schedule.disabled) continue;
+          if (!isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences)) continue;
 
           jobs.push({
             key: `${projectId}/${schedule.id}`,
@@ -117,7 +126,13 @@ export const createExtensionScheduler = (input: Input) => {
       const meta = job.meta as ScheduleJobMeta;
       const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(input.deps, meta.projectId);
       const schedule = runtime.schedules.find((candidate) => candidate.id === meta.scheduleId);
-      if (!schedule || schedule.disabled) return;
+      if (!schedule) return;
+
+      const preferences = await loadAutomationPreferences(input.deps, meta.projectId);
+      if (
+        !isAutomationEnabled(schedule, instanceIdsByExtensionId(enabledSources).get(schedule.extensionId), preferences)
+      )
+        return;
 
       const runner = createCommandRunner(runtime, {
         logger: input.extensionLogger ?? extensionLogger,

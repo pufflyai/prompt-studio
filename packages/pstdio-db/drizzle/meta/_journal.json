@@ -176,6 +176,13 @@
       "when": 1782990036107,
       "tag": "0024_flippant_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1785829135160,
+      "tag": "0025_eager_freak",
+      "breakpoints": true
     }
   ]
 }

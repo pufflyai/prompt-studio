@@ -218,7 +218,89 @@
   },
   "projectSettings": {
     "title": "專案設定",
-    "skills": "技能"
+    "skills": "技能",
+    "extensionsPanel": {
+      "empty": "此專案未安裝任何擴充功能。",
+      "loadError": "載入擴充功能失敗。",
+      "title": "擴充功能",
+      "counts": "{{installed}} 個已安裝 · {{enabled}} 個已啟用 · {{failing}} 個失敗",
+      "searchPlaceholder": "搜尋擴充功能…",
+      "installedGroup": "已安裝 · {{count}}",
+      "noSearchResults": "沒有符合\"{{query}}\"的擴充功能。",
+      "noDescription": "未提供描述。",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "等待中",
+        "loaded": "已載入",
+        "error": "載入失敗",
+        "missing": "缺失",
+        "disabled": "已停用"
+      },
+      "health": {
+        "triggerAriaLabel": "顯示 {{name}} 的問題",
+        "failedToLoad": "載入失敗",
+        "issues_one": "{{count}} 個問題",
+        "issues_other": "{{count}} 個問題",
+        "lastLoaded": "上次載入於 {{time}}",
+        "unknownError": "擴充功能載入失敗。",
+        "retry": "重試",
+        "retrySucceeded": "擴充功能已載入",
+        "retryFailed": "擴充功能仍然無法載入",
+        "attemptFix": "嘗試修復",
+        "fixSessionStarted": "修復工作階段已啟動",
+        "fixSessionFailed": "啟動修復工作階段失敗"
+      },
+      "automations": {
+        "title": "自動化",
+        "toggleAriaLabel": "切換自動化 {{name}}",
+        "listStatus": "{{count}} 個自動化中已啟用 {{enabled}} 個",
+        "cron": "cron {{cron}}",
+        "stateOn": "開",
+        "stateOff": "關"
+      },
+      "detail": {
+        "back": "擴充功能",
+        "tabs": {
+          "settings": "設定",
+          "contributions": "貢獻"
+        },
+        "noContributions": "此擴充功能未宣告任何貢獻。",
+        "noSettings": "此擴充功能未宣告任何設定。",
+        "dangerZone": "危險區域",
+        "deleteHint": "刪除此擴充功能的檔案並將其從專案中移除。",
+        "copyCommand": "複製命令",
+        "contributionKinds": {
+          "harnesses": "Harness",
+          "commands": "命令",
+          "modes": "模式",
+          "panels": "檢視",
+          "routes": "路由",
+          "menuContributions": "選單項目",
+          "settingsPanels": "設定面板",
+          "renderers": "轉譯器",
+          "skills": "技能",
+          "templates": "範本",
+          "themes": "主題",
+          "treeItems": "樹狀項目",
+          "commandPaletteResources": "命令面板資源"
+        }
+      },
+      "toggleAriaLabel": "切換 {{name}}",
+      "toggleErrorTitle": "更新擴充功能失敗",
+      "toggleError": "更新擴充功能失敗。請再試一次。",
+      "delete": "刪除擴充功能",
+      "deleteErrorTitle": "刪除擴充功能失敗",
+      "deleteError": "刪除擴充功能失敗。請再試一次。",
+      "deleteConfirm": {
+        "headline": "要刪除擴充功能嗎？",
+        "notification": "這將刪除\"{{name}}\"的擴充功能檔案並將其從專案中移除。其儲存的資料會保留，重新安裝後即可還原。",
+        "deleteDataLabel": "同時刪除此擴充功能的資料（無法復原）",
+        "button": "刪除"
+      }
+    }
   },
   "list": {
     "projectCreated": "專案已建立",

@@ -108,7 +108,8 @@ export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Prom
 
     const nodes: TreeNode[] = [];
     for (const panel of sectionPanels) nodes.push(await panelToNode(panel));
-    result.push({ id: sectionId, label: section?.title, actions, nodes });
+    // Settings groups are plain labels, not accordions — the whole tree stays visible.
+    result.push({ id: sectionId, label: section?.title, actions, nodes, collapsible: false });
   }
 
   return result;

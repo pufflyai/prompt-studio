@@ -1,6 +1,7 @@
 import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
+  createExtensionAutomationPreferencesDBService,
   createExtensionFilesDBService,
   createExtensionInstancesDBService,
   createExtensionSettingsDBService,
@@ -55,6 +56,7 @@ export interface RouteDeps {
   notificationService: ReturnType<typeof createNotificationService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+  extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesDBService>;
   extensionFilesService: ReturnType<typeof createExtensionFilesDBService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;

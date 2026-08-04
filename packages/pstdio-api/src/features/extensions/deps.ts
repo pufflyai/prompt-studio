@@ -16,6 +16,7 @@ export type ExtensionsRouteDeps = Pick<
   | "workspaceSessionService"
 > & {
   activityEventsService: RouteDeps["activityEventsService"];
+  extensionAutomationPreferencesService: RouteDeps["extensionAutomationPreferencesService"];
   extensionFilesService: RouteDeps["extensionFilesService"];
   extensionInstancesService: RouteDeps["extensionInstancesService"];
   extensionStorageService: RouteDeps["extensionStorageService"];

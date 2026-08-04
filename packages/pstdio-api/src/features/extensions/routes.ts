@@ -2,6 +2,10 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps } from "./deps";
 import {
+  attemptFixProjectExtensionHandler,
+  attemptFixProjectExtensionRoute,
+} from "./endpoints/attempt-fix-project-extension";
+import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
 } from "./endpoints/create-extension-notification";
@@ -36,10 +40,19 @@ import {
   updateProjectExtensionSettingHandler,
   updateProjectExtensionSettingRoute,
 } from "./endpoints/extension-settings";
+import {
+  getExtensionContributionsHandler,
+  getExtensionContributionsRoute,
+} from "./endpoints/get-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
+import { reloadProjectExtensionHandler, reloadProjectExtensionRoute } from "./endpoints/reload-project-extension";
+import {
+  setExtensionAutomationEnabledHandler,
+  setExtensionAutomationEnabledRoute,
+} from "./endpoints/set-extension-automation-enabled";
 import {
   setProjectExtensionEnabledHandler,
   setProjectExtensionEnabledRoute,
@@ -80,7 +93,11 @@ const registerExtensionFileRoutes = (routes: ExtensionRoutes, deps: ExtensionsRo
 
 const registerProjectExtensionRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
+  routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
+  routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
+  routes.openapi(reloadProjectExtensionRoute, reloadProjectExtensionHandler(deps));
+  routes.openapi(attemptFixProjectExtensionRoute, attemptFixProjectExtensionHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
 };
 

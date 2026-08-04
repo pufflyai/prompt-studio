@@ -218,7 +218,89 @@
   },
   "projectSettings": {
     "title": "项目设置",
-    "skills": "技能"
+    "skills": "技能",
+    "extensionsPanel": {
+      "empty": "此项目未安装任何扩展。",
+      "loadError": "加载扩展失败。",
+      "title": "扩展",
+      "counts": "{{installed}} 个已安装 · {{enabled}} 个已启用 · {{failing}} 个失败",
+      "searchPlaceholder": "搜索扩展…",
+      "installedGroup": "已安装 · {{count}}",
+      "noSearchResults": "没有与\"{{query}}\"匹配的扩展。",
+      "noDescription": "未提供描述。",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "等待中",
+        "loaded": "已加载",
+        "error": "加载失败",
+        "missing": "缺失",
+        "disabled": "已禁用"
+      },
+      "health": {
+        "triggerAriaLabel": "显示 {{name}} 的问题",
+        "failedToLoad": "加载失败",
+        "issues_one": "{{count}} 个问题",
+        "issues_other": "{{count}} 个问题",
+        "lastLoaded": "上次加载于 {{time}}",
+        "unknownError": "扩展加载失败。",
+        "retry": "重试",
+        "retrySucceeded": "扩展已加载",
+        "retryFailed": "扩展仍然无法加载",
+        "attemptFix": "尝试修复",
+        "fixSessionStarted": "修复会话已启动",
+        "fixSessionFailed": "启动修复会话失败"
+      },
+      "automations": {
+        "title": "自动化",
+        "toggleAriaLabel": "切换自动化 {{name}}",
+        "listStatus": "{{count}} 个自动化中已启用 {{enabled}} 个",
+        "cron": "cron {{cron}}",
+        "stateOn": "开",
+        "stateOff": "关"
+      },
+      "detail": {
+        "back": "扩展",
+        "tabs": {
+          "settings": "设置",
+          "contributions": "贡献"
+        },
+        "noContributions": "此扩展未声明任何贡献。",
+        "noSettings": "此扩展未声明任何设置。",
+        "dangerZone": "危险区域",
+        "deleteHint": "删除此扩展的文件并将其从项目中移除。",
+        "copyCommand": "复制命令",
+        "contributionKinds": {
+          "harnesses": "Harness",
+          "commands": "命令",
+          "modes": "模式",
+          "panels": "视图",
+          "routes": "路由",
+          "menuContributions": "菜单项",
+          "settingsPanels": "设置面板",
+          "renderers": "渲染器",
+          "skills": "技能",
+          "templates": "模板",
+          "themes": "主题",
+          "treeItems": "树节点",
+          "commandPaletteResources": "命令面板资源"
+        }
+      },
+      "toggleAriaLabel": "切换 {{name}}",
+      "toggleErrorTitle": "更新扩展失败",
+      "toggleError": "更新扩展失败。请重试。",
+      "delete": "删除扩展",
+      "deleteErrorTitle": "删除扩展失败",
+      "deleteError": "删除扩展失败。请重试。",
+      "deleteConfirm": {
+        "headline": "删除扩展？",
+        "notification": "这将删除\"{{name}}\"的扩展文件并将其从项目中移除。其存储的数据会保留，重新安装后可恢复。",
+        "deleteDataLabel": "同时删除此扩展的数据（无法撤销）",
+        "button": "删除"
+      }
+    }
   },
   "list": {
     "projectCreated": "项目已创建",
