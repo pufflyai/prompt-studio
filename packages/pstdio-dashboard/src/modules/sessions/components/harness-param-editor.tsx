@@ -1,4 +1,4 @@
-import { type Param, ParamEditor, type ParamValueMap } from "@pstdio/ui";
+import { type Param, ParamEditorRow, type ParamValueMap } from "@pstdio/ui";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "./harness-param-values";
 
@@ -53,15 +53,16 @@ export const HarnessParamEditor = (props: HarnessParamEditorProps) => {
     entries.map(([key, descriptor]) => [key, resolveParamValue(key, descriptor, defaults, overrides)]),
   ) as ParamValueMap;
 
+  const handleChange = (key: string, value: unknown) => {
+    if (typeof value !== "string" && typeof value !== "boolean") return;
+    onOverridesChange(updateHarnessParamOverride(overrides, defaults, key, value));
+  };
+
   return (
-    <ParamEditor
-      params={params}
-      defaultValues={values}
-      readOnly={disabled}
-      onChange={(key, value) => {
-        if (typeof value !== "string" && typeof value !== "boolean") return;
-        onOverridesChange(updateHarnessParamOverride(overrides, defaults, key, value));
-      }}
-    />
+    <>
+      {params.map((param) => (
+        <ParamEditorRow key={param.id} param={param} values={values} readOnly={disabled} onChange={handleChange} />
+      ))}
+    </>
   );
 };

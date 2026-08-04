@@ -110,8 +110,10 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <Dialog.Body flex="1" minH="0" p="0">
-            <ScrollArea h="full" contentProps={{ p: "md" }}>
-              <Stack gap="md">
+            <ScrollArea h="full" contentProps={{ px: "sm", py: "md" }}>
+              {/* Fields carry the param editor's own row padding, so the form is a
+                  flush stack of rows rather than rows spaced twice over. */}
+              <Stack gap="0">
                 {entries.map((entry) => {
                   const fieldProps = {
                     entry,
@@ -123,7 +125,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
                   return <Fragment key={entry.key}>{custom ?? <CommandParamField {...fieldProps} />}</Fragment>;
                 })}
                 {error ? (
-                  <Text textStyle="paragraph/S/regular" color="fg.error">
+                  <Text textStyle="paragraph/S/regular" color="fg.error" px="sm" pt="xs">
                     {error}
                   </Text>
                 ) : null}
