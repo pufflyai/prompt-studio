@@ -202,7 +202,9 @@ export const SessionTabMenu = (props: { input: WorkbenchPanelRenderInput }) => {
       onSelectSession={(session) => {
         void input.workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
           resource: session.resource,
-          replaceWidgetId: input.instance.instanceId,
+          ...(input.instance.resource?.kind === "session-draft"
+            ? { tabRetention: "persistent" }
+            : { replaceWidgetId: input.instance.instanceId }),
         });
       }}
       onViewAllSessions={() => {

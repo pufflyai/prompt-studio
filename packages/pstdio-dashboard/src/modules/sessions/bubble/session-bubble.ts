@@ -56,13 +56,21 @@ interface OpenDashboardSessionPanelInput extends OpenSessionBubbleWidgetsInput {
 export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
   rememberDashboardSessionResource(ctx, input.resource);
 
-  const { bubble } = openSessionBubbleWidgets(ctx, {
-    resource: input.resource,
-    title: input.resource.label,
-    replaceWidgetId: input.replaceWidgetId,
-    tabPosition: input.tabPosition,
-    tabRetention: input.tabRetention,
-  });
+  const existing = ctx.layout
+    .listPanelInstances("side")
+    .find(
+      (instance) =>
+        instance.panelId === dashboardWidgetIds.sessionBubble && instance.resourceUri === input.resource.uri,
+    );
+  const bubble = existing
+    ? ctx.layout.activatePanel(existing.instanceId)
+    : openSessionBubbleWidgets(ctx, {
+        resource: input.resource,
+        title: input.resource.label,
+        replaceWidgetId: input.replaceWidgetId,
+        tabPosition: input.tabPosition,
+        tabRetention: input.tabRetention,
+      }).bubble;
 
   selectSidenavSessionNode(ctx, input.resource);
   if (!input.preservePanelMode && ctx.sidePanel.getMode() === "closed") ctx.sidePanel.setMode("floating");

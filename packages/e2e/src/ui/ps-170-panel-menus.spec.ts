@@ -99,7 +99,7 @@ test("PS-170 keeps the project selector and Session Panel available on project h
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
 });
 
-test("PS-170 reuses Session Sub Panels and restores them after viewing all sessions", async ({ page, request }) => {
+test("PS-170 preserves other Session tabs when selecting from New session", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Session Sub Panels" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
@@ -132,9 +132,14 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
+  await expect(sessionTabs).toHaveCount(2);
+
+  const firstNewSessionTab = sideHeader.getByRole("tab", { name: /New session/ });
+  await firstNewSessionTab.click();
+  await firstNewSessionTab.getByRole("button", { name: "Close New session" }).click();
   await expect(sessionTabs).toHaveCount(1);
 
-  await openTabCustomMenu(sessionTabs.first());
+  await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
   await page
     .getByRole("menu", { name: "First context session menu" })
     .getByRole("menuitem", { name: "Second context session" })
@@ -142,32 +147,29 @@ test("PS-170 reuses Session Sub Panels and restores them after viewing all sessi
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
   await expect(sessionTabs).toHaveCount(1);
 
-  await openTabCustomMenu(sessionTabs.first());
-  await page
-    .getByRole("menu", { name: "Second context session menu" })
-    .getByRole("menuitem", { name: "New session" })
-    .click();
-  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toBeVisible();
-  await expect(sessionTabs).toHaveCount(1);
-
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await expect(sessionTabs).toHaveCount(2);
 
-  await openTabCustomMenu(sideHeader.locator('[role="tab"][aria-selected="true"]'));
+  await openTabCustomMenu(sideHeader.getByRole("tab", { name: /New session/ }));
   await page
     .getByRole("menu", { name: "New session menu" })
-    .last()
-    .getByRole("menuitem", {
-      name: "View all sessions",
-    })
+    .getByRole("menuitem", { name: "First context session" })
     .click();
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Navigate back" }).click();
+  await expect(sessionTabs).toHaveCount(3);
+  await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
+  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toBeVisible();
+  await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
 
-  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
-  await expect(sessionTabs).toHaveCount(2);
+  await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
+  await page
+    .getByRole("menu", { name: "First context session menu" })
+    .getByRole("menuitem", { name: "Second context session" })
+    .click();
+  await expect(sessionTabs).toHaveCount(3);
+  await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(page.getByRole("region", { name: "Side Panel" })).toBeVisible();
 });
 

@@ -167,6 +167,41 @@ describe("createSessionBubbleModule", () => {
       tabRetention: "preview",
     });
   });
+
+  test("opens a session selected from New session without replacing another preview", async () => {
+    const workbench = createWorkbenchCore();
+    const sessionOne = createDashboardResource("session", "session-1", "ONE", "MessageCircle", "project-1");
+    const sessionTwo = createDashboardResource("session", "session-2", "TWO", "MessageCircle", "project-1");
+    workbench.registerModule(createSessionBubbleModule());
+
+    const previewTwo = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: sessionTwo,
+    });
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+
+    const existingTwo = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: sessionTwo,
+      tabRetention: "persistent",
+    });
+    expect(existingTwo).toMatchObject({
+      instanceId: (previewTwo as { instanceId: string }).instanceId,
+      tabRetention: "preview",
+    });
+
+    const openedOne = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: sessionOne,
+      tabRetention: "persistent",
+    });
+    const placements = workbench.layout
+      .getLayout()
+      .regions.side.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+
+    expect(placements).toHaveLength(3);
+    expect(placements).toContainEqual(
+      expect.objectContaining({ resourceUri: sessionTwo.uri, tabRetention: "preview" }),
+    );
+    expect(openedOne).toMatchObject({ resourceUri: sessionOne.uri, tabRetention: "persistent" });
+  });
 });
 
 describe("createSessionBubbleModule workspace resolution", () => {

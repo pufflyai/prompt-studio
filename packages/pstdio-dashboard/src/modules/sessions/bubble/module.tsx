@@ -144,12 +144,14 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           replaceWidgetId,
           selectWorkspaceSidenav = true,
           tabPosition,
+          tabRetention,
         } = (args ?? {}) as {
           resource?: ResourceRef;
           preservePanelMode?: boolean;
           replaceWidgetId?: string;
           selectWorkspaceSidenav?: boolean;
           tabPosition?: WorkbenchTabPosition;
+          tabRetention?: WorkbenchTabRetention;
         };
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
@@ -157,6 +159,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           resource,
           replaceWidgetId,
           tabPosition,
+          tabRetention,
           preservePanelMode,
         });
         if (
