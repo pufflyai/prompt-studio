@@ -146,6 +146,32 @@ describe("extension file endpoints", () => {
     expect(contentResponse.status).toBe(404);
   });
 
+  test("rejects uploads for unknown extension instances", async () => {
+    const response = await uploadFile("00000000-0000-0000-0000-000000000000");
+
+    expect(response.status).toBe(404);
+  });
+
+  test("deletes an extension file with its ownership and bytes", async () => {
+    const uploadResponse = await uploadFile(labInstanceId);
+    const uploaded = (await uploadResponse.json()) as { id: string; url: string };
+    const fileUrl = `/v1/projects/${projectId}/extensions/${labInstanceId}/files/${uploaded.id}`;
+
+    const deleteResponse = await app.request(fileUrl, { method: "DELETE" });
+    expect(deleteResponse.status).toBe(204);
+
+    const listResponse = await app.request(
+      `/v1/projects/${projectId}/extensions/${labInstanceId}/files?scope_type=resource&scope_id=ticket-1`,
+    );
+    expect(((await listResponse.json()) as { files: unknown[] }).files).toEqual([]);
+
+    const contentResponse = await app.request(uploaded.url);
+    expect(contentResponse.status).toBe(404);
+
+    const repeatedDeleteResponse = await app.request(fileUrl, { method: "DELETE" });
+    expect(repeatedDeleteResponse.status).toBe(404);
+  });
+
   test("decodes percent-encoded upload file names", async () => {
     const fileName = "メモ-😀.txt";
     const response = await app.request(`/v1/projects/${projectId}/extensions/${labInstanceId}/files`, {

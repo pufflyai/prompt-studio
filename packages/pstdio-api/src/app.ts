@@ -26,6 +26,7 @@ import {
   createTemplatesDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
+  type DbClient,
   resolveDbPath,
 } from "pstdio-db";
 import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
@@ -45,6 +46,7 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
+import { createExtensionFileService } from "./services/extension-file-service";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
@@ -128,6 +130,78 @@ const openDb = async (dbPath: string | undefined) => {
   }
 };
 
+const createDBServices = (db: DbClient) => ({
+  projectsDBService: createProjectsDBService(db),
+  reposDBService: createReposDBService(db),
+  sessionQueueEntriesService: createSessionQueueEntriesDBService(db),
+  sessionsDBService: createSessionsDBService(db),
+  settingsDBService: createSettingsDBService(db),
+  workspacesDBService: createWorkspacesDBService(db),
+  workspaceSessionsDBService: createWorkspaceSessionsDBService(db),
+  skillsDBService: createSkillsDBService(db),
+  templatesDBService: createTemplatesDBService(db),
+  filesDBService: createFilesDBService(db),
+  activityEventsService: createActivityEventsDBService(db),
+  notificationsDbService: createNotificationsDBService(db),
+  installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
+  extensionInstancesService: createExtensionInstancesDBService(db),
+  extensionFilesDBService: createExtensionFilesDBService(db),
+  extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
+  extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
+  extensionAutomationPreferencesService: createExtensionAutomationPreferencesDBService(db),
+  extensionStorageService: createExtensionStorageDBService(db),
+  extensionSettingsDBService: createExtensionSettingsDBService(db),
+});
+
+const createCoreDomainServices = (input: {
+  db: DbClient;
+  dbs: ReturnType<typeof createDBServices>;
+  eventBus: EventBus;
+  storageRoot: string;
+}) => {
+  const { db, dbs, eventBus, storageRoot } = input;
+  const filesStorageService = createFilesStorageService(storageRoot);
+  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService });
+
+  return {
+    fileService,
+    projectService: createProjectService({ projectsDBService: dbs.projectsDBService }),
+    repoService: createRepoService({ reposDBService: dbs.reposDBService }),
+    extensionFileService: createExtensionFileService({
+      eventBus,
+      extensionFilesDBService: dbs.extensionFilesDBService,
+      extensionInstancesDBService: dbs.extensionInstancesService,
+      fileService,
+    }),
+    syncService: createSyncService({ db, eventBus }),
+    notificationService: createNotificationService({
+      notificationsDb: dbs.notificationsDbService,
+      activityEventsService: dbs.activityEventsService,
+      eventBus,
+    }),
+    extensionSettingsService: createExtensionSettingsService({
+      extensionSettingsDBService: dbs.extensionSettingsDBService,
+    }),
+    workspaceSessionService: createWorkspaceSessionService({
+      workspaceSessionsDBService: dbs.workspaceSessionsDBService,
+      eventBus,
+    }),
+    workspaceService: createWorkspaceService({ workspacesDb: dbs.workspacesDBService, eventBus }),
+  };
+};
+
+const startNotificationWakeTimer = (notificationService: ReturnType<typeof createNotificationService>) => {
+  const timer = setInterval(() => {
+    notificationService
+      .wakeDueSnoozed()
+      .catch((err) =>
+        apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
+      );
+  }, 30_000);
+  timer.unref?.();
+  return timer;
+};
+
 export const createApp = async (options: AppOptions) => {
   const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
   const { db, close: closeDb } = await openDb(dbPath);
@@ -137,30 +211,23 @@ export const createApp = async (options: AppOptions) => {
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
   ensureStorageRoot(storageRoot);
 
-  // --- db services ---
-  const projectsDBService = createProjectsDBService(db);
-  const reposDBService = createReposDBService(db);
-  const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
-  const sessionsDBService = createSessionsDBService(db);
-  const settingsDBService = createSettingsDBService(db);
-  const workspacesDBService = createWorkspacesDBService(db);
-  const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
-  const skillsDBService = createSkillsDBService(db);
-  const templatesDBService = createTemplatesDBService(db);
-  const filesDBService = createFilesDBService(db);
-  const activityEventsService = createActivityEventsDBService(db);
-  const notificationsDbService = createNotificationsDBService(db);
-  const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
-  const extensionInstancesService = createExtensionInstancesDBService(db);
-  const extensionFilesService = createExtensionFilesDBService(db);
-  const extensionTemplatePreferencesDBService = createExtensionTemplatePreferencesDBService(db);
-  const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
-  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesDBService(db);
-  const extensionStorageService = createExtensionStorageDBService(db);
-  const extensionSettingsDBService = createExtensionSettingsDBService(db);
-
-  // --- storage services ---
-  const filesStorageService = createFilesStorageService(storageRoot);
+  const dbs = createDBServices(db);
+  const {
+    activityEventsService,
+    extensionAutomationPreferencesService,
+    extensionInstancesService,
+    extensionSettingsDBService,
+    extensionSkillPreferencesDBService,
+    extensionStorageService,
+    extensionTemplatePreferencesDBService,
+    installedExtensionSourcesService,
+    notificationsDbService,
+    sessionQueueEntriesService,
+    sessionsDBService,
+    settingsDBService,
+    skillsDBService,
+    templatesDBService,
+  } = dbs;
 
   // --- infrastructure ---
   const eventBus = new EventBus({
@@ -168,15 +235,17 @@ export const createApp = async (options: AppOptions) => {
   });
 
   // --- domain services ---
-  const projectService = createProjectService({ projectsDBService });
-  const repoService = createRepoService({ reposDBService });
-  const fileService = createFileService({ filesDBService, filesStorageService });
-  const syncService = createSyncService({ db, eventBus });
-  const notificationService = createNotificationService({
-    notificationsDb: notificationsDbService,
-    activityEventsService,
-    eventBus,
-  });
+  const {
+    extensionFileService,
+    extensionSettingsService,
+    fileService,
+    notificationService,
+    projectService,
+    repoService,
+    syncService,
+    workspaceSessionService,
+    workspaceService,
+  } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
   let closeApp: () => Promise<void> = async () => {};
   const extensionService = createExtensionService({
@@ -192,7 +261,6 @@ export const createApp = async (options: AppOptions) => {
     },
     projectService,
   });
-  const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });
   const harnessRegistry =
     options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService, extensionService });
   const extensionRuntime = await createInstalledExtensionRuntime({
@@ -227,14 +295,11 @@ export const createApp = async (options: AppOptions) => {
     skillsDBService,
   });
 
-  const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService, eventBus });
-  const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
-
   const sessionHookDeps = (): SessionHookDeps => ({
     activityEventsService,
     eventBus,
     extensionAutomationPreferencesService,
-    extensionFilesService,
+    extensionFileService,
     extensionInstancesService,
     extensionService,
     extensionSettingsDBService,
@@ -304,7 +369,7 @@ export const createApp = async (options: AppOptions) => {
     installedExtensionSourcesService,
     extensionInstancesService,
     extensionAutomationPreferencesService,
-    extensionFilesService,
+    extensionFileService,
     extensionSettingsDBService,
     extensionService,
     extensionSettingsService,
@@ -319,14 +384,7 @@ export const createApp = async (options: AppOptions) => {
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
     watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
   });
-  const notificationWakeTimer = setInterval(() => {
-    notificationService
-      .wakeDueSnoozed()
-      .catch((err) =>
-        apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
-      );
-  }, 30_000);
-  notificationWakeTimer.unref?.();
+  const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
   drainSessionQueue = async (input) => {
     await createSessionScheduler(deps).drainQueue(input);

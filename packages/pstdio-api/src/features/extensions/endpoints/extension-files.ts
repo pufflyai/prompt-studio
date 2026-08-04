@@ -131,7 +131,7 @@ export const deleteExtensionFileRoute = createRoute({
   },
 });
 
-type FileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["fileService"]["get"]>>>;
+type FileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["extensionFileService"]["getOwnedFile"]>>>;
 
 const resolveScope = (projectId: string, query: { scope_type?: string; scope_id?: string }) => {
   const scopeType = query.scope_type ?? "project";
@@ -139,15 +139,6 @@ const resolveScope = (projectId: string, query: { scope_type?: string; scope_id?
     scope_type: scopeType,
     scope_id: query.scope_id ?? (scopeType === "project" ? projectId : null),
   };
-};
-
-const getProjectExtensionInstance = async (
-  deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionInstanceId: string },
-) => {
-  const instance = await deps.extensionInstancesService.get(input.extensionInstanceId);
-  if (!instance || instance.scope_type !== "project" || instance.scope_id !== input.projectId) return null;
-  return instance;
 };
 
 const fileUrl = (projectId: string, extensionInstanceId: string, fileId: string) =>
@@ -191,30 +182,23 @@ export const uploadExtensionFileHandler = (
   return async (c) => {
     const { extensionInstanceId, projectId } = c.req.valid("param");
     const query = c.req.valid("query");
-    const instance = await getProjectExtensionInstance(deps, { extensionInstanceId, projectId });
-    if (!instance) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
     const data = Buffer.from(await c.req.arrayBuffer());
     if (data.byteLength > MAX_EXTENSION_FILE_UPLOAD_BYTES) {
       return c.json({ error: "Extension file upload exceeds the maximum size." }, 413);
     }
 
-    const file = await deps.fileService.upload({
+    const scope = resolveScope(projectId, query);
+    const file = await deps.extensionFileService.upload({
       project_id: projectId,
+      extension_instance_id: extensionInstanceId,
+      scope_type: scope.scope_type,
+      scope_id: scope.scope_id,
       file_name: readUploadName(c.req.raw.headers),
-      file_kind: "extension",
       data,
       mime_type: c.req.raw.headers.get("content-type"),
     });
-    const scope = resolveScope(projectId, query);
-    await deps.extensionFilesService.attach({
-      project_id: projectId,
-      extension_instance_id: extensionInstanceId,
-      file_id: file.id,
-      scope_type: scope.scope_type,
-      scope_id: scope.scope_id,
-    });
-    deps.eventBus.emit("files", "set", file);
+    if (!file) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
     return c.json(toBlobRef(projectId, extensionInstanceId, file), 201);
   };
@@ -226,16 +210,15 @@ export const listExtensionFilesHandler = (
   return async (c) => {
     const { extensionInstanceId, projectId } = c.req.valid("param");
     const query = c.req.valid("query");
-    const instance = await getProjectExtensionInstance(deps, { extensionInstanceId, projectId });
-    if (!instance) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
     const scope = resolveScope(projectId, query);
-    const files = await deps.extensionFilesService.list({
+    const files = await deps.extensionFileService.list({
       project_id: projectId,
       extension_instance_id: extensionInstanceId,
       scope_type: scope.scope_type,
       scope_id: scope.scope_id,
     });
+    if (!files) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
     return c.json({ files: files.map((file) => toBlobRef(projectId, extensionInstanceId, file)) }, 200);
   };
@@ -246,7 +229,7 @@ export const getExtensionFileContentHandler = (
 ): AppRouteHandler<typeof getExtensionFileContentRoute> => {
   return async (c) => {
     const { extensionInstanceId, fileId, projectId } = c.req.valid("param");
-    const file = await deps.extensionFilesService.getOwnedFile({
+    const file = await deps.extensionFileService.getOwnedFile({
       project_id: projectId,
       extension_instance_id: extensionInstanceId,
       file_id: fileId,
@@ -274,20 +257,12 @@ export const deleteExtensionFileHandler = (
 ): AppRouteHandler<typeof deleteExtensionFileRoute> => {
   return async (c) => {
     const { extensionInstanceId, fileId, projectId } = c.req.valid("param");
-    const file = await deps.extensionFilesService.getOwnedFile({
+    const removed = await deps.extensionFileService.remove({
       project_id: projectId,
       extension_instance_id: extensionInstanceId,
       file_id: fileId,
     });
-    if (!file) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
-
-    await deps.extensionFilesService.detach({
-      project_id: projectId,
-      extension_instance_id: extensionInstanceId,
-      file_id: fileId,
-    });
-    await deps.fileService.remove(fileId);
-    deps.eventBus.emit("files", "delete", { id: fileId });
+    if (!removed) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
 
     return c.body(null, 204);
   };
