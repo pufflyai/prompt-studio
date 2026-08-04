@@ -1,7 +1,6 @@
-import { Stack } from "@chakra-ui/react";
-import { ParamEditor, type SelectionOption, type SelectionParam } from "@pstdio/ui";
+import { ParamEditorRow, type SelectionOption, type SelectionParam } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import type { CommandParamFieldProps } from "@pstdio/workbench/react";
+import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -85,7 +84,7 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   }
   const workspaceParam: SelectionParam = {
     id: "branch",
-    name: `${entry.label}${entry.required ? " *" : ""}`,
+    name: commandParamName(entry),
     description: entry.description,
     type: "selection",
     defaultValue: branch,
@@ -109,16 +108,14 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   };
 
   return (
-    <Stack gap="0">
-      <ParamEditor
-        params={[workspaceParam]}
-        defaultValues={{ branch, repoId }}
-        onChange={(id, nextValue) => {
-          if (typeof nextValue !== "string") return;
-          if (id === "repoId") handleSelectRepository(nextValue);
-          if (id === "branch") handleSelectBranch(nextValue);
-        }}
-      />
-    </Stack>
+    <ParamEditorRow
+      param={workspaceParam}
+      values={{ branch, repoId }}
+      onChange={(id, nextValue) => {
+        if (typeof nextValue !== "string") return;
+        if (id === "repoId") handleSelectRepository(nextValue);
+        if (id === "branch") handleSelectBranch(nextValue);
+      }}
+    />
   );
 };

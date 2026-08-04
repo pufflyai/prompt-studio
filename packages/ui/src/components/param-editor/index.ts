@@ -61,4 +61,6 @@ export { ParamEditorLabel } from "./param-editor-label";
 export { isParamEditorRichControl } from "./param-editor-presentation";
 export { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 export { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
+export type { ParamEditorRowProps } from "./param-editor-row";
+export { ParamEditorRow } from "./param-editor-row";
 export { ParamEditorSection } from "./param-editor-section";

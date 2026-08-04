@@ -45,6 +45,15 @@ export const TextInput = (props: TextInputProps) => {
     scheduleChange(newValue);
   };
 
+  // Leaving the field is a commit: a form submitted inside the debounce window
+  // would otherwise send the value as it was before the last keystrokes.
+  const handleBlur = () => {
+    if (!timeoutRef.current) return;
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = null;
+    onChange(id, value);
+  };
+
   if (readOnly) {
     const valueElement = <ParamEditorReadOnlyValue preserveWhitespace={!singleLine}>{value}</ParamEditorReadOnlyValue>;
 
@@ -86,6 +95,7 @@ export const TextInput = (props: TextInputProps) => {
             placeholder={hideLabel ? name : undefined}
             value={value}
             onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
             onKeyUp={(e) => {
               if (e.key === "Enter") {
                 e.currentTarget.blur();
@@ -110,6 +120,7 @@ export const TextInput = (props: TextInputProps) => {
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
                   e.currentTarget.blur();
@@ -125,6 +136,7 @@ export const TextInput = (props: TextInputProps) => {
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
               rows={3}
               resize="vertical"
             />
