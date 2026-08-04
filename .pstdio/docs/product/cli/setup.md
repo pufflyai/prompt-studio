@@ -24,6 +24,10 @@ This page documents runtime commands that control API/dashboard startup, shutdow
 
 All commands except `close`, `logs`, and `serve` run through startup middleware that calls `ensureApi(...)` before command execution.
 
+Auto-started API processes are detached from the invoking command and do not retain its terminal streams. The middleware waits for API health while also monitoring early process exit. Startup failures are correlated with structured records in the runtime JSONL log so the CLI can show the relevant error and PGlite recovery guidance without keeping stdout or stderr pipes open.
+
+If an auto-started process exits before becoming healthy, the CLI reports its exit code or signal. If it remains unhealthy for 15 seconds, the middleware terminates that unsuccessful process and reports matching startup diagnostics plus the resolved log path.
+
 ## Environment Variables
 
 ### Runtime state

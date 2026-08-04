@@ -104,6 +104,21 @@ describe("serveApp", () => {
     expect(reportedError!.message).toBe("listen EADDRINUSE");
   });
 
+  it("reports the error when app creation fails", async () => {
+    let reportedError: Error | undefined;
+    const serveApp = createServeApp({
+      createApp: async () => {
+        throw new Error("PANIC: could not locate a valid checkpoint record");
+      },
+      reportStartupError: (error) => {
+        reportedError = error;
+      },
+    });
+
+    await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("valid checkpoint");
+    expect(reportedError?.message).toContain("valid checkpoint");
+  });
+
   it("configures Bun idle timeout to 20 seconds", async () => {
     const captured = { idleTimeout: undefined as number | undefined };
 

@@ -1,6 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { cleanupDirs, createGitRepo } from "../cli/helpers";
-import { type ApiInstance, startApi } from "../cli/start-api";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { cleanupDirs, createGitRepo, shutdownApiViaHttp } from "../cli/helpers";
+import { type ApiInstance, getFreePort, startApi } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
 import { buildBinary, runPackaged, runPackagedSafe } from "./packaged-helpers";
 
@@ -54,6 +57,41 @@ describe("packaged pstdio — project lifecycle", () => {
 
       const output = run("--version", repo);
       expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+describe("packaged pstdio — auto-start", () => {
+  test(
+    "keeps the detached API alive after the launcher exits",
+    async () => {
+      const port = await getFreePort();
+      const url = `http://localhost:${port}`;
+      const repo = createGitRepo();
+      const homePath = mkdtempSync(join(tmpdir(), "pstdio-packaged-autostart-home-"));
+      dirs.push(repo, homePath);
+
+      try {
+        const output = runPackaged("projects create packaged-autostart", repo, {
+          PSTDIO_API_PORT: String(port),
+          PSTDIO_API_URL: url,
+          PSTDIO_DB_PATH: ":memory:",
+          PSTDIO_DISABLE_API_AUTO_START: "0",
+          PSTDIO_HOME: homePath,
+          PSTDIO_LOG_LEVEL: "info",
+          PSTDIO_STORAGE_PATH: join(homePath, "storage"),
+        });
+        expect(output).toContain("packaged-autostart");
+
+        for (let request = 0; request < 3; request += 1) {
+          const response = await fetch(`${url}/healthz`);
+          expect(response.ok).toBe(true);
+          await Bun.sleep(50);
+        }
+      } finally {
+        await shutdownApiViaHttp(url);
+      }
     },
     TEST_TIMEOUT,
   );

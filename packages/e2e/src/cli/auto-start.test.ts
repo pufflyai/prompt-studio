@@ -67,12 +67,18 @@ describe("ensureApi auto-start", () => {
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_DISABLE_API_AUTO_START: "0",
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
+        PSTDIO_LOG_LEVEL: "info",
       });
 
       expect(output).toContain("Created project");
       expect(output).toContain("auto-test");
 
-      expect(await isReachable(url)).toBe(true);
+      // Request logging happens after the launcher has exited. A detached API must
+      // remain alive when it writes those later records.
+      for (let request = 0; request < 3; request += 1) {
+        expect(await isReachable(url)).toBe(true);
+        await Bun.sleep(50);
+      }
     },
     TEST_TIMEOUT,
   );

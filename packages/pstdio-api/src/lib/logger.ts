@@ -2,6 +2,11 @@ import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 
 const rootLoggers = new Map<string, ReturnType<typeof createLogger>>();
 
+const resolveLoggerBase = () => {
+  const autostartId = process.env.PSTDIO_AUTOSTART_ID;
+  return autostartId ? { autostartId } : undefined;
+};
+
 const resolveRootLogger = () => {
   const logPath = resolveDefaultLogPath();
   const existing = rootLoggers.get(logPath);
@@ -9,7 +14,7 @@ const resolveRootLogger = () => {
     return existing;
   }
 
-  const created = createLogger({ service: "pstdio-api", sync: true });
+  const created = createLogger({ base: resolveLoggerBase(), service: "pstdio-api", sync: true });
   rootLoggers.set(logPath, created);
   return created;
 };

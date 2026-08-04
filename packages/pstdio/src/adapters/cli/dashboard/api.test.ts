@@ -2,12 +2,12 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveApiRoot, resolveBundledApiEntry, runApi, shouldAutoStartApi } from "./api";
+import { buildCompiledApiCommand, resolveApiRoot, resolveBundledApiEntry, runApi, shouldAutoStartApi } from "./api";
 
 type SpawnCall = {
   command: string;
   args: string[];
-  options: { cwd?: string; stdio: "inherit" | "ignore" | "pipe"; detached?: boolean; env?: NodeJS.ProcessEnv };
+  options: { cwd?: string; stdio: "inherit" | "ignore"; detached?: boolean; env?: NodeJS.ProcessEnv };
 };
 
 const createSpawnRecorder = () => {
@@ -17,7 +17,7 @@ const createSpawnRecorder = () => {
   const spawner = (
     command: string,
     args: readonly string[],
-    options: { cwd?: string; stdio: "inherit" | "ignore" | "pipe"; detached?: boolean; env?: NodeJS.ProcessEnv },
+    options: { cwd?: string; stdio: "inherit" | "ignore"; detached?: boolean; env?: NodeJS.ProcessEnv },
   ) => {
     calls.push({ command, args: [...args], options });
     const child = {
@@ -161,6 +161,14 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
       },
     },
   ]);
+});
+
+test("compiled auto-start passes the configured port to the serve command", () => {
+  expect(buildCompiledApiCommand("4511")).toEqual({
+    command: process.execPath,
+    args: ["serve", "--port", "4511"],
+    options: { cwd: undefined, stdio: "ignore", detached: true },
+  });
 });
 
 test("shouldAutoStartApi returns false when disable flag is set", () => {

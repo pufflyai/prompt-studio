@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "pstdio-api/pglite-recovery-hint";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { runApi as defaultRunApi, shouldAutoStartApi } from "@/adapters/cli/dashboard/api";
@@ -6,6 +7,7 @@ import {
   waitForHealthy as defaultWaitForHealthy,
 } from "@/adapters/cli/dashboard/health-check";
 import { resolveDefaultDbPath } from "@/adapters/cli/dashboard/state-paths";
+import { readStartupDiagnostics, resolveStartupLogOffset } from "./api-startup-diagnostics";
 
 /**
  * Ensures the pstdio API server is running before CLI commands that need it.
@@ -30,38 +32,43 @@ const defaultDeps: EnsureApiDeps = {
 };
 
 const API_HEALTH_TIMEOUT_MS = 15_000;
-const OUTPUT_TAIL_BYTES = 8_192;
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 const startupLogger = () => createLogger({ component: "ensure-api", service: "pstdio", sync: true });
 
-const appendOutput = (current: string, chunk: Buffer | string) => {
-  const next = current + chunk.toString();
-  return next.length > OUTPUT_TAIL_BYTES ? next.slice(next.length - OUTPUT_TAIL_BYTES) : next;
-};
-
-const unrefStream = (stream: unknown) => {
-  if (stream && typeof stream === "object" && "unref" in stream && typeof stream.unref === "function") {
-    stream.unref();
-  }
-};
-
 type ApiChild = NonNullable<ReturnType<EnsureApiDeps["runApi"]>>["child"];
 
-const captureProcessOutput = (child: ApiChild | undefined) => {
-  let stdout = "";
-  let stderr = "";
-  child?.stdout?.on?.("data", (chunk) => {
-    stdout = appendOutput(stdout, chunk);
-  });
-  child?.stderr?.on?.("data", (chunk) => {
-    stderr = appendOutput(stderr, chunk);
-  });
-  unrefStream(child?.stdout);
-  unrefStream(child?.stderr);
+class ApiChildStartupError extends Error {}
 
-  return () => ({ stdout: stdout.trim(), stderr: stderr.trim() });
+const monitorApiChild = (child: ApiChild, controller: AbortController) => {
+  let failure: ApiChildStartupError | null = null;
+  const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+    const reason = code !== null ? `code ${code}` : signal ? `signal ${signal}` : "an unknown status";
+    failure = new ApiChildStartupError(`API process exited with ${reason} before becoming healthy.`);
+    rejectFailure?.(failure);
+    controller.abort();
+  };
+  const onError = (error: Error) => {
+    failure = new ApiChildStartupError(`API process failed before becoming healthy: ${error.message}`);
+    rejectFailure?.(failure);
+    controller.abort();
+  };
+  let rejectFailure: ((error: ApiChildStartupError) => void) | undefined;
+  const promise = child.once
+    ? new Promise<never>((_resolve, reject) => {
+        rejectFailure = reject;
+        child.once?.("exit", onExit);
+        child.once?.("error", onError);
+      })
+    : new Promise<never>(() => {});
+
+  const dispose = () => {
+    child.off?.("exit", onExit);
+    child.off?.("error", onError);
+  };
+
+  return { dispose, failure: () => failure, promise };
 };
 
 const checkpointRecoveryHint = (output: string) => {
@@ -71,15 +78,8 @@ const checkpointRecoveryHint = (output: string) => {
   return `\nDetected a PGlite checkpoint/WAL startup failure at ${dbPath}. ${pgliteRecoverySteps(dbPath)}.`;
 };
 
-const formatCapturedOutput = (output: { stdout: string; stderr: string }) => {
-  const parts = [];
-  if (output.stderr) parts.push(`stderr:\n${output.stderr}`);
-  if (output.stdout) parts.push(`stdout:\n${output.stdout}`);
-  if (parts.length === 0) return "";
-
-  const text = parts.join("\n");
-  return `\nCaptured API process output:\n${text}${checkpointRecoveryHint(text)}`;
-};
+const formatStartupDiagnostics = (diagnostics: string) =>
+  diagnostics ? `\nAPI startup diagnostics:\n${diagnostics}${checkpointRecoveryHint(diagnostics)}` : "";
 
 const apiStartupError = (detail: string, data: Record<string, unknown> = {}) => {
   const error = new Error(`Could not start the pstdio API. ${detail} Logs: ${resolveDefaultLogPath()}`);
@@ -96,12 +96,15 @@ export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDep
     throw apiStartupError("API auto-start is disabled (PSTDIO_DISABLE_API_AUTO_START=1); run `pstdio serve`.");
   }
 
+  const autostartId = randomUUID();
+  const logPath = resolveDefaultLogPath();
+  const logOffset = resolveStartupLogOffset(logPath);
   let result: ReturnType<EnsureApiDeps["runApi"]>;
   try {
     result = deps.runApi(process.cwd(), {
-      stdio: "pipe",
+      stdio: "ignore",
       detached: true,
-      env: process.env,
+      env: { ...process.env, PSTDIO_AUTOSTART_ID: autostartId },
     });
   } catch (error) {
     throw apiStartupError(`API process failed to spawn: ${errorMessage(error)}. Run \`pstdio serve\`.`);
@@ -110,15 +113,27 @@ export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDep
   if (!result) {
     throw apiStartupError("API process could not be launched; run `pstdio serve`.");
   }
-  const readCapturedOutput = captureProcessOutput(result.child);
 
+  const controller = new AbortController();
+  const childMonitor = monitorApiChild(result.child, controller);
   try {
-    await deps.waitForHealthy({ url: healthUrl, timeoutMs: API_HEALTH_TIMEOUT_MS });
+    await Promise.race([
+      deps.waitForHealthy({ url: healthUrl, timeoutMs: API_HEALTH_TIMEOUT_MS, signal: controller.signal }),
+      childMonitor.promise,
+    ]);
+    childMonitor.dispose();
   } catch (error) {
-    const output = readCapturedOutput();
-    throw apiStartupError(`API did not become healthy in 15s. ${errorMessage(error)}${formatCapturedOutput(output)}`, {
-      stderr: output.stderr,
-      stdout: output.stdout,
+    controller.abort();
+    childMonitor.dispose();
+    const childFailure = childMonitor.failure();
+    if (!childFailure) result.child.kill?.();
+
+    const failure = childFailure ?? error;
+    const diagnostics = readStartupDiagnostics({ autostartId, logPath, offset: logOffset });
+    const detail = childFailure ? childFailure.message : `API did not become healthy in 15s. ${errorMessage(failure)}`;
+    throw apiStartupError(`${detail}${formatStartupDiagnostics(diagnostics)}`, {
+      autostartId,
+      diagnostics,
     });
   }
 };
