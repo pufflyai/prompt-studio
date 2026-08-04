@@ -1,4 +1,4 @@
-import { commandRef, defineExtension } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { implementTicketsCommand } from "./src/automations/implement-tickets";
 import { refineTicketsCommand } from "./src/automations/refine-tickets";
 import { reviewTicketsCommand } from "./src/automations/review-tickets";
@@ -23,6 +23,18 @@ export default defineExtension({
         default: false,
         title: "Enable planner automation",
         description: "Allow this repository's scheduled planner automation to create and reconcile agent work.",
+      },
+    },
+  },
+
+  settingsPanels: {
+    automation: {
+      title: l10n("settingsPanels.automation.title", "Planner automation"),
+      target: "workbench.settings",
+      scope: "project",
+      webview: {
+        entry: packageAsset("./src/views/automation-settings.tsx", import.meta.url),
+        capabilities: ["extension.settings.all", "extension.settings.set"],
       },
     },
   },

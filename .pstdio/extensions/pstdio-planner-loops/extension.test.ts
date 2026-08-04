@@ -25,4 +25,15 @@ describe("pstdio-planner-loops extension", () => {
       "automation.enabled": { type: "boolean", scope: "project", default: false },
     });
   });
+
+  test("contributes project settings for planner automation", () => {
+    expect(extension.settingsPanels?.automation).toMatchObject({
+      target: "workbench.settings",
+      scope: "project",
+      webview: {
+        entry: { kind: "package-asset", path: "./src/views/automation-settings.tsx" },
+        capabilities: ["extension.settings.all", "extension.settings.set"],
+      },
+    });
+  });
 });

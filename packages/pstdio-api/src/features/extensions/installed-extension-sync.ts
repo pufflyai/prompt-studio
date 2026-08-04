@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
+import { isExtensionInstallInProgress } from "./extension-install-state";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 import { resolvePstdioHome } from "./install-extension-source";
 
@@ -57,6 +58,10 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
   for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) continue;
     const sourcePath = join(root, entry.name);
+    if (isExtensionInstallInProgress(sourcePath)) {
+      presentSourcePaths.push(sourcePath);
+      continue;
+    }
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {

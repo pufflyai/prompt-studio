@@ -11,6 +11,7 @@ import {
 } from "pstdio-db";
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
+import { installExtensionSource } from "./install-extension-source";
 import { syncRepoExtensionsForLinkedRepos, syncRepoExtensionsForProject } from "./repo-extensions";
 
 let close: (() => Promise<void>) | undefined;
@@ -20,7 +21,7 @@ let installedExtensionSourcesService: ReturnType<typeof createInstalledExtension
 let extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
 let tempRoot: string;
 
-const writeExtension = (dir: string, name: string) => {
+const writeExtension = (dir: string, name: string, manifest: Record<string, unknown> = {}) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -31,6 +32,7 @@ const writeExtension = (dir: string, name: string) => {
       publisher: "pstdio",
       main: "./extension.ts",
       engines: { pstdio: "^1.0.0" },
+      ...manifest,
     }),
   );
   writeFileSync(join(dir, "extension.ts"), "export default {};\n");
@@ -57,6 +59,57 @@ afterEach(async () => {
 });
 
 describe("syncRepoExtensionsForProject", () => {
+  test("does not discover a repo extension until its dependency install completes", async () => {
+    const project = await projectService.create({ name: "Repo Extensions" });
+    const repoPath = join(tempRoot, "repo");
+    const sourcePath = join(tempRoot, "source-extension");
+    let markInstallStarted: () => void = () => {};
+    let releaseInstall: () => void = () => {};
+    const installStarted = new Promise<void>((resolve) => {
+      markInstallStarted = resolve;
+    });
+    const installReleased = new Promise<void>((resolve) => {
+      releaseInstall = resolve;
+    });
+    writeExtension(sourcePath, "planner-loops", {
+      dependencies: { dependency: "1.0.0" },
+      pstdio: { scope: "repo" },
+    });
+
+    const install = installExtensionSource({
+      source: sourcePath,
+      repoPath,
+      env: { PSTDIO_HOME: join(tempRoot, "home") },
+      homedir: () => "/unused",
+      runCommand: async () => {
+        markInstallStarted();
+        await installReleased;
+        return { exitCode: 0, stderr: "", stdout: "" };
+      },
+    });
+    await installStarted;
+
+    const duringInstall = await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+
+    expect(duringInstall).toEqual({ enabled: [], missing: [], skipped: ["source-extension"] });
+
+    releaseInstall();
+    await install;
+    const afterInstall = await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+
+    expect(afterInstall).toEqual({ enabled: ["source-extension"], missing: [], skipped: [] });
+  });
+
   test("discovers repo-local extensions and enables them for a project", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoPath = join(tempRoot, "repo");

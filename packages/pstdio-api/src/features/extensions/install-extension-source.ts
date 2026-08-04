@@ -5,6 +5,7 @@ import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { readPackageManifest } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
+import { clearExtensionInstallInProgress, markExtensionInstallInProgress } from "./extension-install-state";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
@@ -280,6 +281,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     }
 
     if (!reuseExisting) {
+      markExtensionInstallInProgress(targetPath);
       copyExtensionSource(resolvedSource.path, targetPath);
     }
 
@@ -288,6 +290,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     }
 
     if (!input.skipInstall && shouldInstallDependencies(targetPath)) {
+      markExtensionInstallInProgress(targetPath);
       await installDependencies(targetPath, input);
     }
 
@@ -296,6 +299,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     if (check.errorCount > 0) {
       throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
     }
+    clearExtensionInstallInProgress(targetPath);
 
     return {
       check,

@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { createExtensionService } from "../../services/extension-service";
+import { isExtensionInstallInProgress } from "./extension-install-state";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type ExtensionService = Pick<
@@ -56,6 +57,11 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 
   for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
     const sourcePath = join(root, name);
+    if (isExtensionInstallInProgress(sourcePath)) {
+      presentSourcePaths.add(sourcePath);
+      skipped.push(name);
+      continue;
+    }
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
