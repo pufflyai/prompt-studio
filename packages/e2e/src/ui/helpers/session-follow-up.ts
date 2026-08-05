@@ -171,6 +171,74 @@ export const getRenderedConversationBlocks = async (page: Page) => {
   return blocks.map(normalizeWhitespace).filter(Boolean);
 };
 
+export interface ConversationLayoutSnapshot {
+  blocks: Array<{ text: string; top: number }>;
+}
+
+const conversationLayoutRecorderKey = "__pstdioConversationLayoutRecorder";
+
+export const startConversationLayoutRecorder = async (page: Page) => {
+  await page.evaluate((recorderKey) => {
+    const recorderWindow = window as unknown as Record<
+      string,
+      { frameId: number; snapshots: ConversationLayoutSnapshot[] }
+    >;
+    const snapshots: ConversationLayoutSnapshot[] = [];
+    let previousSignature = "";
+
+    const capture = () => {
+      const blocks = Array.from(document.querySelectorAll<HTMLElement>("[role='log'] [role='textbox']"))
+        .map((node) => ({
+          text: (node.textContent ?? "").replace(/\s+/g, " ").trim(),
+          top: Math.round(node.getBoundingClientRect().top),
+        }))
+        .filter((block) => block.text.length > 0);
+      const signature = JSON.stringify(blocks);
+
+      if (signature !== previousSignature) {
+        snapshots.push({ blocks });
+        previousSignature = signature;
+      }
+
+      recorderWindow[recorderKey]!.frameId = requestAnimationFrame(capture);
+    };
+
+    recorderWindow[recorderKey] = { frameId: requestAnimationFrame(capture), snapshots };
+  }, conversationLayoutRecorderKey);
+
+  return async () =>
+    page.evaluate((recorderKey) => {
+      const recorderWindow = window as unknown as Record<
+        string,
+        { frameId: number; snapshots: ConversationLayoutSnapshot[] } | undefined
+      >;
+      const recorder = recorderWindow[recorderKey];
+      if (!recorder) return [];
+
+      cancelAnimationFrame(recorder.frameId);
+      delete recorderWindow[recorderKey];
+      return recorder.snapshots;
+    }, conversationLayoutRecorderKey);
+};
+
+export const expectConversationLayoutOrder = (
+  snapshots: ConversationLayoutSnapshot[],
+  input: { earlier: string; later: string },
+) => {
+  const relevantSnapshots = snapshots.flatMap((snapshot) => {
+    const earlier = snapshot.blocks.find((block) => block.text === normalizeWhitespace(input.earlier));
+    const later = snapshot.blocks.find((block) => block.text === normalizeWhitespace(input.later));
+    return earlier && later ? [{ earlier, later, blocks: snapshot.blocks }] : [];
+  });
+
+  expect(relevantSnapshots.length, "the live layout should render both turns together").toBeGreaterThan(0);
+  const invalidSnapshot = relevantSnapshots.find(({ earlier, later }) => earlier.top >= later.top);
+  expect(
+    invalidSnapshot ? { earlier: invalidSnapshot.earlier, later: invalidSnapshot.later } : undefined,
+    `"${input.earlier}" should stay visually above "${input.later}" throughout the live update`,
+  ).toBeUndefined();
+};
+
 export const getExactMatchIndices = (blocks: string[], expected: string) =>
   blocks.flatMap((block, index) => (block === normalizeWhitespace(expected) ? [index] : []));
 

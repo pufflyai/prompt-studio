@@ -1,5 +1,6 @@
 ---
 "@pstdio/ui": patch
+"pstdio": patch
 ---
 
-Keep each active chat turn sticky without reordering follow-ups
+Keep active chat turns sticky and preserve live follow-up order

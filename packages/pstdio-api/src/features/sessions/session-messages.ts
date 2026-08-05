@@ -23,10 +23,9 @@ const sanitizeMessages = (messages: SessionMessage[]) => {
   return sanitized;
 };
 
-// When resuming with messageOffset=0 (e.g. getMessages failed), the accumulator
-// emits patches at /messages/0, /messages/1, etc. If we naively splice into
-// initialMessages at those indices, the follow-up gets inserted *before* the
-// originals. Detect this case and shift patch indices past the initial messages.
+// A harness transcript can omit persisted-only messages such as token usage.
+// Align the first resumed add with the end of the persisted conversation so
+// follow-up patches cannot be inserted into an earlier turn.
 export const resolveMessagePatchIndexOffset = (patches: JsonPatch[], initialCount: number) => {
   if (initialCount === 0) return 0;
 
@@ -34,7 +33,7 @@ export const resolveMessagePatchIndexOffset = (patches: JsonPatch[], initialCoun
   if (!firstIndexedPatch) return 0;
 
   const firstIndex = Number(firstIndexedPatch.path.match(/\/messages\/(\d+)/)![1]);
-  if (firstIndex < initialCount) return initialCount;
+  if (firstIndex < initialCount) return initialCount - firstIndex;
 
   return 0;
 };
