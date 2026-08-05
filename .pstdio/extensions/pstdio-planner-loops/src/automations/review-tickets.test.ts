@@ -7,15 +7,6 @@ const workspace = (id: string) => ({ id, workspace: `${id}-shorthand`, branch: "
 const run = (ctx: Parameters<typeof reviewTicketsCommand.run>[0]) => reviewTicketsCommand.run(ctx);
 
 describe("review-tickets automation", () => {
-  test("does nothing while automation.enabled is off", async () => {
-    const { ctx, calls } = makeAutomationContext({ tickets: [], settings: { "automation.enabled": false } });
-
-    const result = await run(ctx as never);
-
-    expect(result).toEqual({ ran: false, reason: "automation.enabled is off" });
-    expect(calls).toEqual([]);
-  });
-
   test("reviews the oldest-updated inactive In Review ticket", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [

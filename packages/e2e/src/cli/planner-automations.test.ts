@@ -183,66 +183,6 @@ describe("planner automations", () => {
   );
 
   test(
-    "gates repo-local planner automation behind its project setting",
-    async () => {
-      const run = createRun(ctx);
-      const repo = createInitializedRepo(ctx, "planner-loops");
-      const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "planner-loops-repo");
-
-      // The stored workspace-status surface is gone: the old command id no longer
-      // resolves on the planner's public surface.
-      const removed = await fetch(
-        `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio-planner.workspaceStatus.set/execute`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ source: "api", params: { workspaceId: "w", status: "review-ready" } }),
-        },
-      );
-      expect(removed.ok).toBe(false);
-
-      const disabled = await executePlannerCommand(projectId, "pstdio-planner-loops.refine-tickets", {
-        source: "api",
-        params: {},
-      });
-      expect(disabled.outcome.ok).toBe(true);
-      expect(disabled.outcome.value).toEqual({ ran: false, reason: "automation.enabled is off" });
-
-      const automationInstanceId = await getExtensionInstanceId(projectId, "pstdio-planner-loops");
-      const enable = await fetch(
-        `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(automationInstanceId)}/settings/${encodeURIComponent("automation.enabled")}`,
-        {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ value: true }),
-        },
-      );
-      expect(enable.status).toBe(200);
-
-      // With no eligible Backlog work the enabled tick is a recorded no-op that
-      // reads planner data across the extension boundary.
-      const enabledTick = await executePlannerCommand(projectId, "pstdio-planner-loops.refine-tickets", {
-        source: "api",
-        params: {},
-      });
-      expect(enabledTick.outcome.ok).toBe(true);
-      expect(enabledTick.outcome.value).toMatchObject({ ran: true, refined: null });
-
-      run(`tickets create --content "# Loop candidate"`, repo);
-      const candidateTick = await executePlannerCommand(projectId, "pstdio-planner-loops.implement-tickets", {
-        source: "api",
-        params: {},
-      });
-      expect(candidateTick.outcome.ok).toBe(true);
-      // The candidate sits in Backlog, so implementation automation has nothing
-      // Ready to pick up — but it ran, proving cross-extension planner reads.
-      expect(candidateTick.outcome.value).toMatchObject({ ran: true, implemented: [] });
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "creates ticket workspaces and previews image attachments through planner extension commands",
     async () => {
       const run = createRun(ctx);

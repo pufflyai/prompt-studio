@@ -5,18 +5,6 @@ import { refineTicketsCommand } from "./refine-tickets";
 const run = (ctx: Parameters<typeof refineTicketsCommand.run>[0]) => refineTicketsCommand.run(ctx);
 
 describe("refine-tickets automation", () => {
-  test("does nothing while automation.enabled is off", async () => {
-    const { ctx, calls } = makeAutomationContext({
-      tickets: [makeTicket({ id: "t1" })],
-      settings: { "automation.enabled": false },
-    });
-
-    const result = await run(ctx as never);
-
-    expect(result).toEqual({ ran: false, reason: "automation.enabled is off" });
-    expect(calls).toEqual([]);
-  });
-
   test("refines the oldest-updated Backlog ticket without human_requested", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [

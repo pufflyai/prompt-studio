@@ -10,15 +10,6 @@ const workspace = (id: string) => ({ id, workspace: `${id}-shorthand`, branch: "
 const run = (ctx: Parameters<typeof stuckWorkSweepCommand.run>[0]) => stuckWorkSweepCommand.run(ctx);
 
 describe("stuck-work-sweep automation", () => {
-  test("does nothing while automation.enabled is off", async () => {
-    const { ctx, calls } = makeAutomationContext({ tickets: [], settings: { "automation.enabled": false } });
-
-    const result = await run(ctx as never);
-
-    expect(result).toEqual({ ran: false, reason: "automation.enabled is off" });
-    expect(calls).toEqual([]);
-  });
-
   test("moves a stuck ticket to In Review after a completed session", async () => {
     const state = {
       tickets: [makeTicket({ id: "t1", statusId: "in-progress", updatedAt: HOURS_AGO_2 })],

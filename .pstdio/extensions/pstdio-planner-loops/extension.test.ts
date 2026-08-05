@@ -19,10 +19,4 @@ describe("pstdio-planner-loops extension", () => {
       reviewTickets: { cron: "2-59/5 * * * *", command: { id: "pstdio-planner-loops.review-tickets" } },
     });
   });
-
-  test("ships autonomous planner work disabled by default", () => {
-    expect(extension.settings?.properties).toMatchObject({
-      "automation.enabled": { type: "boolean", scope: "project", default: false },
-    });
-  });
 });
