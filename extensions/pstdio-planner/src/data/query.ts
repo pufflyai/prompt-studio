@@ -9,11 +9,13 @@ import {
   statusToColumnConfig,
 } from "./mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
   projectId: string;
   workspaces?: ExtensionWorkspace[];
+  workspaceSessions?: TicketWorkspaceSessionLookup;
 }
 
 // The renderer re-applies filter / sort / group locally, so we return every
@@ -24,6 +26,7 @@ export const runTicketsQuery = async ({
   storage,
   projectId,
   workspaces = [],
+  workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
   const [tickets, statuses, tags] = await Promise.all([
     ticketsCollection(storage).list(),
@@ -35,7 +38,7 @@ export const runTicketsQuery = async ({
   const toTicketRow = createTicketRowMapper(
     projectId,
     tags,
-    createTicketWorkspaceLookup(workspaces),
+    createTicketWorkspaceLookup(workspaces, workspaceSessions),
     createTicketParentLookup(tickets),
   );
   const rows = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived)).map(toTicketRow);
