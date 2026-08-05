@@ -60,7 +60,9 @@ export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: Op
     .listPanelInstances("side")
     .find(
       (instance) =>
-        instance.panelId === dashboardWidgetIds.sessionBubble && instance.resourceUri === input.resource.uri,
+        instance.panelId === dashboardWidgetIds.sessionBubble &&
+        instance.resource?.kind === "session" &&
+        instance.resource.id === input.resource.id,
     );
   const bubble = existing
     ? ctx.layout.activatePanel(existing.instanceId)

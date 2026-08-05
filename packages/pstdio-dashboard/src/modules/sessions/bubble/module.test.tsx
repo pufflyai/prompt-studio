@@ -202,6 +202,34 @@ describe("createSessionBubbleModule", () => {
     );
     expect(openedOne).toMatchObject({ resourceUri: sessionOne.uri, tabRetention: "persistent" });
   });
+
+  test("reuses a session tab when an extension link uses a different resource URI", async () => {
+    const workbench = createWorkbenchCore();
+    const dashboardSession = createDashboardResource("session", "session-1", "Session A", "MessageCircle", "project-1");
+    const extensionSession = {
+      kind: "session",
+      uri: "pstdio://extension-resource/session/session-1",
+      id: "session-1",
+      label: "Session A",
+      metadata: { sessionSurface: "side" },
+    };
+    workbench.registerModule(createSessionBubbleModule());
+
+    const existing = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: dashboardSession,
+      tabRetention: "persistent",
+    });
+    const selected = await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: extensionSession,
+    });
+    const placements = workbench.layout
+      .listPanelInstances("side")
+      .filter((instance) => instance.panelId === dashboardWidgetIds.sessionBubble);
+
+    expect(placements).toHaveLength(1);
+    expect((selected as { instanceId: string }).instanceId).toBe((existing as { instanceId: string }).instanceId);
+    expect(selected).toMatchObject({ resourceUri: dashboardSession.uri, tabRetention: "persistent" });
+  });
 });
 
 describe("createSessionBubbleModule workspace resolution", () => {

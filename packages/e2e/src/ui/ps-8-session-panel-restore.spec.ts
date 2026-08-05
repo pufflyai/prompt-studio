@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -53,6 +53,66 @@ const openTicketCard = async (page: Page, ticketContent: string) => {
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.click();
 };
+
+const openTabMenu = async (tab: Locator) => {
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+  await tab.click();
+};
+
+test("PS-8 reuses a dashboard session tab selected again from a planner ticket", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const project = await createProjectViaApi(request, "PS-8 Session Tab Reuse");
+  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: "Reuse session A across resource surfaces",
+    statusId: statuses[0]?.id,
+  });
+  await executePlannerCommand<{ id: string }>(
+    request,
+    apiBase,
+    project.id,
+    "refine-ticket",
+    { agent: { harnessId: "pstdio.extension-lab.fake" } },
+    {
+      resource: {
+        type: "ticket",
+        id: ticket.id,
+        projectId: project.id,
+        label: ticket.shorthand,
+        extensionId: "pstdio.pstdio-planner",
+      },
+    },
+  );
+
+  await bypassOnboarding(page, project.id);
+  await openTicketBoard(page);
+  await page.getByRole("button", { name: "Show Side Panel" }).click();
+
+  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionTabs = sideHeader.getByRole("tab");
+  const newSessionTab = sessionTabs.filter({ hasText: "New session" });
+  await openTabMenu(newSessionTab);
+  await page
+    .getByRole("menu", { name: "New session menu" })
+    .getByRole("menuitem", { name: `Refine ticket: ${ticket.shorthand}` })
+    .click();
+
+  const sessionTab = sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
+  await expect(sessionTab).toBeVisible();
+  await newSessionTab.click();
+  await newSessionTab.getByRole("button", { name: "Close New session" }).click();
+  await expect(sessionTabs).toHaveCount(1);
+
+  await openTicketCard(page, "Reuse session A across resource surfaces");
+  const sessionRow = page.getByRole("complementary").getByText(`Refine ticket: ${ticket.shorthand}`);
+  await expect(sessionRow).toBeVisible();
+  await sessionRow.click();
+
+  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+});
 
 test("PS-8 restores an attached session Side Panel and its session across refresh", async ({ page, request }) => {
   await deleteAllProjects(request);
