@@ -47,7 +47,16 @@ const overflowingFollowUpMessages: SessionMessage[] = [
   {
     id: "initial-assistant-response",
     role: "assistant",
-    parts: [{ type: "text", text: "The rollout is healthy and ready for the next verification pass." }],
+    parts: [
+      {
+        type: "text",
+        text: Array.from(
+          { length: 18 },
+          (_, index) =>
+            `Rollout check ${index + 1}: the initial verification stayed healthy before the follow-up was sent.`,
+        ).join("\n\n"),
+      },
+    ],
   },
   {
     id: "follow-up-user-prompt",
@@ -590,23 +599,47 @@ export const OverflowingFollowUp: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const initialUserMessage = (await canvas.findByText("Summarize the rollout status.")).closest<HTMLElement>(
+      ".ai-message__root",
+    );
+    const initialAssistantMessage = (await canvas.findByText(/Rollout check 1:/)).closest<HTMLElement>(
+      ".ai-message__root",
+    );
     const latestUserMessage = (
       await canvas.findByText("Show me the detailed verification results.")
     ).closest<HTMLElement>(".ai-message__root");
     const viewport = latestUserMessage?.closest<HTMLElement>('[data-part="content"][role="list"]')?.parentElement;
 
-    if (!viewport || !latestUserMessage) {
-      throw new Error("Expected the conversation viewport and latest user message");
+    if (!viewport || !initialUserMessage || !initialAssistantMessage || !latestUserMessage) {
+      throw new Error("Expected the conversation viewport and both user turns");
     }
 
-    viewport.scrollTop = viewport.scrollHeight;
+    viewport.scrollTop = 0;
     viewport.dispatchEvent(new Event("scroll"));
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
     const viewportTop = viewport.getBoundingClientRect().top;
+    const initialAssistantOffset = initialAssistantMessage.getBoundingClientRect().top - viewportTop;
+    const latestUserOffset = latestUserMessage.getBoundingClientRect().top - viewportTop;
+
+    viewport.scrollTop = initialAssistantOffset + 80;
+    viewport.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
     expect(viewport.scrollTop).toBeGreaterThan(0);
+    expect(initialUserMessage.getBoundingClientRect().top).toBeGreaterThanOrEqual(viewportTop - 1);
+    expect(initialUserMessage.getBoundingClientRect().top).toBeLessThanOrEqual(viewportTop + 1);
+    expect(initialAssistantMessage.compareDocumentPosition(latestUserMessage) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+    viewport.scrollTop = latestUserOffset + 80;
+    viewport.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
     expect(latestUserMessage.getBoundingClientRect().top).toBeGreaterThanOrEqual(viewportTop - 1);
     expect(latestUserMessage.getBoundingClientRect().top).toBeLessThanOrEqual(viewportTop + 1);
+    expect(initialUserMessage.getBoundingClientRect().bottom).toBeLessThanOrEqual(viewportTop + 1);
   },
 };
 

@@ -30,9 +30,8 @@ interface StickyMessageToggleProps {
   actionPanel?: ReactNode;
 }
 
-interface ChatTurnGroupProps {
+interface StickyMessageGroupProps {
   group: MessageGroup;
-  sticky: boolean;
   streaming: boolean;
   hideQuestionForms: boolean;
   isExpanded: boolean;
@@ -207,8 +206,8 @@ const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
   return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
 };
 
-const ChatTurnGroup = (props: ChatTurnGroupProps) => {
-  const { group, sticky, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
+const StickyMessageGroup = (props: StickyMessageGroupProps) => {
+  const { group, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
   const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
   const isExpandedCollapsible = isCollapsible && isExpanded;
   const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
@@ -216,7 +215,7 @@ const ChatTurnGroup = (props: ChatTurnGroupProps) => {
 
   return (
     <Box>
-      <Box position={sticky ? "sticky" : undefined} top={sticky ? "0" : undefined} zIndex={sticky ? 1 : undefined}>
+      <Box position="sticky" top="0" zIndex={1}>
         <ChatMessage.Root from="user" {...(animate ? messageFadeInProps : undefined)}>
           <ChatMessage.Content
             from="user"
@@ -285,9 +284,8 @@ const renderListItem = (
   }
 
   return (
-    <ChatTurnGroup
+    <StickyMessageGroup
       group={item.group}
-      sticky={item.groupIndex === groups.length - 1}
       streaming={streaming}
       hideQuestionForms={item.groupIndex < groups.length - 1 || hideActiveQuestionForms}
       isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}

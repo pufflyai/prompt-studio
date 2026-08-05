@@ -2,4 +2,4 @@
 "@pstdio/ui": patch
 ---
 
-Keep follow-up chat turns in normal conversation flow
+Keep each active chat turn sticky without reordering follow-ups
