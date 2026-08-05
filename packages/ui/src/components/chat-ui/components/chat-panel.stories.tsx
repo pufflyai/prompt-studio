@@ -2,6 +2,7 @@ import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
+import { expect, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp, SessionMessage } from "./message-types";
@@ -586,6 +587,26 @@ export const OverflowingFollowUp: Story = {
   args: {
     ...Empty.args,
     messages: overflowingFollowUpMessages,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const latestUserMessage = (
+      await canvas.findByText("Show me the detailed verification results.")
+    ).closest<HTMLElement>(".ai-message__root");
+    const viewport = latestUserMessage?.closest<HTMLElement>('[data-part="content"][role="list"]')?.parentElement;
+
+    if (!viewport || !latestUserMessage) {
+      throw new Error("Expected the conversation viewport and latest user message");
+    }
+
+    viewport.scrollTop = viewport.scrollHeight;
+    viewport.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+    const viewportTop = viewport.getBoundingClientRect().top;
+    expect(viewport.scrollTop).toBeGreaterThan(0);
+    expect(latestUserMessage.getBoundingClientRect().top).toBeGreaterThanOrEqual(viewportTop - 1);
+    expect(latestUserMessage.getBoundingClientRect().top).toBeLessThanOrEqual(viewportTop + 1);
   },
 };
 

@@ -287,7 +287,7 @@ const renderListItem = (
   return (
     <ChatTurnGroup
       group={item.group}
-      sticky={item.groupIndex === 0}
+      sticky={item.groupIndex === groups.length - 1}
       streaming={streaming}
       hideQuestionForms={item.groupIndex < groups.length - 1 || hideActiveQuestionForms}
       isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}
