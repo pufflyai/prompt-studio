@@ -54,6 +54,7 @@ export const timelineSlotRecipe = defineSlotRecipe({
       flexDirection: "column",
       width: "full",
       gap: "0",
+      paddingBottom: "0",
     },
     title: {
       display: "flex",
