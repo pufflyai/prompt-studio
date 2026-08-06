@@ -34,7 +34,6 @@ const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrow
 
   process.stdout.write(`Dashboard: ${url}\n`);
   process.stdout.write(`API:       ${url}/v1\n`);
-
 };
 
 export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps, compiled = isCompiledBinary()) => {
