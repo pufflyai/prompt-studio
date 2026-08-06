@@ -102,7 +102,7 @@ test("resets markdown scroll when switching from a ticket file back to the ticke
   await expect(fileRow).toBeVisible({ timeout: 15_000 });
   await fileRow.click();
   await expect(fileRow).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("file-scroll-reset line 001")).toBeVisible();
+  await expect(page.getByTestId("content-editable").first().getByText("file-scroll-reset line 001")).toBeVisible();
   await scrollEditorToBottom(page);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
 
