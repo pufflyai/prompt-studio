@@ -1,6 +1,7 @@
 import { Box, Grid, Icon, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 
 import { IconColorPicker } from "./icon-color-picker";
 import { optionIcons } from "./icon-options";
@@ -47,13 +48,28 @@ export const ColorOnly = {
   },
 };
 
+export const PopoverOpen = {
+  render: () => {
+    const [color, setColor] = useState("blue");
+    const [icon, setIcon] = useState<string | null>("status-progress");
+
+    return <IconColorPicker color={color} icon={icon} onColorChange={setColor} onIconChange={setIcon} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Pick color and icon"));
+    await expect(within(document.body).getByText("Color")).toBeVisible();
+    await expect(within(document.body).getByText("Icon")).toBeVisible();
+  },
+};
+
 /** Every registry entry, including the status ring and level bar font glyphs. */
 export const IconRegistry = {
   render: () => (
     <Grid templateColumns="repeat(8, 1fr)" gap="sm" justifyItems="center" maxWidth="480px">
       {optionIcons.map((entry) => (
         <Stack key={entry.value ?? "none"} gap="2xs" alignItems="center">
-          <Icon as={entry.icon} boxSize="20px" color="fg.muted" />
+          <Icon as={entry.icon} boxSize="icon-md" color="fg.muted" />
           <Text textStyle="label/2XS" color="fg.subtle" textAlign="center">
             {entry.label}
           </Text>

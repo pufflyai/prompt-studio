@@ -1,6 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 
 import { SegmentedControl } from "./segmented-control";
 
@@ -32,6 +33,22 @@ export const Default = {
     return (
       <SegmentedControl options={selectionModes} value={value} onValueChange={setValue} aria-label="Selection mode" />
     );
+  },
+};
+
+export const Toggle = {
+  render: () => {
+    const [value, setValue] = useState("single_select");
+
+    return (
+      <SegmentedControl options={selectionModes} value={value} onValueChange={setValue} aria-label="Selection mode" />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const multiple = canvas.getByRole("button", { name: "Multiple" });
+    await userEvent.click(multiple);
+    await expect(multiple).toHaveAttribute("aria-pressed", "true");
   },
 };
 

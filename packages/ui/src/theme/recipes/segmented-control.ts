@@ -35,12 +35,12 @@ export const segmentedControlSlotRecipe = defineSlotRecipe({
   variants: {
     size: {
       sm: {
-        root: { height: "28px" },
-        item: { height: "24px", paddingInline: "compact" },
+        root: { height: "segmented-control-sm" },
+        item: { height: "segmented-control-item-sm", paddingInline: "compact" },
       },
       xs: {
-        root: { height: "24px" },
-        item: { height: "20px", paddingInline: "xs" },
+        root: { height: "segmented-control-xs" },
+        item: { height: "segmented-control-item-xs", paddingInline: "xs" },
       },
     },
   },

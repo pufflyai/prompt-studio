@@ -41,11 +41,11 @@ const ActionDropdown = (props: {
       <Menu.Trigger asChild>
         <Button size="2xs" variant="ghost" gap="xs" color="fg.muted" disabled={disabled}>
           {actions.length} action{actions.length !== 1 ? "s" : ""}
-          <Icon as={ChevronDown} boxSize="12px" />
+          <Icon as={ChevronDown} boxSize="icon-2xs" />
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="160px" bg="bg">
+        <Menu.Content minW="tag-action-menu" bg="bg">
           {options.map((option) => (
             <Menu.Item key={option.value} value={option.value} asChild>
               <ListRow
@@ -54,7 +54,7 @@ const ActionDropdown = (props: {
                 id={option.value}
                 label={option.label}
                 isSelected={actions.includes(option.value)}
-                endContent={actions.includes(option.value) ? <Check size={14} /> : undefined}
+                endContent={actions.includes(option.value) ? <Icon as={Check} boxSize="icon-xs" /> : undefined}
                 onActivate={() => toggleAction(option.value)}
               />
             </Menu.Item>
@@ -88,7 +88,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className="group"
-      height="40px"
+      height="tag-editor-row"
       alignItems="center"
       gap="compact"
       px="xs"
@@ -109,7 +109,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         {...attributes}
         {...listeners}
       >
-        <Icon as={GripVertical} boxSize="14px" />
+        <Icon as={GripVertical} boxSize="icon-xs" />
       </Flex>
       <IconColorPicker
         color={value.color}
@@ -145,7 +145,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
           disabled={isSaving || value.isDefault}
           aria-label={`Set ${value.name} as default`}
         >
-          <Check size={14} />
+          <Icon as={Check} boxSize="icon-xs" />
         </Button>
       ) : null}
       {actionOptions ? (
@@ -165,7 +165,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         disabled={isSaving || value.isDefault}
         aria-label={`Delete ${value.name}`}
       >
-        <Icon as={Trash2} boxSize="14px" />
+        <Icon as={Trash2} boxSize="icon-xs" />
       </IconButton>
     </Flex>
   );

@@ -14,12 +14,12 @@ const SwatchTrigger = chakra("button", {
 
 const ColorDot = chakra("button", {
   base: {
-    boxSize: "20px",
+    boxSize: "tag-color-dot",
     borderRadius: "full",
     cursor: "pointer",
     outlineStyle: "solid",
-    outlineWidth: "1.5px",
-    outlineOffset: "2px",
+    outlineWidth: "selection",
+    outlineOffset: "3xs",
     outlineColor: "transparent",
     _selected: { outlineColor: "fg" },
   },
@@ -30,7 +30,7 @@ const IconCell = chakra("button", {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    boxSize: "28px",
+    boxSize: "tag-icon-cell",
     borderRadius: "compact",
     color: "fg.muted",
     cursor: "pointer",
@@ -76,7 +76,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width={showIcons ? "268px" : "220px"} bg="bg.elevated">
+          <Popover.Content width={showIcons ? "tag-picker" : "tag-picker-color-only"} bg="bg.elevated">
             <Stack gap="compact" p="sm">
               <Text textStyle="label/S/medium" color="fg.muted">
                 {colorLabel}
@@ -96,7 +96,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
               </Grid>
               {showIcons ? (
                 <>
-                  <Box height="1px" bg="border.subtle" />
+                  <Box borderTop="subtle" />
                   <Text textStyle="label/S/medium" color="fg.muted">
                     {iconLabel}
                   </Text>
@@ -114,7 +114,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
                           aria-pressed={selected}
                           onClick={() => onIconChange?.(entry.value)}
                         >
-                          <Icon as={entry.icon} boxSize="15px" />
+                          <Icon as={entry.icon} boxSize="icon-xs" />
                         </IconCell>
                       );
                     })}

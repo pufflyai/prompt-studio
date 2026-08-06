@@ -1,4 +1,4 @@
-import { Button, HStack } from "@chakra-ui/react";
+import { Button, HStack, Icon } from "@chakra-ui/react";
 import { SegmentedControl, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { Trash2 } from "lucide-react";
 import {
@@ -72,7 +72,7 @@ export const TagSettingsSection = (props: TagSettingsSectionProps) => {
             aria-label={t("settings.ticketTags.deleteTag", "Delete tag")}
             onClick={onDeleteTag}
           >
-            <Trash2 size={14} />
+            <Icon as={Trash2} boxSize="icon-xs" />
           </Button>
         </HStack>
       }

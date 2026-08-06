@@ -18,11 +18,11 @@ export const TagSwatch = (props: TagSwatchProps) => {
   const IconComponent = getIconComponent(icon, iconOptions);
 
   return (
-    <Center boxSize="26px" flexShrink={0} borderRadius="compact" bg={`${color}.500/15`} {...rest}>
+    <Center boxSize="tag-swatch" flexShrink={0} borderRadius="compact" bg={`${color}.500/15`} {...rest}>
       {showIcon && hasGlyph(icon) ? (
-        <Icon as={IconComponent} boxSize="14px" color={`${color}.500`} />
+        <Icon as={IconComponent} boxSize="icon-xs" color={`${color}.500`} />
       ) : (
-        <Box boxSize="10px" borderRadius="full" bg={`${color}.500`} />
+        <Box boxSize="tag-swatch-dot" borderRadius="full" bg={`${color}.500`} />
       )}
     </Center>
   );

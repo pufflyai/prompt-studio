@@ -16,7 +16,7 @@ const AddOptionRow = chakra("button", {
     display: "flex",
     alignItems: "center",
     gap: "xs",
-    height: "36px",
+    height: "tag-editor-add-row",
     paddingInline: "xs",
     color: "fg.muted",
     borderRadius: "compact",
@@ -97,7 +97,7 @@ export const TagEditor = (props: TagEditorProps) => {
     <>
       <Stack gap="2xs">
         {title || headerActions ? (
-          <Flex minHeight="40px" alignItems="center" justifyContent="space-between" gap="xs">
+          <Flex minHeight="tag-editor-row" alignItems="center" justifyContent="space-between" gap="xs">
             <Stack gap="3xs">
               {title ? <Text textStyle="label/L/medium">{title}</Text> : null}
               {description ? (
@@ -135,7 +135,7 @@ export const TagEditor = (props: TagEditorProps) => {
           </DndContext>
 
           <AddOptionRow type="button" disabled={isSaving} onClick={handleAddOption}>
-            <Icon as={Plus} boxSize="14px" />
+            <Icon as={Plus} boxSize="icon-xs" />
             <Text textStyle="paragraph/S/regular">{addLabel}</Text>
           </AddOptionRow>
         </Stack>

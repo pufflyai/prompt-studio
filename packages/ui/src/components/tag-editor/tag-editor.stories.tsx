@@ -2,6 +2,7 @@ import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import { CircleDashed, Diamond, Hexagon, Square, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { TagEditor } from "./tag-editor";
@@ -48,6 +49,43 @@ export const WithIcons = {
         <TagEditorFooter hasChanges onSave={() => undefined} onCancel={() => setValues(initialItems)} />
       </Stack>
     );
+  },
+};
+
+export const Hover = {
+  render: () => {
+    const [values, setValues] = useState<TagEditorValue[]>(initialItems);
+
+    return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.hover(within(canvasElement).getByText("Low"));
+  },
+};
+
+export const Renaming = {
+  render: () => {
+    const [values, setValues] = useState<TagEditorValue[]>([
+      { id: "new-priority", name: "New option", color: "blue", icon: "circle", sortOrder: 0, isNew: true },
+      ...initialItems,
+    ]);
+
+    return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
+  },
+};
+
+export const Dragging = {
+  render: () => {
+    const [values, setValues] = useState<TagEditorValue[]>(initialItems);
+
+    return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.pointer([
+      { target: canvas.getByLabelText("Reorder Low"), keys: "[MouseLeft>]" },
+      { target: canvas.getByLabelText("Reorder Medium") },
+    ]);
   },
 };
 
