@@ -1,6 +1,7 @@
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
+import { findFirstProjectRepoPath } from "@/shared/projects/project-repo-path";
 
 export interface DashboardProject {
   id: string;
@@ -22,20 +23,7 @@ const readRows = (table: "projects" | "project_repos" | "repos") =>
 
 const isVisibleRow = (row: SyncedRow) => !row.deleted_at;
 
-const toProjectRepoPath = (projectId: string, projectRepoRows: SyncedRow[], repoById: Map<string, SyncedRow>) => {
-  const linkedRepoPaths = projectRepoRows
-    .filter((row) => row.project_id === projectId)
-    .map((row) => repoById.get(row.repo_id as string)?.path)
-    .filter((path): path is string => typeof path === "string");
-
-  return linkedRepoPaths[0] ?? null;
-};
-
-const toDashboardProject = (
-  row: SyncedRow,
-  projectRepoRows: SyncedRow[],
-  repoById: Map<string, SyncedRow>,
-): DashboardProject => {
+const toDashboardProject = (row: SyncedRow, projectRepoRows: SyncedRow[], repoRows: SyncedRow[]): DashboardProject => {
   const name = row.name as string;
 
   return {
@@ -43,7 +31,7 @@ const toDashboardProject = (
     name,
     createdAt: (row.created_at as string) ?? "",
     updatedAt: (row.updated_at as string) ?? "",
-    repoPath: toProjectRepoPath(row.id, projectRepoRows, repoById),
+    repoPath: findFirstProjectRepoPath(row.id, projectRepoRows, repoRows),
     resource: createDashboardResource("project", row.id, name, standardResourceIcons.project, row.id),
   };
 };
@@ -55,11 +43,9 @@ export const readDashboardProjectRows = (): DashboardProjectRows => ({
 });
 
 export const buildDashboardProjectsFromRows = (rows: DashboardProjectRows) => {
-  const repoById = new Map(rows.repos.filter(isVisibleRow).map((repo) => [repo.id, repo]));
-
   return rows.projects
     .filter(isVisibleRow)
-    .map((project) => toDashboardProject(project, rows.projectRepos, repoById))
+    .map((project) => toDashboardProject(project, rows.projectRepos, rows.repos))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 

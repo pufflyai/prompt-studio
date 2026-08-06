@@ -3,6 +3,14 @@ import { buildDashboardWorkspacesFromRows, toWorkspaceRow } from "./dashboard-wo
 
 const rows = {
   files: [],
+  projectRepos: [
+    { id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" },
+    { id: "project-repo-2", project_id: "project-1", repo_id: "repo-2" },
+  ],
+  repos: [
+    { id: "repo-1", path: "/repo/prompt-studio" },
+    { id: "repo-2", path: "/repo/other" },
+  ],
   sessions: [],
   workspaceSessions: [],
   workspaces: [
@@ -88,6 +96,18 @@ describe("dashboard workspaces", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, { projectId: "project-1" });
 
     expect(workspace.resource.metadata).toMatchObject({ workspaceBranch: "workspace/PS-307_A1" });
+  });
+
+  test("uses the first linked repository path for a default workspace resource", () => {
+    const [workspace] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [{ ...rows.workspaces[0], branch: "main", worktree_path: null }],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(workspace.resource.metadata).toMatchObject({ workspacePath: "/repo/prompt-studio" });
   });
 
   test("carries ticket anchors in resource metadata so breadcrumbs stay ticket-scoped", () => {

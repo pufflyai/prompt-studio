@@ -58,6 +58,8 @@ describe("resolveDashboardSessionView", () => {
   test("exposes session status on the session resource", () => {
     const [session] = buildDashboardSessionsFromRows({
       files: [],
+      projectRepos: [],
+      repos: [],
       sessions: [
         {
           id: "session-1",
