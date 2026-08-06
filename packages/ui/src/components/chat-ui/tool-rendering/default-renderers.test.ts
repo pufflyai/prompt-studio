@@ -31,6 +31,58 @@ describe("shell renderer", () => {
     ]);
     expect(item.blocks).toEqual([{ type: "code", language: "text", code: "Validated 42 projects" }]);
   });
+
+  it("keeps a pending command visible without an empty disclosure", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "pending",
+      state: {
+        status: "pending",
+        input: { command: "bun run validate" },
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
+      { kind: "text", text: "queued", muted: true },
+    ]);
+    expect(item.blocks).toEqual([]);
+  });
+
+  it("keeps a failed command visible with the existing error treatment", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "failed",
+      state: {
+        status: "failed",
+        input: { command: "bun run validate" },
+        errorText: "Validation failed",
+      },
+    });
+
+    expect(item.indicator).toEqual({ type: "icon", icon: "danger" });
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
+      { kind: "text", text: "failed", muted: true },
+    ]);
+    expect(item.blocks).toEqual([{ type: "comment", text: "Validation failed" }]);
+  });
 });
 
 describe("apply patch renderer", () => {
