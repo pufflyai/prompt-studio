@@ -5,7 +5,7 @@ import { createHistoryController } from "./controllers/history/history-controlle
 import { createWorkbenchLastResourceController } from "./controllers/last-resource/last-resource-controller";
 import { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
-import { createWorkbenchShellController, isWorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
+import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
@@ -34,6 +34,7 @@ import { createDisposable } from "./shared/disposable";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 import type { CreateWorkbenchCoreInput, WorkbenchCore } from "./workbench-core-types";
 import { createModuleContext, disposeDisposables, toDisposables } from "./workbench-module-context";
+import { createWorkbenchNavigationDispatcher } from "./workbench-navigation-dispatcher";
 
 export type {
   CreateWorkbenchCoreInput,
@@ -111,33 +112,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modes: undefined as unknown as WorkbenchCore["modes"],
     notifications: createNotificationRegistry(),
     navigation: createNavigationRegistry({
-      resolveDispatcher: () => ({
-        createCheckpoint: () => {
-          const layout = core.layout.getLayout();
-          return () => core.layout.restoreLayout(layout);
-        },
-        canOpenResource: (resource) => {
-          const state = core.resources.store.getState();
-          return Boolean(
-            state.kinds[resource.kind] &&
-              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
-          );
-        },
-        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
-        canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
-        openPanel: (panelId, openInput) => {
-          const instance = core.layout.openPanel(panelId, openInput);
-          const panel = core.layout.getPanel(panelId);
-          const region = openInput?.region ?? panel?.region;
-          if (region) {
-            if (region === "side") core.shell.setSidePanelPresentation("attached");
-            else if (isWorkbenchShellOpenRegion(region)) core.shell.setRegionOpen(region, true);
-          }
-          return instance;
-        },
-        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
-      }),
+      resolveDispatcher: () => createWorkbenchNavigationDispatcher(core),
     }),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
