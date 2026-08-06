@@ -20,6 +20,23 @@ describe("buildExtensionWebview", () => {
     );
   });
 
+  test("expands nested aggregate diagnostics once in depth-first order", () => {
+    const error = new AggregateError(
+      [
+        new Error("Missing first package"),
+        new AggregateError(
+          [new Error("Missing second package"), new Error("Bundle failed")],
+          "Dependency resolution failed",
+        ),
+      ],
+      "Bundle failed",
+    );
+
+    expect(formatExtensionWebviewBuildError(error)).toBe(
+      "Bundle failed\nMissing first package\nDependency resolution failed\nMissing second package",
+    );
+  });
+
   test("builds a browser module in the current Bun process", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-builder-test-"));
     const entryPath = join(root, "main.ts");

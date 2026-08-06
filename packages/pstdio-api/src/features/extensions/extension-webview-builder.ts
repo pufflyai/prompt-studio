@@ -13,9 +13,21 @@ export type ExtensionWebviewBuilder = (input: ExtensionWebviewBuildInput) => Pro
 
 const buildErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+const buildErrorDiagnostics = (error: unknown) => {
+  const pending: unknown[] = [error];
+  const diagnostics: unknown[] = [];
+
+  while (pending.length > 0) {
+    const diagnostic = pending.pop();
+    diagnostics.push(diagnostic);
+    if (diagnostic instanceof AggregateError) pending.push(...[...diagnostic.errors].reverse());
+  }
+
+  return diagnostics;
+};
+
 export const formatExtensionWebviewBuildError = (error: unknown) => {
-  const diagnostics = error instanceof AggregateError ? [error, ...error.errors] : [error];
-  const messages = diagnostics.map(buildErrorMessage).filter(Boolean);
+  const messages = buildErrorDiagnostics(error).map(buildErrorMessage).filter(Boolean);
   return [...new Set(messages)].join("\n") || "Webview build failed.";
 };
 
