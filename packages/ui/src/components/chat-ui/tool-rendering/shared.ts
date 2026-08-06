@@ -71,15 +71,28 @@ export const buildIndicator = (invocation: ToolPart) => {
     return { type: "icon", icon: "danger" } as const;
   }
 
-  return { type: "icon", icon: toolTypeToIconName(getToolType(invocation)) } as const;
+  return {
+    type: "icon",
+    icon: toolTypeToIconName(getToolType(invocation)),
+  } as const;
 };
 
-export const buildBaseTitle = (invocation: ToolPart, detail?: string, labelOverride?: string) => {
+export const buildBaseTitle = (
+  invocation: ToolPart,
+  detail?: string,
+  labelOverride?: string,
+  detailStyle?: "monospace",
+) => {
   const label = labelOverride ?? getToolLabel(invocation.tool ?? "tool");
   const title: TitleSegment[] = [{ kind: "text", text: label, bold: true }];
 
   if (detail) {
-    title.push({ kind: "text", text: detail, muted: true });
+    title.push({
+      kind: "text",
+      text: detail,
+      muted: true,
+      ...(detailStyle === "monospace" ? { truncate: true, monospace: true } : {}),
+    });
   }
 
   const stateLabel = getStateLabel(invocation);
@@ -250,7 +263,10 @@ export const buildFileLinkSegment = (filePath: string): TitleSegment => {
 
 export const prependErrorBlock = (invocation: ToolPart, blocks: Block[]): Block[] => {
   if (!isErrorState(invocation) || !invocation.state?.errorText) return blocks;
-  const errorBlock: Block = { type: "comment", text: invocation.state.errorText };
+  const errorBlock: Block = {
+    type: "comment",
+    text: invocation.state.errorText,
+  };
   return [errorBlock, ...blocks];
 };
 

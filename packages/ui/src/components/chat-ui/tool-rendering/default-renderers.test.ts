@@ -21,7 +21,13 @@ describe("shell renderer", () => {
 
     expect(item.title).toEqual([
       { kind: "text", text: "Shell", bold: true },
-      { kind: "text", text: "bun run validate", muted: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
     ]);
     expect(item.blocks).toEqual([{ type: "code", language: "text", code: "Validated 42 projects" }]);
   });
@@ -69,8 +75,16 @@ describe("todowrite renderer", () => {
         status: "completed",
         input: {
           todos: [
-            { content: "Implement API", status: "in_progress", priority: "high" },
-            { content: "Run validate", status: "completed", priority: "medium" },
+            {
+              content: "Implement API",
+              status: "in_progress",
+              priority: "high",
+            },
+            {
+              content: "Run validate",
+              status: "completed",
+              priority: "medium",
+            },
           ],
         },
       },

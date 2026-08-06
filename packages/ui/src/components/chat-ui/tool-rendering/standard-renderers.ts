@@ -43,7 +43,7 @@ const renderCommand = (invocation: Parameters<ToolRenderer>[0], label: string) =
   const output = getOutputObject(invocation);
   const command = getStringValue(input?.command) ?? undefined;
 
-  const title = buildBaseTitle(invocation, command, label);
+  const title = buildBaseTitle(invocation, command, label, "monospace");
   const blocks: Block[] = [];
 
   const outputText = getOutputText(invocation);
