@@ -120,11 +120,30 @@ const sessionSyncTables = new Set<CollectionChange["table"]>(["sessions", "works
 
 // Session status shown on a row (e.g. a ticket's workspace badge) changes outside planner
 // commands — a run finishing, an agent asking for input — so follow the synced feed directly.
-const createSessionSyncRefreshSubscription = (refresh: () => void) => ({
-  dispose: subscribeCollections((change) => {
-    if (change && sessionSyncTables.has(change.table)) refresh();
-  }),
-});
+// The feed writes one row at a time, and a single action touches several (a session plus its
+// workspace link; a reconnect replays both tables). Each refresh re-runs the board query with
+// one session lookup per linked workspace, so bursts are collapsed into a single refresh.
+const createSessionSyncRefreshSubscription = (refresh: () => void) => {
+  let scheduled = false;
+  let disposed = false;
+
+  const unsubscribe = subscribeCollections((change) => {
+    if (!change || !sessionSyncTables.has(change.table) || scheduled) return;
+    scheduled = true;
+
+    queueMicrotask(() => {
+      scheduled = false;
+      if (!disposed) refresh();
+    });
+  });
+
+  return {
+    dispose: () => {
+      disposed = true;
+      unsubscribe();
+    },
+  };
+};
 
 const uploadExtensionFile = async (input: {
   extensionInstanceId: string;

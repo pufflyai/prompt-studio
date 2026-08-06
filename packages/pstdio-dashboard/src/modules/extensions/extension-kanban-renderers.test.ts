@@ -308,7 +308,7 @@ describe("registerExtensionKanbanRenderers adapter hooks", () => {
     expect(typeof workspaceAttribute?.render).toBe("function");
   });
 
-  test("refreshes an open kanban renderer when synced session data changes", () => {
+  test("refreshes an open kanban renderer when synced session data changes", async () => {
     const workbench = createWorkbenchCore();
 
     const disposable = workbench.registerModule({
@@ -322,17 +322,67 @@ describe("registerExtensionKanbanRenderers adapter hooks", () => {
     });
 
     getWriter("templates")?.upsert({ id: "template-1" });
+    await flushMicrotasks();
     expect(refreshes).toBe(0);
 
     getWriter("sessions")?.upsert({ id: "session-1", status: "in_progress" });
+    await flushMicrotasks();
     expect(refreshes).toBe(1);
 
     getWriter("workspace_sessions")?.upsert({ id: "workspace-session-1" });
+    await flushMicrotasks();
     expect(refreshes).toBe(2);
 
     disposable.dispose();
     getWriter("sessions")?.upsert({ id: "session-1", status: "completed" });
+    await flushMicrotasks();
     expect(refreshes).toBe(2);
+  });
+
+  test("coalesces a burst of synced session rows into a single refresh", async () => {
+    const workbench = createWorkbenchCore();
+
+    const disposable = workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
+    });
+
+    let refreshes = 0;
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => {
+      if (event.kanbanRendererId === ticketsRecord.id) refreshes += 1;
+    });
+
+    // Starting an attempt writes a session row and its workspace link back to back, and a
+    // reconnect replays both tables. Each refresh costs one session lookup per linked
+    // workspace, so a burst must settle into one query rather than one per synced row.
+    getWriter("sessions")?.upsert({ id: "session-1", status: "queued" });
+    getWriter("workspace_sessions")?.upsert({ id: "workspace-session-1" });
+    getWriter("sessions")?.upsert({ id: "session-1", status: "in_progress" });
+    await flushMicrotasks();
+
+    expect(refreshes).toBe(1);
+
+    disposable.dispose();
+  });
+
+  test("skips a refresh scheduled before the registration was disposed", async () => {
+    const workbench = createWorkbenchCore();
+
+    const disposable = workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
+    });
+
+    let refreshes = 0;
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => {
+      if (event.kanbanRendererId === ticketsRecord.id) refreshes += 1;
+    });
+
+    getWriter("sessions")?.upsert({ id: "session-1", status: "in_progress" });
+    disposable.dispose();
+    await flushMicrotasks();
+
+    expect(refreshes).toBe(0);
   });
 });
 
