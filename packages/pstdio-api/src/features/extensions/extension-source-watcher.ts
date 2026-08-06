@@ -140,7 +140,23 @@ export const createExtensionSourceWatcher = async (
     for (const directoryPath of directories) watchDirectory(registration, directoryPath);
   };
 
+  const watchDependencyRoot = (registration: WatchedRegistration) => {
+    const dependencyRoot = join(registration.sourcePath, "node_modules");
+    const existingWatcher = registration.watchers.get(dependencyRoot);
+    const stats = lstatSync(dependencyRoot, { throwIfNoEntry: false });
+    if (!stats?.isDirectory()) {
+      existingWatcher?.close();
+      registration.watchers.delete(dependencyRoot);
+      return;
+    }
+    if (!existingWatcher) watchDirectory(registration, dependencyRoot);
+  };
+
   const watchCreatedDirectory = (registration: WatchedRegistration, eventPath: string) => {
+    if (eventPath === join(registration.sourcePath, "node_modules")) {
+      watchDependencyRoot(registration);
+      return;
+    }
     if (registration.watchers.has(eventPath)) return;
     if (skippedDirectoryNames.has(basename(eventPath))) return;
 
@@ -158,9 +174,11 @@ export const createExtensionSourceWatcher = async (
   ) => {
     const eventPath = toEventPath(directoryPath, filename);
     const relativePath = relative(registration.sourcePath, eventPath);
-    if (relativePath && registration.matcher.ignores(relativePath)) return;
+    const dependencyRoot = join(registration.sourcePath, "node_modules");
+    const isDependencyEvent = directoryPath === dependencyRoot || eventPath === dependencyRoot;
+    if (!isDependencyEvent && relativePath && registration.matcher.ignores(relativePath)) return;
 
-    watchCreatedDirectory(registration, eventPath);
+    if (directoryPath !== dependencyRoot) watchCreatedDirectory(registration, eventPath);
     scheduleReload(registration);
   };
 
@@ -175,6 +193,7 @@ export const createExtensionSourceWatcher = async (
 
     registrations.set(row.source_path, registration);
     watchDirectoryTree(registration, row.source_path);
+    watchDependencyRoot(registration);
   };
 
   const refreshRegistration = async (

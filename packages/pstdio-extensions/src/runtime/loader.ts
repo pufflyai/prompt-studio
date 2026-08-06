@@ -114,27 +114,28 @@ const symlinkPackageChild = (sourcePath: string, targetPath: string) => {
   symlinkSync(sourcePath, targetPath, stats.isDirectory() ? "junction" : "file");
 };
 
-const mirrorPackageDirectory = (sourceDir: string, targetDir: string, entrySegments: string[]) => {
+const mirrorPackageDirectory = (sourceDir: string, targetDir: string) => {
   mkdirSync(targetDir, { recursive: true });
-  const [entrySegment, ...remainingSegments] = entrySegments;
 
   for (const dirent of readdirSync(sourceDir, { withFileTypes: true })) {
-    if (dirent.name === "node_modules" || dirent.name.startsWith(".pstdio-runtime-")) continue;
+    if (dirent.name === ".git" || dirent.name === "node_modules" || dirent.name.startsWith(".pstdio-runtime-")) {
+      continue;
+    }
 
     const sourceChild = join(sourceDir, dirent.name);
     const targetChild = join(targetDir, dirent.name);
 
-    if (dirent.name !== entrySegment) {
-      symlinkPackageChild(sourceChild, targetChild);
+    if (dirent.isDirectory()) {
+      mirrorPackageDirectory(sourceChild, targetChild);
       continue;
     }
 
-    if (remainingSegments.length === 0) {
+    if (dirent.isFile()) {
       copyFileSync(sourceChild, targetChild);
       continue;
     }
 
-    mirrorPackageDirectory(sourceChild, targetChild, remainingSegments);
+    if (dirent.isSymbolicLink()) symlinkPackageChild(sourceChild, targetChild);
   }
 };
 
@@ -228,10 +229,9 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
   );
   const runtimePackagePath = join(rootPath, "package");
   const entryRelativePath = relative(packagePath, entryPath);
-  const entrySegments = entryRelativePath.split(/[\\/]+/);
 
   if (!existsSync(runtimePackagePath)) {
-    mirrorPackageDirectory(packagePath, runtimePackagePath, entrySegments);
+    mirrorPackageDirectory(packagePath, runtimePackagePath);
     if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
   } else if (nodeModulesPath && !existsSync(join(runtimePackagePath, "node_modules"))) {
     mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));

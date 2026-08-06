@@ -253,6 +253,40 @@ test("uses a new runtime cache package when extension source changes", async () 
   expect(secondCachedPackages).toHaveLength(2);
 });
 
+test("loads fresh transitive modules when extension source changes", async () => {
+  isolateRuntimeCache();
+  const dir = createTempDir();
+  mkdirSync(join(dir, "src"));
+  writePackage(dir);
+  writeSdkDependency(dir);
+  writeFileSync(
+    join(dir, "extension.ts"),
+    `
+      import { title } from "./src/contributions";
+
+      export default {
+        commands: {
+          check: {
+            title,
+            run: async () => ({ title }),
+          },
+        },
+      };
+    `,
+  );
+
+  writeFileSync(join(dir, "src", "contributions.ts"), `export const title = "first";`);
+  await loadExtensionPackage({ path: dir }, []);
+
+  writeFileSync(join(dir, "src", "contributions.ts"), `export const title = "second";`);
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const loaded = await loadExtensionPackage({ path: dir }, diagnostics);
+  const commands = loaded?.definition.commands as Record<string, { title: string }> | undefined;
+
+  expect(diagnostics).toEqual([]);
+  expect(commands?.check.title).toBe("second");
+});
+
 test("adds dependencies to an existing runtime cache package when node_modules appears", async () => {
   const cacheRoot = isolateRuntimeCache();
   const dir = createTempDir();
