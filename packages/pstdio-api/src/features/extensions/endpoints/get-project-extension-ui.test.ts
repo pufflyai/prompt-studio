@@ -57,6 +57,57 @@ const createProject = async (name: string) => {
 };
 
 describe("GET /v1/projects/:projectId/extensions/ui", () => {
+  test("exposes a durable layout reset revision after the host accepts a scoped reset", async () => {
+    const project = await createProject("Layout Reset Project");
+    const sourcePath = createTestExtensionSource({
+      root: pstdioHome,
+      name: "layout-reset-extension",
+      displayName: "Layout Reset Extension",
+      installName: "layout-reset-extension-source",
+    });
+    const enabled = await handle.deps.extensionService.enableInstalledSourceForProject({
+      displayName: "Layout Reset Extension",
+      extensionId: "test.layout-reset-extension",
+      installName: "layout-reset-extension-source",
+      manifest: {
+        displayName: "Layout Reset Extension",
+        id: "test.layout-reset-extension",
+        name: "layout-reset-extension",
+      },
+      name: "layout-reset-extension",
+      projectId: project.id,
+      sourcePath,
+    });
+
+    const reset = await app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}/reset-layout`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ modeId: "layout-reset-extension.detail" }),
+    });
+
+    expect(reset.status).toBe(200);
+    const resetBody = await reset.json();
+    expect(resetBody).toMatchObject({
+      extensionId: "test.layout-reset-extension",
+      instanceId: enabled.instance.id,
+      modeId: "layout-reset-extension.detail",
+      projectId: project.id,
+    });
+    expect(resetBody.revision).toBeString();
+
+    const ui = await app.request(`/v1/projects/${project.id}/extensions/ui`);
+    const metadata = await ui.json();
+    expect(metadata.extensions).toContainEqual(
+      expect.objectContaining({
+        id: "test.layout-reset-extension",
+        layoutReset: {
+          modeId: "layout-reset-extension.detail",
+          revision: resetBody.revision,
+        },
+      }),
+    );
+  });
+
   test("removes enabled extensions whose installed folder was deleted", async () => {
     const project = await createProject("Deleted UI Extension Project");
     const sourcePath = createTestExtensionSource({

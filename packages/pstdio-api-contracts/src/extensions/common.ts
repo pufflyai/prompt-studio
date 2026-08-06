@@ -27,6 +27,12 @@ export const extensionRecordSchema = z.object({
   version: z.string().optional(),
   description: z.string().optional(),
   sourcePath: z.string(),
+  layoutReset: z
+    .object({
+      revision: z.string(),
+      modeId: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const packageAssetDescriptorSchema = z.object({

@@ -279,6 +279,15 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return updated;
   };
 
+  const resetProjectExtensionLayout = async (instanceId: string, modeId?: string) => {
+    const updated = await deps.extensionInstancesService.update(instanceId, {
+      layout_reset_mode_id: modeId ?? null,
+      layout_reset_revision: crypto.randomUUID(),
+    });
+    if (updated) emitExtensionInstance(updated);
+    return updated;
+  };
+
   const listEnabledSourcesForProject = async (projectId: string) => {
     const records = await listProjectInstances(projectId);
     return records.filter(({ instance }) => instance.enabled);
@@ -343,6 +352,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     reportWebviewBuildSuccess: (installName: string, webviewId: string, expectedSource?: ExpectedWebviewBuildSource) =>
       reportWebviewBuildSuccessImpl(reloadDeps, installName, webviewId, expectedSource),
     registerInstalledSource,
+    resetProjectExtensionLayout,
     setProjectExtensionEnabled,
     syncInstalledSourceForProject,
     uninstallProjectExtension: (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) =>

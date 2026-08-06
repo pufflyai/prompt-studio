@@ -49,6 +49,18 @@ export const setProjectExtensionEnabledRequestSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const resetProjectExtensionLayoutRequestSchema = z.object({
+  modeId: z.string().min(1).optional(),
+});
+
+export const resetProjectExtensionLayoutResponseSchema = z.object({
+  extensionId: z.string(),
+  instanceId: z.string(),
+  modeId: z.string().optional(),
+  projectId: z.string(),
+  revision: z.string(),
+});
+
 export const setExtensionAutomationEnabledRequestSchema = z.object({
   enabled: z.boolean(),
 });
@@ -87,6 +99,8 @@ export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExt
 export type ProjectExtensionInstance = z.infer<typeof projectExtensionInstanceSchema>;
 export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensionsResponseSchema>;
 export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
+export type ResetProjectExtensionLayoutRequest = z.infer<typeof resetProjectExtensionLayoutRequestSchema>;
+export type ResetProjectExtensionLayoutResponse = z.infer<typeof resetProjectExtensionLayoutResponseSchema>;
 export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAutomationEnabledRequestSchema>;
 export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
 export type UpdateInstalledExtensionTemplateInput = z.infer<typeof updateInstalledExtensionTemplateInputSchema>;

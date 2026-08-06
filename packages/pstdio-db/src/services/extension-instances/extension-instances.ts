@@ -21,6 +21,8 @@ export type UpdateInstanceInput = {
   display_name_override?: string | null;
   config_json?: InstanceRow["config_json"];
   diagnostics_json?: InstanceRow["diagnostics_json"];
+  layout_reset_revision?: string | null;
+  layout_reset_mode_id?: string | null;
 };
 
 export const createExtensionInstancesDBService = (db: DbClient) => {

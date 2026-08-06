@@ -42,6 +42,8 @@ export type {
   ListProjectExtensionsResponse,
   LocalizableString,
   ProjectExtensionInstance,
+  ResetProjectExtensionLayoutRequest,
+  ResetProjectExtensionLayoutResponse,
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,

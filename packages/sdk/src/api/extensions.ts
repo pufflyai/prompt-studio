@@ -28,6 +28,8 @@ export type {
   LocalizableString,
   ModeLayoutContributionRecord,
   ProjectExtensionInstance,
+  ResetProjectExtensionLayoutRequest,
+  ResetProjectExtensionLayoutResponse,
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,

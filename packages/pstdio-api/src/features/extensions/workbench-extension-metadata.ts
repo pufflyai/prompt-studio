@@ -9,6 +9,7 @@ import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-we
 type ExtensionIdMap = Map<string, string>;
 type InstallNameMap = Map<string, string>;
 type AssetRevisionMap = Map<string, string | null | undefined>;
+type LayoutResetMap = Map<string, { modeId?: string; revision: string }>;
 type ExtensionWebviewRecord = WorkbenchExtensionRouteRecord["webview"];
 
 const RUNTIME_URL = `/v1${EXTENSION_RUNTIME_PATH}`;
@@ -58,6 +59,7 @@ export interface BuildWorkbenchExtensionMetadataInput {
   installNamesByExtensionId: InstallNameMap;
   /** Maps an extensionId to the most recent completed webview build revision for asset cache busting. */
   assetRevisionsByExtensionId?: AssetRevisionMap;
+  layoutResetsByExtensionId?: LayoutResetMap;
   /** Root cache directory the build manager writes built webview assets into. */
   webviewCacheRoot: string;
 }
@@ -86,6 +88,10 @@ export const buildWorkbenchExtensionMetadata = (
 
   return {
     ...metadata,
+    extensions: metadata.extensions.map((extension) => {
+      const layoutReset = input.layoutResetsByExtensionId?.get(extension.id);
+      return layoutReset ? { ...extension, layoutReset } : extension;
+    }),
     keybindings: metadata.keybindings,
     kanbanRenderers: (metadata.kanbanRenderers ?? []).map((renderer) => enrichInstallMetadata(renderer, input)),
     panels: metadata.panels.map((panel) => enrichInstallMetadata(panel, input)),

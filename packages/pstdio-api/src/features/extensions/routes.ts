@@ -50,6 +50,10 @@ import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endp
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
 import { reloadProjectExtensionHandler, reloadProjectExtensionRoute } from "./endpoints/reload-project-extension";
 import {
+  resetProjectExtensionLayoutHandler,
+  resetProjectExtensionLayoutRoute,
+} from "./endpoints/reset-project-extension-layout";
+import {
   setExtensionAutomationEnabledHandler,
   setExtensionAutomationEnabledRoute,
 } from "./endpoints/set-extension-automation-enabled";
@@ -97,6 +101,7 @@ const registerProjectExtensionRoutes = (routes: ExtensionRoutes, deps: Extension
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
   routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
   routes.openapi(reloadProjectExtensionRoute, reloadProjectExtensionHandler(deps));
+  routes.openapi(resetProjectExtensionLayoutRoute, resetProjectExtensionLayoutHandler(deps));
   routes.openapi(attemptFixProjectExtensionRoute, attemptFixProjectExtensionHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
 };

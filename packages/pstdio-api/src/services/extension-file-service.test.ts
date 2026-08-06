@@ -11,6 +11,8 @@ const projectInstance = {
   enabled: true,
   config_json: {},
   diagnostics_json: null,
+  layout_reset_revision: null,
+  layout_reset_mode_id: null,
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
 };

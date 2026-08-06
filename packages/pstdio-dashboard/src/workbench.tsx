@@ -18,6 +18,7 @@ import {
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createDashboardViewsModule } from "./modules/dashboard-views/module";
+import { createExtensionLayoutPersistence } from "./modules/extensions/extension-layout-persistence";
 import { createExtensionsModule } from "./modules/extensions/module";
 import { createHeadersModule } from "./modules/headers/module";
 import { createHelpModule } from "./modules/help/module";
@@ -40,6 +41,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 type CreateDashboardModulesInput = {
+  extensionLayoutPersistence?: ReturnType<typeof createExtensionLayoutPersistence>;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
@@ -49,7 +51,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createDashboardViewsModule(),
   createSidenavModule(),
   createWorkspacesModule(),
-  createExtensionsModule(),
+  createExtensionsModule({ layoutPersistence: input.extensionLayoutPersistence }),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
   createHeadersModule(),
   createKeyboardShortcutsModule(),
@@ -86,17 +88,25 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const sessionSelectionPersistence = createDashboardSessionSelectionPersistence(scopedByProject);
   const sessionDraftPersistence = createDashboardSessionDraftPersistence(scopedByProject);
 
+  const workbenchPersistence = createLocalStorageWorkbenchPersistence({
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+  });
+  const extensionLayoutPersistence = createExtensionLayoutPersistence({
+    layoutPersistence: workbenchPersistence.layoutPersistence,
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+  });
   const workbench = createWorkbenchCore({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
-    ...createLocalStorageWorkbenchPersistence({
-      namespace: dashboardWorkbenchStorageNamespace,
-      storage,
-    }),
+    ...workbenchPersistence,
+    layoutPersistence: extensionLayoutPersistence.layoutPersistence,
     lastResourcePersistence: createDashboardLastResourcePersistence(scopedByProject),
   });
 
   const modules = createDashboardModules({
+    extensionLayoutPersistence,
     projectSelectionPersistence,
     sessionDraftPersistence,
     sessionSelectionPersistence,

@@ -6,7 +6,7 @@ import { resolvePstdioHome } from "./install-extension-source";
 import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
 type SourceLike = {
-  instance: { id: string };
+  instance: { id: string; layout_reset_mode_id: string | null; layout_reset_revision: string | null };
   installedSource: { id: string; extension_id: string; install_name: string; loaded_revision: string | null };
 };
 
@@ -42,6 +42,21 @@ export const assembleWorkbenchMetadata = async (
   const extensionInstanceIdsByExtensionId = new Map(
     sources.map(({ installedSource, instance }) => [installedSource.extension_id, instance.id]),
   );
+  const layoutResetsByExtensionId = new Map(
+    sources.flatMap(({ installedSource, instance }) =>
+      instance.layout_reset_revision
+        ? [
+            [
+              installedSource.extension_id,
+              {
+                revision: instance.layout_reset_revision,
+                ...(instance.layout_reset_mode_id ? { modeId: instance.layout_reset_mode_id } : {}),
+              },
+            ] as const,
+          ]
+        : [],
+    ),
+  );
   const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
   const automations = await buildAutomationRecords(deps, projectId, runtime, sources);
   const harnesses = runtime.harnesses.map((harness) => ({
@@ -65,6 +80,7 @@ export const assembleWorkbenchMetadata = async (
       extensionInstanceIdsByExtensionId,
       installedExtensionIdsByExtensionId,
       installNamesByExtensionId,
+      layoutResetsByExtensionId,
       runtime,
       assetRevisionsByExtensionId,
       webviewCacheRoot,

@@ -3,10 +3,8 @@ import type {
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
 import type { Disposable, ResourceRef, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
-import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -23,35 +21,38 @@ import {
   setDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import {
-  buildDashboardExtensionRouteEntries,
   clearCachedDashboardExtensionMetadata,
-  createDashboardExtensionRouteResource,
-  dashboardExtensionRouteKind,
   emptyDashboardExtensionMetadata,
-  getCachedDashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { syncActiveResourceContext } from "./active-resource-context";
-import { ExtensionRouteWidget } from "./components/extension-route-widget";
-import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
-import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import { disposeExtensionContributions } from "./extension-contribution-registration";
+import type { createExtensionLayoutPersistence } from "./extension-layout-persistence";
+import {
+  createExtensionLayoutCompatibility,
+  type ExtensionLayoutCompatibility,
+} from "./extension-layout-reconciliation";
+import {
+  reconcileExtensionRefreshLayout,
+  registerCurrentExtensionContributions,
+} from "./extension-metadata-application";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
+import { registerExtensionResources } from "./extension-resource-registration";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
-import { dashboardExtensionViewKind, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
 
 interface CreateExtensionsModuleInput {
   executeCommand?: ExecuteDashboardExtensionCommand;
+  layoutPersistence?: ReturnType<typeof createExtensionLayoutPersistence>;
   loadAppearance?: LoadDashboardExtensionAppearance;
   loadMetadata?: LoadDashboardExtensionMetadata;
 }
@@ -85,18 +86,6 @@ const restorePrimaryResourceIfRefreshClearedIt = (
   void ctx.resources.openResource(input.resource, { replaceActive: true }).catch(() => undefined);
 };
 
-const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId: string | undefined) => {
-  const routeProjectId =
-    typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : fallbackProjectId;
-  const routePath = typeof resource.metadata?.routePath === "string" ? resource.metadata.routePath : resource.id;
-  const route = getCachedDashboardExtensionMetadata(routeProjectId)?.routes.find(
-    (candidate) => candidate.path === routePath,
-  );
-  if (!route) throw new Error(`Extension route is not available: ${routePath}`);
-  if (!routeProjectId) throw new Error(`Extension route has no project: ${routePath}`);
-  return createDashboardExtensionRouteResource({ icon: resource.icon, projectId: routeProjectId, route });
-};
-
 // Extension metadata is fetched per project and re-applied whenever the active
 // project or installed-extension collections change.
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
@@ -110,6 +99,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let rawAppearance: ListExtensionAppearanceResponse | undefined;
       let rawMetadata: DashboardExtensionMetadata | undefined;
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
+      let layoutCompatibility: ExtensionLayoutCompatibility | undefined;
       let projectGeneration = 0;
       let appearanceDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
@@ -148,18 +138,30 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           return;
         }
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
+        const nextLayoutCompatibility = createExtensionLayoutCompatibility(nextResolvedMetadata);
+        const reconciledRefreshLayout = reconcileExtensionRefreshLayout({
+          activeLayoutScope: ctx.layout.getPersistenceScope(),
+          current: nextLayoutCompatibility,
+          layout: refreshLayout.layout,
+          layoutPersistence: input.layoutPersistence,
+          previous: layoutCompatibility,
+          projectId: nextProjectId,
+          resets: nextResolvedMetadata.extensions.flatMap((extension) =>
+            extension.layoutReset ? [{ extensionId: extension.id, ...extension.layoutReset }] : [],
+          ),
+        });
         clearContributions();
-        contributionDisposables = registerExtensionContributions({
+        contributionDisposables = registerCurrentExtensionContributions({
           ctx,
           executeCommand,
           metadata,
           projectId: nextProjectId,
-          onRegistrationError: (error, extensionId) => {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error(`[dashboard.extensions:${extensionId}] contribution registration failed: ${message}`);
-          },
         });
-        restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
+        restoreExtensionContributionRefreshLayout(ctx, {
+          ...refreshLayout,
+          layout: reconciledRefreshLayout,
+        });
+        layoutCompatibility = nextLayoutCompatibility;
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }
@@ -209,6 +211,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           rawAppearance = undefined;
           rawMetadata = undefined;
           metadata = undefined;
+          layoutCompatibility = undefined;
           clearCachedDashboardExtensionMetadata(previousProjectId);
           clearCachedDashboardExtensionMetadata(projectId);
           clearDashboardExtensionsReadyProject(ctx);
@@ -237,77 +240,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         }
       };
 
-      ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
-      ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
       registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
-      ctx.layout.registerPanel(
-        {
-          closable: false,
-          id: dashboardWidgetIds.extensionRoute,
-          title: "Extension route",
-          region: "main",
-          singleton: true,
-          rendererId: dashboardWidgetIds.extensionRoute,
-          priority: 70,
-        },
-        { priority: 70 },
-      );
-      ctx.renderers.registerRenderer({
-        id: dashboardWidgetIds.extensionRoute,
-        render: (renderInput) => createElement(ExtensionRouteWidget, { input: renderInput }),
-      });
-      ctx.renderers.registerRenderer({
-        id: dashboardWidgetIds.extensionView,
-        render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
-      });
-      ctx.resources.registerProvider({
-        id: "dashboard-workbench.extension-routes",
-        kind: dashboardExtensionRouteKind,
-        list: () => buildDashboardExtensionRouteEntries({ metadata, projectId }),
-      });
-      // A mode-layout view docked in the primary region (e.g. an extension overview) is recorded
-      // as an `extension-view` history landmark. Back/Forward replay reopens it through this
-      // presenter, which re-derives the view from the cached manifest and re-places the widget.
-      // Without it, replaying that entry would silently leave the primary region desynced from the
-      // history cursor (there is no presenter for the synthetic `extension-view` kind otherwise).
-      ctx.resources.registerPresenter({
-        id: "dashboard.extensions.panel-presenter",
-        priority: 1000,
-        canOpen: (resource) => resource.kind === dashboardExtensionViewKind,
-        open: (resource, openInput) => {
-          const viewProjectId =
-            typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : projectId;
-          const view = getCachedDashboardExtensionMetadata(viewProjectId)?.panels.find(
-            (candidate) => candidate.id === resource.id,
-          );
-          if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
-          selectDashboardNavigationResource(ctx, resource);
-          return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-            resource,
-            region: extensionViewRegion(view.region),
-            title: resource.label,
-          });
-        },
-      });
-      ctx.resources.registerPresenter({
-        id: "dashboard.extensions.route-presenter",
-        priority: 1000,
-        canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
-        open: (resource, openInput) => {
-          const availableResource = resolveAvailableRouteResource(resource, projectId);
-          selectDashboardNavigationResource(ctx, availableResource, { modeId: "project" });
-          setResourceBreadcrumb(ctx, availableResource);
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
-          }
-          return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-            resource: availableResource,
-            title: availableResource.label,
-          });
-        },
-      });
+      registerExtensionResources(ctx, () => ({ metadata, projectId }));
 
       const activeResourceContext = syncActiveResourceContext(ctx);
 

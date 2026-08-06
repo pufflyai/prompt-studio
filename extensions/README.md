@@ -174,4 +174,18 @@ Declare every package imported by a managed TypeScript or JavaScript webview in 
 
 While Prompt Studio is running, edits to a webview's local import graph, `package.json`, `bun.lock` or `bun.lockb`, and installed dependency package metadata trigger a rebuild automatically. Creating or removing a top-level dependency under `node_modules` also retries a previously failed build, so dependency fixes do not require an API restart. Repeated refreshes with unchanged inputs reuse a successful bundle or preserve the existing failure backoff.
 
+### Persisted extension layouts
+
+Prompt Studio automatically reconciles every persisted project, mode, and resource layout when an extension changes a panel body or removes or renames a panel. Current extension placements are migrated without changing unrelated tabs or their order, and a stale open dashboard cannot restore an incompatible layout during `pagehide`.
+
+Use the recovery command when you want to clear all placements owned by one extension. The extension argument accepts its id, name, or install name; the project defaults to the project linked to the current repository.
+
+```bash
+pst extensions reset-layout extension-lab
+pst extensions reset-layout extension-lab --mode pstdio.extension-lab.lab
+pst extensions reset-layout extension-lab --project-id <project-id>
+```
+
+The command reports the resolved extension, project, optional mode, and durable reset revision. Running dashboards observe that revision, clear matching extension-owned placements, preserve unrelated layout state, and reject lifecycle writes from an older revision.
+
 For the full extension API surface, see [the product extension API docs](../.pstdio/docs/product/extensions/pstdio-extension-api.md). For loader internals, see [the extension runtime loader architecture doc](../.pstdio/docs/architecture/extensions-runtime.md).

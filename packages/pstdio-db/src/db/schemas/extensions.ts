@@ -45,6 +45,8 @@ export const extension_instances = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     config_json: jsonb("config_json").$type<JsonObject>().notNull().default({}),
     diagnostics_json: jsonb("diagnostics_json").$type<JsonObject>(),
+    layout_reset_revision: text("layout_reset_revision"),
+    layout_reset_mode_id: text("layout_reset_mode_id"),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
   },

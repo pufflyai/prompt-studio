@@ -17,7 +17,11 @@ import {
 const createStore = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
   return {
+    get length() {
+      return values.size;
+    },
     getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
     setItem: (key, value) => {
       values.set(key, value);
     },
@@ -168,6 +172,51 @@ describe("local storage workbench persistence", () => {
 });
 
 describe("local storage workbench persistence recovery", () => {
+  test("reconciles persisted and pending layouts without allowing pagehide to restore stale state", () => {
+    const storage = createStore();
+    const listeners = new Set<() => void>();
+    const eventTarget = {
+      addEventListener: (_event: "pagehide", listener: () => void) => listeners.add(listener),
+      removeEventListener: (_event: "pagehide", listener: () => void) => listeners.delete(listener),
+    };
+    const persistence = createLocalStorageLayoutPersistence({
+      debounceMs: 60_000,
+      eventTarget,
+      namespace: "demo",
+      storage,
+    });
+    const stale = createDefaultWorkbenchLayout();
+    stale.regions.main.widgets = [
+      { widgetId: "extension.old", contributionId: "extension.old", closable: false },
+      { widgetId: "native.notes", contributionId: "native.notes", closable: false },
+    ];
+    const projectScope = "project/one/mode/project/aggregate/tickets";
+    const otherProjectScope = "project/two/mode/project/aggregate/tickets";
+    persistence.setLayout(stale, projectScope);
+    persistence.setLayout(stale, otherProjectScope);
+
+    const result = persistence.updateLayouts(
+      (layout) => ({
+        ...layout,
+        regions: {
+          ...layout.regions,
+          main: {
+            ...layout.regions.main,
+            widgets: layout.regions.main.widgets.filter((entry) => entry.contributionId !== "extension.old"),
+          },
+        },
+      }),
+      (scope) => scope?.startsWith("project/one/") === true,
+    );
+    for (const listener of listeners) listener();
+
+    expect(result).toEqual({ scopes: [projectScope], updated: 1 });
+    expect(persistence.getLayout(projectScope)?.regions.main.widgets.map((entry) => entry.contributionId)).toEqual([
+      "native.notes",
+    ]);
+    expect(persistence.getLayout(otherProjectScope)?.regions.main.widgets).toHaveLength(2);
+  });
+
   test("ignores malformed persisted JSON", () => {
     const storage = createStore();
     storage.setItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"), "{");
