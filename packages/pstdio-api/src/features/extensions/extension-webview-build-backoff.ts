@@ -6,8 +6,12 @@ type InstalledSourceSignatureInput = {
 
 export const processKey = (installName: string, webviewId: string) => `${installName}\0${webviewId}`;
 
-export const signatureFor = (row: InstalledSourceSignatureInput, webviewId: string, entryPath: string) =>
-  [row.source_path, row.source_hash ?? "", webviewId, entryPath].join("\0");
+export const signatureFor = (
+  row: InstalledSourceSignatureInput,
+  webviewId: string,
+  entryPath: string,
+  buildInputsSignature: string,
+) => [row.source_path, row.source_hash ?? "", webviewId, entryPath, buildInputsSignature].join("\0");
 
 export const createWebviewBuildBackoff = () => {
   const failedBuilds = new Map<string, string>();
