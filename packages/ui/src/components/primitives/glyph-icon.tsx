@@ -18,29 +18,35 @@ const glyphContent = new Map(
 // whatever box the caller gives it (`boxSize` on a Chakra `Icon`, say) exactly
 // like a lucide SVG would.
 //
-// The font builder normalises every glyph to a 1024-unit ink box sitting 47 units
-// above the baseline of a 1000-unit em (ascent 850 / descent -150). Left alone the
-// ink therefore renders larger than the box and ~21% of the font size too high, so
-// both corrections below are expressed against the container to stay size-independent:
-// 89.5% lands the ink on lucide's 22-of-24 optical size, 18.7% re-centres it.
-const GLYPH_SIZE = "89.5cqmin";
-const GLYPH_BASELINE_OFFSET = "18.7cqmin";
+// The ::before is taken out of flow and stretched over the wrapper so its geometry
+// never depends on the wrapper's own display mode — callers that reach through
+// Chakra's `Icon` blockify it, which silently breaks flex centring.
+//
+// Within that box the font builder normalises every glyph's ink to a 1024-unit box
+// sitting 47 units above the baseline of a 1000-unit em (ascent 850 / descent -150).
+// The ink therefore renders larger than the em and half its overhang above centre:
+// 89.5% of the container lands it on lucide's 22-of-24 optical size, and 0.209em
+// (measured against the glyph's own font size, so it follows any optical scale)
+// drops it back onto the centre line.
+const GLYPH_OPTICAL_SIZE = 89.5;
+const GLYPH_BASELINE_OFFSET = "0.209em";
 
 const GlyphRoot = chakra("span", {
   base: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
+    position: "relative",
+    display: "inline-block",
     flexShrink: 0,
     boxSize: "1em",
     lineHeight: 1,
     containerType: "size",
     "&::before": {
+      position: "absolute",
+      inset: 0,
       fontFamily: '"prompt-studio-icons", sans-serif',
       fontStyle: "normal",
       fontWeight: "normal",
-      fontSize: GLYPH_SIZE,
-      lineHeight: 1,
+      lineHeight: "100cqmin",
+      textAlign: "center",
       transform: `translateY(${GLYPH_BASELINE_OFFSET})`,
     },
   },
@@ -48,14 +54,26 @@ const GlyphRoot = chakra("span", {
 
 type GlyphIconProps = Omit<HTMLAttributes<HTMLSpanElement>, "children">;
 
+export interface GlyphIconOptions {
+  /**
+   * Optical size relative to a round glyph. Every glyph is normalised to the same
+   * ink box, so square marks such as the level bars need trimming to carry the
+   * same visual weight as the status rings.
+   */
+  scale?: number;
+}
+
 /**
  * Builds a component for one `prompt-studio-icons` glyph so lucide icons and
  * font glyphs share a single component type in the icon registry.
  */
-export const createGlyphIcon = (glyph: string): ComponentType<GlyphIconProps> => {
+export const createGlyphIcon = (glyph: string, options: GlyphIconOptions = {}): ComponentType<GlyphIconProps> => {
   const content = `"${glyphContent.get(glyph) ?? ""}"`;
+  const fontSize = `${(GLYPH_OPTICAL_SIZE * (options.scale ?? 1)).toFixed(1)}cqmin`;
 
-  const GlyphIcon = (props: GlyphIconProps) => <GlyphRoot aria-hidden {...props} css={{ "&::before": { content } }} />;
+  const GlyphIcon = (props: GlyphIconProps) => (
+    <GlyphRoot aria-hidden {...props} css={{ "&::before": { content, fontSize } }} />
+  );
 
   GlyphIcon.displayName = `GlyphIcon(${glyph})`;
   return GlyphIcon;

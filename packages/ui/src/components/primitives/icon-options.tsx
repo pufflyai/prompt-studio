@@ -71,6 +71,14 @@ export const optionColors = [
 
 const glyph = (name: string, label: string) => ({ value: name, label, icon: createGlyphIcon(name) });
 
+// Level bars fill their ink box as a solid square, so they read heavier than the
+// round status glyphs at the same size; lucide's own bar marks sit at 18-of-24.
+const levelGlyph = (name: string, label: string) => ({
+  value: name,
+  label,
+  icon: createGlyphIcon(name, { scale: 0.82 }),
+});
+
 // Ordered exactly like the `cmp/TagAppearancePopover` grid in the design system:
 // a leading "none" cell, generic icons, then status rings, levels and concepts.
 // Status rings and level bars have no lucide equivalent and ship as glyphs in
@@ -109,10 +117,10 @@ export const optionIcons = [
   glyph("status-canceled", "status canceled"),
   { value: "ticket", label: "ticket", icon: Ticket },
   { value: "git-branch", label: "git branch", icon: GitBranch },
-  glyph("level-low", "level low"),
-  glyph("level-mid", "level medium"),
-  glyph("level-high", "level high"),
-  glyph("level-xhigh", "level very high"),
+  levelGlyph("level-low", "level low"),
+  levelGlyph("level-mid", "level medium"),
+  levelGlyph("level-high", "level high"),
+  levelGlyph("level-xhigh", "level very high"),
   { value: "bot", label: "bot", icon: Bot },
   { value: "puzzle", label: "puzzle", icon: Puzzle },
   { value: "workflow", label: "workflow", icon: Workflow },
