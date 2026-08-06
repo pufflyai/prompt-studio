@@ -1,5 +1,17 @@
-import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+} from "node:fs";
+import { dirname, extname, join, relative, resolve } from "node:path";
 
 type PackageJson = {
   dependencies?: Record<string, unknown>;
@@ -7,26 +19,44 @@ type PackageJson = {
   peerDependencies?: Record<string, unknown>;
 };
 
-type PrepareManagedWebviewBuildSourceInput = {
+type ManagedWebviewBuildSourceInput = {
   entryPath: string;
   installName: string;
   packageName: string;
   packagePath: string;
+};
+
+type PrepareManagedWebviewBuildSourceInput = ManagedWebviewBuildSourceInput & {
+  buildInputs?: ManagedWebviewBuildInputs;
   shellDir: string;
 };
+
+export type ManagedWebviewBuildInputs = {
+  dependencyNames: string[];
+  dependencyNodeModules: string | null;
+  missingDependencies: string[];
+  signature: string;
+};
+
+export type ManagedWebviewBuildSourceResult =
+  | { entryPath: string; success: true }
+  | { details: string; success: false };
+
+const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css"];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const readPackageJsonText = (packagePath: string) => readFileSync(join(packagePath, "package.json"), "utf8");
+
 const readPackageJson = (packagePath: string): PackageJson => {
-  const parsed = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8")) as unknown;
+  const parsed = JSON.parse(readPackageJsonText(packagePath)) as unknown;
   if (!isRecord(parsed)) return {};
   return parsed as PackageJson;
 };
 
-const packageDependencyNames = (manifest: PackageJson) => [
-  ...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]),
-];
+const packageDependencyNames = (manifest: PackageJson) =>
+  [...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})])].sort();
 
 const packagePathInNodeModules = (nodeModulesPath: string, packageName: string) => {
   const [scope, name] = packageName.split("/");
@@ -34,10 +64,11 @@ const packagePathInNodeModules = (nodeModulesPath: string, packageName: string) 
   return join(nodeModulesPath, packageName);
 };
 
-const hasUsableNodeModules = (nodeModulesPath: string, dependencyNames: string[]) => {
-  if (!existsSync(nodeModulesPath)) return false;
-  return dependencyNames.every((name) => existsSync(packagePathInNodeModules(nodeModulesPath, name)));
-};
+const missingDependenciesIn = (nodeModulesPath: string, dependencyNames: string[]) =>
+  dependencyNames.filter((name) => !existsSync(packagePathInNodeModules(nodeModulesPath, name)));
+
+const hasUsableNodeModules = (nodeModulesPath: string, dependencyNames: string[]) =>
+  existsSync(nodeModulesPath) && missingDependenciesIn(nodeModulesPath, dependencyNames).length === 0;
 
 const candidateSourceRoots = (installName: string, packageName: string) => {
   const names = [...new Set([installName, packageName])];
@@ -52,9 +83,6 @@ const packageNameMatches = (packagePath: string, packageName: string) => {
     return false;
   }
 };
-
-const canBuildFromPackagePath = (packagePath: string, dependencyNames: string[]) =>
-  dependencyNames.length === 0 || hasUsableNodeModules(join(packagePath, "node_modules"), dependencyNames);
 
 const resolveFallbackDependencyNodeModules = (
   packagePath: string,
@@ -73,6 +101,119 @@ const resolveFallbackDependencyNodeModules = (
   return null;
 };
 
+const resolveLocalImport = (importerPath: string, importPath: string) => {
+  if (!importPath.startsWith(".")) return null;
+
+  const unresolvedPath = resolve(dirname(importerPath), importPath);
+  const candidates = [
+    unresolvedPath,
+    ...sourceExtensions.map((extension) => `${unresolvedPath}${extension}`),
+    ...sourceExtensions.map((extension) => join(unresolvedPath, `index${extension}`)),
+  ];
+  return candidates.find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile()) ?? null;
+};
+
+const transpilerLoader = (filePath: string) => {
+  const extension = extname(filePath);
+  if (extension === ".tsx") return "tsx" as const;
+  if (extension === ".jsx") return "jsx" as const;
+  if (extension === ".ts") return "ts" as const;
+  return "js" as const;
+};
+
+const normalizedRelativePath = (rootPath: string, filePath: string) =>
+  relative(rootPath, filePath).replaceAll("\\", "/");
+
+const addHashEntry = (hash: ReturnType<typeof createHash>, path: string, content: string | Buffer) => {
+  hash.update(path.replaceAll("\\", "/"));
+  hash.update("\0");
+  hash.update(content);
+  hash.update("\0");
+};
+
+const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: string, entryPath: string) => {
+  const pending = [entryPath];
+  const visited = new Set<string>();
+
+  while (pending.length > 0) {
+    const filePath = pending.pop();
+    if (!filePath || visited.has(filePath)) continue;
+    visited.add(filePath);
+
+    const content = readFileSync(filePath);
+    addHashEntry(hash, normalizedRelativePath(packagePath, filePath), content);
+    if (![".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(filePath))) continue;
+
+    try {
+      const imports = new Bun.Transpiler({ loader: transpilerLoader(filePath) }).scanImports(content);
+      for (const imported of imports) {
+        const resolvedPath = resolveLocalImport(filePath, imported.path);
+        if (resolvedPath) pending.push(resolvedPath);
+      }
+    } catch {
+      // Bun will surface source parse diagnostics during the actual build.
+    }
+  }
+};
+
+const addOptionalFile = (hash: ReturnType<typeof createHash>, path: string, filePath: string) =>
+  addHashEntry(hash, path, existsSync(filePath) ? readFileSync(filePath) : "missing");
+
+const buildInputSignature = (
+  input: ManagedWebviewBuildSourceInput,
+  dependencyNames: string[],
+  dependencyNodeModules: string | null,
+  missingDependencies: string[],
+) => {
+  const hash = createHash("sha256");
+  addHashEntry(hash, "package.json", readPackageJsonText(input.packagePath));
+  addOptionalFile(hash, "bun.lock", join(input.packagePath, "bun.lock"));
+  addOptionalFile(hash, "bun.lockb", join(input.packagePath, "bun.lockb"));
+  addLocalImportGraph(hash, input.packagePath, input.entryPath);
+  addHashEntry(hash, "dependency-node-modules", dependencyNodeModules ? "available" : "missing");
+  addHashEntry(hash, "missing-dependencies", missingDependencies.join("\0"));
+
+  for (const dependencyName of dependencyNames) {
+    addHashEntry(hash, "dependency", dependencyName);
+    if (!dependencyNodeModules) continue;
+    addOptionalFile(
+      hash,
+      `node_modules/${dependencyName}/package.json`,
+      join(packagePathInNodeModules(dependencyNodeModules, dependencyName), "package.json"),
+    );
+  }
+
+  return hash.digest("hex");
+};
+
+export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourceInput): ManagedWebviewBuildInputs => {
+  const manifest = readPackageJson(input.packagePath);
+  const dependencyNames = packageDependencyNames(manifest);
+  const packageNodeModules = join(input.packagePath, "node_modules");
+  const packageMissingDependencies = missingDependenciesIn(packageNodeModules, dependencyNames);
+  let dependencyNodeModules: string | null = null;
+
+  if (dependencyNames.length === 0 || packageMissingDependencies.length === 0) {
+    dependencyNodeModules = packageNodeModules;
+  } else {
+    dependencyNodeModules = resolveFallbackDependencyNodeModules(
+      input.packagePath,
+      input.installName,
+      input.packageName,
+      dependencyNames,
+    );
+  }
+
+  const missingDependencies = dependencyNodeModules ? [] : packageMissingDependencies;
+
+  return {
+    dependencyNames,
+    dependencyNodeModules,
+    missingDependencies,
+    signature: buildInputSignature(input, dependencyNames, dependencyNodeModules, missingDependencies),
+  };
+};
+
 const symlinkPackageChild = (sourcePath: string, targetPath: string) => {
   const stats = lstatSync(sourcePath);
   symlinkSync(sourcePath, targetPath, stats.isDirectory() ? "junction" : "file");
@@ -86,23 +227,35 @@ const mirrorPackageSource = (packagePath: string, shellDir: string) => {
   }
 };
 
-export const prepareManagedWebviewBuildSource = (input: PrepareManagedWebviewBuildSourceInput) => {
-  const manifest = readPackageJson(input.packagePath);
-  const dependencyNames = packageDependencyNames(manifest);
-  if (canBuildFromPackagePath(input.packagePath, dependencyNames)) {
-    return { entryPath: input.entryPath };
+export const prepareManagedWebviewBuildSource = (
+  input: PrepareManagedWebviewBuildSourceInput,
+): ManagedWebviewBuildSourceResult => {
+  const buildInputs = input.buildInputs ?? inspectManagedWebviewBuildInputs(input);
+  if (buildInputs.missingDependencies.length > 0) {
+    return {
+      details: `Missing extension webview dependencies: ${buildInputs.missingDependencies.join(", ")}. Run \`bun install\` in ${input.packagePath}.`,
+      success: false,
+    };
   }
 
-  const dependencyNodeModules = resolveFallbackDependencyNodeModules(
-    input.packagePath,
-    input.installName,
-    input.packageName,
-    dependencyNames,
-  );
+  const packageNodeModules = join(input.packagePath, "node_modules");
+  if (buildInputs.dependencyNames.length === 0 || buildInputs.dependencyNodeModules === packageNodeModules) {
+    return { entryPath: input.entryPath, success: true };
+  }
 
-  rmSync(input.shellDir, { recursive: true, force: true });
-  mirrorPackageSource(input.packagePath, input.shellDir);
-  if (dependencyNodeModules) symlinkPackageChild(dependencyNodeModules, join(input.shellDir, "node_modules"));
+  const stagingDir = `${input.shellDir}.staging-${crypto.randomUUID()}`;
+  rmSync(stagingDir, { recursive: true, force: true });
+  try {
+    mirrorPackageSource(input.packagePath, stagingDir);
+    if (buildInputs.dependencyNodeModules) {
+      symlinkPackageChild(buildInputs.dependencyNodeModules, join(stagingDir, "node_modules"));
+    }
+    rmSync(input.shellDir, { recursive: true, force: true });
+    renameSync(stagingDir, input.shellDir);
+  } catch (error) {
+    rmSync(stagingDir, { recursive: true, force: true });
+    throw error;
+  }
 
-  return { entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)) };
+  return { entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)), success: true };
 };

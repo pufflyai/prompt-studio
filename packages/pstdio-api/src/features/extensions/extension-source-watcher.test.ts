@@ -223,6 +223,39 @@ describe("createExtensionSourceWatcher", () => {
 });
 
 describe("createExtensionSourceWatcher registrations", () => {
+  test("reloads for dependency availability changes without watching inside packages", async () => {
+    const sourcePath = join(root, "watched");
+    const nodeModulesPath = join(sourcePath, "node_modules");
+    mkdirSync(nodeModulesPath, { recursive: true });
+    const watchersByPath = new Map<string, FakeWatcher>();
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async (path) => {
+        reloaded.push(path);
+      },
+      watch: (path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchersByPath.set(path, fake);
+        return fake;
+      },
+    });
+
+    try {
+      mkdirSync(join(nodeModulesPath, "react"));
+      watchersByPath.get(nodeModulesPath)?.listener("rename", "react");
+      await delay(15);
+
+      expect(reloaded).toEqual([sourcePath]);
+      expect(watchersByPath.has(join(nodeModulesPath, "react"))).toBe(false);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("registers per-directory watchers and never descends into node_modules, ignored, or symlinked directories", async () => {
     const sourcePath = join(root, "watched");
     mkdirSync(join(sourcePath, "src", "nested"), { recursive: true });
@@ -245,7 +278,12 @@ describe("createExtensionSourceWatcher registrations", () => {
 
     try {
       expect(watchedPaths.sort()).toEqual(
-        [sourcePath, join(sourcePath, "src"), join(sourcePath, "src", "nested")].sort(),
+        [
+          sourcePath,
+          join(sourcePath, "node_modules"),
+          join(sourcePath, "src"),
+          join(sourcePath, "src", "nested"),
+        ].sort(),
       );
     } finally {
       watcher.dispose();
