@@ -14235,6 +14235,10 @@
                       "type": "frame",
                       "id": "dOjl0",
                       "name": "cmp/WorkspaceBadge",
+                      "context": "Workspace badge. Optional leading session indicator shows the latest session status of the workspace it represents, themed by the tab-status axis and selectable to open that session; disabled when the workspace has no session.",
+                      "theme": {
+                        "tab-status": "none"
+                      },
                       "reusable": true,
                       "height": 20,
                       "fill": "$ds-surface",
@@ -14249,6 +14253,19 @@
                       ],
                       "alignItems": "center",
                       "children": [
+                        {
+                          "type": "icon",
+                          "id": "ZiLw7",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Session Indicator",
+                          "enabled": false,
+                          "width": 12,
+                          "height": 12,
+                          "icon": "circle-dashed",
+                          "library": "lucide",
+                          "fill": "$tab-status-fg"
+                        },
                         {
                           "type": "icon",
                           "id": "uNqVT",
