@@ -156,7 +156,8 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
       actionOptions={actionOptions}
       addLabel={t("settings.ticketStatuses.addLabel", "Add status")}
       addName={t("settings.ticketStatuses.addName", "New status")}
-      showIcons={false}
+      resetLabel={t("settings.ticketStatuses.reset", "Reset")}
+      saveLabel={t("settings.ticketStatuses.save", "Save")}
       deleteHeadline={t("settings.ticketStatuses.deleteHeadline", "Delete ticket status?")}
       deleteNotificationText={(status) =>
         t(

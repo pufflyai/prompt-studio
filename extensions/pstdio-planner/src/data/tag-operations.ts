@@ -153,6 +153,7 @@ export interface TagDraftOptionUpdate {
 export const applyTagDraft = async (input: {
   storage: ExtensionStorageApi;
   tagId: string;
+  name?: string;
   type?: StoredTag["type"];
   optionsToCreate: TagDraftOptionCreate[];
   optionsToUpdate: TagDraftOptionUpdate[];
@@ -185,7 +186,12 @@ export const applyTagDraft = async (input: {
     description: null,
   }));
 
-  await putTag(input.storage, { ...tag, type: input.type ?? tag.type, options: [...kept, ...created] });
+  await putTag(input.storage, {
+    ...tag,
+    name: input.name ?? tag.name,
+    type: input.type ?? tag.type,
+    options: [...kept, ...created],
+  });
 
   if (deletedIds.size > 0) {
     await Promise.all(

@@ -149269,6 +149269,190 @@
                                   ]
                                 }
                               ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bVEVI",
+                              "name": "Grid Row 6",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "lZpEj",
+                                  "name": "Cell component",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "f0Hguh",
+                                      "name": "CellIcon component",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "component",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cr3Yy",
+                                  "name": "Cell square-kanban",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "TVSji",
+                                      "name": "CellIcon square-kanban",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "square-kanban",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lMmnb",
+                                  "name": "Cell git-commit-horizontal",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "d28W9",
+                                      "name": "CellIcon git-commit-horizontal",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "git-commit-horizontal",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "QaIcZ",
+                                  "name": "Cell inbox",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "zCKbK",
+                                      "name": "CellIcon inbox",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "inbox",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "bN0Fj",
+                                  "name": "Cell list-checks",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "O3Rizu",
+                                      "name": "CellIcon list-checks",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "list-checks",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "y5D1E",
+                                  "name": "Cell archive",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Awy3a",
+                                      "name": "CellIcon archive",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "archive",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "jWix0",
+                                  "name": "Cell link",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "YgYgV",
+                                      "name": "CellIcon link",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "link",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "z3cAlg",
+                                  "name": "Cell settings",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "kgs1Q",
+                                      "name": "CellIcon settings",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "settings",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                }
+                              ]
                             }
                           ]
                         }

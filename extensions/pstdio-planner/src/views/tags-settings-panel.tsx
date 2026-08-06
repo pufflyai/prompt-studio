@@ -1,6 +1,6 @@
-import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
-import { AlertMessage, ScrollArea, TagEditorFooter } from "@pstdio/ui";
+import { AlertMessage, ScrollArea, TagEditorHeading, TagEditorSaveBar } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { runCommand } from "../hooks/use-command";
@@ -79,17 +79,28 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
     createTag.mutate(name);
   };
 
+  const hasChanges = changedTags.length > 0;
   const queryError = tagsQuery.error ?? saveTags.error;
   const error = queryError ? String(queryError instanceof Error ? queryError.message : queryError) : null;
 
   return (
     <ScrollArea h="full" minH="0" bg="bg" color="fg" contentProps={{ p: "lg", spaceY: "lg", minH: "100%" }}>
-      <Box>
-        <Text textStyle="label/L/medium">{t("settings.ticketTags.title", "Ticket tags")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("settings.ticketTags.description", "Configure the tag definitions and options available on tickets.")}
-        </Text>
-      </Box>
+      <Flex gap="sm" alignItems="flex-start" justifyContent="space-between">
+        <Box minW="0">
+          <TagEditorHeading hasChanges={hasChanges}>{t("settings.ticketTags.title", "Ticket tags")}</TagEditorHeading>
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
+            {t("settings.ticketTags.description", "Configure the tag definitions and options available on tickets.")}
+          </Text>
+        </Box>
+        <TagEditorSaveBar
+          hasChanges={hasChanges}
+          isSaving={saveTags.isPending}
+          resetLabel={t("settings.ticketTags.reset", "Reset")}
+          saveLabel={t("settings.ticketTags.save", "Save")}
+          onSave={() => saveTags.mutate()}
+          onReset={() => setDrafts(buildDrafts(tags))}
+        />
+      </Flex>
       {error ? (
         <AlertMessage
           status="error"
@@ -138,14 +149,6 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
               {t("settings.ticketTags.addTag", "Add tag")}
             </Button>
           </HStack>
-          <TagEditorFooter
-            hasChanges={changedTags.length > 0}
-            isSaving={saveTags.isPending}
-            cancelLabel={t("settings.ticketTags.cancel", "Cancel")}
-            saveLabel={t("settings.ticketTags.save", "Save")}
-            onSave={() => saveTags.mutate()}
-            onCancel={() => setDrafts(buildDrafts(tags))}
-          />
         </Stack>
       )}
     </ScrollArea>

@@ -1,4 +1,4 @@
-import { chakra, Flex, Icon, Stack, Text } from "@chakra-ui/react";
+import { chakra, Editable, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
@@ -6,10 +6,41 @@ import { useState } from "react";
 
 import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
+import { TagEditorHeading } from "./tag-editor-heading";
 import { TagEditorRow } from "./tag-editor-row";
 
 const nextSortOrder = (values: TagEditorValue[]) =>
   values.length > 0 ? Math.max(...values.map((value) => value.sortOrder)) + 1 : 0;
+
+interface TagEditorTitleProps {
+  title: string;
+  hasChanges?: boolean;
+  isSaving?: boolean;
+  onTitleChange?: (title: string) => void;
+}
+
+/** Renames the tag definition inline, matching how its options are renamed. */
+const TagEditorTitle = (props: TagEditorTitleProps) => {
+  const { title, hasChanges, isSaving, onTitleChange } = props;
+
+  if (!onTitleChange) return <TagEditorHeading hasChanges={hasChanges}>{title}</TagEditorHeading>;
+
+  return (
+    <Editable.Root
+      key={title}
+      defaultValue={title}
+      disabled={isSaving}
+      selectOnFocus
+      onValueCommit={(details) => {
+        const trimmed = details.value.trim();
+        if (trimmed && trimmed !== title) onTitleChange(trimmed);
+      }}
+    >
+      <Editable.Preview textStyle="label/L/medium" />
+      <Editable.Input textStyle="label/L/medium" />
+    </Editable.Root>
+  );
+};
 
 const AddOptionRow = chakra("button", {
   base: {
@@ -35,6 +66,8 @@ export const TagEditor = (props: TagEditorProps) => {
     onValuesChange,
     onDeleteValue,
     onSetDefault,
+    onTitleChange,
+    hasChanges,
     isSaving,
     addLabel = "Add option",
     addName = "New option",
@@ -98,8 +131,15 @@ export const TagEditor = (props: TagEditorProps) => {
       <Stack gap="2xs">
         {title || headerActions ? (
           <Flex minHeight="tag-editor-row" alignItems="center" justifyContent="space-between" gap="xs">
-            <Stack gap="3xs">
-              {title ? <Text textStyle="label/L/medium">{title}</Text> : null}
+            <Stack gap="3xs" minWidth="0">
+              {title ? (
+                <TagEditorTitle
+                  title={title}
+                  hasChanges={hasChanges}
+                  isSaving={isSaving}
+                  onTitleChange={onTitleChange}
+                />
+              ) : null}
               {description ? (
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
                   {description}

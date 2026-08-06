@@ -7,7 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { TagEditor } from "./tag-editor";
 import type { TagEditorValue } from "./tag-editor.types";
-import { TagEditorFooter } from "./tag-editor-footer";
+import { TagEditorSaveBar } from "./tag-editor-save-bar";
 
 type StoryFn = () => ReactNode;
 
@@ -46,7 +46,7 @@ export const WithIcons = {
     return (
       <Stack gap="md">
         <TagEditor title="Priority" values={values} onValuesChange={setValues} />
-        <TagEditorFooter hasChanges onSave={() => undefined} onCancel={() => setValues(initialItems)} />
+        <TagEditorSaveBar hasChanges onSave={() => undefined} onReset={() => setValues(initialItems)} />
       </Stack>
     );
   },
@@ -144,7 +144,7 @@ export const WithHeaderActions = {
             </HStack>
           }
         />
-        <TagEditorFooter hasChanges onSave={() => undefined} onCancel={() => setValues(initialItems)} />
+        <TagEditorSaveBar hasChanges onSave={() => undefined} onReset={() => setValues(initialItems)} />
       </Stack>
     );
   },
