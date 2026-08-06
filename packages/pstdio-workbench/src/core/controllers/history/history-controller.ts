@@ -1,5 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import { findPlacementByWidgetId, getActiveLocationPlacement } from "../../registries/layout/layout-operations";
+import { findPlacementByWidgetId } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import {
   type WorkbenchPanelRegion,
@@ -9,12 +9,11 @@ import {
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import {
-  emptyHistoryState,
-  hydrateHistoryState,
-  reconcileHistoryState,
-  WORKBENCH_HISTORY_VERSION,
-} from "./history-reconciliation";
+import { createHistoryControllerApi } from "./history-controller-api";
+import { createHistoryCursorMover, createHistoryRestoreFinisher, trackLayoutScopeRotation } from "./history-navigation";
+import { createHistoryPersistenceScheduler } from "./history-persistence";
+import { emptyHistoryState, hydrateHistoryState } from "./history-reconciliation";
+import { activateHistoryResource } from "./history-resource-activation";
 import {
   closedNavigationEntry,
   compactNavigationEntries,
@@ -74,32 +73,6 @@ export interface CreateHistoryControllerInput {
 
 const DEFAULT_MAX_ENTRIES = 50;
 const RECENTLY_CLOSED_LIMIT = 20;
-const PERSISTENCE_DELAY_MS = 50;
-
-interface HistoryPersistenceSchedulerInput {
-  persistence?: WorkbenchHistoryPersistence;
-  store: WorkbenchStore<HistoryStoreState>;
-  getScope(): string | undefined;
-}
-
-const createHistoryPersistenceScheduler = (input: HistoryPersistenceSchedulerInput) => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const flush = () => {
-    if (timer) clearTimeout(timer);
-    timer = undefined;
-    if (!input.persistence) return;
-    const { hydrating: _hydrating, ...state } = input.store.getState();
-    input.persistence.setHistory({ ...state, version: WORKBENCH_HISTORY_VERSION }, input.getScope());
-  };
-
-  return {
-    flush,
-    schedule() {
-      if (!input.persistence || timer) return;
-      timer = setTimeout(flush, PERSISTENCE_DELAY_MS);
-    },
-  };
-};
 
 const suppressTransitionSnapshot = (
   current: WorkbenchNavigationEntry | undefined,
@@ -121,214 +94,6 @@ const placementsByWidgetId = (layout: LayoutModel) => {
     for (const placement of region.widgets) placements.set(placement.widgetId, { placement, region: region.id });
   }
   return placements;
-};
-
-interface ActivateHistoryResourceInput {
-  entry: WorkbenchNavigationEntry;
-  resource: NonNullable<WorkbenchNavigationEntry["resource"]>;
-  placement?: WorkbenchWidgetPlacement;
-  layout: LayoutModel;
-  resources: ResourceRegistry;
-  replayCurrentLocation?: boolean;
-  replayResource(entry: WorkbenchNavigationEntry, replaceActive: boolean): Promise<unknown>;
-  restoreSelections(entry: WorkbenchNavigationEntry): void;
-}
-
-const activateHistoryResource = (input: ActivateHistoryResourceInput) => {
-  const { entry, layout, placement, replayCurrentLocation, replayResource, resource, resources, restoreSelections } =
-    input;
-  const presenter = Object.values(resources.store.getState().presenters).find((candidate) =>
-    candidate.canOpen(resource),
-  );
-  const activeLocationUri = getActiveLocationPlacement(layout.getLayout())?.resourceUri;
-  if (presenter && (replayCurrentLocation || activeLocationUri !== resource.uri)) {
-    return replayResource(entry, placement === undefined);
-  }
-
-  if (placement?.resourceUri === resource.uri) layout.activateWidget(placement.widgetId);
-  else if (entry.contributionId && layout.getWidget(entry.contributionId)?.role === "location") {
-    layout.openWidget(entry.contributionId, {
-      resource,
-      title: entry.title,
-      replaceActive: Boolean(placement),
-    });
-  } else if (placement) layout.activateWidget(placement.widgetId);
-  else if (entry.contributionId && layout.getWidget(entry.contributionId)) {
-    layout.openWidget(entry.contributionId, { title: entry.title });
-  }
-  restoreSelections(entry);
-  return undefined;
-};
-
-interface CreateHistoryControllerApiInput {
-  controllerInput: CreateHistoryControllerInput;
-  store: WorkbenchStore<HistoryStoreState>;
-  activateEntry(
-    entry: WorkbenchNavigationEntry,
-    options?: { replayCurrentLocation?: boolean },
-  ): Promise<unknown> | undefined;
-  finishRestore(scope?: string, restoredEntryId?: string): void;
-  flush(): void;
-  getPersistenceScope(): string | undefined;
-  moveCursor(delta: number): WorkbenchNavigationEntry | undefined;
-  runSilent(action: () => unknown): void;
-  setPersistenceScope(scope: string | undefined): void;
-  setState(state: HistoryStoreState, action: string, persist?: boolean): void;
-}
-
-const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): HistoryController => {
-  const {
-    activateEntry,
-    controllerInput,
-    finishRestore,
-    flush,
-    getPersistenceScope,
-    moveCursor,
-    runSilent,
-    setPersistenceScope,
-    setState,
-    store,
-  } = input;
-
-  return {
-    store,
-    goBack: () => moveCursor(-1),
-    goForward: () => moveCursor(1),
-    goPrevious() {
-      const snapshot = store.getState();
-      if (snapshot.hydrating) return undefined;
-      const current = snapshot.entries[snapshot.cursor];
-      for (let index = snapshot.entries.length - 1; index >= 0; index -= 1) {
-        const candidate = snapshot.entries[index];
-        if (isSameNavigationEntry(candidate, current)) continue;
-        setState({ ...snapshot, cursor: index }, "history.goPrevious");
-        runSilent(() => activateEntry(candidate));
-        return candidate;
-      }
-      return undefined;
-    },
-    recentlyClosed: () => store.getState().recentlyClosed,
-    reopenLastClosed() {
-      const snapshot = store.getState();
-      if (snapshot.hydrating) return undefined;
-      const last = snapshot.recentlyClosed.at(-1);
-      if (!last) return undefined;
-      setState({ ...snapshot, recentlyClosed: snapshot.recentlyClosed.slice(0, -1) }, "history.reopenClosed");
-      runSilent(() => {
-        const pending = activateEntry(last);
-        const reopenSubPanel = () => {
-          if (!last.closedSubPanel) return;
-          controllerInput.layout.openWidget(last.closedSubPanel.reference.contributionId, {
-            region: last.closedSubPanel.region,
-            resource: last.closedSubPanel.resource,
-            title: last.closedSubPanel.title,
-            closable: true,
-          });
-        };
-        if (pending instanceof Promise) void pending.then(reopenSubPanel);
-        else reopenSubPanel();
-      });
-      return last;
-    },
-    setPersistenceScope,
-    getPersistenceScope,
-    restore() {
-      const snapshot = reconcileHistoryState({
-        state: store.getState(),
-        layout: controllerInput.layout,
-        modes: controllerInput.modes,
-        resources: controllerInput.resources,
-      });
-      setState(snapshot, "history.reconcile");
-      const entry = snapshot.entries[snapshot.cursor];
-      const scope = getPersistenceScope();
-      let pending: Promise<unknown> | undefined;
-      if (entry) {
-        runSilent(() => {
-          const result = activateEntry(entry, { replayCurrentLocation: true });
-          if (result instanceof Promise) pending = result;
-        });
-      }
-      if (pending)
-        void pending.then(
-          () => finishRestore(scope, entry?.entryId),
-          () => finishRestore(scope, entry?.entryId),
-        );
-      else finishRestore(scope, entry?.entryId);
-      return entry;
-    },
-    flush,
-    clear() {
-      finishRestore();
-      setState(emptyHistoryState(), "history.clear");
-    },
-  };
-};
-
-interface HistoryRestoreFinisherInput {
-  store: WorkbenchStore<HistoryStoreState>;
-  activateEntry(entry: WorkbenchNavigationEntry): Promise<unknown> | undefined;
-  getScope(): string | undefined;
-  onFinish(): void;
-  runSilent(action: () => unknown): void;
-  setState(state: HistoryStoreState, action: string, persist?: boolean): void;
-}
-
-const createHistoryRestoreFinisher = (input: HistoryRestoreFinisherInput) => {
-  const finish = (scope: string | undefined, restoredEntryId?: string) => {
-    if (scope !== undefined && scope !== input.getScope()) return;
-    const snapshot = input.store.getState();
-    const requestedEntry = snapshot.entries[snapshot.cursor];
-    if (restoredEntryId && requestedEntry && requestedEntry.entryId !== restoredEntryId) {
-      let pending: Promise<unknown> | undefined;
-      input.runSilent(() => {
-        const result = input.activateEntry(requestedEntry);
-        if (result instanceof Promise) pending = result;
-      });
-      if (pending) {
-        void pending.then(
-          () => finish(scope, requestedEntry.entryId),
-          () => finish(scope, requestedEntry.entryId),
-        );
-      } else finish(scope, requestedEntry.entryId);
-      return;
-    }
-    input.onFinish();
-    if (snapshot.hydrating) {
-      input.setState({ ...snapshot, hydrating: false }, "history.finishRestore", false);
-    }
-  };
-  return finish;
-};
-
-interface HistoryCursorMoverInput {
-  store: WorkbenchStore<HistoryStoreState>;
-  activateEntry(entry: WorkbenchNavigationEntry): Promise<unknown> | undefined;
-  flush(): void;
-  runSilent(action: () => unknown): void;
-  setState(state: HistoryStoreState, action: string): void;
-}
-
-const createHistoryCursorMover = (input: HistoryCursorMoverInput) => (delta: number) => {
-  const snapshot = input.store.getState();
-  const cursor = snapshot.cursor + delta;
-  const entry = snapshot.entries[cursor];
-  if (!entry) return undefined;
-  input.setState({ ...snapshot, cursor }, delta < 0 ? "history.goBack" : "history.goForward");
-  input.flush();
-  if (!snapshot.hydrating) input.runSilent(() => input.activateEntry(entry));
-  return entry;
-};
-
-const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]) => {
-  let rotating = false;
-  layout.onWillChangePersistenceScope(() => {
-    rotating = true;
-  });
-  layout.onDidChangePersistenceScope(() => {
-    rotating = false;
-  });
-  return () => rotating;
 };
 
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
