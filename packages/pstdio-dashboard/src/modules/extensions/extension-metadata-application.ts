@@ -2,7 +2,7 @@ import type { WorkbenchLayout, WorkbenchModuleContext } from "@pstdio/workbench"
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { registerExtensionContributions } from "./extension-contribution-registration";
-import type { createExtensionLayoutPersistence } from "./extension-layout-persistence";
+import type { ExtensionLayoutPersistence } from "./extension-layout-persistence";
 import {
   type ExtensionLayoutCompatibility,
   reconcileExtensionLayout,
@@ -13,7 +13,7 @@ export const reconcileExtensionRefreshLayout = (input: {
   activeLayoutScope: string | undefined;
   current: ExtensionLayoutCompatibility;
   layout: WorkbenchLayout;
-  layoutPersistence: ReturnType<typeof createExtensionLayoutPersistence> | undefined;
+  layoutPersistence: ExtensionLayoutPersistence | undefined;
   previous: ExtensionLayoutCompatibility | undefined;
   projectId: string;
   resets: Array<{ extensionId: string; modeId?: string; revision: string }>;

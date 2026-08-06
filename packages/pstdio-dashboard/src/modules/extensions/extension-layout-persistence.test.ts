@@ -175,3 +175,41 @@ test("rejects a stale page flush after another host observes a newer contributio
     "native.notes",
   ]);
 });
+
+test("rejects a pending write captured before the first contribution fence", () => {
+  const storage = createStorage();
+  const scope = "project/one/mode/project/resource/pstdio://ticket/PS-1";
+  const seed = createLocalStorageLayoutPersistence({ debounceMs: 60_000, namespace: "dashboard", storage });
+  seed.setLayout(staleLayout(), scope);
+  seed.flush();
+
+  const staleLayoutPersistence = createLocalStorageLayoutPersistence({
+    debounceMs: 60_000,
+    namespace: "dashboard",
+    storage,
+  });
+  const currentLayoutPersistence = createLocalStorageLayoutPersistence({
+    debounceMs: 60_000,
+    namespace: "dashboard",
+    storage,
+  });
+  const stalePage = createExtensionLayoutPersistence({
+    layoutPersistence: staleLayoutPersistence,
+    namespace: "dashboard",
+    storage,
+  });
+  const currentPage = createExtensionLayoutPersistence({
+    layoutPersistence: currentLayoutPersistence,
+    namespace: "dashboard",
+    storage,
+  });
+
+  stalePage.layoutPersistence.setLayout(staleLayout(), scope);
+  currentPage.reconcile("one", removedCompatibility);
+  currentPage.applyResets("one", removedCompatibility, []);
+  staleLayoutPersistence.flush();
+
+  expect(currentLayoutPersistence.getLayout(scope)?.regions.main.widgets.map((entry) => entry.contributionId)).toEqual([
+    "native.notes",
+  ]);
+});

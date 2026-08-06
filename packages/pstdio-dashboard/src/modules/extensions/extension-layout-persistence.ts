@@ -61,9 +61,10 @@ export const createExtensionLayoutPersistence = (input: {
     },
     isCurrent: (scope, writeFence) => {
       const projectId = projectIdFromScope(scope);
-      if (!projectId || !writeFence) return true;
+      if (!projectId) return true;
       const key = workbenchStoragePersistenceKey(input.namespace, "layout-write-fence", projectId);
-      return input.storage.getItem(key) === writeFence;
+      const currentWriteFence = input.storage.getItem(key);
+      return writeFence ? currentWriteFence === writeFence : currentWriteFence === null;
     },
   });
 
@@ -139,3 +140,5 @@ export const createExtensionLayoutPersistence = (input: {
     },
   };
 };
+
+export type ExtensionLayoutPersistence = ReturnType<typeof createExtensionLayoutPersistence>;

@@ -33,7 +33,7 @@ import {
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
 import { disposeExtensionContributions } from "./extension-contribution-registration";
-import type { createExtensionLayoutPersistence } from "./extension-layout-persistence";
+import type { ExtensionLayoutPersistence } from "./extension-layout-persistence";
 import {
   createExtensionLayoutCompatibility,
   type ExtensionLayoutCompatibility,
@@ -52,7 +52,7 @@ type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExten
 
 interface CreateExtensionsModuleInput {
   executeCommand?: ExecuteDashboardExtensionCommand;
-  layoutPersistence?: ReturnType<typeof createExtensionLayoutPersistence>;
+  layoutPersistence?: ExtensionLayoutPersistence;
   loadAppearance?: LoadDashboardExtensionAppearance;
   loadMetadata?: LoadDashboardExtensionMetadata;
 }

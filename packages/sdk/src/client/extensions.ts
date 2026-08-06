@@ -67,7 +67,7 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
       body,
     }),
   resetLayout: (projectId, instanceId, body) =>
-    request(`/v1/projects/${projectId}/extensions/${instanceId}/reset-layout`, {
+    request(`/v1/projects/${projectId}/extensions/${encodeURIComponent(instanceId)}/reset-layout`, {
       method: "POST",
       body,
     }),
