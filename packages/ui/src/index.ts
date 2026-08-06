@@ -55,12 +55,13 @@ export { buildTabVisibilityMenuActions, filterVisibleTabs } from "@/components/t
 export type {
   SaveTagSettingsInput,
   TagEditorAction,
-  TagEditorFooterProps,
+  TagEditorHeadingProps,
   TagEditorProps,
+  TagEditorSaveBarProps,
   TagEditorValue,
   TagSettingsPanelProps,
 } from "@/components/tag-editor";
-export { TagEditor, TagEditorFooter, TagSettingsPanel } from "@/components/tag-editor";
+export { TagEditor, TagEditorHeading, TagEditorSaveBar, TagSettingsPanel } from "@/components/tag-editor";
 export { TreeList } from "@/components/tree-list/tree-list";
 export type {
   TreeListAction,

@@ -38,7 +38,8 @@ export const TagSettingsSection = (props: TagSettingsSectionProps) => {
 
   return (
     <TagEditor
-      title={tag.name}
+      title={draft.name}
+      onTitleChange={(name) => onDraftChange({ ...draft, name })}
       values={draft.options}
       onValuesChange={(options) => onDraftChange({ ...draft, options })}
       onDeleteValue={removeOption}

@@ -22,10 +22,14 @@ export interface TagEditorProps {
   onValuesChange: (values: TagEditorValue[]) => void;
   onDeleteValue?: (value: TagEditorValue) => void;
   onSetDefault?: (value: TagEditorValue) => void;
+  /** Enables inline renaming of the tag definition itself. */
+  onTitleChange?: (title: string) => void;
   title?: string;
   description?: string;
   /** Rendered on the right of the header row, e.g. a mode toggle and a delete action. */
   headerActions?: ReactNode;
+  /** Marks the heading with the unsaved-changes asterisk. */
+  hasChanges?: boolean;
   isSaving?: boolean;
   addLabel?: string;
   /** Name given to a freshly added option before it is renamed inline. */
