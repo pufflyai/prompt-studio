@@ -4,14 +4,29 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release-packages.yml"
+      - "bun.lock"
+      - "package.json"
+      - "extensions/**"
+      - "packages/e2e/package.json"
+      - "packages/e2e/src/packaged/**"
+      - "packages/pstdio/**"
+      - "packages/pstdio-*/**"
+      - "packages/sdk/**"
+      - "scripts/build/**"
+      - "scripts/embed.json"
+      - "scripts/release/**"
+      - "scripts/verify/**"
   workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  contents: read
 
 jobs:
   verify_packaged_bun_toolchain:
@@ -53,6 +68,10 @@ jobs:
     needs: verify_packaged_bun_toolchain
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     env:
       NPM_CONFIG_PROVENANCE: true
     steps:

@@ -27,7 +27,7 @@ services:
         bun install --frozen-lockfile
         bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://127.0.0.1:19841
 
-        bun packages/pstdio/src/index.ts serve --host 0.0.0.0 --port 19841 &
+        bun packages/pstdio/src/index.ts serve --foreground --owner persistent --host 0.0.0.0 --port 19841 &
         api_child=$$!
         bun run --cwd packages/pstdio-dashboard dev -- --host 0.0.0.0 --port 5173 &
         dashboard_child=$$!
