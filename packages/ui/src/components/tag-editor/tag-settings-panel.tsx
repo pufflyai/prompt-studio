@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { TagEditor } from "./tag-editor";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
+import { TagEditorFooter } from "./tag-editor-footer";
 
 export interface SaveTagSettingsInput<TValue> {
   deletedIds: Set<string>;
@@ -13,9 +14,8 @@ export interface SaveTagSettingsInput<TValue> {
 type EditorLabels = Pick<
   TagEditorProps,
   | "actionOptions"
-  | "actionsColumnLabel"
   | "addLabel"
-  | "addPlaceholder"
+  | "addName"
   | "colorOptions"
   | "deleteButtonText"
   | "deleteHeadline"
@@ -24,7 +24,6 @@ type EditorLabels = Pick<
   | "iconOptions"
   | "showIcons"
   | "title"
-  | "valueColumnLabel"
 >;
 
 type SortableValue = { id: string; sortOrder: number };
@@ -139,16 +138,21 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
           <Text textStyle="paragraph/S/regular">{loadingText}</Text>
         </HStack>
       ) : (
-        <TagEditor
-          {...editorProps}
-          values={drafts}
-          onValuesChange={setDrafts}
-          onDeleteValue={handleDeleteValue}
-          hasChanges={hasChanges}
-          isSaving={isSaving}
-          onSave={() => void handleSave()}
-          onCancel={handleCancel}
-        />
+        <>
+          <TagEditor
+            {...editorProps}
+            values={drafts}
+            onValuesChange={setDrafts}
+            onDeleteValue={handleDeleteValue}
+            isSaving={isSaving}
+          />
+          <TagEditorFooter
+            hasChanges={hasChanges}
+            isSaving={isSaving}
+            onSave={() => void handleSave()}
+            onCancel={handleCancel}
+          />
+        </>
       )}
     </Stack>
   );

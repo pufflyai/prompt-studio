@@ -154,9 +154,8 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
       title={t("settings.ticketStatuses.title", "Ticket statuses")}
       description={t("settings.ticketStatuses.description", "Configure the board columns used by tickets.")}
       actionOptions={actionOptions}
-      actionsColumnLabel={t("settings.ticketStatuses.actionsColumnLabel", "Actions")}
       addLabel={t("settings.ticketStatuses.addLabel", "Add status")}
-      addPlaceholder={t("settings.ticketStatuses.addPlaceholder", "Status label")}
+      addName={t("settings.ticketStatuses.addName", "New status")}
       showIcons={false}
       deleteHeadline={t("settings.ticketStatuses.deleteHeadline", "Delete ticket status?")}
       deleteNotificationText={(status) =>

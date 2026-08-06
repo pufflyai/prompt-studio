@@ -1,12 +1,12 @@
 @font-face {
   font-family: "prompt-studio-icons";
-  src: url("$fonts/prompt-studio-icons.eot?e46cc65b");
+  src: url("$fonts/prompt-studio-icons.eot?959122fb");
   src:
-    url("$fonts/prompt-studio-icons.eot?e46cc65b#iefix") format("embedded-opentype"),
-    url("$fonts/prompt-studio-icons.woff2?e46cc65b") format("woff2"),
-    url("$fonts/prompt-studio-icons.woff?e46cc65b") format("woff"),
-    url("$fonts/prompt-studio-icons.ttf?e46cc65b") format("truetype"),
-    url("$fonts/prompt-studio-icons.svg?e46cc65b#prompt-studio-icons") format("svg");
+    url("$fonts/prompt-studio-icons.eot?959122fb#iefix") format("embedded-opentype"),
+    url("$fonts/prompt-studio-icons.woff2?959122fb") format("woff2"),
+    url("$fonts/prompt-studio-icons.woff?959122fb") format("woff"),
+    url("$fonts/prompt-studio-icons.ttf?959122fb") format("truetype"),
+    url("$fonts/prompt-studio-icons.svg?959122fb#prompt-studio-icons") format("svg");
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -66,6 +66,9 @@
 }
 .icon-data-array::before {
   content: "\e80b";
+}
+.icon-status-backlog::before {
+  content: "\e80c";
 }
 .icon-metrics::before {
   content: "\e80d";
@@ -139,17 +142,44 @@
 .icon-sum::before {
   content: "\e824";
 }
+.icon-status-todo::before {
+  content: "\e825";
+}
+.icon-status-progress::before {
+  content: "\e826";
+}
+.icon-status-review::before {
+  content: "\e827";
+}
+.icon-status-done::before {
+  content: "\e828";
+}
+.icon-status-canceled::before {
+  content: "\e829";
+}
+.icon-level-low::before {
+  content: "\e82a";
+}
 .icon-arrow-down::before {
   content: "\e82b";
 }
 .icon-arrow-down-1::before {
   content: "\e82c";
 }
+.icon-level-mid::before {
+  content: "\e82d";
+}
 .icon-arrow-left::before {
   content: "\e82e";
 }
+.icon-level-high::before {
+  content: "\e82f";
+}
 .icon-arrow-left-2::before {
   content: "\e830";
+}
+.icon-level-xhigh::before {
+  content: "\e831";
 }
 .icon-arrow-right::before {
   content: "\e832";

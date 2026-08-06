@@ -23,6 +23,7 @@ export const sp = {
 
 export const spacing = {
   none: { value: "0" },
+  "3xs": { value: sp[25] },
   "2xs": { value: sp[50] },
   xs: { value: sp[100] },
   compact: { value: "0.625rem" },
