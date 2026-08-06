@@ -20,17 +20,32 @@ type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
 
 export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launcher";
 
+const restoreTerminalSelectionFromLauncher = (ctx: WorkbenchCoreContributionContext, launcherInstanceId: string) => {
+  const secondary = ctx.layout.getLayout().regions.secondary;
+  if (secondary.activeWidgetId !== launcherInstanceId) return;
+
+  const terminal = [...secondary.widgets]
+    .reverse()
+    .find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+  if (terminal) ctx.layout.setRegionActiveWidget("secondary", terminal.widgetId);
+};
+
 const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
   const existing = ctx.layout
     .getLayout()
     .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
-  if (existing) return existing;
+  if (existing) {
+    restoreTerminalSelectionFromLauncher(ctx, existing.widgetId);
+    return existing;
+  }
 
-  return ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
+  const launcher = ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
     hiddenByDefault: true,
     pinned: true,
     title: "Terminal",
   });
+  restoreTerminalSelectionFromLauncher(ctx, launcher.instanceId);
+  return launcher;
 };
 
 const terminalTitlePattern = /^Terminal (\d+)$/;

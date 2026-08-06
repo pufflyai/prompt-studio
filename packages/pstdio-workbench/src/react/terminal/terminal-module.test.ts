@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import {
+  createWorkbenchCore,
+  type ResourceRef,
+  type WorkbenchLayout,
+  workbenchTopHeaderTrailingMenuPath,
+} from "../../core";
 import {
   createWorkbenchTerminalModule,
   openWorkbenchTerminal,
@@ -294,5 +299,32 @@ describe("createWorkbenchTerminalModule", () => {
       .getLayout()
       .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
     expect(terminal?.resource).toBe(workspaceResource);
+  });
+});
+
+describe("restored terminal selection", () => {
+  test("restores a real terminal when the hidden launcher was persisted active", async () => {
+    const savedLayouts: WorkbenchLayout[] = [];
+    const persistence = {
+      getLayout: () => savedLayouts.at(-1),
+      setLayout: (layout: WorkbenchLayout) => savedLayouts.push(structuredClone(layout)),
+    };
+    const firstWorkbench = createWorkbenchCore({ layoutPersistence: persistence });
+    firstWorkbench.registerModule(createWorkbenchTerminalModule());
+    await firstWorkbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+
+    firstWorkbench.layout.setRegionActiveWidget("secondary", WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+    expect(firstWorkbench.layout.getLayout().regions.secondary.activeWidgetId).toBe(
+      WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+    );
+
+    const restoredWorkbench = createWorkbenchCore({ layoutPersistence: persistence });
+    restoredWorkbench.registerModule(createWorkbenchTerminalModule());
+    const secondary = restoredWorkbench.layout.getLayout().regions.secondary;
+    const restoredTerminal = secondary.widgets.find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
+
+    expect(secondary.activeWidgetId).toBe(restoredTerminal?.widgetId);
   });
 });
