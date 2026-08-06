@@ -2,7 +2,7 @@ import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import { CircleDashed, Diamond, Hexagon, Square, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { TagEditor } from "./tag-editor";
@@ -71,6 +71,32 @@ export const Renaming = {
     ]);
 
     return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
+  },
+};
+
+export const ExternalReset = {
+  render: () => {
+    const [values, setValues] = useState<TagEditorValue[]>(initialItems);
+
+    return (
+      <Stack gap="sm">
+        <TagEditor title="Priority" values={values} onValuesChange={setValues} />
+        <Button size="sm" alignSelf="flex-start" onClick={() => setValues(initialItems)}>
+          Reset
+        </Button>
+      </Stack>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.dblClick(canvas.getByText("Low"));
+    const input = canvas.getByDisplayValue("Low");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Low reviewed{enter}");
+    await expect(canvas.getByText("Low reviewed")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Reset" }));
+    await expect(canvas.getByText("Low")).toBeVisible();
+    await expect(canvas.queryByText("Low reviewed")).not.toBeInTheDocument();
   },
 };
 

@@ -123,6 +123,8 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         aria-label={`Change ${value.name} appearance`}
       />
       <Editable.Root
+        // Editable owns its draft text, so a changed source name must remount it for Cancel/reset flows.
+        key={value.name}
         flex="1"
         minWidth="0"
         defaultValue={value.name}
