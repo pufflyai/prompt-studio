@@ -121,6 +121,16 @@ const transpilerLoader = (filePath: string) => {
   return "js" as const;
 };
 
+const normalizedRelativePath = (rootPath: string, filePath: string) =>
+  relative(rootPath, filePath).replaceAll("\\", "/");
+
+const addHashEntry = (hash: ReturnType<typeof createHash>, path: string, content: string | Buffer) => {
+  hash.update(path.replaceAll("\\", "/"));
+  hash.update("\0");
+  hash.update(content);
+  hash.update("\0");
+};
+
 const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: string, entryPath: string) => {
   const pending = [entryPath];
   const visited = new Set<string>();
@@ -131,8 +141,7 @@ const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: s
     visited.add(filePath);
 
     const content = readFileSync(filePath);
-    hash.update(relative(packagePath, filePath));
-    hash.update(content);
+    addHashEntry(hash, normalizedRelativePath(packagePath, filePath), content);
     if (![".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(filePath))) continue;
 
     try {
@@ -147,11 +156,8 @@ const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: s
   }
 };
 
-const addOptionalFile = (hash: ReturnType<typeof createHash>, filePath: string) => {
-  hash.update(filePath);
-  if (existsSync(filePath)) hash.update(readFileSync(filePath));
-  else hash.update("missing");
-};
+const addOptionalFile = (hash: ReturnType<typeof createHash>, path: string, filePath: string) =>
+  addHashEntry(hash, path, existsSync(filePath) ? readFileSync(filePath) : "missing");
 
 const buildInputSignature = (
   input: ManagedWebviewBuildSourceInput,
@@ -160,17 +166,21 @@ const buildInputSignature = (
   missingDependencies: string[],
 ) => {
   const hash = createHash("sha256");
-  hash.update(readPackageJsonText(input.packagePath));
-  addOptionalFile(hash, join(input.packagePath, "bun.lock"));
-  addOptionalFile(hash, join(input.packagePath, "bun.lockb"));
+  addHashEntry(hash, "package.json", readPackageJsonText(input.packagePath));
+  addOptionalFile(hash, "bun.lock", join(input.packagePath, "bun.lock"));
+  addOptionalFile(hash, "bun.lockb", join(input.packagePath, "bun.lockb"));
   addLocalImportGraph(hash, input.packagePath, input.entryPath);
-  hash.update(dependencyNodeModules ?? "missing-node-modules");
-  hash.update(missingDependencies.join("\0"));
+  addHashEntry(hash, "dependency-node-modules", dependencyNodeModules ? "available" : "missing");
+  addHashEntry(hash, "missing-dependencies", missingDependencies.join("\0"));
 
   for (const dependencyName of dependencyNames) {
-    hash.update(dependencyName);
+    addHashEntry(hash, "dependency", dependencyName);
     if (!dependencyNodeModules) continue;
-    addOptionalFile(hash, join(packagePathInNodeModules(dependencyNodeModules, dependencyName), "package.json"));
+    addOptionalFile(
+      hash,
+      `node_modules/${dependencyName}/package.json`,
+      join(packagePathInNodeModules(dependencyNodeModules, dependencyName), "package.json"),
+    );
   }
 
   return hash.digest("hex");

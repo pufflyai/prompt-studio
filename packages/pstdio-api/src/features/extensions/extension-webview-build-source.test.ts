@@ -50,3 +50,47 @@ describe("prepareManagedWebviewBuildSource", () => {
     }
   });
 });
+
+describe("inspectManagedWebviewBuildInputs", () => {
+  test("produces the same signature for identical packages in different roots", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-signature-test-"));
+    const createPackage = (name: string) => {
+      const packagePath = join(root, name);
+      const entryPath = join(packagePath, "src", "main.ts");
+      mkdirSync(join(packagePath, "src"), { recursive: true });
+      writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "test-extension" }));
+      writeFileSync(entryPath, "export const value = 1;");
+      return { entryPath, installName: "test-extension", packageName: "test-extension", packagePath };
+    };
+
+    try {
+      const first = inspectManagedWebviewBuildInputs(createPackage("first"));
+      const second = inspectManagedWebviewBuildInputs(createPackage("second"));
+
+      expect(first.signature).toBe(second.signature);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("delimits source paths from their contents in the signature", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-signature-test-"));
+    const packagePath = join(root, "extension");
+    const firstEntryPath = join(packagePath, "src", "a");
+    const secondEntryPath = join(packagePath, "src", "ab");
+    mkdirSync(join(packagePath, "src"), { recursive: true });
+    writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "test-extension" }));
+    writeFileSync(firstEntryPath, "bc");
+    writeFileSync(secondEntryPath, "c");
+
+    try {
+      const shared = { installName: "test-extension", packageName: "test-extension", packagePath };
+      const first = inspectManagedWebviewBuildInputs({ ...shared, entryPath: firstEntryPath });
+      const second = inspectManagedWebviewBuildInputs({ ...shared, entryPath: secondEntryPath });
+
+      expect(first.signature).not.toBe(second.signature);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
