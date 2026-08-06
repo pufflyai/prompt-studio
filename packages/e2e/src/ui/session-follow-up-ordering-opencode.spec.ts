@@ -7,10 +7,14 @@ import {
   createProjectViaApi,
   deleteAllProjects,
   expectOrderedConversationBlocks,
-  extractSessionIdFromUrl,
   getRenderedConversationBlocks,
+  openNewSessionPanel,
+  openRecentSession,
   registerRepoViaApi,
+  setProjectAgentDefaults,
+  submitInitialMessage,
   submitMessage,
+  waitForRenderedConversationBlock,
   waitForSessionStatus,
 } from "./helpers/session-follow-up";
 
@@ -82,6 +86,7 @@ test.describe("OpenCode follow-up ordering", () => {
     });
     const project = await createProjectViaApi(request, "OpenCode Follow-up Ordering");
     projectId = project.id;
+    await setProjectAgentDefaults(request, projectId, opencodeAgentId, selectedModel);
     const repo = await registerRepoViaApi(request, projectId, "opencode-follow-up-ordering-repo", repoDir);
     repoId = repo.id;
   });
@@ -101,24 +106,18 @@ test.describe("OpenCode follow-up ordering", () => {
       agentId: opencodeAgentId,
       models: [selectedModel],
     });
-    await page.goto(`/projects/${projectId}/sessions`);
+    await openNewSessionPanel(page, projectId);
     await expect(page.locator("button[aria-label='Select model']")).toContainText(selectedModel);
 
-    const createSessionRequestPromise = page.waitForRequest(
-      (request) => request.method() === "POST" && request.url().endsWith("/v1/sessions"),
-    );
-    await submitMessage(page, firstPrompt);
-    const createSessionRequest = await createSessionRequestPromise;
-    expect(createSessionRequest.postDataJSON()).toMatchObject({
+    const initialMessage = await submitInitialMessage(page, firstPrompt);
+    expect(initialMessage.request.postDataJSON()).toMatchObject({
       agent: opencodeAgentId,
       model: selectedModel,
       prompt: firstPrompt,
     });
-    await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
+    const sessionId = initialMessage.sessionId;
 
-    const sessionId = extractSessionIdFromUrl(page.url());
-
-    await expect(page.getByText("FIRST DONE").first()).toBeVisible({ timeout: opencodeStatusTimeout });
+    await waitForRenderedConversationBlock(page, "FIRST DONE", { timeout: opencodeStatusTimeout });
     await waitForSessionStatus(request, sessionId, "completed", { timeout: opencodeStatusTimeout });
     await expect(page.getByText("Working...")).toHaveCount(0);
 
@@ -132,8 +131,8 @@ test.describe("OpenCode follow-up ordering", () => {
       model: selectedModel,
       prompt: followUpPrompt,
     });
-    await expect(page.getByText("SECOND DONE").first()).toBeVisible({ timeout: opencodeStatusTimeout });
     await waitForSessionStatus(request, sessionId, "completed", { timeout: opencodeStatusTimeout });
+    await waitForRenderedConversationBlock(page, "SECOND DONE", { timeout: opencodeStatusTimeout });
     await expect(page.getByText("Working...")).toHaveCount(0);
 
     const beforeRefreshBlocks = await getRenderedConversationBlocks(page);
@@ -144,9 +143,9 @@ test.describe("OpenCode follow-up ordering", () => {
       followUpPrompt,
       label: "before refresh",
     });
-
     await page.reload();
-    await expect(page.getByText("SECOND DONE").first()).toBeVisible({ timeout: opencodeStatusTimeout });
+    await openRecentSession(page, firstPrompt);
+    await waitForRenderedConversationBlock(page, "SECOND DONE", { timeout: opencodeStatusTimeout });
     await expect(page.getByText("Working...")).toHaveCount(0);
 
     const afterRefreshBlocks = await getRenderedConversationBlocks(page);
@@ -157,7 +156,6 @@ test.describe("OpenCode follow-up ordering", () => {
       followUpPrompt,
       label: "after refresh",
     });
-
     const conversationMessages = await getConversationMessages(request, sessionId);
     expectConversationOrder(conversationMessages, { firstPrompt, followUpPrompt });
   });

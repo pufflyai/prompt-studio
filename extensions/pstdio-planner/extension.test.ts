@@ -112,7 +112,7 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.settingsPanels?.ticketStatuses?.title).toEqual({
       $l10n: "settingsPanels.ticketStatuses.title",
-      default: "Ticket statuses",
+      default: "Ticket status",
     });
   });
 

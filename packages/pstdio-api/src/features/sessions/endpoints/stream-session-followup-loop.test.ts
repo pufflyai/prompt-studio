@@ -114,6 +114,57 @@ const createSpyRecord = (): { record: RuntimeHarnessRecord; firstExit: () => voi
   };
 };
 
+const message = (id: string, role: "user" | "assistant", text: string) => ({
+  id,
+  role,
+  parts: [{ type: "text" as const, text }],
+});
+
+const createDelayedResumeRecord = (): RuntimeHarnessRecord => {
+  const persistedMessages = [
+    message("m1", "user", "FIRST"),
+    message("m2", "assistant", "FIRST DONE"),
+    {
+      id: "usage-1",
+      role: "system" as const,
+      parts: [{ type: "token_usage" as const, inputTokens: 10, outputTokens: 2 }],
+    },
+  ];
+
+  return createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, input) => {
+        persistedMessages.forEach((value, index) => {
+          input.events.push({ op: "add", path: `/messages/${index}`, value });
+        });
+        return {
+          agentSessionId: `delayed-${crypto.randomUUID()}`,
+          done: Promise.resolve({ status: "completed" }),
+          stop: () => {},
+        };
+      },
+      resume: (_ctx, input) => {
+        setTimeout(() => {
+          input.events.push({ op: "add", path: "/messages/2", value: message("m3", "user", "SECOND") });
+        }, 50);
+        setTimeout(() => {
+          input.events.push({ op: "add", path: "/messages/3", value: message("m4", "assistant", "SECOND DONE") });
+        }, 100);
+
+        return {
+          agentSessionId: input.agentSessionId,
+          done: new Promise<HarnessExit>((resolve) => {
+            setTimeout(() => resolve({ status: "completed" }), 150);
+          }),
+          stop: () => {},
+        };
+      },
+      // Transcript normalization omits the persisted token-usage message.
+      getMessages: () => persistedMessages.slice(0, 2),
+    },
+  });
+};
+
 const getPatchTextParts = (patch: JsonPatch) => {
   if (!Array.isArray(patch.value)) return [];
   return patch.value.flatMap((message) => {
@@ -193,5 +244,66 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     expect(lastPatch && getPatchTextParts(lastPatch)).toContain("SECOND DONE");
 
     sse.close();
+  });
+
+  test("shifts the first live follow-up patch when replay history is initially empty", async () => {
+    const delayedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-delayed-offset-"));
+    const delayedApp = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(delayedRoot, "storage"),
+      filesRoot: "",
+      harnessRegistry: createTestHarnessRegistry([createDelayedResumeRecord()]),
+    });
+
+    try {
+      const projectRes = await delayedApp.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Delayed Offset Project" }),
+      });
+      const project = await projectRes.json();
+
+      const createRes = await delayedApp.app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, title: "Delayed Offset", prompt: "hello", agent: FAKE_ID }),
+      });
+      const session = await createRes.json();
+
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        const response = await delayedApp.app.request(`/v1/sessions/${session.id}`);
+        if ((await response.json()).status === "completed") break;
+        await Bun.sleep(10);
+      }
+
+      const followUpRes = await delayedApp.app.request(`/v1/sessions/${session.id}/follow-up`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "follow up" }),
+      });
+      expect(followUpRes.status).toBe(200);
+
+      const streamRes = await delayedApp.app.request(`/v1/sessions/${session.id}/stream`);
+      const sse = createSSEReader(streamRes);
+      const initial = await sse.readUntil(
+        (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"),
+      );
+      const snapshot = initial.find((event) => event.event === "patch")?.data as JsonPatch;
+      expect(snapshot.path).toBe("/messages");
+
+      const resumed = await sse.readUntil(
+        (event) =>
+          event.event === "patch" &&
+          (event.data as JsonPatch).path === "/messages/4" &&
+          ((event.data as JsonPatch).value as { parts?: Array<{ text?: string }> }).parts?.[0]?.text === "SECOND DONE",
+      );
+      const messagePatches = resumed.filter((event) => event.event === "patch").map((event) => event.data as JsonPatch);
+
+      expect(messagePatches.map((patch) => patch.path)).toEqual(["/messages/3", "/messages/4"]);
+      sse.close();
+    } finally {
+      await delayedApp.close();
+      rmSync(delayedRoot, { recursive: true, force: true });
+    }
   });
 });

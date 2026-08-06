@@ -9,6 +9,7 @@ import {
   type TagSettingsDraft,
   type TagSettingsTag,
   tagOptionsToEditorValues,
+  tagSettingsDraftsVersion,
   tagSettingsDraftVersion,
 } from "./tag-settings-draft";
 
@@ -28,6 +29,7 @@ const tag = {
 } satisfies TagSettingsTag;
 
 const unchangedDraft = (): TagSettingsDraft => ({
+  name: tag.name,
   type: tag.type,
   options: tagOptionsToEditorValues(tag.options),
   deletedIds: new Set(),
@@ -42,6 +44,7 @@ describe("tag settings draft", () => {
     };
 
     expect(createTagSettingsDraft(latestTag)).toEqual({
+      name: latestTag.name,
       type: "multi_select",
       options: [
         {
@@ -54,7 +57,21 @@ describe("tag settings draft", () => {
       ],
       deletedIds: new Set(),
     });
-    expect(tagSettingsDraftVersion(latestTag)).toBe("tag-1:multi_select:option-1:Dashboard:blue:sparkles:0");
+    expect(tagSettingsDraftVersion(latestTag)).toBe(
+      `tag-1:${latestTag.name}:multi_select:option-1:Dashboard:blue:sparkles:0`,
+    );
+  });
+
+  test("distinguishes tag collections when values contain version separators", () => {
+    const separateTags: TagSettingsTag[] = [
+      { ...tag, id: "first", options: [] },
+      { ...tag, id: "second", type: "multi_select", options: [] },
+    ];
+    const joinedTag: TagSettingsTag[] = [
+      { ...tag, id: "first:single_select|second", type: "multi_select", options: [] },
+    ];
+
+    expect(tagSettingsDraftsVersion(separateTags)).not.toBe(tagSettingsDraftsVersion(joinedTag));
   });
 
   test("detects type changes without mutating the saved tag", () => {
@@ -66,6 +83,7 @@ describe("tag settings draft", () => {
 
   test("builds an atomic payload with type, creates, updates, and deletes", () => {
     const draft: TagSettingsDraft = {
+      name: tag.name,
       type: "multi_select",
       options: [
         { id: "option-1", name: "API v2", color: "blue", sortOrder: 0, icon: null },
@@ -76,6 +94,7 @@ describe("tag settings draft", () => {
 
     expect(buildTagDraftPayload(tag, draft)).toEqual({
       tagId: "tag-1",
+      name: undefined,
       type: "multi_select",
       optionsToCreate: [{ name: "Dashboard", color: "green", icon: "circle" }],
       optionsToUpdate: [{ id: "option-1", name: "API v2", color: "blue", icon: "circle" }],
@@ -83,9 +102,18 @@ describe("tag settings draft", () => {
     });
   });
 
-  test("omits unchanged type and skips untouched options in the payload", () => {
+  test("carries a renamed tag definition into the payload", () => {
+    const draft = { ...unchangedDraft(), name: "Surfaces" };
+
+    expect(hasTagDraftChanges(tag, draft)).toBe(true);
+    expect(buildTagDraftPayload(tag, draft).name).toBe("Surfaces");
+    expect(tag.name).toBe("Surface");
+  });
+
+  test("omits an unchanged name and type and skips untouched options in the payload", () => {
     expect(buildTagDraftPayload(tag, unchangedDraft())).toEqual({
       tagId: "tag-1",
+      name: undefined,
       type: undefined,
       optionsToCreate: [],
       optionsToUpdate: [],

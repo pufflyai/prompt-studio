@@ -1,9 +1,10 @@
-import { Box, Button, Flex } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { type ReactNode, useEffect, useRef, type WheelEvent } from "react";
+import { useEffect, useRef, type WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
+import { ChatMessageListResponse, StickyMessageToggle } from "./chat-message-list-items";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
@@ -12,7 +13,7 @@ import {
 } from "./chat-panel-sticky-user-message";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
-import { getMessageOrigin, type MessageGroup, type SessionMessage } from "./message-types";
+import { getAssistantMessageActionTargetId, type MessageGroup, type SessionMessage } from "./message-types";
 
 interface ChatMessageListProps {
   leadingResponses: SessionMessage[];
@@ -22,12 +23,6 @@ interface ChatMessageListProps {
   expandedStickyMessageIds: Set<string>;
   onToggleStickyMessage: (messageId: string) => void;
   onReady?: () => void;
-}
-
-interface StickyMessageToggleProps {
-  label: string;
-  onClick: () => void;
-  actionPanel?: ReactNode;
 }
 
 interface StickyMessageGroupProps {
@@ -44,6 +39,7 @@ type ChatMessageListItem =
       type: "leading-response";
       key: string;
       message: SessionMessage;
+      showAssistantActions: boolean;
     }
   | {
       type: "group";
@@ -60,19 +56,24 @@ const TAIL_READY_PIXEL_EPSILON = 1;
 const VIRTUAL_LIST_OVERSCAN = 4;
 const VIRTUAL_LIST_GAP = 8;
 
-const buildMessageListItems = (leadingResponses: SessionMessage[], groups: MessageGroup[]) => [
-  ...leadingResponses.map((message) => ({
-    type: "leading-response" as const,
-    key: message.id,
-    message,
-  })),
-  ...groups.map((group, groupIndex) => ({
-    type: "group" as const,
-    key: group.userMessage.id,
-    group,
-    groupIndex,
-  })),
-];
+const buildMessageListItems = (leadingResponses: SessionMessage[], groups: MessageGroup[]) => {
+  const leadingActionMessageId = getAssistantMessageActionTargetId(leadingResponses);
+
+  return [
+    ...leadingResponses.map((message) => ({
+      type: "leading-response" as const,
+      key: message.id,
+      message,
+      showAssistantActions: message.id === leadingActionMessageId,
+    })),
+    ...groups.map((group, groupIndex) => ({
+      type: "group" as const,
+      key: group.userMessage.id,
+      group,
+      groupIndex,
+    })),
+  ];
+};
 
 const getEstimatedTailOffset = (count: number, viewportHeight: number) => {
   if (count === 0) return 0;
@@ -144,49 +145,6 @@ const useTailReady = (input: {
   }, [itemCount, scrollRef, totalSize]);
 };
 
-const StickyMessageToggle = (props: StickyMessageToggleProps) => {
-  const { label, onClick, actionPanel } = props;
-
-  return (
-    <Flex
-      position="absolute"
-      bottom="0"
-      left="0"
-      right="0"
-      justifyContent={actionPanel ? "space-between" : "flex-end"}
-      alignItems="flex-end"
-      px="xs"
-      pb="xs"
-      pt="lg"
-      bgGradient="to-t"
-      gradientFrom="bg.subtle"
-      gradientTo="transparent"
-      borderBottomRadius="xs"
-      pointerEvents="none"
-    >
-      {actionPanel}
-      <Button size="2xs" variant="outline" pointerEvents="auto" onClick={onClick}>
-        {label}
-      </Button>
-    </Flex>
-  );
-};
-
-const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false, animate = false) => {
-  const from = getMessageOrigin(message.role);
-
-  return (
-    <ChatMessage.Root from={from} {...(animate ? messageFadeInProps : undefined)}>
-      <ChatMessage.Content from={from}>
-        <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
-        {from === "assistant" || from === "user" ? (
-          <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
-        ) : null}
-      </ChatMessage.Content>
-    </ChatMessage.Root>
-  );
-};
-
 const handleExpandedStickyMessageWheel = (event: WheelEvent<HTMLElement>) => {
   if (shouldStopStickyUserMessageWheel(event.currentTarget, event.deltaY)) {
     event.stopPropagation();
@@ -212,6 +170,7 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   const isExpandedCollapsible = isCollapsible && isExpanded;
   const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
   const toggleStickyMessage = () => onToggleStickyMessage(group.userMessage.id);
+  const actionMessageId = getAssistantMessageActionTargetId(group.responses);
 
   return (
     <Box>
@@ -252,7 +211,14 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
         </ChatMessage.Root>
       </Box>
       {group.responses.map((message) => (
-        <Box key={message.id}>{renderMessage(message, streaming, hideQuestionForms)}</Box>
+        <Box key={message.id}>
+          <ChatMessageListResponse
+            message={message}
+            streaming={streaming}
+            hideQuestionForms={hideQuestionForms}
+            showAssistantActions={message.id === actionMessageId}
+          />
+        </Box>
       ))}
     </Box>
   );
@@ -275,11 +241,14 @@ const renderListItem = (
   } = props;
 
   if (item.type === "leading-response") {
-    return renderMessage(
-      item.message,
-      streaming,
-      groups.length > 0 || hideActiveQuestionForms,
-      animatedItemKeys.has(item.key),
+    return (
+      <ChatMessageListResponse
+        message={item.message}
+        streaming={streaming}
+        hideQuestionForms={groups.length > 0 || hideActiveQuestionForms}
+        animate={animatedItemKeys.has(item.key)}
+        showAssistantActions={item.showAssistantActions}
+      />
     );
   }
 

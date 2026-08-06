@@ -1,0 +1,13 @@
+/*
+ * The font-editor generates a five-format @font-face (eot/svg/ttf/woff/woff2)
+ * and Vite inlines every referenced asset in library builds, so importing the
+ * generated stylesheet would ship ~670kB of legacy font data. Only woff2 is
+ * declared here; glyph codepoints still come from the generated stylesheet.
+ */
+@font-face {
+  font-family: "prompt-studio-icons";
+  src: url("../../../public/font/prompt-studio-icons.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}

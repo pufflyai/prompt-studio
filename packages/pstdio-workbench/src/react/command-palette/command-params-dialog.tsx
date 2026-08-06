@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
 import { Fragment, useEffect, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import {
@@ -95,7 +95,12 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
     >
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content display="flex" flexDirection="column" maxH="calc(100% - 48px)">
+        <Dialog.Content
+          display="flex"
+          flexDirection="column"
+          maxH="calc(100% - 48px)"
+          onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void run(), isValid && !submitting)}
+        >
           <Dialog.Header>
             <Stack gap="2xs" minW="0">
               <Text textStyle="heading/M/semibold">{request?.label ?? "Run command"}</Text>

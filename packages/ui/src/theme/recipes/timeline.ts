@@ -50,11 +50,11 @@ export const timelineSlotRecipe = defineSlotRecipe({
       position: "relative",
     },
     content: {
-      pb: "var(--timeline-content-gap)",
       display: "flex",
       flexDirection: "column",
       width: "full",
-      gap: "2",
+      gap: "0",
+      paddingBottom: "0",
     },
     title: {
       display: "flex",

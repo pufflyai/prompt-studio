@@ -69,6 +69,7 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     fileRenderers: scoped(metadata.fileRenderers),
     controlsRenderers: scoped(metadata.controlsRenderers),
     keybindings: scoped(metadata.keybindings),
+    settingsSections: scoped(metadata.settingsSections),
     settingsPanels: scoped(metadata.settingsPanels) ?? [],
     settingsDefinitions: scoped(metadata.settingsDefinitions),
     treeItems: scoped(metadata.treeItems),

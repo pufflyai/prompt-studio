@@ -241,6 +241,14 @@ export interface MessageGroup {
   responses: SessionMessage[];
 }
 
+export const getAssistantMessageActionTargetId = (messages: SessionMessage[]) => {
+  const lastMessage = messages.at(-1);
+  if (lastMessage?.role !== "assistant") return null;
+
+  const hasVisibleText = lastMessage.parts.some((part) => part.type === "text" && isVisibleText(part));
+  return hasVisibleText ? lastMessage.id : null;
+};
+
 // Groups messages into turns: each group starts with a user message
 // followed by all non-user messages until the next user message.
 export const groupMessagesByTurn = (messages: SessionMessage[]) => {

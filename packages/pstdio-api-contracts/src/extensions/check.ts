@@ -33,6 +33,7 @@ import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } 
 import {
   extensionSettingDefinitionRecordSchema,
   extensionSettingsPanelRecordSchema,
+  extensionSettingsSectionRecordSchema,
   workbenchExtensionSettingsPanelRecordSchema,
 } from "./settings";
 
@@ -94,6 +95,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   routes: z.array(workbenchExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
+  settingsSections: z.array(extensionSettingsSectionRecordSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   kanbanRenderers: z.array(extensionKanbanRendererRecordSchema).optional(),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),

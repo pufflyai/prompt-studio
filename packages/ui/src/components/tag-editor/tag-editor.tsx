@@ -1,69 +1,89 @@
-import { Button, Flex, HStack, Input, Stack, Table, Text } from "@chakra-ui/react";
+import { chakra, Editable, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus, X } from "lucide-react";
-import type { KeyboardEvent } from "react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
-import { IconColorPicker } from "@/components/primitives/icon-color-picker";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
+import { TagEditorHeading } from "./tag-editor-heading";
 import { TagEditorRow } from "./tag-editor-row";
 
-interface AddFormState {
-  name: string;
-  color: string;
-  icon: string | null;
+const nextSortOrder = (values: TagEditorValue[]) =>
+  values.length > 0 ? Math.max(...values.map((value) => value.sortOrder)) + 1 : 0;
+
+interface TagEditorTitleProps {
+  title: string;
+  hasChanges?: boolean;
+  isSaving?: boolean;
+  onTitleChange?: (title: string) => void;
 }
 
-const buildDraftItem = (form: AddFormState, sortOrder: number) => ({
-  id: `new-${crypto.randomUUID()}`,
-  name: form.name.trim(),
-  color: form.color,
-  icon: form.icon,
-  sortOrder,
-  isNew: true,
+/** Renames the tag definition inline, matching how its options are renamed. */
+const TagEditorTitle = (props: TagEditorTitleProps) => {
+  const { title, hasChanges, isSaving, onTitleChange } = props;
+
+  if (!onTitleChange) return <TagEditorHeading hasChanges={hasChanges}>{title}</TagEditorHeading>;
+
+  return (
+    <Editable.Root
+      key={title}
+      defaultValue={title}
+      disabled={isSaving}
+      selectOnFocus
+      onValueCommit={(details) => {
+        const trimmed = details.value.trim();
+        if (trimmed && trimmed !== title) onTitleChange(trimmed);
+      }}
+    >
+      <Editable.Preview textStyle="label/L/medium" />
+      <Editable.Input textStyle="label/L/medium" />
+    </Editable.Root>
+  );
+};
+
+const AddOptionRow = chakra("button", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    height: "tag-editor-add-row",
+    paddingInline: "xs",
+    color: "fg.muted",
+    borderRadius: "compact",
+    cursor: "pointer",
+    _hover: { bg: "bg.muted", color: "fg" },
+    _disabled: { cursor: "not-allowed", opacity: 0.5, _hover: { bg: "transparent", color: "fg.muted" } },
+  },
 });
 
 export const TagEditor = (props: TagEditorProps) => {
   const {
     title,
     description,
+    headerActions,
     values,
     onValuesChange,
-    onSave,
-    onCancel,
     onDeleteValue,
     onSetDefault,
+    onTitleChange,
     hasChanges,
     isSaving,
-    addLabel = "Add tag",
-    addPlaceholder = "Tag name",
+    addLabel = "Add option",
+    addName = "New option",
     actionOptions,
-    actionsColumnLabel = "Actions",
-    cancelLabel = "Cancel",
     colorOptions,
     defaultAddColor = "blue",
     defaultAddIcon = null,
-    defaultColumnLabel = "Default",
     deleteButtonText = "Delete tag",
     deleteHeadline = "Delete tag?",
     deleteNotificationText = (value) => `This will delete "${value.name}".`,
     iconOptions,
-    saveLabel = "Save",
     showDefault,
     showIcons = true,
-    valueColumnLabel = "Name",
   } = props;
-  const [isAdding, setIsAdding] = useState(false);
-  const [addForm, setAddForm] = useState<AddFormState>({ name: "", color: defaultAddColor, icon: defaultAddIcon });
   const [valueToDelete, setValueToDelete] = useState<TagEditorValue | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  const resetAddForm = () => {
-    setIsAdding(false);
-    setAddForm({ name: "", color: defaultAddColor, icon: defaultAddIcon });
-  };
 
   const updateValue = (index: number, patch: Partial<TagEditorValue>) => {
     const next = [...values];
@@ -72,10 +92,17 @@ export const TagEditor = (props: TagEditorProps) => {
   };
 
   const handleAddOption = () => {
-    if (!addForm.name.trim()) return;
-    const maxOrder = values.length > 0 ? Math.max(...values.map((value) => value.sortOrder)) : 0;
-    onValuesChange([...values, buildDraftItem(addForm, maxOrder + 1)]);
-    resetAddForm();
+    onValuesChange([
+      ...values,
+      {
+        id: `new-${crypto.randomUUID()}`,
+        name: addName,
+        color: defaultAddColor,
+        icon: defaultAddIcon,
+        sortOrder: nextSortOrder(values),
+        isNew: true,
+      },
+    ]);
   };
 
   const handleDeleteOption = () => {
@@ -99,114 +126,59 @@ export const TagEditor = (props: TagEditorProps) => {
     onValuesChange(arrayMove(values, oldIndex, newIndex).map((value, index) => ({ ...value, sortOrder: index })));
   };
 
-  const handleAddKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") handleAddOption();
-    if (event.key === "Escape") resetAddForm();
-  };
-
   return (
     <>
-      <Stack gap="md" height="100%">
-        <Flex justifyContent="space-between" alignItems="center" gap="sm" flexWrap="wrap">
-          <Stack gap="2xs">
-            <Text textStyle="heading/S">{title}</Text>
-            {description ? (
-              <Text textStyle="paragraph/S/regular" color="fg.muted">
-                {description}
-              </Text>
-            ) : null}
-          </Stack>
-          <Button size="sm" variant="outline" onClick={() => setIsAdding(true)} disabled={isAdding || isSaving}>
-            <Plus size={16} />
-            {addLabel}
-          </Button>
-        </Flex>
+      <Stack gap="2xs">
+        {title || headerActions ? (
+          <Flex minHeight="tag-editor-row" alignItems="center" justifyContent="space-between" gap="xs">
+            <Stack gap="3xs" minWidth="0">
+              {title ? (
+                <TagEditorTitle
+                  title={title}
+                  hasChanges={hasChanges}
+                  isSaving={isSaving}
+                  onTitleChange={onTitleChange}
+                />
+              ) : null}
+              {description ? (
+                <Text textStyle="paragraph/S/regular" color="fg.muted">
+                  {description}
+                </Text>
+              ) : null}
+            </Stack>
+            {headerActions}
+          </Flex>
+        ) : null}
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={values.map((value) => value.id)} strategy={verticalListSortingStrategy}>
-            <Table.Root size="sm" variant="outline">
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeader width="40px" />
-                  <Table.ColumnHeader>{valueColumnLabel}</Table.ColumnHeader>
-                  <Table.ColumnHeader width="54px" />
-                  {showDefault ? <Table.ColumnHeader width="80px">{defaultColumnLabel}</Table.ColumnHeader> : null}
-                  {actionOptions ? <Table.ColumnHeader width="140px">{actionsColumnLabel}</Table.ColumnHeader> : null}
-                  <Table.ColumnHeader width="40px" />
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {values.map((value, index) => (
-                  <TagEditorRow
-                    key={value.id}
-                    value={value}
-                    isSaving={isSaving}
-                    showDefault={showDefault}
-                    showIcons={showIcons}
-                    actionOptions={actionOptions}
-                    colorOptions={colorOptions}
-                    iconOptions={iconOptions}
-                    onNameChange={(name) => updateValue(index, { name })}
-                    onColorChange={(color) => updateValue(index, { color })}
-                    onIconChange={(icon) => updateValue(index, { icon })}
-                    onActionsChange={(actions) => updateValue(index, { actions })}
-                    onSetDefault={() => onSetDefault?.(value)}
-                    onDelete={() => setValueToDelete(value)}
-                  />
-                ))}
-                {isAdding ? (
-                  <Table.Row>
-                    <Table.Cell />
-                    <Table.Cell>
-                      <Input
-                        size="xs"
-                        placeholder={addPlaceholder}
-                        value={addForm.name}
-                        onChange={(event) => setAddForm({ ...addForm, name: event.target.value })}
-                        onKeyDown={handleAddKeyDown}
-                        autoFocus
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <IconColorPicker
-                        color={addForm.color}
-                        icon={addForm.icon}
-                        showIcons={showIcons}
-                        colorOptions={colorOptions}
-                        iconOptions={iconOptions}
-                        onColorChange={(color) => setAddForm({ ...addForm, color })}
-                        onIconChange={(icon) => setAddForm({ ...addForm, icon })}
-                      />
-                    </Table.Cell>
-                    {showDefault ? <Table.Cell /> : null}
-                    {actionOptions ? <Table.Cell /> : null}
-                    <Table.Cell>
-                      <HStack gap="2xs">
-                        <Button size="2xs" variant="primary" onClick={handleAddOption} disabled={!addForm.name.trim()}>
-                          Add
-                        </Button>
-                        <Button size="2xs" variant="ghost" onClick={resetAddForm} aria-label="Cancel add value">
-                          <X size={14} />
-                        </Button>
-                      </HStack>
-                    </Table.Cell>
-                  </Table.Row>
-                ) : null}
-              </Table.Body>
-            </Table.Root>
-          </SortableContext>
-        </DndContext>
+        <Stack gap="none">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={values.map((value) => value.id)} strategy={verticalListSortingStrategy}>
+              {values.map((value, index) => (
+                <TagEditorRow
+                  key={value.id}
+                  value={value}
+                  isSaving={isSaving}
+                  showDefault={showDefault}
+                  showIcons={showIcons}
+                  actionOptions={actionOptions}
+                  colorOptions={colorOptions}
+                  iconOptions={iconOptions}
+                  onNameChange={(name) => updateValue(index, { name })}
+                  onColorChange={(color) => updateValue(index, { color })}
+                  onIconChange={(icon) => updateValue(index, { icon })}
+                  onActionsChange={(actions) => updateValue(index, { actions })}
+                  onSetDefault={() => onSetDefault?.(value)}
+                  onDelete={() => setValueToDelete(value)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
-        <Flex justifyContent="flex-end">
-          <HStack gap="xs">
-            <Button size="sm" variant="outline" onClick={onCancel} disabled={!hasChanges || isSaving}>
-              {cancelLabel}
-            </Button>
-            <Button size="sm" variant="primary" onClick={onSave} loading={isSaving} disabled={!hasChanges}>
-              {saveLabel}
-            </Button>
-          </HStack>
-        </Flex>
+          <AddOptionRow type="button" disabled={isSaving} onClick={handleAddOption}>
+            <Icon as={Plus} boxSize="icon-xs" />
+            <Text textStyle="paragraph/S/regular">{addLabel}</Text>
+          </AddOptionRow>
+        </Stack>
       </Stack>
 
       <DeleteConfirmationModal
