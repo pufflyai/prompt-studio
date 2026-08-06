@@ -23,6 +23,7 @@ import type {
   RendererContribution,
   RouteContribution,
   SettingsPanelContribution,
+  SettingsSectionContribution,
   SkillContribution,
   TemplateContribution,
   TemplateTypeContribution,
@@ -151,6 +152,7 @@ export interface UiContributions {
   treeRenderers?: Record<string, TreeRendererContribution>;
   fileRenderers?: Record<string, FileRendererContribution>;
   controlsRenderers?: Record<string, ControlsRendererContribution>;
+  settingsSections?: Record<string, SettingsSectionContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   kanbanRenderers?: Record<string, KanbanRendererContribution>;
   dataTableRenderers?: Record<string, DataTableRendererContribution>;

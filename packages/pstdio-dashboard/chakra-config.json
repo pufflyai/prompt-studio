@@ -11832,7 +11832,7 @@
           "variant": {
             "solid": {
               "control": {
-                "borderRadius": "full",
+                "borderRadius": "md",
                 "bg": "bg.emphasized",
                 "focusVisibleRing": "outside",
                 "_checked": {
@@ -12414,6 +12414,17 @@
                   "bg": "var(--tabs-indicator-bg)",
                   "borderRadius": "var(--tabs-trigger-radius)"
                 }
+              }
+            }
+          },
+          "tray": {
+            "true": {
+              "list": {
+                "width": "100%",
+                "paddingX": "lg",
+                "paddingBottom": "xs",
+                "borderBottom": "1px solid",
+                "borderBottomColor": "border.subtle"
               }
             }
           }

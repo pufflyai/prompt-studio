@@ -151,7 +151,7 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
       toEditorValue={toEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
       errorTitle={t("settings.ticketStatuses.errorTitle", "Unable to update ticket statuses")}
-      title={t("settings.ticketStatuses.title", "Ticket statuses")}
+      title={t("settings.ticketStatuses.title", "Ticket status")}
       description={t("settings.ticketStatuses.description", "Configure the board columns used by tickets.")}
       actionOptions={actionOptions}
       addLabel={t("settings.ticketStatuses.addLabel", "Add status")}

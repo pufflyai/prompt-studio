@@ -190,7 +190,17 @@ export interface SettingsPanelContribution<TSlotContext extends Struct = Struct>
   scope?: WorkbenchSettingsScope;
   slot?: SlotRef<TSlotContext, "settings"> | string;
   icon?: string;
+  /** Key of a `settingsSections` entry. Unset panels fall back to the host's scope section. */
+  section?: string;
   webview: WebviewContribution;
+}
+
+/** A named group in the settings navigation that an extension's panels can sit under. */
+export interface SettingsSectionContribution {
+  title: Localizable<string>;
+  scope?: WorkbenchSettingsScope;
+  /** Lower sorts first among sibling sections. */
+  order?: number;
 }
 
 export type KanbanRendererViewMode = "board" | "list";
