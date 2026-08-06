@@ -11,7 +11,7 @@ import {
   saveTagDraftWithRecovery,
   type TagSettingsDraft,
   type TagSettingsTag,
-  tagSettingsDraftVersion,
+  tagSettingsDraftsVersion,
 } from "./tag-settings-draft";
 import { TagSettingsSection, type Translate } from "./tag-settings-section";
 import { renderTicketRoot } from "./view-root";
@@ -43,7 +43,7 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
 
   // Rebuild drafts only when the loaded tags change semantically; identity-only
   // refetches keep the user's in-progress edits.
-  const tagsVersion = tags.map(tagSettingsDraftVersion).join("|");
+  const tagsVersion = tagSettingsDraftsVersion(tags);
   const lastVersionRef = useRef<string | null>(null);
   useEffect(() => {
     if (lastVersionRef.current === tagsVersion) return;

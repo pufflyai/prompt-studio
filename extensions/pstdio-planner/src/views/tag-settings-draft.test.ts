@@ -9,6 +9,7 @@ import {
   type TagSettingsDraft,
   type TagSettingsTag,
   tagOptionsToEditorValues,
+  tagSettingsDraftsVersion,
   tagSettingsDraftVersion,
 } from "./tag-settings-draft";
 
@@ -55,6 +56,18 @@ describe("tag settings draft", () => {
       deletedIds: new Set(),
     });
     expect(tagSettingsDraftVersion(latestTag)).toBe("tag-1:multi_select:option-1:Dashboard:blue:sparkles:0");
+  });
+
+  test("distinguishes tag collections when values contain version separators", () => {
+    const separateTags: TagSettingsTag[] = [
+      { ...tag, id: "first", options: [] },
+      { ...tag, id: "second", type: "multi_select", options: [] },
+    ];
+    const joinedTag: TagSettingsTag[] = [
+      { ...tag, id: "first:single_select|second", type: "multi_select", options: [] },
+    ];
+
+    expect(tagSettingsDraftsVersion(separateTags)).not.toBe(tagSettingsDraftsVersion(joinedTag));
   });
 
   test("detects type changes without mutating the saved tag", () => {

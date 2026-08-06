@@ -82,6 +82,8 @@ export const tagSettingsDraftVersion = (tag: TagSettingsTag) =>
     ),
   ].join(":");
 
+export const tagSettingsDraftsVersion = (tags: TagSettingsTag[]) => JSON.stringify(tags.map(tagSettingsDraftVersion));
+
 const commandIcon = (icon: string | null | undefined) => icon ?? DEFAULT_TAG_OPTION_ICON;
 
 const optionChanged = (original: TagSettingsOption, draft: TagEditorValue) =>

@@ -5,7 +5,7 @@ export interface TagSwatchProps extends Omit<CenterProps, "color"> {
   color: string;
   icon?: string | null;
   iconOptions?: readonly IconColorPickerIconOption[];
-  /** Renders the plain colour dot even when the value carries an icon. */
+  /** Renders the icon glyph instead of a plain colour dot when the value carries an icon. */
   showIcon?: boolean;
 }
 

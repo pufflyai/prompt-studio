@@ -63,6 +63,20 @@ export const PopoverOpen = {
   },
 };
 
+export const NoIconSentinel = {
+  render: () => {
+    const [color, setColor] = useState("gray");
+    const [icon, setIcon] = useState<string | null>("circle");
+
+    return <IconColorPicker color={color} icon={icon} onColorChange={setColor} onIconChange={setIcon} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Pick color and icon"));
+    await expect(within(document.body).getByRole("button", { name: "none" })).toHaveAttribute("aria-pressed", "true");
+  },
+};
+
 /** Every registry entry, including the status ring and level bar font glyphs. */
 export const IconRegistry = {
   render: () => (

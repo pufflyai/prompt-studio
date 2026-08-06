@@ -66,6 +66,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
     iconLabel = "Icon",
     "aria-label": ariaLabel = "Pick color and icon",
   } = props;
+  const selectedIcon = icon === "circle" ? null : (icon ?? null);
 
   return (
     <Popover.Root positioning={{ placement: "bottom-start" }}>
@@ -102,7 +103,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
                   </Text>
                   <Grid templateColumns="repeat(8, 1fr)" gap="3xs" justifyItems="center">
                     {iconOptions.map((entry) => {
-                      const selected = entry.value === (icon ?? null);
+                      const selected = entry.value === selectedIcon;
                       return (
                         <IconCell
                           key={entry.value ?? "none"}
