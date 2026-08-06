@@ -14,6 +14,7 @@ import {
   ticketDisplayTitle,
 } from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
+import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
 import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
@@ -39,6 +40,7 @@ export type TicketWorkspaceBadgeItem = {
   type: "worktree" | "current_branch";
   createdAt?: string;
   resourceParent?: TicketResourceReference;
+  session?: TicketWorkspaceSession;
 };
 export type TicketWorkspaceLookup = Map<string, TicketWorkspaceBadgeItem[]>;
 
@@ -79,26 +81,34 @@ const workspaceDisplayName = (workspace: ExtensionWorkspace) => {
   return workspace.id;
 };
 
-const workspaceToBadgeItem = (workspace: ExtensionWorkspace): TicketWorkspaceBadgeItem => ({
+const workspaceToBadgeItem = (
+  workspace: ExtensionWorkspace,
+  session: TicketWorkspaceSession | undefined,
+): TicketWorkspaceBadgeItem => ({
   id: workspace.id,
   name: workspaceDisplayName(workspace),
   ...(workspace.workspace_shorthand ? { shorthand: workspace.workspace_shorthand } : {}),
   type: workspace.worktree_path ? "worktree" : "current_branch",
   ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
+  // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
+  ...(session ? { session } : {}),
 });
 
 const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
   (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||
   (right.shorthand ?? right.id).localeCompare(left.shorthand ?? left.id, undefined, { numeric: true });
 
-export const createTicketWorkspaceLookup = (workspaces: ExtensionWorkspace[] = []) => {
+export const createTicketWorkspaceLookup = (
+  workspaces: ExtensionWorkspace[] = [],
+  sessions: TicketWorkspaceSessionLookup = new Map(),
+) => {
   const lookup: TicketWorkspaceLookup = new Map();
 
   for (const workspace of workspaces) {
     const ticketShorthand = ticketShorthandFromWorkspace(workspace);
     if (!ticketShorthand) continue;
     const items = lookup.get(ticketShorthand) ?? [];
-    items.push(workspaceToBadgeItem(workspace));
+    items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
     lookup.set(ticketShorthand, items);
   }
 

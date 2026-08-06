@@ -119,9 +119,9 @@ describe("createLayoutModel Location-owned placements", () => {
 
     const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
     const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
-    const alpha = layout.openPanel("project.content", { resource: alphaResource });
+    const alpha = layout.openPanel("project.content", { resource: alphaResource, strategy: { kind: "persistent" } });
     layout.establishLocation(alpha.instanceId);
-    const notes = layout.openPanel("project.notes");
+    const notes = layout.openPanel("project.notes", { strategy: { kind: "persistent" } });
 
     const beta = layout.openPanel("project.content", {
       resource: betaResource,

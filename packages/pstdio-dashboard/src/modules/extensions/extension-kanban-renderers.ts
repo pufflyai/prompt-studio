@@ -16,6 +16,7 @@ import {
   type WorkbenchExtensionKanbanRendererAdapter,
 } from "@pstdio/workbench/extensions";
 import { apiRequest } from "@/lib/api";
+import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -112,6 +113,16 @@ const createRowActionRefreshSubscription = (commandIds: Set<string>, refresh: ()
   dispose: subscribeToExtensionCommandFeed((event) => {
     if (!event.outcome.ok || !commandIds.has(event.commandId)) return;
     refresh();
+  }),
+});
+
+const sessionSyncTables = new Set<CollectionChange["table"]>(["sessions", "workspace_sessions"]);
+
+// Session status shown on a row (e.g. a ticket's workspace badge) changes outside planner
+// commands — a run finishing, an agent asking for input — so follow the synced feed directly.
+const createSessionSyncRefreshSubscription = (refresh: () => void) => ({
+  dispose: subscribeCollections((change) => {
+    if (change && sessionSyncTables.has(change.table)) refresh();
   }),
 });
 
@@ -247,6 +258,12 @@ export const registerExtensionKanbanRenderers = (
       }),
     );
   }
+
+  disposables.push(
+    createSessionSyncRefreshSubscription(() => {
+      for (const record of metadata.kanbanRenderers ?? []) refreshRecord(record);
+    }),
+  );
 
   const commandContext: WorkbenchExtensionCommandContext = {
     executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),

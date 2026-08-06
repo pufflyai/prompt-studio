@@ -283,7 +283,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
           selectDashboardNavigationResource(ctx, resource);
           return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
             resource,
             region: extensionViewRegion(view.region),
             title: resource.label,
@@ -302,7 +302,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
           }
           return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
             resource: availableResource,
             title: availableResource.label,
           });

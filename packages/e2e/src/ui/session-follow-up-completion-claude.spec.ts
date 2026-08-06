@@ -5,8 +5,10 @@ import {
   createFollowUpGitRepo,
   createProjectViaApi,
   deleteAllProjects,
-  extractSessionIdFromUrl,
+  openNewSessionPanel,
   registerRepoViaApi,
+  setProjectAgentDefaults,
+  submitInitialMessage,
   submitMessage,
   waitForRenderedConversationBlock,
   waitForSessionStatus,
@@ -32,6 +34,7 @@ test.describe("Claude follow-up completion", () => {
     });
     const project = await createProjectViaApi(request, "Claude Follow-up Completion");
     projectId = project.id;
+    await setProjectAgentDefaults(request, projectId, claudeAgentId);
     const repo = await registerRepoViaApi(request, projectId, "claude-follow-up-completion-repo", repoDir);
     repoId = repo.id;
   });
@@ -45,12 +48,8 @@ test.describe("Claude follow-up completion", () => {
     const followUpPrompt = "Reply with exactly SECOND DONE and nothing else.";
 
     await bypassOnboarding(page, { projectId, repoId, branch: "main", agentId: claudeAgentId });
-    await page.goto(`/projects/${projectId}/sessions`);
-
-    await submitMessage(page, firstPrompt);
-    await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
-
-    const sessionId = extractSessionIdFromUrl(page.url());
+    await openNewSessionPanel(page, projectId);
+    const { sessionId } = await submitInitialMessage(page, firstPrompt);
 
     await waitForRenderedConversationBlock(page, "FIRST DONE");
     await waitForSessionStatus(request, sessionId, "completed");

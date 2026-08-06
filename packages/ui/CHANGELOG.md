@@ -1,5 +1,19 @@
 # @pstdio/ui
 
+## 0.18.0
+
+_2026-08-04_
+
+### Minor Changes
+
+- 5069240: Add a generated Prompt Studio icon font with CSS mappings.
+
+### Patch Changes
+
+- 225af02: Refine DataTable analytics and selection presentation
+- 053867b: Add complete parameter editor parity and preload file renderers for reliable document startup.
+- 225af02: Improve DataTable display settings with persistent visibility controls and borderless search
+
 ## 0.17.0
 
 _2026-07-28_

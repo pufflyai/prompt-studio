@@ -21,7 +21,8 @@ export const createFileService = (deps: FileServiceDeps) => {
     data: Buffer;
     mime_type?: string | null;
   }) => {
-    const id = crypto.randomUUID();
+    // Widen to the persisted column type so upload's inferred row matches reads.
+    const id: string = crypto.randomUUID();
     const storagePath = storage.writeFile(input.project_id, id, input.data);
     const hash = storage.computeHash(input.data);
     const timestamp = new Date().toISOString();

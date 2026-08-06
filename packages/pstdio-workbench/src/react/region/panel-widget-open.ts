@@ -23,7 +23,8 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
     });
   } else {
     const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
-    workbench.layout.openPanel(widget.id, { region, resource: widgetResource });
+    // Adding a tab from the region's "+" tray is the user asking for a tab that stays.
+    workbench.layout.openPanel(widget.id, { region, resource: widgetResource, strategy: { kind: "persistent" } });
   }
 
   if (region === "secondary") {

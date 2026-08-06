@@ -5,6 +5,9 @@
 .pstdio/*
 !.pstdio/extensions/
 .pstdio/extensions/*
+!.pstdio/extensions/font-editor/
+.pstdio/extensions/font-editor/*
+!.pstdio/extensions/font-editor/package.json
 !.pstdio/extensions/pstdio-planner-loops/
 .pstdio/extensions/pstdio-planner-loops/*
 !.pstdio/extensions/pstdio-planner-loops/package.json

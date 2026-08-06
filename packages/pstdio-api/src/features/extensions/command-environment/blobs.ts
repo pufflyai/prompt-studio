@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
-type ExtensionFileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["fileService"]["get"]>>>;
+type ExtensionFileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["extensionFileService"]["getOwnedFile"]>>>;
 
 const extensionFileUrl = (projectId: string, extensionInstanceId: string, fileId: string) =>
   `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files/${encodeURIComponent(fileId)}/content`;
@@ -31,25 +31,20 @@ export const createExtensionBlobsApi = (
   },
 ): CommandRunnerEnvironment["storage"]["files"] => ({
   async put(fileInput) {
-    const file = await deps.fileService.upload({
+    const file = await deps.extensionFileService.upload({
       project_id: input.projectId,
+      extension_instance_id: input.extensionInstanceId,
+      scope_type: input.scopeType,
+      scope_id: input.scopeId,
       file_name: fileInput.name,
-      file_kind: "extension",
       data: toBuffer(fileInput.data),
       mime_type: fileInput.mimeType ?? null,
     });
-    await deps.extensionFilesService.attach({
-      project_id: input.projectId,
-      extension_instance_id: input.extensionInstanceId,
-      file_id: file.id,
-      scope_type: input.scopeType,
-      scope_id: input.scopeId,
-    });
-    deps.eventBus?.emit("files", "set", file);
+    if (!file) throw new Error(`Extension instance not found: ${input.extensionInstanceId}`);
     return toExtensionBlobRef(input.projectId, input.extensionInstanceId, file);
   },
   async get(id) {
-    const file = await deps.extensionFilesService.getOwnedFile({
+    const file = await deps.extensionFileService.getOwnedFile({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       file_id: id,
@@ -57,7 +52,7 @@ export const createExtensionBlobsApi = (
     return file ? toExtensionBlobRef(input.projectId, input.extensionInstanceId, file) : undefined;
   },
   async getBytes(id) {
-    const file = await deps.extensionFilesService.getOwnedFile({
+    const file = await deps.extensionFileService.getOwnedFile({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       file_id: id,
@@ -66,28 +61,21 @@ export const createExtensionBlobsApi = (
     return new Uint8Array(readFileSync(file.storage_path));
   },
   async list() {
-    const files = await deps.extensionFilesService.list({
+    const files = await deps.extensionFileService.list({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       scope_type: input.scopeType,
       scope_id: input.scopeId,
     });
+    if (!files) throw new Error(`Extension instance not found: ${input.extensionInstanceId}`);
     return files.map((file) => toExtensionBlobRef(input.projectId, input.extensionInstanceId, file));
   },
   async delete(id) {
-    const file = await deps.extensionFilesService.getOwnedFile({
+    await deps.extensionFileService.remove({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       file_id: id,
     });
-    if (!file) return;
-    await deps.extensionFilesService.detach({
-      project_id: input.projectId,
-      extension_instance_id: input.extensionInstanceId,
-      file_id: id,
-    });
-    await deps.fileService.remove(id);
-    deps.eventBus?.emit("files", "delete", { id });
   },
   urlFor(id) {
     return extensionFileUrl(input.projectId, input.extensionInstanceId, id);

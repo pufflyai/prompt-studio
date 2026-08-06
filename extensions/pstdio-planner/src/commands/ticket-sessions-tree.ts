@@ -57,10 +57,21 @@ const emptySessionsNode = (): TreeNode => ({
   rowVariant: "empty-state",
 });
 
-export const buildSessionsSection = (sessions: TicketSession[], ticketId: string): TreeViewSection => {
-  const ticketSessions = sessions
-    .filter((session) => isAnchoredToTicket(session, ticketId))
-    .sort((a, b) => sessionActivityAt(b).localeCompare(sessionActivityAt(a)));
+export interface BuildSessionsSectionInput {
+  sessions: TicketSession[];
+  ticketId: string;
+  // Sessions of the workspaces linked to the ticket — the attempts made on it.
+  workspaceSessions?: TicketSession[];
+}
+
+export const buildSessionsSection = (input: BuildSessionsSectionInput): TreeViewSection => {
+  const byId = new Map<string, TicketSession>();
+  for (const session of input.sessions) {
+    if (isAnchoredToTicket(session, input.ticketId)) byId.set(session.id, session);
+  }
+  for (const session of input.workspaceSessions ?? []) byId.set(session.id, session);
+
+  const ticketSessions = [...byId.values()].sort((a, b) => sessionActivityAt(b).localeCompare(sessionActivityAt(a)));
 
   return {
     id: "sessions",

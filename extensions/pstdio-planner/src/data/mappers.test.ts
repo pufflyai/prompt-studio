@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import {
   buildTicketAttributes,
   createTicketParentLookup,
+  createTicketWorkspaceLookup,
   statusToColumnConfig,
   TICKET_RESOURCE_KIND,
   ticketToRow,
@@ -116,6 +118,63 @@ describe("ticketToRow", () => {
     const row = ticketToRow({ ...ticket, tagIds: ["default-type-bug", "default-type-feature"] }, "proj-1", [typeTag]);
 
     expect((row.attributes as Record<string, unknown>).type).toBe("default-type-bug");
+  });
+});
+
+describe("createTicketWorkspaceLookup", () => {
+  const workspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
+    id,
+    workspace_shorthand: shorthand,
+    worktree_path: `/worktrees/${shorthand}`,
+    created_at: createdAt,
+  });
+
+  test("attaches each workspace's latest session to its own badge item", () => {
+    const items = createTicketWorkspaceLookup(
+      [
+        workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z"),
+        workspace("workspace-2", "T-1_A2", "2026-01-03T00:00:00.000Z"),
+      ],
+      new Map([
+        ["workspace-1", { id: "session-1", status: "completed" as const }],
+        ["workspace-2", { id: "session-2", status: "in_progress" as const }],
+      ]),
+    ).get("T-1");
+
+    // Newest workspace first, each carrying the session of that same workspace.
+    expect(items?.map((item) => [item.id, item.session])).toEqual([
+      ["workspace-2", { id: "session-2", status: "in_progress" }],
+      ["workspace-1", { id: "session-1", status: "completed" }],
+    ]);
+  });
+
+  test("omits the session field for workspaces without sessions", () => {
+    const items = createTicketWorkspaceLookup([workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")]).get(
+      "T-1",
+    );
+
+    expect(items?.[0]).not.toHaveProperty("session");
+  });
+
+  test("passes every supported session status through unchanged", () => {
+    const statuses = [
+      "queued",
+      "in_progress",
+      "awaiting_input",
+      "completed",
+      "failed",
+      "cancelled",
+      "disconnected",
+    ] as const;
+
+    for (const status of statuses) {
+      const items = createTicketWorkspaceLookup(
+        [workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")],
+        new Map([["workspace-1", { id: "session-1", status }]]),
+      ).get("T-1");
+
+      expect(items?.[0]?.session).toEqual({ id: "session-1", status });
+    }
   });
 });
 

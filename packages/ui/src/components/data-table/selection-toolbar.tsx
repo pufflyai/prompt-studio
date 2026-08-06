@@ -49,7 +49,7 @@ export function SelectionToolbar(props: SelectionToolbarProps) {
             </Menu.Trigger>
             <Portal>
               <Menu.Positioner>
-                <Menu.Content zIndex="popover" bg="bg">
+                <Menu.Content bg="bg">
                   {actions.map((action) => (
                     <Menu.Item key={action.label} value={action.label} asChild>
                       <ListRow

@@ -5,18 +5,6 @@ import { implementTicketsCommand } from "./implement-tickets";
 const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx);
 
 describe("implement-tickets automation", () => {
-  test("does nothing while automation.enabled is off", async () => {
-    const { ctx, calls } = makeAutomationContext({
-      tickets: [makeTicket({ id: "t1", statusId: "ready" })],
-      settings: { "automation.enabled": false },
-    });
-
-    const result = await run(ctx as never);
-
-    expect(result).toEqual({ ran: false, reason: "automation.enabled is off" });
-    expect(calls).toEqual([]);
-  });
-
   test("implements TODO tickets by priority, then oldest created", async () => {
     const { ctx } = makeAutomationContext({
       tickets: [

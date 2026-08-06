@@ -1,8 +1,8 @@
-import { Box, Button, Collapsible, Flex, Icon, Stack, Text } from "@chakra-ui/react";
+import { Button, Collapsible, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
-import { ParamEditorField } from "./param-editor-field";
+import { ParamEditorRow } from "./param-editor-row";
 
 interface ParamEditorSectionProps {
   title?: string;
@@ -90,17 +90,16 @@ const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "
   return (
     <Stack gap="0" py={sectionPadding}>
       {params.map((param) => (
-        <Box key={param.id} px="sm" py={variant === "small" ? "2xs" : "xs"}>
-          <ParamEditorField
-            param={param}
-            defaultValues={defaultValues}
-            onChange={onChange}
-            onOpenResource={onOpenResource}
-            readOnly={readOnly}
-            fullWidth={fullWidth}
-            size={variant === "small" ? "xs" : "sm"}
-          />
-        </Box>
+        <ParamEditorRow
+          key={param.id}
+          param={param}
+          values={defaultValues}
+          onChange={onChange}
+          onOpenResource={onOpenResource}
+          readOnly={readOnly}
+          fullWidth={fullWidth}
+          variant={variant}
+        />
       ))}
     </Stack>
   );

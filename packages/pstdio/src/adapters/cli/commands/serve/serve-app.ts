@@ -44,7 +44,13 @@ const getServeLogger = () => {
     return serveLogger;
   }
 
-  serveLogger = createLogger({ component: "serve", service: "pstdio" });
+  const autostartId = process.env.PSTDIO_AUTOSTART_ID;
+  serveLogger = createLogger({
+    base: autostartId ? { autostartId } : undefined,
+    component: "serve",
+    service: "pstdio",
+    sync: true,
+  });
   return serveLogger;
 };
 
@@ -81,16 +87,16 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
   return async (options: ServeAppOptions) => {
     const { port, host } = options;
-    const { app, close } = await deps.createApp();
+    let appHandle: AppHandle | null = null;
 
     let closed = false;
     const closeApp = async () => {
-      if (closed) {
+      if (closed || !appHandle) {
         return;
       }
 
       closed = true;
-      await close();
+      await appHandle.close();
     };
 
     const removeShutdownListeners = () => {
@@ -117,12 +123,14 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       deps.exit(1);
     };
 
-    deps.onSignal("SIGINT", shutdown);
-    deps.onSignal("SIGTERM", shutdown);
-    deps.onFatal("uncaughtException", fatalShutdown);
-    deps.onFatal("unhandledRejection", fatalShutdown);
-
     try {
+      appHandle = await deps.createApp();
+      const { app } = appHandle;
+      deps.onSignal("SIGINT", shutdown);
+      deps.onSignal("SIGTERM", shutdown);
+      deps.onFatal("uncaughtException", fatalShutdown);
+      deps.onFatal("unhandledRejection", fatalShutdown);
+
       const assets = deps.isCompiledBinary() ? deps.loadEmbeddedAssets() : deps.loadFilesystemAssets();
       const baseUrl = `http://${host}:${port}`;
 

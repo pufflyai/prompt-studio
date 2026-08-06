@@ -20,6 +20,8 @@ export interface WorkbenchOverlayWidgetConfig {
   contentHeight?: string;
   contentMaxHeight?: string;
   contentMinHeight?: string;
+  contentWidth?: string;
+  contentMaxWidth?: string;
   closeTriggerTop?: string;
 }
 
@@ -53,6 +55,8 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   const contentHeight = stringValue(config, "contentHeight");
   const contentMaxHeight = stringValue(config, "contentMaxHeight");
   const contentMinHeight = stringValue(config, "contentMinHeight");
+  const contentWidth = stringValue(config, "contentWidth");
+  const contentMaxWidth = stringValue(config, "contentMaxWidth");
   const closeTriggerTop = stringValue(config, "closeTriggerTop");
 
   if (size) overlayConfig.size = size as WorkbenchOverlayWidgetConfig["size"];
@@ -68,6 +72,8 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   if (contentHeight) overlayConfig.contentHeight = contentHeight;
   if (contentMaxHeight) overlayConfig.contentMaxHeight = contentMaxHeight;
   if (contentMinHeight) overlayConfig.contentMinHeight = contentMinHeight;
+  if (contentWidth) overlayConfig.contentWidth = contentWidth;
+  if (contentMaxWidth) overlayConfig.contentMaxWidth = contentMaxWidth;
   if (closeTriggerTop) overlayConfig.closeTriggerTop = closeTriggerTop;
   return overlayConfig;
 };
@@ -128,7 +134,15 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { open, placement } = renderState;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
-  const { contentHeight, contentMaxHeight, contentMinHeight, closeTriggerTop, ...dialogRootConfig } = overlayConfig;
+  const {
+    contentHeight,
+    contentMaxHeight,
+    contentMinHeight,
+    contentWidth,
+    contentMaxWidth,
+    closeTriggerTop,
+    ...dialogRootConfig
+  } = overlayConfig;
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
@@ -169,8 +183,25 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     setExitingPlacement((current) => (current?.widgetId === placement.widgetId ? undefined : current));
   };
 
+  // Nested overlays (confirmation dialogs, popovers, menus) portal outside this
+  // dialog's content, so their clicks register as outside interactions here. If
+  // the interaction landed inside any overlay content, it cannot mean "dismiss
+  // the settings dialog" — the widget's own content never reaches this handler.
+  const handleInteractOutside = (event: CustomEvent<{ originalEvent?: Event }>) => {
+    const target = event.detail.originalEvent?.target;
+    if (target instanceof Element && target.closest('[data-part="content"]')) {
+      event.preventDefault();
+    }
+  };
+
   return (
-    <Dialog.Root {...dialogRootConfig} open={open} onExitComplete={handleExitComplete} onOpenChange={handleOpenChange}>
+    <Dialog.Root
+      {...dialogRootConfig}
+      open={open}
+      onExitComplete={handleExitComplete}
+      onOpenChange={handleOpenChange}
+      onInteractOutside={handleInteractOutside}
+    >
       <Portal>
         <Dialog.Backdrop position="fixed" inset="0" />
         <Dialog.Positioner position="fixed" inset="0" overflow="auto">
@@ -182,6 +213,8 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
             h={contentHeight}
             maxH={contentMaxHeight}
             minH={contentMinHeight}
+            w={contentWidth}
+            maxW={contentMaxWidth}
           >
             {body}
             {canCloseOverlay ? (

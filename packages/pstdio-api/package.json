@@ -9,7 +9,7 @@
     "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts"
   },
   "scripts": {
-    "start": "bun run src/index.ts",
+    "start": "bun run src/server.ts",
     "dev": "bun run --hot src/index.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",

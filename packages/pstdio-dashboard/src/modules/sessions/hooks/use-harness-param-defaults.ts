@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
-import type { HarnessParamValues } from "../components/harness-param-controls";
+import type { HarnessParamValues } from "../components/harness-param-values";
 
 export type HarnessParamDefaultsResponse = {
   schema: HarnessParamsInfo | null;

@@ -210,7 +210,7 @@ const applyLocationSwitch = async (
     .find((panel) => panel.panelId === "onboarding.panel-composition.main.notes.tools");
   if (notesMenu) workbench.panels.setOpen(`panel-menu:${notesMenu.instanceId}`, false);
   await workbench.resources.openResource(resources[1]);
-  workbench.layout.openPanel("onboarding.panel-composition.main.reports");
+  workbench.layout.openPanel("onboarding.panel-composition.main.reports", { strategy: { kind: "persistent" } });
   workbench.layout.activatePanel(alphaLocation.instanceId);
   const alphaNotes = workbench.layout
     .listPanelInstances("main")
@@ -228,10 +228,16 @@ const openPanelCompositionScenario = (
   const flags = compositionFlags(kind);
   void workbench.resources.openResource(resources[0]).then(async (alphaLocation) => {
     for (const region of flags.openRegions) {
-      workbench.layout.openPanel(`onboarding.panel-composition.${region}.notes`);
+      workbench.layout.openPanel(`onboarding.panel-composition.${region}.notes`, {
+        strategy: { kind: "persistent" },
+      });
     }
     if (kind === "cross-panel-history") {
-      for (const region of panelRegions) workbench.layout.openPanel(`onboarding.panel-composition.${region}.reports`);
+      for (const region of panelRegions) {
+        workbench.layout.openPanel(`onboarding.panel-composition.${region}.reports`, {
+          strategy: { kind: "persistent" },
+        });
+      }
     }
     if (kind === "collapsed-menu") {
       collapseMenu(workbench, "main", locationMenuId);
@@ -255,7 +261,7 @@ const registerPanelFixture = (ctx: WorkbenchModuleContext, kind: CompositionKind
     open: (resource, input) => {
       ctx.breadcrumbs.setItems([{ title: resource.label ?? "Location", icon: resource.icon, resource }]);
       return ctx.layout.openPanel(LOCATION_ID, {
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         resource,
         title: resource.label,
       });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createWorkspaceBadgeInteractionProps,
   createWorkspaceBadgeResource,
+  createWorkspaceBadgeSessionResource,
   normalizeWorkspaceBadgeItems,
 } from "./extension-workspace-badge-renderer";
 
@@ -56,6 +57,51 @@ describe("extension workspace badge renderer", () => {
       },
       { id: "workspace-1", name: "T-1_A1", shorthand: "T-1_A1", type: "worktree" },
     ]);
+  });
+
+  test("keeps a supported session status on the workspace it belongs to", () => {
+    expect(
+      normalizeWorkspaceBadgeItems([
+        { id: "workspace-2", shorthand: "T-1_A2", type: "worktree", session: { id: "session-2", status: "queued" } },
+        { id: "workspace-1", shorthand: "T-1_A1", type: "worktree" },
+      ]),
+    ).toMatchObject([{ id: "workspace-2", session: { id: "session-2", status: "queued" } }, { id: "workspace-1" }]);
+  });
+
+  test("drops session payloads that are not a supported session status", () => {
+    const [item] = normalizeWorkspaceBadgeItems([
+      { id: "workspace-1", type: "worktree", session: { id: "session-1", status: "archived" } },
+    ]);
+
+    expect(item).not.toHaveProperty("session");
+  });
+
+  test("drops session payloads without an id", () => {
+    const [item] = normalizeWorkspaceBadgeItems([
+      { id: "workspace-1", type: "worktree", session: { status: "completed" } },
+    ]);
+
+    expect(item).not.toHaveProperty("session");
+  });
+
+  test("resolves the badge session to a side-panel session resource", () => {
+    const resource = createWorkspaceBadgeSessionResource(
+      {
+        id: "workspace-2",
+        name: "Latest attempt",
+        shorthand: "T-1_A2",
+        type: "worktree",
+        session: { id: "session-2", status: "in_progress" },
+      },
+      "project-1",
+    );
+
+    expect(resource).toMatchObject({
+      kind: "session",
+      id: "session-2",
+      label: "T-1_A2",
+      metadata: { sessionSurface: "side" },
+    });
   });
 
   test("creates native workspace resources from badge items", () => {

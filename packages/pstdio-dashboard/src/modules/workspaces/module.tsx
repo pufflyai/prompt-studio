@@ -12,7 +12,6 @@ import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/wor
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
-import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
@@ -68,29 +67,6 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
 const metadataString = (resource: ResourceRef, key: string) => {
   const value = resource.metadata?.[key];
   return typeof value === "string" ? value : undefined;
-};
-
-const findFirstWorkspaceSessionResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  const workspaceId = resource.id ?? metadataString(resource, "workspaceId");
-  if (!workspaceId) return undefined;
-
-  return createDashboardSessions(getDashboardSelectedProjectId(ctx)).find(
-    (session) => session.workspaceId === workspaceId,
-  )?.resource;
-};
-
-const openFirstWorkspaceSession = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
-
-  const session = findFirstWorkspaceSessionResource(ctx, resource);
-  if (!session) return;
-
-  void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-    preservePanelMode: true,
-    resource: session,
-    tabPosition: "start",
-    tabRetention: "preview",
-  });
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -277,7 +253,6 @@ export const createWorkspacesModule = () =>
           showDashboardSidenav(ctx, { selectedNode: null });
         },
         afterOpen: ({ resource, placement }) => {
-          openFirstWorkspaceSession(ctx, resource);
           ensureWorkspaceTerminalResource(ctx, resource);
           ctx.layout.activatePanel(placement.instanceId);
         },

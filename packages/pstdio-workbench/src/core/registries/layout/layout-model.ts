@@ -20,7 +20,6 @@ import {
   createScopeEvent,
   resolveScopedLayout,
 } from "./layout-scope";
-import { withoutPreviewTabs } from "./layout-tab-lifecycle";
 import {
   mergeWithDefaultRegions,
   type RegisteredWidgetContribution,
@@ -163,7 +162,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const regionQueries = createRegionQueries({ getLayout, getWidgets, getPlaceholder });
   const contributionLists = createContributionLists({ getPlaceholders, getWidgets });
 
-  const persistLayout = () => input.persistence?.setLayout(withoutPreviewTabs(getLayout()), currentScope);
+  const persistLayout = () => input.persistence?.setLayout(getLayout(), currentScope);
 
   const requireWidget = (id: string) => requireRegisteredWidget(getWidgets(), id);
 
@@ -371,7 +370,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
 
     setPersistenceScope(nextScope, scopeInput = {}) {
       if (currentScope === nextScope) return;
-      input.persistence?.setLayout(withoutPreviewTabs(getLayout()), currentScope);
+      input.persistence?.setLayout(getLayout(), currentScope);
       willChangeScope.notify(nextScope);
       currentScope = nextScope;
       const incoming = input.persistence?.getLayout(currentScope);

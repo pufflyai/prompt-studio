@@ -77,7 +77,6 @@ export interface PlannerFixtureState {
   workspacesByTicket?: Record<string, TicketWorkspaceRow[]>;
   activityByWorkspace?: Record<string, WorkspaceActivity>;
   sessionsById?: Record<string, { id: string; status: string }>;
-  settings?: Record<string, unknown>;
   maxInProgress?: number;
 }
 
@@ -88,7 +87,6 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
   const activities: Array<{ message: string; metadata?: Record<string, unknown> }> = [];
   const statuses = state.statuses ?? DEFAULT_STATUSES;
   const tags = state.tags ?? DEFAULT_TAGS;
-  const settings: Record<string, unknown> = { "automation.enabled": true, ...state.settings };
   let createdSessions = 0;
 
   const findTicket = (ref: string) =>
@@ -144,7 +142,6 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
 
   const ctx = {
     storage: createMemoryStorage(),
-    settings: { get: async (key: string) => settings[key] },
     activity: {
       record: async (input: { message: string; metadata?: Record<string, unknown> }) => {
         activities.push(input);

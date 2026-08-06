@@ -1,5 +1,11 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
-import { ListRow, WorkspaceBadge, type WorkspaceBadgeProps } from "@pstdio/ui";
+import {
+  ListRow,
+  type SessionCompletionStatus,
+  sessionCompletionStatuses,
+  WorkspaceBadge,
+  type WorkspaceBadgeProps,
+} from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef } from "@pstdio/workbench";
@@ -16,6 +22,11 @@ import {
   subscribeDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 
+export interface ExtensionWorkspaceBadgeSession {
+  id: string;
+  status: SessionCompletionStatus;
+}
+
 export interface ExtensionWorkspaceBadgeItem {
   id: string;
   name: string;
@@ -23,7 +34,12 @@ export interface ExtensionWorkspaceBadgeItem {
   type: WorkspaceBadgeProps["workspaceType"];
   createdAt?: string;
   resourceParent?: ExtensionResourceReference;
+  session?: ExtensionWorkspaceBadgeSession;
 }
+
+type ExtensionWorkspaceBadgeSessionItem = ExtensionWorkspaceBadgeItem & { session: ExtensionWorkspaceBadgeSession };
+
+const supportedSessionStatuses = new Set<string>(sessionCompletionStatuses);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -32,6 +48,19 @@ const textValue = (value: unknown) => (typeof value === "string" && value.trim()
 
 const workspaceTypeFrom = (value: unknown): ExtensionWorkspaceBadgeItem["type"] =>
   value === "current_branch" ? "current_branch" : "worktree";
+
+// A status the shared session contract does not define must not reach the indicator, which
+// would render it as its generic "unknown" state instead of admitting it has none.
+const badgeSessionFrom = (value: unknown): ExtensionWorkspaceBadgeSession | undefined => {
+  if (!isRecord(value)) return undefined;
+  const id = textValue(value.id);
+  const status = textValue(value.status);
+  if (!id || !status || !supportedSessionStatuses.has(status)) return undefined;
+  return { id, status: status as SessionCompletionStatus };
+};
+
+const hasBadgeSession = (item: ExtensionWorkspaceBadgeItem): item is ExtensionWorkspaceBadgeSessionItem =>
+  Boolean(item.session);
 
 export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspaceBadgeItem[] => {
   if (!Array.isArray(value)) return [];
@@ -44,6 +73,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
     const name = textValue(item.name) ?? shorthand ?? id;
     const createdAt = textValue(item.createdAt);
     const resourceParent = normalizeExtensionResourceReference(item.resourceParent);
+    const session = badgeSessionFrom(item.session);
     return [
       {
         id,
@@ -52,6 +82,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
         type: workspaceTypeFrom(item.type),
         ...(createdAt ? { createdAt } : {}),
         ...(resourceParent ? { resourceParent } : {}),
+        ...(session ? { session } : {}),
       },
     ];
   });
@@ -63,6 +94,16 @@ export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, 
     workspaceType: item.type,
     ...(item.shorthand ? { workspaceShorthand: item.shorthand } : {}),
     ...(item.resourceParent ? { resourceParent: item.resourceParent } : {}),
+  });
+
+// `sessionSurface: "side"` keeps the board in place and opens the session in the Side Panel.
+// The label is only a fallback — the sessions module resolves the live title by session id.
+export const createWorkspaceBadgeSessionResource = (
+  item: ExtensionWorkspaceBadgeSessionItem,
+  projectId: string,
+): ResourceRef =>
+  createDashboardResource("session", item.session.id, item.shorthand ?? item.name, "MessageCircle", projectId, {
+    sessionSurface: "side",
   });
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
@@ -128,7 +169,15 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
       diffAdditions={selectedSummary?.additions}
       diffDeletions={selectedSummary?.deletions}
       hasMultipleWorkspaces={items.length > 1}
-      showLeadingSessionIndicator={false}
+      sessionStatus={selectedItem.session?.status}
+      showLeadingSessionIndicator={hasBadgeSession(selectedItem)}
+      // Wired apart from the badge's own activation so the indicator opens the session
+      // without also opening the workspace or the ticket card behind it.
+      onSessionIndicatorClick={
+        hasBadgeSession(selectedItem)
+          ? () => openResource(createWorkspaceBadgeSessionResource(selectedItem, projectId))
+          : undefined
+      }
     />
   );
 

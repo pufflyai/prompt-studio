@@ -34,12 +34,12 @@ const widgetIds = (layout: LayoutModel) =>
   layout.getLayout().regions.secondary.widgets.map((placement) => placement.widgetId);
 
 describe("createLayoutModel persisted widget ids", () => {
-  test("persists reordered tabs but excludes runtime preview tabs", () => {
+  test("persists reordered tabs alongside preview tabs", () => {
     const { persistence } = createPersistedLayout();
     const firstLayout = createTerminalLayout(persistence);
     const first = firstLayout.openWidget(terminalContribution.id);
     const second = firstLayout.openWidget(terminalContribution.id);
-    firstLayout.openWidget(terminalContribution.id, {
+    const preview = firstLayout.openWidget(terminalContribution.id, {
       tabRetention: "preview",
       tabPosition: "start",
     });
@@ -47,10 +47,40 @@ describe("createLayoutModel persisted widget ids", () => {
 
     const restoredLayout = createTerminalLayout(persistence);
 
-    expect(widgetIds(restoredLayout)).toEqual([second.widgetId, first.widgetId]);
-    expect(
-      restoredLayout.getLayout().regions.secondary.widgets.some((placement) => placement.tabRetention === "preview"),
-    ).toBe(false);
+    expect(widgetIds(restoredLayout)).toEqual([preview.widgetId, second.widgetId, first.widgetId]);
+  });
+
+  test("restores a preview tab as a preview", () => {
+    const { persistence } = createPersistedLayout();
+    const firstLayout = createTerminalLayout(persistence);
+    const preview = firstLayout.openWidget(terminalContribution.id, { tabRetention: "preview" });
+
+    const restoredLayout = createTerminalLayout(persistence);
+    const restored = restoredLayout
+      .getLayout()
+      .regions.secondary.widgets.find((placement) => placement.widgetId === preview.widgetId);
+
+    expect(restored?.tabRetention).toBe("preview");
+  });
+
+  test("restores preview tabs after leaving and returning to a scope", () => {
+    const savedLayouts = new Map<string, WorkbenchLayout>();
+    const persistence = {
+      getLayout: (scope?: string) => savedLayouts.get(scope ?? "global"),
+      setLayout: (layout: WorkbenchLayout, scope?: string) =>
+        void savedLayouts.set(scope ?? "global", structuredClone(layout)),
+    };
+    const layout = createTerminalLayout(persistence);
+    layout.setPersistenceScope("project");
+    const preview = layout.openWidget(terminalContribution.id, { tabRetention: "preview" });
+
+    layout.setPersistenceScope("workspace");
+    expect(widgetIds(layout)).toEqual([]);
+
+    layout.setPersistenceScope("project");
+
+    expect(widgetIds(layout)).toEqual([preview.widgetId]);
+    expect(layout.getLayout().regions.secondary.widgets[0]?.tabRetention).toBe("preview");
   });
 
   test("allocates a unique id after restoring non-singleton placements", () => {

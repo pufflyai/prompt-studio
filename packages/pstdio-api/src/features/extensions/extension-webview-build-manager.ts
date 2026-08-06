@@ -2,7 +2,7 @@ import { renameSync, rmSync } from "node:fs";
 import { loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
-import { prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
 import { buildExtensionWebview, type ExtensionWebviewBuilder } from "./extension-webview-builder";
 import {
   classifyWebviewEntry,
@@ -151,7 +151,14 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   }): Promise<WebviewBuildResult | null> => {
     const { packageName, row, webview } = input;
     const key = processKey(row.install_name, webview.id);
-    const signature = signatureFor(row, webview.id, webview.entry.path);
+    const sourceEntryPath = resolvePackageAssetFile(webview.entry);
+    const buildInputs = inspectManagedWebviewBuildInputs({
+      entryPath: sourceEntryPath,
+      installName: row.install_name,
+      packageName,
+      packagePath: row.source_path,
+    });
+    const signature = signatureFor(row, webview.id, webview.entry.path, buildInputs.signature);
     if (built.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
     if (backoff.isBuildBlocked(key, signature)) return null;
 
@@ -165,14 +172,25 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
     rmSync(stageDir, { recursive: true, force: true });
 
-    const sourceEntryPath = resolvePackageAssetFile(webview.entry);
     const buildSource = prepareManagedWebviewBuildSource({
+      buildInputs,
       entryPath: sourceEntryPath,
       installName: row.install_name,
       packageName,
       packagePath: row.source_path,
       shellDir: paths.shellDir,
     });
+    if (!buildSource.success) {
+      await reportFailure(
+        row.install_name,
+        webview.id,
+        buildFailure(row.install_name, webview.id, buildSource.details),
+        { sourceHash: row.source_hash, sourcePath: row.source_path },
+      );
+      backoff.recordBuildFailure(key, signature);
+      return null;
+    }
+
     const builtSuccessfully = await buildOnce(row, webview.id, buildSource.entryPath, stageDir);
     if (!builtSuccessfully || disposed) {
       if (!disposed) backoff.recordBuildFailure(key, signature);

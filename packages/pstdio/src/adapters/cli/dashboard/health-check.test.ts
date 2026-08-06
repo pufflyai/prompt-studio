@@ -79,4 +79,25 @@ describe("waitForHealthy", () => {
       }),
     ).rejects.toThrow("did not become healthy");
   });
+
+  test("stops retrying when startup monitoring is aborted", async () => {
+    const controller = new AbortController();
+    let attempts = 0;
+    const fetcher = () => {
+      attempts += 1;
+      controller.abort();
+      return failFetcher();
+    };
+
+    await expect(
+      waitForHealthy({
+        url: "http://localhost:3000/healthz",
+        intervalMs: 10,
+        timeoutMs: 2000,
+        fetcher,
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow("aborted");
+    expect(attempts).toBe(1);
+  });
 });

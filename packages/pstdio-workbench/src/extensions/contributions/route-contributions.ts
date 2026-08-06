@@ -64,7 +64,7 @@ export const registerWorkbenchExtensionRoutes = (input: RegisterWorkbenchExtensi
       open: (resource, openInput) => {
         const route = routeFromResource(input.metadata, resource)!;
         return input.workbench.layout.openPanel(route.id, {
-          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           title: text(route.label, route.id),
         });
       },

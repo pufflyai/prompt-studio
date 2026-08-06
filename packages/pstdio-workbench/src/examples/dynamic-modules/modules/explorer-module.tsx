@@ -31,7 +31,7 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
       canOpen: (resource) => resource.kind === fileKind,
       open: (resource, input) =>
         ctx.layout.openPanel(explorerWidgetId, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         }),

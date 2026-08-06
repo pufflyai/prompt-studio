@@ -39,6 +39,17 @@ export const extensionScheduleRecordSchema = z.object({
   commandId: z.string(),
 });
 
+export const workbenchExtensionAutomationRecordSchema = z.object({
+  id: z.string(),
+  localId: z.string(),
+  extensionId: z.string(),
+  extensionInstanceId: z.string().optional(),
+  title: localizableStringSchema,
+  cron: z.string(),
+  commandId: z.string(),
+  enabled: z.boolean(),
+});
+
 export const extensionMenuContributionSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -70,5 +81,6 @@ export type ExtensionCommandRecord = z.infer<typeof extensionCommandRecordSchema
 export type ExtensionMiddlewareRecord = z.infer<typeof extensionMiddlewareRecordSchema>;
 export type ExtensionHookRecord = z.infer<typeof extensionHookRecordSchema>;
 export type ExtensionScheduleRecord = z.infer<typeof extensionScheduleRecordSchema>;
+export type WorkbenchExtensionAutomationRecord = z.infer<typeof workbenchExtensionAutomationRecordSchema>;
 export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
 export type ExtensionCommandPaletteContribution = z.infer<typeof extensionCommandPaletteContributionSchema>;

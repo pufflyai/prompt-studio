@@ -223,7 +223,89 @@
   },
   "projectSettings": {
     "title": "Configuración del proyecto",
-    "skills": "Habilidades"
+    "skills": "Habilidades",
+    "extensionsPanel": {
+      "empty": "No hay extensiones instaladas para este proyecto.",
+      "loadError": "Error al cargar las extensiones.",
+      "title": "Extensiones",
+      "counts": "{{installed}} instaladas · {{enabled}} habilitadas · {{failing}} con fallos",
+      "searchPlaceholder": "Buscar extensiones…",
+      "installedGroup": "Instaladas · {{count}}",
+      "noSearchResults": "Ninguna extensión coincide con \"{{query}}\".",
+      "noDescription": "Sin descripción.",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "Pendiente",
+        "loaded": "Cargada",
+        "error": "Error al cargar",
+        "missing": "No encontrada",
+        "disabled": "Deshabilitada"
+      },
+      "health": {
+        "triggerAriaLabel": "Mostrar problemas de {{name}}",
+        "failedToLoad": "Error al cargar",
+        "issues_one": "{{count}} problema",
+        "issues_other": "{{count}} problemas",
+        "lastLoaded": "Última carga {{time}}",
+        "unknownError": "La extensión no se pudo cargar.",
+        "retry": "Reintentar",
+        "retrySucceeded": "Extensión cargada",
+        "retryFailed": "La extensión sigue sin cargarse",
+        "attemptFix": "Intentar corregir",
+        "fixSessionStarted": "Sesión de corrección iniciada",
+        "fixSessionFailed": "Error al iniciar la sesión de corrección"
+      },
+      "automations": {
+        "title": "Automatizaciones",
+        "toggleAriaLabel": "Alternar automatización {{name}}",
+        "listStatus": "{{enabled}} de {{count}} automatizaciones habilitadas",
+        "cron": "cron {{cron}}",
+        "stateOn": "activada",
+        "stateOff": "desactivada"
+      },
+      "detail": {
+        "back": "Extensiones",
+        "tabs": {
+          "settings": "Configuración",
+          "contributions": "Contribuciones"
+        },
+        "noContributions": "Esta extensión no declara ninguna contribución.",
+        "noSettings": "Esta extensión no declara ninguna configuración.",
+        "dangerZone": "Zona de peligro",
+        "deleteHint": "Eliminar los archivos de esta extensión y quitarla del proyecto.",
+        "copyCommand": "Copiar comando",
+        "contributionKinds": {
+          "harnesses": "Harnesses",
+          "commands": "Comandos",
+          "modes": "Modos",
+          "panels": "Vistas",
+          "routes": "Rutas",
+          "menuContributions": "Elementos de menú",
+          "settingsPanels": "Paneles de configuración",
+          "renderers": "Renderizadores",
+          "skills": "Habilidades",
+          "templates": "Plantillas",
+          "themes": "Temas",
+          "treeItems": "Elementos de árbol",
+          "commandPaletteResources": "Recursos de la paleta de comandos"
+        }
+      },
+      "toggleAriaLabel": "Alternar {{name}}",
+      "toggleErrorTitle": "Error al actualizar la extensión",
+      "toggleError": "No se pudo actualizar la extensión. Inténtalo de nuevo.",
+      "delete": "Eliminar extensión",
+      "deleteErrorTitle": "Error al eliminar la extensión",
+      "deleteError": "No se pudo eliminar la extensión. Inténtalo de nuevo.",
+      "deleteConfirm": {
+        "headline": "¿Eliminar la extensión?",
+        "notification": "Esto elimina los archivos de extensión de \"{{name}}\" y la quita del proyecto. Sus datos almacenados se conservan para restaurarlos al reinstalar.",
+        "deleteDataLabel": "Eliminar también los datos de esta extensión (no se puede deshacer)",
+        "button": "Eliminar"
+      }
+    }
   },
   "list": {
     "projectCreated": "Proyecto creado",

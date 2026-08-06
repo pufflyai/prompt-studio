@@ -1,5 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import type { SelectionGroup } from "../param-editor.types";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
 import { SelectionMenu, type SelectionMenuOption, selectionOptionIcon } from "./selection-menu";
@@ -21,6 +22,10 @@ interface SelectionInputProps {
   clearable?: boolean;
   /** Inert, but still rendered as a control. */
   disabled?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  group?: SelectionGroup;
   size?: "xs" | "sm";
 }
 
@@ -39,18 +44,22 @@ export const SelectionInput = (props: SelectionInputProps) => {
     fullWidth = false,
     clearable = false,
     disabled = false,
+    searchable = false,
+    searchPlaceholder,
+    emptyText,
+    group,
     size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleChange = (nextValue: string | string[]) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => onChange(id, nextValue), 540);
-  };
+  const [groupValue, setGroupValue] = useState(group?.defaultValue ?? "");
 
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  useEffect(() => {
+    setGroupValue(group?.defaultValue ?? "");
+  }, [group?.defaultValue]);
 
   const selectedIds = multiSelect
     ? Array.isArray(value)
@@ -72,7 +81,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
 
   const commit = (nextValue: string | string[]) => {
     setValue(nextValue);
-    scheduleChange(nextValue);
+    onChange(id, nextValue);
   };
 
   const handleToggle = (optionId: string) => {
@@ -85,6 +94,12 @@ export const SelectionInput = (props: SelectionInputProps) => {
     commit(
       selectedIds.includes(optionId) ? selectedIds.filter((item) => item !== optionId) : [...selectedIds, optionId],
     );
+  };
+
+  const handleGroupChange = (optionId: string) => {
+    if (!group || optionId === groupValue) return;
+    setGroupValue(optionId);
+    onChange(group.id, optionId);
   };
 
   // Only a lone selection can colour the trigger; a multi-pick has no single icon.
@@ -124,9 +139,14 @@ export const SelectionInput = (props: SelectionInputProps) => {
       selectedIds={selectedIds}
       multiSelect={multiSelect}
       disabled={disabled}
+      searchable={searchable}
+      searchPlaceholder={searchPlaceholder}
+      emptyText={emptyText}
+      group={group ? { ...group, defaultValue: groupValue } : undefined}
       fullWidth={fullWidth}
       size={size}
       onToggle={handleToggle}
+      onGroupChange={handleGroupChange}
     />
   );
 

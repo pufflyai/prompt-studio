@@ -179,6 +179,8 @@ export type {
   WorkbenchShellController,
   WorkbenchShellOpenRegion,
   WorkbenchShellRegionState,
+  WorkbenchSidePanelMode,
+  WorkbenchSidePanelPersistenceAdapter,
   WorkbenchSidePanelPresentation,
   WorkbenchSnapshot,
   WorkbenchTabPosition,

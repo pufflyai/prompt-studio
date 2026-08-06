@@ -6,15 +6,14 @@ import { isCompiledBinary } from "../commands/serve/embedded-assets";
 
 type ApiSpawnOptions = {
   cwd?: string;
-  stdio: "inherit" | "ignore" | "pipe";
+  stdio: "inherit" | "ignore";
   detached?: boolean;
   env?: NodeJS.ProcessEnv;
 };
 
 type ApiChildProcess = {
-  on?: (event: string, listener: (code: number | null) => void) => ApiChildProcess;
-  stderr?: { on?: (event: string, listener: (chunk: Buffer) => void) => unknown; unref?: () => void } | null;
-  stdout?: { on?: (event: string, listener: (chunk: Buffer) => void) => unknown; unref?: () => void } | null;
+  once?: import("node:child_process").ChildProcess["once"];
+  off?: import("node:child_process").ChildProcess["off"];
   unref?: () => void;
   kill?: (signal?: NodeJS.Signals | number) => boolean;
 };
@@ -77,9 +76,13 @@ const resolveCliEntryPath = () => {
   }
 };
 
-const buildCompiledApiCommand = (stdio: ApiSpawnOptions["stdio"] = "ignore", detached = true) => ({
+export const buildCompiledApiCommand = (
+  apiPort: string | undefined,
+  stdio: ApiSpawnOptions["stdio"] = "ignore",
+  detached = true,
+) => ({
   command: process.execPath,
-  args: ["serve"],
+  args: apiPort ? ["serve", "--port", apiPort] : ["serve"],
   options: { cwd: undefined as string | undefined, stdio, detached },
 });
 
@@ -119,7 +122,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   // Path 1: compiled binary — self-spawn with `serve` subcommand
   if (isCompiledBinary()) {
     const compiledEnv = resolveApiEnv(env);
-    const { command, args, options: spawnOptions } = buildCompiledApiCommand(stdio, detached);
+    const { command, args, options: spawnOptions } = buildCompiledApiCommand(env.PSTDIO_API_PORT, stdio, detached);
     const child = spawner(command, args, { ...spawnOptions, env: compiledEnv });
 
     if (detached) {

@@ -1,5 +1,17 @@
 # pstdio-planner
 
+## 0.9.0
+
+_2026-08-04_
+
+### Minor Changes
+
+- 135aaf4: Show ticket ancestry and add immediate-parent filtering
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.18.0`
+
 ## 0.8.0
 
 _2026-07-28_

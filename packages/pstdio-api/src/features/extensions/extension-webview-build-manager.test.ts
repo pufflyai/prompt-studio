@@ -4,17 +4,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
-const writeExtension = (root: string, entries: Record<string, string>) => {
+const writeExtension = (
+  root: string,
+  entries: Record<string, string>,
+  options: { dependencies?: Record<string, string>; version?: string } = {},
+) => {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({
       name: "lab",
-      version: "1.0.0",
+      version: options.version ?? "1.0.0",
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
       engines: { pstdio: "^1.0.0" },
+      dependencies: options.dependencies,
     }),
   );
   for (const entry of Object.values(entries)) {
@@ -38,6 +43,12 @@ const writeExtension = (root: string, entries: Record<string, string>) => {
       routes: { ${routes} },
     };`,
   );
+};
+
+const writeDependency = (root: string, name: string, version: string) => {
+  const dependencyPath = join(root, "node_modules", name);
+  mkdirSync(dependencyPath, { recursive: true });
+  writeFileSync(join(dependencyPath, "package.json"), JSON.stringify({ name, version }));
 };
 
 const writeManagedBuildOutput = (input: { outdir: string }) => {
@@ -229,7 +240,134 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("createExtensionWebviewBuildManager invalidation", () => {
+  test("retries a failed build after its entry source changes without a persisted hash update", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-source-edit-retry-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
+    let runCount = 0;
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async () => {},
+      buildWebview: async () => {
+        runCount++;
+        return { success: false, details: "build failed" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+      await manager.refresh();
+      expect(runCount).toBe(1);
+
+      writeFileSync(join(sourcePath, "src", "main.tsx"), "console.log('fixed webview');");
+      await manager.refresh();
+
+      expect(runCount).toBe(2);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("waits for declared dependencies and rebuilds once they are installed", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-dependency-recovery-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx" }, { dependencies: { "webview-dep": "^1.0.0" } });
+    const failures: string[] = [];
+    let runCount = 0;
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+      ],
+      reportBuildFailure: async (_installName, _webviewId, error) => {
+        failures.push(String(error));
+      },
+      reportBuildSuccess: async () => {},
+      buildWebview: async (input) => {
+        runCount++;
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+      await manager.refresh();
+
+      expect(runCount).toBe(0);
+      expect(failures).toHaveLength(1);
+      expect(failures[0]).toContain("webview-dep");
+      expect(failures[0]).toContain("bun install");
+
+      writeDependency(sourcePath, "webview-dep", "1.0.0");
+      await manager.refresh();
+
+      expect(runCount).toBe(1);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("invalidates successful builds for manifest, lockfile, and dependency metadata changes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-input-invalidation-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx" }, { dependencies: { "webview-dep": "^1.0.0" } });
+    writeDependency(sourcePath, "webview-dep", "1.0.0");
+    let runCount = 0;
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async () => {},
+      buildWebview: async (input) => {
+        runCount++;
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+      await manager.refresh();
+      expect(runCount).toBe(1);
+
+      writeExtension(
+        sourcePath,
+        { labPage: "src/main.tsx" },
+        { dependencies: { "webview-dep": "^1.0.0" }, version: "1.0.1" },
+      );
+      await manager.refresh();
+      expect(runCount).toBe(2);
+
+      writeFileSync(join(sourcePath, "bun.lock"), "lockfile revision one");
+      await manager.refresh();
+      expect(runCount).toBe(3);
+
+      writeDependency(sourcePath, "webview-dep", "2.0.0");
+      await manager.refresh();
+      expect(runCount).toBe(4);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("createExtensionWebviewBuildManager resilience", () => {
   test("retries an unchanged source after a transient source load failure", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-source-load-retry-test-"));
     const sourcePath = join(root, "extension");

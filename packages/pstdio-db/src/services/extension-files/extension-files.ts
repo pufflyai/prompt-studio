@@ -47,7 +47,7 @@ export const createExtensionFilesDBService = (db: DbClient) => {
   const getOwnedFile = async (
     input: Pick<ExtensionFileScope, "project_id" | "extension_instance_id"> & { file_id: string },
   ) => {
-    const [row] = await db
+    const rows = await db
       .select({ file: files })
       .from(extension_files)
       .innerJoin(files, eq(extension_files.file_id, files.id))
@@ -59,7 +59,7 @@ export const createExtensionFilesDBService = (db: DbClient) => {
         ),
       );
 
-    return row?.file ?? null;
+    return rows.at(0)?.file ?? null;
   };
 
   const detach = async (

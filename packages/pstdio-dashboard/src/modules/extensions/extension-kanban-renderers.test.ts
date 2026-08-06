@@ -307,6 +307,33 @@ describe("registerExtensionKanbanRenderers adapter hooks", () => {
     const workspaceAttribute = attributes.getSnapshot().find((attribute) => attribute.id === "workspace");
     expect(typeof workspaceAttribute?.render).toBe("function");
   });
+
+  test("refreshes an open kanban renderer when synced session data changes", () => {
+    const workbench = createWorkbenchCore();
+
+    const disposable = workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
+    });
+
+    let refreshes = 0;
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => {
+      if (event.kanbanRendererId === ticketsRecord.id) refreshes += 1;
+    });
+
+    getWriter("templates")?.upsert({ id: "template-1" });
+    expect(refreshes).toBe(0);
+
+    getWriter("sessions")?.upsert({ id: "session-1", status: "in_progress" });
+    expect(refreshes).toBe(1);
+
+    getWriter("workspace_sessions")?.upsert({ id: "workspace-session-1" });
+    expect(refreshes).toBe(2);
+
+    disposable.dispose();
+    getWriter("sessions")?.upsert({ id: "session-1", status: "completed" });
+    expect(refreshes).toBe(2);
+  });
 });
 
 describe("buildExtensionKanbanRendererSidenavHeaderNodes", () => {

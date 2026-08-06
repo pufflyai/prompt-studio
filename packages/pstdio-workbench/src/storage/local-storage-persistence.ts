@@ -10,6 +10,8 @@ import type {
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
   WorkbenchPersistenceAdapter,
+  WorkbenchSidePanelMode,
+  WorkbenchSidePanelPersistenceAdapter,
 } from "../core";
 import { workbenchRegions } from "../core";
 
@@ -24,6 +26,7 @@ export type WorkbenchStoragePersistenceKind =
   | "layout"
   | "layout-resource-index"
   | "panels"
+  | "side-panel"
   | "tree"
   | "last-resource";
 
@@ -303,6 +306,37 @@ export const createLocalStorageLastResourcePersistence = (
   };
 };
 
+interface PersistedWorkbenchSidePanel {
+  version: 1;
+  mode: WorkbenchSidePanelMode;
+}
+
+const WORKBENCH_SIDE_PANEL_VERSION = 1 as const;
+
+const sidePanelModes: readonly WorkbenchSidePanelMode[] = ["attached", "closed", "floating"];
+
+export interface CreateLocalStorageSidePanelPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+  scope?: string;
+}
+
+export const createLocalStorageSidePanelPersistence = (
+  input: CreateLocalStorageSidePanelPersistenceInput,
+): WorkbenchSidePanelPersistenceAdapter => {
+  const storage = resolveStorage(input.storage);
+  const key = workbenchStoragePersistenceKey(input.namespace, "side-panel", input.scope);
+  return {
+    getMode: () => {
+      const persisted = readJson<PersistedWorkbenchSidePanel>(storage, key);
+      if (persisted?.version !== WORKBENCH_SIDE_PANEL_VERSION) return undefined;
+      return sidePanelModes.includes(persisted.mode) ? persisted.mode : undefined;
+    },
+    setMode: (mode) => {
+      const persisted: PersistedWorkbenchSidePanel = { version: WORKBENCH_SIDE_PANEL_VERSION, mode };
+      storage.setItem(key, JSON.stringify(persisted));
+    },
+  };
+};
+
 export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorageWorkbenchPersistenceInput) => {
   const storage = resolveStorage(input.storage);
   const layoutPersistence = createLocalStorageLayoutPersistence({
@@ -339,6 +373,11 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
       storage,
     }),
     lastResourcePersistence: createLocalStorageLastResourcePersistence({
+      namespace: input.namespace,
+      scope: input.scope,
+      storage,
+    }),
+    sidePanelPersistence: createLocalStorageSidePanelPersistence({
       namespace: input.namespace,
       scope: input.scope,
       storage,

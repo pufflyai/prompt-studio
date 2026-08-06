@@ -1,4 +1,5 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
+import { resolveDashboardStorage } from "./dashboard-storage";
 
 export interface DashboardProjectSelectionPersistence {
   getSelectedProjectId(): string | undefined;
@@ -10,32 +11,12 @@ interface CreateDashboardProjectSelectionPersistenceInput {
   storage?: WorkbenchStorageLike;
 }
 
-const createMemoryStorage = (): WorkbenchStorageLike => {
-  const values = new Map<string, string>();
-
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-  };
-};
-
-const resolveStorage = (storage: WorkbenchStorageLike | undefined) => {
-  if (storage) return storage;
-  if (typeof localStorage !== "undefined") return localStorage;
-  return createMemoryStorage();
-};
-
 const projectSelectionStorageKey = (namespace: string) => `${namespace}:selected-project:global`;
 
 export const createDashboardProjectSelectionPersistence = (
   input: CreateDashboardProjectSelectionPersistenceInput,
 ): DashboardProjectSelectionPersistence => {
-  const storage = resolveStorage(input.storage);
+  const storage = resolveDashboardStorage(input.storage);
   const key = projectSelectionStorageKey(input.namespace);
 
   return {

@@ -711,33 +711,23 @@ describe("createCommandEnvironment storage files", () => {
         updated_at: string;
       }
     >();
-    const attached: unknown[] = [];
-    const detached: unknown[] = [];
-    const removed: string[] = [];
-    const events: unknown[] = [];
+    const uploaded: unknown[] = [];
+    const removed: unknown[] = [];
 
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        extensionFilesService: {
-          attach: async (input: unknown) => {
-            attached.push(input);
-          },
-          list: async () => [...files.values()],
-          getOwnedFile: async (input: { file_id: string }) => files.get(input.file_id) ?? null,
-          detach: async (input: unknown) => {
-            detached.push(input);
-            return true;
-          },
-        },
-        fileService: {
+        extensionFileService: {
           upload: async (input: {
             data: Buffer;
-            file_kind: string;
+            extension_instance_id: string;
             file_name: string;
             mime_type?: string | null;
             project_id: string;
+            scope_id: string | null;
+            scope_type: string;
           }) => {
+            uploaded.push(input);
             const id = `file-${(files.size + 1).toString()}`;
             const storagePath = join(root, id);
             writeFileSync(storagePath, input.data);
@@ -745,7 +735,7 @@ describe("createCommandEnvironment storage files", () => {
               id,
               project_id: input.project_id,
               file_name: input.file_name,
-              file_kind: input.file_kind,
+              file_kind: "extension",
               storage_path: storagePath,
               mime_type: input.mime_type ?? null,
               size_bytes: input.data.byteLength,
@@ -756,14 +746,11 @@ describe("createCommandEnvironment storage files", () => {
             files.set(id, file);
             return file;
           },
-          remove: async (fileId: string) => {
-            removed.push(fileId);
-            files.delete(fileId);
-          },
-        },
-        eventBus: {
-          emit: (table: string, action: string, payload: unknown) => {
-            events.push({ table, action, payload });
+          list: async () => [...files.values()],
+          getOwnedFile: async (input: { file_id: string }) => files.get(input.file_id) ?? null,
+          remove: async (input: { file_id: string }) => {
+            removed.push(input);
+            return files.delete(input.file_id);
           },
         },
       } as never,
@@ -796,18 +783,12 @@ describe("createCommandEnvironment storage files", () => {
 
     expect(projectFile).toMatchObject({ name: "notes.txt", mimeType: "text/plain", size: 5 });
     expect(ticketFile.url).toContain(`/v1/projects/project-1/extensions/instance-1/files/${ticketFile.id}/content`);
-    expect(attached).toEqual([
-      expect.objectContaining({ scope_type: "project", scope_id: "project-1", file_id: projectFile.id }),
-      expect.objectContaining({ scope_type: "collection:tickets", scope_id: "ticket-1", file_id: ticketFile.id }),
+    expect(uploaded).toEqual([
+      expect.objectContaining({ scope_type: "project", scope_id: "project-1", file_name: "notes.txt" }),
+      expect.objectContaining({ scope_type: "collection:tickets", scope_id: "ticket-1", file_name: "screen.png" }),
     ]);
-    expect(detached).toEqual([
+    expect(removed).toEqual([
       expect.objectContaining({ project_id: "project-1", extension_instance_id: "instance-1", file_id: ticketFile.id }),
-    ]);
-    expect(removed).toEqual([ticketFile.id]);
-    expect(events).toEqual([
-      { table: "files", action: "set", payload: expect.objectContaining({ id: projectFile.id }) },
-      { table: "files", action: "set", payload: expect.objectContaining({ id: ticketFile.id }) },
-      { table: "files", action: "delete", payload: { id: ticketFile.id } },
     ]);
   });
 });

@@ -75,7 +75,6 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
           args: {
             resource: session.resource,
             tabPosition: "start",
-            tabRetention: "preview",
           },
         } as const,
       }),

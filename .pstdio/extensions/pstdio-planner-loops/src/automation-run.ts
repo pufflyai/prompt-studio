@@ -1,20 +1,11 @@
-import type {
-  ExtensionActivityApi,
-  ExtensionSettingsApi,
-  ExtensionStorageApi,
-  JsonObject,
-} from "@pstdio/sdk/extensions";
+import type { ExtensionActivityApi, ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
 import { executePlanner, type PlannerContext, planner } from "./planner-client";
 
 export interface AutomationContext extends PlannerContext {
   storage: ExtensionStorageApi;
-  settings: ExtensionSettingsApi;
   activity: ExtensionActivityApi;
   sessions: { get(id: string): Promise<{ id: string; status?: string } | null> };
 }
-
-export const automationEnabled = async (ctx: AutomationContext) =>
-  (await ctx.settings.get("automation.enabled")) === true;
 
 export const maxInProgress = async (ctx: AutomationContext) =>
   (await executePlanner(ctx, planner.automationPolicy, {})).maxInProgress;

@@ -6,13 +6,14 @@ import type {
   WorkbenchTabRetention,
 } from "@pstdio/workbench";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
-import { forgetDashboardSession, rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
+import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
-import { openSessionBubbleWidgets } from "./session-bubble";
+import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
 import { SessionTabContent, SessionTabMenu } from "./session-tab";
 
 const sessionTabRendererId = "dashboard-workbench.session-tab";
@@ -66,30 +67,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
   };
 };
 
-const selectSidenavSessionNode = (ctx: WorkbenchModuleContext, resource: ResourceRef | undefined) => {
-  const nodeId = resource?.kind === "session" ? resource.uri : undefined;
-
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
-  }
-};
-
-const getReusableSessionPlacementId = (ctx: WorkbenchModuleContext) => {
-  const region = ctx.layout.getLayout().regions.side;
-  const active = region.widgets.find(
-    (placement) =>
-      placement.widgetId === region.activeWidgetId && placement.contributionId === dashboardWidgetIds.sessionBubble,
-  );
-  if (active) return active.widgetId;
-
-  const locationUri = ctx.getPrimaryResource()?.uri;
-  return region.widgets.find(
-    (placement) =>
-      placement.contributionId === dashboardWidgetIds.sessionBubble && placement.ownerResourceUri === locationUri,
-  )?.widgetId;
-};
-
-const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext) => {
+const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
   ctx.layout.registerPanel(
     {
       id: dashboardWidgetIds.sessionBubble,
@@ -115,7 +93,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext) => {
 
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubble,
-    render: (input) => <SessionWidget input={input} />,
+    render: (input) => <SessionWidget input={input} drafts={drafts} />,
   });
   ctx.renderers.registerRenderer({
     id: sessionTabRendererId,
@@ -129,7 +107,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext) => {
 
 const openNewSessionDraft = (
   ctx: WorkbenchModuleContext,
-  input: { workspace?: ResourceRef; replaceWidgetId?: string } = {},
+  input: { workspace?: ResourceRef; replaceWidgetId?: string; tabRetention?: WorkbenchTabRetention } = {},
 ) => {
   const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
   const draftResource = createNewSessionDraftResource(workspace);
@@ -145,6 +123,7 @@ const openNewSessionDraft = (
     resource: draftResource,
     title: draftResource.label,
     replaceWidgetId: input.replaceWidgetId,
+    tabRetention: input.tabRetention,
   });
   return placement.bubble;
 };
@@ -176,16 +155,13 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
         };
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
-        rememberDashboardSessionResource(ctx, resource);
-        const placement = openSessionBubbleWidgets(ctx, {
+        const bubble = openDashboardSessionPanel(ctx, {
           resource,
-          title: resource.label,
-          replaceWidgetId:
-            replaceWidgetId ?? (tabRetention === "preview" ? undefined : getReusableSessionPlacementId(ctx)),
+          replaceWidgetId,
           tabPosition,
           tabRetention,
+          preservePanelMode,
         });
-        selectSidenavSessionNode(ctx, resource);
         if (
           selectWorkspaceSidenav &&
           ctx.modes.getActiveModeId() === "workspace" &&
@@ -195,8 +171,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
             resource,
           });
         }
-        if (!preservePanelMode && ctx.sidePanel.getMode() === "closed") ctx.sidePanel.setMode("floating");
-        return placement.bubble;
+        return bubble;
       },
     },
   );
@@ -205,21 +180,27 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     {
       execute: (args, context) => {
         const { replaceWidgetId, workspace } = (args ?? {}) as { replaceWidgetId?: string; workspace?: ResourceRef };
+        // The tab tray's + asks for a new tab; everywhere else reuses the peek slot.
+        const isNewTab = context?.source === "panel-add";
         return openNewSessionDraft(ctx, {
           workspace,
-          replaceWidgetId:
-            context?.source === "panel-add" ? undefined : (replaceWidgetId ?? getReusableSessionPlacementId(ctx)),
+          replaceWidgetId: isNewTab ? undefined : replaceWidgetId,
+          tabRetention: isNewTab ? "persistent" : undefined,
         });
       },
     },
   );
 };
 
-export const createSessionBubbleModule = () =>
+interface CreateSessionBubbleModuleInput {
+  sessionDraftPersistence?: DashboardSessionDraftPersistence;
+}
+
+export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput = {}) =>
   ({
     id: "dashboard.session-bubble",
     activate(ctx) {
-      registerSessionBubbleWidgets(ctx);
+      registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

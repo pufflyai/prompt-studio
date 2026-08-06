@@ -1,5 +1,18 @@
 # @pstdio/workbench
 
+## 0.4.0
+
+_2026-08-04_
+
+### Minor Changes
+
+- 225af02: Add multi-row selection and bulk actions to DataTable renderer contributions
+
+### Patch Changes
+
+- 053867b: Add complete parameter editor parity and preload file renderers for reliable document startup.
+- Updated internal dependencies: `@pstdio/ui@0.18.0`
+
 ## 0.3.0
 
 _2026-07-28_

@@ -14,6 +14,7 @@ export type {
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
 export type {
+  AttemptExtensionFixResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ExtensionCommandPaletteContribution,
@@ -44,13 +45,16 @@ export type {
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
+  WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
   WorkbenchExtensionDataTableRendererRecord,
+  WorkbenchExtensionHarnessRecord,
   WorkbenchExtensionKanbanRendererRecord,
   WorkbenchExtensionMetadata,
   WorkbenchExtensionPanelRecord,
   WorkbenchExtensionTreeRendererRecord,
+  WorkbenchExtensionViewRecord,
 } from "./extensions";
 export type { CreateProjectInput, RegisterRepoInput } from "./projects";
 export type {

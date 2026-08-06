@@ -54,6 +54,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
     workbench.layout.openPanel(panel.id, {
       resource: placement.resource,
       title: text(panel.title, placement.title),
+      strategy: { kind: "replace-panel", instanceId: placement.instanceId },
     });
   }
 
@@ -64,6 +65,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
     workbench.layout.openPanel(route.id, {
       resource: placement.resource,
       title: text(route.label, placement.title),
+      strategy: { kind: "replace-panel", instanceId: placement.instanceId },
     });
   }
 

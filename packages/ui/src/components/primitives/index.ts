@@ -19,7 +19,12 @@ export { Radio, RadioGroup } from "./radio";
 export { ResourceBadge } from "./resource-badge";
 export { ScrollArea } from "./scroll-area";
 export type { SessionCompletionStatus } from "./session-indicator";
-export { resolveSessionIndicatorColor, resolveSessionIndicatorIcon, SessionIndicator } from "./session-indicator";
+export {
+  resolveSessionIndicatorColor,
+  resolveSessionIndicatorIcon,
+  SessionIndicator,
+  sessionCompletionStatuses,
+} from "./session-indicator";
 export type { SimpleCardBodyProps, SimpleCardProps } from "./simple-card";
 export { SimpleCard, SimpleCardBody } from "./simple-card";
 export type { SwitchProps } from "./switch";

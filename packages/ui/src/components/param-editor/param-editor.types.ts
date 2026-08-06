@@ -39,6 +39,21 @@ export interface SelectionOption {
   icon?: string;
   /** Palette key (e.g. "blue") applied to the option's icon. */
   color?: string;
+  description?: string;
+  disabled?: boolean;
+}
+
+/** Parent selector used to swap the option set of a grouped selection. */
+export interface SelectionGroup {
+  id: string;
+  name: string;
+  defaultValue: string;
+  options: SelectionOption[];
+  placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  disabled?: boolean;
 }
 
 export interface SelectionParam extends BaseParam {
@@ -47,6 +62,10 @@ export interface SelectionParam extends BaseParam {
   options: SelectionOption[];
   multiSelect?: boolean;
   placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  group?: SelectionGroup;
   /** Adds a "clear" row so a single-select can be returned to unset. */
   clearable?: boolean;
   /**

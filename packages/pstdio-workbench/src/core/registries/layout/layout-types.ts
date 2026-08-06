@@ -277,9 +277,9 @@ export interface OpenWidgetInput {
 }
 
 export type WorkbenchPanelOpenStrategy =
-  | { kind: "activate-or-open"; position?: WorkbenchTabPosition }
+  | { kind: "persistent"; position?: WorkbenchTabPosition }
   | { kind: "replace-active" }
-  | { kind: "replace-panel"; instanceId: string }
+  | { kind: "replace-panel"; instanceId: string; retention?: WorkbenchTabRetention }
   | { kind: "preview"; position?: WorkbenchTabPosition };
 
 export interface OpenWorkbenchPanelInput {

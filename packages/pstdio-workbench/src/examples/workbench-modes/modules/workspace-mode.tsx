@@ -82,7 +82,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       canOpen: (resource) => resource.kind === workspaceResourceKind,
       open: (resource, input) =>
         ctx.layout.openPanel(workspaceWidgetIds.editor, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         }),

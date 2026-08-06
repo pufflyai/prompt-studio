@@ -4,11 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import {
+  attemptExtensionFix,
   executeExtensionCommand,
+  getExtensionContributions,
   getProjectExtensionMetadata,
+  listProjectExtensionSettings,
   listProjectExtensions,
+  reloadProjectExtension,
+  setExtensionAutomationEnabled,
   setProjectExtensionEnabled,
   uninstallProjectExtension,
+  updateProjectExtensionSetting,
 } from "./api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
@@ -21,6 +27,7 @@ const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_exten
 const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) => {
   queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) });
   queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
+  queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] });
   // Harness availability follows extension enablement.
   queryClient.invalidateQueries({ queryKey: ["agents-info"] });
   queryClient.invalidateQueries({ queryKey: ["agent-models"] });
@@ -67,6 +74,77 @@ export const useSetProjectExtensionEnabled = (projectId: string | undefined) => 
       return setProjectExtensionEnabled(projectId, instanceId, enabled);
     },
     onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
+export const useSetExtensionAutomationEnabled = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      instanceId,
+      automationId,
+      enabled,
+    }: {
+      instanceId: string;
+      automationId: string;
+      enabled: boolean;
+    }) => {
+      if (!projectId) throw new Error("Project id is required to update automations.");
+      return setExtensionAutomationEnabled(projectId, instanceId, automationId, enabled);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
+export const useReloadProjectExtension = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ instanceId }: { instanceId: string }) => {
+      if (!projectId) throw new Error("Project id is required to reload extensions.");
+      return reloadProjectExtension(projectId, instanceId);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
+export const useAttemptExtensionFix = (projectId: string | undefined) => {
+  return useMutation({
+    mutationFn: ({ instanceId }: { instanceId: string }) => {
+      if (!projectId) throw new Error("Project id is required to fix extensions.");
+      return attemptExtensionFix(projectId, instanceId);
+    },
+  });
+};
+
+export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) => {
+  return useQuery({
+    queryKey: ["extension-contributions", projectId, instanceId],
+    queryFn: () => getExtensionContributions(projectId!, instanceId!),
+    enabled: Boolean(projectId && instanceId),
+  });
+};
+
+const projectExtensionSettingsQueryKey = (projectId: string | undefined, instanceId: string | undefined) =>
+  ["project-extension-settings", projectId, instanceId] as const;
+
+export const useProjectExtensionSettings = (projectId: string | undefined, instanceId: string | undefined) => {
+  return useQuery({
+    queryKey: projectExtensionSettingsQueryKey(projectId, instanceId),
+    queryFn: () => listProjectExtensionSettings(projectId!, instanceId!),
+    enabled: Boolean(projectId && instanceId),
+  });
+};
+
+export const useUpdateProjectExtensionSetting = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ instanceId, key, value }: { instanceId: string; key: string; value: unknown }) => {
+      if (!projectId) throw new Error("Project id is required to update extension settings.");
+      return updateProjectExtensionSetting(projectId, instanceId, key, value);
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: projectExtensionSettingsQueryKey(projectId, variables.instanceId) });
+    },
   });
 };
 

@@ -80,8 +80,6 @@ export const selectDashboardNavigationResource = (
   resource: ResourceRef,
   input: { modeId?: string } = {},
 ) => {
-  ctx.layout.expirePreviewTabs(resource.kind === "dashboard-view" ? undefined : resource.uri);
-
   if (resource.kind !== "dashboard-view") {
     activeCollectionByWorkbench.delete(ctx.context.store);
     ctx.context.delete(dashboardActiveCollectionContextKey);

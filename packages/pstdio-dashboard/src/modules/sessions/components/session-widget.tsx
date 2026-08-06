@@ -1,6 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useSyncExternalStore } from "react";
+import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
@@ -9,8 +10,13 @@ import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/d
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { DashboardSessionChatPanel, ReviewChangesAction } from "./session-chat-panel";
 
-export const SessionWidget = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
+interface SessionWidgetProps {
+  input: WorkbenchPanelRenderInput;
+  drafts?: DashboardSessionDraftPersistence;
+}
+
+export const SessionWidget = (props: SessionWidgetProps) => {
+  const { input, drafts } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
 
   const view = resolveDashboardSessionViewForPlacement(input.instance);
@@ -26,6 +32,7 @@ export const SessionWidget = (props: { input: WorkbenchPanelRenderInput }) => {
     <DashboardSessionChatPanel
       input={input}
       view={view}
+      drafts={drafts}
       emptyStateTitle="No active conversations"
       emptyStateDescription="Start a conversation to see messages here."
       // The hub frames every session; the open action only appears when there is a workspace to open
@@ -37,13 +44,13 @@ export const SessionWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   );
 };
 
-export const SessionViewWidget = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
+export const SessionViewWidget = (props: SessionWidgetProps) => {
+  const { input, drafts } = props;
 
   return (
     <Flex h="full" minH="0" w="full" bg="bg" overflow="hidden" px="sm" py="sm" justify="center">
       <Box h="full" minH="0" w="full" maxW="52rem">
-        <SessionWidget input={input} />
+        <SessionWidget input={input} drafts={drafts} />
       </Box>
     </Flex>
   );

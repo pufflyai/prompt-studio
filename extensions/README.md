@@ -168,4 +168,10 @@ extensions/<name>/
 
 Reference: `extensions/extension-lab/` shows commands, middlewares, hooks, schedules, harnesses, routes, navigation, templates, and skills.
 
+### Managed webview dependencies
+
+Declare every package imported by a managed TypeScript or JavaScript webview in the extension's `dependencies` or `peerDependencies`. Install those packages in the extension source directory with `bun install`; otherwise Prompt Studio reports the complete missing-package list and leaves the previous successful bundle untouched.
+
+While Prompt Studio is running, edits to a webview's local import graph, `package.json`, `bun.lock` or `bun.lockb`, and installed dependency package metadata trigger a rebuild automatically. Creating or removing a top-level dependency under `node_modules` also retries a previously failed build, so dependency fixes do not require an API restart. Repeated refreshes with unchanged inputs reuse a successful bundle or preserve the existing failure backoff.
+
 For the full extension API surface, see [the product extension API docs](../.pstdio/docs/product/extensions/pstdio-extension-api.md). For loader internals, see [the extension runtime loader architecture doc](../.pstdio/docs/architecture/extensions-runtime.md).

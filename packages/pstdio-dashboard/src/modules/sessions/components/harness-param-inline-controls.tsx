@@ -3,15 +3,20 @@ import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { forwardRef, type ReactNode } from "react";
+import {
+  type HarnessParamValues,
+  removeHarnessParamOverride,
+  resolveHarnessParamText,
+  updateHarnessParamOverride,
+} from "./harness-param-values";
 
-export type HarnessParamValues = Record<string, string | boolean>;
 type HarnessParamDescriptor = HarnessParamsInfo[string];
 type SelectHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "select" }>;
 type BooleanHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "boolean" }>;
 
 type ControlSize = "2xs" | "xs" | "sm";
 
-interface HarnessParamControlsProps {
+interface HarnessParamInlineControlsProps {
   schema: HarnessParamsInfo | undefined;
   defaults?: HarnessParamValues;
   overrides: HarnessParamValues;
@@ -19,26 +24,6 @@ interface HarnessParamControlsProps {
   disabled?: boolean;
   size?: ControlSize;
 }
-
-// Harness param labels are Localizable; resolve before rendering so an l10n
-// object never reaches the DOM as "[object Object]".
-const labelFor = (key: string, label: string | { $l10n: string; default?: string } | undefined) => {
-  if (typeof label === "string") return label;
-  if (label) return label.default ?? label.$l10n;
-  return key.replace(/[-_]/g, " ");
-};
-
-const removeOverride = (overrides: HarnessParamValues, key: string) => {
-  const { [key]: _removed, ...rest } = overrides;
-  return rest;
-};
-
-const nextOverrides = (
-  overrides: HarnessParamValues,
-  defaults: HarnessParamValues | undefined,
-  key: string,
-  value: string | boolean,
-) => (Object.is(defaults?.[key], value) ? removeOverride(overrides, key) : { ...overrides, [key]: value });
 
 interface TriggerProps extends HTMLChakraProps<"button"> {
   displayLabel: string;
@@ -89,7 +74,7 @@ const BooleanParamControl = (
   props: ParamControlProps & { descriptor: BooleanHarnessParamDescriptor; value: string | boolean | undefined },
 ) => {
   const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value, size } = props;
-  const label = labelFor(paramKey, descriptor.label);
+  const label = resolveHarnessParamText(paramKey, descriptor.label);
   const booleanValue = value === true;
 
   return (
@@ -102,7 +87,7 @@ const BooleanParamControl = (
       startIcon={
         <Circle size={10} fill={booleanValue ? "currentColor" : "transparent"} strokeWidth={booleanValue ? 0 : 2} />
       }
-      onClick={() => onOverridesChange(nextOverrides(overrides, defaults, paramKey, !booleanValue))}
+      onClick={() => onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, !booleanValue))}
     />
   );
 };
@@ -111,7 +96,7 @@ const SelectParamControl = (
   props: ParamControlProps & { descriptor: SelectHarnessParamDescriptor; value: string | boolean | undefined },
 ) => {
   const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value, size } = props;
-  const label = labelFor(paramKey, descriptor.label);
+  const label = resolveHarnessParamText(paramKey, descriptor.label);
   const selectedValue = typeof value === "string" ? value : descriptor.options[0]?.value;
   const selectedOption = descriptor.options.find((option) => option.value === selectedValue);
   const selectedLabel = selectedOption?.label ?? selectedValue ?? "unset";
@@ -139,7 +124,9 @@ const SelectParamControl = (
                 <Menu.Item
                   key={option.value}
                   value={option.value}
-                  onSelect={() => onOverridesChange(nextOverrides(overrides, defaults, paramKey, option.value))}
+                  onSelect={() =>
+                    onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, option.value))
+                  }
                 >
                   <Box
                     display="grid"
@@ -166,7 +153,7 @@ const SelectParamControl = (
                 <Menu.Separator />
                 <Menu.Item
                   value={`${paramKey}:reset`}
-                  onSelect={() => onOverridesChange(removeOverride(overrides, paramKey))}
+                  onSelect={() => onOverridesChange(removeHarnessParamOverride(overrides, paramKey))}
                 >
                   Reset to default
                 </Menu.Item>
@@ -190,7 +177,7 @@ const ParamControl = (props: ParamControlProps) => {
   return <SelectParamControl {...props} descriptor={descriptor} value={value} />;
 };
 
-export const HarnessParamControls = (props: HarnessParamControlsProps) => {
+export const HarnessParamInlineControls = (props: HarnessParamInlineControlsProps) => {
   const { schema, defaults, overrides, onOverridesChange, disabled = false, size = "sm" } = props;
   const entries = Object.entries(schema ?? {});
   if (entries.length === 0) return null;

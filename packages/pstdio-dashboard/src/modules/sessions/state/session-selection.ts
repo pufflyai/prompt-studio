@@ -2,12 +2,12 @@ import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardSessions, type DashboardSession } from "../data/dashboard-sessions";
 
+export const dashboardSelectedSessionIdContextKey = "dashboard.session.id";
+
 type DashboardSessionSelectionContext = Pick<WorkbenchModuleContext, "context">;
 
-const selectedSessionByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], string>();
-
 export const rememberDashboardSession = (ctx: DashboardSessionSelectionContext, session: DashboardSession) => {
-  selectedSessionByWorkbench.set(ctx.context.store, session.id);
+  ctx.context.set(dashboardSelectedSessionIdContextKey, session.id);
 };
 
 export const rememberDashboardSessionResource = (
@@ -15,18 +15,23 @@ export const rememberDashboardSessionResource = (
   resource: ResourceRef | undefined,
 ) => {
   if (resource?.kind !== "session" || !resource.id) return;
-  selectedSessionByWorkbench.set(ctx.context.store, resource.id);
+  ctx.context.set(dashboardSelectedSessionIdContextKey, resource.id);
 };
 
 export const forgetDashboardSession = (ctx: DashboardSessionSelectionContext) => {
-  selectedSessionByWorkbench.delete(ctx.context.store);
+  ctx.context.delete(dashboardSelectedSessionIdContextKey);
 };
 
-export const getDashboardSelectedSessionId = (ctx: DashboardSessionSelectionContext) =>
-  selectedSessionByWorkbench.get(ctx.context.store);
+export const getDashboardSelectedSessionId = (ctx: DashboardSessionSelectionContext) => {
+  const value = ctx.context.get(dashboardSelectedSessionIdContextKey);
+  return typeof value === "string" ? value : undefined;
+};
 
 export const getDashboardSelectedSession = (ctx: DashboardSessionSelectionContext) => {
   const sessionId = getDashboardSelectedSessionId(ctx);
   if (!sessionId) return undefined;
   return createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => session.id === sessionId);
 };
+
+export const subscribeDashboardSelectedSession = (ctx: DashboardSessionSelectionContext, listener: () => void) =>
+  ctx.context.store.subscribeSelector((state) => state.values[dashboardSelectedSessionIdContextKey], listener);

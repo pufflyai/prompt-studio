@@ -39,7 +39,7 @@ const setup = (): RouteContractHarness => {
       return workbench.layout.openPanel("contract-root-view", {
         resource,
         title: resource.label,
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
       });
     },
   });
@@ -51,7 +51,7 @@ const setup = (): RouteContractHarness => {
       return workbench.layout.openPanel("contract-detail-view", {
         resource,
         title: resource.label,
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
       });
     },
   });
@@ -89,7 +89,7 @@ test("the active-URI invariant catches a wrapper-identity presenter", async () =
       workbench.layout.openPanel("wrap-view", {
         resource: { ...resource, uri: `wrapper://${resource.uri}` },
         title: resource.label,
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
       }),
   });
 

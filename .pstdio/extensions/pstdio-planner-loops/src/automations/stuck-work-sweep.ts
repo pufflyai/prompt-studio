@@ -1,10 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
-import {
-  type AutomationContext,
-  automationEnabled,
-  moveTicketIfStillIn,
-  recordAutomationActivity,
-} from "../automation-run";
+import { type AutomationContext, moveTicketIfStillIn, recordAutomationActivity } from "../automation-run";
 import { executePlanner, type PlannerTicket, planner, type WorkspaceActivitySession } from "../planner-client";
 import { automatable, statusIdByNames } from "../selection";
 
@@ -86,8 +81,6 @@ export const stuckWorkSweepCommand = defineCommand({
   title: "Sweep stuck in-progress tickets",
   cli: true,
   async run(ctx) {
-    if (!(await automationEnabled(ctx))) return { ran: false, reason: "automation.enabled is off" };
-
     const [{ statuses }, { tags }, tickets] = await Promise.all([
       executePlanner(ctx, planner.readStatuses, {}),
       executePlanner(ctx, planner.readTags, {}),

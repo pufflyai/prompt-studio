@@ -80,6 +80,8 @@ export const openWorkbenchTerminal = (
     ...openInput,
     resource,
     title: openInput.title ?? getNextTerminalTitle(ctx),
+    // Every terminal keeps its own live session, so each open is a real tab.
+    strategy: { kind: "persistent" },
   });
   if (reveal) {
     ctx.layout.setRegionVisible("secondary", true);

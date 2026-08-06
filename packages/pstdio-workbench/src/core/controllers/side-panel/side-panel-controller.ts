@@ -16,8 +16,14 @@ export interface WorkbenchSidePanelController {
   onDidChange(listener: WorkbenchSidePanelChangeListener): Disposable;
 }
 
+export interface WorkbenchSidePanelPersistenceAdapter {
+  getMode(): WorkbenchSidePanelMode | undefined;
+  setMode(mode: WorkbenchSidePanelMode): void;
+}
+
 export interface CreateWorkbenchSidePanelControllerInput {
   initialMode?: WorkbenchSidePanelMode;
+  persistence?: WorkbenchSidePanelPersistenceAdapter;
 }
 
 export const createWorkbenchSidePanelController = (
@@ -25,7 +31,8 @@ export const createWorkbenchSidePanelController = (
 ): WorkbenchSidePanelController => {
   const internal = createWorkbenchStore<WorkbenchSidePanelState>({
     name: "workbench.sidePanel",
-    initialState: { mode: input.initialMode ?? "floating" },
+    // What the user last chose outranks the app's opening default.
+    initialState: { mode: input.persistence?.getMode() ?? input.initialMode ?? "floating" },
   });
 
   return {
@@ -36,6 +43,7 @@ export const createWorkbenchSidePanelController = (
     setMode(next) {
       if (internal.getState().mode === next) return;
       internal.setState({ mode: next }, false, "setMode");
+      input.persistence?.setMode(next);
     },
     onDidChange(listener) {
       const unsubscribe = internal.subscribeSelector(

@@ -218,7 +218,89 @@
   },
   "projectSettings": {
     "title": "プロジェクト設定",
-    "skills": "スキル"
+    "skills": "スキル",
+    "extensionsPanel": {
+      "empty": "このプロジェクトにはインストール済みの拡張機能がありません。",
+      "loadError": "拡張機能の読み込みに失敗しました。",
+      "title": "拡張機能",
+      "counts": "{{installed}}件インストール済み · {{enabled}}件有効 · {{failing}}件失敗",
+      "searchPlaceholder": "拡張機能を検索…",
+      "installedGroup": "インストール済み · {{count}}",
+      "noSearchResults": "\"{{query}}\"に一致する拡張機能はありません。",
+      "noDescription": "説明がありません。",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "保留中",
+        "loaded": "読み込み済み",
+        "error": "読み込みに失敗しました",
+        "missing": "見つかりません",
+        "disabled": "無効"
+      },
+      "health": {
+        "triggerAriaLabel": "{{name}}の問題を表示",
+        "failedToLoad": "読み込みに失敗しました",
+        "issues_one": "{{count}}件の問題",
+        "issues_other": "{{count}}件の問題",
+        "lastLoaded": "最終読み込み {{time}}",
+        "unknownError": "拡張機能の読み込みに失敗しました。",
+        "retry": "再試行",
+        "retrySucceeded": "拡張機能を読み込みました",
+        "retryFailed": "拡張機能の読み込みに依然として失敗しています",
+        "attemptFix": "修正を試みる",
+        "fixSessionStarted": "修正セッションを開始しました",
+        "fixSessionFailed": "修正セッションの開始に失敗しました"
+      },
+      "automations": {
+        "title": "自動化",
+        "toggleAriaLabel": "自動化{{name}}を切り替え",
+        "listStatus": "{{count}}件中{{enabled}}件の自動化が有効",
+        "cron": "cron {{cron}}",
+        "stateOn": "オン",
+        "stateOff": "オフ"
+      },
+      "detail": {
+        "back": "拡張機能",
+        "tabs": {
+          "settings": "設定",
+          "contributions": "コントリビューション"
+        },
+        "noContributions": "この拡張機能はコントリビューションを宣言していません。",
+        "noSettings": "この拡張機能は設定を宣言していません。",
+        "dangerZone": "危険な操作",
+        "deleteHint": "この拡張機能のファイルを削除し、プロジェクトから取り除きます。",
+        "copyCommand": "コマンドをコピー",
+        "contributionKinds": {
+          "harnesses": "ハーネス",
+          "commands": "コマンド",
+          "modes": "モード",
+          "panels": "ビュー",
+          "routes": "ルート",
+          "menuContributions": "メニュー項目",
+          "settingsPanels": "設定パネル",
+          "renderers": "レンダラー",
+          "skills": "スキル",
+          "templates": "テンプレート",
+          "themes": "テーマ",
+          "treeItems": "ツリー項目",
+          "commandPaletteResources": "コマンドパレットリソース"
+        }
+      },
+      "toggleAriaLabel": "{{name}}を切り替え",
+      "toggleErrorTitle": "拡張機能の更新に失敗しました",
+      "toggleError": "拡張機能を更新できませんでした。もう一度お試しください。",
+      "delete": "拡張機能を削除",
+      "deleteErrorTitle": "拡張機能の削除に失敗しました",
+      "deleteError": "拡張機能を削除できませんでした。もう一度お試しください。",
+      "deleteConfirm": {
+        "headline": "拡張機能を削除しますか？",
+        "notification": "\"{{name}}\"の拡張機能ファイルを削除し、プロジェクトから取り除きます。保存されたデータは保持されるため、再インストールすると復元されます。",
+        "deleteDataLabel": "この拡張機能のデータも削除する（元に戻せません）",
+        "button": "削除"
+      }
+    }
   },
   "list": {
     "projectCreated": "プロジェクトを作成しました",

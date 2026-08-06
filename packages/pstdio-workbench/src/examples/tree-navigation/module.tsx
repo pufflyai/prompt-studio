@@ -171,7 +171,7 @@ export const createTreeNavigationWorkbench = () => {
         canOpen: (resource) => resource.kind === "tree-navigation.view",
         open: (resource, input) =>
           ctx.layout.openPanel(resource.id === "workspaces" ? WORKSPACES_WIDGET_ID : TICKETS_WIDGET_ID, {
-            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
             resource,
             title: resource.label,
           }),
@@ -181,7 +181,7 @@ export const createTreeNavigationWorkbench = () => {
         canOpen: (resource) => resource.kind === "tree-navigation.ticket",
         open: (resource, input) =>
           ctx.layout.openPanel(TICKET_WIDGET_ID, {
-            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
             resource,
             title: resource.label,
           }),

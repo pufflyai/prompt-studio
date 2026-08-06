@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { resolveDashboardLayoutPersistenceScope } from "./navigation-state";
+import { createWorkbenchCore } from "@pstdio/workbench";
+import { resolveDashboardLayoutPersistenceScope, selectDashboardNavigationResource } from "./navigation-state";
+import { selectDashboardProject } from "./project-context";
+import { dashboardResources } from "./resources";
 
 describe("resolveDashboardLayoutPersistenceScope", () => {
   test("uses canonical resource, aggregate, and empty scopes", () => {
@@ -24,5 +27,47 @@ describe("resolveDashboardLayoutPersistenceScope", () => {
       }),
     ).toBe("project/project-1/mode/project/aggregate/empty");
     expect(resolveDashboardLayoutPersistenceScope({ modeId: "project" })).toBeUndefined();
+  });
+});
+
+describe("selectDashboardNavigationResource", () => {
+  test("preserves a preview Side Panel tab across same-project navigation scopes", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+    workbench.layout.registerPanel({
+      closable: true,
+      id: "dashboard.session",
+      title: "Session",
+      region: "side",
+      rendererId: "test.session",
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    selectDashboardNavigationResource(workbench, dashboardResources.sessions, { modeId: "project" });
+
+    const session = workbench.layout.openPanel("dashboard.session", {
+      resource: {
+        kind: "session",
+        uri: "dashboard-workbench://session/session-1",
+        id: "session-1",
+        label: "Session one",
+      },
+    });
+
+    selectDashboardNavigationResource(
+      workbench,
+      {
+        kind: "workspace",
+        uri: "dashboard-workbench://workspace/workspace-1",
+        id: "workspace-1",
+        label: "Workspace one",
+      },
+      { modeId: "workspace" },
+    );
+    selectDashboardNavigationResource(workbench, dashboardResources.sessions, { modeId: "project" });
+
+    expect(workbench.layout.listPanelInstances("side")).toEqual([
+      expect.objectContaining({ instanceId: session.instanceId, tabRetention: "preview" }),
+    ]);
   });
 });

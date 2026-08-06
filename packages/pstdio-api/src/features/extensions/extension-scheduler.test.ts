@@ -25,7 +25,7 @@ const waitFor = async (condition: () => Promise<boolean> | boolean, timeoutMs = 
   throw new Error(`Condition not met within ${timeoutMs}ms`);
 };
 
-const writeScheduledExtension = () => {
+const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) => {
   const root = createTempRoot();
   mkdirSync(root, { recursive: true });
   writeFileSync(
@@ -62,7 +62,7 @@ const writeScheduledExtension = () => {
             title: "Heartbeat",
             cron: "* * * * *",
             commandId: "lab.heartbeat",
-            params: { from: "schedule" },
+            params: { from: "schedule" },${options.scheduleDisabled ? "\n            disabled: true," : ""}
           },
         },
       };
@@ -72,8 +72,17 @@ const writeScheduledExtension = () => {
   return root;
 };
 
-const createDeps = (sourcePath: string) =>
+type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
+
+const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) =>
   ({
+    extensionAutomationPreferencesService: {
+      list: async () => automationPreferences,
+      get: async (_projectId: string, instanceId: string, automationId: string) =>
+        automationPreferences.find(
+          (row) => row.extension_instance_id === instanceId && row.automation_id === automationId,
+        ) ?? null,
+    },
     extensionService: {
       listEnabledSourcesForProject: async () => [
         {
@@ -149,5 +158,49 @@ describe("createExtensionScheduler", () => {
         scheduledFor: "2026-05-18T07:56:00.000Z",
       },
     });
+  });
+
+  test("skips schedules the user disabled via automation preferences", async () => {
+    const sourcePath = writeScheduledExtension();
+    const state = { calls: [] as unknown[] };
+    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+
+    const cron = createTestCronDriver();
+    const scheduler = createExtensionScheduler({
+      deps: createDeps(sourcePath, [
+        { extension_instance_id: "instance-1", automation_id: "lab.heartbeat", enabled: false },
+      ]),
+      listProjectIds: async () => ["project-1"],
+      watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
+      now: () => new Date("2026-05-18T07:56:15.000Z"),
+      cron: cron.factory,
+    });
+    schedulers.push(scheduler);
+
+    await scheduler.refresh();
+    expect(cron.size()).toBe(0);
+  });
+
+  test("runs author-disabled schedules the user explicitly enabled", async () => {
+    const sourcePath = writeScheduledExtension({ scheduleDisabled: true });
+    const state = { calls: [] as unknown[] };
+    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+
+    const cron = createTestCronDriver();
+    const scheduler = createExtensionScheduler({
+      deps: createDeps(sourcePath, [
+        { extension_instance_id: "instance-1", automation_id: "lab.heartbeat", enabled: true },
+      ]),
+      listProjectIds: async () => ["project-1"],
+      watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
+      now: () => new Date("2026-05-18T07:56:15.000Z"),
+      cron: cron.factory,
+    });
+    schedulers.push(scheduler);
+
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
+
+    await waitFor(() => state.calls.length === 1);
   });
 });

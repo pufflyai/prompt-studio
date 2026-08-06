@@ -16,9 +16,16 @@ type InstalledSourceLike = {
   source_path: string;
   version: string | null;
   manifest_json: unknown;
+  status: "pending" | "loaded" | "error" | "missing" | "disabled";
+  last_loaded_at: string | null;
+  last_error_json: unknown;
 };
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
+
+// Mirrors repoExtensionsRoot: repo-local sources always live under `<repo>/.pstdio/extensions/`.
+const sourceScope = (sourcePath: string) =>
+  sourcePath.includes("/.pstdio/extensions/") ? ("repo" as const) : ("global" as const);
 
 // The package name follows the source's current manifest, so it can never drift from a stored copy.
 export const nameFromSource = (installedSource: InstalledSourceLike) => {
@@ -42,6 +49,10 @@ export const toProjectExtensionInstance = (
     version: installedSource.version,
     description: optionalString(manifest.description),
     sourcePath: installedSource.source_path,
+    scope: sourceScope(installedSource.source_path),
+    status: installedSource.status,
+    lastLoadedAt: installedSource.last_loaded_at,
+    lastError: (installedSource.last_error_json ?? null) as Record<string, unknown> | null,
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
   };

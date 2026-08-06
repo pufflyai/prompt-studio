@@ -175,7 +175,10 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
-    workbench.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, { title: "Terminal 10" });
+    workbench.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, {
+      title: "Terminal 10",
+      strategy: { kind: "persistent" },
+    });
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 

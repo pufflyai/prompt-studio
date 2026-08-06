@@ -11,7 +11,6 @@ import {
   getSidenavContributionSections,
 } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
 
@@ -60,86 +59,6 @@ describe("createWorkspacesModule", () => {
       .map((node) => node.id);
     expect(sidenavNodeIds).not.toContain(workspace.uri);
     expect(sidenavNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
-  });
-
-  test("opens the last active linked session in the Side Panel when a workspace opens", async () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.registerModule(createSidenavModule());
-    workbench.registerModule(createSessionBubbleModule());
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.sidePanel.setMode("closed");
-
-    getWriter("workspaces")?.truncateAndWrite([
-      {
-        id: "workspace-1",
-        project_id: "project-1",
-        name: "Dashboard workbench datalayer",
-        branch: "workspace/PS-307_A1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
-        archived: false,
-        workspace_shorthand: "PS-307_A1",
-        setup_error: null,
-        created_at: "2026-05-22T08:10:00Z",
-        updated_at: "2026-05-22T08:50:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("sessions")?.truncateAndWrite([
-      {
-        id: "session-older",
-        project_id: "project-1",
-        title: "Recently active session",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        last_request_started: "2026-05-22T09:40:00Z",
-        last_request_ended: "2026-05-22T09:45:00Z",
-        created_at: "2026-05-22T08:20:00Z",
-        updated_at: "2026-05-22T08:20:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "session-newer",
-        project_id: "project-1",
-        title: "Newer row",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        last_request_started: "2026-05-22T08:30:00Z",
-        last_request_ended: "2026-05-22T08:35:00Z",
-        created_at: "2026-05-22T08:30:00Z",
-        updated_at: "2026-05-22T08:30:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("workspace_sessions")?.truncateAndWrite([
-      { id: "link-older", workspace_id: "workspace-1", session_id: "session-older" },
-      { id: "link-newer", workspace_id: "workspace-1", session_id: "session-newer" },
-    ]);
-
-    const workspace = workbench.resources
-      .listResources("")
-      .find((entry) => entry.resource.kind === "workspace")?.resource;
-
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
-
-    const floatingSession = workbench.layout
-      .listPanelInstances("side")
-      .find((panel) => panel.resource?.uri === "dashboard-workbench://session/session-older");
-
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
-    expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
-    expect(floatingSession?.tabRetention).toBe("preview");
-    expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(floatingSession!.instanceId);
-    expect(workbench.sidePanel.getMode()).toBe("closed");
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
-      "dashboard-workbench://session/session-older",
-    );
   });
 
   test("lists workspaces of the selected project as command panel resources", () => {
@@ -247,7 +166,7 @@ describe("createWorkspacesModule sidenav state", () => {
       region: "side",
       rendererId: "test.files",
     });
-    workbench.layout.openPanel("test.files", {});
+    workbench.layout.openPanel("test.files", { strategy: { kind: "persistent" } });
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
