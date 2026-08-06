@@ -4,11 +4,11 @@ import {
   createContributionRegistrations,
   createRegionQueries,
 } from "./layout-contribution-helpers";
-import { createLocationEstablisher, type LocationAwareLayoutModel } from "./layout-location-establisher";
-import type { CreateLayoutModelInput, LayoutScope } from "./layout-model-types";
+import type { CreateLayoutModelInput, LayoutModel, LayoutScope } from "./layout-model-types";
 import {
   activateInLayout,
   closeWidgetInLayout,
+  findPlacementByWidgetId,
   getActiveLocationPlacement,
   removePlacementsForContribution,
   setLocationSubPanelSelection,
@@ -25,6 +25,7 @@ import {
   type RegisteredWidgetContribution,
   type WorkbenchLayout,
   type WorkbenchLayoutStoreState,
+  type WorkbenchPanelInstance,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   type WorkbenchRegionState,
@@ -84,6 +85,54 @@ export {
   workbenchPanelRegions,
   workbenchRegions,
 } from "./layout-types";
+
+interface LocationAwareLayoutModel extends LayoutModel {
+  establishLocation(instanceId: string): WorkbenchPanelInstance;
+}
+
+interface CreateLocationEstablisherInput {
+  applyAndActivate(
+    layout: WorkbenchLayout,
+    regionId: WorkbenchRegion,
+    placement: WorkbenchWidgetPlacement,
+  ): WorkbenchWidgetPlacement;
+  getLayout(): WorkbenchLayout;
+  getWidget(id: string): RegisteredWidgetContribution | undefined;
+  panelMethods: Pick<LayoutModel, "activatePanel" | "getActivePanel">;
+}
+
+const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (instanceId: string) => {
+  const layout = input.getLayout();
+  const found = findPlacementByWidgetId(layout, instanceId);
+  if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
+  if (found.regionId !== "main") return input.panelMethods.activatePanel(instanceId);
+
+  const placement = { ...found.placement, role: "location" as const };
+  const ownedPanelMenuIds = new Set(input.getWidget(placement.contributionId)?.ownedPanelMenuIds ?? []);
+  const regions = Object.fromEntries(
+    Object.entries(layout.regions).map(([regionId, region]) => [
+      regionId,
+      {
+        ...region,
+        widgets: region.widgets.map((candidate) => {
+          if (candidate.widgetId === instanceId) return placement;
+          if (!ownedPanelMenuIds.has(candidate.contributionId)) return candidate;
+          if (candidate.resourceUri !== placement.resourceUri) return candidate;
+          return { ...candidate, ownerResourceUri: placement.resourceUri };
+        }),
+      },
+    ]),
+  ) as WorkbenchLayout["regions"];
+  input.applyAndActivate(
+    {
+      ...layout,
+      regions,
+    },
+    "main",
+    placement,
+  );
+  return input.panelMethods.getActivePanel("main")!;
+};
 
 const requireRegisteredWidget = (
   widgets: WorkbenchLayoutStoreState["widgets"],
