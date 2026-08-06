@@ -9,10 +9,13 @@ import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { dashboardResources } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
+import {
+  createDashboardWorkspaceOptionResource,
+  createDashboardWorkspaceOptions,
+} from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
 import { SessionTabContent, SessionTabMenu } from "./session-tab";
 
@@ -31,11 +34,7 @@ const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const workspace = createDashboardWorkspaceOptions(projectId)[0];
   if (!workspace) return undefined;
 
-  return createDashboardResource("workspace", workspace.id, workspace.title, "GitBranch", projectId, {
-    workspaceId: workspace.id,
-    workspaceShorthand: workspace.shorthand,
-    ...(workspace.branch ? { workspaceBranch: workspace.branch } : {}),
-  });
+  return createDashboardWorkspaceOptionResource(workspace, projectId);
 };
 
 const getWorkspaceModeResource = (ctx: WorkbenchModuleContext) => {
@@ -49,6 +48,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
   const workspaceId = workspace?.id ?? metadataString(workspace, "workspaceId");
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
   const workspaceBranch = metadataString(workspace, "workspaceBranch");
+  const workspacePath = metadataString(workspace, "workspacePath");
   const workspaceTitle = workspace?.label ?? workspaceShorthand;
   const id = `${workspaceId ? `new-${workspaceId}` : "new"}-${globalThis.crypto.randomUUID()}`;
 
@@ -63,6 +63,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
       ...(workspaceTitle ? { workspaceTitle } : {}),
       ...(workspaceShorthand ? { workspaceShorthand } : {}),
       ...(workspaceBranch ? { workspaceBranch } : {}),
+      ...(workspacePath ? { workspacePath } : {}),
     },
   };
 };

@@ -11,8 +11,13 @@ import {
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
+import {
+  createDashboardWorkspaceOptionResource,
+  createDashboardWorkspaceOptions,
+} from "@/shared/workspaces/workspace-options";
 
 const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContext, Set<string>>();
 
@@ -28,6 +33,26 @@ const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContext) => {
 const workspaceLabel = (resource: ResourceRef) => {
   const shorthand = resource.metadata?.workspaceShorthand;
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
+};
+
+const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  if (typeof resource.metadata?.workspacePath === "string" && resource.metadata.workspacePath.length > 0) {
+    return resource;
+  }
+
+  const projectId = getDashboardSelectedProjectId(ctx);
+  const workspace = createDashboardWorkspaceOptions(projectId).find((option) => option.id === resource.id);
+  if (!workspace?.workspacePath) return resource;
+
+  const canonical = createDashboardWorkspaceOptionResource(workspace, projectId);
+  return {
+    ...resource,
+    metadata: {
+      ...canonical.metadata,
+      ...resource.metadata,
+      workspacePath: workspace.workspacePath,
+    },
+  };
 };
 
 // The board, selected-resource breadcrumb, and tree resource menus all run the same
@@ -74,13 +99,14 @@ export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resou
   if (!resource.id) return;
   if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
-  return openWorkbenchTerminal(ctx, { resource });
+  return openWorkbenchTerminal(ctx, { resource: resolveWorkspaceTerminalResource(ctx, resource) });
 };
 
 export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
   if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
+  const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
   const existing = ctx.layout
     .getLayout()
@@ -99,7 +125,7 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
   if (existing) return existing;
 
   autoOpenedUris.add(resource.uri);
-  return openWorkbenchTerminal(ctx, { resource, reveal: false });
+  return openWorkbenchTerminal(ctx, { resource: terminalResource, reveal: false });
 };
 
 // The default workspace (root repo) is permanent: hide every action when the active or

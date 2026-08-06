@@ -2,7 +2,7 @@ import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
-import { findFirstProjectRepoPath } from "@/shared/projects/project-repo-path";
+import { indexFirstProjectRepoPaths } from "@/shared/projects/project-repo-path";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -100,8 +100,10 @@ const createWorkspaceResourceMetadata = (input: {
   return metadata;
 };
 
-export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) =>
-  rows.workspaces
+export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) => {
+  const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
+
+  return rows.workspaces
     .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, options.projectId))
     .map((workspace) => {
       const title = (workspace.name as string | null) ?? (workspace.workspace_shorthand as string);
@@ -109,8 +111,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
       const summary = options.diffSummariesByWorkspaceId?.get(workspace.id);
       const diffOverview = summary ? formatDashboardWorkspaceDiffOverview(summary) : undefined;
       const workspacePath =
-        (workspace.worktree_path as string | null) ??
-        findFirstProjectRepoPath(workspace.project_id as string, rows.projectRepos, rows.repos);
+        (workspace.worktree_path as string | null) ?? repoPathByProjectId.get(workspace.project_id as string) ?? null;
 
       return {
         id: workspace.id,
@@ -138,6 +139,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
       } satisfies DashboardWorkspace;
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+};
 
 export const createDashboardWorkspaces = (projectId?: string) => {
   const rows = readDashboardRows();

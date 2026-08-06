@@ -91,6 +91,7 @@ describe("openSelectedWorkspace", () => {
         branch: "workspace/PS-307_A2",
         type: "worktree",
         isDefault: false,
+        workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
         updatedAt: "2026-05-22T08:55:00Z",
       },
       "project-1",
@@ -111,6 +112,7 @@ describe("openSelectedWorkspace", () => {
         workspaceBranch: "workspace/PS-307_A2",
         workspaceShorthand: "PS-307_A2",
         workspaceIsDefault: false,
+        workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
       },
     });
   });

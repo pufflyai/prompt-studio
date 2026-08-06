@@ -1,7 +1,7 @@
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
-import { findFirstProjectRepoPath } from "@/shared/projects/project-repo-path";
+import { indexFirstProjectRepoPaths } from "@/shared/projects/project-repo-path";
 
 export interface DashboardProject {
   id: string;
@@ -23,7 +23,7 @@ const readRows = (table: "projects" | "project_repos" | "repos") =>
 
 const isVisibleRow = (row: SyncedRow) => !row.deleted_at;
 
-const toDashboardProject = (row: SyncedRow, projectRepoRows: SyncedRow[], repoRows: SyncedRow[]): DashboardProject => {
+const toDashboardProject = (row: SyncedRow, repoPathByProjectId: ReadonlyMap<string, string>): DashboardProject => {
   const name = row.name as string;
 
   return {
@@ -31,7 +31,7 @@ const toDashboardProject = (row: SyncedRow, projectRepoRows: SyncedRow[], repoRo
     name,
     createdAt: (row.created_at as string) ?? "",
     updatedAt: (row.updated_at as string) ?? "",
-    repoPath: findFirstProjectRepoPath(row.id, projectRepoRows, repoRows),
+    repoPath: repoPathByProjectId.get(row.id) ?? null,
     resource: createDashboardResource("project", row.id, name, standardResourceIcons.project, row.id),
   };
 };
@@ -43,9 +43,10 @@ export const readDashboardProjectRows = (): DashboardProjectRows => ({
 });
 
 export const buildDashboardProjectsFromRows = (rows: DashboardProjectRows) => {
+  const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
   return rows.projects
     .filter(isVisibleRow)
-    .map((project) => toDashboardProject(project, rows.projectRepos, rows.repos))
+    .map((project) => toDashboardProject(project, repoPathByProjectId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
