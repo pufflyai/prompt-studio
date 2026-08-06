@@ -141,6 +141,30 @@ export const CodexShell: Story = {
   ),
 };
 
+const codexApplyPatchInvocations: ToolPart[] = [
+  {
+    type: "tool",
+    tool: "apply_patch",
+    status: "completed",
+    state: {
+      input: {
+        changes: [
+          { path: "packages/ui/src/components/chat-ui/components/chat-message-list.tsx", kind: "update" },
+          { path: "packages/ui/src/components/chat-ui/components/chat-message-list-items.tsx", kind: "add" },
+        ],
+      },
+    },
+  },
+];
+
+export const CodexApplyPatch: Story = {
+  render: () => (
+    <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <ToolInvocationTimeline invocations={codexApplyPatchInvocations} />
+    </Box>
+  ),
+};
+
 const questionAndTodoInvocations: ToolPart[] = [
   {
     type: "tool",

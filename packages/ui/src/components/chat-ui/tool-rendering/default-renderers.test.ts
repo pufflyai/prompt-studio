@@ -33,6 +33,46 @@ describe("shell renderer", () => {
   });
 });
 
+describe("apply patch renderer", () => {
+  it("renders Codex file changes when the event does not include diff content", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "apply_patch",
+      status: "completed",
+      state: {
+        input: {
+          changes: [
+            { path: "packages/ui/src/example.ts", kind: "update" },
+            { path: "packages/ui/src/new-file.ts", kind: "add" },
+          ],
+        },
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Apply patch", bold: true },
+      {
+        kind: "link",
+        text: "example.ts",
+        filePath: "packages/ui/src/example.ts",
+        variant: "bubble",
+      },
+      {
+        kind: "link",
+        text: "new-file.ts",
+        filePath: "packages/ui/src/new-file.ts",
+        variant: "bubble",
+      },
+    ]);
+    expect(item.blocks).toEqual([
+      {
+        type: "references",
+        references: ["packages/ui/src/example.ts", "packages/ui/src/new-file.ts"],
+      },
+    ]);
+  });
+});
+
 describe("todowrite renderer", () => {
   it("renders Claude TodoWrite payloads with the shared readonly todo list", () => {
     const item = renderInvocation({
