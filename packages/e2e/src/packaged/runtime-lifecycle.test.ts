@@ -40,6 +40,11 @@ const createRuntimeEnv = (home: string) => {
   return env;
 };
 
+const readRuntimeLogs = (home: string) => {
+  const logPath = join(home, "logs.jsonl");
+  return existsSync(logPath) ? readFileSync(logPath, "utf8") : "No runtime log was written.";
+};
+
 const runBinary = (args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
   const result = spawnSync(PACKAGED_BINARY_PATH, args, {
     cwd,
@@ -49,7 +54,7 @@ const runBinary = (args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
   });
 
   expect(result.error).toBeUndefined();
-  expect(result.status, result.stderr).toBe(0);
+  expect(result.status, `${result.stderr}\nRuntime log:\n${readRuntimeLogs(cwd)}`).toBe(0);
   return result;
 };
 
@@ -66,12 +71,12 @@ const runBinaryAsync = async (args: string[], cwd: string, env: NodeJS.ProcessEn
 const readDescriptor = (path: string) => JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor;
 
 const waitForDescriptor = async (path: string) => {
-  const deadline = Date.now() + TEST_TIMEOUT;
+  const deadline = Date.now() + TEST_TIMEOUT - 5_000;
   while (Date.now() < deadline) {
     if (existsSync(path)) return readDescriptor(path);
     await Bun.sleep(50);
   }
-  throw new Error("Packaged runtime descriptor was not created");
+  throw new Error(`Packaged runtime descriptor was not created. Runtime log:\n${readRuntimeLogs(join(path, ".."))}`);
 };
 
 const assertAuthenticatedReady = async (descriptor: RuntimeDescriptor) => {
