@@ -2,13 +2,13 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { topLevelCommandModules } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
-import { resolveApiUrl as resolveConfiguredApiUrl } from "./features/api-url";
 import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
 import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
 import { loadExtensionNamespaces } from "./features/extensions/root-help-namespaces";
+import { resolveRootHelpRuntime } from "./features/extensions/root-help-runtime";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
 import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
@@ -158,8 +158,9 @@ for (const mod of topLevelCommandModules) {
 // root help. API-gated and best-effort: when the server is reachable we list the
 // installed namespaces, otherwise root help degrades to core commands only.
 if (!firstCommandToken() && (rawArgs.includes("--help") || rawArgs.includes("-h"))) {
-  const apiUrl = resolveRequestedApiUrl() ?? resolveConfiguredApiUrl();
+  const { apiUrl, token } = await resolveRootHelpRuntime(resolveRequestedApiUrl());
   process.env.PSTDIO_API_URL = apiUrl;
+  if (token) process.env.PSTDIO_API_TOKEN = token;
   const namespaces = await loadExtensionNamespaces({
     healthUrl: `${apiUrl}/healthz`,
     exclude: staticTopLevelCommands,
