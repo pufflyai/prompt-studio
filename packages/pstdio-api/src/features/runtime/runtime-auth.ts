@@ -13,5 +13,4 @@ const bearerToken = (request: Request) => {
   return authorization.replace(/^bearer\s+/i, "").trim();
 };
 
-export const isRuntimeBearerAuthorized = (request: Request, token: string) =>
-  tokenMatches(bearerToken(request), token);
+export const isRuntimeBearerAuthorized = (request: Request, token: string) => tokenMatches(bearerToken(request), token);

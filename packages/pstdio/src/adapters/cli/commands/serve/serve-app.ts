@@ -1,5 +1,5 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
-import { type RuntimeHost, type RuntimeOwnerType } from "pstdio-api/runtime";
+import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
