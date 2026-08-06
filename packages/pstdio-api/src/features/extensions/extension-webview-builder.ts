@@ -11,6 +11,26 @@ export type ExtensionWebviewBuildResult = {
 
 export type ExtensionWebviewBuilder = (input: ExtensionWebviewBuildInput) => Promise<ExtensionWebviewBuildResult>;
 
+const buildErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const buildErrorDiagnostics = (error: unknown) => {
+  const pending: unknown[] = [error];
+  const diagnostics: unknown[] = [];
+
+  while (pending.length > 0) {
+    const diagnostic = pending.pop();
+    diagnostics.push(diagnostic);
+    if (diagnostic instanceof AggregateError) pending.push(...[...diagnostic.errors].reverse());
+  }
+
+  return diagnostics;
+};
+
+export const formatExtensionWebviewBuildError = (error: unknown) => {
+  const messages = buildErrorDiagnostics(error).map(buildErrorMessage).filter(Boolean);
+  return [...new Set(messages)].join("\n") || "Webview build failed.";
+};
+
 export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
@@ -32,6 +52,6 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
       details: result.success ? "" : result.logs.map(String).join("\n") || "Webview build failed.",
     };
   } catch (error) {
-    return { success: false, details: error instanceof Error ? error.message : String(error) };
+    return { success: false, details: formatExtensionWebviewBuildError(error) };
   }
 };
