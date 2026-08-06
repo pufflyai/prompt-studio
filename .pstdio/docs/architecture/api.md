@@ -39,20 +39,41 @@ commands executed by the API, not through core ticket REST endpoints.
 | GET    | /readyz  | Readiness (DB + storage) |
 | GET    | /ping    | Simple ping              |
 
+### Runtime control
+
+The combined runtime also exposes descriptor-authenticated lifecycle routes under `/runtime`. `/runtime/ready`
+returns the protocol version and process instance identity; `/runtime/activity` reports active sessions, terminals,
+and scheduled jobs; `/runtime/promote` changes desktop ownership to persistent ownership; and `/runtime/shutdown`
+performs the activity-gated graceful shutdown. Every lifecycle mutation names the expected `instanceId` so a stale
+client cannot act on a replacement process. `/runtime/events` announces intentional shutdown before disconnect.
+
+The runtime descriptor token is required for every `/runtime` route. Runtime clients send it as
+`Authorization: Bearer <token>`; lifecycle mutations also name the expected instance identity.
+
 ## Lifecycle
 
-### Starting the API
+### Starting the runtime
 
-The CLI auto-starts the API as a detached background process when a command needs it. There are two launch paths:
+The shared runtime binds to `127.0.0.1` and lets the operating system select an available port. After the server is
+bound and authenticated readiness succeeds, it atomically publishes `$PSTDIO_HOME/runtime.json` with mode `0600`.
+The versioned descriptor contains its PID, instance ID, ownership type, exact origin, bearer token, application
+version, and start time.
 
-- **Workspace mode** (monorepo detected): runs `bun run start` in the `pstdio-api` package.
-- **Bundled mode** (distributed CLI): runs the bundled `server.js` directly with `node`.
+API-backed CLI commands first validate the descriptor, PID, instance identity, and authenticated readiness. A
+healthy runtime is reused even when its application version differs. A stale descriptor is reclaimed only when both
+the PID and readiness probe are dead; uncertain ownership is reported instead of starting a competing PGlite owner.
+When no runtime exists, compiled mode self-spawns the Bun sidecar and workspace mode runs the same combined runtime
+from `packages/pstdio`. Both paths wait for the descriptor rather than parsing human-readable output.
 
-The `dev` script (`bun run --hot`) is reserved for interactive development only. It must never be used for background processes because `--hot` restarts the process on exit, which prevents graceful shutdown via the `/shutdown` endpoint.
+`pst serve` starts a detached persistent runtime and returns after readiness. When it finds a desktop-owned runtime,
+it promotes that process atomically without a restart or ownership demotion.
 
 ### Stopping the API
 
-`pst close` sends a `POST /shutdown` request. The endpoint responds with 200 and calls `process.exit(0)` after a short delay. If the API is not running, the CLI prints "API is not running." and exits normally.
+`pst close` targets the runtime in the default-home descriptor. It refuses shutdown while backend-authoritative
+activity is present and prints the active work. `pst close --force` authorizes cancellation, requests the same normal
+shutdown path, and waits without a timeout for both process exit and matching descriptor removal. Cleanup only
+removes a descriptor whose PID and instance ID still match the exiting runtime.
 
 ## Service Layer
 

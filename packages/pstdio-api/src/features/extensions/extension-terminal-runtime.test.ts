@@ -138,4 +138,18 @@ describe("terminal supervisor", () => {
 
     expect(() => process.kill(pid, 0)).toThrow(/ESRCH/);
   });
+
+  test("reports live terminal activity with a stable id and display label", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: ["/bin/sh"], cols: 80, rows: 24 });
+    void (async () => {
+      for await (const _event of handle.events()) void _event;
+    })();
+
+    expect(supervisor.activity()).toEqual([{ id: handle.id, label: "sh" }]);
+
+    await handle.kill();
+    expect(supervisor.activity()).toEqual([]);
+  });
 });

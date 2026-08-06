@@ -39,6 +39,7 @@ export type SchedulerInput = {
 };
 
 export type Scheduler = {
+  activity: () => Array<{ id: string; label: string }>;
   refresh: () => Promise<void>;
   dispose: () => Promise<void>;
 };

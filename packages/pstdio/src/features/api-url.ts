@@ -1,1 +1,1 @@
-export const API_URL = process.env.PSTDIO_API_URL ?? "http://localhost:19840";
+export const resolveApiUrl = () => process.env.PSTDIO_API_URL ?? "http://127.0.0.1:19840";

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getFreePort, waitForReady } from "./start-api";
@@ -9,7 +9,24 @@ import { TEST_TIMEOUT } from "./timeouts";
 const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
 const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-home-"));
 
-const spawnServe = (port: number, storagePath: string, dbPath = ":memory:") => {
+const spawnServe = (port: number, storagePath: string, dbPath = ":memory:", owner = "persistent") => {
+  const child = spawn("bun", ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", owner, "--port", String(port)], {
+    cwd: join(import.meta.dirname, "../.."),
+    env: {
+      ...process.env,
+      PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+      PSTDIO_DB_PATH: dbPath,
+      PSTDIO_DEFAULT_EXTENSIONS: "[]",
+      PSTDIO_HOME: SHARED_PSTDIO_HOME,
+      PSTDIO_STORAGE_PATH: storagePath,
+    },
+    stdio: "pipe",
+  });
+
+  return child;
+};
+
+const spawnDetachedServe = (port: number, storagePath: string, dbPath: string) => {
   const child = spawn("bun", ["run", PSTDIO_CLI, "serve", "--port", String(port)], {
     cwd: join(import.meta.dirname, "../.."),
     env: {
@@ -36,30 +53,43 @@ const startServe = async (port: number, storagePath: string, dbPath = ":memory:"
 describe("pstdio serve", () => {
   let child: ChildProcess | null = null;
 
-  afterEach(() => {
-    child?.kill();
+  afterEach(async () => {
+    const runningChild = child;
     child = null;
+    if (!runningChild || runningChild.exitCode !== null || runningChild.signalCode !== null) return;
+
+    const exited = new Promise<void>((resolve) => runningChild.once("exit", () => resolve()));
+    runningChild.kill();
+    await exited;
   });
 
   test(
-    "refuses a second serve using the same database while the first stays healthy",
+    "reuses and promotes a running desktop-owned runtime",
     async () => {
       const firstPort = await getFreePort();
       const secondPort = await getFreePort();
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-concurrent-serve-"));
       const dbPath = join(tempRoot, "pstdio.db");
-      child = await startServe(firstPort, join(tempRoot, "first-storage"), dbPath);
+      child = spawnServe(firstPort, join(tempRoot, "first-storage"), dbPath, "desktop");
+      await waitForReady(`http://localhost:${firstPort}`);
 
-      const second = spawnServe(secondPort, join(tempRoot, "second-storage"), dbPath);
-      let stderr = "";
-      second.stderr?.on("data", (chunk) => {
-        stderr += String(chunk);
-      });
+      const original = JSON.parse(readFileSync(join(SHARED_PSTDIO_HOME, "runtime.json"), "utf8")) as {
+        instanceId: string;
+        ownerType: string;
+        pid: number;
+      };
+
+      const second = spawnDetachedServe(secondPort, join(tempRoot, "second-storage"), dbPath);
       const exitCode = await new Promise<number | null>((resolve) => second.once("exit", resolve));
 
-      expect(exitCode).not.toBe(0);
-      expect(stderr).toContain("pstdio.db is in use by pid");
-      expect(stderr).toContain("refusing to open it a second time");
+      expect(exitCode).toBe(0);
+      const promoted = JSON.parse(readFileSync(join(SHARED_PSTDIO_HOME, "runtime.json"), "utf8")) as {
+        instanceId: string;
+        ownerType: string;
+        pid: number;
+      };
+      expect(promoted).toEqual({ ...original, ownerType: "persistent" });
+      expect(promoted.pid).toBe(child.pid);
 
       const health = await fetch(`http://localhost:${firstPort}/healthz`);
       expect(health.ok).toBe(true);

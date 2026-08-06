@@ -7,6 +7,7 @@ import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
+import { createRuntimeRoutes } from "./features/runtime/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
@@ -43,23 +44,18 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, apiToken: string |
 
   app.use("/v1/*", async (c, next) => {
     const authorization = c.req.header("authorization");
-
     if (!authorization || !/^bearer\s+/i.test(authorization)) {
       return c.json({ error: "Unauthorized" }, 401);
     }
-
     const token = authorization.replace(/^bearer\s+/i, "").trim();
-
-    if (token !== apiToken) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
+    if (token !== apiToken) return c.json({ error: "Unauthorized" }, 401);
     await next();
   });
 };
 
 const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/", createHealthRoutes(deps));
+  if (deps.runtime) app.route("/runtime", createRuntimeRoutes(deps.runtime));
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));

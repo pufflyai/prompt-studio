@@ -42,6 +42,7 @@ import {
   type HarnessRegistryService,
 } from "./features/harnesses/harness-registry-service";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
+import type { RuntimeHost } from "./features/runtime/routes";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
@@ -75,6 +76,7 @@ interface AppOptions {
   extensionWebviewBuilds?: boolean;
   /** Test seam: overrides the extension-backed harness registry. */
   harnessRegistry?: HarnessRegistryService;
+  runtimeHost?: RuntimeHost;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -109,6 +111,36 @@ const createAppTerminalSupervisor = () =>
         apiLogger.error({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
     },
   });
+
+const createRuntimeRouteDeps = (input: {
+  extensionScheduler: ReturnType<typeof createExtensionScheduler>;
+  host: RuntimeHost | undefined;
+  sessionService: ReturnType<typeof createSessionService>;
+  terminalSupervisor: ReturnType<typeof createTerminalSupervisor>;
+}) => {
+  if (!input.host) return undefined;
+
+  const activeSessions = async () => {
+    const rows = await Promise.all(
+      (["queued", "in_progress", "awaiting_input"] as const).map((status) => input.sessionService.listByStatus(status)),
+    );
+    return rows.flat().map((session) => ({ id: session.id, label: session.title }));
+  };
+
+  return {
+    host: input.host,
+    activity: async () => ({
+      sessions: await activeSessions(),
+      terminals: input.terminalSupervisor.activity(),
+      jobs: input.extensionScheduler.activity(),
+    }),
+    cancelActivity: async () => {
+      const sessions = await activeSessions();
+      await Promise.all(sessions.map((session) => input.sessionService.cancel(session.id)));
+      await Promise.all([input.terminalSupervisor.dispose(), input.extensionScheduler.dispose()]);
+    },
+  };
+};
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string | undefined) => {
   const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
@@ -247,7 +279,6 @@ export const createApp = async (options: AppOptions) => {
     workspaceService,
   } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
-  let closeApp: () => Promise<void> = async () => {};
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
@@ -351,7 +382,6 @@ export const createApp = async (options: AppOptions) => {
     filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
     closeDb,
-    shutdown: () => closeApp(),
     eventBus,
     harnessRegistry,
     projectService,
@@ -386,6 +416,14 @@ export const createApp = async (options: AppOptions) => {
   });
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
+  const runtimeDeps = createRuntimeRouteDeps({
+    extensionScheduler,
+    host: options.runtimeHost,
+    sessionService,
+    terminalSupervisor,
+  });
+  if (runtimeDeps) deps.runtime = runtimeDeps;
+
   drainSessionQueue = async (input) => {
     await createSessionScheduler(deps).drainQueue(input);
   };
@@ -412,7 +450,5 @@ export const createApp = async (options: AppOptions) => {
 
     await closePromise;
   };
-  closeApp = close;
-
   return { app, close, deps, eventBus };
 };

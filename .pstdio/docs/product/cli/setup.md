@@ -13,18 +13,22 @@ This page documents runtime commands that control API/dashboard startup, shutdow
 
 | Command | Purpose |
 | ------- | ------- |
-| `pst` | Ensure API is running, serve dashboard, optionally open browser. |
-| `pst serve` | Start API + dashboard in one process (used directly and by compiled mode). |
-| `pst close` | Stop the background API process if running. |
+| `pst` | Ensure the shared runtime is running, serve the dashboard, and optionally open a browser. |
+| `pst serve` | Start or promote the detached persistent API + dashboard runtime. |
+| `pst close` | Gracefully stop the descriptor runtime, subject to its activity gate. |
 | `pst logs` | Print the tail of the runtime JSONL log file or its resolved path. |
 
 ## Behavior
 
 ## API Auto-Start Middleware
 
-All commands except `close`, `logs`, and `serve` run through startup middleware that calls `ensureApi(...)` before command execution.
+All API-backed commands except `close`, `logs`, and `serve` run through startup middleware before command execution.
+Unless an explicit API URL or port is supplied, the middleware discovers `$PSTDIO_HOME/runtime.json`, validates its
+PID and authenticated instance identity, and publishes its ephemeral origin to later CLI clients.
 
-Auto-started API processes are detached from the invoking command and do not retain its terminal streams. The middleware waits for API health while also monitoring early process exit. Startup failures are correlated with structured records in the runtime JSONL log so the CLI can show the relevant error and PGlite recovery guidance without keeping stdout or stderr pipes open.
+Auto-started runtime processes are detached from the invoking command and do not retain its terminal streams. The
+middleware waits for the protected descriptor and authenticated readiness. A descriptor is reclaimed only after both
+its PID and readiness probe fail, preserving the PGlite single-owner lock as the final concurrent-start guard.
 
 If an auto-started process exits before becoming healthy, the CLI reports its exit code or signal. If it remains unhealthy for 15 seconds, the middleware terminates that unsuccessful process and reports matching startup diagnostics plus the resolved log path.
 
@@ -45,8 +49,8 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `PSTDIO_API_URL` | `http://localhost:19840` | API base URL used by CLI clients and SDK clients when no explicit base URL is passed. Dev scripts set this when the API runs on a non-default port. |
-| `PSTDIO_API_PORT` | unset | Port forwarded to an auto-started API process as `PORT`. The `--api-port` flag sets this when neither `PSTDIO_API_URL` nor `PSTDIO_API_PORT` is already set. |
+| `PSTDIO_API_URL` | discovered runtime origin | Explicit API base URL override. Normally the CLI sets this from the validated runtime descriptor. |
+| `PSTDIO_API_PORT` | unset (`0` for descriptor startup) | Explicit port for an auto-started sidecar. Port `0` lets the operating system select an available port. |
 | `PSTDIO_DISABLE_API_AUTO_START` | unset | Set to `1` when another process manager already owns the API process, such as `bun run dev` or `bun run dev:isolated`. |
 | `PSTDIO_DISABLE_EMBED_MANIFEST` | unset | Set to `1` in source/dev mode to skip loading the compiled embedded-assets manifest. |
 | `PORT` | `19840` | API server port when running `packages/pstdio-api` directly. |
@@ -56,7 +60,7 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `PSTDIO_API_TOKEN` | unset | Optional bearer token required by protected API routes when set. |
+| `PSTDIO_API_TOKEN` | discovered descriptor token | Bearer token published for authenticated runtime-control requests. |
 | `PSTDIO_AGENTS` | `claude-code,opencode` | Comma-separated agent registry override. Tests commonly use `fake`. |
 | `PSTDIO_DEFAULT_EXTENSIONS` | core skills, templates, and automation extensions | JSON array or `{ "defaultExtensions": [...] }` object installed by each extension's `pstdio.scope` and enabled for new projects. Tests can set `[]`. |
 | `PSTDIO_EVENT_BUS_BUFFER_SIZE` | service default | Optional positive integer for the sync event bus replay buffer. |
@@ -72,17 +76,12 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 pst [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
 ```
 
-### Flags
-
-| Flag | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `--api-port` | `number` | `19840` | API server port. |
-| `--dashboard-port` | `number` | `5555` | Dashboard web server port. |
-| `--open-browser` | `boolean` | `true` | Open dashboard URL in default browser. |
+The command discovers or starts the shared runtime. Compiled mode opens the dashboard at the descriptor origin;
+workspace mode serves the development dashboard separately.
 
 ### Output
 
-On startup, prints dashboard and API URLs.
+Prints the dashboard and API URLs.
 
 ## `pst serve`
 
@@ -96,21 +95,24 @@ pst serve [--port <port>]
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `--port` | `number` | `19840` | Server port for the combined API/dashboard process. |
+| `--port` | `number` | `0` | Server port for the combined runtime; `0` selects an available port. |
+
+The command returns after readiness. It attaches to an existing persistent runtime or atomically promotes an existing
+desktop-owned runtime without restarting it.
 
 ## `pst close`
 
 ### Usage
 
 ```sh
-pst close
+pst close [--force]
 ```
 
 ### Behavior
 
-- If API health check fails, prints `API is not running.` and exits successfully.
-- If API is healthy, requests shutdown and prints `API stopped.`.
-- If shutdown fails, prints `Failed to stop the API.` and exits with status `1`.
+- If no descriptor runtime is running, prints `Runtime is not running.` and exits successfully.
+- Without `--force`, active sessions, terminals, or jobs are listed and shutdown is refused with a non-zero result.
+- `--force` authorizes active-work cancellation, then waits without a timeout for normal exit and descriptor cleanup.
 
 ## `pst logs`
 
@@ -129,5 +131,5 @@ pst logs [--lines <count>] [--path]
 ## Verification & Evidence
 
 - **Commands to run**: `sed -n '1,220p' packages/pstdio/src/index.ts`, `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/close.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/logs.ts`
-- **Expected evidence**: Auto-start middleware excludes `close`, `logs`, and `serve`, and all four runtime commands match documented flags/behavior.
+- **Expected evidence**: Auto-start middleware excludes `close`, `logs`, and `serve`; all four runtime commands match documented behavior.
 - **Where to find artifacts**: `packages/pstdio/src/index.ts`, `packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `packages/pstdio/src/adapters/cli/commands/close.ts`, `packages/pstdio/src/adapters/cli/commands/logs.ts`

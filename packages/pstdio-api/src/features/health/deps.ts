@@ -1,3 +1,3 @@
 import type { RouteDeps } from "../deps";
 
-export type HealthRouteDeps = Pick<RouteDeps, "readiness" | "shutdown">;
+export type HealthRouteDeps = Pick<RouteDeps, "readiness">;

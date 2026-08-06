@@ -33,17 +33,29 @@ const createSpawnRecorder = () => {
 };
 
 const writeApiPackage = (root: string) => {
-  const apiRoot = join(root, "packages", "pstdio-api");
+  const apiRoot = join(root, "packages", "pstdio");
   mkdirSync(apiRoot, { recursive: true });
-  writeFileSync(join(apiRoot, "package.json"), JSON.stringify({ name: "pstdio-api" }));
+  writeFileSync(join(apiRoot, "package.json"), JSON.stringify({ name: "pstdio" }));
   return apiRoot;
 };
+
+const runtimeArgs = (port = "0") => [
+  "./src/index.ts",
+  "serve",
+  "--foreground",
+  "--owner",
+  "persistent",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  port,
+];
 
 const withApiRuntimeEnv = (env: NodeJS.ProcessEnv) => ({
   ...env,
 });
 
-test("resolveApiRoot finds pstdio-api workspace above start directory", () => {
+test("resolveApiRoot finds the pstdio runtime workspace above start directory", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-root-"));
   const apiRoot = writeApiPackage(base);
   const nested = join(base, "packages", "pstdio", "src");
@@ -52,7 +64,7 @@ test("resolveApiRoot finds pstdio-api workspace above start directory", () => {
   expect(resolveApiRoot(nested)).toBe(apiRoot);
 });
 
-test("runApi spawns bun start in the api workspace", () => {
+test("runApi spawns the combined runtime in the pstdio workspace", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-run-"));
   const apiRoot = writeApiPackage(base);
   const nested = join(base, "packages", "pstdio", "src");
@@ -66,14 +78,14 @@ test("runApi spawns bun start in the api workspace", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "start"],
+      args: runtimeArgs(),
       options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
   expect(unrefCalled()).toBe(true);
 });
 
-test("runApi finds the api workspace relative to the source CLI entry when cwd is outside the repo", () => {
+test("runApi finds the runtime workspace relative to the source CLI entry when cwd is outside the repo", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-run-cli-entry-"));
   const outsideBase = mkdtempSync(join(tmpdir(), "pstdio-api-run-cli-entry-outside-"));
   const apiRoot = writeApiPackage(base);
@@ -91,7 +103,7 @@ test("runApi finds the api workspace relative to the source CLI entry when cwd i
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "start"],
+      args: runtimeArgs(),
       options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
@@ -111,7 +123,7 @@ test("runApi keeps child attached when detached is false", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "start"],
+      args: runtimeArgs(),
       options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withApiRuntimeEnv(env) },
     },
   ]);
@@ -132,13 +144,13 @@ test("runApi uses stdio override when provided", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "start"],
+      args: runtimeArgs(),
       options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
 });
 
-test("runApi forwards PSTDIO_API_PORT as PORT", () => {
+test("runApi forwards PSTDIO_API_PORT to the runtime serve command", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-port-"));
   const apiRoot = writeApiPackage(base);
   const nested = join(base, "packages", "pstdio", "src");
@@ -152,12 +164,12 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "start"],
+      args: runtimeArgs("4511"),
       options: {
         cwd: apiRoot,
         stdio: "ignore",
         detached: true,
-        env: withApiRuntimeEnv({ ...env, PORT: "4511" }),
+        env: withApiRuntimeEnv(env),
       },
     },
   ]);
@@ -166,7 +178,7 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
 test("compiled auto-start passes the configured port to the serve command", () => {
   expect(buildCompiledApiCommand("4511")).toEqual({
     command: process.execPath,
-    args: ["serve", "--port", "4511"],
+    args: runtimeArgs("4511").slice(1),
     options: { cwd: undefined, stdio: "ignore", detached: true },
   });
 });

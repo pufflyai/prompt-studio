@@ -1,10 +1,78 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { apiWebSocket } from "pstdio-api/app";
+import type { RuntimeHost } from "pstdio-api/runtime";
 import packageData from "../../../../../package.json";
 
 import { createServeApp } from "./serve-app";
 
 describe("serveApp", () => {
+  it("publishes the actual port-zero origin and promotes ownership through the runtime host", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-serve-runtime-"));
+    const descriptorPath = join(root, "runtime.json");
+    const logs: string[] = [];
+    let runtimeHost: RuntimeHost | undefined;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async (host) => {
+          runtimeHost = host;
+          return {
+            app: {
+              fetch: () =>
+                new Response(
+                  JSON.stringify({
+                    instanceId: host!.instanceId,
+                    ok: true,
+                    ownerType: host!.ownerType(),
+                    protocolVersion: 1,
+                  }),
+                ),
+            },
+            close: async () => {},
+          };
+        },
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map(),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: () => ({ port: 43127, stop: () => {} }) as ReturnType<typeof Bun.serve>,
+        onSignal: () => {},
+        offSignal: () => {},
+        onFatal: () => {},
+        offFatal: () => {},
+        log: (message) => logs.push(message),
+      });
+
+      await serveApp({
+        descriptorPath,
+        host: "127.0.0.1",
+        instanceId: "runtime-one",
+        ownerType: "desktop",
+        port: 0,
+        token: "runtime-secret",
+      });
+
+      expect(JSON.parse(readFileSync(descriptorPath, "utf8"))).toMatchObject({
+        instanceId: "runtime-one",
+        origin: "http://127.0.0.1:43127",
+        ownerType: "desktop",
+        pid: process.pid,
+        token: "runtime-secret",
+      });
+      expect(logs.join("")).toContain('"origin":"http://127.0.0.1:43127"');
+      expect(logs.join("")).not.toContain("runtime-secret");
+
+      await runtimeHost!.promote();
+      expect(JSON.parse(readFileSync(descriptorPath, "utf8")).ownerType).toBe("persistent");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("leaves state path defaults to the app runtime", async () => {
     const previousDbPath = process.env.PSTDIO_DB_PATH;
     const previousStoragePath = process.env.PSTDIO_STORAGE_PATH;

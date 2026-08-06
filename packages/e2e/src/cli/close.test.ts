@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runPstdio, shutdownApiViaHttp } from "./helpers";
-import { type ApiInstance, getFreePort, startApi } from "./start-api";
+import { PSTDIO_CLI } from "./helpers";
+import { getFreePort, waitForReady } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
 
 const isReachable = async (url: string) => {
@@ -28,35 +29,76 @@ const waitForUnreachable = async (url: string) => {
   return false;
 };
 
+const runClose = async (homePath: string) => {
+  const cli = spawn("bun", ["run", PSTDIO_CLI, "close"], {
+    cwd: join(import.meta.dirname, "../.."),
+    env: {
+      ...process.env,
+      PSTDIO_DEFAULT_EXTENSIONS: "[]",
+      PSTDIO_DISABLE_API_AUTO_START: "1",
+      PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+      PSTDIO_HOME: homePath,
+    },
+    stdio: "pipe",
+  });
+  let stdout = "";
+  let stderr = "";
+  cli.stdout?.on("data", (chunk) => {
+    stdout += String(chunk);
+  });
+  cli.stderr?.on("data", (chunk) => {
+    stderr += String(chunk);
+  });
+  const exitCode = await new Promise<number | null>((resolve) => cli.once("exit", resolve));
+  if (exitCode !== 0) throw new Error(stderr);
+  return stdout;
+};
+
 describe("pstdio close", () => {
-  let apiToCleanup: ApiInstance | null = null;
-  let portToCleanup: number | null = null;
+  let runtimeToCleanup: ChildProcess | null = null;
 
   afterEach(async () => {
-    if (apiToCleanup) {
-      apiToCleanup.stop();
-      apiToCleanup = null;
-    }
-    if (portToCleanup) {
-      await shutdownApiViaHttp(`http://localhost:${portToCleanup}`);
-      portToCleanup = null;
-    }
+    const runtime = runtimeToCleanup;
+    runtimeToCleanup = null;
+    if (!runtime || runtime.exitCode !== null || runtime.signalCode !== null) return;
+
+    const exited = new Promise<void>((resolve) => runtime.once("exit", () => resolve()));
+    runtime.kill();
+    await exited;
   });
 
   test(
     "shuts down a running API",
     async () => {
-      const api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
-      apiToCleanup = api;
+      const port = await getFreePort();
+      const url = `http://127.0.0.1:${port}`;
+      const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-home-"));
+      runtimeToCleanup = spawn(
+        "bun",
+        ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", "persistent", "--port", String(port)],
+        {
+          cwd: join(import.meta.dirname, "../.."),
+          env: {
+            ...process.env,
+            PSTDIO_DB_PATH: ":memory:",
+            PSTDIO_DEFAULT_EXTENSIONS: "[]",
+            PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+            PSTDIO_HOME: homePath,
+            PSTDIO_STORAGE_PATH: join(homePath, "storage"),
+          },
+          stdio: "pipe",
+        },
+      );
+      await waitForReady(url);
 
-      expect(await isReachable(api.url)).toBe(true);
+      expect(await isReachable(url)).toBe(true);
 
-      const output = runPstdio("close", process.cwd(), { PSTDIO_API_URL: api.url });
+      const output = await runClose(homePath);
 
-      expect(output).toContain("API stopped.");
+      expect(output).toContain("Runtime stopped.");
 
-      expect(await waitForUnreachable(api.url)).toBe(true);
-      apiToCleanup = null;
+      expect(await waitForUnreachable(url)).toBe(true);
+      runtimeToCleanup = null;
     },
     TEST_TIMEOUT,
   );
@@ -69,16 +111,11 @@ describe("pstdio close", () => {
 
       expect(await isReachable(url)).toBe(false);
 
-      const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-storage-"));
+      const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-home-"));
 
-      const output = runPstdio("close", process.cwd(), {
-        PSTDIO_API_URL: url,
-        PSTDIO_API_PORT: String(port),
-        PSTDIO_DB_PATH: ":memory:",
-        PSTDIO_STORAGE_PATH: storagePath,
-      });
+      const output = await runClose(homePath);
 
-      expect(output).toContain("API is not running.");
+      expect(output).toContain("Runtime is not running.");
 
       expect(await waitForUnreachable(url)).toBe(true);
     },

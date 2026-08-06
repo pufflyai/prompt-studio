@@ -1,14 +1,20 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
+import { type RuntimeHost, type RuntimeOwnerType } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
 import { loadFilesystemAssets } from "./filesystem-assets";
+import { createServeRuntime } from "./serve-runtime";
 
 type ServeAppOptions = {
   port: number;
   host: string;
+  ownerType?: RuntimeOwnerType;
+  descriptorPath?: string;
+  instanceId?: string;
+  token?: string;
 };
 
 type AppHandle = {
@@ -19,7 +25,7 @@ type AppHandle = {
 };
 
 type ServeAppDeps = {
-  createApp: () => Promise<AppHandle>;
+  createApp: (runtimeHost?: RuntimeHost) => Promise<AppHandle>;
   injectConfig: typeof injectConfig;
   isCompiledBinary: typeof isCompiledBinary;
   loadEmbeddedAssets: typeof loadEmbeddedAssets;
@@ -66,7 +72,7 @@ const reportStartupError = (error: Error) => {
 };
 
 const defaultDeps: ServeAppDeps = {
-  createApp: async () => createApp({ filesRoot: await resolveFilesRoot() }),
+  createApp: async (runtimeHost) => createApp({ filesRoot: await resolveFilesRoot(), runtimeHost }),
   injectConfig,
   isCompiledBinary,
   loadEmbeddedAssets,
@@ -82,12 +88,84 @@ const defaultDeps: ServeAppDeps = {
   exit: (code = 0) => process.exit(code),
 };
 
+const isApiPath = (pathname: string) =>
+  pathname.startsWith("/v1") || pathname.startsWith("/runtime/") || pathname === "/healthz" || pathname === "/readyz";
+
+const createRequestHandler = (
+  app: AppHandle["app"],
+  assets: Map<string, Blob>,
+  deps: Pick<ServeAppDeps, "injectConfig" | "resolveMimeType">,
+) => {
+  const serveHtml = (_request: Request, blob: Blob) =>
+    blob.text().then((html) => {
+      const injected = deps.injectConfig(html, { version: CLI_VERSION });
+      return new Response(injected, { headers: { "Content-Type": "text/html" } });
+    });
+
+  const serveAsset = (request: Request, assetPath: string, blob: Blob) => {
+    const mimeType = deps.resolveMimeType(assetPath);
+    return mimeType === "text/html"
+      ? serveHtml(request, blob)
+      : new Response(blob, { headers: { "Content-Type": mimeType } });
+  };
+
+  return (request: Request, server: object) => {
+    const pathname = new URL(request.url).pathname;
+    if (isApiPath(pathname)) return app.fetch(request, server);
+
+    // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
+    const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);
+    const asset = assets.get(assetPath);
+    if (asset) return serveAsset(request, assetPath, asset);
+
+    const index = assets.get("index.html");
+    return index ? serveHtml(request, index) : new Response("Not Found", { status: 404 });
+  };
+};
+
+const publishRuntimeWhenReady = async (input: {
+  app: AppHandle["app"];
+  baseUrl: string;
+  log: ServeAppDeps["log"];
+  runtime: NonNullable<ReturnType<typeof createServeRuntime>>;
+  server: ReturnType<typeof Bun.serve>;
+}) => {
+  const { app, baseUrl, log, runtime, server } = input;
+  const ready = await app.fetch(
+    new Request(`${baseUrl}/runtime/ready`, {
+      headers: { authorization: `Bearer ${runtime.host.token}` },
+    }),
+    server,
+  );
+  const identity = ready.ok ? ((await ready.json()) as Record<string, unknown>) : null;
+  if (identity?.instanceId !== runtime.host.instanceId || identity.protocolVersion !== 1) {
+    throw new Error("pstdio runtime did not become ready after binding");
+  }
+
+  runtime.publish(baseUrl as `http://127.0.0.1:${number}`);
+  log(`${JSON.stringify({ instanceId: runtime.host.instanceId, origin: baseUrl, type: "runtime_ready" })}\n`);
+};
+
+const logServeUrls = (host: string, baseUrl: string, log: ServeAppDeps["log"]) => {
+  log(`pstdio serve: ${baseUrl}\n`);
+  log(`  Dashboard: ${baseUrl}\n`);
+  log(`  API:       ${baseUrl}/v1\n`);
+  if (LOCALHOST_HOSTS.has(host)) return;
+
+  log(`  WARNING: bound to ${host}; pstdio serve has no auth, only expose on trusted networks.\n`);
+  if (host === "0.0.0.0" || host === "::") {
+    log("  LAN clients should connect with this machine's LAN IP address.\n");
+  }
+};
+
 export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
   const deps = { ...defaultDeps, ...overrides };
 
   return async (options: ServeAppOptions) => {
     const { port, host } = options;
     let appHandle: AppHandle | null = null;
+    let server: ReturnType<typeof Bun.serve> | null = null;
+    let runtime: ReturnType<typeof createServeRuntime> = null;
 
     let closed = false;
     const closeApp = async () => {
@@ -96,7 +174,9 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       }
 
       closed = true;
+      await (server as { stop?: () => void | Promise<void> } | null)?.stop?.();
       await appHandle.close();
+      runtime?.cleanup();
     };
 
     const removeShutdownListeners = () => {
@@ -123,8 +203,15 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       deps.exit(1);
     };
 
+    runtime = createServeRuntime(options, async () => {
+      removeShutdownListeners();
+      await closeApp();
+      deps.exit(0);
+    });
+    const runtimeHost = runtime?.host;
+
     try {
-      appHandle = await deps.createApp();
+      appHandle = await deps.createApp(runtimeHost);
       const { app } = appHandle;
       deps.onSignal("SIGINT", shutdown);
       deps.onSignal("SIGTERM", shutdown);
@@ -132,68 +219,21 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       deps.onFatal("unhandledRejection", fatalShutdown);
 
       const assets = deps.isCompiledBinary() ? deps.loadEmbeddedAssets() : deps.loadFilesystemAssets();
-      const baseUrl = `http://${host}:${port}`;
 
-      // Without this, "/" reaches resolveMimeType as-is — extname("/") is "",
-      // which falls back to application/octet-stream and the browser downloads
-      // the dashboard HTML instead of rendering it.
-      const resolveAssetPath = (pathname: string) => (pathname === "/" ? "index.html" : pathname.slice(1));
-
-      const serveHtml = (blob: Blob) =>
-        blob.text().then((html) => {
-          const injected = deps.injectConfig(html, { version: CLI_VERSION });
-          return new Response(injected, { headers: { "Content-Type": "text/html" } });
-        });
-
-      const serveAsset = (assetPath: string, blob: Blob) => {
-        const mimeType = deps.resolveMimeType(assetPath);
-
-        if (mimeType === "text/html") {
-          return serveHtml(blob);
-        }
-
-        return new Response(blob, { headers: { "Content-Type": mimeType } });
-      };
-
-      deps.serve({
+      server = deps.serve({
         idleTimeout: 20,
         hostname: host,
         port,
-        fetch(req, server) {
-          const url = new URL(req.url);
-
-          // API routes → Hono
-          if (url.pathname.startsWith("/v1") || url.pathname === "/healthz" || url.pathname === "/shutdown") {
-            return app.fetch(req, server);
-          }
-
-          // Dashboard assets → embedded or filesystem
-          const assetPath = resolveAssetPath(url.pathname);
-          const asset = assets.get(assetPath);
-          if (asset) {
-            return serveAsset(assetPath, asset);
-          }
-
-          // SPA fallback → index.html for client-side routing
-          const index = assets.get("index.html");
-          if (index) {
-            return serveHtml(index);
-          }
-
-          return new Response("Not Found", { status: 404 });
-        },
+        fetch: createRequestHandler(app, assets, deps),
         websocket: apiWebSocket,
       });
 
-      deps.log(`pstdio serve: ${baseUrl}\n`);
-      deps.log(`  Dashboard: ${baseUrl}\n`);
-      deps.log(`  API:       ${baseUrl}/v1\n`);
-      if (!LOCALHOST_HOSTS.has(host)) {
-        deps.log(`  WARNING: bound to ${host}; pstdio serve has no auth, only expose on trusted networks.\n`);
-        if (host === "0.0.0.0" || host === "::") {
-          deps.log("  LAN clients should connect with this machine's LAN IP address.\n");
-        }
-      }
+      const boundPort = server.port || port;
+      if (!boundPort) throw new Error("pstdio serve did not report its bound port");
+      const baseUrl = runtimeHost ? `http://127.0.0.1:${boundPort}` : `http://${host}:${boundPort}`;
+
+      if (runtime) await publishRuntimeWhenReady({ app, baseUrl, log: deps.log, runtime, server });
+      logServeUrls(host, baseUrl, deps.log);
     } catch (error) {
       removeShutdownListeners();
       await closeApp();

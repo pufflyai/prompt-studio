@@ -97,6 +97,7 @@ const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
 };
 
 interface TerminalSession {
+  label: string;
   pid: number;
   kill(signal?: NodeJS.Signals): Promise<void>;
 }
@@ -157,8 +158,8 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         terminal.close();
       });
 
-      const kill = async (signal?: NodeJS.Signals) => {
-        logger.info("terminal session kill", { id, signal: signal ?? null });
+      const kill = async (signal: NodeJS.Signals = "SIGKILL") => {
+        logger.info("terminal session kill", { id, signal });
         child.kill(signal);
         await child.exited;
       };
@@ -180,7 +181,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         },
       };
 
-      sessions.set(id, { pid: child.pid, kill });
+      sessions.set(id, { label: fallbackTitle, pid: child.pid, kill });
       logger.info("terminal session opened", { id, pid: child.pid });
       return handle;
     },
@@ -191,5 +192,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
     sessions.clear();
   };
 
-  return { api, dispose };
+  const activity = () => [...sessions].map(([id, session]) => ({ id, label: session.label }));
+
+  return { activity, api, dispose };
 };
