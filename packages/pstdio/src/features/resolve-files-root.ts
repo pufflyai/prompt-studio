@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 
 import { isCompiledBinary } from "../adapters/cli/commands/serve/embedded-assets";
 
@@ -12,10 +13,10 @@ const normalizeEmbeddedRelativePath = (relativePath: string) =>
   relativePath.endsWith(".") ? relativePath.slice(0, -1) : relativePath;
 
 const listEmbeddedFiles = () =>
-  (Bun.embeddedFiles as EmbeddedFile[]).filter((file) => file.name.startsWith(FILES_PREFIX));
+  (Bun.embeddedFiles as EmbeddedFile[]).filter((file) => normalizeEmbeddedFileName(file.name).startsWith(FILES_PREFIX));
 
 const resolveEmbeddedOutputPath = (root: string, file: EmbeddedFile) =>
-  join(root, normalizeEmbeddedRelativePath(file.name.slice(FILES_PREFIX.length)));
+  join(root, normalizeEmbeddedRelativePath(normalizeEmbeddedFileName(file.name).slice(FILES_PREFIX.length)));
 
 const hasCompleteEmbeddedFilesRoot = (root: string, files: EmbeddedFile[]) =>
   files.every((file) => existsSync(resolveEmbeddedOutputPath(root, file)));

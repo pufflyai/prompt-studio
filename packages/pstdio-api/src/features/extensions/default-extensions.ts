@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifest } from "pstdio-extensions";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -93,7 +94,7 @@ const normalizeEmbeddedRelativePath = (relativePath: string) =>
 const embeddedExtensionFiles = (name: string) => {
   const prefix = `${EMBEDDED_EXTENSIONS_PREFIX}${name}/`;
   return {
-    files: getEmbeddedFiles().filter((file) => file.name.startsWith(prefix)),
+    files: getEmbeddedFiles().filter((file) => normalizeEmbeddedFileName(file.name).startsWith(prefix)),
     prefix,
   };
 };
@@ -106,7 +107,7 @@ const extractEmbeddedDefaultExtension = async (name: string) => {
   rmSync(targetDir, { recursive: true, force: true });
 
   for (const file of files) {
-    const relativePath = normalizeEmbeddedRelativePath(file.name.slice(prefix.length));
+    const relativePath = normalizeEmbeddedRelativePath(normalizeEmbeddedFileName(file.name).slice(prefix.length));
     const targetPath = join(targetDir, relativePath);
     mkdirSync(dirname(targetPath), { recursive: true });
     writeFileSync(targetPath, new Uint8Array(await file.arrayBuffer()));

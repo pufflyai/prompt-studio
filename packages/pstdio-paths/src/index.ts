@@ -26,6 +26,8 @@ export const expandHomePath = (value: string, homePath = resolveUserHome()) => {
   return value;
 };
 
+export const normalizeEmbeddedFileName = (value: string) => value.replaceAll("\\", "/");
+
 export const resolvePstdioHome = (input: ResolvePstdioHomeInput = {}) => {
   const env = input.env ?? process.env;
   const homePath = resolveUserHome({ ...input, env });

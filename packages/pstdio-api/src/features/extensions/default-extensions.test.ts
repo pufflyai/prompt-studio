@@ -175,7 +175,7 @@ describe("installDefaultExtensions", () => {
     const extensionName = "bundled-planner";
     useEmbeddedFiles([
       toEmbedded(
-        `../../../extensions/${extensionName}/package.json`,
+        `..\\..\\..\\extensions\\${extensionName}\\package.json`,
         JSON.stringify({
           name: extensionName,
           version: "1.0.0",
@@ -184,7 +184,7 @@ describe("installDefaultExtensions", () => {
           engines: { pstdio: "^1.0.0" },
         }),
       ),
-      toEmbedded(`../../../extensions/${extensionName}/extension.ts`, "export default {};"),
+      toEmbedded(`..\\..\\..\\extensions\\${extensionName}\\extension.ts`, "export default {};"),
     ]);
 
     const calls: Array<Record<string, unknown>> = [];

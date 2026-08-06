@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
@@ -35,7 +36,7 @@ const extractEmbeddedMigrations = async (
   logger: (message: string) => void,
 ) => {
   for (const file of embeddedFiles) {
-    const relativePath = file.name.slice(DRIZZLE_PREFIX.length);
+    const relativePath = normalizeEmbeddedFileName(file.name).slice(DRIZZLE_PREFIX.length);
     const outPath = path.join(root, relativePath);
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
@@ -52,7 +53,7 @@ export const resolveMigrationsFolder = async (
   } = {},
 ) => {
   const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
-  const embedded = embeddedSource.filter((f) => f.name.startsWith(DRIZZLE_PREFIX));
+  const embedded = embeddedSource.filter((file) => normalizeEmbeddedFileName(file.name).startsWith(DRIZZLE_PREFIX));
 
   if (embedded.length > 0) {
     const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
@@ -65,8 +66,8 @@ export const resolveMigrationsFolder = async (
 };
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
-  const wasmFile = embeddedFiles.find((f) => f.name.endsWith(PGLITE_WASM_SUFFIX));
-  const dataFile = embeddedFiles.find((f) => f.name.endsWith(PGLITE_DATA_SUFFIX));
+  const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
+  const dataFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_DATA_SUFFIX));
 
   if (!wasmFile && !dataFile) return {};
   if (!wasmFile || !dataFile) {

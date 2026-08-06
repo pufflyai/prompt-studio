@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   expandHomePath,
+  normalizeEmbeddedFileName,
   resolvePstdioDbPath,
   resolvePstdioHome,
   resolvePstdioLogPath,
@@ -8,6 +9,12 @@ import {
   resolvePstdioStoragePath,
   resolvePstdioWorkspacesPath,
 } from ".";
+
+test("normalizes Windows embedded file names", () => {
+  expect(normalizeEmbeddedFileName("..\\..\\pstdio-db\\vendor\\pglite\\pglite.data")).toBe(
+    "../../pstdio-db/vendor/pglite/pglite.data",
+  );
+});
 
 test("resolvePstdioHome uses PSTDIO_HOME when configured", () => {
   expect(resolvePstdioHome({ env: { PSTDIO_HOME: "/tmp/pstdio-home" }, homedir: () => "/home/user" })).toBe(
