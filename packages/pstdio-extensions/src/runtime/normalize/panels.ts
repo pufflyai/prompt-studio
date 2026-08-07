@@ -20,6 +20,11 @@ const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => (
   sourcePath: source.sourcePath,
 });
 
+const hasEmptyEligibleLocations = (panel: Record<string, unknown>) => {
+  const eligibleLocations = panel.eligibleLocations;
+  return isRecord(eligibleLocations) && Object.keys(eligibleLocations).length === 0;
+};
+
 const resolveTreeRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
   const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
   return runtime.treeRenderers.some((renderer) => renderer.id === id) ? id : undefined;
@@ -133,6 +138,20 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
       );
       continue;
     }
+
+    if (hasEmptyEligibleLocations(panel)) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_panel_empty_eligible_locations",
+          severity: "warning",
+          message: `Panel "${id}" declares eligibleLocations with no constraints, so it becomes a sub-panel/tab that is eligible in every matching location`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id },
+        }),
+      );
+    }
+
     runtime.panels.push({
       id,
       localId,

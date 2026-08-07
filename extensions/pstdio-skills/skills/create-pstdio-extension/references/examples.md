@@ -241,6 +241,44 @@ export default defineExtension({
 `kanbanRenderers` are automatically listed in the project sidenav. Do not add a `treeItems` entry with
 `action.kind === "kanbanRenderer"`.
 
+## Workbench Panels
+
+Use a panel without `eligibleLocations` for full content. Use `eligibleLocations` only when the panel should be a
+supporting sub-panel or tab.
+
+```ts
+import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+
+export default defineExtension({
+  panels: {
+    ticketEditor: {
+      title: "Ticket",
+      region: "main",
+      closable: false,
+      resourceKind: "ticket",
+      webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
+    },
+    notesTab: {
+      title: "Notes",
+      region: "secondary",
+      closable: true,
+      eligibleLocations: {},
+      webview: { entry: packageAsset("./src/notes.tsx", import.meta.url) },
+    },
+    ticketFilesTab: {
+      title: "Ticket files",
+      region: "secondary",
+      closable: true,
+      eligibleLocations: { resourceKinds: ["ticket"] },
+      webview: { entry: packageAsset("./src/ticket-files.tsx", import.meta.url) },
+    },
+  },
+});
+```
+
+`eligibleLocations: {}` is valid, but it creates an everywhere-eligible supporting tab. `pst extensions check`
+reports `extension_panel_empty_eligible_locations` so you can decide whether to keep it or add constraints.
+
 ## Native Resource Detail Mode
 
 Use this pattern for host-rendered resource screens: the file renderer owns document content, the tree renderer owns

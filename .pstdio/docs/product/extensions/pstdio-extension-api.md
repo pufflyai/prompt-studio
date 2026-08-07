@@ -314,11 +314,11 @@ Dashboard UI contributions are declarative:
 - menus attach commands to targets such as `workbench.top.actions` or `workbench.commandPalette`
 - tree items attach routes, commands, or links to area-tree targets such as `workbench.left.tree`
 - tree renderers register native workbench trees whose data comes from extension commands
-- views attach webviews or tree renderers to workbench targets
+- panels attach webviews or native renderers to workbench regions
 - settings panels use webview package assets
 - modes declare workbench mode metadata and optional layout/resource ownership
 
-Tree renderers are reusable renderer contributions. Place one in the dashboard by declaring a view with `treeRenderer`; that field is mutually exclusive with `webview`.
+Tree renderers are reusable renderer contributions. Place one in the dashboard by declaring a panel with `treeRenderer`; that field is mutually exclusive with `webview`.
 
 ```ts
 export default defineExtension({
@@ -366,10 +366,11 @@ export default defineExtension({
       },
     },
   },
-  views: {
+  panels: {
     files: {
       title: "Files",
-      surface: "panel",
+      region: "sidenav",
+      closable: false,
       resourceKind: "ticket",
       treeRenderer: "files",
     },
@@ -378,6 +379,14 @@ export default defineExtension({
 ```
 
 `bodyCommand` returns tree sections. Optional `childrenCommand` and `footerCommand` return nodes for lazy children and footer content. The command invocation includes the active project, resource, tree id, tree state, filter text, and selected node context.
+
+Panel role is currently selected by `eligibleLocations`:
+
+- omit `eligibleLocations` for full content panels
+- use `eligibleLocations: {}` for a supporting sub-panel/tab that is eligible everywhere
+- use `eligibleLocations: { resourceKinds: ["ticket"] }` for a supporting sub-panel/tab constrained to ticket resources
+
+The empty object form is valid, but `pst extensions check` warns with `extension_panel_empty_eligible_locations` so authors notice the everywhere-eligible tab behavior. PS-214 tracks an explicit presentation model that can replace this implicit contract later.
 
 Visibility can be limited with `when`:
 
@@ -468,3 +477,5 @@ The theme id is `planner.monokai` for package `planner`.
 ## Diagnostics
 
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
+
+Warnings are actionable even when the extension still loads. For example, `extension_panel_empty_eligible_locations` means a panel declared `eligibleLocations: {}`. The panel is not invalid, but it becomes a supporting sub-panel/tab that is eligible in every matching location.

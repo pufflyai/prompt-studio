@@ -161,6 +161,50 @@ settingsPanels: {
 
 Settings panels must declare `scope: "project"` or `scope: "global"`. The panel contents remain ordinary extension webviews.
 
+## Workbench Panels
+
+An extension panel without `eligibleLocations` is full content. It can be used as the main content for a resource or mode layout:
+
+```ts
+panels: {
+  ticketEditor: {
+    title: "Ticket",
+    region: "main",
+    closable: false,
+    resourceKind: "ticket",
+    webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
+  },
+}
+```
+
+Adding `eligibleLocations` makes the panel supporting UI, shown as a closable sub-panel or tab. An empty object is valid and means the tab is eligible everywhere:
+
+```ts
+panels: {
+  notes: {
+    title: "Notes",
+    region: "secondary",
+    closable: true,
+    eligibleLocations: {},
+    webview: { entry: packageAsset("./src/notes.tsx", import.meta.url) },
+  },
+}
+```
+
+Constrain supporting tabs when they only apply to some resource kinds:
+
+```ts
+panels: {
+  ticketFiles: {
+    title: "Files",
+    region: "secondary",
+    closable: true,
+    eligibleLocations: { resourceKinds: ["ticket"] },
+    webview: { entry: packageAsset("./src/ticket-files.tsx", import.meta.url) },
+  },
+}
+```
+
 ## Panel Placement
 
 Extension panels and panel menus can set `placement: "first" | "default" | "last"`.
@@ -179,6 +223,7 @@ Invalid UI attachments are reported by extension checks and runtime diagnostics:
 | Unknown target id | `extension_target_invalid`. |
 | Target used by the wrong contribution kind | `extension_target_unsupported`. |
 | Missing settings scope | `extension_settings_scope_invalid`. |
+| Panel has `eligibleLocations: {}` | `extension_panel_empty_eligible_locations` warning. The panel is valid, but it becomes an everywhere-eligible sub-panel/tab. |
 | Missing package asset | Webview, template, skill, theme, or icon source cannot be loaded. |
 
 Diagnostics include the extension id, package path, contribution id, requested target, expected kind, and supported alternatives when applicable.

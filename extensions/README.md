@@ -41,6 +41,9 @@ After install, verify with:
 pst extensions check
 ```
 
+Fix errors before using the extension. Review warnings too; they call out valid but important behavior such as
+`eligibleLocations: {}` creating a supporting tab that is eligible everywhere.
+
 `pst extensions check` validates the extension contract and the dashboard host capabilities. If an extension declares a UI surface that the current dashboard does not support, the command exits non-zero and names the missing capability plus the Prompt Studio version that first supports it when known. With `--json`, read `hostCompatibility.status`, `hostCompatibility.host`, and each diagnostic `metadata.missingCapability`.
 
 ## Dev Workflow (in-monorepo)

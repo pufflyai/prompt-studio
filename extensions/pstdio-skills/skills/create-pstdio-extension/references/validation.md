@@ -34,6 +34,10 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
 PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 ```
 
+Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
+For example, `extension_panel_empty_eligible_locations` means a panel used `eligibleLocations: {}` and will
+load as a supporting tab that is eligible everywhere.
+
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
 dependencies under the installed extension root so the packaged runtime does not depend on workspace
 `node_modules` symlinks or repo paths under `~/Documents`. Use `--skip-install` only for a deliberate

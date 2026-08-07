@@ -110,6 +110,41 @@ describe("checkExtensions", () => {
     expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
+  test("reports empty eligible locations panel warnings", async () => {
+    const home = createTempHome();
+    writeExtension(
+      home,
+      "extension-lab",
+      `export default {
+        panels: {
+          everywhere: {
+            title: "Everywhere",
+            region: "main",
+            closable: true,
+            eligibleLocations: {},
+            webview: { entry: "./panel.tsx" },
+          },
+        },
+      };`,
+    );
+
+    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
+
+    expect(result.errorCount).toBe(0);
+    expect(result.warningCount).toBe(1);
+    expect(result.runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "extension_panel_empty_eligible_locations",
+        severity: "warning",
+        metadata: { contributionId: "extension-lab.everywhere" },
+      }),
+    ]);
+
+    const report = formatCheckReport(result);
+    expect(report).toContain("Warnings: 1");
+    expect(report).toContain("warning extension_panel_empty_eligible_locations");
+  });
+
   test("flags invalid default exports", async () => {
     const home = createTempHome();
     writeExtension(home, "broken", `export default "nope";`);
