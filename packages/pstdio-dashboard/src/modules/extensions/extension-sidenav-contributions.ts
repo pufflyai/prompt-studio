@@ -22,16 +22,16 @@ export const registerExtensionSidenavContributions = (
 ) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.extensions.project-sidenav.first",
-    modes: ["project"],
+    modes: ["*"],
     order: 10,
-    getSections: () => {
+    getSections: (_workbench, input) => {
       const state = getState();
       if (!state.projectId) return [];
       const metadata = extensionNavigationMetadata(state);
       return metadata
         ? buildDashboardExtensionTreeSections({
             metadata,
-            modeId: "project",
+            modeId: input.modeId,
             placement: "first",
             projectId: state.projectId,
             target: "workbench.left.tree",
@@ -41,16 +41,16 @@ export const registerExtensionSidenavContributions = (
   });
   registerSidenavContribution(ctx, {
     id: "dashboard.extensions.project-sidenav.default",
-    modes: ["project"],
+    modes: ["*"],
     order: 40,
-    getSections: () => {
+    getSections: (_workbench, input) => {
       const state = getState();
       if (!state.projectId) return [];
       const metadata = extensionNavigationMetadata(state);
       return metadata
         ? buildDashboardExtensionTreeSections({
             metadata,
-            modeId: "project",
+            modeId: input.modeId,
             placement: "default",
             projectId: state.projectId,
             target: "workbench.left.tree",

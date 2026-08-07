@@ -110,3 +110,37 @@ test("Extension Lab demonstrates mode-owned layouts and restores prior Panel sta
     timeout: 30_000,
   });
 });
+
+test("Extension Lab keeps project navigation available inside a custom mode", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await sidenav.getByRole("option", { name: "Lab coding mode", exact: true }).click({ timeout: 30_000 });
+  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const labRow = sidenav.getByRole("option", { name: "Lab", exact: true });
+  await expect(labRow).toBeVisible();
+  await labRow.click();
+  await expect(modeFrame(page, "Lab").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await sidenav.getByRole("option", { name: "Lab coding mode", exact: true }).click();
+  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await sidenav
+    .getByRole("option", { name: /^Workspaces/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
+});

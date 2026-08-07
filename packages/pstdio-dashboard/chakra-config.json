@@ -2494,6 +2494,9 @@
         "none": {
           "value": "0"
         },
+        "3xs": {
+          "value": "0.125rem"
+        },
         "2xs": {
           "value": "0.25rem"
         },
@@ -2802,6 +2805,57 @@
         "filter-pill": {
           "value": "1.5rem"
         },
+        "icon-2xs": {
+          "value": "0.75rem"
+        },
+        "icon-xs": {
+          "value": "0.875rem"
+        },
+        "icon-sm": {
+          "value": "1rem"
+        },
+        "icon-md": {
+          "value": "1.25rem"
+        },
+        "tag-color-dot": {
+          "value": "1.25rem"
+        },
+        "tag-icon-cell": {
+          "value": "1.75rem"
+        },
+        "tag-picker": {
+          "value": "16.75rem"
+        },
+        "tag-picker-color-only": {
+          "value": "13.75rem"
+        },
+        "tag-swatch": {
+          "value": "1.625rem"
+        },
+        "tag-swatch-dot": {
+          "value": "0.625rem"
+        },
+        "tag-editor-row": {
+          "value": "2.5rem"
+        },
+        "tag-editor-add-row": {
+          "value": "2.25rem"
+        },
+        "segmented-control-sm": {
+          "value": "1.75rem"
+        },
+        "segmented-control-xs": {
+          "value": "1.5rem"
+        },
+        "segmented-control-item-sm": {
+          "value": "1.5rem"
+        },
+        "segmented-control-item-xs": {
+          "value": "1.25rem"
+        },
+        "tag-action-menu": {
+          "value": "10rem"
+        },
         "view-bar": {
           "value": "2.5rem"
         },
@@ -2874,6 +2928,11 @@
         },
         "switch": {
           "value": "pointer"
+        }
+      },
+      "borderWidths": {
+        "selection": {
+          "value": "0.09375rem"
         }
       }
     },

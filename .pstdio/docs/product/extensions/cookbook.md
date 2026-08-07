@@ -212,11 +212,12 @@ export default defineExtension({
       label: "Planner",
       icon: "calendar-check",
       action: { kind: "route", route: "planner" },
-      when: { mode: "project" },
     },
   },
 });
 ```
+
+Omit `when.mode` when a route or command should stay visible in every active mode where the host left tree exists. Add `when: { mode: "project" }` for project-only navigation, or use an extension-defined mode id such as `when: { mode: "planner.focus" }` for mode-only navigation.
 
 ## Add Packaged Assets
 

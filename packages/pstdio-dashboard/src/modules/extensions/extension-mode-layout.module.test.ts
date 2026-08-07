@@ -3,10 +3,17 @@ import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import {
+  clearCachedDashboardExtensionMetadata,
+  type DashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
+import {
+  getSidenavContributionHeaderNodes,
+  getSidenavContributionSections,
+} from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createProjectsModule } from "../projects/module";
 import { createSidenavModule } from "../sidenav/module";
+import { createWorkspacesModule } from "../workspaces/module";
 import { createExtensionsModule } from "./module";
 import {
   emptyAppearance,
@@ -106,7 +113,9 @@ describe("createExtensionsModule mode layout", () => {
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
+});
 
+describe("createExtensionsModule mode layout persistence", () => {
   test("keeps the active extension mode layout mounted across webview metadata refreshes", async () => {
     let nextMetadata = metadataWithLabMode;
     const loadMetadata = mock(async () => nextMetadata);
@@ -198,9 +207,11 @@ describe("createExtensionsModule mode layout", () => {
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
+});
 
-  test("contributes extension tree items only to the project sidenav", async () => {
-    const loadMetadata = mock(async () => metadata);
+describe("extension tree mode visibility", () => {
+  test("keeps unrestricted extension tree items available in custom modes", async () => {
+    const loadMetadata = mock(async () => metadataWithLabMode);
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -212,14 +223,96 @@ describe("createExtensionsModule mode layout", () => {
       const projectNodeIds = (await getSidenavContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
-      const workspaceNodeIds = (await getSidenavContributionSections(workbench, "workspace"))
+      const labNodeIds = (await getSidenavContributionSections(workbench, "pstdio.extension-lab.lab"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
       expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
-      expect(workspaceNodeIds).not.toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(labNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
     } finally {
       disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("filters extension tree items by their mode condition", async () => {
+    const labModeMetadata = {
+      ...metadataWithLabMode,
+      commands: [
+        ...metadataWithLabMode.commands,
+        { id: "extension-lab.project-command", extensionId: "pstdio.extension-lab", title: "Project command" },
+        { id: "extension-lab.lab-command", extensionId: "pstdio.extension-lab", title: "Lab command" },
+      ],
+      treeItems: [
+        ...metadataWithLabMode.treeItems,
+        {
+          id: "extension-lab.projectOnly",
+          extensionId: "pstdio.extension-lab",
+          target: "workbench.left.tree",
+          group: "Lab",
+          label: "Project only",
+          action: { kind: "command", commandId: "extension-lab.project-command" },
+          when: { mode: "project" },
+        },
+        {
+          id: "extension-lab.labOnly",
+          extensionId: "pstdio.extension-lab",
+          target: "workbench.left.tree",
+          group: "Lab",
+          label: "Lab only",
+          action: { kind: "command", commandId: "extension-lab.lab-command" },
+          when: { mode: "pstdio.extension-lab.lab" },
+        },
+      ],
+    } satisfies DashboardExtensionMetadata;
+    const loadMetadata = mock(async () => labModeMetadata);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const projectNodeIds = (await getSidenavContributionSections(workbench, "project"))
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id);
+      const labNodeIds = (await getSidenavContributionSections(workbench, "pstdio.extension-lab.lab"))
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id);
+
+      expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(projectNodeIds).toContain("extension-lab.projectOnly");
+      expect(projectNodeIds).not.toContain("extension-lab.labOnly");
+      expect(labNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(labNodeIds).not.toContain("extension-lab.projectOnly");
+      expect(labNodeIds).toContain("extension-lab.labOnly");
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("keeps host navigation available in custom mode sidenav chrome", async () => {
+    const loadMetadata = mock(async () => metadataWithLabMode);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const sidenavDisposable = workbench.registerModule(createSidenavModule());
+    const workspacesDisposable = workbench.registerModule(createWorkspacesModule());
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+
+      expect(
+        getSidenavContributionHeaderNodes(workbench, "pstdio.extension-lab.lab").map((node) => node.label),
+      ).toContain("Workspaces");
+    } finally {
+      disposable.dispose();
+      workspacesDisposable.dispose();
+      sidenavDisposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
