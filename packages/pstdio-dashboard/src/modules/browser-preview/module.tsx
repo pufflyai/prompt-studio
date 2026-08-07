@@ -65,7 +65,6 @@ export const createBrowserPreviewModule = () =>
           reuse: "none",
           closable: true,
           mountStrategy: "keep-mounted",
-          resourceKinds: [browserPreviewResourceKind],
           rendererId: dashboardWidgetIds.browserPreview,
           openCommandId: dashboardCommandIds.openBrowserPreview,
           priority: 60,

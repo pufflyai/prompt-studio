@@ -105,6 +105,12 @@ test.describe("Browser Preview", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     const mainTabs = page.locator('[data-workbench-panel-header="main"]').getByRole("tab");
 
+    await page.getByRole("button", { name: "Add panel", exact: true }).click();
+    const emptyPreviewTab = mainTabs.filter({ hasText: "Browser" });
+    await expect(emptyPreviewTab).toHaveCount(1);
+    await emptyPreviewTab.getByRole("button", { name: /^Close/ }).click();
+    await expect(emptyPreviewTab).toHaveCount(0);
+
     await openPreviewFromPalette(page, fixture!.url);
     await expect(visiblePreview(page).getByText("Fixture load 1")).toBeVisible();
 

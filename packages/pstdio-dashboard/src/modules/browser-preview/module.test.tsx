@@ -64,6 +64,14 @@ describe("createBrowserPreviewModule", () => {
     expect(workbench.layout.getWidget(dashboardWidgetIds.browserPreview)?.role).toBe("sub-panel");
   });
 
+  test("offers Browser Preview from the Add panel surface for a normal dashboard location", () => {
+    const workbench = createWorkbench();
+    const browserPreview = workbench.layout.getWidget(dashboardWidgetIds.browserPreview);
+
+    expect(browserPreview?.openCommandId).toBe(dashboardCommandIds.openBrowserPreview);
+    expect(browserPreview?.resourceKinds).toBeUndefined();
+  });
+
   test("restores open previews with their own state and leaves closed previews out", async () => {
     let savedLayout: WorkbenchLayout | undefined;
     const createPersistentWorkbench = () => {
