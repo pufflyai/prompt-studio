@@ -8,6 +8,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
+import { getActiveLocationPlacement } from "../layout/layout-operations";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
@@ -222,11 +223,13 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     let unsubscribeMainPanel: () => void = () => undefined;
     const establishSeededLocation = () => {
       if (locationEstablished) return;
-      const primary = context.layout.getActivePanel("main");
-      if (!primary) return;
+      const instanceId =
+        getActiveLocationPlacement(context.layout.getLayout())?.widgetId ??
+        context.layout.getActivePanel("main")?.instanceId;
+      if (!instanceId) return;
       locationEstablished = true;
       unsubscribeMainPanel();
-      input.establishLocation?.(primary.instanceId);
+      input.establishLocation?.(instanceId);
     };
 
     unsubscribeMainPanel = context.layout.store.subscribeSelector(

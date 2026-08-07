@@ -8,6 +8,7 @@ export const dashboardWidgetIds = {
   createWorkspace: "dashboard-workbench.create-workspace",
   renameWorkspace: "dashboard-workbench.rename-workspace",
   dashboardSidenav: "dashboard-workbench.sidenav",
+  browserPreview: "dashboard-workbench.browser-preview",
   extensionRoute: "dashboard-workbench.extension-route",
   extensionView: "dashboard-workbench.extension-view",
   settings: "dashboard-workbench.settings",

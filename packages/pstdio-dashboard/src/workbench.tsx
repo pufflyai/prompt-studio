@@ -16,6 +16,7 @@ import {
   type DashboardSessionSelectionPersistence,
 } from "@/shared/app/session-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
+import { createBrowserPreviewModule } from "./modules/browser-preview/module";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createDashboardViewsModule } from "./modules/dashboard-views/module";
 import { createExtensionsModule } from "./modules/extensions/module";
@@ -65,6 +66,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),
+  createBrowserPreviewModule(),
   createBootstrapModule({
     projectSelectionPersistence: input.projectSelectionPersistence,
     sessionSelectionPersistence: input.sessionSelectionPersistence,

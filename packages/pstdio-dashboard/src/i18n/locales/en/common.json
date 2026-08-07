@@ -385,6 +385,49 @@
     "changeTheme": "Change theme",
     "themePlaceholder": "Select theme"
   },
+  "browserPreview": {
+    "title": "Browser Preview",
+    "panelTitle": "Browser",
+    "category": "Browser",
+    "commandLabel": "Browser: Open Preview",
+    "urlLabel": "URL",
+    "addressLabel": "Browser Preview address",
+    "openAddress": "Open address",
+    "reload": "Reload",
+    "reloadAria": "Reload preview",
+    "copyUrl": "Copy URL",
+    "copyUrlAria": "Copy preview URL",
+    "copySuccess": "Copied preview URL",
+    "copyFailure": "Failed to copy preview URL",
+    "openExternal": "Open externally",
+    "openExternalAria": "Open preview externally",
+    "viewportLabel": "Browser Preview viewport",
+    "customWidth": "Custom viewport width",
+    "customHeight": "Custom viewport height",
+    "help": "Preview help",
+    "helpAria": "Browser Preview help",
+    "framingTitle": "Framing limitations",
+    "framingDescription": "Some targets block iframes with X-Frame-Options, CSP frame-ancestors, or mixed-content policy. Open externally when a target appears blank.",
+    "emptyDescription": "Enter a local HTTP(S) address to open it inside this workbench tab.",
+    "viewports": {
+      "responsive": "Responsive",
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "custom": "Custom"
+    },
+    "status": {
+      "loading": "Loading",
+      "ready": "Ready",
+      "empty": "No page loaded"
+    },
+    "errors": {
+      "invalid-url": "Browser Preview URL is invalid.",
+      "unsupported-scheme": "Browser Preview supports only HTTP(S) URLs.",
+      "credentials": "Browser Preview URLs cannot include credentials.",
+      "host-origin": "Browser Preview cannot open the Prompt Studio host origin.",
+      "projectRequired": "Browser Preview requires a selected project."
+    }
+  },
   "workspace": {
     "title": "Workspace"
   }

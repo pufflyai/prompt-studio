@@ -276,7 +276,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     );
 
     disposables.push(
-      context.workbench.layout.registerPanel({
+      context.workbench.layout.registerLocation({
         closable: false,
         id: record.id,
         title: localize(record.title, record.id),
