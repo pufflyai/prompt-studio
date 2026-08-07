@@ -4,6 +4,7 @@ import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleConte
 import { unwrapCommandValue } from "../host/command-response";
 import {
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
   toWorkbenchPanelMenus,
 } from "./panel-contributions";
@@ -78,7 +79,11 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
       : undefined,
   });
 
-const registerFileViewWidget = (input: RegisterWorkbenchExtensionFileRenderersInput, panel: ViewRecord) => {
+const registerFileViewWidget = (
+  input: RegisterWorkbenchExtensionFileRenderersInput,
+  panel: ViewRecord,
+  index: number,
+) => {
   if (!panel.fileRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
@@ -92,6 +97,7 @@ const registerFileViewWidget = (input: RegisterWorkbenchExtensionFileRenderersIn
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
       panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });
 };
@@ -103,10 +109,10 @@ export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbench
     disposables.push(registerFileRenderer(input, record));
   }
 
-  for (const panel of input.metadata.panels) {
-    const disposable = registerFileViewWidget(input, panel);
+  input.metadata.panels.forEach((panel, index) => {
+    const disposable = registerFileViewWidget(input, panel, index);
     if (disposable) disposables.push(disposable);
-  }
+  });
 
   return {
     dispose() {

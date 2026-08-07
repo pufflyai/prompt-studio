@@ -41,6 +41,7 @@ export {
 export {
   type RegisterWorkbenchExtensionPanelInput,
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
 } from "./contributions/panel-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,

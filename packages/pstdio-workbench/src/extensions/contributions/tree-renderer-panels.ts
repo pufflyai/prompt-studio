@@ -2,6 +2,7 @@ import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchModuleContext } from "../../core";
 import {
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
   toWorkbenchPanelMenus,
 } from "./panel-contributions";
@@ -11,7 +12,11 @@ interface RegisterTreeViewWidgetInput {
   workbench: WorkbenchModuleContext;
 }
 
-export const registerTreeViewWidget = (input: RegisterTreeViewWidgetInput, panel: ExtensionTreePanelRecord) => {
+export const registerTreeViewWidget = (
+  input: RegisterTreeViewWidgetInput,
+  panel: ExtensionTreePanelRecord,
+  index: number,
+) => {
   if (!panel.treeRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
@@ -25,6 +30,7 @@ export const registerTreeViewWidget = (input: RegisterTreeViewWidgetInput, panel
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
       panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });
 };

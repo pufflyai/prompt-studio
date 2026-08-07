@@ -335,10 +335,10 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
     disposables.push(registerTree(input, record));
   }
 
-  for (const panel of input.metadata.panels) {
-    const disposable = registerTreeViewWidget(input, panel);
+  input.metadata.panels.forEach((panel, index) => {
+    const disposable = registerTreeViewWidget(input, panel, index);
     if (disposable) disposables.push(disposable);
-  }
+  });
 
   return {
     dispose() {

@@ -480,6 +480,32 @@ describe("createLayoutModel placement management", () => {
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 
+  test("opens priority-placed widgets beside preserved unregistered placements", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "session-chat-bubble",
+      title: "Session chat bubble",
+      region: "side",
+      priority: -1,
+    });
+    registerTestWidget(layout, {
+      id: "project.notes",
+      title: "Notes",
+      region: "side",
+      priority: 1,
+    });
+
+    layout.openWidget("session-chat-bubble");
+    layout.unregisterWidget("session-chat-bubble", { removePlacements: false, persist: false });
+    const notes = layout.openWidget("project.notes");
+
+    expect(layout.getLayout().regions.side.widgets.map((placement) => placement.widgetId)).toEqual([
+      notes.widgetId,
+      "session-chat-bubble",
+    ]);
+  });
+
   test("resets every region and clears active workbench selection", () => {
     const layout = createLayoutModel();
 

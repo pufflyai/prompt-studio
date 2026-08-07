@@ -5,6 +5,7 @@ import type { WorkbenchExtensionCommandContext } from "../host/workbench-extensi
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import {
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
   toWorkbenchPanelMenus,
 } from "./panel-contributions";
@@ -55,7 +56,11 @@ const registerControlsRenderer = (
 // A panel that references a controls renderer places it into a panel — the widget is
 // keyed by the panel id and rendered by the referenced controls renderer, mirroring
 // tree/file renderer panel widgets.
-const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, panel: ControlsViewRecord) => {
+const registerControlsViewWidget = (
+  context: WorkbenchExtensionCommandContext,
+  panel: ControlsViewRecord,
+  index: number,
+) => {
   if (!panel.controlsRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
@@ -69,6 +74,7 @@ const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, p
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
       panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });
 };
@@ -85,10 +91,10 @@ export const registerWorkbenchExtensionControlsRenderers = (
   const disposables: Disposable[] = [];
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
-  for (const panel of panels) {
-    const disposable = registerControlsViewWidget(context, panel);
+  panels.forEach((panel, index) => {
+    const disposable = registerControlsViewWidget(context, panel, index);
     if (disposable) disposables.push(disposable);
-  }
+  });
 
   return {
     dispose() {

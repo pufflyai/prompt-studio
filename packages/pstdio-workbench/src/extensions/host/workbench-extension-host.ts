@@ -38,6 +38,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import {
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
   toWorkbenchPanelMenus,
 } from "../contributions/panel-contributions";
@@ -206,7 +207,7 @@ const registerCommandPaletteContributions = (
 };
 
 const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.panels.flatMap((panel) => {
+  input.metadata.panels.flatMap((panel, index) => {
     if (!panel.webview) return [];
     return [
       registerWorkbenchExtensionPanel({
@@ -221,6 +222,7 @@ const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInp
           resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
           eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
           panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
           config: {
             ...toBridgeWebviewConfig(panel.webview),
             ...(panel.region === "overlay"

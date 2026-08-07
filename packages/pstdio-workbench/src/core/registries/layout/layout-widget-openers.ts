@@ -89,6 +89,21 @@ const findReplacementIndex = (
   return region.widgets.findIndex((placement) => placement.widgetId === replacementWidgetId && !placement.pinned);
 };
 
+const defaultTabPosition = (
+  widgets: WorkbenchWidgetPlacement[],
+  widget: RegisteredWidgetContribution,
+  requireWidget: (id: string) => RegisteredWidgetContribution,
+) => {
+  const before = widgets.find((placement) => {
+    try {
+      return widget.priority > requireWidget(placement.contributionId).priority;
+    } catch {
+      return widget.priority > 0;
+    }
+  });
+  return before ? ({ beforeWidgetId: before.widgetId } as const) : undefined;
+};
+
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireWidget, applyAndActivate } = input;
 
@@ -205,7 +220,13 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const widgetId = createUniqueWidgetId(getLayout(), widget.id);
     const placement = bindToActiveLocation(createPlacement(widgetId, widget, openInput), widget, getLayout());
     const layout = replaceRegionWidgets(getLayout(), regionId, (widgets) => {
-      if (replacementIndex < 0) return placeWidget(widgets, placement, openInput.tabPosition);
+      if (replacementIndex < 0) {
+        return placeWidget(
+          widgets,
+          placement,
+          openInput.tabPosition ?? defaultTabPosition(widgets, widget, requireWidget),
+        );
+      }
       const copy = [...widgets];
       copy.splice(replacementIndex, 1, placement);
       return placement.tabRetention === "preview" ? placeWidget(copy, placement, "start") : copy;
