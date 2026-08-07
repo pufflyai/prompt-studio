@@ -12,8 +12,11 @@ type SidenavContributionRegion = "header" | "body" | "footer";
 const allModes = "*";
 
 interface SidenavContributionInput {
+  modeId: SidenavModeId;
   resource?: ResourceRef;
 }
+
+type SidenavContributionRequest = Omit<SidenavContributionInput, "modeId">;
 
 interface SidenavContribution {
   id: string;
@@ -90,11 +93,11 @@ const matchingContributions = (ctx: SidenavTreeContext, mode: SidenavModeId, reg
 export const getSidenavContributionSections = async (
   ctx: WorkbenchModuleContext,
   mode: SidenavModeId,
-  input: SidenavContributionInput = {},
+  input: SidenavContributionRequest = {},
 ) => {
   const sections: TreeViewSection[] = [];
   for (const contribution of matchingContributions(ctx, mode, "body")) {
-    sections.push(...((await contribution.getSections?.(ctx, input)) ?? []));
+    sections.push(...((await contribution.getSections?.(ctx, { ...input, modeId: mode })) ?? []));
   }
   return sections;
 };

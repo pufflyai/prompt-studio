@@ -81,9 +81,10 @@ Everything below uses only host-owned workbench targets and lab-internal command
 - Switching away and back exercises one-time mode seeding, per-mode layout persistence, unavailable-Panel removal,
   pinned views, shared views, and restoration without rebuilding project chrome.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
-- Four mode tree items enter each layout from Project mode. Once inside a custom mode, use `Switch Mode` in the
-  workbench Command Palette to compare layouts through the supported mode picker.
-- `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon.
+- Four mode tree items enter each layout from Project mode. Once inside a custom mode, use the host `Workspaces`
+  entry or `Switch Mode` in the workbench Command Palette to leave the mode or compare layouts.
+- `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon. Tree items
+  without `when.mode` stay visible in custom modes where the host left tree is present.
 
 ### Storage
 

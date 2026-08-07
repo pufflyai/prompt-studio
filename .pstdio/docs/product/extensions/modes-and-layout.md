@@ -31,7 +31,7 @@ export default defineExtension({
 - `resourceKind` is optional. When present, dashboard resource presenters use the mode for matching resource details.
 - `layout.reset: true` clears all mode-layout areas before opening mode content. A reset array can target specific areas.
 - `layout.open` can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
-- Mode-specific visibility belongs in `when.mode` on the UI contribution.
+- Mode-specific visibility belongs in `when.mode` on the UI contribution. If a `treeItems` contribution omits `when.mode`, it appears in every active mode where the host left tree exists.
 
 ## Resource-Owned Modes
 
@@ -54,4 +54,4 @@ Use the shipped UI contribution surfaces for dashboard placement:
 - `views` for webview panels attached to host-owned targets
 - `settingsPanels` for project settings UI
 
-Use `when.mode` to limit visibility to a specific active mode.
+Use `when.mode` to limit visibility to a specific active mode. A tree item without `when.mode` is not project-only. It stays available in built-in modes and extension-defined modes while the host left tree is present.
