@@ -4,8 +4,8 @@ import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
 import { CLI_VERSION } from "@/features/cli-version";
 import {
   cleanupRuntimeDescriptor,
+  promoteRuntimeDescriptor,
   type RuntimeDescriptor,
-  readRuntimeDescriptor,
   writeRuntimeDescriptor,
 } from "@/features/runtime/runtime-descriptor";
 
@@ -33,12 +33,11 @@ export const createServeRuntime = (options: ServeRuntimeOptions, shutdown: () =>
     ownerType: () => ownerType,
     promote: async () => {
       if (ownerType === "persistent") return;
-      const current = readRuntimeDescriptor(descriptorPath);
-      if (!current || current.pid !== process.pid || current.instanceId !== instanceId) {
+      const promoted = promoteRuntimeDescriptor(descriptorPath, { pid: process.pid, instanceId });
+      if (!promoted) {
         throw new Error("Runtime descriptor no longer belongs to this process instance");
       }
-      descriptor = { ...current, ownerType: "persistent" };
-      writeRuntimeDescriptor(descriptorPath, descriptor);
+      descriptor = promoted;
       ownerType = "persistent";
     },
     announceShutdown: () => {

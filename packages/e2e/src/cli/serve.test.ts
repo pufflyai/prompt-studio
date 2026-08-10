@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getFreePort, waitForReady } from "./start-api";
@@ -50,6 +50,37 @@ const startServe = async (port: number, storagePath: string, dbPath = ":memory:"
   return child;
 };
 
+const waitForRuntimeDescriptor = async (path: string) => {
+  const deadline = performance.now() + TEST_TIMEOUT;
+  while (performance.now() < deadline) {
+    if (existsSync(path)) {
+      try {
+        const value = JSON.parse(readFileSync(path, "utf8")) as { origin?: string; pid?: number };
+        if (typeof value.origin === "string" && typeof value.pid === "number") return value;
+      } catch {
+        // Startup can still be replacing an older descriptor when this poll runs.
+      }
+    }
+    await Bun.sleep(20);
+  }
+  throw new Error("Runtime descriptor was not published before the test deadline");
+};
+
+const stopChildren = async (children: ChildProcess[]) => {
+  const exits = children.map(
+    (candidate) =>
+      new Promise<void>((resolve) => {
+        if (candidate.exitCode !== null || candidate.signalCode !== null) {
+          resolve();
+          return;
+        }
+        candidate.once("exit", () => resolve());
+        candidate.kill();
+      }),
+  );
+  await Promise.all(exits);
+};
+
 describe("pstdio serve", () => {
   let child: ChildProcess | null = null;
 
@@ -93,6 +124,34 @@ describe("pstdio serve", () => {
 
       const health = await fetch(`http://localhost:${firstPort}/healthz`);
       expect(health.ok).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "allows only the database owner to publish when foreground runtimes race",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-runtime-race-"));
+      const dbPath = join(tempRoot, "pstdio.db");
+      const descriptorPath = join(SHARED_PSTDIO_HOME, "runtime.json");
+      const ports = await Promise.all([getFreePort(), getFreePort()]);
+      const contenders = ports.map((port, index) => spawnServe(port, join(tempRoot, `storage-${index}`), dbPath));
+
+      try {
+        const runtime = await waitForRuntimeDescriptor(descriptorPath);
+        const winner = contenders.find((candidate) => candidate.pid === runtime.pid);
+        const loser = contenders.find((candidate) => candidate.pid !== runtime.pid);
+        expect(winner).toBeDefined();
+        expect(loser).toBeDefined();
+
+        const loserExit =
+          loser!.exitCode ?? (await new Promise<number | null>((resolve) => loser!.once("exit", resolve)));
+        expect(loserExit).not.toBe(0);
+        expect(JSON.parse(readFileSync(descriptorPath, "utf8")).pid).toBe(winner!.pid);
+        expect((await fetch(`${runtime.origin}/healthz`)).ok).toBe(true);
+      } finally {
+        await stopChildren(contenders);
+      }
     },
     TEST_TIMEOUT,
   );

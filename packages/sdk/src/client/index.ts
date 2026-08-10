@@ -10,7 +10,6 @@ export {
   type RequestFn,
   type RequestOptions,
 } from "./request";
-export type { RuntimeClient } from "./runtime";
 export type { ListSessionsInput, SessionClient, SessionStreamConnection, SessionStreamHandlers } from "./sessions";
 export type { SettingsClient } from "./settings";
 export type { SkillClient } from "./skills";

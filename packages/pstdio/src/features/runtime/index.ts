@@ -11,6 +11,7 @@ export {
   discoverRuntime,
   isRuntimePidAlive,
   parseRuntimeDescriptor,
+  promoteRuntimeDescriptor,
   type RuntimeDescriptor,
   type RuntimeDiscovery,
   type RuntimeOwnerType,

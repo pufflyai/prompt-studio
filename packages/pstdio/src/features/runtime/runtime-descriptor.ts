@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { withRuntimeDescriptorLock } from "./runtime-descriptor-lock";
 
 export type RuntimeOwnerType = "desktop" | "persistent";
 
@@ -93,7 +94,7 @@ export const readRuntimeDescriptor = (path: string) => {
   return parseRuntimeDescriptor(result.value);
 };
 
-export const writeRuntimeDescriptor = (path: string, descriptor: RuntimeDescriptor) => {
+const writeRuntimeDescriptorUnlocked = (path: string, descriptor: RuntimeDescriptor) => {
   const parent = dirname(path);
   mkdirSync(parent, { recursive: true, mode: 0o700 });
   const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
@@ -110,12 +111,32 @@ export const writeRuntimeDescriptor = (path: string, descriptor: RuntimeDescript
   chmodSync(path, 0o600);
 };
 
-export const cleanupRuntimeDescriptor = (path: string, identity: Pick<RuntimeDescriptor, "pid" | "instanceId">) => {
-  const current = readRuntimeDescriptor(path);
-  if (!current || current.pid !== identity.pid || current.instanceId !== identity.instanceId) return false;
-  unlinkSync(path);
-  return true;
-};
+const isMatchingRuntime = (
+  descriptor: RuntimeDescriptor | null,
+  identity: Pick<RuntimeDescriptor, "pid" | "instanceId">,
+): descriptor is RuntimeDescriptor => descriptor?.pid === identity.pid && descriptor.instanceId === identity.instanceId;
+
+export const writeRuntimeDescriptor = (path: string, descriptor: RuntimeDescriptor) =>
+  withRuntimeDescriptorLock(path, () => writeRuntimeDescriptorUnlocked(path, descriptor));
+
+export const promoteRuntimeDescriptor = (path: string, identity: Pick<RuntimeDescriptor, "pid" | "instanceId">) =>
+  withRuntimeDescriptorLock(path, () => {
+    const current = readRuntimeDescriptor(path);
+    if (!isMatchingRuntime(current, identity)) return null;
+    if (current.ownerType === "persistent") return current;
+
+    const promoted: RuntimeDescriptor = { ...current, ownerType: "persistent" };
+    writeRuntimeDescriptorUnlocked(path, promoted);
+    return promoted;
+  });
+
+export const cleanupRuntimeDescriptor = (path: string, identity: Pick<RuntimeDescriptor, "pid" | "instanceId">) =>
+  withRuntimeDescriptorLock(path, () => {
+    const current = readRuntimeDescriptor(path);
+    if (!isMatchingRuntime(current, identity)) return false;
+    unlinkSync(path);
+    return true;
+  });
 
 export const isRuntimePidAlive = (pid: number) => {
   try {

@@ -57,7 +57,9 @@ The runtime descriptor token is required for every `/runtime` route. Runtime cli
 The shared runtime binds to `127.0.0.1` and lets the operating system select an available port. After the server is
 bound and authenticated readiness succeeds, it atomically publishes `$PSTDIO_HOME/runtime.json` with mode `0600`.
 The versioned descriptor contains its PID, instance ID, ownership type, exact origin, bearer token, application
-version, and start time.
+version, and start time. Descriptor publication, promotion, and cleanup share a cross-process ownership lock. Promotion
+and cleanup re-read the descriptor inside that lock, so a delayed process cannot overwrite or remove a replacement
+runtime's descriptor.
 
 API-backed CLI commands first validate the descriptor, PID, instance identity, and authenticated readiness. A
 healthy runtime is reused even when its application version differs. A stale descriptor is reclaimed only when both

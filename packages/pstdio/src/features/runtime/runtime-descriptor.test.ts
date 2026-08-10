@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,9 +7,11 @@ import {
   cleanupRuntimeDescriptor,
   discoverRuntime,
   parseRuntimeDescriptor,
+  promoteRuntimeDescriptor,
   type RuntimeDescriptor,
   writeRuntimeDescriptor,
 } from "./runtime-descriptor";
+import { acquireRuntimeDescriptorLock } from "./runtime-descriptor-lock";
 
 const roots: string[] = [];
 
@@ -30,6 +33,41 @@ const descriptor = (overrides: Partial<RuntimeDescriptor> = {}): RuntimeDescript
   startedAt: "2026-08-06T08:00:00.000Z",
   ...overrides,
 });
+
+const runDescriptorOperation = async (path: string, operation: "cleanup" | "promote") => {
+  const modulePath = join(import.meta.dirname, "runtime-descriptor.ts");
+  const source = `
+    const { cleanupRuntimeDescriptor, promoteRuntimeDescriptor } = await import(${JSON.stringify(modulePath)});
+    const path = process.env.RUNTIME_DESCRIPTOR_PATH;
+    const operation = process.env.RUNTIME_DESCRIPTOR_OPERATION;
+    process.stdout.write("started\\n");
+    const identity = { pid: 1234, instanceId: "runtime-one" };
+    const result = operation === "cleanup"
+      ? cleanupRuntimeDescriptor(path, identity)
+      : promoteRuntimeDescriptor(path, identity);
+    process.stdout.write(JSON.stringify(result) + "\\n");
+  `;
+  const child = spawn(process.execPath, ["-e", source], {
+    env: { ...process.env, RUNTIME_DESCRIPTOR_OPERATION: operation, RUNTIME_DESCRIPTOR_PATH: path },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  let markStarted: (() => void) | null = null;
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
+  });
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+    if (stdout.includes("started\n")) markStarted?.();
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+  const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+
+  return { child, exited, output: () => ({ stderr, stdout }), started };
+};
 
 afterEach(() => {
   for (const root of roots) rmSync(root, { force: true, recursive: true });
@@ -68,6 +106,51 @@ describe("runtime descriptor persistence", () => {
     );
     expect(cleanupRuntimeDescriptor(path, { pid: 1234, instanceId: "replacement" })).toBe(true);
     expect(Bun.file(path).size).toBe(0);
+  });
+
+  test("does not remove a replacement published while cleanup waits for ownership", async () => {
+    const path = join(createRoot(), "runtime.json");
+    writeRuntimeDescriptor(path, descriptor());
+    const release = acquireRuntimeDescriptorLock(path);
+    const operation = await runDescriptorOperation(path, "cleanup");
+
+    try {
+      await operation.started;
+      writeFileSync(path, `${JSON.stringify(descriptor({ instanceId: "replacement" }), null, 2)}\n`, "utf8");
+    } finally {
+      release();
+    }
+
+    expect(await operation.exited).toBe(0);
+    expect(operation.output()).toEqual({ stderr: "", stdout: "started\nfalse\n" });
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(descriptor({ instanceId: "replacement" }));
+  });
+
+  test("does not overwrite a replacement published while promotion waits for ownership", async () => {
+    const path = join(createRoot(), "runtime.json");
+    writeRuntimeDescriptor(path, descriptor());
+    const release = acquireRuntimeDescriptorLock(path);
+    const operation = await runDescriptorOperation(path, "promote");
+
+    try {
+      await operation.started;
+      writeFileSync(path, `${JSON.stringify(descriptor({ instanceId: "replacement" }), null, 2)}\n`, "utf8");
+    } finally {
+      release();
+    }
+
+    expect(await operation.exited).toBe(0);
+    expect(operation.output()).toEqual({ stderr: "", stdout: "started\nnull\n" });
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(descriptor({ instanceId: "replacement" }));
+  });
+
+  test("promotes only the matching runtime and never demotes persistent ownership", () => {
+    const path = join(createRoot(), "runtime.json");
+    writeRuntimeDescriptor(path, descriptor());
+
+    expect(promoteRuntimeDescriptor(path, { pid: 1234, instanceId: "runtime-one" })?.ownerType).toBe("persistent");
+    expect(promoteRuntimeDescriptor(path, { pid: 1234, instanceId: "runtime-one" })?.ownerType).toBe("persistent");
+    expect(JSON.parse(readFileSync(path, "utf8")).ownerType).toBe("persistent");
   });
 });
 
