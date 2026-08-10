@@ -1,111 +1,42 @@
-import { Grid, GridItem, Icon, IconButton, Popover, Text } from "@chakra-ui/react";
-import {
-  AlertTriangle,
-  AlignLeft,
-  BookOpen,
-  Brain,
-  Bug,
-  ChartColumnIncreasing,
-  CheckCircle,
-  Circle,
-  CircleDot,
-  CircleQuestionMark,
-  Clock,
-  Code,
-  Cpu,
-  Eye,
-  Feather,
-  FileText,
-  Flag,
-  Flame,
-  FolderGit2,
-  Gauge,
-  GitBranch,
-  GitFork,
-  GitPullRequest,
-  Layers,
-  Lightbulb,
-  Scale,
-  Shield,
-  ShieldAlert,
-  Sparkles,
-  Star,
-  Tag,
-  Terminal,
-  Ticket,
-  Wrench,
-  Zap,
-} from "lucide-react";
-import type { ComponentType } from "react";
+import { Box, chakra, Grid, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { type IconColorPickerIconOption, optionColors, optionIcons } from "./icon-options";
+import { TagSwatch } from "./tag-swatch";
 
-export interface IconColorPickerIconOption {
-  value: string | null;
-  label: string;
-  icon: ComponentType;
-}
+const SwatchTrigger = chakra("button", {
+  base: {
+    display: "inline-flex",
+    borderRadius: "compact",
+    cursor: "pointer",
+    focusVisibleRing: "outside",
+    _disabled: { cursor: "not-allowed", opacity: 0.5 },
+  },
+});
 
-export const optionColors = [
-  "gray",
-  "red",
-  "orange",
-  "yellow",
-  "green",
-  "teal",
-  "blue",
-  "cyan",
-  "purple",
-  "pink",
-] as const;
+const ColorDot = chakra("button", {
+  base: {
+    boxSize: "tag-color-dot",
+    borderRadius: "full",
+    cursor: "pointer",
+    outlineStyle: "solid",
+    outlineWidth: "selection",
+    outlineOffset: "3xs",
+    outlineColor: "transparent",
+    _selected: { outlineColor: "fg" },
+  },
+});
 
-export const optionIcons = [
-  { value: "circle", label: "circle", icon: Circle },
-  { value: "circle-dot", label: "circle dot", icon: CircleDot },
-  { value: "brain", label: "brain", icon: Brain },
-  { value: "zap", label: "zap", icon: Zap },
-  { value: "bug", label: "bug", icon: Bug },
-  { value: "sparkles", label: "sparkles", icon: Sparkles },
-  { value: "book-open", label: "book open", icon: BookOpen },
-  { value: "wrench", label: "wrench", icon: Wrench },
-  { value: "gauge", label: "gauge", icon: Gauge },
-  { value: "feather", label: "feather", icon: Feather },
-  { value: "scale", label: "scale", icon: Scale },
-  { value: "layers", label: "layers", icon: Layers },
-  { value: "alert-triangle", label: "alert triangle", icon: AlertTriangle },
-  { value: "star", label: "star", icon: Star },
-  { value: "flag", label: "flag", icon: Flag },
-  { value: "flame", label: "flame", icon: Flame },
-  { value: "align-left", label: "align left", icon: AlignLeft },
-  { value: "file-text", label: "file text", icon: FileText },
-  { value: "cpu", label: "CPU", icon: Cpu },
-  { value: "terminal", label: "terminal", icon: Terminal },
-  { value: "folder-git-2", label: "git folder", icon: FolderGit2 },
-  { value: "git-branch", label: "git branch", icon: GitBranch },
-  { value: "git-fork", label: "git fork", icon: GitFork },
-  { value: "lightbulb", label: "lightbulb", icon: Lightbulb },
-  { value: "shield", label: "shield", icon: Shield },
-  { value: "eye", label: "eye", icon: Eye },
-  { value: "clock", label: "clock", icon: Clock },
-  { value: "check-circle", label: "check circle", icon: CheckCircle },
-  { value: "tag", label: "tag", icon: Tag },
-  { value: "ticket", label: "ticket", icon: Ticket },
-  { value: "code", label: "code", icon: Code },
-  { value: "git-pull-request", label: "git pull request", icon: GitPullRequest },
-  { value: "chart-column-increasing", label: "chart column increasing", icon: ChartColumnIncreasing },
-  { value: "circle-question-mark", label: "circle question mark", icon: CircleQuestionMark },
-  { value: "shield-alert", label: "shield alert", icon: ShieldAlert },
-] satisfies IconColorPickerIconOption[];
-
-export const getIconComponent = (
-  name: string | null | undefined,
-  iconOptions: readonly IconColorPickerIconOption[] = optionIcons,
-): ComponentType => {
-  const normalizedName = (name ?? "circle")
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
-    .toLowerCase();
-  const entry = iconOptions.find((icon) => icon.value === normalizedName);
-  return entry?.icon ?? Circle;
-};
+const IconCell = chakra("button", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxSize: "tag-icon-cell",
+    borderRadius: "compact",
+    color: "fg.muted",
+    cursor: "pointer",
+    _hover: { bg: "bg.hover" },
+  },
+});
 
 export interface IconColorPickerProps {
   color: string;
@@ -116,6 +47,8 @@ export interface IconColorPickerProps {
   onIconChange?: (icon: string | null) => void;
   disabled?: boolean;
   showIcons?: boolean;
+  colorLabel?: string;
+  iconLabel?: string;
   "aria-label"?: string;
 }
 
@@ -129,70 +62,70 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
     onIconChange,
     disabled,
     showIcons = true,
+    colorLabel = "Color",
+    iconLabel = "Icon",
     "aria-label": ariaLabel = "Pick color and icon",
   } = props;
-  const IconComponent = showIcons ? getIconComponent(icon, iconOptions) : Circle;
-  const selectedIcon = icon ?? "circle";
+  const selectedIcon = icon === "circle" ? null : (icon ?? null);
 
   return (
-    <Popover.Root>
+    <Popover.Root positioning={{ placement: "bottom-start" }}>
       <Popover.Trigger asChild>
-        <IconButton size="2xs" variant="ghost" disabled={disabled} aria-label={ariaLabel}>
-          <Icon
-            as={IconComponent}
-            boxSize="14px"
-            color={`${color}.500`}
-            fill={showIcons ? undefined : `${color}.500`}
-          />
-        </IconButton>
+        <SwatchTrigger type="button" disabled={disabled} aria-label={ariaLabel}>
+          <TagSwatch color={color} icon={icon} iconOptions={iconOptions} showIcon={showIcons} />
+        </SwatchTrigger>
       </Popover.Trigger>
-      <Popover.Positioner>
-        <Popover.Content w={showIcons ? "320px" : "220px"} p="sm" bg="bg">
-          <Text textStyle="label/S" mb="xs">
-            Color
-          </Text>
-          <Grid
-            templateColumns={showIcons ? "repeat(10, 1fr)" : "repeat(5, 1fr)"}
-            gap="2xs"
-            mb={showIcons ? "md" : "0"}
-          >
-            {colorOptions.map((optionColor) => (
-              <GridItem key={optionColor}>
-                <IconButton
-                  size="2xs"
-                  variant={optionColor === color ? "outline" : "ghost"}
-                  colorPalette={optionColor}
-                  onClick={() => onColorChange(optionColor)}
-                  aria-label={optionColor}
-                >
-                  <Icon as={Circle} boxSize="14px" fill={`${optionColor}.500`} color={`${optionColor}.500`} />
-                </IconButton>
-              </GridItem>
-            ))}
-          </Grid>
-          {showIcons ? (
-            <>
-              <Text textStyle="label/S" mb="xs">
-                Icon
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content width={showIcons ? "tag-picker" : "tag-picker-color-only"} bg="bg.elevated">
+            <Stack gap="compact" p="sm">
+              <Text textStyle="label/S/medium" color="fg.muted">
+                {colorLabel}
               </Text>
-              <Grid templateColumns="repeat(5, 1fr)" gap="2xs">
-                {iconOptions.map((entry) => (
-                  <GridItem key={entry.value ?? "none"}>
-                    <IconButton
-                      size="2xs"
-                      variant={entry.value === selectedIcon ? "outline" : "ghost"}
-                      onClick={() => onIconChange?.(entry.value)}
-                      aria-label={entry.label}
-                    >
-                      <Icon as={entry.icon} boxSize="14px" />
-                    </IconButton>
-                  </GridItem>
+              <Grid templateColumns={`repeat(${showIcons ? 10 : 5}, 1fr)`} gap="2xs" justifyItems="center">
+                {colorOptions.map((optionColor) => (
+                  <ColorDot
+                    key={optionColor}
+                    type="button"
+                    bg={`${optionColor}.500`}
+                    aria-label={optionColor}
+                    aria-pressed={optionColor === color}
+                    data-selected={optionColor === color ? "" : undefined}
+                    onClick={() => onColorChange(optionColor)}
+                  />
                 ))}
               </Grid>
-            </>
-          ) : null}
-        </Popover.Content>
-      </Popover.Positioner>
+              {showIcons ? (
+                <>
+                  <Box borderTop="subtle" />
+                  <Text textStyle="label/S/medium" color="fg.muted">
+                    {iconLabel}
+                  </Text>
+                  <Grid templateColumns="repeat(8, 1fr)" gap="3xs" justifyItems="center">
+                    {iconOptions.map((entry) => {
+                      const selected = entry.value === selectedIcon;
+                      return (
+                        <IconCell
+                          key={entry.value ?? "none"}
+                          type="button"
+                          color={selected ? `${color}.500` : undefined}
+                          bg={selected ? `${color}.500/15` : undefined}
+                          _hover={selected ? { bg: `${color}.500/15` } : undefined}
+                          aria-label={entry.label}
+                          aria-pressed={selected}
+                          onClick={() => onIconChange?.(entry.value)}
+                        >
+                          <Icon as={entry.icon} boxSize="icon-xs" />
+                        </IconCell>
+                      );
+                    })}
+                  </Grid>
+                </>
+              ) : null}
+            </Stack>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
     </Popover.Root>
   );
 };

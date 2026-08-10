@@ -17,6 +17,11 @@
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
   },
+  "nx": {
+    "implicitDependencies": [
+      "@pstdio/ui"
+    ]
+  },
   "scripts": {
     "pstdio": "bun ./src/index.ts",
     "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun ./src/index.ts -- serve --foreground --owner persistent --host 127.0.0.1 & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",

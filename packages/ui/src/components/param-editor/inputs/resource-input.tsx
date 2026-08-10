@@ -2,7 +2,7 @@ import { Box, Flex, Icon, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { getIconComponent } from "../../primitives/icon-color-picker";
+import { getIconComponent } from "../../primitives/icon-options";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ResourceChipList } from "./resource-input-chips";

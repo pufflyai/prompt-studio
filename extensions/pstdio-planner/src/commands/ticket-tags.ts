@@ -123,6 +123,7 @@ export const applyTicketTagDraftCommand = defineCommand({
   title: "Apply ticket tag draft",
   params: {
     tagId: params.text({ label: "Tag", required: true }),
+    name: params.text({ label: "Name", required: false }),
     type: params.text({ label: "Type", required: false }),
     optionsToCreate: params.json<TagDraftOptionCreate[]>(),
     optionsToUpdate: params.json<TagDraftOptionUpdate[]>(),
@@ -134,6 +135,7 @@ export const applyTicketTagDraftCommand = defineCommand({
     return applyTagDraft({
       storage: ctx.storage,
       tagId: ctx.params.tagId,
+      name: ctx.params.name,
       type,
       optionsToCreate: ctx.params.optionsToCreate ?? [],
       optionsToUpdate: ctx.params.optionsToUpdate ?? [],

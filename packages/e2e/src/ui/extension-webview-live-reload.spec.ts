@@ -127,6 +127,24 @@ const enableExtension = async (
   expect(response.ok()).toBe(true);
 };
 
+const getExtensionLoadState = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  installName: string,
+) => {
+  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions`);
+  expect(response.ok()).toBe(true);
+  const body = (await response.json()) as {
+    extensions: Array<{
+      installName: string;
+      lastError?: Record<string, unknown> | null;
+      status: string;
+    }>;
+  };
+  const extension = body.extensions.find((entry) => entry.installName === installName);
+  return { lastError: extension?.lastError ?? null, status: extension?.status };
+};
+
 test.describe("Extension webview live reload", () => {
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
@@ -194,18 +212,17 @@ test.describe("Extension webview live reload", () => {
 
       declareMissingWebviewDependency(extensionRoot);
       await expect
-        .poll(async () => {
-          const response = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
-          const body = (await response.json()) as {
-            extensions: Array<{ installName: string; lastError?: Record<string, unknown> | null; status: string }>;
-          };
-          const extension = body.extensions.find((entry) => entry.installName === installName);
-          return JSON.stringify({ lastError: extension?.lastError, status: extension?.status });
-        })
+        .poll(async () => JSON.stringify(await getExtensionLoadState(request, project.id, installName)))
         .toContain(`Missing extension webview dependencies: ${missingDependencyName}`);
 
       installMissingWebviewDependency(extensionRoot);
 
+      await expect
+        .poll(() => getExtensionLoadState(request, project.id, installName))
+        .toEqual({
+          lastError: null,
+          status: "loaded",
+        });
       await expect(frame.getByRole("heading", { name: recoveredHeading })).toBeVisible({ timeout: 5_000 });
     } finally {
       rmSync(extensionRoot, { recursive: true, force: true });

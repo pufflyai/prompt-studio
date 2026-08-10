@@ -6,6 +6,7 @@ export { AttachmentChip } from "./attachment-chip";
 export { BubbleButton } from "./bubble-button";
 export { BubblePanel } from "./bubble-panel";
 export { DeleteConfirmationModal } from "./delete-confirmation-modal";
+export { handleDialogAcceptShortcut } from "./dialog-accept-shortcut";
 export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "./repo-picker-dialog";
 export { RepoPickerDialog } from "./repo-picker-dialog";
 export type { ResourceActionMenuProps, ResourceContextAction } from "./resource-context-menu";

@@ -1,5 +1,5 @@
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
-import { getIconComponent } from "@/components/primitives/icon-color-picker";
+import { getIconComponent } from "@/components/primitives/icon-options";
 import { type KanbanRendererColumnGroup, orderRows } from "./kanban-renderer-grouping";
 import {
   collectDisplayBadges,

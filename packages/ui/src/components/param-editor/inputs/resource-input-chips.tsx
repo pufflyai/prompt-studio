@@ -1,6 +1,6 @@
 import { Icon, Text, Wrap } from "@chakra-ui/react";
 import { Chip } from "../../primitives/chip";
-import { getIconComponent } from "../../primitives/icon-color-picker";
+import { getIconComponent } from "../../primitives/icon-options";
 import { ResourceBadge } from "../../primitives/resource-badge";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
 

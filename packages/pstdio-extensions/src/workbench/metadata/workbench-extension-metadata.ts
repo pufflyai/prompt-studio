@@ -466,9 +466,20 @@ const toSettingsPanelRecord = (
     scope: panel.contribution.scope,
     title: panel.contribution.title,
     icon: panel.contribution.icon,
+    // Namespaced the same way contributions are, so a panel points at its own
+    // extension's section and never another's.
+    section: panel.contribution.section ? `${panel.name}.${panel.contribution.section}` : undefined,
     webview,
   };
 };
+
+const toSettingsSectionRecord = (section: ExtensionRuntime["settingsSections"][number]) => ({
+  id: section.id,
+  extensionId: section.extensionId,
+  title: section.contribution.title,
+  scope: section.contribution.scope,
+  order: section.contribution.order,
+});
 
 export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
   const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
@@ -517,6 +528,7 @@ export const createWorkbenchExtensionMetadata = (
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
     navigation: [],
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
+    settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
     kanbanRenderers: compact(input.runtime.kanbanRenderers.map(toKanbanRendererRecord)),
     dataTableRenderers: compact(input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),

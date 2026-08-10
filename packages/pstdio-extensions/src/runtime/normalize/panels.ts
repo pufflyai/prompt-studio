@@ -3,6 +3,7 @@ import type {
   RuntimePanelRecord,
   RuntimeRouteRecord,
   RuntimeSettingsPanelRecord,
+  RuntimeSettingsSectionRecord,
   RuntimeTreeItemRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -202,6 +203,20 @@ const reportUnsupportedNavigation = (ext: NormalizedExtension, source: LoadedExt
   }
 };
 
+const registerSettingsSections = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  for (const [localId, section] of Object.entries(source.definition.settingsSections ?? {})) {
+    if (!isRecord(section) || !isLocalizableString(section.title)) continue;
+    runtime.settingsSections.push({
+      id: contributionId(ext, localId),
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: section as RuntimeSettingsSectionRecord["contribution"],
+    });
+  }
+};
+
 const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, panel] of Object.entries(source.definition.settingsPanels ?? {})) {
     if (!isRecord(panel) || !isLocalizableString(panel.title)) continue;
@@ -257,5 +272,6 @@ export const registerPanelContributions = (
   registerRoutes(ext, source, runtime);
   registerTreeItems(ext, source, runtime);
   reportUnsupportedNavigation(ext, source, runtime);
+  registerSettingsSections(ext, source, runtime);
   registerSettingsPanels(ext, source, runtime);
 };

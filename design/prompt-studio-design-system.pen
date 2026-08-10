@@ -11070,6 +11070,453 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "PkDGW",
+              "name": "Row 2",
+              "width": "fill_container",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Z94Lkn",
+                  "name": "Session status on the workspace badge",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Pue5A",
+                      "name": "Card Head",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dyD5o",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Session status on the workspace badge",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "SBjOh",
+                          "name": "Chips",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "RESGp",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "WorkspaceBadge",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "WorkspaceBadge"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GSDft",
+                      "name": "Demo",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nex6y",
+                          "name": "in_progress",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YW3i7",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "in_progress",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "P4B2g",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A1",
+                              "theme": {
+                                "tab-status": "in_progress"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "loader-circle"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A1"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ebnnn",
+                          "name": "awaiting_input",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "TSdau",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "awaiting_input",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "kEbQr",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A2",
+                              "theme": {
+                                "tab-status": "awaiting_input"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "circle-dot"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A2"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q6SNXw",
+                          "name": "queued",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KaPnT",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "queued",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "HdkRK",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A3",
+                              "theme": {
+                                "tab-status": "queued"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "clock-alert"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A3"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XBqPO",
+                          "name": "completed",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "AbxDh",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "completed",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "GExCM",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A4",
+                              "theme": {
+                                "tab-status": "completed"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "circle-check"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A4"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ys9lV",
+                          "name": "failed",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sCVlw",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "failed",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "B5S7iv",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A5",
+                              "theme": {
+                                "tab-status": "failed"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "circle-alert"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A5"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "X4BZN",
+                          "name": "cancelled",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "gVsT3",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "cancelled",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "dJPO8",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A6",
+                              "theme": {
+                                "tab-status": "cancelled"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "circle-stop"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A6"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "bq1hI",
+                          "name": "disconnected",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "zFjoX",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "disconnected",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "dTABP",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A7",
+                              "theme": {
+                                "tab-status": "disconnected"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": true,
+                                  "icon": "circle-pause"
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Z7I3a",
+                          "name": "no session",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "HGmMz",
+                              "name": "Token",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 104,
+                              "content": "no session",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "v8qjub",
+                              "type": "ref",
+                              "ref": "dOjl0",
+                              "name": "A8",
+                              "theme": {
+                                "tab-status": "none"
+                              },
+                              "descendants": {
+                                "ZiLw7": {
+                                  "enabled": false
+                                },
+                                "uNqVT": {
+                                  "icon": "git-branch"
+                                },
+                                "fZiqN": {
+                                  "content": "A8"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "H0wb5g",
+                      "name": "Hint",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Mg8SU",
+                          "name": "I",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "info",
+                          "library": "lucide",
+                          "fill": "$ds-fg-subtle"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZawHK",
+                          "name": "T",
+                          "fill": "$ds-fg-subtle",
+                          "content": "Shows the latest session of the workspace on the badge; selecting it opens that session",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -14235,6 +14682,10 @@
                       "type": "frame",
                       "id": "dOjl0",
                       "name": "cmp/WorkspaceBadge",
+                      "context": "Workspace badge. Optional leading session indicator shows the latest session status of the workspace it represents, themed by the tab-status axis and selectable to open that session; disabled when the workspace has no session.",
+                      "theme": {
+                        "tab-status": "none"
+                      },
                       "reusable": true,
                       "height": 20,
                       "fill": "$ds-surface",
@@ -14249,6 +14700,19 @@
                       ],
                       "alignItems": "center",
                       "children": [
+                        {
+                          "type": "icon",
+                          "id": "ZiLw7",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Session Indicator",
+                          "enabled": false,
+                          "width": 12,
+                          "height": 12,
+                          "icon": "circle-dashed",
+                          "library": "lucide",
+                          "fill": "$tab-status-fg"
+                        },
                         {
                           "type": "icon",
                           "id": "uNqVT",
@@ -148799,6 +149263,190 @@
                                       "width": 15,
                                       "height": 15,
                                       "icon": "users",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bVEVI",
+                              "name": "Grid Row 6",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "lZpEj",
+                                  "name": "Cell component",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "f0Hguh",
+                                      "name": "CellIcon component",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "component",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cr3Yy",
+                                  "name": "Cell square-kanban",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "TVSji",
+                                      "name": "CellIcon square-kanban",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "square-kanban",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lMmnb",
+                                  "name": "Cell git-commit-horizontal",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "d28W9",
+                                      "name": "CellIcon git-commit-horizontal",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "git-commit-horizontal",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "QaIcZ",
+                                  "name": "Cell inbox",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "zCKbK",
+                                      "name": "CellIcon inbox",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "inbox",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "bN0Fj",
+                                  "name": "Cell list-checks",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "O3Rizu",
+                                      "name": "CellIcon list-checks",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "list-checks",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "y5D1E",
+                                  "name": "Cell archive",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Awy3a",
+                                      "name": "CellIcon archive",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "archive",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "jWix0",
+                                  "name": "Cell link",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "YgYgV",
+                                      "name": "CellIcon link",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "link",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "z3cAlg",
+                                  "name": "Cell settings",
+                                  "width": 28,
+                                  "height": 28,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "kgs1Q",
+                                      "name": "CellIcon settings",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "settings",
                                       "library": "lucide",
                                       "fill": "$ds-fg-muted"
                                     }

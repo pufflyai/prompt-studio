@@ -178,10 +178,10 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
 
   await sidenav.getByRole("option", { name: "Settings", exact: true }).click();
   const settingsDialog = page.getByRole("dialog").last();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket statuses", exact: true })).toBeVisible();
+  await expect(settingsDialog.getByRole("option", { name: "Ticket status", exact: true })).toBeVisible();
   await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();
-  await settingsDialog.getByRole("option", { name: "Ticket statuses", exact: true }).click();
+  await settingsDialog.getByRole("option", { name: "Ticket status", exact: true }).click();
   await expect(
-    page.frameLocator('iframe[title="Ticket statuses"]').getByText("Ticket statuses", { exact: true }),
+    page.frameLocator('iframe[title="Ticket status"]').getByText("Ticket status", { exact: true }),
   ).toBeVisible();
 });

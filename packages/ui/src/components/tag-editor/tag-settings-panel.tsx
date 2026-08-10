@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { TagEditor } from "./tag-editor";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
+import { TagEditorSaveBar } from "./tag-editor-save-bar";
 
 export interface SaveTagSettingsInput<TValue> {
   deletedIds: Set<string>;
@@ -13,9 +14,8 @@ export interface SaveTagSettingsInput<TValue> {
 type EditorLabels = Pick<
   TagEditorProps,
   | "actionOptions"
-  | "actionsColumnLabel"
   | "addLabel"
-  | "addPlaceholder"
+  | "addName"
   | "colorOptions"
   | "deleteButtonText"
   | "deleteHeadline"
@@ -24,7 +24,6 @@ type EditorLabels = Pick<
   | "iconOptions"
   | "showIcons"
   | "title"
-  | "valueColumnLabel"
 >;
 
 type SortableValue = { id: string; sortOrder: number };
@@ -32,6 +31,8 @@ type SortableValue = { id: string; sortOrder: number };
 export interface TagSettingsPanelProps<TValue extends SortableValue> extends EditorLabels {
   errorTitle: string;
   loadingText?: string;
+  resetLabel?: string;
+  saveLabel?: string;
   /** Loaded values; pass undefined while the initial load is pending. */
   values: TValue[] | undefined;
   /** Load/save error surfaced by the host's data layer. */
@@ -78,6 +79,8 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
   const {
     errorTitle,
     loadingText = "Loading...",
+    resetLabel,
+    saveLabel,
     values: loadedValues,
     loadError,
     onSave,
@@ -120,7 +123,7 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
     setDrafts(drafts.filter((draft) => draft.id !== value.id));
   };
 
-  const handleCancel = () => {
+  const handleReset = () => {
     setDrafts(toEditorValues(values, toEditorValue));
     setDeletedIds(new Set());
     setSaveError(null);
@@ -146,8 +149,16 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
           onDeleteValue={handleDeleteValue}
           hasChanges={hasChanges}
           isSaving={isSaving}
-          onSave={() => void handleSave()}
-          onCancel={handleCancel}
+          headerActions={
+            <TagEditorSaveBar
+              hasChanges={hasChanges}
+              isSaving={isSaving}
+              resetLabel={resetLabel}
+              saveLabel={saveLabel}
+              onSave={() => void handleSave()}
+              onReset={handleReset}
+            />
+          }
         />
       )}
     </Stack>

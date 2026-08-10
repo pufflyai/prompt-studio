@@ -34,11 +34,20 @@ export default defineExtension({
 
   commands: plannerCommands,
 
+  settingsSections: {
+    planner: {
+      title: l10n("settingsSections.planner.title", "Planner"),
+      scope: "project",
+      order: 30,
+    },
+  },
+
   settingsPanels: {
     ticketStatuses: {
-      title: l10n("settingsPanels.ticketStatuses.title", "Ticket statuses"),
+      title: l10n("settingsPanels.ticketStatuses.title", "Ticket status"),
       target: "workbench.settings",
       scope: "project",
+      section: "planner",
       icon: "list-checks",
       webview: {
         entry: packageAsset("./src/views/settings-panel.tsx", import.meta.url),
@@ -49,6 +58,7 @@ export default defineExtension({
       title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
       target: "workbench.settings",
       scope: "project",
+      section: "planner",
       icon: "tag",
       webview: {
         entry: packageAsset("./src/views/tags-settings-panel.tsx", import.meta.url),

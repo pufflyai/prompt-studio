@@ -6,8 +6,8 @@ import { TagEditor } from "@/components/tag-editor";
 import { GalleryCard } from "../gallery-frame";
 
 const tagValues = [
-  { id: "blocked", name: "blocked", color: "red", icon: "alert-triangle", sortOrder: 10 },
-  { id: "ready", name: "ready", color: "green", icon: "check-circle", sortOrder: 20, isDefault: true },
+  { id: "blocked", name: "blocked", color: "red", icon: "flame", sortOrder: 10 },
+  { id: "ready", name: "ready", color: "green", icon: "status-done", sortOrder: 20, isDefault: true },
   { id: "review", name: "review", color: "purple", icon: "eye", sortOrder: 30 },
 ] satisfies TagEditorValue[];
 
@@ -22,9 +22,6 @@ export const SettingsCompositeCards = () => {
             values={tagValues}
             onValuesChange={() => undefined}
             showDefault
-            hasChanges={false}
-            onSave={() => undefined}
-            onCancel={() => undefined}
           />
         </Box>
       </GalleryCard>

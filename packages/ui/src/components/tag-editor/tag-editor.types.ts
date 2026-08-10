@@ -1,4 +1,5 @@
-import type { IconColorPickerIconOption } from "@/components/primitives/icon-color-picker";
+import type { ReactNode } from "react";
+import type { IconColorPickerIconOption } from "@/components/primitives/icon-options";
 
 export interface TagEditorValue {
   id: string;
@@ -17,31 +18,30 @@ export interface TagEditorAction {
 }
 
 export interface TagEditorProps {
-  title: string;
-  description?: string;
   values: TagEditorValue[];
   onValuesChange: (values: TagEditorValue[]) => void;
-  onSave: () => void | Promise<void>;
-  onCancel: () => void;
   onDeleteValue?: (value: TagEditorValue) => void;
   onSetDefault?: (value: TagEditorValue) => void;
+  /** Enables inline renaming of the tag definition itself. */
+  onTitleChange?: (title: string) => void;
+  title?: string;
+  description?: string;
+  /** Rendered on the right of the header row, e.g. a mode toggle and a delete action. */
+  headerActions?: ReactNode;
+  /** Marks the heading with the unsaved-changes asterisk. */
   hasChanges?: boolean;
   isSaving?: boolean;
   addLabel?: string;
-  addPlaceholder?: string;
+  /** Name given to a freshly added option before it is renamed inline. */
+  addName?: string;
   actionOptions?: TagEditorAction[];
-  actionsColumnLabel?: string;
-  cancelLabel?: string;
   defaultAddColor?: string;
   defaultAddIcon?: string | null;
-  defaultColumnLabel?: string;
   deleteButtonText?: string;
   deleteHeadline?: string;
   deleteNotificationText?: (value: TagEditorValue) => string;
   colorOptions?: readonly string[];
   iconOptions?: readonly IconColorPickerIconOption[];
-  saveLabel?: string;
   showDefault?: boolean;
   showIcons?: boolean;
-  valueColumnLabel?: string;
 }

@@ -22,6 +22,7 @@ import type {
   ParamObjectSchema,
   RouteContribution,
   SettingsPanelContribution,
+  SettingsSectionContribution,
   SkillContribution,
   TemplateContribution,
   TemplateTypeContribution,
@@ -190,6 +191,15 @@ export interface RuntimeSettingsPanelRecord {
   name: string;
   sourcePath: string;
   contribution: SettingsPanelContribution;
+}
+
+export interface RuntimeSettingsSectionRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: SettingsSectionContribution;
 }
 
 export interface RuntimeKanbanRendererRecord {
@@ -398,6 +408,7 @@ export interface ExtensionRuntime {
   routes: RuntimeRouteRecord[];
   navigation: never[];
   treeItems: RuntimeTreeItemRecord[];
+  settingsSections: RuntimeSettingsSectionRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
   kanbanRenderers: RuntimeKanbanRendererRecord[];
   dataTableRenderers: RuntimeDataTableRendererRecord[];
