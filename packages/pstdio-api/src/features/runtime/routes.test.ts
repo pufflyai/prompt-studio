@@ -69,6 +69,25 @@ describe("runtime control routes", () => {
     });
   });
 
+  test("provisions browser cookie auth without exposing the bearer token to JavaScript", async () => {
+    const { app } = createHarness();
+    const provision = await app.request("http://127.0.0.1:43123/runtime/browser-session", {
+      method: "POST",
+      headers: { authorization: "Bearer runtime-secret", origin: "http://127.0.0.1:43123" },
+    });
+
+    expect(provision.status).toBe(204);
+    expect(await provision.text()).toBe("");
+    const cookie = provision.headers.get("set-cookie")!;
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("SameSite=Strict");
+
+    const authenticated = await app.request("http://127.0.0.1:43123/runtime/ready", {
+      headers: { cookie: cookie.split(";", 1)[0]!, origin: "http://127.0.0.1:43123" },
+    });
+    expect(authenticated.status).toBe(200);
+  });
+
   test("promotes desktop ownership atomically and never demotes", async () => {
     const { host, request } = createHarness();
     const promote = () =>

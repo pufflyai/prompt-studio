@@ -16,14 +16,17 @@ export type PstdioConfig = {
 
 export const readRuntimeConfig = (): PstdioConfig | null => {
   const w = globalThis as unknown as { __PSTDIO_CONFIG__?: PstdioConfig };
-  return w.__PSTDIO_CONFIG__ ?? null;
+  if (w.__PSTDIO_CONFIG__) return w.__PSTDIO_CONFIG__;
+
+  const encodedConfig = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
+  return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as PstdioConfig) : null;
 };
 
 const resolveApiBaseUrl = () => {
   const runtimeConfig = readRuntimeConfig();
 
-  if (runtimeConfig?.apiBaseUrl) {
-    return runtimeConfig.apiBaseUrl.replace(/\/$/, "");
+  if (runtimeConfig) {
+    return runtimeConfig.apiBaseUrl?.replace(/\/$/, "") ?? "";
   }
 
   const envBaseUrl = import.meta.env?.VITE_API_BASE_URL;

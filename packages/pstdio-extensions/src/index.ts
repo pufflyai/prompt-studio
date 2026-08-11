@@ -27,6 +27,7 @@ export {
   checkExtensions,
   createCommandRunner,
   createDiagnostic,
+  createExtensionProcessEnvironment,
   DEFAULT_MAX_COMMAND_DEPTH,
   type DependencyInstallReport,
   discoverExtensionPackages,

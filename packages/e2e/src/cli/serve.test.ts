@@ -9,6 +9,13 @@ import { TEST_TIMEOUT } from "./timeouts";
 const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
 const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-home-"));
 
+const runtimeAuthorization = () => {
+  const descriptor = JSON.parse(readFileSync(join(SHARED_PSTDIO_HOME, "runtime.json"), "utf8")) as {
+    token: string;
+  };
+  return { authorization: `Bearer ${descriptor.token}` };
+};
+
 const spawnServe = (port: number, storagePath: string, dbPath = ":memory:", owner = "persistent") => {
   const child = spawn("bun", ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", owner, "--port", String(port)], {
     cwd: join(import.meta.dirname, "../.."),
@@ -179,7 +186,7 @@ describe("pstdio serve", () => {
       const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-"));
       child = await startServe(port, storagePath);
 
-      const res = await fetch(`http://localhost:${port}/v1/projects`);
+      const res = await fetch(`http://localhost:${port}/v1/projects`, { headers: runtimeAuthorization() });
       expect(res.ok).toBe(true);
 
       const body = (await res.json()) as unknown[];
@@ -211,7 +218,7 @@ describe("pstdio serve", () => {
 
       const createRes = await fetch(`http://localhost:${port}/v1/projects`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { ...runtimeAuthorization(), "content-type": "application/json" },
         body: JSON.stringify({ name: "serve-test" }),
       });
       expect(createRes.ok).toBe(true);
@@ -219,7 +226,7 @@ describe("pstdio serve", () => {
       const project = (await createRes.json()) as { id: string; name: string };
       expect(project.name).toBe("serve-test");
 
-      const listRes = await fetch(`http://localhost:${port}/v1/projects`);
+      const listRes = await fetch(`http://localhost:${port}/v1/projects`, { headers: runtimeAuthorization() });
       const projects = (await listRes.json()) as { id: string; name: string }[];
       expect(projects.some((p) => p.name === "serve-test")).toBe(true);
     },

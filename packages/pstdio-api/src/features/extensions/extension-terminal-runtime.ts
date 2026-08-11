@@ -7,6 +7,7 @@ import type {
   TerminalSessionHandle,
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
+import { createExtensionProcessEnvironment } from "pstdio-extensions";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
@@ -86,7 +87,7 @@ const readForegroundProcessName = (shellPid: number, fallback: string) => {
 };
 
 const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
-  const env = { ...process.env, ...requestEnv };
+  const env = createExtensionProcessEnvironment(process.env, requestEnv);
   const hasExplicitTerm = Boolean(requestEnv?.TERM);
   const hasExplicitColorTerm = Boolean(requestEnv?.COLORTERM);
 

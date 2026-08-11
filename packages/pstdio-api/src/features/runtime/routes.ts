@@ -1,6 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import { isRuntimeBearerAuthorized } from "./runtime-auth";
+import {
+  isRuntimeBearerAuthorized,
+  isRuntimeOriginAllowed,
+  isRuntimeRequestAuthorized,
+  runtimeSessionCookie,
+} from "./runtime-auth";
+
+export { runtimeSessionCookie } from "./runtime-auth";
 
 export type RuntimeOwnerType = "desktop" | "persistent";
 
@@ -55,10 +62,21 @@ const readJson = async (request: Request) => {
 
 export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  const security = { origin: deps.host.origin, token: deps.host.token };
 
   routes.use("*", async (c, next) => {
-    if (!isRuntimeBearerAuthorized(c.req.raw, deps.host.token)) return c.json({ error: "Unauthorized" }, 401);
+    if (!isRuntimeOriginAllowed(c.req.raw, security)) return c.json({ error: "Forbidden" }, 403);
+    const browserProvision = c.req.path.endsWith("/browser-session");
+    const authorized = browserProvision
+      ? isRuntimeBearerAuthorized(c.req.raw, security)
+      : isRuntimeRequestAuthorized(c.req.raw, security);
+    if (!authorized) return c.json({ error: "Unauthorized" }, 401);
     await next();
+  });
+
+  routes.post("/browser-session", (c) => {
+    c.header("set-cookie", runtimeSessionCookie(deps.host.token));
+    return c.body(null, 204);
   });
 
   routes.get("/ready", (c) =>

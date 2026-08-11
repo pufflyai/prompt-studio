@@ -238,6 +238,7 @@ export const createApp = async (options: AppOptions) => {
   const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
   const { db, close: closeDb } = await openDb(dbPath);
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
+  const securityToken = apiToken ?? options.runtimeHost?.token;
   const app = new OpenAPIHono<AppBindings>();
 
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
@@ -428,7 +429,14 @@ export const createApp = async (options: AppOptions) => {
     await createSessionScheduler(deps).drainQueue(input);
   };
 
-  registerApi(app, deps, { apiToken });
+  registerApi(app, deps, {
+    security: securityToken
+      ? {
+          token: securityToken,
+          ...(options.runtimeHost ? { origin: options.runtimeHost.origin } : {}),
+        }
+      : undefined,
+  });
 
   const startupAbort = new AbortController();
   const startupDone = runStartupTasks(deps, startupAbort.signal, {

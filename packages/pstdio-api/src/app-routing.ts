@@ -1,5 +1,6 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
+import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionRoutes } from "./features/extensions/routes";
@@ -8,6 +9,12 @@ import { createHealthRoutes } from "./features/health/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createRuntimeRoutes } from "./features/runtime/routes";
+import {
+  isRuntimeOriginAllowed,
+  isRuntimeRequestAuthorized,
+  type RuntimeSecurity,
+  runtimeOrigin,
+} from "./features/runtime/runtime-auth";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
@@ -19,8 +26,39 @@ import { apiLogger } from "./lib/logger";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
-const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, apiToken: string | undefined) => {
-  app.use("*", cors());
+const isPublicPath = (path: string) => path === "/healthz" || path === "/ping";
+
+const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity) => {
+  app.use("*", async (c, next) => {
+    if (isPublicPath(c.req.path)) {
+      await next();
+      return;
+    }
+
+    if (!isRuntimeOriginAllowed(c.req.raw, security)) return c.json({ error: "Forbidden" }, 403);
+
+    const origin = c.req.header("origin");
+    const expectedOrigin = runtimeOrigin(security);
+    if (c.req.method === "OPTIONS") {
+      if (!origin || origin !== expectedOrigin) return c.json({ error: "Forbidden" }, 403);
+      c.header("access-control-allow-origin", origin);
+      c.header("access-control-allow-credentials", "true");
+      c.header("access-control-allow-headers", "content-type");
+      c.header("access-control-allow-methods", "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS");
+      c.header("vary", "Origin");
+      return c.body(null, 204);
+    }
+
+    await next();
+    if (origin && origin === expectedOrigin) {
+      c.header("access-control-allow-origin", origin);
+      c.header("access-control-allow-credentials", "true");
+      c.header("vary", "Origin");
+    }
+  });
+};
+
+const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity | undefined) => {
   app.use("*", async (c, next) => {
     const start = performance.now();
     try {
@@ -40,15 +78,19 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, apiToken: string |
     }
   });
 
-  if (!apiToken) return;
+  if (!security) {
+    app.use("*", cors());
+    return;
+  }
 
-  app.use("/v1/*", async (c, next) => {
-    const authorization = c.req.header("authorization");
-    if (!authorization || !/^bearer\s+/i.test(authorization)) {
-      return c.json({ error: "Unauthorized" }, 401);
+  registerSecureTransport(app, security);
+
+  app.use("*", async (c, next) => {
+    if (isPublicPath(c.req.path)) {
+      await next();
+      return;
     }
-    const token = authorization.replace(/^bearer\s+/i, "").trim();
-    if (token !== apiToken) return c.json({ error: "Unauthorized" }, 401);
+    if (!isRuntimeRequestAuthorized(c.req.raw, security)) return c.json({ error: "Unauthorized" }, 401);
     await next();
   });
 };
@@ -70,31 +112,33 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createTerminalRoutes(deps));
 };
 
-const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>) => {
+const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity | undefined) => {
   app.onError((err, c) => {
+    const secrets = security ? [security.token] : [];
+    const message = redactSensitiveText(err.message || "Internal server error", secrets);
     const entry = {
       level: "error" as const,
       timestamp: new Date().toISOString(),
       method: c.req.method,
       path: c.req.path,
       status: 500,
-      message: err.message,
-      stack: err.stack,
+      message,
+      stack: err.stack ? redactSensitiveText(err.stack, secrets) : undefined,
     };
 
     apiLogger.error({ event: "api.request.error", ...entry }, "API request failed");
 
-    return c.json({ code: "internal_server_error", error: err.message || "Internal server error" }, 500);
+    return c.json({ code: "internal_server_error", error: message }, 500);
   });
 };
 
 export const registerApi = (
   app: OpenAPIHono<AppBindings>,
   deps: RouteDeps,
-  input: { apiToken: string | undefined },
+  input: { security: RuntimeSecurity | undefined },
 ) => {
-  registerApiMiddleware(app, input.apiToken);
+  registerApiMiddleware(app, input.security);
   registerApiRoutes(app, deps);
-  registerApiErrorHandler(app);
+  registerApiErrorHandler(app, input.security);
   swagger(app);
 };

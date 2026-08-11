@@ -243,6 +243,7 @@ describe("installExtensionSource", () => {
     expect(existsSync(join(pstdioHome, "extensions", "source-extension", "extension.ts"))).toBe(true);
     expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
       cwd: join(pstdioHome, "extensions", "source-extension"),
+      env: {},
     });
   });
 
@@ -256,13 +257,14 @@ describe("installExtensionSource", () => {
 
     await installExtensionSource({
       source,
-      env: { PSTDIO_HOME: pstdioHome },
+      env: { PATH: "/bin", PSTDIO_API_TOKEN: "runtime-secret", PSTDIO_HOME: pstdioHome },
       homedir: () => "/unused",
       runCommand,
     });
 
     expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
       cwd: join(pstdioHome, "extensions", "source-extension"),
+      env: { PATH: "/bin" },
     });
   });
 

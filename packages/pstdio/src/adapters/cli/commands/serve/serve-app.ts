@@ -1,5 +1,5 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
-import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
+import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
@@ -95,11 +95,16 @@ const createRequestHandler = (
   app: AppHandle["app"],
   assets: Map<string, Blob>,
   deps: Pick<ServeAppDeps, "injectConfig" | "resolveMimeType">,
+  runtimeHost: RuntimeHost | undefined,
 ) => {
-  const serveHtml = (_request: Request, blob: Blob) =>
+  const serveHtml = (request: Request, blob: Blob) =>
     blob.text().then((html) => {
       const injected = deps.injectConfig(html, { version: CLI_VERSION });
-      return new Response(injected, { headers: { "Content-Type": "text/html" } });
+      const headers = new Headers({ "Content-Type": "text/html" });
+      if (runtimeHost?.origin() === new URL(request.url).origin) {
+        headers.set("set-cookie", runtimeSessionCookie(runtimeHost.token));
+      }
+      return new Response(injected, { headers });
     });
 
   const serveAsset = (request: Request, assetPath: string, blob: Blob) => {
@@ -224,7 +229,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
         idleTimeout: 20,
         hostname: host,
         port,
-        fetch: createRequestHandler(app, assets, deps),
+        fetch: createRequestHandler(app, assets, deps, runtimeHost),
         websocket: apiWebSocket,
       });
 

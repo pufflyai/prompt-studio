@@ -287,6 +287,65 @@ describe("serveApp WebSocket transport", () => {
 });
 
 describe("serveApp dashboard config", () => {
+  it("bootstraps exact-origin browser auth with an HttpOnly strict cookie", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-dashboard-auth-"));
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async (host) => ({
+          app: {
+            fetch: () =>
+              new Response(
+                JSON.stringify({
+                  instanceId: host!.instanceId,
+                  ok: true,
+                  ownerType: host!.ownerType(),
+                  protocolVersion: 1,
+                }),
+              ),
+          },
+          close: async () => {},
+        }),
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map(),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: (options) => {
+          capturedFetch = options.fetch;
+          return { port: 43123 } as ReturnType<typeof Bun.serve>;
+        },
+        onSignal: () => {},
+        offSignal: () => {},
+        onFatal: () => {},
+        offFatal: () => {},
+        log: () => {},
+      });
+
+      await serveApp({
+        descriptorPath: join(root, "runtime.json"),
+        host: "127.0.0.1",
+        instanceId: "runtime-one",
+        ownerType: "persistent",
+        port: 0,
+        token: "runtime-secret",
+      });
+
+      const server = {} as Bun.Server<undefined>;
+      const response = await capturedFetch?.call(server, new Request("http://127.0.0.1:43123/"), server);
+      const foreign = await capturedFetch?.call(server, new Request("http://localhost:43123/"), server);
+
+      expect(response?.headers.get("set-cookie")).toBe(
+        "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
+      );
+      expect(await response?.text()).not.toContain("runtime-secret");
+      expect(foreign?.headers.get("set-cookie")).toBeNull();
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("does not inject an absolute apiBaseUrl into the dashboard config", async () => {
     let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
     let injectedApiBaseUrl: string | undefined;

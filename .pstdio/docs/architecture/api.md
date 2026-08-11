@@ -47,8 +47,26 @@ and scheduled jobs; `/runtime/promote` changes desktop ownership to persistent o
 performs the activity-gated graceful shutdown. Every lifecycle mutation names the expected `instanceId` so a stale
 client cannot act on a replacement process. `/runtime/events` announces intentional shutdown before disconnect.
 
-The runtime descriptor token is required for every `/runtime` route. Runtime clients send it as
-`Authorization: Bearer <token>`; lifecycle mutations also name the expected instance identity.
+### Local transport security
+
+The runtime descriptor token is required for `/v1`, `/readyz`, and every `/runtime` route. CLI and other
+non-browser clients send it as `Authorization: Bearer <token>`; the SDK reads `PSTDIO_API_TOKEN` when callers do not
+pass a token explicitly. Tokens never belong in request URLs, page titles, analytics arguments, or diagnostic text.
+
+Browser authentication uses a non-persistent `pstdio_runtime_session` cookie with `Path=/`, `HttpOnly`, and
+`SameSite=Strict`. Loading dashboard HTML from the descriptor's exact origin bootstraps that cookie without placing
+the bearer token in HTML or JavaScript. The authenticated browser session then carries the same cookie across REST,
+SSE, and WebSocket handshakes. The `/runtime/browser-session` endpoint provides the equivalent bearer-authenticated
+cookie provisioning contract for the desktop session owner.
+
+Browser requests and credentialed CORS preflights must use the descriptor's exact
+`http://127.0.0.1:<ephemeral-port>` origin. Wildcard CORS is disabled whenever runtime authentication is configured;
+foreign origins receive `403`, and missing or invalid credentials receive `401`. `/healthz` and `/ping` remain public
+because they expose only liveness. `/readyz` is protected because it reports backend readiness.
+
+Runtime tokens and common credential-shaped values are redacted from structured logs, API errors, startup
+diagnostics, and CLI failure records. Mutating-command analytics record the normalized command name, duration, and
+result but never raw arguments.
 
 ## Lifecycle
 
