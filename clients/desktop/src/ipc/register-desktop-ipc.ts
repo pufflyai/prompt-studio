@@ -11,6 +11,7 @@ type DesktopIpcOptions = {
   confirmQuit: () => Promise<void>;
   copyDiagnostics: () => void;
   getState: () => DesktopState;
+  getWorkbenchState: () => Record<string, string>;
   ipcMain: IpcMain;
   lifecycleUrl: string;
   openLogs: () => void;
@@ -18,6 +19,7 @@ type DesktopIpcOptions = {
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
   runtimeOrigin: () => string | null;
+  setWorkbenchStateItem: (key: string, value: string | null) => void;
   window: BrowserWindow;
 };
 
@@ -59,6 +61,13 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.copyDiagnostics, options.copyDiagnostics);
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
   handle(DESKTOP_CHANNELS.quitApp, options.quitApp);
+  handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
+  handle(DESKTOP_CHANNELS.setWorkbenchStateItem, (key, value) => {
+    if (typeof key !== "string" || (typeof value !== "string" && value !== null)) {
+      throw new Error("Invalid desktop workbench state update");
+    }
+    options.setWorkbenchStateItem(key, value);
+  });
 
   return () => {
     for (const channel of Object.values(DESKTOP_CHANNELS)) options.ipcMain.removeHandler(channel);

@@ -89,7 +89,8 @@ the target artifacts are eligible for publication:
   and the runtime credential is absent from HTML, URLs, and JavaScript cookies;
 - `pst serve` promotes ownership without changing the runtime PID, closing the
   desktop detaches, and a warm relaunch reaches the same persistent runtime
-  within three seconds with project data intact;
+  within three seconds with project data and the selected workbench resource
+  intact;
 - `pst close` announces an intentional shutdown, removes the matching descriptor,
   and closes the connected desktop; and
 - an injected sidecar exit displays recovery within 500 milliseconds, then Retry

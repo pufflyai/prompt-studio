@@ -6,5 +6,5 @@ export default defineConfig({
   testMatch: "packaged-app.spec.ts",
   workers: 1,
   fullyParallel: false,
-  reporter: [["line"], ["json", { outputFile: "test-results/packaged-desktop.json" }]],
+  reporter: [["line"], ["json", { outputFile: "test-results/packaged-release-readiness.json" }]],
 });

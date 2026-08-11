@@ -23,7 +23,7 @@ A persistent runtime is detached. Ownership is rediscovered immediately before q
 
 The workbench uses a dedicated session partition without the `persist:` prefix. Before dashboard load, Electron clears old cookies and calls the bearer-authenticated browser-session endpoint. The response provisions the session-only HttpOnly, same-origin, `SameSite=Strict` cookie; the descriptor token never crosses the preload boundary.
 
-The ephemeral browser session deliberately discards credentials and browser storage between launches. Runtime-served dashboard metadata also forces API and sync requests to remain same-origin, even when a source build supplied a different `VITE_API_BASE_URL`.
+The ephemeral browser session deliberately discards credentials and browser storage between launches. Desktop keeps non-secret workbench choices, such as the selected project and last resource, in Electron's user-data directory and exposes only typed get/set capabilities for them. The dashboard uses that store in Electron and keeps `localStorage` in a normal browser. Runtime-served dashboard metadata also forces API and sync requests to remain same-origin, even when a source build supplied a different `VITE_API_BASE_URL`.
 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
@@ -117,7 +117,7 @@ bun run --cwd clients/desktop make -- --skip-package
 bun run --cwd clients/desktop verify:fuses
 ```
 
-The source Electron suite starts isolated temporary homes and a real Electron process. It checks authenticated attachment, the sandboxed/frozen preload boundary, ephemeral cookie storage, denied popups and permissions, single-instance focus, persistent-runtime detach, and actionable recovery. The packaged suite launches the produced application itself over the Chromium debugging protocol without enabling Electron's disabled Node inspector. It measures the cold-start, warm-attach, and crash-recovery budgets; creates and lists a project through the HttpOnly browser session and descriptor-bearer CLI; promotes ownership without restarting the runtime; proves persistent detach and data persistence; exercises intentional `pst close`; and retries an unexpected sidecar exit without relaunching Electron.
+The source Electron suite starts isolated temporary homes and a real Electron process. It checks authenticated attachment, the sandboxed/frozen preload boundary, ephemeral cookie storage, denied popups and permissions, single-instance focus, persistent-runtime detach, and actionable recovery. The packaged suite launches the produced application itself over the Chromium debugging protocol without enabling Electron's disabled Node inspector. It measures the cold-start, warm-attach, and crash-recovery budgets; creates and lists a project through the HttpOnly browser session and descriptor-bearer CLI; promotes ownership without restarting the runtime; proves persistent detach plus project and workbench-state restoration; exercises intentional `pst close`; and retries an unexpected sidecar exit without relaunching Electron.
 
 Run `bun run --cwd scripts verify:packages` whenever packaged defaults change. It verifies the compiled runtime's embedded dashboard, migrations, built-in extensions, and host-platform runtime behavior.
 

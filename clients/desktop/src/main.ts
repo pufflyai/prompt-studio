@@ -18,6 +18,7 @@ import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-
 import { focusPrimaryWindow } from "./security/apply-window-security";
 import { LIFECYCLE_SCHEME } from "./windows/lifecycle-protocol";
 import { DesktopWindowController } from "./windows/window-controller";
+import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
 
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 const descriptorPath = resolvePstdioRuntimeDescriptorPath();
@@ -207,6 +208,7 @@ const confirmQuit = async () => {
 };
 
 const bootstrap = async () => {
+  const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       createApplicationMenuTemplate(process.platform, () => {
@@ -257,6 +259,8 @@ const bootstrap = async () => {
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
     quitApp: requestQuit,
+    getWorkbenchState: () => workbenchState.getAll(),
+    setWorkbenchStateItem: (key, value) => workbenchState.setItem(key, value),
   });
   await startRuntime();
 };

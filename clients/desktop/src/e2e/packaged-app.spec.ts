@@ -83,6 +83,20 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     first = await launchPackagedApp(home);
     const created = await createProjectThroughBrowser(first, "Relaunch persistence project");
     expect(created).toMatchObject({ status: 201 });
+    const projectId = created.body.id;
+    expect(projectId).toBeTruthy();
+    await first.page.getByRole("option", { name: /Workspaces/ }).click();
+    await expect(first.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
+    await expect(first.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await expect
+      .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
+      .toMatchObject({ "dashboard-wb:selected-project:global": projectId });
+    const firstState = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
+    const lastResource = firstState[`dashboard-wb:last-resource:${projectId}`];
+    expect(JSON.parse(lastResource ?? "null")).toMatchObject({
+      id: "workspaces",
+      kind: "dashboard-view",
+    });
 
     const originalPid = first.runtime.pid;
     expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
@@ -106,9 +120,15 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
+    expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
+      [`dashboard-wb:last-resource:${projectId}`]: lastResource,
+      "dashboard-wb:selected-project:global": projectId,
+    });
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
+    await expect(second.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
+    await expect(second.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
 
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(second.child);

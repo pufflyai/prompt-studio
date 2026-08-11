@@ -16,6 +16,8 @@ export interface PromptStudioDesktopApi {
   copyDiagnostics: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
   quitApp: () => Promise<void>;
+  getWorkbenchState: () => Promise<Record<string, string>>;
+  setWorkbenchStateItem: (key: string, value: string | null) => Promise<void>;
 }
 
 export const DESKTOP_CHANNELS = {
@@ -29,4 +31,6 @@ export const DESKTOP_CHANNELS = {
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
   checkForUpdates: "pstdio:desktop:check-for-updates",
   quitApp: "pstdio:desktop:quit-app",
+  getWorkbenchState: "pstdio:desktop:get-workbench-state",
+  setWorkbenchStateItem: "pstdio:desktop:set-workbench-state-item",
 } as const;
