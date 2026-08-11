@@ -53,6 +53,11 @@ const installed = {
     templates: [],
     skills: [],
     diagnostics: [],
+    hostCompatibility: {
+      status: "verified" as const,
+      host: { host: "dashboard" as const, hostVersion: "0.25.2", capabilities: {} },
+      diagnostics: [],
+    },
   },
 };
 

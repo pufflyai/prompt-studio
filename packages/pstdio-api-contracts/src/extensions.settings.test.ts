@@ -66,6 +66,11 @@ describe("extension settings contracts", () => {
         templates: [],
         skills: [],
         diagnostics: [],
+        hostCompatibility: {
+          status: "verified",
+          host: { host: "dashboard", hostVersion: "0.25.2", capabilities: {} },
+          diagnostics: [],
+        },
       }),
     ).toMatchObject({
       settingsDefinitions: [definition],

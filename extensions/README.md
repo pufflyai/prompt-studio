@@ -41,6 +41,8 @@ After install, verify with:
 pst extensions check
 ```
 
+`pst extensions check` validates the extension contract and the dashboard host capabilities. If an extension declares a UI surface that the current dashboard does not support, the command exits non-zero and names the missing capability plus the Prompt Studio version that first supports it when known. With `--json`, read `hostCompatibility.status`, `hostCompatibility.host`, and each diagnostic `metadata.missingCapability`.
+
 ## Dev Workflow (in-monorepo)
 
 When developing extensions inside this monorepo, you usually want them installed under `~/.pstdio-dev/` so they don't pollute your real user root.
@@ -131,6 +133,8 @@ pst extensions check
 ```
 
 Should list the extension with its commands, hooks, schedules, and zero errors.
+
+Host compatibility should be `verified` against the bundled dashboard. If a check runs without a dashboard descriptor, Prompt Studio reports `hostCompatibility.status: "unverified"`; contract validation still ran, but UI bridge support was not proven.
 
 ## Releasing an Extension
 

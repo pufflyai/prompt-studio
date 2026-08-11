@@ -17,6 +17,7 @@ import {
 import { extensionDiagnosticSchema, extensionRecordSchema, localizableStringSchema } from "./common";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
+import { extensionHostCompatibilitySchema } from "./host-capabilities";
 import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import {
@@ -69,6 +70,7 @@ export const extensionsCheckResponseSchema = z.object({
   templates: z.array(extensionViewLikeSchema),
   skills: z.array(extensionViewLikeSchema),
   diagnostics: z.array(extensionDiagnosticSchema),
+  hostCompatibility: extensionHostCompatibilitySchema,
 });
 
 export const workbenchExtensionHarnessRecordSchema = z.object({

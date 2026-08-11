@@ -117,6 +117,10 @@ pst extensions add <source> [--name <name>] # Install an extension source using 
 pst extensions check [--json]               # Validate user and repo-local extension roots
 ```
 
+`pst extensions check` also compares declared dashboard UI surfaces with the dashboard capability descriptor. Text output prints `Host compatibility: verified` with the dashboard version. JSON output includes `hostCompatibility.status`, `hostCompatibility.host`, and diagnostics with `metadata.missingCapability` and `metadata.requiredSince`.
+
+If no host descriptor is available, `hostCompatibility.status` is `unverified`. Contract validation still ran, but dashboard bridge support was not proven.
+
 To smoke-test an extension you are developing, install it into a throwaway Prompt Studio home so the
 install cannot disturb your real one:
 

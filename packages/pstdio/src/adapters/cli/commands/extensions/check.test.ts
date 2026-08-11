@@ -33,6 +33,11 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   templates: [],
   skills: [],
   diagnostics: [],
+  hostCompatibility: {
+    status: "verified" as const,
+    host: { host: "dashboard" as const, hostVersion: "0.25.2", capabilities: {} },
+    diagnostics: [],
+  },
 });
 
 describe("extensions check", () => {
@@ -54,7 +59,16 @@ describe("extensions check", () => {
 
     expect(roots).toEqual(["/home/user/.pstdio/extensions", join("/repo", ".pstdio", "extensions")]);
     expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      checks: [{ extensionsRoot: "/home/user/.pstdio/extensions" }, { extensionsRoot: "/repo/.pstdio/extensions" }],
+      checks: [
+        {
+          extensionsRoot: "/home/user/.pstdio/extensions",
+          hostCompatibility: { status: "verified", host: { host: "dashboard" } },
+        },
+        {
+          extensionsRoot: "/repo/.pstdio/extensions",
+          hostCompatibility: { status: "verified", host: { host: "dashboard" } },
+        },
+      ],
     });
   });
 

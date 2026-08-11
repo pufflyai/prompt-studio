@@ -1,11 +1,13 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
-  type ExtensionDiagnostic,
+  checkExtensionHostCompatibility,
+  dashboardExtensionHostCapabilities,
   loadExtensionPackage,
   normalizeExtensionSources,
   type PackageManifest,
+  type ExtensionDiagnostic as RuntimeExtensionDiagnostic,
   readPackageManifest,
 } from "pstdio-extensions";
 import { toKeybindingRecord } from "pstdio-extensions/workbench";
@@ -53,7 +55,7 @@ export type LoadedExtension = {
   definition: UnknownRecord;
   manifest: UnknownRecord;
   metadata: ExtensionMetadata;
-  diagnostics: ExtensionDiagnostic[];
+  diagnostics: RuntimeExtensionDiagnostic[];
 };
 
 const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckResponse => ({
@@ -88,7 +90,16 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   templates: [],
   skills: [],
   diagnostics: [],
+  hostCompatibility: {
+    status: "verified",
+    host: dashboardExtensionHostCapabilities,
+    diagnostics: [],
+  },
 });
+
+type CheckExtensionHostOptions = {
+  hostCapabilities?: ExtensionHostCapabilities | null;
+};
 
 const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord): UnknownRecord => ({
   id: metadata.id,
@@ -117,7 +128,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
 });
 
 export const loadExtensionSource = async (sourcePath: string) => {
-  const diagnostics: ExtensionDiagnostic[] = [];
+  const diagnostics: RuntimeExtensionDiagnostic[] = [];
   const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
 
   if (!loaded) {
@@ -130,7 +141,7 @@ export const loadExtensionSource = async (sourcePath: string) => {
 
 const toLoadedExtension = (
   loaded: NonNullable<Awaited<ReturnType<typeof loadExtensionPackage>>>,
-  diagnostics: ExtensionDiagnostic[],
+  diagnostics: RuntimeExtensionDiagnostic[],
 ) => {
   const definition = (loaded.definition ?? {}) as UnknownRecord;
   if (!isRecord(definition)) {
@@ -155,7 +166,10 @@ const toLoadedExtension = (
   } satisfies LoadedExtension;
 };
 
-const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: ExtensionDiagnostic[]) => {
+const addRuntimeDiagnostics = (
+  check: ExtensionsCheckResponse,
+  diagnostics: Array<ExtensionDiagnostic | RuntimeExtensionDiagnostic>,
+) => {
   for (const diagnostic of diagnostics) {
     addDiagnostic(check, {
       code: diagnostic.code,
@@ -171,6 +185,7 @@ const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: Exte
 const populateCheckFromRuntime = (
   check: ExtensionsCheckResponse,
   runtime: ReturnType<typeof normalizeExtensionSources>,
+  options: CheckExtensionHostOptions = {},
 ) => {
   check.commands.push(...toCheckCommands(runtime.commands));
   check.menuContributions.push(...toCheckMenuContributions(runtime.commands));
@@ -196,11 +211,21 @@ const populateCheckFromRuntime = (
   check.skills.push(...toCheckSkills(runtime.skills));
   check.keybindings.push(...runtime.keybindings.map(toKeybindingRecord));
   collectCheckModes(check, runtime);
+  const hostCompatibility = checkExtensionHostCompatibility(
+    runtime,
+    options.hostCapabilities === undefined ? dashboardExtensionHostCapabilities : options.hostCapabilities,
+  );
+  check.hostCompatibility = hostCompatibility;
+  addRuntimeDiagnostics(check, hostCompatibility.diagnostics);
 };
 
-export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
+export const checkExtensionSource = async (
+  sourcePath: string,
+  extensionsRoot: string,
+  options: CheckExtensionHostOptions = {},
+) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
-  const diagnostics: ExtensionDiagnostic[] = [];
+  const diagnostics: RuntimeExtensionDiagnostic[] = [];
   const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
 
   if (!source) {
@@ -219,7 +244,7 @@ export const checkExtensionSource = async (sourcePath: string, extensionsRoot: s
       description: loaded.metadata.description,
     });
     const runtime = normalizeExtensionSources([source]);
-    populateCheckFromRuntime(check, runtime);
+    populateCheckFromRuntime(check, runtime, options);
     addRuntimeDiagnostics(check, loaded.diagnostics);
     addRuntimeDiagnostics(check, runtime.diagnostics);
     return { check, loaded };
@@ -258,7 +283,7 @@ const collectFallbackMetadata = (sourcePath: string) => {
   };
 };
 
-export const checkExtensionsRoot = async (extensionsRoot: string) => {
+export const checkExtensionsRoot = async (extensionsRoot: string, options: CheckExtensionHostOptions = {}) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
   if (!existsSync(extensionsRoot)) return check;
 
@@ -267,7 +292,7 @@ export const checkExtensionsRoot = async (extensionsRoot: string) => {
     .sort((left, right) => left.name.localeCompare(right.name));
 
   for (const entry of extensionDirectories) {
-    const sourceCheck = await checkExtensionSource(join(extensionsRoot, entry.name), extensionsRoot);
+    const sourceCheck = await checkExtensionSource(join(extensionsRoot, entry.name), extensionsRoot, options);
     mergeCheck(check, sourceCheck.check);
   }
 
@@ -281,6 +306,11 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
     `Commands: ${check.commands.length}`,
     `Warnings: ${check.warningCount}`,
     `Errors: ${check.errorCount}`,
+    `Host compatibility: ${check.hostCompatibility.status}${
+      check.hostCompatibility.host
+        ? ` (${check.hostCompatibility.host.host} ${check.hostCompatibility.host.hostVersion})`
+        : ""
+    }`,
   ];
 
   for (const extension of check.extensions) {
@@ -291,6 +321,10 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
 
   for (const diagnostic of check.diagnostics) {
     lines.push("", `${diagnostic.severity.toUpperCase()}: ${diagnostic.message}`);
+    const missingCapability = diagnostic.metadata?.missingCapability;
+    const requiredSince = diagnostic.metadata?.requiredSince;
+    if (typeof missingCapability === "string") lines.push(`  Missing capability: ${missingCapability}`);
+    if (typeof requiredSince === "string") lines.push(`  Supported since: ${requiredSince}`);
     if (diagnostic.sourcePath) lines.push(`  Source: ${diagnostic.sourcePath}`);
   }
 
