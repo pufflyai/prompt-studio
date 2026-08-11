@@ -16,7 +16,7 @@
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@pstdio/ui": "workspace:*",
-    "astro": "^6.0.4",
+    "astro": "^7.1.0",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"

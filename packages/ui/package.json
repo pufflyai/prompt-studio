@@ -102,7 +102,7 @@
     "katex": "^0.16.33",
     "lexical": "^0.40.0",
     "lucide-react": "^0.556.0",
-    "mermaid": "11.15.0",
+    "mermaid": "11.16.1",
     "monaco-editor": "^0.55.1",
     "prismjs": "^1.30.0",
     "recharts": "^3.9.2",
