@@ -137,6 +137,17 @@ type InstallDefaultExtensionsDeps = {
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
 };
 
+let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
+
+const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>) => {
+  const result = defaultExtensionInstallQueue.then(install);
+  defaultExtensionInstallQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+};
+
 type LoadScope = "user" | "repo";
 
 const repoDefaultInstallName = (entry: DefaultExtensionEntry, sourcePath: string) => {
@@ -220,8 +231,10 @@ const withResolvedDefaultEntries = async <T>(
   }
 };
 
-export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDeps = {}) => {
-  const config = deps.config ?? resolveDefaultExtensionsConfig(deps.env);
+const runDefaultExtensionInstall = async (
+  deps: InstallDefaultExtensionsDeps,
+  context: { config: DefaultExtensionsConfig; env: Record<string, string | undefined>; sourceMode: boolean },
+) => {
   const install = deps.installExtensionSource ?? installExtensionSource;
   const installed: InstalledExtensionSource[] = [];
   const reportFailure = (failure: {
@@ -239,13 +252,13 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
 
   await withResolvedDefaultEntries(
     {
-      config,
+      config: context.config,
       onEntryFailure: deps.onInstallFailure
         ? ({ entry, error, source }) => reportFailure({ entry, error, source })
         : undefined,
       prepareSharedCheckout: deps.prepareSharedCheckout,
       forceSourceDefaults: deps.forceSourceDefaults,
-      sourceMode: !deps.config,
+      sourceMode: context.sourceMode,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
@@ -254,6 +267,7 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
           installed.push(
             await install({
               ...toInstallInput(resolved.entry),
+              env: context.env,
               existsOk: true,
               prepareNamedSource,
             }),
@@ -267,6 +281,16 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
   );
 
   return installed;
+};
+
+export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) => {
+  const env = { ...(deps.env ?? process.env) };
+  const context = {
+    config: deps.config ?? resolveDefaultExtensionsConfig(env),
+    env,
+    sourceMode: !deps.config,
+  };
+  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context));
 };
 
 type InstallRepoDefaultExtensionsInput = {
