@@ -16,12 +16,16 @@ const descriptor = {
 };
 
 class RuntimeChild extends EventEmitter {
+  exitOnKill = false;
   killedWith: NodeJS.Signals | number | undefined;
+  killedSignals: (NodeJS.Signals | number | undefined)[] = [];
   stdout = new PassThrough();
   stderr = new PassThrough();
 
   kill(signal?: NodeJS.Signals | number) {
     this.killedWith = signal;
+    this.killedSignals.push(signal);
+    if (this.exitOnKill) queueMicrotask(() => this.emit("exit", null, signal));
     return true;
   }
 }
@@ -29,6 +33,7 @@ class RuntimeChild extends EventEmitter {
 describe("DesktopRuntimeManager", () => {
   test("refuses a different runtime that publishes the descriptor while the sidecar starts", async () => {
     const child = new RuntimeChild();
+    child.exitOnKill = true;
     const replacement = { ...descriptor, instanceId: "replacement-runtime" };
     const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor: replacement }];
     let spawnedArgs: string[] = [];
@@ -45,7 +50,7 @@ describe("DesktopRuntimeManager", () => {
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
         observeRuntimeShutdown: async () => {},
-        sleep: async () => {},
+        sleep: () => new Promise(() => {}),
         spawn: (_path, args) => {
           spawnedArgs = args;
           return child;
@@ -56,6 +61,42 @@ describe("DesktopRuntimeManager", () => {
     await expect(manager.start()).rejects.toThrow("unexpected_exit");
     expect(spawnedArgs).toContain("--instance-id");
     expect(child.killedWith).toBe("SIGTERM");
+  });
+
+  test("waits for a failed sidecar to exit before reporting the startup failure", async () => {
+    const child = new RuntimeChild();
+    const replacement = { ...descriptor, instanceId: "replacement-runtime" };
+    const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor: replacement }];
+    const manager = new DesktopRuntimeManager(
+      {
+        descriptorPath: "/tmp/runtime.json",
+        resolveSidecarPath: () => "/app/pstdio",
+        onIntentionalShutdown: () => {},
+        onUnexpectedExit: () => {},
+        onPhase: () => {},
+      },
+      {
+        createInstanceId: () => descriptor.instanceId,
+        discoverRuntime: async () => discoveries.shift()!,
+        existsSync: () => true,
+        observeRuntimeShutdown: async () => {},
+        sleep: async () => {},
+        spawn: () => child,
+      },
+    );
+
+    const startup = manager.start();
+    let settled = false;
+    void startup.catch(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(child.killedSignals).toEqual(["SIGTERM", "SIGKILL"]);
+    expect(settled).toBe(false);
+
+    child.emit("exit", null, "SIGKILL");
+    await expect(startup).rejects.toThrow("unexpected_exit");
   });
 
   test("reports an unexpected child exit after a spawned runtime became ready", async () => {

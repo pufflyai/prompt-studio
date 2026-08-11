@@ -20,6 +20,7 @@ import {
 } from "./runtime-controller";
 
 const OUTPUT_LIMIT = 64 * 1024;
+const SIDECAR_TERMINATION_GRACE_MS = 2_000;
 
 export type ManagedRuntime = {
   descriptor: RuntimeDescriptor;
@@ -75,6 +76,22 @@ const defaultDeps: RuntimeManagerDeps = {
 };
 
 const appendBounded = (current: string, chunk: unknown) => `${current}${String(chunk)}`.slice(-OUTPUT_LIMIT);
+
+const terminateSpawnedRuntime = async (
+  child: RuntimeProcess,
+  terminated: Promise<void>,
+  sleep: RuntimeManagerDeps["sleep"],
+) => {
+  child.kill("SIGTERM");
+  const stoppedGracefully = await Promise.race([
+    terminated.then(() => true),
+    sleep(SIDECAR_TERMINATION_GRACE_MS).then(() => false),
+  ]);
+  if (stoppedGracefully) return;
+
+  child.kill("SIGKILL");
+  await terminated;
+};
 
 export class DesktopRuntimeManager {
   #eventAbort: AbortController | null = null;
@@ -144,12 +161,18 @@ export class DesktopRuntimeManager {
     });
 
     let ready = false;
+    let markChildTerminated: () => void = () => {};
+    const childTerminated = new Promise<void>((resolve) => {
+      markChildTerminated = resolve;
+    });
     const childExit = new Promise<never>((_resolve, reject) => {
       child.once("exit", (code, signal) => {
+        markChildTerminated();
         const detail = this.#output || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
         else if (!this.#intentional) this.#options.onUnexpectedExit(detail);
       });
+      child.once("close", markChildTerminated);
       child.once("error", reject);
     });
 
@@ -166,9 +189,7 @@ export class DesktopRuntimeManager {
       ready = true;
       return this.#attach(descriptor, false);
     } catch (error) {
-      try {
-        child.kill("SIGTERM");
-      } catch {}
+      await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
       const failure = classifyRuntimeFailure(error instanceof Error ? error.message : String(error));
       throw new Error(`${failure.code}: ${failure.message}`);
     }
