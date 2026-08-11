@@ -1,5 +1,9 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
-import { registerWorkbenchExtensionPanel, toWorkbenchExtensionPlacementMetadata } from "@pstdio/workbench/extensions";
+import {
+  panelMenuDeclarationOffsets,
+  registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
+} from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -136,6 +140,7 @@ const registerExtensionViews = (
 ) => {
   const disposables: Disposable[] = [];
   const modeIdsByViewId = getModeIdsByViewId(metadata);
+  const menuOffsets = panelMenuDeclarationOffsets(metadata.panels);
 
   metadata.panels.forEach((panel, index) => {
     if (!panel.webview) return;
@@ -172,7 +177,10 @@ const registerExtensionViews = (
             side: menu.side,
             rendererId: dashboardWidgetIds.extensionView,
             config: { projectId },
-            ...toWorkbenchExtensionPlacementMetadata({ placement: menu.placement, declarationIndex: menuIndex }),
+            ...toWorkbenchExtensionPlacementMetadata({
+              placement: menu.placement,
+              declarationIndex: menuOffsets[index]! + menuIndex,
+            }),
           })),
         },
       }),

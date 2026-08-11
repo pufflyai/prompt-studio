@@ -11,6 +11,7 @@ import type {
   WorkbenchModuleContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
+import { panelMenuDeclarationOffsets } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
 import type {
   ExtensionTreeAction,
@@ -335,8 +336,9 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
     disposables.push(registerTree(input, record));
   }
 
+  const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
   input.metadata.panels.forEach((panel, index) => {
-    const disposable = registerTreeViewWidget(input, panel, index);
+    const disposable = registerTreeViewWidget(input, panel, index, menuOffsets[index]!);
     if (disposable) disposables.push(disposable);
   });
 

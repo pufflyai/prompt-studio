@@ -4,6 +4,7 @@ import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import {
+  panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -60,6 +61,7 @@ const registerControlsViewWidget = (
   context: WorkbenchExtensionCommandContext,
   panel: ControlsViewRecord,
   index: number,
+  menuDeclarationOffset: number,
 ) => {
   if (!panel.controlsRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
@@ -73,7 +75,7 @@ const registerControlsViewWidget = (
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
       ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });
@@ -91,8 +93,9 @@ export const registerWorkbenchExtensionControlsRenderers = (
   const disposables: Disposable[] = [];
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
+  const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerControlsViewWidget(context, panel, index);
+    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!);
     if (disposable) disposables.push(disposable);
   });
 

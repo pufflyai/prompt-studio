@@ -29,6 +29,69 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
 const resource = { kind: "ticket", uri: "pstdio://ticket/ticket-1", id: "ticket-1", label: "PS-1" };
 
 describe("registerWorkbenchExtensionFileRenderers", () => {
+  test("honors panel placement when registering and opening file-backed panels", () => {
+    const workbench = createWorkbenchCore();
+    const metadata = {
+      ...baseMetadata,
+      fileRenderers: [
+        {
+          id: "lab.ticketContent",
+          extensionId: "pstdio.lab",
+          title: "Ticket",
+          resourceKind: "ticket",
+          loadCommandId: "lab.ticket.load",
+        },
+      ],
+      panels: [
+        {
+          id: "lab.last",
+          extensionId: "pstdio.lab",
+          region: "main",
+          title: "Last",
+          closable: false,
+          placement: "last",
+          fileRendererId: "lab.ticketContent",
+        },
+        {
+          id: "lab.default",
+          extensionId: "pstdio.lab",
+          region: "main",
+          title: "Default",
+          closable: false,
+          fileRendererId: "lab.ticketContent",
+        },
+        {
+          id: "lab.first",
+          extensionId: "pstdio.lab",
+          region: "main",
+          title: "First",
+          closable: false,
+          placement: "first",
+          fileRendererId: "lab.ticketContent",
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
+
+    registerWorkbenchExtensionFileRenderers({
+      executeCommand: async (commandId) => success(commandId, { content: "x" }),
+      metadata,
+      projectId: "project-1",
+      workbench,
+    });
+
+    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual(["lab.first", "lab.default", "lab.last"]);
+
+    workbench.layout.openPanel("lab.last", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.default", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.first", { strategy: { kind: "persistent" } });
+
+    expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
+      "lab.first",
+      "lab.default",
+      "lab.last",
+    ]);
+  });
+
   test("registers an editable file renderer + panel widget and wires load/save commands", async () => {
     const workbench = createWorkbenchCore();
     const calls: { commandId: string; body: CommandExecuteRequest }[] = [];

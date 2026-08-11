@@ -16,6 +16,7 @@ export const registerTreeViewWidget = (
   input: RegisterTreeViewWidgetInput,
   panel: ExtensionTreePanelRecord,
   index: number,
+  menuDeclarationOffset: number,
 ) => {
   if (!panel.treeRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
@@ -29,7 +30,7 @@ export const registerTreeViewWidget = (
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
       ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });

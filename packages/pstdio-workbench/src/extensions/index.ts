@@ -39,6 +39,7 @@ export {
   type WorkbenchExtensionKanbanRendererAdapter,
 } from "./contributions/kanban-renderer-contributions";
 export {
+  panelMenuDeclarationOffsets,
   type RegisterWorkbenchExtensionPanelInput,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,

@@ -17,6 +17,7 @@ import {
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
 import {
+  panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -122,7 +123,12 @@ const registerRenderer = (
   });
 };
 
-const registerView = (context: WorkbenchExtensionCommandContext, panel: DataTableViewRecord, index: number) => {
+const registerView = (
+  context: WorkbenchExtensionCommandContext,
+  panel: DataTableViewRecord,
+  index: number,
+  menuDeclarationOffset: number,
+) => {
   if (!panel.dataTableRendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
@@ -135,7 +141,7 @@ const registerView = (context: WorkbenchExtensionCommandContext, panel: DataTabl
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
       ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
     },
   });
@@ -147,8 +153,9 @@ export const registerWorkbenchExtensionDataTableRenderers = (
   panels: DataTableViewRecord[],
 ): Disposable => {
   const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
+  const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerView(context, panel, index);
+    const disposable = registerView(context, panel, index, menuOffsets[index]!);
     if (disposable) disposables.push(disposable);
   });
   return {

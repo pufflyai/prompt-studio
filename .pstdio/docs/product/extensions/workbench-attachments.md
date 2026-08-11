@@ -167,7 +167,7 @@ Extension panels and panel menus can set `placement: "first" | "default" | "last
 
 - `first` entries are placed before `default` entries in the same workbench region.
 - `last` entries are placed after `default` entries in the same workbench region.
-- Entries with the same placement use manifest declaration order, then the stable contribution id.
+- Entries with the same placement use manifest declaration order. The dashboard registers every extension panel with a declaration index, so each tab keeps a deterministic relative order across reloads.
 - The rule is applied when the dashboard creates the initial tab placement. A saved user tab order is not reset on contribution refresh.
 
 ## Diagnostics

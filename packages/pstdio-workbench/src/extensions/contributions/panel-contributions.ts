@@ -39,6 +39,21 @@ export const toWorkbenchExtensionPlacementMetadata = (input: WorkbenchExtensionP
   priority: placementBasePriority[input.placement ?? "default"] - (input.declarationIndex ?? 0),
 });
 
+// Panel menus tie-break by manifest declaration order across every owner panel,
+// not just within one panel. Returns each panel's menu count prefix so callers
+// can hand every menu a unique declaration index in manifest order.
+export const panelMenuDeclarationOffsets = <T extends { panelMenus?: readonly unknown[] }>(
+  panels: readonly T[],
+): number[] => {
+  const offsets: number[] = [];
+  let total = 0;
+  for (const panel of panels) {
+    offsets.push(total);
+    total += panel.panelMenus?.length ?? 0;
+  }
+  return offsets;
+};
+
 const panelMenuRendererId = (menu: ExtensionPanelMenu) => {
   const rendererId =
     menu.treeRendererId ??
@@ -52,6 +67,7 @@ const panelMenuRendererId = (menu: ExtensionPanelMenu) => {
 
 export const toWorkbenchPanelMenus = (
   menus: readonly ExtensionPanelMenu[] | undefined,
+  declarationOffset = 0,
 ): WorkbenchPanelMenuDefinition[] | undefined =>
   menus?.map((menu, index) => ({
     id: menu.id,
@@ -59,7 +75,10 @@ export const toWorkbenchPanelMenus = (
     side: menu.side,
     rendererId: panelMenuRendererId(menu),
     config: menu.webview ? toBridgeWebviewConfig(menu.webview) : undefined,
-    ...toWorkbenchExtensionPlacementMetadata({ placement: menu.placement, declarationIndex: index }),
+    ...toWorkbenchExtensionPlacementMetadata({
+      placement: menu.placement,
+      declarationIndex: declarationOffset + index,
+    }),
   }));
 
 export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable =>
