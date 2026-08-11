@@ -61,7 +61,7 @@ import { createSyncService } from "./services/sync-service";
 import { createTemplateService } from "./services/template-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
-import { runStartupTasks } from "./startup";
+import { deferStartupTasks, runStartupTasks } from "./startup";
 import type { AppBindings } from "./types";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
@@ -441,9 +441,11 @@ export const createApp = async (options: AppOptions) => {
   });
 
   const startupAbort = new AbortController();
-  const startupDone = runStartupTasks(deps, startupAbort.signal, {
-    recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
-  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
+  const startupDone = deferStartupTasks(() =>
+    runStartupTasks(deps, startupAbort.signal, {
+      recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
+    }),
+  ).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
   let closePromise: Promise<void> | null = null;
   const close = async () => {
