@@ -22,8 +22,8 @@ const workspaceModeParam = params.select({
   required: false,
   defaultValue: "worktree",
   options: [
-    { label: "Worktree", value: "worktree" },
-    { label: "Current branch", value: "current_branch" },
+    { label: "Worktree", value: "worktree", icon: "GitFork" },
+    { label: "Current branch", value: "current_branch", icon: "GitBranch" },
   ],
 });
 
@@ -134,7 +134,7 @@ export const createWorkspaceCommand = defineCommand({
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
-    repo: params.repo({ label: "Repository" }),
+    repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
   },
   async run(ctx) {
@@ -160,7 +160,7 @@ export const runAttemptCommand = defineCommand({
   ],
   params: {
     ...ticketActionParams,
-    repo: params.repo({ label: "Repository" }),
+    repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
   },
   async run(ctx) {

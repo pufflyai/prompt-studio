@@ -1,5 +1,5 @@
 import { createServer } from "node:net";
-import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createExtensionProcessEnvironment } from "pstdio-extensions";
 
 const processOutput = (result: { stdout: string; stderr: string }) =>
   [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
@@ -9,7 +9,7 @@ export const createProcessApi = (): CommandRunnerEnvironment["process"] => {
     async run(input) {
       const proc = Bun.spawn(input.command, {
         cwd: input.cwd,
-        env: input.env ? { ...process.env, ...input.env } : process.env,
+        env: createExtensionProcessEnvironment(process.env, input.env),
         stderr: "pipe",
         stdout: "pipe",
       });
@@ -29,7 +29,7 @@ export const createProcessApi = (): CommandRunnerEnvironment["process"] => {
     async spawnDetached(input) {
       const proc = Bun.spawn(input.command, {
         cwd: input.cwd,
-        env: input.env ? { ...process.env, ...input.env } : process.env,
+        env: createExtensionProcessEnvironment(process.env, input.env),
         stderr: "ignore",
         stdout: "ignore",
       });

@@ -39,6 +39,7 @@ export const refreshOpenExtensionRoutes = (
       ctx.layout.openPanel(placement.contributionId, {
         resource: nextResource,
         title: nextResource.label,
+        strategy: { kind: "replace-panel", instanceId: placement.widgetId },
       });
     }
   }

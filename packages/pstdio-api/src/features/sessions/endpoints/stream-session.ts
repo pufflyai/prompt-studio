@@ -115,8 +115,30 @@ const shiftIndexedMessagePatch = (patch: JsonPatch, indexOffset: number): JsonPa
   };
 };
 
-async function* translateIndexedMessagePatches(patches: AsyncIterable<JsonPatch>, indexOffset: number) {
+const hasMessageListReplacement = (patches: JsonPatch[]) =>
+  patches.some((patch) => patch.path === "/messages" && (patch.op === "add" || patch.op === "replace"));
+
+const hasIndexedMessageAdd = (patches: JsonPatch[]) =>
+  patches.some((patch) => patch.op === "add" && /^\/messages\/\d+$/.test(patch.path));
+
+async function* translateIndexedMessagePatches(
+  patches: AsyncIterable<JsonPatch>,
+  initialPatches: JsonPatch[],
+  initialMessageCount: number,
+) {
+  let indexOffset = resolveMessagePatchIndexOffset(initialPatches, initialMessageCount);
+  let offsetResolved =
+    initialMessageCount === 0 || hasMessageListReplacement(initialPatches) || hasIndexedMessageAdd(initialPatches);
+
   for await (const patch of patches) {
+    if (!offsetResolved && patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
+      indexOffset = 0;
+      offsetResolved = true;
+    } else if (!offsetResolved && patch.op === "add" && /^\/messages\/\d+$/.test(patch.path)) {
+      indexOffset = resolveMessagePatchIndexOffset([patch], initialMessageCount);
+      offsetResolved = true;
+    }
+
     yield shiftIndexedMessagePatch(patch, indexOffset);
   }
 }
@@ -129,14 +151,16 @@ const replayActiveSession = async (
 ) => {
   const persistedMessages = session.session_file_id ? await getPersistedMessages(session.session_file_id, deps) : [];
   const snapshot = eventStore.snapshotAndSubscribe();
-  const indexOffset = resolveMessagePatchIndexOffset(snapshot.history, persistedMessages.length);
   const messages = buildMessagesFromPatches(snapshot.history, persistedMessages);
 
   if (messages.length > 0) {
     await replayMessagesAsPatch(messages, stream);
   }
 
-  return streamLivePatches(translateIndexedMessagePatches(snapshot.stream, indexOffset), stream);
+  return streamLivePatches(
+    translateIndexedMessagePatches(snapshot.stream, snapshot.history, persistedMessages.length),
+    stream,
+  );
 };
 
 const WAIT_FOR_AGENT_POLL_MS = 500;

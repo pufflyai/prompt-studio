@@ -1,10 +1,9 @@
-import { Box, Button, Icon, Input, Stack, Text, Textarea, Wrap } from "@chakra-ui/react";
+import { Button, Icon, Input, Stack, Text, Textarea, Wrap } from "@chakra-ui/react";
 import { Paperclip } from "lucide-react";
-import { type ComponentType, useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { AttachmentChip } from "@/components/overlays/attachment-chip";
 import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
-import type { MarkdownEditorProps } from "@/components/rich-text";
-import { installPrismGlobal } from "@/utils/prism";
+import { LazyMarkdownEditor } from "@/components/rich-text";
 import type { KanbanRendererCreateField } from "./types";
 
 // The editor and its syntax highlighting are heavy and only needed once a
@@ -15,26 +14,9 @@ const MarkdownControl = (props: {
   onChange: (value: unknown) => void;
 }) => {
   const { disabled, field, onChange } = props;
-  const [Editor, setEditor] = useState<ComponentType<MarkdownEditorProps> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      await installPrismGlobal();
-      const module = await import("@/components/rich-text");
-      if (!cancelled) setEditor(() => module.MarkdownEditor);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Reserve the editor's space without claiming textbox semantics — a disabled
-  // stand-in would otherwise be the first textbox a caller (or test) finds.
-  if (!Editor) return <Box minH="144px" borderWidth="1px" borderColor="border" borderRadius="sm" />;
 
   return (
-    <Editor
+    <LazyMarkdownEditor
       // Seed from the declared default so a pre-filled field is visible rather
       // than blank-but-submittable. Lexical reads this once, on mount.
       defaultState={typeof field.defaultValue === "string" ? field.defaultValue : ""}

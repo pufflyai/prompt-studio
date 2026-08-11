@@ -63,6 +63,7 @@ const setupProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string
   if (installDefaults) {
     try {
       await installDefaultExtensions({
+        forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
         onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       });
     } catch (error) {

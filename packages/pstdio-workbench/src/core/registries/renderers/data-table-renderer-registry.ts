@@ -58,11 +58,21 @@ export interface DataTableRendererRowAction {
   run(row: DataTableRendererRow): Promise<void> | void;
 }
 
+export interface DataTableRendererSelectionAction {
+  id: string;
+  label: string;
+  icon?: unknown;
+  destructive?: boolean;
+  run(rows: DataTableRendererRow[]): Promise<void> | void;
+}
+
 export interface DataTableRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
   columns?: DataTableRendererColumn[];
+  selectionMode?: "none" | "multiple";
+  selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];
   initialPageSize?: number;
   pageSizeOptions?: number[];

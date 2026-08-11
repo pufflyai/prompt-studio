@@ -16,6 +16,7 @@ const createSession = (input: { id: string; title: string; status: string }): Da
   workspaceId: null,
   workspaceBranch: null,
   workspaceShorthand: "",
+  ticketId: null,
   resource: createDashboardResource("session", input.id, input.title, "MessageCircle", "project", {
     status: input.status,
   }),

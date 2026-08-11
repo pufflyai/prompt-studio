@@ -11,7 +11,7 @@ type SourceWatcher = {
   close: () => void;
 };
 
-const defaultDebounceMs = 1000;
+const defaultDebounceMs = 100;
 
 // Watch registration walks the source tree itself, so it must never descend into
 // dependency or VCS trees: node_modules symlinks back into the monorepo store,
@@ -26,6 +26,8 @@ type WatchSource = (path: string, listener: WatchListener, onError: WatchErrorHa
 type WatchedRegistration = {
   identity: string;
   matcher: ExtensionIgnoreMatcher;
+  queued: boolean;
+  running: boolean;
   sourcePath: string;
   timer: ReturnType<typeof setTimeout> | null;
   watchers: Map<string, SourceWatcher>;
@@ -33,7 +35,7 @@ type WatchedRegistration = {
 
 export type ExtensionSourceWatcher = {
   dispose: () => void;
-  refresh: () => Promise<void>;
+  refresh: (sourcePath?: string) => Promise<void>;
 };
 
 export type CreateExtensionSourceWatcherInput = {
@@ -55,13 +57,7 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
 
 const sourceIdentity = (sourcePath: string) => {
   const stats = lstatSync(sourcePath, { bigint: true });
-  return [
-    stats.dev.toString(),
-    stats.ino.toString(),
-    stats.birthtimeNs.toString(),
-    stats.ctimeNs.toString(),
-    stats.mtimeMs.toString(),
-  ].join(":");
+  return [stats.dev.toString(), stats.ino.toString(), stats.birthtimeNs.toString()].join(":");
 };
 
 const listWatchableDirectories = (sourcePath: string, matcher: ExtensionIgnoreMatcher, startPath: string) => {
@@ -99,9 +95,31 @@ export const createExtensionSourceWatcher = async (
   let disposed = false;
 
   const disposeRegistration = (registration: WatchedRegistration) => {
+    registration.queued = false;
     if (registration.timer) clearTimeout(registration.timer);
     for (const watcher of registration.watchers.values()) watcher.close();
     registration.watchers.clear();
+  };
+
+  const runReload = (registration: WatchedRegistration) => {
+    if (disposed || registrations.get(registration.sourcePath) !== registration) return;
+    if (registration.running) {
+      registration.queued = true;
+      return;
+    }
+
+    registration.running = true;
+    input
+      .reloadInstalledSource(registration.sourcePath)
+      .catch((error) => input.onError?.(error))
+      .finally(() => {
+        registration.running = false;
+        if (disposed || registrations.get(registration.sourcePath) !== registration) return;
+        if (!registration.queued) return;
+
+        registration.queued = false;
+        scheduleReload(registration);
+      });
   };
 
   const scheduleReload = (registration: WatchedRegistration) => {
@@ -109,7 +127,7 @@ export const createExtensionSourceWatcher = async (
 
     registration.timer = setTimeout(() => {
       registration.timer = null;
-      input.reloadInstalledSource(registration.sourcePath).catch((error) => input.onError?.(error));
+      runReload(registration);
     }, debounceMs);
   };
 
@@ -140,7 +158,23 @@ export const createExtensionSourceWatcher = async (
     for (const directoryPath of directories) watchDirectory(registration, directoryPath);
   };
 
+  const watchDependencyRoot = (registration: WatchedRegistration) => {
+    const dependencyRoot = join(registration.sourcePath, "node_modules");
+    const existingWatcher = registration.watchers.get(dependencyRoot);
+    const stats = lstatSync(dependencyRoot, { throwIfNoEntry: false });
+    if (!stats?.isDirectory()) {
+      existingWatcher?.close();
+      registration.watchers.delete(dependencyRoot);
+      return;
+    }
+    if (!existingWatcher) watchDirectory(registration, dependencyRoot);
+  };
+
   const watchCreatedDirectory = (registration: WatchedRegistration, eventPath: string) => {
+    if (eventPath === join(registration.sourcePath, "node_modules")) {
+      watchDependencyRoot(registration);
+      return;
+    }
     if (registration.watchers.has(eventPath)) return;
     if (skippedDirectoryNames.has(basename(eventPath))) return;
 
@@ -158,9 +192,11 @@ export const createExtensionSourceWatcher = async (
   ) => {
     const eventPath = toEventPath(directoryPath, filename);
     const relativePath = relative(registration.sourcePath, eventPath);
-    if (relativePath && registration.matcher.ignores(relativePath)) return;
+    const dependencyRoot = join(registration.sourcePath, "node_modules");
+    const isDependencyEvent = directoryPath === dependencyRoot || eventPath === dependencyRoot;
+    if (!isDependencyEvent && relativePath && registration.matcher.ignores(relativePath)) return;
 
-    watchCreatedDirectory(registration, eventPath);
+    if (directoryPath !== dependencyRoot) watchCreatedDirectory(registration, eventPath);
     scheduleReload(registration);
   };
 
@@ -168,6 +204,8 @@ export const createExtensionSourceWatcher = async (
     const registration: WatchedRegistration = {
       identity: sourceIdentity(row.source_path),
       matcher: createExtensionIgnoreMatcher(row.source_path),
+      queued: false,
+      running: false,
       sourcePath: row.source_path,
       timer: null,
       watchers: new Map(),
@@ -175,6 +213,7 @@ export const createExtensionSourceWatcher = async (
 
     registrations.set(row.source_path, registration);
     watchDirectoryTree(registration, row.source_path);
+    watchDependencyRoot(registration);
   };
 
   const refreshRegistration = async (
@@ -200,13 +239,22 @@ export const createExtensionSourceWatcher = async (
     }
   };
 
-  const refresh = async () => {
+  const refresh = async (sourcePath?: string) => {
     if (disposed) return;
 
     const rows = await input.listInstalledSources();
 
-    for (const [sourcePath, registration] of registrations) {
-      await refreshRegistration(sourcePath, registration, rows);
+    if (sourcePath) {
+      const registration = registrations.get(sourcePath);
+      if (registration) await refreshRegistration(sourcePath, registration, rows);
+
+      const row = rows.find((candidate) => candidate.source_path === sourcePath);
+      if (row && !registrations.has(sourcePath)) addRegistration(row);
+      return;
+    }
+
+    for (const [registeredSourcePath, registration] of registrations) {
+      await refreshRegistration(registeredSourcePath, registration, rows);
     }
 
     for (const row of rows) {

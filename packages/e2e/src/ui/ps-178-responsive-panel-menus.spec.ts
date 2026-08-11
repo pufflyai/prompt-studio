@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const storyId = "pstdio-workbench-onboarding--responsive-panel-menus";
 
@@ -45,14 +45,14 @@ test.describe("PS-178 responsive Panel menus", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(storyId, "pstdio-workbench"));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   test("collapses each Panel at 480 px and restores only responsive collapses", async ({ page }) => {

@@ -314,9 +314,16 @@ export const listTicketFilesTreeCommand = defineCommand({
     });
     const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
 
-    // Refine / Break into sub-tickets / Run attempt sessions anchor themselves to the ticket, so
-    // they surface here alongside the ticket's files and workspaces.
-    const sessionsSection = buildSessionsSection(await ctx.sessions.list(), ticket.id);
+    // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
+    // to its workspaces. The ticket shows the whole conversation history either way.
+    const workspaceSessions = (
+      await Promise.all(linkedWorkspaces.map((workspace) => ctx.sessions.listByWorkspace(workspace.id)))
+    ).flat();
+    const sessionsSection = buildSessionsSection({
+      sessions: await ctx.sessions.list(),
+      ticketId: ticket.id,
+      workspaceSessions,
+    });
 
     return [
       ticketSection,

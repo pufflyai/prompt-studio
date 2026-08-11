@@ -8,6 +8,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
+import { findResourceAnchor } from "@/shared/sync/resource-anchors";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
@@ -55,28 +56,8 @@ interface DashboardWorkspaceOptions {
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
-type WorkspaceResourceAnchor = {
-  type: string;
-  id: string;
-  label?: string;
-  metadata?: Record<string, unknown>;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isWorkspaceResourceAnchor = (value: unknown): value is WorkspaceResourceAnchor =>
-  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
-
-const ticketAnchorFromWorkspace = (workspace: SyncedRow) => {
-  const anchors = workspace.anchors_json;
-  if (!Array.isArray(anchors)) return undefined;
-
-  return anchors.find((anchor) => isWorkspaceResourceAnchor(anchor) && anchor.type === "ticket");
-};
-
 const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
-  const anchor = ticketAnchorFromWorkspace(workspace);
+  const anchor = findResourceAnchor(workspace, "ticket");
   if (!anchor) return {};
 
   return {

@@ -16,15 +16,11 @@ Prompt Studio is a local-first project management tool for AI-driven development
 # Install dependencies
 bun install
 
-# Initialize a project
-bun run --cwd packages/pstdio pstdio -- projects create <name>
-
-# Launch the dashboard
-bun run dev:dashboard
-
-# Launch the API
-bun run dev:api
+# Start an isolated API, dashboard, database, and seeded project
+bun run dev:isolated
 ```
+
+For manual browser validation, use `bun run dev:playwright` and tear down the stack afterward with `bun run dev:playwright:down`. See [Contributing](/contributing/overview) for the full local workflow.
 
 ## Architecture
 

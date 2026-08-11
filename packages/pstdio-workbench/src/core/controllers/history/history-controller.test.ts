@@ -269,7 +269,7 @@ describe("createHistoryController navigation", () => {
         workbench.layout.openPanel("board-view", {
           resource,
           title: resource.label,
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         }),
     });
     workbench.resources.registerPresenter({
@@ -279,7 +279,7 @@ describe("createHistoryController navigation", () => {
         workbench.layout.openPanel("ticket-editor", {
           resource,
           title: resource.label,
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         }),
     });
 
@@ -326,7 +326,7 @@ describe("createHistoryController navigation", () => {
         return workbench.layout.openPanel("ticket-editor", {
           resource,
           title: resource.label,
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         });
       },
     });
@@ -404,7 +404,7 @@ describe("createHistoryController mode-aware navigation", () => {
         workbench.layout.openPanel("project-viewer", {
           resource,
           title: resource.label,
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         }),
     });
     workbench.resources.registerPresenter({
@@ -414,7 +414,7 @@ describe("createHistoryController mode-aware navigation", () => {
         workbench.layout.openPanel("workspace-viewer", {
           resource,
           title: resource.label,
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         }),
     });
     workbench.modes.registerMode({

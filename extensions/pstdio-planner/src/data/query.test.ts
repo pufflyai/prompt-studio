@@ -101,6 +101,7 @@ describe("runTicketsQuery", () => {
       "created",
       "updated",
       "id",
+      "parent",
       "workspace",
       "priority",
       "type",
@@ -265,7 +266,9 @@ describe("runTicketsQuery", () => {
       expect.objectContaining({ id: "workspace-1", name: "T-1_A1" }),
     ]);
   });
+});
 
+describe("runTicketsQuery ordering and hierarchy", () => {
   test("orders rows by sortOrder", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ shorthand: "T-late", sortOrder: 5 }));
@@ -274,5 +277,23 @@ describe("runTicketsQuery", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
 
     expect(result.rows.map((row) => row.attributes.id)).toEqual(["T-early", "T-late"]);
+  });
+
+  test("returns ancestry labels and immediate parent filter values", async () => {
+    const storage = createMemoryStorage();
+    const root = makeTicket({ id: "root", shorthand: "T-1", sortOrder: 0 });
+    const child = makeTicket({ id: "child", shorthand: "T-2", parentId: root.id, sortOrder: 1 });
+    const grandchild = makeTicket({ id: "grandchild", shorthand: "T-3", parentId: child.id, sortOrder: 2 });
+    await putTicket(storage, root);
+    await putTicket(storage, child);
+    await putTicket(storage, grandchild);
+
+    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+
+    expect(result.rows.map((row) => row.attributes)).toEqual([
+      expect.objectContaining({ id: "T-1", parent: "" }),
+      expect.objectContaining({ id: "T-1 / T-2", parent: "T-1" }),
+      expect.objectContaining({ id: "T-1 / T-2 / T-3", parent: "T-2" }),
+    ]);
   });
 });

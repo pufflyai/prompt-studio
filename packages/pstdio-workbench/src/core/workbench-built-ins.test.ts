@@ -142,16 +142,22 @@ describe("workbench built-ins", () => {
     expect(workbench.commandPalette.getView()).toBe("mode");
   });
 
-  test("switch mode command rejects unknown mode ids without mutating active state", async () => {
+  test("switch mode command reports unknown mode ids without mutating active state", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.modes.setActiveMode("project");
 
-    await expect(
-      workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "does-not-exist" }),
-    ).rejects.toThrow("Workbench mode not registered: does-not-exist");
+    await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "does-not-exist" });
+
     expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.notifications.listNotifications()).toEqual([
+      expect.objectContaining({
+        level: "error",
+        title: "Mode unavailable",
+        message: "Workbench mode not registered: does-not-exist",
+      }),
+    ]);
   });
 
   test("does not register collection persistence commands", () => {

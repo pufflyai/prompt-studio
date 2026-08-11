@@ -7,7 +7,7 @@ import { registerWorkbenchExtensionDataTableRenderers } from "./data-table-rende
 type ViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionDataTableRenderers", () => {
-  test("adapts query rows and columns, places the panel, and executes row actions", async () => {
+  test("adapts query rows and columns, places the panel, and executes row and selection actions", async () => {
     const workbench = createWorkbenchCore();
     const calls: Array<{ commandId: string; body: CommandExecuteRequest }> = [];
     const record = {
@@ -16,6 +16,8 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       title: "Health",
       queryCommandId: "lab.queryHealth",
       columns: [{ id: "name", label: "Service" }],
+      selectionMode: "multiple",
+      selectionActions: [{ id: "restart-selected", label: "Restart selected", commandId: "lab.restartSelected" }],
       rowActions: [{ id: "restart", label: "Restart", commandId: "lab.restart" }],
     } satisfies WorkbenchExtensionDataTableRendererRecord;
     const panel = {
@@ -41,6 +43,11 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
                   values: { name: "API", score: 92 },
                   resource: { type: "service", id: "api", label: "API" },
                 },
+                {
+                  id: "worker",
+                  values: { name: "Worker", score: 87 },
+                  resource: { type: "service", id: "worker", label: "Worker" },
+                },
               ],
               columns: [{ id: "score", label: "Score" }],
             };
@@ -65,6 +72,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     });
 
     await renderer?.rowActions?.[0]?.run(result!.rows[0]!);
+    await renderer?.selectionActions?.[0]?.run(result!.rows);
     expect(calls[0]).toMatchObject({
       commandId: "lab.queryHealth",
       body: {
@@ -76,6 +84,10 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     expect(calls[1]).toMatchObject({
       commandId: "lab.restart",
       body: { params: { rowId: "api" }, resource: { type: "service", id: "api" } },
+    });
+    expect(calls[2]).toMatchObject({
+      commandId: "lab.restartSelected",
+      body: { params: { rowIds: ["api", "worker"] } },
     });
   });
 });

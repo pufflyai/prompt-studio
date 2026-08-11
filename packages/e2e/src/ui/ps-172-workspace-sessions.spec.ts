@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const workspaceModeStoryId = "dashboard-sidenav--workspace-mode";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
@@ -9,14 +9,14 @@ test.describe("PS-172 workspace sessions", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(workspaceModeStoryId, "pstdio-dashboard"));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   test("keeps the workspace session list in the Sidenav and opens sessions in the Side Panel", async ({ page }) => {

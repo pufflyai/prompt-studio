@@ -15,23 +15,10 @@ export default defineExtension({
     "review-tickets": reviewTicketsCommand,
   },
 
-  settings: {
-    properties: {
-      "automation.enabled": {
-        type: "boolean",
-        scope: "project",
-        default: false,
-        title: "Enable planner automation",
-        description: "Allow this repository's scheduled planner automation to create and reconcile agent work.",
-      },
-    },
-  },
-
   hooks: {
     sessionStarted: sessionStartedHook,
   },
 
-  // Every schedule ticks a command that no-ops until automation.enabled is on.
   schedules: {
     refineTickets: {
       title: "Refine backlog tickets",

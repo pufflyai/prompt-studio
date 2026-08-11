@@ -1,5 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
-import { automationEnabled, maxInProgress, recordAutomationActivity } from "../automation-run";
+import { maxInProgress, recordAutomationActivity } from "../automation-run";
 import { executePlanner, planner } from "../planner-client";
 import { automatable, byPriorityThenCreatedAt, statusIdByNames } from "../selection";
 
@@ -9,8 +9,6 @@ export const implementTicketsCommand = defineCommand({
   title: "Implement ready tickets",
   cli: true,
   async run(ctx) {
-    if (!(await automationEnabled(ctx))) return { ran: false, reason: "automation.enabled is off" };
-
     const [{ statuses }, { tags }, tickets, cap] = await Promise.all([
       executePlanner(ctx, planner.readStatuses, {}),
       executePlanner(ctx, planner.readTags, {}),

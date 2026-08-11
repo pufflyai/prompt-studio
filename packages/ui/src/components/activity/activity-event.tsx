@@ -27,7 +27,7 @@ export const ActivityEvent = (props: ActivityEventProps) => {
           <ActivityAvatar actor={actor} icon={icon} color={iconColor} background={iconBackground} />
         </Timeline.Indicator>
       </Timeline.Connector>
-      <Timeline.Content gap="0" paddingBottom="xs" minW="0">
+      <Timeline.Content gap="0" minW="0">
         <Timeline.Title
           marginTop="0"
           gap="xs"

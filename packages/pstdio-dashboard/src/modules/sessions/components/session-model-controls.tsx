@@ -10,8 +10,8 @@ import { useProject } from "@/shared/projects/use-project";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useHarnessParamDefaults } from "../hooks/use-harness-param-defaults";
 import { resolveRuntimeAgentSelection, resolveRuntimeModelSelection } from "../runtime/session-runtime-selection";
-import { HarnessParamControls, type HarnessParamValues } from "./harness-param-controls";
-import { filterHarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
+import { HarnessParamInlineControls } from "./harness-param-inline-controls";
+import { filterHarnessParamValues, type HarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
 
 const fallbackAgentId = "pstdio.harness-open-code.opencode";
 
@@ -122,7 +122,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
         isModelsLoading={isModelsLoading}
         size="xs"
       />
-      <HarnessParamControls
+      <HarnessParamInlineControls
         schema={effectiveParamSchema ?? undefined}
         defaults={effectiveParamDefaults}
         overrides={harnessParamOverrides}

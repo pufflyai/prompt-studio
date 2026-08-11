@@ -85,7 +85,7 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
         singleton: true,
         eligibleLocations: {},
       });
-      ctx.layout.openPanel(renderer.panelId, { title: renderer.title });
+      ctx.layout.openPanel(renderer.panelId, { title: renderer.title, strategy: { kind: "persistent" } });
     }
   },
 });

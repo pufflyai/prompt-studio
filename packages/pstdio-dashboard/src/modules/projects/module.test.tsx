@@ -96,6 +96,70 @@ describe("createProjectsModule", () => {
     expect(workbench.history.store.getState().cursor).toBe(-1);
   });
 
+  test("clears a persisted project that is missing after initial sync", () => {
+    const workbench = createWorkbenchCore();
+    let persistedProjectId: string | undefined = "deleted-project";
+    getWriter("projects")?.truncateAndWrite([]);
+
+    const projects = workbench.registerModule(
+      createProjectsModule({
+        projectSelectionPersistence: {
+          getSelectedProjectId: () => persistedProjectId,
+          setSelectedProjectId: (projectId) => {
+            persistedProjectId = projectId;
+          },
+        },
+      }),
+    );
+
+    try {
+      getWriter("projects")?.truncateAndWrite([
+        { id: "current-project", name: "Current project", created_at: "2026-01-01T00:00:00.000Z" },
+        { id: "other-project", name: "Other project", created_at: "2026-01-02T00:00:00.000Z" },
+      ]);
+      markInitialCollectionsSyncComplete();
+
+      expect(getDashboardSelectedProjectId(workbench)).toBeUndefined();
+      expect(persistedProjectId).toBeUndefined();
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+
+  test("clears a selected project that is missing after initial sync", () => {
+    const workbench = createWorkbenchCore();
+    let persistedProjectId: string | undefined = "deleted-project";
+    selectDashboardProject(
+      { context: workbench.context.createScope("dashboard.selectedProject") },
+      { id: "deleted-project", name: "Deleted project" },
+    );
+    getWriter("projects")?.truncateAndWrite([
+      { id: "current-project", name: "Current project", created_at: "2026-01-01T00:00:00.000Z" },
+      { id: "other-project", name: "Other project", created_at: "2026-01-02T00:00:00.000Z" },
+    ]);
+
+    const projects = workbench.registerModule(
+      createProjectsModule({
+        projectSelectionPersistence: {
+          getSelectedProjectId: () => persistedProjectId,
+          setSelectedProjectId: (projectId) => {
+            persistedProjectId = projectId;
+          },
+        },
+      }),
+    );
+
+    try {
+      expect(getDashboardSelectedProjectId(workbench)).toBeUndefined();
+      expect(persistedProjectId).toBeUndefined();
+      expect(workbench.modes.getActiveModeId()).toBe("project-selection");
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+
   test("selects the only synced project when no project is selected", async () => {
     const workbench = createWorkbenchCore();
     getWriter("projects")?.truncateAndWrite([]);

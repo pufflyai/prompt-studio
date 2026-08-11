@@ -1,6 +1,12 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
+import {
+  STORY_RENDER_TIMEOUT_MS,
+  startStorybook,
+  stopStorybook,
+  storyUrl,
+  waitForStoryPlayback,
+} from "./mermaid-renderer-storybook";
 
 const previewTabsStoryId = "pstdio-workbench-examples--preview-tabs";
 
@@ -8,14 +14,14 @@ test.describe("PS-193 preview tabs", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(previewTabsStoryId, "pstdio-workbench"));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   test("separates the active-tab custom menu from preview context actions", async ({ page }) => {

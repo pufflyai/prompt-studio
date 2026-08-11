@@ -223,7 +223,89 @@
   },
   "projectSettings": {
     "title": "Paramètres du projet",
-    "skills": "Compétences"
+    "skills": "Compétences",
+    "extensionsPanel": {
+      "empty": "Aucune extension installée pour ce projet.",
+      "loadError": "Échec du chargement des extensions.",
+      "title": "Extensions",
+      "counts": "{{installed}} installées · {{enabled}} activées · {{failing}} en échec",
+      "searchPlaceholder": "Rechercher des extensions…",
+      "installedGroup": "Installées · {{count}}",
+      "noSearchResults": "Aucune extension ne correspond à \"{{query}}\".",
+      "noDescription": "Aucune description fournie.",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "En attente",
+        "loaded": "Chargée",
+        "error": "Échec du chargement",
+        "missing": "Introuvable",
+        "disabled": "Désactivée"
+      },
+      "health": {
+        "triggerAriaLabel": "Afficher les problèmes de {{name}}",
+        "failedToLoad": "Échec du chargement",
+        "issues_one": "{{count}} problème",
+        "issues_other": "{{count}} problèmes",
+        "lastLoaded": "Dernier chargement {{time}}",
+        "unknownError": "L'extension n'a pas pu être chargée.",
+        "retry": "Réessayer",
+        "retrySucceeded": "Extension chargée",
+        "retryFailed": "L'extension ne se charge toujours pas",
+        "attemptFix": "Tenter une correction",
+        "fixSessionStarted": "Session de correction démarrée",
+        "fixSessionFailed": "Échec du démarrage de la session de correction"
+      },
+      "automations": {
+        "title": "Automatisations",
+        "toggleAriaLabel": "Activer/désactiver l'automatisation {{name}}",
+        "listStatus": "{{enabled}} automatisations activées sur {{count}}",
+        "cron": "cron {{cron}}",
+        "stateOn": "activé",
+        "stateOff": "désactivé"
+      },
+      "detail": {
+        "back": "Extensions",
+        "tabs": {
+          "settings": "Paramètres",
+          "contributions": "Contributions"
+        },
+        "noContributions": "Cette extension ne déclare aucune contribution.",
+        "noSettings": "Cette extension ne déclare aucun paramètre.",
+        "dangerZone": "Zone de danger",
+        "deleteHint": "Supprimer les fichiers de cette extension et la retirer du projet.",
+        "copyCommand": "Copier la commande",
+        "contributionKinds": {
+          "harnesses": "Harness",
+          "commands": "Commandes",
+          "modes": "Modes",
+          "panels": "Vues",
+          "routes": "Routes",
+          "menuContributions": "Éléments de menu",
+          "settingsPanels": "Panneaux de paramètres",
+          "renderers": "Moteurs de rendu",
+          "skills": "Compétences",
+          "templates": "Modèles",
+          "themes": "Thèmes",
+          "treeItems": "Éléments d'arborescence",
+          "commandPaletteResources": "Ressources de la palette de commandes"
+        }
+      },
+      "toggleAriaLabel": "Activer/désactiver {{name}}",
+      "toggleErrorTitle": "Échec de la mise à jour de l'extension",
+      "toggleError": "Impossible de mettre à jour l'extension. Veuillez réessayer.",
+      "delete": "Supprimer l'extension",
+      "deleteErrorTitle": "Échec de la suppression de l'extension",
+      "deleteError": "Impossible de supprimer l'extension. Veuillez réessayer.",
+      "deleteConfirm": {
+        "headline": "Supprimer l'extension ?",
+        "notification": "Cela supprime les fichiers d'extension de \"{{name}}\" et la retire du projet. Ses données stockées sont conservées afin qu'une réinstallation les restaure.",
+        "deleteDataLabel": "Supprimer aussi les données de cette extension (irréversible)",
+        "button": "Supprimer"
+      }
+    }
   },
   "list": {
     "projectCreated": "Projet créé",

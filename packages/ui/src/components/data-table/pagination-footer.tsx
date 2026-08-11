@@ -41,7 +41,7 @@ export function PaginationFooter({
             </Menu.Trigger>
             <Portal>
               <Menu.Positioner>
-                <Menu.Content zIndex="popover" bg="bg">
+                <Menu.Content bg="bg">
                   {pageSizeOptions.map((option) => (
                     <Menu.Item key={option} value={`${option}`} asChild>
                       <ListRow

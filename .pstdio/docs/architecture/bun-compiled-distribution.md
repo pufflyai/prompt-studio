@@ -28,14 +28,14 @@ End users MUST NOT need Bun or Node.js installed.
 The compiled binary handles both CLI and API server via a subcommand:
 
 ```
-pst --help          # normal CLI
-pst serve           # starts API server (replaces current `bun run start` in pstdio-api)
-pst dashboard       # starts API + opens dashboard
+pst                 # launches or focuses the separately installed desktop
+pst --help          # normal CLI help
+pst serve           # starts or promotes the shared persistent runtime
 ```
 
 ### Why single binary
 
-- The CLI already starts the API server automatically (`ensureApi`). Today it spawns a separate Node process running `api/server.js`. With a compiled binary, it spawns itself with `pst serve`.
+- API-backed CLI subcommands start the runtime automatically through `ensureApi`. In a compiled binary, that startup path self-spawns the same binary in foreground serve mode. Bare `pst` is excluded: it delegates launch/focus to the installed desktop, which owns discovery and startup.
 - No need to distribute two binaries.
 - `Bun.serve()` works in compiled binaries.
 

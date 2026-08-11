@@ -38,8 +38,8 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
   };
 
   const get = async (id: string) => {
-    const [row] = await db.select().from(extension_instances).where(eq(extension_instances.id, id));
-    return row ?? null;
+    const rows = await db.select().from(extension_instances).where(eq(extension_instances.id, id));
+    return rows.at(0) ?? null;
   };
 
   const findByScopeInstalledSource = async (scopeType: string, scopeId: string, installedExtensionId: string) => {

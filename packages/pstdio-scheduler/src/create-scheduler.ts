@@ -10,6 +10,7 @@ type ActiveJob = {
   job: Job;
   handle: CronHandle;
   inFlight: Promise<void> | null;
+  runId: string | null;
   catchupChecked: boolean;
 };
 
@@ -80,8 +81,10 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
 
     const tracked = activeRun.completion.finally(() => {
       entry.inFlight = null;
+      entry.runId = null;
     });
     entry.inFlight = tracked;
+    entry.runId = ctx.runId;
 
     const awaitable = activeRun.awaitableForShutdown.finally(() => {
       inFlight.delete(awaitable);
@@ -96,6 +99,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
       job,
       handle: { stop: () => {} },
       inFlight: null,
+      runId: null,
       catchupChecked: false,
     };
 
@@ -192,6 +196,8 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
   void refresh();
 
   return {
+    activity: () =>
+      [...active.values()].flatMap((entry) => (entry.runId ? [{ id: entry.runId, label: entry.job.key }] : [])),
     refresh,
     async dispose() {
       disposed = true;

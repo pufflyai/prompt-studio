@@ -2,7 +2,6 @@ import { defineCommand } from "@pstdio/sdk/extensions";
 import {
   type AutomationContext,
   addHumanRequested,
-  automationEnabled,
   clearPendingRun,
   isSessionLive,
   listPendingRuns,
@@ -67,8 +66,6 @@ export const reviewTicketsCommand = defineCommand({
   title: "Review in-review tickets",
   cli: true,
   async run(ctx) {
-    if (!(await automationEnabled(ctx))) return { ran: false, reason: "automation.enabled is off" };
-
     const [{ statuses }, { tags }] = await Promise.all([
       executePlanner(ctx, planner.readStatuses, {}),
       executePlanner(ctx, planner.readTags, {}),

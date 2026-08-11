@@ -17,6 +17,7 @@ import {
 import {
   createWorkbenchExtensionMetadata,
   type ResolveWorkbenchExtensionWebview,
+  type ResolveWorkbenchExtensionWebviewInput,
   text,
 } from "pstdio-extensions/workbench";
 import type { ExtensionBenchCommandRequest, ExtensionBenchLoadResponse } from "./api-contract";
@@ -32,6 +33,7 @@ interface ExtensionTestbenchApiInput {
 }
 
 interface LoadExtensionBenchInput {
+  prepareWebviews?: (webviews: ResolveWorkbenchExtensionWebviewInput[]) => Promise<void>;
   projectId?: string;
   resolveWebview?: ResolveWorkbenchExtensionWebview;
   sourcePath: string;
@@ -154,6 +156,17 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
     extensionPackages: [{ path: resolve(input.sourcePath), sourceKind: "local_path" }],
   });
   const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
+  if (input.prepareWebviews) {
+    const webviews: ResolveWorkbenchExtensionWebviewInput[] = [];
+    createWorkbenchExtensionMetadata({
+      resolveWebview: (webview) => {
+        webviews.push(webview);
+        return null;
+      },
+      runtime,
+    });
+    await input.prepareWebviews(webviews);
+  }
   const metadata = createWorkbenchExtensionMetadata({ resolveWebview: input.resolveWebview, runtime });
   const inventory = createBenchContributionInventory(runtime);
   const environment = createBenchEnvironment(input.storage);
@@ -242,6 +255,7 @@ export const createExtensionTestbenchApi = (input: ExtensionTestbenchApiInput) =
   const loadBench = async (url: URL) => {
     const sourcePath = normalizeSourcePath(url.searchParams.get("source"));
     const bench = await loadExtensionBench({
+      prepareWebviews: webviewHost.prepareWebviews,
       resolveWebview: webviewHost.resolveWebview,
       sourcePath,
       storage: createPreviewStorage(),

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 
 export type RunPackageInstallOptions = {
   extensionPath: string;
@@ -14,7 +15,10 @@ export type RunPackageInstallResult = {
 export const isBunOnPath = () => {
   // Pass a fresh env snapshot so spawnSync respects in-process mutations
   // (Bun's spawnSync does not pick up `process.env.PATH` changes otherwise).
-  const result = spawnSync("bun", ["--version"], { stdio: "pipe", env: { ...process.env } });
+  const result = spawnSync("bun", ["--version"], {
+    stdio: "pipe",
+    env: createExtensionProcessEnvironment(),
+  });
   return result.status === 0;
 };
 
@@ -26,7 +30,7 @@ export const runPackageInstall = (options: RunPackageInstallOptions): RunPackage
     cwd: options.extensionPath,
     stdio: "pipe",
     encoding: "utf8",
-    env: { ...process.env },
+    env: createExtensionInstallEnvironment(),
   });
 
   return {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { e2eExtensions } from "../default-extensions";
-import { createProjectViaApi, shutdownApiViaHttp } from "./helpers";
+import { createProjectViaApi } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { FLOW_TIMEOUT } from "./timeouts";
 
@@ -9,8 +9,6 @@ describe("non-blocking startup tasks", () => {
 
   afterEach(async () => {
     if (api) {
-      await shutdownApiViaHttp(api.url);
-      await new Promise((r) => setTimeout(r, 500));
       api.stop();
       api = null;
     }
@@ -51,9 +49,8 @@ describe("non-blocking startup tasks", () => {
       });
       expect(sessionRes.ok).toBe(true);
 
-      // Shutdown should complete without hanging
-      const shutdownRes = await fetch(`${api.url}/shutdown`, { method: "POST" });
-      expect(shutdownRes.ok).toBe(true);
+      // The raw API test process still shuts down cleanly when its owner exits.
+      api.stop();
 
       // Verify the server is actually down
       await new Promise((r) => setTimeout(r, 500));
@@ -63,8 +60,6 @@ describe("non-blocking startup tasks", () => {
       } catch {
         // expected: connection refused
       }
-
-      api.stop();
       api = null;
     },
     FLOW_TIMEOUT,

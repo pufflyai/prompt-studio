@@ -54,14 +54,14 @@ describe("createExtensionWebviewBuildManager dispose", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, _args, options) => {
+      buildWebview: async (input) => {
         runCount++;
-        buildSignal = options.signal;
+        buildSignal = input.signal;
         await Promise.race([
-          new Promise<void>((resolve) => options.signal.addEventListener("abort", () => resolve(), { once: true })),
+          new Promise<void>((resolve) => input.signal.addEventListener("abort", () => resolve(), { once: true })),
           Bun.sleep(20),
         ]);
-        return { exitCode: 1, stderr: "aborted", stdout: "" };
+        return { success: false, details: "aborted" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -93,9 +93,9 @@ describe("createExtensionWebviewBuildManager dispose", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      buildWebview: async () => {
         runCount++;
-        return { exitCode: 0, stderr: "", stdout: "" };
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });

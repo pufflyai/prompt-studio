@@ -3,7 +3,8 @@ import { ListRow, SearchableMenu, toaster } from "@pstdio/ui";
 import { SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
-import { HarnessParamControls, type HarnessParamValues } from "../../sessions/components/harness-param-controls";
+import { HarnessParamEditor } from "../../sessions/components/harness-param-editor";
+import type { HarnessParamValues } from "../../sessions/components/harness-param-values";
 import {
   useHarnessParamDefaults,
   useUpdateHarnessParamDefaults,
@@ -93,7 +94,7 @@ export const HarnessParamDefaultsCard = (props: HarnessParamDefaultsCardProps) =
                 />
 
                 <Box opacity={defaultsQuery.isLoading ? 0.5 : 1}>
-                  <HarnessParamControls
+                  <HarnessParamEditor
                     schema={defaultsQuery.data?.schema ?? selectedAgentInfo?.params}
                     defaults={{}}
                     overrides={draft}

@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 
 import { Switch } from "@/components/primitives/switch";
 
+// The switch track uses borderRadius "md" — this is the design-system look and
+// must never be changed to "full" (a fully-round pill breaks the look). The
+// radius lives in packages/ui/src/theme/recipes/switch.ts, restated in the solid
+// variant because Chakra's default variant would otherwise pin "full".
 const meta = {
   title: "Components/Inputs/Switch",
   component: Switch,

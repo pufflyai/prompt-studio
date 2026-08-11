@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   type DashboardExtensionMetadata,
@@ -56,6 +57,39 @@ const metadata = {
   ],
 } satisfies DashboardExtensionMetadata;
 
+const dataTableMetadata = {
+  ...emptyDashboardExtensionMetadata,
+  extensions: [
+    { id: "pstdio.data-table-demo", name: "data-table-demo", displayName: "DataTable Demo", sourcePath: "" },
+  ],
+  dataTableRenderers: [
+    {
+      id: "data-table-demo.services",
+      extensionId: "pstdio.data-table-demo",
+      title: "Services",
+      queryCommandId: "data-table-demo.services.query",
+      selectionMode: "multiple",
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          commandId: "data-table-demo.services.restart",
+        },
+      ],
+    },
+  ],
+  panels: [
+    {
+      id: "data-table-demo.services",
+      extensionId: "pstdio.data-table-demo",
+      title: "Services",
+      region: "main",
+      closable: false,
+      dataTableRendererId: "data-table-demo.services",
+    },
+  ],
+} satisfies DashboardExtensionMetadata;
+
 describe("registerExtensionContributions", () => {
   test("keeps one invalid extension from removing another extension's settings", () => {
     const workbench = createWorkbenchCore();
@@ -84,5 +118,75 @@ describe("registerExtensionContributions", () => {
       error: expect.any(Error),
     });
     expect(workbench.settings.getPanel("pstdio-planner.ticketStatuses")?.title).toBe("Ticket statuses");
+  });
+
+  test("registers extension DataTable renderers and their panels", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule({
+      id: "test.data-table-extension",
+      activate: (ctx) =>
+        registerExtensionContributions({
+          ctx,
+          executeCommand: async () => {
+            throw new Error("not used");
+          },
+          metadata: dataTableMetadata,
+          projectId: "project-1",
+        }),
+    });
+
+    expect(workbench.renderers.getDataTableRenderer("data-table-demo.services")).toMatchObject({
+      selectionMode: "multiple",
+      selectionActions: [expect.objectContaining({ id: "restart" })],
+    });
+    expect(workbench.layout.getPanel("data-table-demo.services")).toMatchObject({
+      rendererId: "data-table-demo.services",
+      region: "main",
+    });
+  });
+
+  test("surfaces extension command notices from DataTable selection actions", async () => {
+    const workbench = createWorkbenchCore();
+    const response: CommandExecuteResponse = {
+      commandId: "data-table-demo.services.restart",
+      extensionId: "pstdio.data-table-demo",
+      outcome: {
+        ok: true,
+        status: "success",
+        value: { restartedRowIds: ["gateway", "worker"] },
+        notices: [
+          {
+            type: "success",
+            title: "Services restarted",
+            message: "Restarted 2 services: gateway, worker",
+          },
+        ],
+      },
+    };
+
+    workbench.registerModule({
+      id: "test.data-table-extension-notices",
+      activate: (ctx) =>
+        registerExtensionContributions({
+          ctx,
+          executeCommand: async () => response,
+          metadata: dataTableMetadata,
+          projectId: "project-1",
+        }),
+    });
+
+    await workbench.renderers.getDataTableRenderer("data-table-demo.services")?.selectionActions?.[0]?.run([
+      { id: "gateway", values: { service: "Gateway" } },
+      { id: "worker", values: { service: "Worker" } },
+    ]);
+
+    expect(workbench.notifications.listNotifications()).toMatchObject([
+      {
+        level: "success",
+        title: "Services restarted",
+        message: "Restarted 2 services: gateway, worker",
+      },
+    ]);
   });
 });

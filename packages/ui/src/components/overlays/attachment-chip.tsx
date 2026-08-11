@@ -43,7 +43,7 @@ export const AttachmentChip = (props: AttachmentChipProps) => {
   );
 
   return (
-    <Badge variant="subtle" colorPalette="gray" gap="2xs" pr="2xs">
+    <Badge variant="chip" gap="2xs" pr="2xs">
       {previewUrl ? (
         <Popover.Root positioning={{ placement: "top" }}>
           <Popover.Trigger asChild>

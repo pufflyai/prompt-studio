@@ -1,4 +1,5 @@
 export type {
+  AttemptExtensionFixResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ExtensionCommandPaletteContribution,
@@ -30,11 +31,14 @@ export type {
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
+  WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
   WorkbenchExtensionDataTableRendererRecord,
+  WorkbenchExtensionHarnessRecord,
   WorkbenchExtensionKanbanRendererRecord,
   WorkbenchExtensionMetadata,
   WorkbenchExtensionPanelRecord,
   WorkbenchExtensionTreeRendererRecord,
+  WorkbenchExtensionViewRecord,
 } from "pstdio-api-contracts";

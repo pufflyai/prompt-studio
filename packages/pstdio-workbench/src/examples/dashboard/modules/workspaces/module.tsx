@@ -102,7 +102,7 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
           ctx.modes.setActiveMode("project");
           setResourceBreadcrumb(ctx, resource);
           return ctx.layout.openPanel(dashboardWidgetIds.workspaces, {
-            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
             resource,
             title: resource.label,
           });
@@ -112,7 +112,7 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
         syncResourceSidenav(ctx, resource);
         setDetailBreadcrumbs(ctx, resource);
         return ctx.layout.openPanel(dashboardWidgetIds.workspace, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

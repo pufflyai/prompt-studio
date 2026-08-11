@@ -10,6 +10,7 @@ export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createExtensionFilesDBService } from "./services/extension-files/extension-files";
 export { createExtensionInstancesDBService } from "./services/extension-instances/extension-instances";
+export { createExtensionAutomationPreferencesDBService } from "./services/extension-preferences/automation-preferences";
 export {
   createExtensionSkillPreferencesDBService,
   createExtensionTemplatePreferencesDBService,

@@ -1,5 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { resolveMimeType } from "./embedded-assets";
+import { loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
+
+test("loads dashboard assets with Windows-style embedded names", () => {
+  const previous = globalThis.Bun.embeddedFiles;
+  const file = Object.assign(new Blob(["<html></html>"]), {
+    name: "..\\..\\pstdio-dashboard\\dist\\index.html",
+  });
+  (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [file];
+
+  try {
+    expect(loadEmbeddedAssets().get("index.html")).toBe(file);
+  } finally {
+    (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [...previous];
+  }
+});
 
 describe("resolveMimeType", () => {
   test("resolves common web asset types", () => {

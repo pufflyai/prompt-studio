@@ -12,8 +12,9 @@ import {
   extensionMenuContributionSchema,
   extensionMiddlewareRecordSchema,
   extensionScheduleRecordSchema,
+  workbenchExtensionAutomationRecordSchema,
 } from "./commands";
-import { extensionDiagnosticSchema, extensionRecordSchema } from "./common";
+import { extensionDiagnosticSchema, extensionRecordSchema, localizableStringSchema } from "./common";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
 import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
@@ -32,6 +33,7 @@ import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } 
 import {
   extensionSettingDefinitionRecordSchema,
   extensionSettingsPanelRecordSchema,
+  extensionSettingsSectionRecordSchema,
   workbenchExtensionSettingsPanelRecordSchema,
 } from "./settings";
 
@@ -69,6 +71,20 @@ export const extensionsCheckResponseSchema = z.object({
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
+export const workbenchExtensionHarnessRecordSchema = z.object({
+  id: z.string(),
+  localId: z.string(),
+  extensionId: z.string(),
+  label: localizableStringSchema.optional(),
+});
+
+export const workbenchExtensionViewRecordSchema = z.object({
+  id: z.string(),
+  localId: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema.optional(),
+});
+
 export const workbenchExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
@@ -79,6 +95,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   routes: z.array(workbenchExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
+  settingsSections: z.array(extensionSettingsSectionRecordSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   kanbanRenderers: z.array(extensionKanbanRendererRecordSchema).optional(),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
@@ -88,6 +105,11 @@ export const workbenchExtensionMetadataSchema = z.object({
   controlsRenderers: z.array(extensionControlsRendererRecordSchema).optional(),
   keybindings: z.array(extensionKeybindingRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
+  automations: z.array(workbenchExtensionAutomationRecordSchema).optional(),
+  harnesses: z.array(workbenchExtensionHarnessRecordSchema).optional(),
+  skills: z.array(workbenchExtensionViewRecordSchema).optional(),
+  templates: z.array(workbenchExtensionViewRecordSchema).optional(),
+  themes: z.array(workbenchExtensionViewRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
@@ -105,6 +127,8 @@ export const listExtensionAppearanceResponseSchema = z.object({
 });
 
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
+export type WorkbenchExtensionHarnessRecord = z.infer<typeof workbenchExtensionHarnessRecordSchema>;
+export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionViewRecordSchema>;
 export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetadataSchema>;
 export type ListExtensionCommandsResponse = z.infer<typeof listExtensionCommandsResponseSchema>;
 export type ListExtensionAppearanceResponse = z.infer<typeof listExtensionAppearanceResponseSchema>;

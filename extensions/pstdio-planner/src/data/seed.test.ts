@@ -18,7 +18,7 @@ describe("seedDefaultStatuses", () => {
     expect(stored.every((status) => Boolean(status.id))).toBe(true);
   });
 
-  test("matches the legacy default board status set", () => {
+  test("matches the default board status set", () => {
     expect(
       DEFAULT_STATUSES.map((status) => ({
         name: status.name,
@@ -27,7 +27,7 @@ describe("seedDefaultStatuses", () => {
       })),
     ).toEqual([
       { name: "Backlog", color: "gray", isDefault: true },
-      { name: "TODO", color: "purple", isDefault: false },
+      { name: "Todo", color: "purple", isDefault: false },
       { name: "In Progress", color: "blue", isDefault: false },
       { name: "Blocked", color: "red", isDefault: false },
       { name: "In Review", color: "yellow", isDefault: false },
@@ -78,8 +78,15 @@ describe("seedDefaultStatuses", () => {
     expect(DEFAULT_STATUSES.filter((status) => status.isDefault)).toHaveLength(1);
   });
 
-  test("uses circle icons for every default status", () => {
-    expect(DEFAULT_STATUSES.map((status) => status.icon ?? null)).toEqual(DEFAULT_STATUSES.map(() => null));
+  test("draws every default status with a status ring glyph", () => {
+    expect(DEFAULT_STATUSES.map((status) => status.icon)).toEqual([
+      "status-backlog",
+      "status-todo",
+      "status-progress",
+      "status-canceled",
+      "status-review",
+      "status-done",
+    ]);
   });
 });
 
@@ -90,19 +97,19 @@ describe("seedDefaultTags", () => {
     await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
 
     const stored = await tagsCollection(storage).list();
-    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "human_requested"]);
+    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "Flags"]);
     expect(stored.find((tag) => tag.id === "default-type")?.type).toBe("single_select");
   });
 
-  test("seeds human_requested as a single-select interrupt tag after Complexity", async () => {
+  test("seeds the Flags interrupt tag after Complexity", async () => {
     const storage = createMemoryStorage();
 
     await seedDefaultTags(storage);
 
     const humanRequested = (await tagsCollection(storage).list()).find((tag) => tag.id === "default-human-requested");
-    expect(humanRequested).toMatchObject({ name: "human_requested", type: "single_select", sortOrder: 3 });
+    expect(humanRequested).toMatchObject({ name: "Flags", type: "multi_select", sortOrder: 3 });
     expect(humanRequested?.options).toEqual([
-      expect.objectContaining({ id: "default-human-requested-true", name: "True", icon: "shield-user" }),
+      expect.objectContaining({ id: "default-human-requested-true", name: "Human Requested", icon: "eye" }),
     ]);
   });
 
@@ -149,9 +156,9 @@ describe("seedDefaultTags", () => {
     ]);
   });
 
-  test("uses circle icons for the default complexity options", () => {
+  test("draws the default complexity options with level glyphs", () => {
     const complexity = DEFAULT_TAGS.map((seed) => seed()).find((tag) => tag.id === "default-complexity");
 
-    expect(complexity?.options.map((option) => option.icon ?? null)).toEqual([null, null, null]);
+    expect(complexity?.options.map((option) => option.icon)).toEqual(["level-low", "level-high", "level-xhigh"]);
   });
 });

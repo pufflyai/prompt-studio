@@ -1,7 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { startStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -151,14 +151,14 @@ test.describe("PS-166 canonical workbench Storybook frame", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(dashboardWorkbenchStoryId, "pstdio-workbench"));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   test("names regions and keeps all Panel Headers equal", async ({ page }) => {

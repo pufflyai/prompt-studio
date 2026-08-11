@@ -2,6 +2,7 @@ import { Button, Flex } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import type { ActionOption } from "../param-editor.types";
 import { ParamEditorControlItem } from "../param-editor-control-item";
+import { SelectionMenu } from "./selection-menu";
 
 interface ActionInputProps {
   id: string;
@@ -12,10 +13,11 @@ interface ActionInputProps {
   onChange: (id: string, value: string) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
+  presentation?: "stacked" | "horizontal";
 }
 
 export const ActionInput = (props: ActionInputProps) => {
-  const { id, name, description, defaultValue, options, onChange, readOnly } = props;
+  const { id, name, description, defaultValue, options, onChange, readOnly, presentation = "stacked" } = props;
   const [active, setActive] = useState(defaultValue);
 
   useEffect(() => {
@@ -26,6 +28,21 @@ export const ActionInput = (props: ActionInputProps) => {
     setActive(optionId);
     onChange(id, optionId);
   };
+  const horizontal = presentation === "horizontal";
+  const selectedName = options.find((option) => option.id === active)?.name ?? name;
+
+  if (horizontal) {
+    return (
+      <SelectionMenu
+        triggerLabel={selectedName}
+        options={options}
+        selectedIds={active ? [active] : []}
+        multiSelect={false}
+        disabled={readOnly}
+        onToggle={run}
+      />
+    );
+  }
 
   const row = (
     <Flex gap="xs" wrap="wrap">

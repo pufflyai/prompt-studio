@@ -12,10 +12,11 @@ interface HorizontalTextInputProps {
   readOnly?: boolean;
   hideLabel?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
+  size?: "xs" | "sm";
 }
 
 export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
-  const { id, defaultValue, name, onChange, description, readOnly, hideLabel = false } = props;
+  const { id, defaultValue, name, onChange, description, readOnly, hideLabel = false, size = "sm" } = props;
   const [value, setValue] = useState(defaultValue);
   const [isExpanded, setIsExpanded] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +77,7 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
               readOnly={readOnly}
               flex="1"
               maxW="12.5rem"
-              size="sm"
+              size={size}
               type="text"
               placeholder={hideLabel ? name : undefined}
               value={value}
@@ -117,7 +118,7 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               width="100%"
-              size="sm"
+              size={size}
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}

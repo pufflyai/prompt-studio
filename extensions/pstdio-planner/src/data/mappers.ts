@@ -8,13 +8,13 @@ import type {
 import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import {
-  linkedResourceParentMetadata,
+  resolveTicketHierarchy,
   type TicketParentLookup,
   type TicketResourceReference,
   ticketDisplayTitle,
-  ticketResourceHierarchyMetadata,
 } from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
+import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
 import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
@@ -40,6 +40,7 @@ export type TicketWorkspaceBadgeItem = {
   type: "worktree" | "current_branch";
   createdAt?: string;
   resourceParent?: TicketResourceReference;
+  session?: TicketWorkspaceSession;
 };
 export type TicketWorkspaceLookup = Map<string, TicketWorkspaceBadgeItem[]>;
 
@@ -80,26 +81,34 @@ const workspaceDisplayName = (workspace: ExtensionWorkspace) => {
   return workspace.id;
 };
 
-const workspaceToBadgeItem = (workspace: ExtensionWorkspace): TicketWorkspaceBadgeItem => ({
+const workspaceToBadgeItem = (
+  workspace: ExtensionWorkspace,
+  session: TicketWorkspaceSession | undefined,
+): TicketWorkspaceBadgeItem => ({
   id: workspace.id,
   name: workspaceDisplayName(workspace),
   ...(workspace.workspace_shorthand ? { shorthand: workspace.workspace_shorthand } : {}),
   type: workspace.worktree_path ? "worktree" : "current_branch",
   ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
+  // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
+  ...(session ? { session } : {}),
 });
 
 const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
   (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||
   (right.shorthand ?? right.id).localeCompare(left.shorthand ?? left.id, undefined, { numeric: true });
 
-export const createTicketWorkspaceLookup = (workspaces: ExtensionWorkspace[] = []) => {
+export const createTicketWorkspaceLookup = (
+  workspaces: ExtensionWorkspace[] = [],
+  sessions: TicketWorkspaceSessionLookup = new Map(),
+) => {
   const lookup: TicketWorkspaceLookup = new Map();
 
   for (const workspace of workspaces) {
     const ticketShorthand = ticketShorthandFromWorkspace(workspace);
     if (!ticketShorthand) continue;
     const items = lookup.get(ticketShorthand) ?? [];
-    items.push(workspaceToBadgeItem(workspace));
+    items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
     lookup.set(ticketShorthand, items);
   }
 
@@ -110,9 +119,9 @@ export const createTicketWorkspaceLookup = (workspaces: ExtensionWorkspace[] = [
 const ticketWorkspaceValues = (
   ticket: StoredTicket,
   workspaceLookup: TicketWorkspaceLookup,
-  parentLookup: TicketParentLookup,
+  resourceReference: TicketResourceReference,
 ) => {
-  const parentMetadata = linkedResourceParentMetadata(ticket, parentLookup);
+  const parentMetadata = { resourceParent: resourceReference };
   const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({ ...item, ...parentMetadata }));
   return {
     [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
@@ -127,10 +136,12 @@ const ticketToRowWithTags = (
   workspaceLookup: TicketWorkspaceLookup,
   parentLookup: TicketParentLookup,
 ) => {
+  const hierarchy = resolveTicketHierarchy(ticket, parentLookup);
+
   return {
     id: ticket.id,
-    // Card/list rows show the bare title; the shorthand stays available as the "id"
-    // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
+    // Card/list rows show the bare title; shorthand ancestry stays in the "id"
+    // attribute while the resource label remains the navigation title.
     title: ticket.title || ticket.shorthand,
     resource: {
       type: TICKET_RESOURCE_KIND,
@@ -138,14 +149,15 @@ const ticketToRowWithTags = (
       projectId,
       label: ticketDisplayTitle(ticket),
       icon: TICKET_RESOURCE_ICON,
-      metadata: ticketResourceHierarchyMetadata(ticket, parentLookup),
+      metadata: hierarchy.resourceReference.metadata,
     },
     attributes: {
       status: ticket.statusId ?? "",
       created: ticket.createdAt,
       updated: ticket.updatedAt,
-      id: ticket.shorthand,
-      ...ticketWorkspaceValues(ticket, workspaceLookup, parentLookup),
+      id: hierarchy.breadcrumb,
+      parent: hierarchy.parent?.shorthand ?? "",
+      ...ticketWorkspaceValues(ticket, workspaceLookup, hierarchy.resourceReference),
       ...ticketTagValues(ticket, tagOptions),
     },
   };
@@ -222,6 +234,12 @@ export const buildTicketAttributes = (
     displayable: true,
   },
   { id: "id", label: l10n("displayMenu.orderingOptions.shorthand", "ID"), type: { kind: "string" }, displayable: true },
+  {
+    id: "parent",
+    label: l10n("displayMenu.propertyOptions.parent", "Parent"),
+    type: { kind: "string" },
+    filterable: true,
+  },
   {
     id: TICKET_WORKSPACE_ATTRIBUTE_ID,
     label: l10n("displayMenu.propertyOptions.workspace", "Workspace"),

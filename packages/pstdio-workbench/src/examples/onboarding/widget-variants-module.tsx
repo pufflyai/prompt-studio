@@ -92,7 +92,11 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
 
   const openResource = (id: VariantNoteId) => {
     const resource = noteResource(id);
-    workbench.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label });
+    workbench.layout.openPanel(RESOURCE_SUB_PANEL_ID, {
+      resource,
+      title: resource.label,
+      strategy: { kind: "persistent" },
+    });
   };
 
   return (
@@ -119,7 +123,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
         <Button
           size="sm"
           justifyContent="flex-start"
-          onClick={() => workbench.layout.openPanel(SINGLETON_SUB_PANEL_ID)}
+          onClick={() => workbench.layout.openPanel(SINGLETON_SUB_PANEL_ID, { strategy: { kind: "persistent" } })}
         >
           <WorkbenchIcon name="X" />
           Closable singleton
@@ -145,6 +149,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
           onClick={() =>
             workbench.layout.openPanel(SCRATCH_SUB_PANEL_ID, {
               title: `Scratch ${scratchCount + 1}`,
+              strategy: { kind: "persistent" },
             })
           }
         >
@@ -240,12 +245,17 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     ctx.resources.registerPresenter({
       id: "onboarding.panel-variants.location-presenter",
       canOpen: (resource) => resource.kind === LOCATION_RESOURCE_KIND,
-      open: (resource) => ctx.layout.openPanel(LOCATION_PANEL_ID, { resource }),
+      open: (resource) => ctx.layout.openPanel(LOCATION_PANEL_ID, { resource, strategy: { kind: "persistent" } }),
     });
     ctx.resources.registerPresenter({
       id: "onboarding.panel-variants.note-presenter",
       canOpen: (resource) => resource.kind === NOTE_RESOURCE_KIND,
-      open: (resource) => ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource, title: resource.label }),
+      open: (resource) =>
+        ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, {
+          resource,
+          title: resource.label,
+          strategy: { kind: "persistent" },
+        }),
     });
 
     ctx.layout.registerPanel({
@@ -327,10 +337,18 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
       { title: locationResource.label, icon: locationResource.icon, resource: locationResource },
     ]);
     void ctx.resources.openResource(locationResource).then(() => {
-      ctx.layout.openPanel(SINGLETON_SUB_PANEL_ID);
-      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource: noteResource("alpha"), title: variantNotes.alpha.label });
-      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, { resource: noteResource("beta"), title: variantNotes.beta.label });
-      ctx.layout.openPanel(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1" });
+      ctx.layout.openPanel(SINGLETON_SUB_PANEL_ID, { strategy: { kind: "persistent" } });
+      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, {
+        resource: noteResource("alpha"),
+        title: variantNotes.alpha.label,
+        strategy: { kind: "persistent" },
+      });
+      ctx.layout.openPanel(RESOURCE_SUB_PANEL_ID, {
+        resource: noteResource("beta"),
+        title: variantNotes.beta.label,
+        strategy: { kind: "persistent" },
+      });
+      ctx.layout.openPanel(SCRATCH_SUB_PANEL_ID, { title: "Scratch 1", strategy: { kind: "persistent" } });
     });
   },
 });

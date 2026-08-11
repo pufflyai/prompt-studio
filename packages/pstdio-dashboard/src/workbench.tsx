@@ -1,8 +1,20 @@
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbenchCore, type LayoutPersistenceAdapter } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
+import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
-import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
+import {
+  createDashboardProjectSelectionPersistence,
+  type DashboardProjectSelectionPersistence,
+} from "@/shared/app/project-selection-persistence";
+import {
+  createDashboardSessionDraftPersistence,
+  type DashboardSessionDraftPersistence,
+} from "@/shared/app/session-draft-persistence";
+import {
+  createDashboardSessionSelectionPersistence,
+  type DashboardSessionSelectionPersistence,
+} from "@/shared/app/session-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createDashboardViewsModule } from "./modules/dashboard-views/module";
@@ -20,60 +32,62 @@ import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 
-const dashboardWorkbenchStorageNamespace = "dashboard-wb";
+// Names every storage key the dashboard owns; hosts and tests build the same keys from it.
+export const dashboardWorkbenchStorageNamespace = "dashboard-wb";
 
 interface CreateDashboardWorkbenchInput {
   storage?: WorkbenchStorageLike;
 }
 
-const createMemoryStorage = (): WorkbenchStorageLike => {
-  const values = new Map<string, string>();
-
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-  };
-};
-
-const resolveDashboardWorkbenchStorage = (storage: WorkbenchStorageLike | undefined) => {
-  if (storage) return storage;
-  if (typeof localStorage !== "undefined") return localStorage;
-  return createMemoryStorage();
-};
-
 type CreateDashboardModulesInput = {
-  projectSelectionPersistence?: ReturnType<typeof createDashboardProjectSelectionPersistence>;
+  layoutPersistence?: LayoutPersistenceAdapter;
+  projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  sessionDraftPersistence?: DashboardSessionDraftPersistence;
+  sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
   createDashboardViewsModule(),
   createSidenavModule(),
   createWorkspacesModule(),
-  createExtensionsModule(),
+  createExtensionsModule({ layoutPersistence: input.layoutPersistence }),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
   createHeadersModule(),
   createKeyboardShortcutsModule(),
   createHelpModule(),
   createCommandPaletteModule(),
-  createSessionBubbleModule(),
-  createSessionsModule(),
+  createSessionBubbleModule({ sessionDraftPersistence: input.sessionDraftPersistence }),
+  createSessionsModule({
+    sessionDraftPersistence: input.sessionDraftPersistence,
+    sessionSelectionPersistence: input.sessionSelectionPersistence,
+  }),
   createNotificationsModule(),
   createSettingsModule(),
   createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),
-  createBootstrapModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
+  createBootstrapModule({
+    projectSelectionPersistence: input.projectSelectionPersistence,
+    sessionSelectionPersistence: input.sessionSelectionPersistence,
+  }),
 ];
 
 export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = {}) => {
-  const storage = resolveDashboardWorkbenchStorage(input.storage);
+  const storage = resolveDashboardStorage(input.storage);
 
   const projectSelectionPersistence = createDashboardProjectSelectionPersistence({
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+  });
+  const scopedByProject = {
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+    projectSelection: projectSelectionPersistence,
+  };
+  const sessionSelectionPersistence = createDashboardSessionSelectionPersistence(scopedByProject);
+  const sessionDraftPersistence = createDashboardSessionDraftPersistence(scopedByProject);
+
+  const persistence = createLocalStorageWorkbenchPersistence({
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
   });
@@ -81,18 +95,17 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const workbench = createWorkbenchCore({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
-    ...createLocalStorageWorkbenchPersistence({
-      namespace: dashboardWorkbenchStorageNamespace,
-      storage,
-    }),
-    lastResourcePersistence: createDashboardLastResourcePersistence({
-      namespace: dashboardWorkbenchStorageNamespace,
-      storage,
-      projectSelection: projectSelectionPersistence,
-    }),
+    ...persistence,
+    lastResourcePersistence: createDashboardLastResourcePersistence(scopedByProject),
   });
 
-  for (const module of createDashboardModules({ projectSelectionPersistence })) workbench.registerModule(module);
+  const modules = createDashboardModules({
+    layoutPersistence: persistence.layoutPersistence,
+    projectSelectionPersistence,
+    sessionDraftPersistence,
+    sessionSelectionPersistence,
+  });
+  for (const module of modules) workbench.registerModule(module);
 
   return workbench;
 };

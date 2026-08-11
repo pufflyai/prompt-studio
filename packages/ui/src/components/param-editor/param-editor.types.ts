@@ -16,10 +16,21 @@ export interface NumberParam extends BaseParam {
   step?: number;
 }
 
+export interface BooleanParam extends BaseParam {
+  type: "boolean";
+  defaultValue: boolean;
+}
+
 export interface TextParam extends BaseParam {
   type: "text";
   defaultValue: string;
   singleLine?: boolean;
+}
+
+export interface MarkdownParam extends BaseParam {
+  type: "markdown";
+  defaultValue: string;
+  placeholder?: string;
 }
 
 export interface SelectionOption {
@@ -28,6 +39,21 @@ export interface SelectionOption {
   icon?: string;
   /** Palette key (e.g. "blue") applied to the option's icon. */
   color?: string;
+  description?: string;
+  disabled?: boolean;
+}
+
+/** Parent selector used to swap the option set of a grouped selection. */
+export interface SelectionGroup {
+  id: string;
+  name: string;
+  defaultValue: string;
+  options: SelectionOption[];
+  placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  disabled?: boolean;
 }
 
 export interface SelectionParam extends BaseParam {
@@ -36,6 +62,10 @@ export interface SelectionParam extends BaseParam {
   options: SelectionOption[];
   multiSelect?: boolean;
   placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  group?: SelectionGroup;
   /** Adds a "clear" row so a single-select can be returned to unset. */
   clearable?: boolean;
   /**
@@ -195,19 +225,23 @@ export interface VectorParam extends BaseParam {
   step?: number;
 }
 
-/** File selection metadata. Not a live `File` object — hosts own persistence. */
-export interface FileDropValue {
-  name: string;
-  mimeType?: string;
-  size?: number;
-  dataUrl?: string;
+export type FileUploadStatus = "queued" | "uploading" | "complete" | "error";
+
+/** A selected file and the host-controlled state of its upload. */
+export interface FileUploadValue {
+  id: string;
+  file: File;
+  status: FileUploadStatus;
+  progress?: number;
+  error?: string;
 }
 
-export interface FileDropParam extends BaseParam {
-  type: "fileDrop";
-  defaultValue: FileDropValue | null;
+export interface FileUploadParam extends BaseParam {
+  type: "fileUpload";
+  defaultValue: FileUploadValue[];
   accept?: string;
-  assetKind?: "file" | "image";
+  multiple?: boolean;
+  uploadLabel?: string;
 }
 
 export interface InputGroup {
@@ -219,11 +253,13 @@ export interface InputGroup {
   defaultCollapsed?: boolean;
 }
 
-export type ParamValue = number | string | null | string[] | RangeValue | VectorValue | FileDropValue;
+export type ParamValue = number | string | boolean | null | string[] | RangeValue | VectorValue | FileUploadValue[];
 
 export type Param =
   | NumberParam
+  | BooleanParam
   | TextParam
+  | MarkdownParam
   | SelectionParam
   | DateParam
   | ColorParam
@@ -235,6 +271,6 @@ export type Param =
   | ActionsParam
   | AnchorGridParam
   | VectorParam
-  | FileDropParam;
+  | FileUploadParam;
 
 export type ParamValueMap = Record<string, ParamValue>;

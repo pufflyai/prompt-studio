@@ -18,6 +18,7 @@ export interface TagSettingsTag {
 }
 
 export interface TagSettingsDraft {
+  name: string;
   type: TagSettingsTagType;
   options: TagEditorValue[];
   deletedIds: Set<string>;
@@ -38,6 +39,7 @@ export interface TagDraftOptionUpdate {
 
 export interface TagDraftPayload {
   tagId: string;
+  name?: string;
   type?: TagSettingsTagType;
   optionsToCreate: TagDraftOptionCreate[];
   optionsToUpdate: TagDraftOptionUpdate[];
@@ -68,6 +70,7 @@ export const tagOptionsToEditorValues = (options: TagSettingsOption[]): TagEdito
   }));
 
 export const createTagSettingsDraft = (tag: TagSettingsTag): TagSettingsDraft => ({
+  name: tag.name,
   type: tag.type,
   options: tagOptionsToEditorValues(tag.options),
   deletedIds: new Set(),
@@ -76,11 +79,14 @@ export const createTagSettingsDraft = (tag: TagSettingsTag): TagSettingsDraft =>
 export const tagSettingsDraftVersion = (tag: TagSettingsTag) =>
   [
     tag.id,
+    tag.name,
     tag.type,
     ...tag.options.map((option) =>
       [option.id, option.name, option.color, option.icon ?? DEFAULT_TAG_OPTION_ICON, option.sortOrder].join(":"),
     ),
   ].join(":");
+
+export const tagSettingsDraftsVersion = (tags: TagSettingsTag[]) => JSON.stringify(tags.map(tagSettingsDraftVersion));
 
 const commandIcon = (icon: string | null | undefined) => icon ?? DEFAULT_TAG_OPTION_ICON;
 
@@ -90,6 +96,7 @@ const optionChanged = (original: TagSettingsOption, draft: TagEditorValue) =>
   (original.icon ?? DEFAULT_TAG_OPTION_ICON) !== commandIcon(draft.icon);
 
 export const hasTagDraftChanges = (tag: TagSettingsTag, draft: TagSettingsDraft) =>
+  tag.name !== draft.name ||
   tag.type !== draft.type ||
   draft.deletedIds.size > 0 ||
   draft.options.some((option) => {
@@ -114,6 +121,7 @@ export const buildTagDraftPayload = (tag: TagSettingsTag, draft: TagSettingsDraf
 
   return {
     tagId: tag.id,
+    name: tag.name !== draft.name ? draft.name : undefined,
     type: tag.type !== draft.type ? draft.type : undefined,
     optionsToCreate,
     optionsToUpdate,
@@ -128,6 +136,7 @@ export const saveTagDraft = (run: RunTagSettingsCommand, tag: TagSettingsTag, dr
   const payload = buildTagDraftPayload(tag, draft);
   return run(tagSettingsCommandIds.applyDraft, {
     tagId: payload.tagId,
+    name: payload.name,
     type: payload.type,
     optionsToCreate: payload.optionsToCreate,
     optionsToUpdate: payload.optionsToUpdate,

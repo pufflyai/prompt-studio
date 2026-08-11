@@ -23,6 +23,7 @@ export const sp = {
 
 export const spacing = {
   none: { value: "0" },
+  "3xs": { value: sp[25] },
   "2xs": { value: sp[50] },
   xs: { value: sp[100] },
   compact: { value: "0.625rem" },
@@ -42,8 +43,29 @@ export const spacing = {
 export const sizes = {
   "collection-row": { value: "2.125rem" },
   "filter-pill": { value: sp[300] },
+  "icon-2xs": { value: sp[150] },
+  "icon-xs": { value: "0.875rem" },
+  "icon-sm": { value: sp[200] },
+  "icon-md": { value: sp[250] },
+  "tag-color-dot": { value: sp[250] },
+  "tag-icon-cell": { value: "1.75rem" },
+  "tag-picker": { value: "16.75rem" },
+  "tag-picker-color-only": { value: "13.75rem" },
+  "tag-swatch": { value: "1.625rem" },
+  "tag-swatch-dot": { value: "0.625rem" },
+  "tag-editor-row": { value: sp[500] },
+  "tag-editor-add-row": { value: "2.25rem" },
+  "segmented-control-sm": { value: "1.75rem" },
+  "segmented-control-xs": { value: sp[300] },
+  "segmented-control-item-sm": { value: sp[300] },
+  "segmented-control-item-xs": { value: sp[250] },
+  "tag-action-menu": { value: sp[2000] },
   "view-bar": { value: sp[500] },
   "view-subheader": { value: "2.25rem" },
+};
+
+export const borderWidths = {
+  selection: { value: "0.09375rem" },
 };
 
 export const radii = {

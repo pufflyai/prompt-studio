@@ -89,7 +89,7 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
       canOpen: (resource) => resource.kind === DOC_KIND,
       open: (resource, input) =>
         ctx.layout.openPanel(DOC_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         }),

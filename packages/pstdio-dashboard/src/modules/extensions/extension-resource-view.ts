@@ -63,11 +63,6 @@ const isResourceSidenavCompanion = (panel: ExtensionPanelRecord, resourceMode: E
     panel.treeRendererId && companionViewRegion(panel, resourceModeEntryForView(panel, resourceMode)) === "sidenav",
   );
 
-const hasPlacementForResource = (ctx: WorkbenchModuleContext, panelId: string, resource: ResourceRef) =>
-  Object.values(ctx.layout.getLayout().regions).some((region) =>
-    region.widgets.some((placement) => placement.contributionId === panelId && placement.resourceUri === resource.uri),
-  );
-
 const updatePlacementForResource = (
   ctx: WorkbenchModuleContext,
   input: { panelId: string; resource: ResourceRef; title?: string; pinned?: boolean },
@@ -168,7 +163,7 @@ const openResourceViewGroup = (
 ) => {
   const { group, openInput, resource, resourceMode } = input;
   const placement = ctx.layout.openPanel(widgetIdFor(group.primary), {
-    strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+    strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
     resource,
     title: resource.label,
   });
@@ -196,19 +191,15 @@ const openResourceCompanionViews = (
     if (isResourceSidenavCompanion(companion, resourceMode)) continue;
     const widgetId = widgetIdFor(companion);
     const title = companionViewTitle(companion, resource, region);
-    const updateInput = {
+
+    // A companion is part of the resource's layout, not a peek at it, so it keeps its tab.
+    ctx.layout.openPanel(widgetId, {
       resource,
       region,
       pinned: modeEntry?.pinned,
       title,
-    };
-
-    if (hasPlacementForResource(ctx, widgetId, resource)) {
-      ctx.layout.openPanel(widgetId, updateInput);
-      continue;
-    }
-
-    ctx.layout.openPanel(widgetId, updateInput);
+      strategy: { kind: "persistent" },
+    });
   }
 };
 

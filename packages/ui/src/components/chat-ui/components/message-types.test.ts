@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { groupMessagesByTurn, normalizeChatMessagesForDisplay, type SessionMessage } from "./message-types";
+import {
+  getAssistantMessageActionTargetId,
+  groupMessagesByTurn,
+  normalizeChatMessagesForDisplay,
+  type SessionMessage,
+} from "./message-types";
 
 const uiSourceDir = decodeURIComponent(new URL("../../..", import.meta.url).pathname).replace(/\/$/, "");
 const forbiddenRuntimeTerms = [
@@ -100,5 +105,39 @@ describe("chat message types", () => {
     );
 
     expect(normalized.map((message) => message.id)).toEqual(["user-1", "activity"]);
+  });
+
+  test("targets message actions at the final assistant response in a completed turn", () => {
+    const normalized = normalizeChatMessagesForDisplay(
+      [
+        { id: "user-1", role: "user", parts: [{ type: "text", text: "Make the change" }] },
+        { id: "commentary", role: "assistant", parts: [{ type: "text", text: "I will inspect it." }] },
+        { id: "tool", role: "assistant", parts: [{ type: "tool", tool: "read", status: "completed" }] },
+        { id: "final", role: "assistant", parts: [{ type: "text", text: "The change is complete." }] },
+        { id: "user-2", role: "user", parts: [{ type: "text", text: "Thanks" }] },
+      ],
+      { streaming: true },
+    );
+    const { groups } = groupMessagesByTurn(normalized);
+
+    expect(getAssistantMessageActionTargetId(groups[0]?.responses ?? [])).toBe("final");
+  });
+
+  test("does not target message actions when a tool follows the last assistant response", () => {
+    const normalized = normalizeChatMessagesForDisplay(
+      [
+        { id: "user-1", role: "user", parts: [{ type: "text", text: "Make the change" }] },
+        { id: "commentary-1", role: "assistant", parts: [{ type: "text", text: "First update." }] },
+        { id: "commentary-2", role: "assistant", parts: [{ type: "text", text: "Second update." }] },
+        { id: "tool-1", role: "assistant", parts: [{ type: "tool", tool: "read", status: "completed" }] },
+        { id: "tool-2", role: "assistant", parts: [{ type: "tool", tool: "grep", status: "completed" }] },
+        { id: "commentary-3", role: "assistant", parts: [{ type: "text", text: "Third update." }] },
+        { id: "tool-3", role: "assistant", parts: [{ type: "tool", tool: "shell", status: "running" }] },
+      ],
+      { streaming: true },
+    );
+    const { groups } = groupMessagesByTurn(normalized);
+
+    expect(getAssistantMessageActionTargetId(groups[0]?.responses ?? [])).toBeNull();
   });
 });

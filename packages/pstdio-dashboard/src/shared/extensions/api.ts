@@ -1,15 +1,20 @@
 import type {
+  AttemptExtensionFixResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
+  WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 
 export const getProjectExtensionMetadata = (projectId: string) =>
   apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/ui`);
+
+export const getExtensionContributions = (projectId: string, instanceId: string) =>
+  apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/${instanceId}/contributions`);
 
 export const getProjectExtensionAppearance = (projectId: string) =>
   apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
@@ -30,6 +35,27 @@ export const setProjectExtensionEnabled = (projectId: string, instanceId: string
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {
     method: "PATCH",
     body: { enabled },
+  });
+
+export const setExtensionAutomationEnabled = (
+  projectId: string,
+  instanceId: string,
+  automationId: string,
+  enabled: boolean,
+) =>
+  apiRequest<WorkbenchExtensionAutomationRecord>(
+    `/v1/projects/${projectId}/extensions/${instanceId}/automations/${encodeURIComponent(automationId)}`,
+    { method: "PATCH", body: { enabled } },
+  );
+
+export const reloadProjectExtension = (projectId: string, instanceId: string) =>
+  apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}/reload`, {
+    method: "POST",
+  });
+
+export const attemptExtensionFix = (projectId: string, instanceId: string) =>
+  apiRequest<AttemptExtensionFixResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/attempt-fix`, {
+    method: "POST",
   });
 
 export const uninstallProjectExtension = (projectId: string, instanceId: string, deleteUserData = false) =>

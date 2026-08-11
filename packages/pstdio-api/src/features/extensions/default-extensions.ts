@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifest } from "pstdio-extensions";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -93,7 +94,7 @@ const normalizeEmbeddedRelativePath = (relativePath: string) =>
 const embeddedExtensionFiles = (name: string) => {
   const prefix = `${EMBEDDED_EXTENSIONS_PREFIX}${name}/`;
   return {
-    files: getEmbeddedFiles().filter((file) => file.name.startsWith(prefix)),
+    files: getEmbeddedFiles().filter((file) => normalizeEmbeddedFileName(file.name).startsWith(prefix)),
     prefix,
   };
 };
@@ -106,7 +107,7 @@ const extractEmbeddedDefaultExtension = async (name: string) => {
   rmSync(targetDir, { recursive: true, force: true });
 
   for (const file of files) {
-    const relativePath = normalizeEmbeddedRelativePath(file.name.slice(prefix.length));
+    const relativePath = normalizeEmbeddedRelativePath(normalizeEmbeddedFileName(file.name).slice(prefix.length));
     const targetPath = join(targetDir, relativePath);
     mkdirSync(dirname(targetPath), { recursive: true });
     writeFileSync(targetPath, new Uint8Array(await file.arrayBuffer()));
@@ -134,6 +135,17 @@ type InstallDefaultExtensionsDeps = {
   installExtensionSource?: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+};
+
+let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
+
+const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>) => {
+  const result = defaultExtensionInstallQueue.then(install);
+  defaultExtensionInstallQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
 };
 
 type LoadScope = "user" | "repo";
@@ -219,8 +231,10 @@ const withResolvedDefaultEntries = async <T>(
   }
 };
 
-export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDeps = {}) => {
-  const config = deps.config ?? resolveDefaultExtensionsConfig(deps.env);
+const runDefaultExtensionInstall = async (
+  deps: InstallDefaultExtensionsDeps,
+  context: { config: DefaultExtensionsConfig; env: Record<string, string | undefined>; sourceMode: boolean },
+) => {
   const install = deps.installExtensionSource ?? installExtensionSource;
   const installed: InstalledExtensionSource[] = [];
   const reportFailure = (failure: {
@@ -238,13 +252,13 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
 
   await withResolvedDefaultEntries(
     {
-      config,
+      config: context.config,
       onEntryFailure: deps.onInstallFailure
         ? ({ entry, error, source }) => reportFailure({ entry, error, source })
         : undefined,
       prepareSharedCheckout: deps.prepareSharedCheckout,
       forceSourceDefaults: deps.forceSourceDefaults,
-      sourceMode: !deps.config,
+      sourceMode: context.sourceMode,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
@@ -253,6 +267,7 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
           installed.push(
             await install({
               ...toInstallInput(resolved.entry),
+              env: context.env,
               existsOk: true,
               prepareNamedSource,
             }),
@@ -266,6 +281,16 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
   );
 
   return installed;
+};
+
+export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) => {
+  const env = { ...(deps.env ?? process.env) };
+  const context = {
+    config: deps.config ?? resolveDefaultExtensionsConfig(env),
+    env,
+    sourceMode: !deps.config,
+  };
+  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context));
 };
 
 type InstallRepoDefaultExtensionsInput = {

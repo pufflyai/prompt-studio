@@ -56,6 +56,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-extension-testbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions", "@pstdio/workbench"],
   e2e: ["pstdio", "pstdio-api-contracts", "pstdio-db", "pstdio-extensions", "pstdio-wt"],
   "pstdio-scripts": ["pstdio-extensions"],
+  "@pstdio/desktop": ["@pstdio/ui", "pstdio", "pstdio-logging", "pstdio-paths"],
   "@pstdio/landing-page": ["@pstdio/ui"],
 };
 

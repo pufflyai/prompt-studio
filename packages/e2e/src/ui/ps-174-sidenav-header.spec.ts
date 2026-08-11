@@ -1,7 +1,13 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
+import {
+  STORY_RENDER_TIMEOUT_MS,
+  startStorybook,
+  stopStorybook,
+  storyUrl,
+  waitForStoryPlayback,
+} from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -224,14 +230,14 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(projectModeStoryId, "pstdio-dashboard"));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   for (const storyId of [

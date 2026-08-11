@@ -1,6 +1,6 @@
 import "./data-table.css";
 
-import { Flex, Table } from "@chakra-ui/react";
+import { Box, Flex, Table } from "@chakra-ui/react";
 import {
   getCoreRowModel,
   getPaginationRowModel,
@@ -33,6 +33,7 @@ import {
 import { DataTableStatsRow } from "./data-table-stats-row";
 import { DataTableBodyRow, DataTableColumnHeader } from "./data-table-table-parts";
 import { PaginationFooter } from "./pagination-footer";
+import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableProps } from "./types";
 
 export const DataTable = (props: DataTableProps) => {
@@ -63,6 +64,7 @@ export const DataTable = (props: DataTableProps) => {
     pageSize: resolveInitialPageSize({ initialPageSize }),
   }));
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [showStats, setShowStats] = useState(true);
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const propHiddenColumnsSet = new Set(hiddenColumns ?? []);
     return Object.keys(data[0] || {}).filter((key) => !propHiddenColumnsSet.has(key));
@@ -146,10 +148,12 @@ export const DataTable = (props: DataTableProps) => {
         label: compactHeaders?.[columnId] ?? columnId,
       }))}
       visibleColumnIds={visibleColumnIds}
-      onColumnToggle={(columnId) =>
+      showStats={showStats}
+      statsAvailable={Boolean(columnStats)}
+      onColumnVisibilityChange={(columnId, visible) =>
         setHiddenColumnMenuIds((current) => {
           const next = new Set(current);
-          if (next.has(columnId)) {
+          if (visible) {
             next.delete(columnId);
           } else {
             next.add(columnId);
@@ -162,6 +166,7 @@ export const DataTable = (props: DataTableProps) => {
           reorderDataTableColumns(resolveDataTableColumnOrder(baseColumnKeys, current), activeColumnId, overColumnId),
         )
       }
+      onStatsVisibilityChange={setShowStats}
     />
   );
 
@@ -171,73 +176,78 @@ export const DataTable = (props: DataTableProps) => {
         rows={rendererRows}
         storageKey={resolvedToolbarStorageKey}
         attributes={rendererAttributes}
-        selectedCount={enableSelection ? selectedRows.length : 0}
-        totalCount={allRows.length}
-        visibleCount={filteredData.length}
-        onClearSelection={() => table.toggleAllRowsSelected(false)}
-        onSelectAll={() => table.toggleAllRowsSelected(true)}
-        actions={selectionActions}
-        selectedRows={selectedOriginalRows}
         columnControl={columnControl}
       />
-      <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
-        <Table.Root
-          className={`data-table${fullWidth ? " full-width" : ""}`}
-          style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
-        >
-          <Table.Header>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <Fragment key={headerGroup.id}>
-                <Table.Row
-                  className="data-table-column-header-row"
-                  borderRight={noBorder ? "none" : "1px solid"}
-                  borderColor="border.subtle"
-                >
-                  {headerGroup.headers.map((header) => (
-                    <DataTableColumnHeader
-                      key={header.id}
-                      header={header}
+      <Box position="relative" flex="1" minHeight="0">
+        <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
+          <Table.Root
+            className={`data-table${fullWidth ? " full-width" : ""}`}
+            style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
+          >
+            <Table.Header>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <Fragment key={headerGroup.id}>
+                  <Table.Row
+                    className="data-table-column-header-row"
+                    borderRight={noBorder ? "none" : "1px solid"}
+                    borderColor="border.subtle"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <DataTableColumnHeader
+                        key={header.id}
+                        header={header}
+                        headerGroup={headerGroup}
+                        table={table}
+                        fullWidth={fullWidth}
+                        hasDescription={Boolean(columnDescriptions?.[header.column.id])}
+                      />
+                    ))}
+                  </Table.Row>
+                  {columnStats && showStats ? (
+                    <DataTableStatsRow
                       headerGroup={headerGroup}
-                      table={table}
+                      rows={filteredData}
+                      columnStats={columnStats}
+                      noBorder={noBorder}
                       fullWidth={fullWidth}
-                      hasDescription={Boolean(columnDescriptions?.[header.column.id])}
                     />
-                  ))}
-                </Table.Row>
-                {columnStats ? (
-                  <DataTableStatsRow
-                    headerGroup={headerGroup}
-                    rows={filteredData}
-                    columnStats={columnStats}
-                    noBorder={noBorder}
-                    fullWidth={fullWidth}
-                  />
-                ) : null}
-              </Fragment>
-            ))}
-          </Table.Header>
-          <Table.Body>
-            {table.getRowModel().rows.map((row) => {
-              const rowIsInteractive = onRowClick ? (isRowInteractive?.(row.original) ?? true) : false;
-              const rowIsActive = shouldHighlightActiveRow({ enableRowActivation, activeRowId, rowId: row.id });
-              const rowIsSelected = row.getIsSelected();
+                  ) : null}
+                </Fragment>
+              ))}
+            </Table.Header>
+            <Table.Body>
+              {table.getRowModel().rows.map((row) => {
+                const rowIsInteractive = onRowClick ? (isRowInteractive?.(row.original) ?? true) : false;
+                const rowIsActive = shouldHighlightActiveRow({ enableRowActivation, activeRowId, rowId: row.id });
+                const rowIsSelected = row.getIsSelected();
 
-              return (
-                <DataTableBodyRow
-                  key={row.id}
-                  row={row}
-                  noBorder={noBorder}
-                  rowIsInteractive={rowIsInteractive}
-                  rowIsActive={rowIsActive}
-                  rowIsSelected={rowIsSelected}
-                  onRowClick={onRowClick}
-                  getCellContextMenuActions={getCellContextMenuActions}
-                />
-              );
-            })}
-          </Table.Body>
-        </Table.Root>
-      </ScrollArea>
+                return (
+                  <DataTableBodyRow
+                    key={row.id}
+                    row={row}
+                    noBorder={noBorder}
+                    rowIsInteractive={rowIsInteractive}
+                    rowIsActive={rowIsActive}
+                    rowIsSelected={rowIsSelected}
+                    onRowClick={onRowClick}
+                    getCellContextMenuActions={getCellContextMenuActions}
+                  />
+                );
+              })}
+            </Table.Body>
+          </Table.Root>
+        </ScrollArea>
+        {enableSelection && selectedRows.length > 0 ? (
+          <SelectionToolbar
+            selectedCount={selectedRows.length}
+            totalCount={allRows.length}
+            onClearSelection={() => table.toggleAllRowsSelected(false)}
+            onSelectAll={() => table.toggleAllRowsSelected(true)}
+            actions={selectionActions}
+            selectedRows={selectedOriginalRows}
+          />
+        ) : null}
+      </Box>
       {table.getPageCount() > 1 && (
         <PaginationFooter
           table={table}

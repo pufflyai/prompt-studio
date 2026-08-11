@@ -1,4 +1,4 @@
-import { Box, Button, Icon as ChakraIcon, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Icon as ChakraIcon } from "@chakra-ui/react";
 import {
   Archive,
   Building2,
@@ -11,14 +11,15 @@ import {
   Flame,
   Globe2,
   Info,
-  Pencil,
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
+import { EditableCellsStory } from "./editable-cells-story";
 
 type StoryFn = () => ReactNode;
 
@@ -27,6 +28,10 @@ interface StoryContext {
     pageHeight?: string;
     pagePadding?: string | number;
   };
+}
+
+interface PlayContext {
+  canvasElement: HTMLElement;
 }
 
 interface DataTableStoryContainerProps {
@@ -88,6 +93,12 @@ const rowActions: DataTableProps["rowActions"] = [
   },
 ];
 
+const singleValueRows = generateTableRows(24).map((row) => ({
+  ...row,
+  Amount: 1_200,
+  Status: tableRows[0]!.Status,
+}));
+
 const withStoryPage = (Story: StoryFn, context: StoryContext) => {
   const pagePadding = context.parameters?.pagePadding ?? "sm";
   const pageHeight = context.parameters?.pageHeight;
@@ -117,76 +128,6 @@ const DataTableStoryContainer = (props: DataTableStoryContainerProps) => {
     <Box width="100%" maxWidth={maxWidth} height={height} marginX={marginX}>
       <DataTable {...args} activeRowId={activeRowId} onRowClick={handleRowClick} />
     </Box>
-  );
-};
-
-const EditableCellsRenderer = (props: DataTableStoryContainerProps) => {
-  const { args, maxWidth, height, marginX } = props;
-  const [rows, setRows] = useState(() => generateTableRows(18));
-  const [editingCell, setEditingCell] = useState<{
-    rowId: string;
-    columnId: string;
-    value: string;
-  } | null>(null);
-
-  const editableColumns = new Set(["Vendor", "Amount", "Region", "Department", "Priority"]);
-
-  const handleSave = () => {
-    if (!editingCell) return;
-
-    setRows((currentRows) =>
-      currentRows.map((row) => {
-        if (row.id !== editingCell.rowId) return row;
-        const nextValue = editingCell.columnId === "Amount" ? Number(editingCell.value) : editingCell.value;
-        return { ...row, [editingCell.columnId]: nextValue };
-      }),
-    );
-    setEditingCell(null);
-  };
-
-  return (
-    <Stack width="100%" maxWidth={maxWidth} height={height} marginX={marginX} gap="xs">
-      <Box flex="1" minH="0">
-        <DataTable
-          {...args}
-          data={rows}
-          getCellContextMenuActions={(context) => {
-            if (!editableColumns.has(context.columnId)) return [];
-
-            return [
-              {
-                label: "Edit cell",
-                icon: <ChakraIcon as={Pencil} boxSize="16px" />,
-                onSelect: () =>
-                  setEditingCell({
-                    rowId: context.rowId,
-                    columnId: context.columnId,
-                    value: String(context.value ?? ""),
-                  }),
-              },
-            ];
-          }}
-        />
-      </Box>
-      {editingCell ? (
-        <HStack gap="xs" borderWidth="1px" borderColor="border.subtle" padding="xs" borderRadius="xs">
-          <Text textStyle="label/S/medium" color="fg.muted">
-            {editingCell.columnId}
-          </Text>
-          <Input
-            size="sm"
-            value={editingCell.value}
-            onChange={(event) => setEditingCell({ ...editingCell, value: event.target.value })}
-          />
-          <Button size="sm" onClick={handleSave}>
-            Save
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setEditingCell(null)}>
-            Cancel
-          </Button>
-        </HStack>
-      ) : null}
-    </Stack>
   );
 };
 
@@ -224,6 +165,52 @@ export const ColumnStats = {
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
+  },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+    const displayMenu = within(document.body);
+    const columnMenu = within(displayMenu.getByRole("dialog"));
+    const invoiceCheckbox = columnMenu.getByRole("checkbox", { name: "Invoice" });
+    await userEvent.click(columnMenu.getByText("Invoice", { exact: true }));
+    await expect(invoiceCheckbox).not.toBeChecked();
+    await expect(canvas.queryByRole("columnheader", { name: "Invoice" })).not.toBeInTheDocument();
+
+    await userEvent.click(columnMenu.getByText("Invoice", { exact: true }));
+    await expect(columnMenu.getByRole("checkbox", { name: "Invoice" })).toBeChecked();
+    await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
+
+    const statisticsSwitch = columnMenu.getByRole("switch", { name: "Statistics" });
+    await expect(statisticsSwitch).toBeChecked();
+    await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
+    await expect(statisticsSwitch).not.toBeChecked();
+    await expect(canvasElement.querySelector(".data-table-stats-row")).not.toBeInTheDocument();
+  },
+};
+
+export const SingleValueStats = {
+  args: {
+    data: singleValueRows,
+    initialPageSize: 20,
+    columnStats: {
+      Amount: { type: "histogram", bins: 8 },
+      Status: { type: "top-values", limit: 3 },
+    },
+    toolbarStorageKey: "storybook-data-table-single-value-stats",
+  },
+  render: (args: DataTableProps) => {
+    return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
+  },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+
+    await expect(
+      canvas.getByText(new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(1200)),
+    ).toBeInTheDocument();
+    await expect(canvas.getByText("Paid", { selector: "[data-single-value-stat] *" })).toBeInTheDocument();
+    await expect(canvas.queryByLabelText("Distribution for Amount")).not.toBeInTheDocument();
+    await expect(canvas.queryByLabelText("Paid: 100%")).not.toBeInTheDocument();
   },
 };
 
@@ -277,6 +264,22 @@ export const SelectableRows = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+    const header = canvas.getByTestId("kanban-renderer-header");
+    const rowSelectors = canvas.getAllByLabelText("Select row");
+
+    await expect(within(header).queryByText("48 rows")).not.toBeInTheDocument();
+    await userEvent.click(rowSelectors[0]!);
+    await userEvent.click(rowSelectors[1]!);
+
+    const selectionBar = canvas.getByRole("toolbar", { name: "Selection actions" });
+    const selectionOverlay = selectionBar.parentElement;
+    await expect(selectionBar).toHaveTextContent("2 rows selected");
+    await expect(selectionOverlay).not.toBeNull();
+    await expect(getComputedStyle(selectionOverlay!).position).toBe("absolute");
+    await expect(within(header).getByText("All")).toBeInTheDocument();
+  },
 };
 
 export const RowActions = {
@@ -313,7 +316,7 @@ export const EditableCells = {
     toolbarStorageKey: "storybook-data-table-editable-cells",
   },
   render: (args: DataTableProps) => {
-    return <EditableCellsRenderer args={args} maxWidth="1080px" height="580px" marginX="auto" />;
+    return <EditableCellsStory args={args} maxWidth="1080px" height="580px" marginX="auto" />;
   },
 };
 

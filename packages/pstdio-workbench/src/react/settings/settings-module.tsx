@@ -82,7 +82,18 @@ export const createWorkbenchSettingsModule = (
         singleton: true,
         closable: true,
         rendererId: RENDERER_ID,
-        config: { size: "xl", scrollBehavior: "inside", contentHeight: "80vh" },
+        config: {
+          size: "xl",
+          scrollBehavior: "inside",
+          contentHeight: "min(760px, 88vh)",
+          contentMaxWidth: "min(1440px, 94vw)",
+          contentWidth: "94vw",
+          closeTriggerTop: "3.5",
+          // Settings hosts nested overlays (confirmations, popovers) that portal
+          // outside this dialog's content; outside-interact dismissal would treat
+          // clicks in them as "close settings". Esc and the close button remain.
+          closeOnInteractOutside: false,
+        },
       });
       ctx.renderers.registerRenderer({
         id: RENDERER_ID,
@@ -105,7 +116,8 @@ export const createWorkbenchSettingsModule = (
       ctx.resources.registerPresenter({
         id: "workbench.settings.presenter",
         canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
-        open: (resource) => ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label }),
+        open: (resource) =>
+          ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label, strategy: { kind: "persistent" } }),
       });
 
       ctx.commands.registerCommand(

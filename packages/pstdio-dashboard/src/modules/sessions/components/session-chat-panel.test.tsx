@@ -7,6 +7,7 @@ import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel
 
 const sessionView = {
   id: "session-1",
+  draftKey: "session-1",
   sessionId: "session-1",
   workspaceTitle: "Dashboard workbench datalayer",
   workspaceId: "workspace-1",
@@ -37,7 +38,7 @@ const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCor
     open: (resource, input) => {
       workbench.modes.setActiveMode("workspace");
       return workbench.layout.openPanel(dashboardWidgetIds.workspace, {
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         resource,
         title: resource.label,
       });

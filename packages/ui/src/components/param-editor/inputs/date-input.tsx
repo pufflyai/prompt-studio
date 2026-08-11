@@ -15,6 +15,7 @@ interface DateInputProps {
   hideLabel?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
   fullWidth?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const DateInput = (props: DateInputProps) => {
@@ -29,6 +30,7 @@ export const DateInput = (props: DateInputProps) => {
     readOnly,
     hideLabel = false,
     fullWidth = false,
+    size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,7 +87,7 @@ export const DateInput = (props: DateInputProps) => {
             className="nodrag"
             readOnly={readOnly}
             width="100%"
-            size="sm"
+            size={size}
             type="date"
             placeholder={hideLabel ? name : undefined}
             value={value}
@@ -106,7 +108,7 @@ export const DateInput = (props: DateInputProps) => {
             className="nodrag"
             readOnly={readOnly}
             width="8.75rem"
-            size="sm"
+            size={size}
             type="date"
             placeholder={hideLabel ? name : undefined}
             value={value}

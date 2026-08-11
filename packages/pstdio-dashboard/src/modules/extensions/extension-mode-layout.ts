@@ -59,6 +59,7 @@ const seedModeEntry = (input: {
     return ctx.layout.openPanel(extensionViewWidgetIdFor(panel), {
       region,
       pinned: entry.pinned,
+      strategy: { kind: "persistent" },
       resource: createExtensionViewResource({ projectId, title: entry.title, panel }),
       title: entry.title
         ? resolveLocalizableString(entry.title, panel.extensionId)

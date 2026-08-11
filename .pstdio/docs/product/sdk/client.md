@@ -11,19 +11,21 @@ core SDK domain clients.
 import { createClient } from "@pstdio/sdk/client";
 
 const client = createClient({
-  baseUrl: "http://localhost:19840", // default: PSTDIO_API_URL env or http://localhost:19840
-  token: "...", // optional: Bearer token (matches PSTDIO_API_TOKEN)
+  baseUrl: "http://127.0.0.1:43123", // default: PSTDIO_API_URL env or http://127.0.0.1:19840
+  token: "...", // optional: defaults to PSTDIO_API_TOKEN outside the browser
 });
 ```
 
-All options are optional. With no arguments, the client reads `PSTDIO_API_URL` from the environment and connects without authentication.
+All options are optional. With no arguments, a non-browser client reads `PSTDIO_API_URL` and `PSTDIO_API_TOKEN` from
+the environment. Browser requests use same-origin credentials so the runtime's HttpOnly session cookie authenticates
+REST and SSE without exposing the bearer token to JavaScript.
 
 ### Options
 
 | Option    | Type           | Default                                                  | Description                                      |
 | --------- | -------------- | -------------------------------------------------------- | ------------------------------------------------ |
-| `baseUrl` | `string`       | `process.env.PSTDIO_API_URL` or `http://localhost:19840` | API server URL                                   |
-| `token`   | `string`       | —                                                        | Bearer token for authenticated requests          |
+| `baseUrl` | `string`       | `process.env.PSTDIO_API_URL` or `http://127.0.0.1:19840` | API server URL                                   |
+| `token`   | `string`       | `process.env.PSTDIO_API_TOKEN` outside the browser       | Bearer token for authenticated requests          |
 | `fetch`   | `typeof fetch` | `globalThis.fetch`                                       | Custom fetch implementation (useful for testing) |
 
 ## Domain Groups
@@ -40,7 +42,12 @@ client.agents; // Agent configuration
 client.extensions; // Extension command execution and metadata
 client.settings; // Global settings
 client.sync; // SSE sync helpers
+client.runtime; // Browser-session provisioning
 ```
+
+Desktop main processes can provision the dedicated browser session through `client.runtime.provisionBrowserSession()`.
+The request uses the bearer header, returns no token payload, and sets the `HttpOnly; SameSite=Strict` cookie. Do not
+forward the descriptor token into renderer JavaScript.
 
 ## Projects
 

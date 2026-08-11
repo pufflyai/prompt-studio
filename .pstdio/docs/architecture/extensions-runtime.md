@@ -214,7 +214,27 @@ graph TD
   Preserve --> Done
 ```
 
-Production entrypoints do not use `bun --watch`. Published installs run a platform binary through `bin/pstdio.cjs`, and compiled auto-start uses `process.execPath serve`. Workspace non-dev auto-start uses `bun run start` in `packages/pstdio-api`, not watch mode.
+Production entrypoints do not use `bun --watch`. Published installs run a platform binary through `bin/pstdio.cjs`,
+and compiled auto-start self-spawns that binary in foreground-sidecar mode. Workspace non-dev auto-start invokes the
+same combined runtime from `packages/pstdio`; both publish the shared runtime descriptor after authenticated readiness.
+
+## Extension process environment
+
+Extension commands and terminals start from an allowlisted host environment instead of inheriting the API process
+environment. The inherited keys are `BUN_INSTALL`, `BUN_INSTALL_CACHE_DIR`, `COLORTERM`,
+`ComSpec`, `FORCE_COLOR`, `HOME`, `LANG`, `LOGNAME`, `NO_COLOR`, `PATH`, `PATHEXT`, `SHELL`, `SystemRoot`, `TEMP`,
+`TERM`, `TMP`, `TMPDIR`, `TZ`, `USER`, `USERPROFILE`, `VOLTA_HOME`, `WINDIR`, and locale variables beginning with
+`LC_`. Explicit environment values supplied by the runtime contract are then added and may override an inherited
+value.
+
+Dependency installers use the same base environment plus a separate package-network allowlist. It includes standard
+upper- and lower-case proxy variables, Bun and npm registry settings, common registry tokens, npm configuration file
+paths, and CA certificate paths. Those values are available only to `bun install`; extension commands and terminals
+do not inherit them.
+
+Host credentials such as `PSTDIO_API_TOKEN`, provider API keys, GitHub tokens, SSH agent sockets, and `NODE_OPTIONS`
+are therefore absent unless the calling runtime explicitly grants them. Extensions that need a credential must
+declare and receive it through their supported configuration path rather than relying on ambient process state.
 
 ## What The Runtime Does Not Own
 

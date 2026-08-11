@@ -10,7 +10,6 @@ interface ParamEditorReadOnlyFieldProps {
 
 const formatPrimitive = (value: string | number | boolean | null) => {
   if (value === null || value === "") return "Not provided";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
 };
 
@@ -55,11 +54,7 @@ const ReadOnlyContent = (props: Pick<ParamEditorReadOnlyFieldProps["param"], "va
   }
 
   if (typeof value === "boolean") {
-    return (
-      <Badge variant="subtle" colorPalette={value ? "green" : "gray"} width="fit-content">
-        {formatPrimitive(value)}
-      </Badge>
-    );
+    return <ParamEditorReadOnlyValue>{formatPrimitive(value)}</ParamEditorReadOnlyValue>;
   }
 
   return (

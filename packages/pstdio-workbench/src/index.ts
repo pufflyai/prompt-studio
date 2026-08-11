@@ -45,6 +45,7 @@ export type {
   DataTableRendererRegistry,
   DataTableRendererRow,
   DataTableRendererRowAction,
+  DataTableRendererSelectionAction,
   DataTableRendererThemeColor,
   Disposable,
   EnumOption,
@@ -75,6 +76,7 @@ export type {
   KeybindingRegistry,
   KeybindingSequence,
   LastResourcePersistenceAdapter,
+  LayoutPersistenceAdapter,
   MenuItem,
   MenuPath,
   MenuRegistry,
@@ -178,6 +180,8 @@ export type {
   WorkbenchShellController,
   WorkbenchShellOpenRegion,
   WorkbenchShellRegionState,
+  WorkbenchSidePanelMode,
+  WorkbenchSidePanelPersistenceAdapter,
   WorkbenchSidePanelPresentation,
   WorkbenchSnapshot,
   WorkbenchTabPosition,
@@ -192,6 +196,7 @@ export type {
   WorkbenchTerminalSessionSink,
   WorkbenchTerminalSessionStatus,
   WorkbenchTerminalState,
+  WorkbenchWidgetPlacement,
 } from "./core";
 
 export {

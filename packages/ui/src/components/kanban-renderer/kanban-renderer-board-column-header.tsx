@@ -2,7 +2,7 @@ import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text } from "@chakra-ui/
 import { MoreHorizontal, Plus } from "lucide-react";
 
 import { ListRow } from "@/components/list-row/list-row";
-import { getIconComponent } from "@/components/primitives/icon-color-picker";
+import { getIconComponent } from "@/components/primitives/icon-options";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 

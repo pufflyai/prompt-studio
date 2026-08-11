@@ -13,6 +13,7 @@ interface TextInputProps {
   singleLine?: boolean;
   hideLabel?: boolean;
   fullWidth?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const TextInput = (props: TextInputProps) => {
@@ -26,6 +27,7 @@ export const TextInput = (props: TextInputProps) => {
     singleLine = true,
     hideLabel = false,
     fullWidth = false,
+    size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,6 +43,15 @@ export const TextInput = (props: TextInputProps) => {
   const handleChange = (newValue: string) => {
     setValue(newValue);
     scheduleChange(newValue);
+  };
+
+  // Leaving the field is a commit: a form submitted inside the debounce window
+  // would otherwise send the value as it was before the last keystrokes.
+  const handleBlur = () => {
+    if (!timeoutRef.current) return;
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = null;
+    onChange(id, value);
   };
 
   if (readOnly) {
@@ -79,11 +90,12 @@ export const TextInput = (props: TextInputProps) => {
             readOnly={readOnly}
             flex="1"
             maxW="12.5rem"
-            size="sm"
+            size={size}
             type="text"
             placeholder={hideLabel ? name : undefined}
             value={value}
             onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
             onKeyUp={(e) => {
               if (e.key === "Enter") {
                 e.currentTarget.blur();
@@ -103,11 +115,12 @@ export const TextInput = (props: TextInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               width="100%"
-              size="sm"
+              size={size}
               type="text"
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
                   e.currentTarget.blur();
@@ -119,10 +132,11 @@ export const TextInput = (props: TextInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               width="100%"
-              size="sm"
+              size={size}
               placeholder={hideLabel ? name : undefined}
               value={value}
               onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
               rows={3}
               resize="vertical"
             />

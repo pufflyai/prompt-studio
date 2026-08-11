@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runPstdio, runPstdioSafe, shutdownApiViaHttp } from "./helpers";
+import { runPstdio, runPstdioSafe } from "./helpers";
 import { getFreePort } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
 
@@ -40,7 +40,7 @@ describe("ensureApi auto-start", () => {
     dirs.length = 0;
 
     if (portToCleanup) {
-      await shutdownApiViaHttp(`http://localhost:${portToCleanup}`);
+      runPstdioSafe("close", process.cwd(), {});
       portToCleanup = null;
     }
   });
@@ -67,12 +67,18 @@ describe("ensureApi auto-start", () => {
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_DISABLE_API_AUTO_START: "0",
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
+        PSTDIO_LOG_LEVEL: "info",
       });
 
       expect(output).toContain("Created project");
       expect(output).toContain("auto-test");
 
-      expect(await isReachable(url)).toBe(true);
+      // Request logging happens after the launcher has exited. A detached API must
+      // remain alive when it writes those later records.
+      for (let request = 0; request < 3; request += 1) {
+        expect(await isReachable(url)).toBe(true);
+        await Bun.sleep(50);
+      }
     },
     TEST_TIMEOUT,
   );

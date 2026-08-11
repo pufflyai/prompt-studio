@@ -33,6 +33,28 @@ describe("resolveDashboardSessionView", () => {
     expect(view.workspaceShorthand).toBe("PS-307_A1");
   });
 
+  test("gives each new session draft resource its own draft storage key", () => {
+    const first = resolveDashboardSessionViewForPlacement({
+      resource: {
+        kind: "session-draft",
+        uri: "dashboard-workbench://session-draft/new-workspace-1-first",
+        id: "new-workspace-1-first",
+        label: "New session",
+      },
+    });
+    const second = resolveDashboardSessionViewForPlacement({
+      resource: {
+        kind: "session-draft",
+        uri: "dashboard-workbench://session-draft/new-workspace-1-second",
+        id: "new-workspace-1-second",
+        label: "New session",
+      },
+    });
+
+    expect(first.draftKey).toBe("new-workspace-1-first");
+    expect(second.draftKey).toBe("new-workspace-1-second");
+  });
+
   test("exposes session status on the session resource", () => {
     const [session] = buildDashboardSessionsFromRows({
       files: [],

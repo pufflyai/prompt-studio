@@ -1,5 +1,16 @@
 # pstdio
 
+## 0.25.2
+
+_2026-08-04_
+
+### Patch Changes
+
+- 0ac6992: Keep auto-started API processes alive after the launching CLI exits while preserving correlated startup diagnostics.
+- 225af02: Refresh installed extension revisions when source files reload.
+- 225af02: Support extension DataTable multi-selection actions end to end
+- 053867b: Stabilize extension webview builds and browser test process cleanup.
+
 ## 0.25.1
 
 _2026-07-28_

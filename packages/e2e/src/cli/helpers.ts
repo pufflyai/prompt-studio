@@ -94,14 +94,6 @@ export const createProjectViaApi = async (apiUrl: string, name: string) => {
   return (await res.json()) as { id: string; name: string };
 };
 
-export const shutdownApiViaHttp = async (apiUrl: string) => {
-  try {
-    await fetch(`${apiUrl}/shutdown`, { method: "POST" });
-  } catch {
-    // already down
-  }
-};
-
 export const cleanupDirs = (dirs: string[]) => {
   for (const dir of dirs) {
     rmSync(dir, { recursive: true, force: true });

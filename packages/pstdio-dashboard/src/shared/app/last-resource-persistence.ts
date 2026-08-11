@@ -1,5 +1,6 @@
 import type { LastResourcePersistenceAdapter, ResourceRef } from "@pstdio/workbench";
 import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "@pstdio/workbench/storage";
+import { resolveDashboardStorage } from "./dashboard-storage";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 interface CreateDashboardLastResourcePersistenceInput {
@@ -7,25 +8,6 @@ interface CreateDashboardLastResourcePersistenceInput {
   storage?: WorkbenchStorageLike;
   projectSelection: Pick<DashboardProjectSelectionPersistence, "getSelectedProjectId">;
 }
-
-const createMemoryStorage = (): WorkbenchStorageLike => {
-  const values = new Map<string, string>();
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-  };
-};
-
-const resolveStorage = (storage: WorkbenchStorageLike | undefined) => {
-  if (storage) return storage;
-  if (typeof localStorage !== "undefined") return localStorage;
-  return createMemoryStorage();
-};
 
 const isResourceRef = (value: unknown): value is ResourceRef =>
   Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
@@ -51,7 +33,7 @@ const readResource = (storage: WorkbenchStorageLike, key: string) => {
 export const createDashboardLastResourcePersistence = (
   input: CreateDashboardLastResourcePersistenceInput,
 ): LastResourcePersistenceAdapter => {
-  const storage = resolveStorage(input.storage);
+  const storage = resolveDashboardStorage(input.storage);
 
   const resolveKey = () => {
     const projectId = input.projectSelection.getSelectedProjectId();

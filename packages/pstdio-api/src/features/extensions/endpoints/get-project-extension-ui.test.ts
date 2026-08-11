@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -89,5 +89,55 @@ describe("GET /v1/projects/:projectId/extensions/ui", () => {
     expect(
       records.find(({ installedSource }) => installedSource.install_name === "deleted-ui-extension-source"),
     ).toBeUndefined();
+  });
+
+  test("lists declared themes as contribution records", async () => {
+    const project = await createProject("Themed UI Extension Project");
+    const sourcePath = createTestExtensionSource({
+      root: pstdioHome,
+      name: "themed-extension",
+      displayName: "Themed Extension",
+      installName: "themed-extension-source",
+    });
+    writeFileSync(
+      join(sourcePath, "midnight-color-theme.json"),
+      JSON.stringify({ name: "Midnight", type: "dark", colors: { "editor.background": "#111111" } }),
+    );
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
+
+export default {
+  themes: {
+    midnight: {
+      title: "Midnight",
+      format: "vscode-color-theme",
+      mode: "dark",
+      source: asset("./midnight-color-theme.json"),
+    },
+  },
+};
+`,
+    );
+
+    await handle.deps.extensionService.enableInstalledSourceForProject({
+      displayName: "Themed Extension",
+      extensionId: "test.themed-extension",
+      installName: "themed-extension-source",
+      manifest: { displayName: "Themed Extension", id: "test.themed-extension", name: "themed-extension" },
+      name: "themed-extension",
+      projectId: project.id,
+      sourcePath,
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/ui`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.themes).toContainEqual({
+      id: "themed-extension.midnight",
+      localId: "midnight",
+      extensionId: "test.themed-extension",
+      title: "Midnight",
+    });
   });
 });

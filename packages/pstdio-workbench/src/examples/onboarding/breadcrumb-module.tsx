@@ -82,7 +82,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       open: (resource, input) => {
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         return ctx.layout.openPanel(DOCS_HOME_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });
@@ -96,7 +96,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
         findSection(typeof resource.id === "string" ? resource.id : undefined);
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         return ctx.layout.openPanel(SECTION_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });
@@ -110,7 +110,7 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
         findPageBySectionPath(typeof resource.id === "string" ? resource.id : undefined);
         ctx.breadcrumbs.setItems(breadcrumbItemsFor(ctx.resources, resource));
         return ctx.layout.openPanel(PAGE_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

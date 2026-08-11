@@ -24,7 +24,7 @@ export const createTicketsModule = (): WorkbenchModuleContribution => ({
         ctx.modes.setActiveMode("project");
         setResourceBreadcrumb(ctx, resource);
         return ctx.layout.openPanel(dashboardWidgetIds.tickets, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

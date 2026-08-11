@@ -33,6 +33,10 @@ export const projectExtensionInstanceSchema = z.object({
   version: z.string().nullable().optional(),
   description: z.string().optional(),
   sourcePath: z.string(),
+  scope: z.enum(["repo", "global"]),
+  status: z.enum(["pending", "loaded", "error", "missing", "disabled"]),
+  lastLoadedAt: z.string().nullable().optional(),
+  lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
 });
@@ -43,6 +47,15 @@ export const listProjectExtensionsResponseSchema = z.object({
 
 export const setProjectExtensionEnabledRequestSchema = z.object({
   enabled: z.boolean(),
+});
+
+export const setExtensionAutomationEnabledRequestSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export const attemptExtensionFixResponseSchema = z.object({
+  sessionId: z.string(),
+  title: z.string(),
 });
 
 export const updateInstalledExtensionTemplateInputSchema = z.object({
@@ -74,6 +87,8 @@ export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExt
 export type ProjectExtensionInstance = z.infer<typeof projectExtensionInstanceSchema>;
 export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensionsResponseSchema>;
 export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
+export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAutomationEnabledRequestSchema>;
+export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
 export type UpdateInstalledExtensionTemplateInput = z.infer<typeof updateInstalledExtensionTemplateInputSchema>;
 export type UpdateInstalledExtensionTemplateResponse = z.infer<typeof updateInstalledExtensionTemplateResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

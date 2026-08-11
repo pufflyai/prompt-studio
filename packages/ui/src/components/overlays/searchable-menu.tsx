@@ -1,10 +1,11 @@
-import { Box, Icon, Input, InputGroup, Menu, Portal } from "@chakra-ui/react";
-import { ChevronDown, Search } from "lucide-react";
+import { Box, Icon, Menu, Portal } from "@chakra-ui/react";
+import { ChevronDown } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { ListRow } from "@/components/list-row/list-row";
 import type { ListRowItem } from "@/components/list-row/list-row.types";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { SearchableMenuInput } from "./searchable-menu-input";
 
 type MenuRootProps = React.ComponentProps<typeof Menu.Root>;
 type MenuContentProps = React.ComponentProps<typeof Menu.Content>;
@@ -110,21 +111,6 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
     listId: "parent",
   };
 };
-
-const portalledMenuLayerZIndex = "calc(var(--chakra-z-index-popover) + 2)";
-
-const searchInputChromeProps = {
-  bg: "transparent",
-  border: "0",
-  borderColor: "transparent",
-  borderRadius: "0",
-  boxShadow: "none",
-  transition: "none",
-  _hover: { bg: "transparent", borderColor: "transparent" },
-  _active: { bg: "transparent", borderColor: "transparent" },
-  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-} as const;
 
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
@@ -264,25 +250,16 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
   const shouldShowSeparator = Boolean(resolvedHeader) && !config.showSearch;
 
   const searchInput = config.showSearch ? (
-    <Header variant="input" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0}>
-      <InputGroup startElement={<Search size={14} />} width="full">
-        <Input
-          ref={inputRef}
-          mx="xs"
-          value={query}
-          placeholder={config.searchPlaceholder}
-          aria-label={config.searchPlaceholder}
-          autoComplete="off"
-          {...searchInputChromeProps}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => event.stopPropagation()}
-        />
-      </InputGroup>
-    </Header>
+    <SearchableMenuInput
+      inputRef={inputRef}
+      value={query}
+      placeholder={config.searchPlaceholder}
+      onValueChange={setQuery}
+    />
   ) : null;
 
   const menuPositioner = (
-    <Menu.Positioner pointerEvents="auto">
+    <Menu.Positioner>
       <Menu.Content w={width} bg="bg" gap="0" p="0">
         {resolvedHeader}
         {searchInput}
@@ -332,15 +309,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       onSelect={hasParentList ? handleMenuItemSelect : undefined}
     >
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
-      <Portal disabled={!portalled}>
-        {portalled ? (
-          <Box position="fixed" inset="0" pointerEvents="none" zIndex={portalledMenuLayerZIndex}>
-            {menuPositioner}
-          </Box>
-        ) : (
-          menuPositioner
-        )}
-      </Portal>
+      <Portal disabled={!portalled}>{menuPositioner}</Portal>
     </Menu.Root>
   );
 };

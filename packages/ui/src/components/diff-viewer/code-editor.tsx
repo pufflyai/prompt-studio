@@ -3,6 +3,19 @@ import { useEffect, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
 import { useThemePreference } from "../../utils/theme-preference";
 
+export const createCodeEditorPreloader = (initialize: () => Promise<unknown>) => {
+  let initialization: Promise<unknown> | undefined;
+
+  return () => {
+    initialization ??= initialize();
+    return initialization;
+  };
+};
+
+export const preloadCodeEditor = createCodeEditorPreloader(() =>
+  import("./monaco-browser").then((module) => module.initializeMonaco()),
+);
+
 export const customTheme = {
   base: "vs-dark" as const,
   inherit: true,

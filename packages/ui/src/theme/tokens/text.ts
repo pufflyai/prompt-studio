@@ -186,6 +186,24 @@ export const textStyles = defineTextStyles({
       letterSpacing: "0.1px",
     },
   },
+  "label/2XS": {
+    value: {
+      fontFamily: "label",
+      fontSize: "2xs",
+      fontWeight: "400",
+      lineHeight: "150%",
+      letterSpacing: "0.08px",
+    },
+  },
+  "label/2XS/medium": {
+    value: {
+      fontFamily: "label",
+      fontSize: "2xs",
+      fontWeight: "500",
+      lineHeight: "150%",
+      letterSpacing: "0.08px",
+    },
+  },
   "mono/XS": {
     value: {
       fontFamily: "mono",

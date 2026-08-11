@@ -19,6 +19,7 @@ interface NumberInputProps {
   hideSlider?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
   fullWidth?: boolean;
+  size?: "xs" | "sm";
 }
 
 export const NumberInput = (props: NumberInputProps) => {
@@ -35,6 +36,7 @@ export const NumberInput = (props: NumberInputProps) => {
     hideLabel = false,
     hideSlider = false,
     fullWidth = false,
+    size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
   const isRange = min !== undefined && max !== undefined;
@@ -89,7 +91,7 @@ export const NumberInput = (props: NumberInputProps) => {
           <NumberInputRoot
             disabled={readOnly}
             width="100%"
-            size="sm"
+            size={size}
             value={`${value}`}
             step={step}
             min={min}
@@ -102,7 +104,6 @@ export const NumberInput = (props: NumberInputProps) => {
           >
             <NumberInputField
               className="nodrag"
-              h="2rem"
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
               onKeyUp={(e) => {
@@ -119,7 +120,7 @@ export const NumberInput = (props: NumberInputProps) => {
           <NumberInputRoot
             disabled={readOnly}
             width="5rem"
-            size="sm"
+            size={size}
             value={`${value}`}
             step={step}
             min={min}
@@ -132,7 +133,6 @@ export const NumberInput = (props: NumberInputProps) => {
           >
             <NumberInputField
               className="nodrag"
-              h="2rem"
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
               onKeyUp={(e) => {
@@ -146,7 +146,6 @@ export const NumberInput = (props: NumberInputProps) => {
       )}
       {showSlider && (
         <Slider
-          size="sm"
           disabled={readOnly}
           value={[value]}
           step={step}

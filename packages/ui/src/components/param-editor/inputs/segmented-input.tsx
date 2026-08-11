@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { SegmentedOption } from "../param-editor.types";
 import { ParamEditorControlItem } from "../param-editor-control-item";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
+import { SelectionMenu } from "./selection-menu";
 
 interface SegmentedInputProps {
   id: string;
@@ -14,10 +15,22 @@ interface SegmentedInputProps {
   onChange: (id: string, value: string) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
+  presentation?: "stacked" | "horizontal";
 }
 
 export const SegmentedInput = (props: SegmentedInputProps) => {
-  const { id, name, description, defaultValue, options, variant = "default", onChange, readOnly, fullWidth } = props;
+  const {
+    id,
+    name,
+    description,
+    defaultValue,
+    options,
+    variant = "default",
+    onChange,
+    readOnly,
+    fullWidth,
+    presentation = "stacked",
+  } = props;
   const [value, setValue] = useState(defaultValue);
 
   useEffect(() => {
@@ -30,12 +43,25 @@ export const SegmentedInput = (props: SegmentedInputProps) => {
   };
 
   const selectedName = options.find((option) => option.id === value)?.name ?? value;
+  const horizontal = presentation === "horizontal";
 
   if (readOnly) {
     return (
-      <ParamEditorControlItem name={name} description={description} fullWidth={fullWidth}>
+      <ParamEditorControlItem name={name} description={description} hideLabel={horizontal} fullWidth={fullWidth}>
         <ParamEditorReadOnlyValue>{selectedName}</ParamEditorReadOnlyValue>
       </ParamEditorControlItem>
+    );
+  }
+
+  if (horizontal) {
+    return (
+      <SelectionMenu
+        triggerLabel={selectedName}
+        options={options}
+        selectedIds={[value]}
+        multiSelect={false}
+        onToggle={select}
+      />
     );
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createRequest, PstdioApiError } from "./request";
+import { createRequest, PstdioApiError, resolveBaseUrl } from "./request";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -7,6 +7,18 @@ const jsonResponse = (body: unknown, status = 200) =>
 const mockFetchFn = (fn: (...args: unknown[]) => Promise<Response>) => fn as unknown as typeof fetch;
 
 describe("createRequest", () => {
+  it("defaults to the IPv4 loopback runtime origin", () => {
+    const previous = process.env.PSTDIO_API_URL;
+    delete process.env.PSTDIO_API_URL;
+
+    try {
+      expect(resolveBaseUrl({})).toBe("http://127.0.0.1:19840");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_URL;
+      else process.env.PSTDIO_API_URL = previous;
+    }
+  });
+
   it("makes a GET request to the base URL + path", async () => {
     const calls: unknown[][] = [];
     const request = createRequest({
@@ -100,6 +112,50 @@ describe("createRequest", () => {
 
     const init = calls[0]![1] as RequestInit;
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer secret");
+  });
+
+  it("does not send the runtime token to an absolute URL on another origin", async () => {
+    const calls: unknown[][] = [];
+    const request = createRequest({
+      baseUrl: "http://127.0.0.1:4321",
+      token: "runtime-secret",
+      fetch: mockFetchFn((...args) => {
+        calls.push(args);
+        return Promise.resolve(jsonResponse({}));
+      }),
+    });
+
+    await request("https://attacker.example/collect");
+
+    const [url, init] = calls[0] as [string, RequestInit];
+    expect(url).toBe("https://attacker.example/collect");
+    expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+  });
+
+  it("uses the discovered CLI token without exposing it in the request URL", async () => {
+    const previous = process.env.PSTDIO_API_TOKEN;
+    const calls: unknown[][] = [];
+    process.env.PSTDIO_API_TOKEN = "runtime-secret";
+
+    try {
+      const request = createRequest({
+        baseUrl: "http://127.0.0.1:4321",
+        fetch: mockFetchFn((...args) => {
+          calls.push(args);
+          return Promise.resolve(jsonResponse({}));
+        }),
+      });
+
+      await request("/v1/projects");
+
+      const [url, init] = calls[0] as [string, RequestInit];
+      expect(url).toBe("http://127.0.0.1:4321/v1/projects");
+      expect((init.headers as Record<string, string>).authorization).toBe("Bearer runtime-secret");
+      expect(init.credentials).toBe("same-origin");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_TOKEN;
+      else process.env.PSTDIO_API_TOKEN = previous;
+    }
   });
 
   it("throws PstdioApiError with message from error body", async () => {

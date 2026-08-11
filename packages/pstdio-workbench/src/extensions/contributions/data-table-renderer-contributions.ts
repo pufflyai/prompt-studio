@@ -77,6 +77,14 @@ const registerRenderer = (
     columns: record.columns?.map(toColumn),
     initialPageSize: record.initialPageSize,
     pageSizeOptions: record.pageSizeOptions,
+    selectionMode: record.selectionMode,
+    selectionActions: record.selectionActions?.map((action) => ({
+      id: action.id,
+      label: localize(action.label, action.id),
+      icon: action.icon ? createElement(WorkbenchIcon, { name: action.icon, size: 16 }) : undefined,
+      destructive: action.destructive,
+      run: (rows) => run(action.commandId, { rowIds: rows.map((row) => row.id) }).then(() => undefined),
+    })),
     emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
     emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
     executeQuery: async ({ resource, modeId }) => {

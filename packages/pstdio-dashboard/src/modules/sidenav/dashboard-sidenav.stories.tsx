@@ -112,7 +112,7 @@ const createTicketsNavigationModule = () => ({
         selectDashboardNavigationResource(ctx, resource);
         setResourceBreadcrumb(ctx, resource);
         return ctx.layout.openPanel(STORY_TICKET_WIDGET_ID, {
-          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.label,
         });

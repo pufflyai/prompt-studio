@@ -174,6 +174,38 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(existsSync(sourcePath)).toBe(false);
   });
 
+  test("deletes repo-local extension files so repo sync cannot resurrect the extension", async () => {
+    counter += 1;
+    const project = await createProject(`Delete Repo Extension Project ${counter}`);
+    const name = `test-repo-delete-${counter}`;
+    const repoExtensionsRoot = join(tempRoot, `repo-${counter}`, ".pstdio", "extensions");
+    const sourcePath = createTestExtensionSource({
+      displayName: `Repo Delete ${counter}`,
+      installName: name,
+      name,
+      root: join(repoExtensionsRoot, ".."),
+      version: "1.0.0",
+    });
+
+    const result = await handle.deps.extensionService.enableInstalledSourceForProject({
+      displayName: `Repo Delete ${counter}`,
+      extensionId: `test.repo-delete-${counter}`,
+      installName: name,
+      manifest: { id: `test.repo-delete-${counter}`, name, displayName: `Repo Delete ${counter}` },
+      name,
+      projectId: project.id,
+      sourcePath,
+      version: "1.0.0",
+    });
+    expect(existsSync(sourcePath)).toBe(true);
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${result.instance.id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(204);
+    expect(existsSync(sourcePath)).toBe(false);
+  });
+
   test("removes extension skills from configured agent repos", async () => {
     const project = await createProject("Uninstall Skill Project");
     await enableProvisionHarness(project.id);

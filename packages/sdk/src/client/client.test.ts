@@ -32,6 +32,19 @@ describe("createClient", () => {
     expect(client.extensions).toBeDefined();
     expect(client.settings).toBeDefined();
     expect(client.sync).toBeDefined();
+    expect(client.runtime).toBeDefined();
+  });
+
+  it("client.runtime provisions browser cookie auth without putting the token in the URL", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://127.0.0.1:43123", fetch: fetchFn, token: "runtime-secret" });
+
+    await client.runtime.provisionBrowserSession();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://127.0.0.1:43123/runtime/browser-session");
+    expect(calls[0]!.url).not.toContain("runtime-secret");
+    expect(calls[0]!.method).toBe("POST");
   });
 
   it("client.projects.list calls GET /v1/projects", async () => {

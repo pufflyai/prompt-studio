@@ -64,7 +64,7 @@ const config: KanbanRendererCreateRowConfig = {
 };
 
 const meta = {
-  title: "Kanban Renderer/Create Dialog",
+  title: "Patterns/Kanban Renderer/Create Dialog",
   component: KanbanRendererCreateDialog,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof KanbanRendererCreateDialog>;

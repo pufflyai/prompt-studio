@@ -6,6 +6,14 @@ export const healthModule: WorkbenchModuleContribution = {
     ctx.renderers.registerDataTableRenderer({
       id: "docs.health.table",
       title: "Service health",
+      selectionMode: "multiple",
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          run: (rows) => console.log("Restart services", rows.map((row) => row.id)),
+        },
+      ],
       columns: [
         { id: "service", label: "Service" },
         { id: "status", label: "Status", stat: { type: "top-values" } },
@@ -14,6 +22,8 @@ export const healthModule: WorkbenchModuleContribution = {
       executeQuery: () => ({
         rows: [
           { id: "api", values: { service: "API", status: "healthy", details: { region: "eu" } } },
+          { id: "worker", values: { service: "Worker", status: "degraded", details: { region: "us" } } },
+          { id: "queue", values: { service: "Queue", status: "healthy", details: { region: "eu" } } },
         ],
       }),
       onRowClick: (row) => console.log(row.id),

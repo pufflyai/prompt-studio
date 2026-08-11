@@ -171,15 +171,19 @@ test("uninstalling an extension removes it from settings and deletes installed f
   const row = page.getByTestId("extension-entry").filter({ hasText: displayName });
   await expect(row).toBeVisible();
 
-  await row.getByRole("button", { name: "Uninstall extension" }).click();
+  // Uninstall now lives on the extension detail page, behind the Settings tab.
+  await row.click();
+  await expect(page.getByTestId("extension-detail")).toBeVisible();
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByTestId("extension-delete").click();
   const dialog = page.getByRole("dialog").last();
-  await expect(dialog.getByText("Uninstall extension?")).toBeVisible();
+  await expect(dialog.getByText("Delete extension?")).toBeVisible();
   holdExtensionRefetch = true;
   const deleteResponse = page.waitForResponse(
     (response) =>
       response.url().includes(`/v1/projects/${project.id}/extensions/`) && response.request().method() === "DELETE",
   );
-  await dialog.getByRole("button", { name: "Uninstall", exact: true }).click();
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   expect((await deleteResponse).status()).toBe(204);
 
   await expect(row).toHaveCount(0);
@@ -193,6 +197,108 @@ test("uninstalling an extension removes it from settings and deletes installed f
 
   const nextList = await listProjectExtensions(request, project.id);
   expect(nextList.extensions.find((entry) => entry.installName === installName)).toBeUndefined();
+});
+
+const writeAutomationExtension = (input: { broken?: boolean; installName: string }) => {
+  const sourcePath = join(extensionsRoot(), input.installName);
+  mkdirSync(sourcePath, { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    `${JSON.stringify(
+      {
+        name: input.installName,
+        version: "0.0.1",
+        displayName: "Automation Extension",
+        description: "Extension with a scheduled automation.",
+        publisher: "e2e",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(sourcePath, "extension.ts"),
+    input.broken
+      ? `import "./does-not-exist.js";\nexport default {};\n`
+      : `export default {
+      commands: {
+        tick: { title: "Tick", run: async () => ({ ok: true }) },
+      },
+      schedules: {
+        tick: { title: "Nightly tick", cron: "0 3 * * *", commandId: "${input.installName}.tick" },
+      },
+    };\n`,
+  );
+  return sourcePath;
+};
+
+test("extension detail toggles automations and retries load errors", async ({ page, request }) => {
+  const unique = Date.now();
+  const installName = `e2e-automation-${unique}`;
+  const project = await createProjectViaApi(request, `Extension Automations ${unique}`);
+
+  try {
+    await uninstallProjectExtensions(request, project.id);
+    emptyExtensionsRoot();
+    await expect.poll(async () => (await listProjectExtensions(request, project.id)).extensions.length).toBe(0);
+
+    await bypassOnboarding(page, project.id);
+    await page.goto(`/projects/${project.id}/settings?panel=extensions`);
+    await expect(page.getByTestId("extensions-empty")).toBeVisible();
+
+    writeAutomationExtension({ installName });
+    const row = page.getByTestId("extension-entry").filter({ hasText: "Automation Extension" });
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    const enableResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/v1/projects/${project.id}/extensions/`) &&
+        response.request().method() === "PATCH" &&
+        response.status() === 200,
+    );
+    await row.locator("input[type='checkbox']").click({ force: true });
+    await enableResponse;
+
+    // Automations are enabled by default and surface in the list once the runtime loads them.
+    await expect(row.getByTestId("extension-automation-status")).toContainText("1/1", { timeout: 10_000 });
+
+    await row.click();
+    await expect(page.getByTestId("extension-detail")).toBeVisible();
+    const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Nightly tick" });
+    await expect(automationRow).toBeVisible({ timeout: 10_000 });
+    await expect(automationRow.locator("input[type='checkbox']")).toBeChecked();
+
+    const disableResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/automations/") &&
+        response.request().method() === "PATCH" &&
+        response.status() === 200,
+    );
+    await automationRow.locator("input[type='checkbox']").click({ force: true });
+    await disableResponse;
+    await expect(automationRow.locator("input[type='checkbox']")).not.toBeChecked({ timeout: 10_000 });
+
+    // Break the source on disk: the watcher flips the extension into the error state
+    // and the load-error notification appears.
+    writeAutomationExtension({ broken: true, installName });
+    await expect(page.getByTestId("extension-detail-health")).toBeVisible({ timeout: 15_000 });
+
+    // Retry while still broken: the reload endpoint runs and reports the error state again.
+    const reloadResponse = page.waitForResponse(
+      (response) => response.url().includes("/reload") && response.request().method() === "POST",
+    );
+    await page.getByTestId("extension-retry").click();
+    expect((await reloadResponse).status()).toBe(200);
+    await expect(page.getByTestId("extension-detail-health")).toBeVisible();
+
+    // Fixing the source lets the watcher reload it back to healthy, which clears the notification.
+    writeAutomationExtension({ installName });
+    await expect(page.getByTestId("extension-detail-health")).toHaveCount(0, { timeout: 15_000 });
+  } finally {
+    restoreDefaultExtensions();
+  }
 });
 
 test("dashboard-wb hot reloads extension root additions and source edits", async ({ page, request }) => {

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import {
-  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -20,6 +19,11 @@ import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { type PackageManifest, readPackageManifest } from "./package-manifest";
+import {
+  collectRuntimeModulePaths,
+  hashRuntimeModulePaths,
+  mirrorRuntimeSourceSnapshot,
+} from "./runtime-source-snapshot";
 
 export type LoadedExtensionSource = {
   /** Path to the extension's package.json directory. */
@@ -79,63 +83,9 @@ const safeCacheSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_
 
 const digest = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 16);
 
-const shouldSkipSourceHashEntry = (name: string) =>
-  name === ".git" || name === "node_modules" || name.startsWith(".pstdio-runtime-");
-
-const hashPackageSource = (packagePath: string) => {
-  const hash = createHash("sha256");
-
-  const walk = (dir: string) => {
-    for (const dirent of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (shouldSkipSourceHashEntry(dirent.name)) continue;
-
-      const fullPath = join(dir, dirent.name);
-      const relativePath = relative(packagePath, fullPath).replaceAll("\\", "/");
-      hash.update(relativePath);
-      hash.update("\0");
-
-      if (dirent.isDirectory()) {
-        walk(fullPath);
-        continue;
-      }
-
-      if (dirent.isFile()) {
-        hash.update(readFileSync(fullPath));
-      }
-    }
-  };
-
-  walk(packagePath);
-  return hash.digest("hex").slice(0, 16);
-};
-
 const symlinkPackageChild = (sourcePath: string, targetPath: string) => {
   const stats = lstatSync(sourcePath);
   symlinkSync(sourcePath, targetPath, stats.isDirectory() ? "junction" : "file");
-};
-
-const mirrorPackageDirectory = (sourceDir: string, targetDir: string, entrySegments: string[]) => {
-  mkdirSync(targetDir, { recursive: true });
-  const [entrySegment, ...remainingSegments] = entrySegments;
-
-  for (const dirent of readdirSync(sourceDir, { withFileTypes: true })) {
-    if (dirent.name === "node_modules" || dirent.name.startsWith(".pstdio-runtime-")) continue;
-
-    const sourceChild = join(sourceDir, dirent.name);
-    const targetChild = join(targetDir, dirent.name);
-
-    if (dirent.name !== entrySegment) {
-      symlinkPackageChild(sourceChild, targetChild);
-      continue;
-    }
-
-    if (remainingSegments.length === 0) {
-      copyFileSync(sourceChild, targetChild);
-      continue;
-    }
-
-    mirrorPackageDirectory(sourceChild, targetChild, remainingSegments);
-  }
 };
 
 const mirrorNodeModules = (sourceNodeModulesPath: string, targetNodeModulesPath: string) => {
@@ -220,18 +170,18 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
   const cacheRoot = runtimeCacheRoot();
   ensureRuntimeCachePruned(cacheRoot);
   const nodeModulesPath = resolveNodeModulesPath(packagePath);
+  const runtimeModulePaths = collectRuntimeModulePaths(packagePath, entryPath);
 
   const rootPath = join(
     cacheRoot,
     safeCacheSegment(packageName),
-    `${digest(resolve(packagePath))}-${hashPackageSource(packagePath)}-${dependencyCacheKey(nodeModulesPath)}`,
+    `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`,
   );
   const runtimePackagePath = join(rootPath, "package");
   const entryRelativePath = relative(packagePath, entryPath);
-  const entrySegments = entryRelativePath.split(/[\\/]+/);
 
   if (!existsSync(runtimePackagePath)) {
-    mirrorPackageDirectory(packagePath, runtimePackagePath, entrySegments);
+    mirrorRuntimeSourceSnapshot(packagePath, runtimePackagePath, runtimeModulePaths);
     if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
   } else if (nodeModulesPath && !existsSync(join(runtimePackagePath, "node_modules"))) {
     mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));

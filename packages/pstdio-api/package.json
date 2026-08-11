@@ -6,10 +6,11 @@
     "./app": "./src/app.ts",
     "./dto": "./src/dto.ts",
     "./extensions/install-extension-source": "./src/features/extensions/install-extension-source.ts",
-    "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts"
+    "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts",
+    "./runtime": "./src/features/runtime/routes.ts"
   },
   "scripts": {
-    "start": "bun run src/index.ts",
+    "start": "bun run src/server.ts",
     "dev": "bun run --hot src/index.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",

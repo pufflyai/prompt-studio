@@ -5,7 +5,7 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 const e2eExtension = (name: string) => ({
   source: resolve(repoRoot, name.includes("/") ? name : `extensions/${name}`),
   installName: name.split("/").at(-1) as string,
-  skipInstall: true,
+  skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
 
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({

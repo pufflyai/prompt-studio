@@ -88,6 +88,20 @@ export const tabsSlotRecipe = defineSlotRecipe({
         },
       },
     },
+    // Full-width strip with a bottom hairline holding the triggers, per the
+    // design's Tab Strip bars.
+    tray: {
+      true: {
+        list: {
+          width: "100%",
+          paddingX: "lg",
+          paddingBottom: "xs",
+          // Restate the base's shorthand key so the hairline survives the merge.
+          borderBottom: "1px solid",
+          borderBottomColor: "border.subtle",
+        },
+      },
+    },
     variant: {
       subtle: {
         trigger: {

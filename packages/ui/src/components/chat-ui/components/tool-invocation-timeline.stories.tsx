@@ -41,7 +41,10 @@ const claudeToolInvocations: ToolPart[] = [
     tool: "Bash",
     status: "completed",
     state: {
-      input: { command: "bun add mustache --cwd packages/pstdio-api" },
+      input: {
+        command:
+          "bun add mustache --cwd packages/pstdio-api && bun run --cwd packages/pstdio-api test && bun run --cwd packages/pstdio-api typecheck",
+      },
       output: {
         stdout:
           "bun add v1.3.10 (30e609e0)\nResolving dependencies\nResolved, downloaded and extracted [14]\nSaved lockfile\n\ninstalled mustache@4.2.0 with binaries:\n - mustache\n\n[616.00ms] done",
@@ -113,6 +116,55 @@ export const ClaudeCodeTools: Story = {
   ),
 };
 
+const codexShellInvocations: ToolPart[] = [
+  {
+    type: "tool",
+    tool: "shell",
+    status: "completed",
+    state: {
+      status: "completed",
+      input: {
+        command:
+          "bun run --cwd packages/ui test tool-rendering && bun run --cwd packages/ui build-storybook && bun run validate",
+      },
+      output:
+        "26 [chromium] › src/ui/workspaces.spec.ts:192:3 › Workspace diff › fork_point resolves\n27 [chromium] › src/ui/workspaces.spec.ts:223:3 › Workspace diff › fork_point handles rebase\n28 [chromium] › src/ui/workspaces.spec.ts:273:3 › Workspace rename › renames the branch\n\n3 skipped\n25 passed (34.1s)",
+    },
+  },
+];
+
+export const CodexShell: Story = {
+  render: () => (
+    <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <ToolInvocationTimeline invocations={codexShellInvocations} />
+    </Box>
+  ),
+};
+
+const codexApplyPatchInvocations: ToolPart[] = [
+  {
+    type: "tool",
+    tool: "apply_patch",
+    status: "completed",
+    state: {
+      input: {
+        changes: [
+          { path: "packages/ui/src/components/chat-ui/components/chat-message-list.tsx", kind: "update" },
+          { path: "packages/ui/src/components/chat-ui/components/chat-message-list-items.tsx", kind: "add" },
+        ],
+      },
+    },
+  },
+];
+
+export const CodexApplyPatch: Story = {
+  render: () => (
+    <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <ToolInvocationTimeline invocations={codexApplyPatchInvocations} />
+    </Box>
+  ),
+};
+
 const questionAndTodoInvocations: ToolPart[] = [
   {
     type: "tool",
@@ -124,8 +176,14 @@ const questionAndTodoInvocations: ToolPart[] = [
             id: "implementation",
             question: "Which implementation path should be used?",
             options: [
-              { label: "Keep it simple", description: "Use the smallest working change." },
-              { label: "Refactor first", description: "Clean up the surface before adding behavior." },
+              {
+                label: "Keep it simple",
+                description: "Use the smallest working change.",
+              },
+              {
+                label: "Refactor first",
+                description: "Clean up the surface before adding behavior.",
+              },
             ],
             required: true,
           },

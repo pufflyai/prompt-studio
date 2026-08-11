@@ -30,6 +30,6 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     params,
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [] },
-    sessions: { list: async () => [] },
+    sessions: { list: async () => [], listByWorkspace: async () => [] },
     ...overrides,
   }) as unknown as CommandContext<TParams>;

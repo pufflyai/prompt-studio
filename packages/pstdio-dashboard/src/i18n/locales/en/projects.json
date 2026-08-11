@@ -241,36 +241,85 @@
     "dangerZone": "Danger zone",
     "extensions": "Extensions",
     "extensionsPanel": {
-      "diagnostics": {
-        "issueCount_one": "{{count}} issue",
-        "issueCount_other": "{{count}} issues",
-        "severity": {
-          "error": "Error",
-          "info": "Info",
-          "warning": "Warning"
-        },
-        "severityCount": {
-          "error_one": "{{count}} error",
-          "error_other": "{{count}} errors",
-          "info_one": "{{count}} info notice",
-          "info_other": "{{count}} info notices",
-          "warning_one": "{{count}} warning",
-          "warning_other": "{{count}} warnings"
-        }
-      },
       "empty": "No extensions installed for this project.",
       "loadError": "Failed to load extensions.",
+      "title": "Extensions",
+      "counts": "{{installed}} installed · {{enabled}} enabled · {{failing}} failing",
+      "searchPlaceholder": "Search extensions…",
+      "installedGroup": "Installed · {{count}}",
+      "noSearchResults": "No extensions match \"{{query}}\".",
+      "noDescription": "No description provided.",
+      "scope": {
+        "repo": "repo",
+        "global": "global"
+      },
+      "status": {
+        "pending": "Pending",
+        "loaded": "Loaded",
+        "error": "Failed to load",
+        "missing": "Missing",
+        "disabled": "Disabled"
+      },
+      "health": {
+        "triggerAriaLabel": "Show issues for {{name}}",
+        "failedToLoad": "Failed to load",
+        "issues_one": "{{count}} issue",
+        "issues_other": "{{count}} issues",
+        "lastLoaded": "Last loaded {{time}}",
+        "unknownError": "The extension failed to load.",
+        "retry": "Retry",
+        "retrySucceeded": "Extension loaded",
+        "retryFailed": "Extension still fails to load",
+        "attemptFix": "Attempt fix",
+        "fixSessionStarted": "Fix session started",
+        "fixSessionFailed": "Failed to start fix session"
+      },
+      "automations": {
+        "title": "Automations",
+        "toggleAriaLabel": "Toggle automation {{name}}",
+        "listStatus": "{{enabled}} of {{count}} automations enabled",
+        "cron": "cron {{cron}}",
+        "stateOn": "on",
+        "stateOff": "off"
+      },
+      "detail": {
+        "back": "Extensions",
+        "tabs": {
+          "settings": "Settings",
+          "contributions": "Contributions"
+        },
+        "noContributions": "This extension declares no contributions.",
+        "noSettings": "This extension declares no settings.",
+        "dangerZone": "Danger zone",
+        "deleteHint": "Delete this extension's files and remove it from the project.",
+        "copyCommand": "Copy command",
+        "contributionKinds": {
+          "harnesses": "Harnesses",
+          "commands": "Commands",
+          "modes": "Modes",
+          "panels": "Views",
+          "routes": "Routes",
+          "menuContributions": "Menu items",
+          "settingsPanels": "Settings panels",
+          "renderers": "Renderers",
+          "skills": "Skills",
+          "templates": "Templates",
+          "themes": "Themes",
+          "treeItems": "Tree items",
+          "commandPaletteResources": "Command palette resources"
+        }
+      },
       "toggleAriaLabel": "Toggle {{name}}",
       "toggleErrorTitle": "Failed to update extension",
       "toggleError": "Failed to update the extension. Please try again.",
-      "uninstall": "Uninstall extension",
-      "uninstallErrorTitle": "Failed to uninstall extension",
-      "uninstallError": "Failed to uninstall the extension. Please try again.",
-      "uninstallConfirm": {
-        "headline": "Uninstall extension?",
-        "notification": "This removes \"{{name}}\" and deletes its installed extension files. Its stored data is kept so reinstalling restores it.",
+      "delete": "Delete extension",
+      "deleteErrorTitle": "Failed to delete extension",
+      "deleteError": "Failed to delete the extension. Please try again.",
+      "deleteConfirm": {
+        "headline": "Delete extension?",
+        "notification": "This deletes \"{{name}}\"'s extension files and removes it from the project. Its stored data is kept so reinstalling restores it.",
         "deleteDataLabel": "Also delete this extension's data (cannot be undone)",
-        "button": "Uninstall"
+        "button": "Delete"
       }
     }
   },

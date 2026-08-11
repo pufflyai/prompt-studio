@@ -2,7 +2,7 @@ import { createSystem, defineConfig } from "@chakra-ui/react";
 import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
-import { radii, sizes, spacing } from "./primitives/sizes";
+import { borderWidths, radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
@@ -19,6 +19,7 @@ import { numberInputSlotRecipe } from "./recipes/number-input";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { skeletonRecipe } from "./recipes/skeleton";
+import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
 import { timelineSlotRecipe } from "./recipes/timeline";
@@ -49,6 +50,7 @@ const config = defineConfig({
     },
     tokens: {
       colors,
+      borderWidths,
       fonts,
       fontSizes,
       fontWeights,
@@ -72,6 +74,7 @@ const config = defineConfig({
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
+      switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,
     },

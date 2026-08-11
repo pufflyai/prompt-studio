@@ -1,9 +1,11 @@
 import { type Disposable, type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
   registerWorkbenchExtensionCommandPaletteResources,
+  registerWorkbenchExtensionDataTableRenderers,
   registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionTreeRenderers,
 } from "@pstdio/workbench/extensions";
+import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
@@ -67,6 +69,7 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     fileRenderers: scoped(metadata.fileRenderers),
     controlsRenderers: scoped(metadata.controlsRenderers),
     keybindings: scoped(metadata.keybindings),
+    settingsSections: scoped(metadata.settingsSections),
     settingsPanels: scoped(metadata.settingsPanels) ?? [],
     settingsDefinitions: scoped(metadata.settingsDefinitions),
     treeItems: scoped(metadata.treeItems),
@@ -132,6 +135,28 @@ const registerSingleExtensionContributions = (
     }
 
     disposables.push(...registerExtensionKanbanRenderers(ctx, { executeCommand, metadata, projectId }));
+    disposables.push(
+      registerWorkbenchExtensionDataTableRenderers(
+        {
+          executeCommand: async (commandId, body) => {
+            const response = await executeCommand(projectId, commandId, body);
+            for (const notification of collectExtensionCommandNotifications(response)) {
+              ctx.notifications.show({
+                level: notification.level,
+                title: notification.title,
+                message: notification.message,
+                metadata: notification.metadata,
+              });
+            }
+            return response;
+          },
+          projectId,
+          workbench: ctx,
+        },
+        metadata.dataTableRenderers ?? [],
+        metadata.panels,
+      ),
+    );
     disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
     disposables.push(

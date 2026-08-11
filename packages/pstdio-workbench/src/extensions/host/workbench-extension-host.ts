@@ -309,6 +309,7 @@ const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributio
               input.workbench.layout.openPanel(panel.id, {
                 resource,
                 title: resource.label ?? resource.id ?? resource.uri,
+                strategy: { kind: "persistent" },
               }),
             );
             return instances.find((_instance, index) => panels[index]?.region === "main") ?? instances[0]!;
@@ -330,6 +331,7 @@ const openModePanel = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExte
     region: entry.region,
     pinned: entry.pinned,
     title: text(entry.title),
+    strategy: { kind: "persistent" },
   });
 };
 

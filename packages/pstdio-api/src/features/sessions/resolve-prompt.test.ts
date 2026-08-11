@@ -1,4 +1,26 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  createDb,
+  createExtensionInstancesDBService,
+  createExtensionTemplatePreferencesDBService,
+  createExtensionUserDataDBService,
+  createFilesDBService,
+  createInstalledExtensionSourcesDBService,
+  createProjectsDBService,
+  createProjectTemplateDefaultsDBService,
+  createReposDBService,
+  createTemplatesDBService,
+} from "pstdio-db";
+import { createFilesStorageService } from "pstdio-storage";
+import { createExtensionService } from "../../services/extension-service";
+import { createFileService } from "../../services/file-service";
+import { createProjectService } from "../../services/project-service";
+import { createRepoService } from "../../services/repo-service";
+import { createTemplateService } from "../../services/template-service";
+import { createProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import { resolvePrompt } from "./resolve-prompt";
 
 const createMockDeps = (
@@ -11,6 +33,41 @@ const createMockDeps = (
   },
   filesRoot: "",
 });
+
+// Writes a minimal installed-extension source that contributes a prompt
+// template and records every module import, so the snapshot-backed read
+// path can be exercised end-to-end.
+const writeExtensionWithTemplate = (root: string, importCountPath: string) => {
+  mkdirSync(root, { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "review-extension",
+      version: "1.0.0",
+      displayName: "Review Extension",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(
+    join(root, "extension.ts"),
+    `const countPath = ${JSON.stringify(importCountPath)};
+const currentCount = Number(await Bun.file(countPath).text().catch(() => "0"));
+await Bun.write(countPath, String(currentCount + 1));
+
+export default {
+  templates: {
+    review_code: {
+      title: "Review code",
+      type: "prompt",
+      source: { kind: "package-asset", path: "./review-code.md", baseUrl: import.meta.url },
+    },
+  },
+};`,
+  );
+  writeFileSync(join(root, "review-code.md"), "Fix issues in {{ticket}}/review.md\n");
+};
 
 describe("resolvePrompt", () => {
   test("returns prompt as-is when prompt is provided", async () => {
@@ -68,5 +125,56 @@ describe("resolvePrompt", () => {
       }),
     );
     expect(result).toBe("No variables here");
+  });
+
+  test("reaches extension template content through the runtime snapshot without re-importing", async () => {
+    const { db, close } = await createDb({ path: ":memory:" });
+    const tempRoot = mkdtempSync(join(tmpdir(), "resolve-prompt-runtime-"));
+    const extensionRoot = join(tempRoot, "review-extension");
+    const importCountPath = join(tempRoot, "imports.txt");
+    writeExtensionWithTemplate(extensionRoot, importCountPath);
+
+    const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
+    const repoService = createRepoService({ reposDBService: createReposDBService(db) });
+    const extensionService = createExtensionService({
+      extensionInstancesService: createExtensionInstancesDBService(db),
+      extensionUserDataService: createExtensionUserDataDBService(db),
+      installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
+      projectService,
+    });
+    const templateService = createTemplateService({
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+      extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
+      fileService: createFileService({
+        filesDBService: createFilesDBService(db),
+        filesStorageService: createFilesStorageService(join(tempRoot, "storage")),
+      }),
+      projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
+      templatesDBService: createTemplatesDBService(db),
+    });
+
+    const project = await projectService.create({ name: "Runtime Project" });
+    await extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "review-extension",
+      extensionId: "pstdio.review-extension",
+      name: "review-extension",
+      displayName: "Review Extension",
+      sourceKind: "local_path",
+      sourcePath: extensionRoot,
+      manifest: {},
+    });
+
+    const deps = { templateService, filesRoot: "" };
+    expect(await resolvePrompt({ template: "review-code", vars: { ticket: "PS-7" } }, project.id, deps)).toBe(
+      "Fix issues in PS-7/review.md\n",
+    );
+    expect(await resolvePrompt({ template: "review-code", vars: { ticket: "PS-9" } }, project.id, deps)).toBe(
+      "Fix issues in PS-9/review.md\n",
+    );
+    expect(await Bun.file(importCountPath).text()).toBe("1");
+
+    await close();
+    rmSync(tempRoot, { recursive: true, force: true });
   });
 });

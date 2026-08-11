@@ -1,9 +1,10 @@
 {
   "name": "pstdio",
-  "version": "0.25.1",
+  "version": "0.25.2",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./runtime": "./src/features/runtime/index.ts"
   },
   "bin": {
     "pstdio": "./bin/pstdio.cjs",
@@ -16,9 +17,14 @@
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
   },
+  "nx": {
+    "implicitDependencies": [
+      "@pstdio/ui"
+    ]
+  },
   "scripts": {
     "pstdio": "bun ./src/index.ts",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun ./src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun ./src/index.ts -- serve --foreground --owner persistent --host 127.0.0.1 --port 19840 & PSTDIO_API_URL=http://127.0.0.1:19840 bun run --cwd ../pstdio-dashboard dev & wait",
     "build": "bun run --cwd ../../scripts build:host",
     "prepack": "bun run --cwd ../../scripts release:readme -- --package pstdio",
     "postpack": "bun run --cwd ../../scripts release:readme -- --package pstdio --cleanup",
@@ -38,12 +44,12 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.25.1",
-    "@pstdio/cli-darwin-x64": "0.25.1",
-    "@pstdio/cli-linux-x64": "0.25.1",
-    "@pstdio/cli-linux-arm64": "0.25.1",
-    "@pstdio/cli-win-x64": "0.25.1",
-    "@pstdio/cli-win-arm64": "0.25.1"
+    "@pstdio/cli-darwin-arm64": "0.25.2",
+    "@pstdio/cli-darwin-x64": "0.25.2",
+    "@pstdio/cli-linux-x64": "0.25.2",
+    "@pstdio/cli-linux-arm64": "0.25.2",
+    "@pstdio/cli-win-x64": "0.25.2",
+    "@pstdio/cli-win-arm64": "0.25.2"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -45,6 +45,8 @@ Use hooks when the extension should react to something that already happened:
 - create a follow-up session after an attempt status changes
 - record activity or show notifications for command lifecycle events
 
+Scheduled contributions (`schedules`) surface in the dashboard as **automations**. Each automation can be toggled per project from the extension's detail page in settings; the enabled count shows on the extension's list row. Automations are enabled by default — an author can opt a schedule out with `disabled: true`, and a user toggle always wins over the author default. The scheduler skips any automation whose effective state is disabled.
+
 ## Dashboard UI Model
 
 The implemented dashboard UI model uses host-owned workbench targets. Extensions attach menus, tree items, views, and settings panels to targets such as `workbench.top.actions`, `workbench.commandPalette`, `workbench.left.tree`, and `workbench.settings`.

@@ -1,4 +1,5 @@
-import { Box, type SliderValueChangeDetails, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Popover, type SliderValueChangeDetails, Stack, Text } from "@chakra-ui/react";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Slider } from "@/components/primitives/slider";
 import type { RangeValue } from "../param-editor.types";
@@ -21,6 +22,7 @@ interface RangeInputProps {
   onChange: (id: string, value: RangeValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
+  presentation?: "stacked" | "horizontal";
 }
 
 export const RangeInput = (props: RangeInputProps) => {
@@ -37,6 +39,7 @@ export const RangeInput = (props: RangeInputProps) => {
     onChange,
     readOnly,
     fullWidth,
+    presentation = "stacked",
   } = props;
 
   const [value, setValue] = useState<RangeValue>(() => normalizeRange(defaultValue, min, max, step));
@@ -46,8 +49,13 @@ export const RangeInput = (props: RangeInputProps) => {
   }, [defaultValue, min, max, step]);
 
   const label = `${formatUnitValue(value[0], unit)} – ${formatUnitValue(value[1], unit)}`;
+  const horizontal = presentation === "horizontal";
 
   if (readOnly) {
+    if (horizontal) {
+      return <ParamEditorReadOnlyValue>{label}</ParamEditorReadOnlyValue>;
+    }
+
     return (
       <ParamEditorControlItem name={name} description={description} fullWidth={fullWidth}>
         <ParamEditorReadOnlyValue>{label}</ParamEditorReadOnlyValue>
@@ -60,27 +68,54 @@ export const RangeInput = (props: RangeInputProps) => {
       {label}
     </Text>
   );
+  const slider = (
+    <Box>
+      <Slider
+        size="sm"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={(details: SliderValueChangeDetails) =>
+          setValue(normalizeRange(details.value as RangeValue, min, max, step))
+        }
+        onValueChangeEnd={(details: SliderValueChangeDetails) => {
+          const next = normalizeRange(details.value as RangeValue, min, max, step);
+          setValue(next);
+          onChange(id, next);
+        }}
+      />
+      <SliderMarks count={markerCount} />
+    </Box>
+  );
+
+  if (horizontal) {
+    return (
+      <Popover.Root positioning={{ placement: "bottom-start", offset: { mainAxis: 4 } }}>
+        <Popover.Trigger asChild>
+          <Button size="xs" variant="ghost" aria-label={`${name}: ${label}`}>
+            {label}
+            <Icon as={ChevronDown} boxSize="14px" />
+          </Button>
+        </Popover.Trigger>
+        <Popover.Positioner>
+          <Popover.Content width="60" padding="sm" background="bg">
+            <Stack gap="xs">
+              <Flex alignItems="center" justifyContent="space-between" gap="xs">
+                <Text textStyle="label/S/medium">{name}</Text>
+                {trailing}
+              </Flex>
+              {slider}
+            </Stack>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Popover.Root>
+    );
+  }
 
   return (
     <ParamEditorControlItem name={name} description={description} orientation="stacked" labelTrailing={trailing}>
-      <Box>
-        <Slider
-          size="sm"
-          value={value}
-          min={min}
-          max={max}
-          step={step}
-          onValueChange={(details: SliderValueChangeDetails) =>
-            setValue(normalizeRange(details.value as RangeValue, min, max, step))
-          }
-          onValueChangeEnd={(details: SliderValueChangeDetails) => {
-            const next = normalizeRange(details.value as RangeValue, min, max, step);
-            setValue(next);
-            onChange(id, next);
-          }}
-        />
-        <SliderMarks count={markerCount} />
-      </Box>
+      {slider}
     </ParamEditorControlItem>
   );
 };

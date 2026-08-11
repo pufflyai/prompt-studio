@@ -17,6 +17,7 @@ import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 import { DiffEditor } from "@/components/diff-viewer/diff-editor";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { IconName } from "../utils/get-icon";
 import { getIconComponent } from "../utils/get-icon";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
@@ -42,9 +43,22 @@ export type Indicator =
   | { type: "none" };
 
 export type TitleSegment =
-  | { kind: "text"; text: string; bold?: boolean; muted?: boolean }
+  | {
+      kind: "text";
+      text: string;
+      bold?: boolean;
+      muted?: boolean;
+      truncate?: boolean;
+      monospace?: boolean;
+    }
   | { kind: "avatar"; src: string; alt?: string }
-  | { kind: "diff"; fileName: string; filePath?: string; additions?: number; deletions?: number }
+  | {
+      kind: "diff";
+      fileName: string;
+      filePath?: string;
+      additions?: number;
+      deletions?: number;
+    }
   | {
       kind: "link";
       text: string;
@@ -77,14 +91,23 @@ export type QuestionFormBlockQuestion = {
 export type Block =
   | { type: "comment"; text: string; reactions?: { clap?: number } }
   | { type: "code"; language: string; code: string; editable?: boolean }
-  | { type: "diff"; language?: string; original: string; modified: string; sideBySide?: boolean }
+  | {
+      type: "diff";
+      language?: string;
+      original: string;
+      modified: string;
+      sideBySide?: boolean;
+    }
   | { type: "input"; placeholder?: string }
   | { type: "text"; text: string }
   | { type: "todo-list"; items: TodoListBlockItem[] }
   | { type: "question-form"; questions: QuestionFormBlockQuestion[] }
   | { type: "references"; references: string[] }
   | { type: "image"; src: string; alt: string; caption?: string }
-  | { type: "component"; render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode };
+  | {
+      type: "component";
+      render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode;
+    };
 
 const handleTitleLinkClick = (
   event: MouseEvent<HTMLAnchorElement>,
@@ -194,10 +217,15 @@ function TextTitleSegment({
   seg: Extract<TitleSegment, { kind: "text" }>;
   isClickable?: boolean;
 }) {
-  return (
+  const segment = (
     <Span
       fontWeight={seg.bold ? "medium" : undefined}
+      textStyle={seg.monospace ? "mono/XS" : undefined}
       color="fg.muted"
+      minW={seg.truncate ? "0" : undefined}
+      overflow={seg.truncate ? "hidden" : undefined}
+      textOverflow={seg.truncate ? "ellipsis" : undefined}
+      whiteSpace={seg.truncate ? "nowrap" : undefined}
       _groupHover={{
         color: isClickable && !seg.muted ? "fg" : "fg.muted",
       }}
@@ -205,6 +233,10 @@ function TextTitleSegment({
       {seg.text}
     </Span>
   );
+
+  if (!seg.truncate) return segment;
+
+  return <Tooltip content={seg.text}>{segment}</Tooltip>;
 }
 
 function TitleInline({
@@ -260,13 +292,19 @@ function IndicatorView({ ind }: { ind?: Indicator }) {
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   return (
-    <ScrollArea background="bg.code" color="fg" borderRadius="md" showHorizontalScrollbar showVerticalScrollbar={false}>
+    <ScrollArea
+      background="bg.code"
+      color="fg.muted"
+      borderWidth="1px"
+      borderColor="border.subtle"
+      borderRadius="md"
+      showHorizontalScrollbar
+      showVerticalScrollbar={false}
+    >
       <Box
         as="pre"
         padding="sm"
-        fontFamily="mono"
-        fontSize="xs"
-        lineHeight="shorter"
+        textStyle="mono/XS"
         whiteSpace="pre"
         aria-label={language ? `${language} code block` : "code block"}
       >
@@ -384,19 +422,21 @@ function TimelineItemRow({
         <Timeline.Separator />
         <IndicatorView ind={item.indicator} />
       </Timeline.Connector>
-      <Timeline.Content pb="xs" h={isOpen ? "auto" : "20px"} overflow="hidden">
+      <Timeline.Content h={isOpen ? "auto" : "20px"}>
         {item.title.length > 0 && (
           <Timeline.Title
             className="group"
             fontWeight="normal"
             display="flex"
             alignItems="center"
-            justifyContent="space-between"
+            minW="0"
+            width="full"
+            overflow="hidden"
             cursor={canExpand ? "pointer" : "default"}
             onClick={canExpand ? () => onToggle(itemKey) : undefined}
           >
-            <Span display="inline-flex" alignItems="center" gap="sm" flexWrap="wrap">
-              <Span display="inline-flex" alignItems="center" gap="xs" flexWrap="wrap">
+            <Span display="flex" alignItems="center" gap="sm" flexWrap="nowrap" minW="0" width="full">
+              <Span display="flex" alignItems="center" gap="xs" flexWrap="nowrap" minW="0" flex="1" overflow="hidden">
                 {item.title.map((seg, i) => (
                   <TitleInline key={i} seg={seg} isClickable={canExpand} onOpenFile={onOpenFile} />
                 ))}
@@ -408,6 +448,7 @@ function TimelineItemRow({
                   transition="transform 200ms ease, color 200ms ease"
                   transform={isOpen ? "rotate(0deg)" : "rotate(-180deg)"}
                   color="transparent"
+                  flexShrink="0"
                   _groupHover={{ color: "fg" }}
                 >
                   <ChevronUpIcon size={12} />

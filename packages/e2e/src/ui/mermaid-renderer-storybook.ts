@@ -1,9 +1,11 @@
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { createServer } from "node:net";
-import { resolve } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-
-const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
+import { stopChildProcess } from "../scripts/child-process";
+import {
+  getSharedStorybookBaseUrl,
+  STORYBOOK_BOOT_TIMEOUT_MS,
+  type StorybookPackageName,
+  startStorybookServer,
+} from "../scripts/storybook-server";
 
 // Storybook compiles the package from source on boot, which on a loaded machine outruns
 // Playwright's default 30s hook timeout. Without this the hook is killed mid-boot and the
@@ -40,96 +42,17 @@ export const waitForStoryPlayback = async (page: Page) => {
     .toEqual(["finished"]);
 };
 
-const getFreePort = async () =>
-  new Promise<number>((resolvePort, reject) => {
-    const server = createServer();
-
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        server.close();
-        reject(new Error("Failed to allocate Storybook port"));
-        return;
-      }
-
-      const port = address.port;
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolvePort(port);
-      });
-    });
-  });
-
-const waitForStorybook = async (baseUrl: string, process: ChildProcessWithoutNullStreams, probeStoryId: string) => {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < STORYBOOK_BOOT_TIMEOUT_MS) {
-    if (process.exitCode !== null) {
-      throw new Error(`Storybook exited before it became reachable with code ${process.exitCode}`);
-    }
-
-    try {
-      const response = await fetch(`${baseUrl}/iframe.html?id=${probeStoryId}`);
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // Storybook is still starting.
-    }
-
-    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
+export const startStorybook = async (probeStoryId: string, packageName: StorybookPackageName = "ui") => {
+  const sharedBaseUrl = getSharedStorybookBaseUrl(packageName);
+  if (sharedBaseUrl) {
+    return { baseUrl: sharedBaseUrl, storybook: undefined };
   }
 
-  throw new Error("Timed out waiting for Storybook");
-};
-
-export const startStorybook = async (
-  probeStoryId: string,
-  packageName: "ui" | "pstdio-dashboard" | "pstdio-workbench" = "ui",
-) => {
   test.setTimeout(STORYBOOK_BOOT_HOOK_TIMEOUT_MS);
-
-  const port = await getFreePort();
-  const repoRoot = resolve(import.meta.dirname, "../../..", "..");
-  const packageRoot = resolve(repoRoot, "packages", packageName);
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const storybook = spawn(
-    "bun",
-    [
-      "x",
-      "storybook",
-      "dev",
-      "--config-dir",
-      resolve(packageRoot, ".storybook"),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(port),
-      "--ci",
-    ],
-    {
-      cwd: packageRoot,
-      env: {
-        ...process.env,
-        STORYBOOK_DISABLE_TELEMETRY: "1",
-      },
-      stdio: "pipe",
-    },
-  );
-
-  try {
-    await waitForStorybook(baseUrl, storybook, probeStoryId);
-  } catch (error) {
-    storybook.kill();
-    throw error;
-  }
-
-  return { baseUrl, storybook };
+  return startStorybookServer(probeStoryId, packageName);
 };
+
+export const stopStorybook = stopChildProcess;
 
 export const storyUrl = (baseUrl: string, storyId: string) => `${baseUrl}/iframe.html?id=${storyId}`;
 

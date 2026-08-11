@@ -45,6 +45,14 @@ const rowActionSchema = z.object({
   commandId: z.string(),
 });
 
+const selectionActionSchema = z.object({
+  id: z.string(),
+  label: localizableStringSchema,
+  icon: z.string().optional(),
+  destructive: z.boolean().optional(),
+  commandId: z.string(),
+});
+
 export const extensionDataTableRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -52,6 +60,8 @@ export const extensionDataTableRendererRecordSchema = z.object({
   resourceKind: z.string().optional(),
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryCommandId: z.string(),
+  selectionMode: z.enum(["none", "multiple"]).optional(),
+  selectionActions: z.array(selectionActionSchema).optional(),
   rowActions: z.array(rowActionSchema).optional(),
   initialPageSize: z.number().int().positive().optional(),
   pageSizeOptions: z.array(z.number().int().positive()).optional(),

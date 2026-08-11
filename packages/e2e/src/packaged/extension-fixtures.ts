@@ -71,3 +71,49 @@ export const writeExtensionWithDependency = (root: string) => {
 
   return extDir;
 };
+
+export const writeExtensionInstallEnvironmentProbe = (root: string) => {
+  const extDir = join(root, "extension-sources", "install-env-probe");
+  const recorderDir = join(extDir, "install-env-recorder");
+  mkdirSync(extDir, { recursive: true });
+  mkdirSync(recorderDir, { recursive: true });
+
+  writeFileSync(
+    join(extDir, "package.json"),
+    JSON.stringify({
+      name: "install-env-probe",
+      version: "1.0.0",
+      publisher: "test",
+      main: "./extension.ts",
+      type: "module",
+      engines: { pstdio: "*" },
+      dependencies: { "install-env-recorder": "file:./install-env-recorder" },
+      trustedDependencies: ["install-env-recorder"],
+    }),
+  );
+  writeFileSync(join(extDir, "extension.ts"), "export default {};\n");
+  writeFileSync(
+    join(recorderDir, "package.json"),
+    JSON.stringify({
+      name: "install-env-recorder",
+      version: "1.0.0",
+      scripts: { postinstall: "bun ./record-install-env.ts" },
+    }),
+  );
+  writeFileSync(
+    join(recorderDir, "record-install-env.ts"),
+    `await Bun.write(
+  String(process.env.HOME) + "/install-env.json",
+  JSON.stringify({
+    httpsProxy: process.env.HTTPS_PROXY ?? null,
+    npmRegistry: process.env.NPM_CONFIG_REGISTRY ?? null,
+    npmToken: process.env.NPM_TOKEN ?? null,
+    sourceControlToken: process.env.GITHUB_TOKEN ?? null,
+    providerKey: process.env.OPENAI_API_KEY ?? null,
+  }),
+);
+`,
+  );
+
+  return extDir;
+};

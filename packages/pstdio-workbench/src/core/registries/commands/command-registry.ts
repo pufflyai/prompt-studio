@@ -25,6 +25,7 @@ export interface WorkbenchCommandExecutionContext {
 export interface CommandParamOption {
   label: string;
   value: string;
+  icon?: string;
 }
 
 export interface CommandParamDescriptor {

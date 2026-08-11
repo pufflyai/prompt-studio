@@ -72,7 +72,7 @@ Open operations return the actual instance:
 ```ts
 const panel = ctx.layout.openPanel("tickets.editor", {
   resource: ticket,
-  strategy: { kind: "activate-or-open" },
+  strategy: { kind: "persistent" },
 });
 
 ctx.layout.activatePanel(panel.instanceId);
@@ -82,10 +82,15 @@ ctx.layout.closePanel(panel.instanceId);
 
 Open strategies are:
 
-- `{ kind: "activate-or-open", position? }`
+- `{ kind: "persistent", position? }`
 - `{ kind: "replace-active" }`
 - `{ kind: "replace-panel", instanceId }`
 - `{ kind: "preview", position? }`
+
+Without a strategy, an open into a tab-hosting region (`main`, `secondary`,
+`side`) lands as a preview tab that the next preview replaces. Pinned opens and
+opens into any other region are persistent. Ask for `{ kind: "persistent" }`
+when a tab must stay put.
 
 Panel definition IDs and Panel instance IDs are intentionally different.
 Mutation methods take the instance ID.
@@ -198,7 +203,7 @@ ctx.resources.registerPresenter({
       resource,
       strategy: input.replaceActive
         ? { kind: "replace-active" }
-        : { kind: "activate-or-open" },
+        : { kind: "persistent" },
     }),
 });
 

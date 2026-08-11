@@ -138,6 +138,24 @@ describe("extensionService installed source sync", () => {
     expect(notifyCount).toBe(0);
   });
 
+  test("identifies the source that changed when notifying installed source listeners", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const changedSourcePaths: Array<string | undefined> = [];
+    const notifyingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      onInstalledSourcesChanged: (sourcePath) => {
+        changedSourcePaths.push(sourcePath);
+      },
+      projectService,
+    });
+
+    await notifyingService.syncInstalledSourceForProject(createServiceInput(project.id));
+
+    expect(changedSourcePaths).toEqual(["/extensions/planner"]);
+  });
+
   test("does not notify installed source listeners when only manifest key order changes", async () => {
     const project = await projectService.create({ name: "Extension Project" });
     let notifyCount = 0;

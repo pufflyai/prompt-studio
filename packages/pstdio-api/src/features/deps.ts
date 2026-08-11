@@ -1,7 +1,7 @@
 import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
-  createExtensionFilesDBService,
+  createExtensionAutomationPreferencesDBService,
   createExtensionInstancesDBService,
   createExtensionSettingsDBService,
   createExtensionStorageDBService,
@@ -9,6 +9,7 @@ import type {
   createNotificationsDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
+import type { createExtensionFileService } from "../services/extension-file-service";
 import type { createExtensionService } from "../services/extension-service";
 import type { createFileService } from "../services/file-service";
 import type { createNotificationService } from "../services/notification-service";
@@ -23,6 +24,7 @@ import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
+import type { RuntimeRouteDeps } from "./runtime/routes";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -38,7 +40,6 @@ export interface RouteDeps {
   filesRoot: string;
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
-  shutdown: () => Promise<void>;
   eventBus: EventBus;
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
@@ -55,7 +56,8 @@ export interface RouteDeps {
   notificationService: ReturnType<typeof createNotificationService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
-  extensionFilesService: ReturnType<typeof createExtensionFilesDBService>;
+  extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesDBService>;
+  extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
@@ -64,4 +66,5 @@ export interface RouteDeps {
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
   terminal?: ExtensionTerminalApi;
+  runtime?: RuntimeRouteDeps;
 }

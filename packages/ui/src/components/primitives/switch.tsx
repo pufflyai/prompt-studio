@@ -15,27 +15,8 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(function S
   return (
     <ChakraSwitch.Root ref={rootRef} disabled={disabled} cursor={interactiveCursor} {...rest}>
       <ChakraSwitch.HiddenInput ref={ref} {...inputProps} />
-      <ChakraSwitch.Control
-        bg="bg.muted"
-        borderWidth="1px"
-        borderColor="border"
-        borderRadius="md"
-        color="fg"
-        cursor={interactiveCursor}
-        transition="border-color 0.2s ease-in-out"
-        boxShadow="none"
-        _hover={{ borderColor: "border.accent-light" }}
-        _active={{ borderColor: "border.accent-light" }}
-        _focusVisible={{ borderColor: "border.accent-light", outline: "none", boxShadow: "none" }}
-        _checked={{
-          bg: "bg.button.primary.default",
-          borderColor: "bg.button.primary.default",
-          color: "fg.button.primary.default",
-          _hover: { borderColor: "bg.button.primary.default" },
-          _active: { borderColor: "bg.button.primary.default" },
-        }}
-      >
-        <ChakraSwitch.Thumb bg="bg" borderColor="border" borderRadius="full">
+      <ChakraSwitch.Control cursor={interactiveCursor}>
+        <ChakraSwitch.Thumb>
           {thumbLabel && (
             <ChakraSwitch.ThumbIndicator fallback={thumbLabel?.off}>{thumbLabel?.on}</ChakraSwitch.ThumbIndicator>
           )}

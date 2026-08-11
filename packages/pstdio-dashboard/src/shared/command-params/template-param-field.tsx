@@ -1,21 +1,14 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import { SearchableMenu, type SearchableMenuItem } from "@pstdio/ui";
+import { ParamEditorRow, type SelectionParam } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import type { CommandParamFieldProps } from "@pstdio/workbench/react";
+import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { getProjectTemplateAssets } from "@/shared/projects/project-api";
-import { ParamFieldLabel } from "./param-field-shared";
 import { buildTemplateParamOptions } from "./template-param-options";
 
 interface TemplateParamFieldProps extends CommandParamFieldProps {
   workbench: WorkbenchCore;
 }
-
-// The template param is optional, so an empty selection means "no template".
-const NONE_VALUE = "";
-const NONE_LABEL = "None";
 
 const getStringValue = (value: CommandParamFieldProps["value"]) => (typeof value === "string" ? value : "");
 
@@ -31,45 +24,22 @@ export const TemplateParamField = (props: TemplateParamFieldProps) => {
     enabled: Boolean(projectId),
   });
   const options = buildTemplateParamOptions(templates, entry);
-  const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? NONE_LABEL;
 
-  const items: SearchableMenuItem[] = [
-    {
-      id: NONE_VALUE,
-      label: NONE_LABEL,
-      isSelected: selectedValue === NONE_VALUE,
-      onSelect: () => onChange(NONE_VALUE),
-    },
-    ...options.map((option) => ({
-      id: option.value,
-      label: option.label,
-      isSelected: option.value === selectedValue,
-      onSelect: () => onChange(option.value),
-    })),
-  ];
+  const templateParam: SelectionParam = {
+    id: entry.key,
+    name: commandParamName(entry),
+    description: entry.description,
+    type: "selection",
+    defaultValue: selectedValue,
+    options: options.map((option) => ({ id: option.value, name: option.label, icon: "FileText" })),
+    // The template is optional: re-picking the selected one clears it back to "none".
+    clearable: !entry.required,
+    placeholder: isLoading ? "Loading templates…" : "No template",
+    searchable: options.length > 5,
+    searchPlaceholder: "Search templates…",
+    emptyText: "No templates available",
+    disabled: disabled || isLoading,
+  };
 
-  return (
-    <Stack gap="2xs">
-      <ParamFieldLabel entry={entry} />
-      <SearchableMenu
-        trigger={
-          <Button size="sm" variant="outline" justifyContent="space-between" disabled={disabled || isLoading}>
-            {isLoading ? "Loading templates..." : selectedLabel}
-            <ChevronDown size={14} aria-hidden="true" />
-          </Button>
-        }
-        items={items}
-        showSearch={options.length > 5}
-        searchPlaceholder="Search templates..."
-        width="260px"
-        emptyState={
-          <Box px="sm" py="xs">
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              No templates
-            </Text>
-          </Box>
-        }
-      />
-    </Stack>
-  );
+  return <ParamEditorRow param={templateParam} onChange={(_id, next) => typeof next === "string" && onChange(next)} />;
 };

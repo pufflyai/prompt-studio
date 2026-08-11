@@ -66,9 +66,8 @@ const writeTwoWebviewExtension = (root: string) => {
   );
 };
 
-const writeManagedBuildOutput = (args: readonly string[]) => {
-  const outdir = args[args.indexOf("--outdir") + 1];
-  if (outdir) mkdirSync(outdir, { recursive: true });
+const writeManagedBuildOutput = (input: { outdir: string }) => {
+  mkdirSync(input.outdir, { recursive: true });
 };
 
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
@@ -91,7 +90,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         concurrent++;
         maxConcurrent = Math.max(maxConcurrent, concurrent);
         arrived++;
@@ -99,8 +98,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         // Serial builds never let `arrived` reach 2, so fall back after a short wait.
         await Promise.race([allArrived, Bun.sleep(200)]);
         concurrent--;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -114,7 +113,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     }
   });
 
-  test("reports successful rebuilds only after all managed webviews finish", async () => {
+  test("reports each successful rebuild without waiting for other managed webviews", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-success-barrier-test-"));
     const sourcePath = join(root, "extension");
     writeTwoWebviewExtension(sourcePath);
@@ -144,8 +143,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async (_file, args) => {
-        const entryPath = args[1] ?? "";
+      buildWebview: async (input) => {
+        const { entryPath } = input;
         if (entryPath.endsWith("first.tsx")) {
           firstStarted();
           await firstBuildReleased;
@@ -153,8 +152,8 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
           secondStarted();
           await secondBuildReleased;
         }
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -166,7 +165,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       releaseFirst();
       await Bun.sleep(10);
 
-      expect(successes).toEqual([]);
+      expect(successes).toEqual(["lab.first"]);
 
       releaseSecond();
       await refresh;
@@ -177,7 +176,9 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("createExtensionWebviewBuildManager refresh serialization", () => {
   test("serializes overlapping refreshes so unchanged webviews are not rebuilt", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-race-test-"));
     const sourcePath = join(root, "extension");
@@ -194,11 +195,11 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         await buildUnblocked;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -219,7 +220,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     }
   });
 
-  test("does not report success for an obsolete build when a newer source hash is queued", async () => {
+  test("does not report success for an obsolete build when newer build inputs are queued", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-obsolete-build-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
@@ -243,12 +244,12 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         if (runCount === 1) await firstReleased;
         else await secondReleased;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -257,6 +258,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       const firstRefresh = manager.refresh();
       await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
 
+      writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('updated webview');");
       sourceHash = "hash-2";
       const secondRefresh = manager.refresh();
       releaseFirst();
@@ -295,11 +297,11 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async () => {
         reports.push("success");
       },
-      runCommand: async (_file, args) => {
+      buildWebview: async (input) => {
         runCount++;
         await buildUnblocked;
-        writeManagedBuildOutput(args);
-        return { exitCode: 0, stderr: "", stdout: "" };
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });

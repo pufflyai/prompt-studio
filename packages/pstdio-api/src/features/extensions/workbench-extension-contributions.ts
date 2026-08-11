@@ -98,6 +98,21 @@ export const toDataTableRendererRecord = (
     resourceKind: renderer.contribution.resourceKind,
     columns: renderer.contribution.columns,
     queryCommandId,
+    selectionMode: renderer.contribution.selectionMode,
+    selectionActions: compact(
+      (renderer.contribution.selectionActions ?? []).map((action) => {
+        const commandId = refIdOf(action.command);
+        return commandId
+          ? {
+              id: action.id,
+              label: action.label,
+              icon: action.icon,
+              destructive: action.destructive,
+              commandId,
+            }
+          : null;
+      }),
+    ),
     rowActions: compact(
       (renderer.contribution.rowActions ?? []).map((action) => {
         const commandId = refIdOf(action.command);

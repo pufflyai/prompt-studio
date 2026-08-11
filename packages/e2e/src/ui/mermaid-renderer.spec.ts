@@ -6,6 +6,7 @@ import {
   readScale,
   readTransform,
   startStorybook,
+  stopStorybook,
   storyUrl,
 } from "./mermaid-renderer-storybook";
 
@@ -26,14 +27,14 @@ test.describe("mermaid renderer storybook", () => {
   test.slow();
 
   let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams;
+  let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
     ({ baseUrl, storybook } = await startStorybook(defaultStoryId));
   });
 
-  test.afterAll(() => {
-    storybook?.kill();
+  test.afterAll(async () => {
+    await stopStorybook(storybook);
   });
 
   test("mermaid renderer story supports zoom-gated pan, windowed overlay, and PNG export", async ({ page }) => {

@@ -13,18 +13,11 @@ export interface TicketResourceReference extends JsonObject {
 export const ticketDisplayTitle = (ticket: StoredTicket) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
-const createTicketResourceReference = (
-  ticket: StoredTicket,
-  parentLookup: TicketParentLookup,
-  visitedTicketIds: Set<string>,
-): TicketResourceReference => {
-  const nextVisitedTicketIds = new Set(visitedTicketIds);
-  nextVisitedTicketIds.add(ticket.id);
-  const parent =
-    ticket.parentId && !nextVisitedTicketIds.has(ticket.parentId) ? parentLookup.get(ticket.parentId) : undefined;
+const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {
+  const ticket = lineage[index];
   const metadata: JsonObject = { shorthand: ticket.shorthand };
-  if (parent) {
-    metadata.resourceParent = createTicketResourceReference(parent, parentLookup, nextVisitedTicketIds);
+  if (index > 0) {
+    metadata.resourceParent = createTicketResourceReference(lineage, index - 1);
   }
 
   return {
@@ -35,8 +28,30 @@ const createTicketResourceReference = (
   };
 };
 
+export const resolveTicketHierarchy = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) => {
+  const lineage = [];
+  const visitedTicketIds = new Set<string>();
+  let current: StoredTicket | undefined = ticket;
+
+  while (current && !visitedTicketIds.has(current.id)) {
+    lineage.push(current);
+    visitedTicketIds.add(current.id);
+    current = current.parentId ? parentLookup.get(current.parentId) : undefined;
+  }
+
+  lineage.reverse();
+  const resourceReference = createTicketResourceReference(lineage, lineage.length - 1);
+
+  return {
+    lineage,
+    breadcrumb: lineage.map(({ shorthand }) => shorthand).join(" / "),
+    parent: lineage[lineage.length - 2],
+    resourceReference,
+  };
+};
+
 export const ticketResourceReference = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
-  createTicketResourceReference(ticket, parentLookup, new Set());
+  resolveTicketHierarchy(ticket, parentLookup).resourceReference;
 
 export const ticketResourceHierarchyMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
   ticketResourceReference(ticket, parentLookup).metadata;

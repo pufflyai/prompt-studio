@@ -1,6 +1,6 @@
 import { createClient } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
+import { resolveApiUrl } from "@/features/api-url";
 
 export const command = "stream";
 export const describe = "Tail live session output in the terminal";
@@ -18,7 +18,7 @@ type Deps = {
 };
 
 const defaultDeps: Deps = {
-  streamSession: (sessionId, onEvent) => createClient({ baseUrl: API_URL }).sessions.stream(sessionId, onEvent),
+  streamSession: (sessionId, onEvent) => createClient({ baseUrl: resolveApiUrl() }).sessions.stream(sessionId, onEvent),
   log: console.log,
 };
 

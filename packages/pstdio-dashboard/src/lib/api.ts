@@ -16,22 +16,25 @@ export type PstdioConfig = {
 
 export const readRuntimeConfig = (): PstdioConfig | null => {
   const w = globalThis as unknown as { __PSTDIO_CONFIG__?: PstdioConfig };
-  return w.__PSTDIO_CONFIG__ ?? null;
+  if (w.__PSTDIO_CONFIG__) return w.__PSTDIO_CONFIG__;
+
+  const encodedConfig = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
+  if (!encodedConfig) return null;
+  try {
+    return JSON.parse(decodeURIComponent(encodedConfig)) as PstdioConfig;
+  } catch {
+    return null;
+  }
 };
 
 const resolveApiBaseUrl = () => {
   const runtimeConfig = readRuntimeConfig();
 
-  if (runtimeConfig?.apiBaseUrl) {
-    return runtimeConfig.apiBaseUrl.replace(/\/$/, "");
+  if (runtimeConfig) {
+    return runtimeConfig.apiBaseUrl?.replace(/\/$/, "") ?? "";
   }
 
-  const envBaseUrl = import.meta.env?.VITE_API_BASE_URL;
-
-  if (envBaseUrl && envBaseUrl.trim().length > 0) {
-    return envBaseUrl.trim().replace(/\/$/, "");
-  }
-
+  // Packaged dashboards share an origin with the API. Vite development uses its proxy.
   return "";
 };
 

@@ -100,7 +100,7 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
       canOpen: (resource) => resource.kind === TICKET_KIND,
       open: (resource, input) =>
         ctx.layout.openPanel(TICKET_WIDGET_ID, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "activate-or-open" },
+          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
           resource,
           title: resource.id ?? resource.label,
         }),
