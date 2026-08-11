@@ -3,7 +3,7 @@ import type { PropertyParam, ResourceOption, ResourceParam } from "@pstdio/ui";
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
 import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
-import { formatTicketUpdatedAt } from "../../views/ticket-properties-values";
+import { formatTicketTimestamp } from "../../views/ticket-properties-values";
 
 export interface TicketRef {
   id: string;
@@ -126,7 +126,8 @@ export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
 
   const params: WireParam[] = [
     idParam(ticket),
-    property("updated", l10n("ticketDetail.updatedAt", "Updated at"), formatTicketUpdatedAt(ticket.updatedAt)),
+    property("created", l10n("ticketDetail.createdAt", "Created at"), formatTicketTimestamp(ticket.createdAt)),
+    property("updated", l10n("ticketDetail.updatedAt", "Updated at"), formatTicketTimestamp(ticket.updatedAt)),
     reviewLinksParam(ticket),
     statusParam(ticket, statuses),
     ...(ticket.archived

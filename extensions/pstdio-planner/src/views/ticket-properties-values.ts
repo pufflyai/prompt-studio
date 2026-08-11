@@ -1,6 +1,6 @@
 export { normalizeTicketDependencies, type TicketDependencyValue } from "../data/ticket-dependencies";
 
-export const formatTicketUpdatedAt = (value: string) => {
+export const formatTicketTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
