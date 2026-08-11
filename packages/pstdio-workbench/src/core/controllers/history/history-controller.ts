@@ -167,6 +167,7 @@ interface CreateHistoryControllerApiInput {
     entry: WorkbenchNavigationEntry,
     options?: { replayCurrentLocation?: boolean },
   ): Promise<unknown> | undefined;
+  failRestore(scope: string | undefined, failedEntryId: string): void;
   finishRestore(scope?: string, restoredEntryId?: string): void;
   flush(): void;
   getPersistenceScope(): string | undefined;
@@ -180,6 +181,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
   const {
     activateEntry,
     controllerInput,
+    failRestore,
     finishRestore,
     flush,
     getPersistenceScope,
@@ -250,14 +252,14 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
             if (result instanceof Promise) pending = result;
           });
         } catch {
-          finishRestore(scope, entry.entryId);
+          failRestore(scope, entry.entryId);
           return entry;
         }
       }
       if (pending)
         void pending.then(
           () => finishRestore(scope, entry?.entryId),
-          () => finishRestore(scope, entry?.entryId),
+          () => (entry ? failRestore(scope, entry.entryId) : finishRestore(scope)),
         );
       else finishRestore(scope, entry?.entryId);
       return entry;
@@ -280,20 +282,43 @@ interface HistoryRestoreFinisherInput {
 }
 
 const createHistoryRestoreFinisher = (input: HistoryRestoreFinisherInput) => {
-  const finish = (scope: string | undefined, restoredEntryId?: string) => {
+  function fail(scope: string | undefined, failedEntryId: string) {
+    if (scope !== undefined && scope !== input.getScope()) return;
+    const snapshot = input.store.getState();
+    const currentEntryId = snapshot.entries[snapshot.cursor]?.entryId;
+    const entries = snapshot.entries.filter((entry) => entry.entryId !== failedEntryId);
+    const retainedCursor = currentEntryId ? entries.findIndex((entry) => entry.entryId === currentEntryId) : -1;
+    input.setState(
+      {
+        ...snapshot,
+        entries,
+        cursor: retainedCursor >= 0 ? retainedCursor : Math.min(snapshot.cursor, entries.length - 1),
+        recentlyClosed: snapshot.recentlyClosed.filter((entry) => entry.entryId !== failedEntryId),
+      },
+      "history.discardFailedRestore",
+    );
+    finish(scope, failedEntryId);
+  }
+
+  function finish(scope: string | undefined, restoredEntryId?: string) {
     if (scope !== undefined && scope !== input.getScope()) return;
     const snapshot = input.store.getState();
     const requestedEntry = snapshot.entries[snapshot.cursor];
     if (restoredEntryId && requestedEntry && requestedEntry.entryId !== restoredEntryId) {
       let pending: Promise<unknown> | undefined;
-      input.runSilent(() => {
-        const result = input.activateEntry(requestedEntry);
-        if (result instanceof Promise) pending = result;
-      });
+      try {
+        input.runSilent(() => {
+          const result = input.activateEntry(requestedEntry);
+          if (result instanceof Promise) pending = result;
+        });
+      } catch {
+        fail(scope, requestedEntry.entryId);
+        return;
+      }
       if (pending) {
         void pending.then(
           () => finish(scope, requestedEntry.entryId),
-          () => finish(scope, requestedEntry.entryId),
+          () => fail(scope, requestedEntry.entryId),
         );
       } else finish(scope, requestedEntry.entryId);
       return;
@@ -302,8 +327,9 @@ const createHistoryRestoreFinisher = (input: HistoryRestoreFinisherInput) => {
     if (snapshot.hydrating) {
       input.setState({ ...snapshot, hydrating: false }, "history.finishRestore", false);
     }
-  };
-  return finish;
+  }
+
+  return { fail, finish };
 };
 
 interface HistoryCursorMoverInput {
@@ -547,7 +573,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
 
   if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
 
-  const finishRestore = createHistoryRestoreFinisher({
+  const restoreFinisher = createHistoryRestoreFinisher({
     store,
     activateEntry,
     getScope: () => currentScope,
@@ -561,7 +587,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   return createHistoryControllerApi({
     controllerInput: input,
     store,
-    finishRestore,
+    failRestore: restoreFinisher.fail,
+    finishRestore: restoreFinisher.finish,
     setPersistenceScope,
     getPersistenceScope: () => currentScope,
     activateEntry,

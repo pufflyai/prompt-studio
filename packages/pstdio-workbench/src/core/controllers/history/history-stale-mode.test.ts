@@ -85,7 +85,8 @@ describe("history stale mode recovery", () => {
     expect(workbench.layout.getLayout().activeResourceUri).toBe(resource("valid").uri);
   });
 
-  test("does not let a mode activation failure escape history restore", () => {
+  test("removes a mode whose activation fails and restores the previous entry", async () => {
+    const validEntry = entry("valid", "project");
     const brokenModeEntry = {
       ...entry("broken", "broken-extension.mode"),
       kind: "mode" as const,
@@ -96,11 +97,12 @@ describe("history stale mode recovery", () => {
     const workbench = createWorkbenchCore({
       historyPersistence: createPersistence({
         version: 1,
-        entries: [brokenModeEntry],
-        cursor: 0,
+        entries: [validEntry, brokenModeEntry],
+        cursor: 1,
         recentlyClosed: [],
       }),
     });
+    registerFixtures(workbench);
     workbench.modes.registerMode({
       id: "broken-extension.mode",
       activate: () => {
@@ -110,5 +112,14 @@ describe("history stale mode recovery", () => {
     workbench.history.setPersistenceScope("project-one");
 
     expect(() => workbench.history.restore()).not.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.history.store.getState()).toMatchObject({
+      entries: [{ entryId: "valid" }],
+      cursor: 0,
+      hydrating: false,
+    });
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(resource("valid").uri);
   });
 });
