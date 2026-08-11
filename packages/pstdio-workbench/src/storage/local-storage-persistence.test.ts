@@ -351,6 +351,29 @@ describe("local storage workbench persistence recovery", () => {
     expect(persistence.getLayout("project/two")?.activeWidgetId).toBe("other");
   });
 
+  test("transforms the newest queued layout before fencing older writers", () => {
+    const storage = createStore();
+    const persistence = createLocalStorageLayoutPersistence({
+      debounceMs: 60_000,
+      namespace: "demo",
+      storage,
+    });
+    const scope = "project/one/mode/project/aggregate/workspaces";
+    const persisted = { ...createDefaultWorkbenchLayout(), activeWidgetId: "persisted" };
+    const queued = { ...persisted, activeWidgetId: "queued" };
+
+    persistence.setLayout(persisted, scope);
+    persistence.flush?.();
+    persistence.setLayout(queued, scope);
+
+    persistence.transformLayouts?.("one", (layout) => ({ ...layout, activeResourceUri: "resource://current" }));
+
+    expect(persistence.getLayout(scope)).toEqual({
+      ...queued,
+      activeResourceUri: "resource://current",
+    });
+  });
+
   test("discovers project layouts that predate the scope index", () => {
     const storage = createStore();
     const layout = createDefaultWorkbenchLayout();

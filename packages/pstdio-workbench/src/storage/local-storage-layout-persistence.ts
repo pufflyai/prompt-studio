@@ -213,6 +213,7 @@ export const createLocalStorageLayoutPersistence = (
       ];
     },
     transformLayouts(projectId, transform) {
+      flush();
       advanceGeneration();
       for (const scope of this.listScopes?.(projectId) ?? []) {
         const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
