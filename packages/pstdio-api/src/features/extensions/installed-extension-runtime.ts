@@ -11,6 +11,7 @@ import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { resolvePstdioHome } from "./install-extension-source";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 
@@ -42,6 +43,10 @@ export const createInstalledExtensionRuntime = async (input: {
   const createRootWatcher = input.createRootWatcher ?? createExtensionRootWatcher;
   const createSourceWatcher = input.createSourceWatcher ?? createExtensionSourceWatcher;
   const createWebviewBuildManager = input.createWebviewBuildManager ?? createExtensionWebviewBuildManager;
+  const projectRuntimeCatalog = createProjectExtensionRuntimeCatalog({
+    extensionService: input.extensionService,
+    repoService: input.repoService,
+  });
   const reportError = (err: unknown) =>
     apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed");
   // Forward reference to refresh(): a repo root sync that marks sources missing must reconcile the
@@ -115,6 +120,7 @@ export const createInstalledExtensionRuntime = async (input: {
   };
 
   const refresh = async () => {
+    projectRuntimeCatalog.refresh();
     await refreshWatchers();
     refreshWebviewsInBackground();
   };
@@ -129,6 +135,7 @@ export const createInstalledExtensionRuntime = async (input: {
       sourceWatcher.dispose();
       webviewBuildManager.dispose();
     },
+    projectRuntimeCatalog,
     refresh,
   };
 };

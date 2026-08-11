@@ -4,7 +4,11 @@ import type {
   createProjectTemplateDefaultsDBService,
   createTemplatesDBService,
 } from "pstdio-db";
-import { loadExtensionSource } from "../features/extensions/extension-runtime";
+import {
+  type ProjectExtensionRuntimeCatalog,
+  type ProjectExtensionRuntimeSnapshot,
+  resolveEnabledSourceForRecord,
+} from "../features/extensions/project-extension-runtime-catalog";
 import {
   catalogId,
   catalogNameFromKey,
@@ -13,7 +17,6 @@ import {
   readTextPackageAsset,
   sourceRootForAsset,
 } from "./extension-asset-catalog";
-import type { createExtensionService } from "./extension-service";
 import type { createFileService } from "./file-service";
 import { mergeProjectAndExtensionTemplates } from "./template-precedence";
 
@@ -38,16 +41,14 @@ type TemplateUpdateError =
 type TemplateUpdateResult = { template: Template } | { error: TemplateUpdateError; message?: string };
 
 export type TemplateServiceDeps = {
-  extensionService: ReturnType<typeof createExtensionService>;
+  extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionTemplatePreferencesDBService: ReturnType<typeof createExtensionTemplatePreferencesDBService>;
   fileService: ReturnType<typeof createFileService>;
   projectTemplateDefaultsDBService: ReturnType<typeof createProjectTemplateDefaultsDBService>;
   templatesDBService: ReturnType<typeof createTemplatesDBService>;
 };
 
-type EnabledExtensionSource = Awaited<
-  ReturnType<TemplateServiceDeps["extensionService"]["listEnabledSourcesForProject"]>
->[number];
+type EnabledExtensionSource = ProjectExtensionRuntimeSnapshot["enabledSources"][number];
 type ExtensionTemplatePreference = Awaited<
   ReturnType<TemplateServiceDeps["extensionTemplatePreferencesDBService"]["list"]>
 >[number];
@@ -129,8 +130,8 @@ const loadExtensionTemplates = async (
   projectId: string,
   input: { includeDisabled: boolean },
 ) => {
-  const [enabledSources, preferences, defaults] = await Promise.all([
-    deps.extensionService.listEnabledSourcesForProject(projectId),
+  const [snapshot, preferences, defaults] = await Promise.all([
+    deps.extensionRuntimeCatalog.getProjectRuntime(projectId),
     deps.extensionTemplatePreferencesDBService.list(projectId),
     deps.projectTemplateDefaultsDBService.list(projectId),
   ]);
@@ -140,26 +141,21 @@ const loadExtensionTemplates = async (
   const defaultByType = new Map(defaults.map((row) => [row.template_type, row]));
   const items: InternalTemplate[] = [];
 
-  for (const { instance, installedSource } of enabledSources) {
-    if (installedSource.status !== "loaded") continue;
+  for (const template of snapshot.runtime.templates) {
+    const source = resolveEnabledSourceForRecord(template.sourcePath, snapshot.enabledSources);
+    if (!source) continue;
 
-    const loaded = await loadExtensionSource(installedSource.source_path);
-    const templates = loaded.definition.templates;
-    if (!isRecord(templates)) continue;
-
-    for (const [key, contribution] of Object.entries(templates)) {
-      const item = toExtensionTemplate({
-        contribution,
-        defaults: defaultByType,
-        includeDisabled: input.includeDisabled,
-        installedSource,
-        instance,
-        key,
-        pref: preferenceByKey.get(preferenceKey(instance.id, key)),
-        projectId,
-      });
-      if (item) items.push(item);
-    }
+    const item = toExtensionTemplate({
+      contribution: template.contribution,
+      defaults: defaultByType,
+      includeDisabled: input.includeDisabled,
+      installedSource: source.installedSource,
+      instance: source.instance,
+      key: template.localId,
+      pref: preferenceByKey.get(preferenceKey(source.instance.id, template.localId)),
+      projectId,
+    });
+    if (item) items.push(item);
   }
 
   return items;

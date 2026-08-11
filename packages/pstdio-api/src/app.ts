@@ -313,14 +313,14 @@ export const createApp = async (options: AppOptions) => {
       ),
   });
   const templateService = createTemplateService({
-    extensionService,
+    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
     extensionTemplatePreferencesDBService,
     fileService,
     projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
     templatesDBService,
   });
   const skillService = createSkillService({
-    extensionService,
+    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
     extensionSkillPreferencesDBService,
     fileService,
     skillsDBService,
