@@ -48,7 +48,9 @@ import {
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
-import { createExtensionLayoutCompatibility, reconcileExtensionLayout } from "./extension-layout-reconciliation";
+import { reconcileStoredExtensionLayouts, registerExtensionLayoutResetCommands } from "./extension-layout-persistence";
+import { reconcileExtensionLayout } from "./extension-layout-reconciliation";
+import { refreshExtensionRenderers, registerExtensionResourceKinds } from "./extension-module-setup";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
@@ -103,69 +105,6 @@ const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId:
   if (!route) throw new Error(`Extension route is not available: ${routePath}`);
   if (!routeProjectId) throw new Error(`Extension route has no project: ${routePath}`);
   return createDashboardExtensionRouteResource({ icon: resource.icon, projectId: routeProjectId, route });
-};
-
-const extensionLayoutCompatibilityKey = (projectId: string) => `dashboard.extensions:${projectId}`;
-
-const reconcileStoredExtensionLayouts = (input: {
-  layoutPersistence: LayoutPersistenceAdapter | undefined;
-  metadata: ResolvedWorkbenchExtensionMetadata;
-  projectId: string;
-}) => {
-  const nextCompatibility = createExtensionLayoutCompatibility(input.metadata);
-  const key = extensionLayoutCompatibilityKey(input.projectId);
-  const previousCompatibility = input.layoutPersistence?.getCompatibilityMarker?.(key);
-  if (previousCompatibility === nextCompatibility) return previousCompatibility;
-
-  input.layoutPersistence?.transformLayouts?.(input.projectId, (layout) =>
-    reconcileExtensionLayout({ layout, metadata: input.metadata, previousCompatibility }),
-  );
-  input.layoutPersistence?.setCompatibilityMarker?.(key, nextCompatibility);
-  return previousCompatibility;
-};
-
-const registerExtensionLayoutResetCommands = (input: {
-  ctx: WorkbenchModuleContext;
-  layoutPersistence: LayoutPersistenceAdapter | undefined;
-  metadata: ResolvedWorkbenchExtensionMetadata;
-  projectId: string;
-}) =>
-  input.metadata.extensions.map((extension) =>
-    input.ctx.commands.registerCommand(
-      {
-        id: `dashboard.extensions.resetLayout.${extension.id}`,
-        label: `Reset ${extension.displayName || extension.name || extension.id} layout`,
-      },
-      {
-        execute: () => {
-          input.layoutPersistence?.transformLayouts?.(input.projectId, (layout) =>
-            reconcileExtensionLayout({ layout, metadata: input.metadata, resetExtensionId: extension.id }),
-          );
-          input.layoutPersistence?.advanceWriteGeneration?.();
-          input.ctx.layout.restoreLayout(
-            reconcileExtensionLayout({
-              layout: input.ctx.layout.getLayout(),
-              metadata: input.metadata,
-              resetExtensionId: extension.id,
-            }),
-          );
-        },
-      },
-    ),
-  );
-
-const refreshExtensionRenderers = (
-  ctx: WorkbenchModuleContext,
-  metadata: ResolvedWorkbenchExtensionMetadata | undefined,
-) => {
-  for (const record of metadata?.treeRenderers ?? []) {
-    if (ctx.renderers.getTreeRenderer(record.id)) ctx.renderers.refresh(record.id);
-  }
-};
-
-const registerExtensionResourceKinds = (ctx: WorkbenchModuleContext) => {
-  ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
-  ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
 };
 
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>

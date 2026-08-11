@@ -17,7 +17,11 @@ import {
 const createStore = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
   return {
+    get length() {
+      return values.size;
+    },
     getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
     setItem: (key, value) => {
       values.set(key, value);
     },
@@ -345,6 +349,28 @@ describe("local storage workbench persistence recovery", () => {
       "changed",
     );
     expect(persistence.getLayout("project/two")?.activeWidgetId).toBe("other");
+  });
+
+  test("discovers project layouts that predate the scope index", () => {
+    const storage = createStore();
+    const layout = createDefaultWorkbenchLayout();
+    const projectScope = "project/one";
+    const aggregateScope = "project/one/mode/project/aggregate/workspaces";
+    storage.setItem(
+      workbenchStoragePersistenceKey("demo", "layout", projectScope),
+      JSON.stringify({ version: 2, layout }),
+    );
+    storage.setItem(
+      workbenchStoragePersistenceKey("demo", "layout", aggregateScope),
+      JSON.stringify({ version: 2, layout }),
+    );
+    storage.setItem(
+      workbenchStoragePersistenceKey("demo", "layout", "project/two"),
+      JSON.stringify({ version: 2, layout }),
+    );
+    const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
+
+    expect(persistence.listScopes?.("one")).toEqual([projectScope, aggregateScope]);
   });
 });
 

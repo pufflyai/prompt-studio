@@ -18,6 +18,16 @@ interface ReconcileExtensionLayoutInput {
   resetExtensionId?: string;
 }
 
+interface PlacementCandidate {
+  migrated: boolean;
+  originalWidgetId: string;
+  placement: WorkbenchWidgetPlacement;
+  sourceRegion: WorkbenchRegion;
+  targetRegion: WorkbenchRegion;
+}
+
+type LayoutRegionEntry = [WorkbenchRegion, WorkbenchLayout["regions"][WorkbenchRegion]];
+
 const compareRecord = (left: ExtensionLayoutCompatibilityRecord, right: ExtensionLayoutCompatibilityRecord) =>
   left.extensionId.localeCompare(right.extensionId) || left.panelId.localeCompare(right.panelId);
 
@@ -67,9 +77,16 @@ const recordKey = (record: Pick<ExtensionLayoutCompatibilityRecord, "extensionId
 const extensionIds = (metadata: DashboardExtensionMetadata) =>
   new Set(metadata.extensions.map((extension) => extension.id));
 
-const placementExtensionId = (placement: WorkbenchWidgetPlacement, knownExtensionIds: Set<string>) => {
+const placementExtensionId = (
+  placement: WorkbenchWidgetPlacement,
+  knownExtensionIds: Set<string>,
+  extensionIdByPlacementId: Map<string, string>,
+) => {
   const resourceExtensionId = placement.resource?.metadata?.extensionId;
   if (typeof resourceExtensionId === "string") return resourceExtensionId;
+  const recordedExtensionId =
+    extensionIdByPlacementId.get(placement.widgetId) ?? extensionIdByPlacementId.get(placement.contributionId);
+  if (recordedExtensionId) return recordedExtensionId;
   for (const extensionId of knownExtensionIds) {
     if (placement.contributionId.startsWith(extensionId) || placement.widgetId.startsWith(extensionId))
       return extensionId;
@@ -95,76 +112,173 @@ const createMigration = (input: {
   return migration;
 };
 
-export const reconcileExtensionLayout = (input: ReconcileExtensionLayoutInput) => {
-  const current = parseCompatibility(createExtensionLayoutCompatibility(input.metadata));
-  const previous = parseCompatibility(input.previousCompatibility);
-  const currentWidgetIds = new Set(current.map((record) => record.widgetId));
-  const migration = createMigration({ current, previous });
-  const knownExtensionIds = extensionIds(input.metadata);
-  const originalCurrentWidgetIds = new Set<string>();
+const layoutRegionEntries = (layout: WorkbenchLayout) => Object.entries(layout.regions) as LayoutRegionEntry[];
 
-  for (const region of Object.values(input.layout.regions)) {
+const createExtensionIdByPlacementId = (records: ExtensionLayoutCompatibilityRecord[]) => {
+  const extensionIdByPlacementId = new Map<string, string>();
+  for (const record of records) {
+    extensionIdByPlacementId.set(record.widgetId, record.extensionId);
+    extensionIdByPlacementId.set(extensionViewWidgetId(record.panelId), record.extensionId);
+  }
+  return extensionIdByPlacementId;
+};
+
+const createPlacementCandidates = (input: {
+  current: ExtensionLayoutCompatibilityRecord[];
+  extensionIdByPlacementId: Map<string, string>;
+  knownExtensionIds: Set<string>;
+  layout: WorkbenchLayout;
+  migration: Map<string, string>;
+  resetExtensionId: string | undefined;
+}) => {
+  const currentWidgetIds = new Set(input.current.map((record) => record.widgetId));
+  const currentRecordByWidgetId = new Map(input.current.map((record) => [record.widgetId, record]));
+  const candidates: PlacementCandidate[] = [];
+
+  for (const [sourceRegion, region] of layoutRegionEntries(input.layout)) {
     for (const placement of region.widgets) {
-      if (currentWidgetIds.has(placement.widgetId)) originalCurrentWidgetIds.add(placement.widgetId);
+      const extensionId = placementExtensionId(placement, input.knownExtensionIds, input.extensionIdByPlacementId);
+      const replacementWidgetId = input.migration.get(placement.widgetId);
+      const widgetId = replacementWidgetId ?? placement.widgetId;
+      const reset = input.resetExtensionId && extensionId === input.resetExtensionId;
+      const obsolete = Boolean(extensionId) && !currentWidgetIds.has(widgetId);
+      if (reset || obsolete) continue;
+
+      candidates.push({
+        migrated: Boolean(replacementWidgetId),
+        originalWidgetId: placement.widgetId,
+        placement: widgetId === placement.widgetId ? placement : { ...placement, widgetId, contributionId: widgetId },
+        sourceRegion,
+        targetRegion: currentRecordByWidgetId.get(widgetId)?.region ?? sourceRegion,
+      });
     }
   }
+  return candidates;
+};
 
-  const retainedWidgetIds = new Set<string>();
-  const widgetIdReplacements = new Map<string, string>();
+const selectPlacementCandidates = (candidates: PlacementCandidate[]) => {
+  const candidateByWidgetId = new Map<string, PlacementCandidate>();
+  for (const candidate of candidates) {
+    const currentCandidate = candidateByWidgetId.get(candidate.placement.widgetId);
+    if (!currentCandidate || (candidate.migrated && !currentCandidate.migrated))
+      candidateByWidgetId.set(candidate.placement.widgetId, candidate);
+  }
+  const retainedCandidates = new Set(candidateByWidgetId.values());
+  const candidateByOriginalWidgetId = new Map(
+    candidates.map((candidate) => [candidate.originalWidgetId, candidateByWidgetId.get(candidate.placement.widgetId)!]),
+  );
+  return { candidateByOriginalWidgetId, retainedCandidates };
+};
+
+const createReconciledRegions = (input: {
+  candidates: PlacementCandidate[];
+  layout: WorkbenchLayout;
+  retainedCandidates: Set<PlacementCandidate>;
+}) => {
   const regions = Object.fromEntries(
-    Object.entries(input.layout.regions).map(([regionId, region]) => {
-      const widgets: WorkbenchWidgetPlacement[] = [];
-      for (const placement of region.widgets) {
-        const extensionId = placementExtensionId(placement, knownExtensionIds);
-        const replacementWidgetId = migration.get(placement.widgetId);
-        const widgetId = replacementWidgetId ?? placement.widgetId;
-        if (replacementWidgetId) widgetIdReplacements.set(placement.widgetId, replacementWidgetId);
-        const isExtensionOwned = Boolean(extensionId);
-        const reset = input.resetExtensionId && extensionId === input.resetExtensionId;
-        const obsolete = isExtensionOwned && !currentWidgetIds.has(widgetId);
-        const duplicateMigration = Boolean(replacementWidgetId && originalCurrentWidgetIds.has(replacementWidgetId));
-        const duplicateRetained = retainedWidgetIds.has(widgetId);
-        if (reset || obsolete || duplicateMigration || duplicateRetained) continue;
-
-        retainedWidgetIds.add(widgetId);
-        widgets.push(
-          widgetId === placement.widgetId ? placement : { ...placement, widgetId, contributionId: widgetId },
-        );
-      }
-      return [
-        regionId,
-        {
-          ...region,
-          widgets,
-          activeWidgetId: region.activeWidgetId
-            ? (widgetIdReplacements.get(region.activeWidgetId) ?? region.activeWidgetId)
-            : undefined,
-        },
-      ];
-    }),
+    layoutRegionEntries(input.layout).map(([regionId, region]) => [
+      regionId,
+      {
+        ...region,
+        widgets: input.candidates
+          .filter(
+            (candidate) =>
+              input.retainedCandidates.has(candidate) &&
+              candidate.sourceRegion === regionId &&
+              candidate.targetRegion === regionId,
+          )
+          .map((candidate) => candidate.placement),
+        activeWidgetId: undefined,
+      },
+    ]),
   ) as WorkbenchLayout["regions"];
 
-  for (const region of Object.values(regions)) {
-    if (!region.activeWidgetId || !retainedWidgetIds.has(region.activeWidgetId))
-      region.activeWidgetId = region.widgets[0]?.widgetId;
+  for (const candidate of input.candidates) {
+    if (!input.retainedCandidates.has(candidate) || candidate.sourceRegion === candidate.targetRegion) continue;
+    regions[candidate.targetRegion].widgets.push(candidate.placement);
   }
+  return regions;
+};
 
-  const replaceWidgetId = (widgetId: string | undefined) => {
-    const next = widgetId ? (widgetIdReplacements.get(widgetId) ?? widgetId) : undefined;
-    return next && retainedWidgetIds.has(next) ? next : undefined;
-  };
-  const activeWidgetId = replaceWidgetId(input.layout.activeWidgetId);
-  const activeLocationWidgetId = replaceWidgetId(input.layout.activeLocationWidgetId);
-  const locationSubPanelSelections = Object.fromEntries(
+const restoreActiveRegionWidgets = (input: {
+  globalActiveCandidate: PlacementCandidate | undefined;
+  layout: WorkbenchLayout;
+  regions: WorkbenchLayout["regions"];
+  resolveCandidate: (widgetId: string | undefined) => PlacementCandidate | undefined;
+  retainedCandidates: Set<PlacementCandidate>;
+}) => {
+  for (const [regionId, region] of layoutRegionEntries(input.layout)) {
+    const activeCandidate = input.resolveCandidate(region.activeWidgetId);
+    if (activeCandidate && input.retainedCandidates.has(activeCandidate)) {
+      const target = input.regions[activeCandidate.targetRegion];
+      if (!target.activeWidgetId) target.activeWidgetId = activeCandidate.placement.widgetId;
+    }
+    const nextRegion = input.regions[regionId];
+    if (!nextRegion.activeWidgetId) nextRegion.activeWidgetId = nextRegion.widgets[0]?.widgetId;
+  }
+  const globalActiveCandidate = input.globalActiveCandidate;
+  if (globalActiveCandidate && input.retainedCandidates.has(globalActiveCandidate))
+    input.regions[globalActiveCandidate.targetRegion].activeWidgetId = globalActiveCandidate.placement.widgetId;
+};
+
+const reconcileLocationSubPanelSelections = (input: {
+  layout: WorkbenchLayout;
+  resolveCandidate: (widgetId: string | undefined) => PlacementCandidate | undefined;
+  retainedCandidates: Set<PlacementCandidate>;
+}) =>
+  Object.fromEntries(
     Object.entries(input.layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
       resourceUri,
       Object.fromEntries(
-        Object.entries(selections)
-          .map(([region, widgetId]) => [region, replaceWidgetId(widgetId)] as const)
-          .filter((entry): entry is [string, string] => Boolean(entry[1])),
+        Object.values(selections)
+          .map((widgetId) => input.resolveCandidate(widgetId))
+          .filter((candidate): candidate is PlacementCandidate =>
+            Boolean(candidate && input.retainedCandidates.has(candidate)),
+          )
+          .map((candidate) => [candidate.targetRegion, candidate.placement.widgetId]),
       ),
     ]),
   );
+
+export const reconcileExtensionLayout = (input: ReconcileExtensionLayoutInput) => {
+  const current = parseCompatibility(createExtensionLayoutCompatibility(input.metadata));
+  const previous = parseCompatibility(input.previousCompatibility);
+  const migration = createMigration({ current, previous });
+  const knownExtensionIds = extensionIds(input.metadata);
+  const extensionIdByPlacementId = createExtensionIdByPlacementId([...previous, ...current]);
+  const candidates = createPlacementCandidates({
+    current,
+    extensionIdByPlacementId,
+    knownExtensionIds,
+    layout: input.layout,
+    migration,
+    resetExtensionId: input.resetExtensionId,
+  });
+  const { candidateByOriginalWidgetId, retainedCandidates } = selectPlacementCandidates(candidates);
+  const regions = createReconciledRegions({ candidates, layout: input.layout, retainedCandidates });
+
+  const resolveCandidate = (widgetId: string | undefined) =>
+    widgetId ? candidateByOriginalWidgetId.get(widgetId) : undefined;
+  const globalActiveCandidate = resolveCandidate(input.layout.activeWidgetId);
+  restoreActiveRegionWidgets({
+    globalActiveCandidate,
+    layout: input.layout,
+    regions,
+    resolveCandidate,
+    retainedCandidates,
+  });
+
+  const replaceWidgetId = (widgetId: string | undefined) => {
+    const candidate = resolveCandidate(widgetId);
+    return candidate && retainedCandidates.has(candidate) ? candidate.placement.widgetId : undefined;
+  };
+  const activeWidgetId = replaceWidgetId(input.layout.activeWidgetId);
+  const activeLocationWidgetId = replaceWidgetId(input.layout.activeLocationWidgetId);
+  const locationSubPanelSelections = reconcileLocationSubPanelSelections({
+    layout: input.layout,
+    resolveCandidate,
+    retainedCandidates,
+  });
 
   return {
     ...input.layout,

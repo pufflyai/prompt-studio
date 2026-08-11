@@ -91,6 +91,23 @@ describe("extension layout compatibility", () => {
 
     expect(createExtensionLayoutCompatibility(first)).toBe(createExtensionLayoutCompatibility(second));
   });
+
+  test("changes only for layout-relevant metadata", () => {
+    const base = createMetadata([nativePanel]);
+    const commandChanged = {
+      ...base,
+      commands: [{ id: "extension-lab.run", extensionId: nativePanel.extensionId, title: "Run" }],
+    } satisfies DashboardExtensionMetadata;
+    const regionChanged = createMetadata([{ ...nativePanel, region: "side" }]);
+    const modeChanged = {
+      ...base,
+      modes: base.modes.map((mode) => ({ ...mode, modeId: "extension-lab.other-mode" })),
+    } satisfies DashboardExtensionMetadata;
+
+    expect(createExtensionLayoutCompatibility(commandChanged)).toBe(createExtensionLayoutCompatibility(base));
+    expect(createExtensionLayoutCompatibility(regionChanged)).not.toBe(createExtensionLayoutCompatibility(base));
+    expect(createExtensionLayoutCompatibility(modeChanged)).not.toBe(createExtensionLayoutCompatibility(base));
+  });
 });
 
 describe("extension layout reconciliation", () => {
@@ -100,6 +117,7 @@ describe("extension layout reconciliation", () => {
       {
         widgetId: extensionViewWidgetId(nativePanel.id),
         contributionId: extensionViewWidgetId(nativePanel.id),
+        pinned: true,
         resource: {
           kind: "extension-view",
           id: nativePanel.id,
@@ -108,6 +126,7 @@ describe("extension layout reconciliation", () => {
           metadata: { extensionId: nativePanel.extensionId },
         },
         resourceUri: "resource://one",
+        tabRetention: "preview",
       },
       { widgetId: nativePanel.id, contributionId: nativePanel.id, resourceUri: "resource://one" },
       { widgetId: "dashboard.native", contributionId: "dashboard.native" },
@@ -126,6 +145,45 @@ describe("extension layout reconciliation", () => {
     expect(reconciled.activeWidgetId).toBe(nativePanel.id);
     expect(reconciled.activeLocationWidgetId).toBe(nativePanel.id);
     expect(reconciled.locationSubPanelSelections?.["resource://one"]?.main).toBe(nativePanel.id);
+    expect(reconciled.regions.main.widgets[0]).toMatchObject({
+      pinned: true,
+      resourceUri: "resource://one",
+      tabRetention: "preview",
+    });
+  });
+
+  test("moves a retained placement when its contribution region changes", () => {
+    const previousCompatibility = createExtensionLayoutCompatibility(createMetadata([nativePanel]));
+    const movedPanel = { ...nativePanel, region: "side" } satisfies DashboardExtensionMetadata["panels"][number];
+    const layout = withWidgets([
+      {
+        widgetId: nativePanel.id,
+        contributionId: nativePanel.id,
+        pinned: true,
+        resourceUri: "resource://one",
+        tabRetention: "persistent",
+      },
+      { widgetId: "dashboard.native", contributionId: "dashboard.native" },
+    ]);
+
+    const reconciled = reconcileExtensionLayout({
+      layout,
+      metadata: createMetadata([movedPanel]),
+      previousCompatibility,
+    });
+
+    expect(reconciled.regions.main.widgets.map((placement) => placement.widgetId)).toEqual(["dashboard.native"]);
+    expect(reconciled.regions.side.widgets).toEqual([
+      expect.objectContaining({
+        widgetId: nativePanel.id,
+        pinned: true,
+        resourceUri: "resource://one",
+        tabRetention: "persistent",
+      }),
+    ]);
+    expect(reconciled.activeWidgetId).toBe(nativePanel.id);
+    expect(reconciled.activeLocationWidgetId).toBe(nativePanel.id);
+    expect(reconciled.locationSubPanelSelections?.["resource://one"]).toEqual({ side: nativePanel.id });
   });
 
   test("prunes removed extension panels while preserving unrelated placements", () => {
@@ -152,5 +210,27 @@ describe("extension layout reconciliation", () => {
     expect(reconciled.activeWidgetId).toBeUndefined();
     expect(reconciled.activeResourceUri).toBeUndefined();
     expect(reconciled.locationSubPanelSelections?.["resource://one"]).toEqual({});
+  });
+
+  test("recognizes native extension placements without resource metadata", () => {
+    const metadata = createMetadata([nativePanel]);
+    const layout = withWidgets([
+      { widgetId: nativePanel.id, contributionId: nativePanel.id },
+      { widgetId: "dashboard.native", contributionId: "dashboard.native" },
+    ]);
+
+    const reset = reconcileExtensionLayout({
+      layout,
+      metadata,
+      resetExtensionId: nativePanel.extensionId,
+    });
+    expect(reset.regions.main.widgets.map((placement) => placement.widgetId)).toEqual(["dashboard.native"]);
+
+    const removed = reconcileExtensionLayout({
+      layout,
+      metadata: createMetadata([]),
+      previousCompatibility: createExtensionLayoutCompatibility(metadata),
+    });
+    expect(removed.regions.main.widgets.map((placement) => placement.widgetId)).toEqual(["dashboard.native"]);
   });
 });
