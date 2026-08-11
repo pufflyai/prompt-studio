@@ -13,9 +13,12 @@ describe("prepareManagedWebviewBuildSource", () => {
     mkdirSync(join(packagePath, "src"), { recursive: true });
     writeFileSync(
       join(packagePath, "package.json"),
-      JSON.stringify({ name: "test-extension", dependencies: { react: "^19.0.0", zustand: "^5.0.0" } }),
+      JSON.stringify({
+        name: "test-extension",
+        dependencies: { react: "^19.0.0", zustand: "^5.0.0" },
+      }),
     );
-    writeFileSync(entryPath, "console.log('webview');");
+    writeFileSync(entryPath, 'import "react";\nimport "zustand";\n');
     mkdirSync(join(packagePath, "node_modules", "react"), { recursive: true });
     writeFileSync(
       join(packagePath, "node_modules", "react", "package.json"),
@@ -52,6 +55,61 @@ describe("prepareManagedWebviewBuildSource", () => {
 });
 
 describe("inspectManagedWebviewBuildInputs", () => {
+  test("ignores declared dependencies outside the webview source graph", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-used-dependencies-test-"));
+    const packagePath = join(root, "extension");
+    const entryPath = join(packagePath, "src", "main.tsx");
+    mkdirSync(join(packagePath, "src"), { recursive: true });
+    mkdirSync(join(packagePath, "node_modules", "react"), { recursive: true });
+    writeFileSync(entryPath, 'import "react";\n');
+    writeFileSync(
+      join(packagePath, "node_modules", "react", "package.json"),
+      JSON.stringify({ name: "react", version: "19.0.0" }),
+    );
+    writeFileSync(
+      join(packagePath, "package.json"),
+      JSON.stringify({
+        name: "test-extension",
+        dependencies: { react: "^19.0.0", zustand: "^5.0.0" },
+      }),
+    );
+
+    try {
+      const first = inspectManagedWebviewBuildInputs({
+        entryPath,
+        installName: "test-extension",
+        packageName: "test-extension",
+        packagePath,
+      });
+
+      writeFileSync(join(packagePath, "bun.lock"), "unrelated lockfile change");
+      writeFileSync(
+        join(packagePath, "package.json"),
+        JSON.stringify({
+          name: "test-extension",
+          dependencies: {
+            react: "^19.0.0",
+            zustand: "^6.0.0",
+            immer: "^10.0.0",
+          },
+        }),
+      );
+      const second = inspectManagedWebviewBuildInputs({
+        entryPath,
+        installName: "test-extension",
+        packageName: "test-extension",
+        packagePath,
+      });
+
+      expect(first.dependencyNames).toEqual(["react"]);
+      expect(first.missingDependencies).toEqual([]);
+      expect(second.dependencyNames).toEqual(["react"]);
+      expect(second.signature).toBe(first.signature);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("produces the same signature for identical packages in different roots", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-signature-test-"));
     const createPackage = (name: string) => {
@@ -60,7 +118,12 @@ describe("inspectManagedWebviewBuildInputs", () => {
       mkdirSync(join(packagePath, "src"), { recursive: true });
       writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "test-extension" }));
       writeFileSync(entryPath, "export const value = 1;");
-      return { entryPath, installName: "test-extension", packageName: "test-extension", packagePath };
+      return {
+        entryPath,
+        installName: "test-extension",
+        packageName: "test-extension",
+        packagePath,
+      };
     };
 
     try {
@@ -84,9 +147,19 @@ describe("inspectManagedWebviewBuildInputs", () => {
     writeFileSync(secondEntryPath, "c");
 
     try {
-      const shared = { installName: "test-extension", packageName: "test-extension", packagePath };
-      const first = inspectManagedWebviewBuildInputs({ ...shared, entryPath: firstEntryPath });
-      const second = inspectManagedWebviewBuildInputs({ ...shared, entryPath: secondEntryPath });
+      const shared = {
+        installName: "test-extension",
+        packageName: "test-extension",
+        packagePath,
+      };
+      const first = inspectManagedWebviewBuildInputs({
+        ...shared,
+        entryPath: firstEntryPath,
+      });
+      const second = inspectManagedWebviewBuildInputs({
+        ...shared,
+        entryPath: secondEntryPath,
+      });
 
       expect(first.signature).not.toBe(second.signature);
     } finally {

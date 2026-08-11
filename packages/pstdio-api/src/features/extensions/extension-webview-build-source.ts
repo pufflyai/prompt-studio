@@ -17,6 +17,7 @@ type PackageJson = {
   dependencies?: Record<string, unknown>;
   name?: string;
   peerDependencies?: Record<string, unknown>;
+  [key: string]: unknown;
 };
 
 type ManagedWebviewBuildSourceInput = {
@@ -47,16 +48,28 @@ const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json",
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const readPackageJsonText = (packagePath: string) => readFileSync(join(packagePath, "package.json"), "utf8");
-
 const readPackageJson = (packagePath: string): PackageJson => {
-  const parsed = JSON.parse(readPackageJsonText(packagePath)) as unknown;
+  const parsed = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8")) as unknown;
   if (!isRecord(parsed)) return {};
   return parsed as PackageJson;
 };
 
-const packageDependencyNames = (manifest: PackageJson) =>
+const declaredDependencyNames = (manifest: PackageJson) =>
   [...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})])].sort();
+
+const packageNameForImport = (importPath: string) => {
+  if (
+    importPath.startsWith(".") ||
+    importPath.startsWith("/") ||
+    importPath.startsWith("#") ||
+    importPath.includes(":")
+  ) {
+    return null;
+  }
+
+  const parts = importPath.split("/");
+  return importPath.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+};
 
 const packagePathInNodeModules = (nodeModulesPath: string, packageName: string) => {
   const [scope, name] = packageName.split("/");
@@ -131,8 +144,10 @@ const addHashEntry = (hash: ReturnType<typeof createHash>, path: string, content
   hash.update("\0");
 };
 
-const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: string, entryPath: string) => {
+const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
+  const hash = createHash("sha256");
   const pending = [entryPath];
+  const packageImports = new Set<string>();
   const visited = new Set<string>();
 
   while (pending.length > 0) {
@@ -143,33 +158,44 @@ const addLocalImportGraph = (hash: ReturnType<typeof createHash>, packagePath: s
     const content = readFileSync(filePath);
     addHashEntry(hash, normalizedRelativePath(packagePath, filePath), content);
     if (![".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(filePath))) continue;
+    if ([".tsx", ".jsx"].includes(extname(filePath))) packageImports.add("react");
 
     try {
-      const imports = new Bun.Transpiler({ loader: transpilerLoader(filePath) }).scanImports(content);
+      const imports = new Bun.Transpiler({
+        loader: transpilerLoader(filePath),
+      }).scanImports(content);
       for (const imported of imports) {
         const resolvedPath = resolveLocalImport(filePath, imported.path);
-        if (resolvedPath) pending.push(resolvedPath);
+        if (resolvedPath) {
+          pending.push(resolvedPath);
+          continue;
+        }
+
+        const packageName = packageNameForImport(imported.path);
+        if (packageName) packageImports.add(packageName);
       }
     } catch {
       // Bun will surface source parse diagnostics during the actual build.
     }
   }
+
+  return { packageImports, signature: hash.digest("hex") };
 };
 
 const addOptionalFile = (hash: ReturnType<typeof createHash>, path: string, filePath: string) =>
   addHashEntry(hash, path, existsSync(filePath) ? readFileSync(filePath) : "missing");
 
 const buildInputSignature = (
-  input: ManagedWebviewBuildSourceInput,
+  manifest: PackageJson,
   dependencyNames: string[],
   dependencyNodeModules: string | null,
   missingDependencies: string[],
+  sourceGraphSignature: string,
 ) => {
   const hash = createHash("sha256");
-  addHashEntry(hash, "package.json", readPackageJsonText(input.packagePath));
-  addOptionalFile(hash, "bun.lock", join(input.packagePath, "bun.lock"));
-  addOptionalFile(hash, "bun.lockb", join(input.packagePath, "bun.lockb"));
-  addLocalImportGraph(hash, input.packagePath, input.entryPath);
+  const { dependencies: _dependencies, peerDependencies: _peerDependencies, ...packageConfiguration } = manifest;
+  addHashEntry(hash, "package.json", JSON.stringify(packageConfiguration));
+  addHashEntry(hash, "source-graph", sourceGraphSignature);
   addHashEntry(hash, "dependency-node-modules", dependencyNodeModules ? "available" : "missing");
   addHashEntry(hash, "missing-dependencies", missingDependencies.join("\0"));
 
@@ -188,7 +214,11 @@ const buildInputSignature = (
 
 export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourceInput): ManagedWebviewBuildInputs => {
   const manifest = readPackageJson(input.packagePath);
-  const dependencyNames = packageDependencyNames(manifest);
+  const { packageImports, signature: sourceGraphSignature } = inspectLocalImportGraph(
+    input.packagePath,
+    input.entryPath,
+  );
+  const dependencyNames = declaredDependencyNames(manifest).filter((name) => packageImports.has(name));
   const packageNodeModules = join(input.packagePath, "node_modules");
   const packageMissingDependencies = missingDependenciesIn(packageNodeModules, dependencyNames);
   let dependencyNodeModules: string | null = null;
@@ -210,7 +240,13 @@ export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourc
     dependencyNames,
     dependencyNodeModules,
     missingDependencies,
-    signature: buildInputSignature(input, dependencyNames, dependencyNodeModules, missingDependencies),
+    signature: buildInputSignature(
+      manifest,
+      dependencyNames,
+      dependencyNodeModules,
+      missingDependencies,
+      sourceGraphSignature,
+    ),
   };
 };
 
@@ -223,7 +259,9 @@ const mirrorPackageSource = (packagePath: string, shellDir: string) => {
   mkdirSync(shellDir, { recursive: true });
   for (const dirent of readdirSync(packagePath, { withFileTypes: true })) {
     if (dirent.name === "node_modules") continue;
-    cpSync(join(packagePath, dirent.name), join(shellDir, dirent.name), { recursive: true });
+    cpSync(join(packagePath, dirent.name), join(shellDir, dirent.name), {
+      recursive: true,
+    });
   }
 };
 
@@ -257,5 +295,8 @@ export const prepareManagedWebviewBuildSource = (
     throw error;
   }
 
-  return { entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)), success: true };
+  return {
+    entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)),
+    success: true,
+  };
 };
