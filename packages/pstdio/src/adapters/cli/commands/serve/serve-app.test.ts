@@ -69,7 +69,9 @@ describe("serveApp startup ordering", () => {
         close: async () => {},
       });
 
-      expect(await (await response).text()).toBe("app-ready");
+      const resolvedResponse = await response;
+      if (!(resolvedResponse instanceof Response)) throw new Error("Expected the queued API response");
+      expect(await resolvedResponse.text()).toBe("app-ready");
       await starting;
     } finally {
       appReady.resolve({ app: { fetch: () => new Response("app-ready") }, close: async () => {} });
