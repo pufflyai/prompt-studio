@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { apiWebSocket } from "pstdio-api/app";
@@ -7,6 +7,77 @@ import type { RuntimeHost } from "pstdio-api/runtime";
 import packageData from "../../../../../package.json";
 
 import { createServeApp } from "./serve-app";
+
+describe("serveApp startup ordering", () => {
+  it("binds and publishes before app initialization finishes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-serve-early-bind-"));
+    const descriptorPath = join(root, "runtime.json");
+    const appReady = Promise.withResolvers<{
+      app: { fetch: (request: Request) => Response };
+      close: () => Promise<void>;
+    }>();
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+    const serveApp = createServeApp({
+      createApp: (_host, onDatabaseLockAcquired) => {
+        onDatabaseLockAcquired?.();
+        return appReady.promise;
+      },
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        capturedFetch = options.fetch;
+        return { port: 43128, stop: () => {} } as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      onFatal: () => {},
+      offFatal: () => {},
+      log: () => {},
+    });
+    const starting = serveApp({
+      descriptorPath,
+      host: "127.0.0.1",
+      instanceId: "runtime-early-bind",
+      ownerType: "desktop",
+      port: 0,
+      token: "runtime-secret",
+    });
+
+    try {
+      await Promise.resolve();
+      expect(existsSync(descriptorPath)).toBe(true);
+
+      const server = {} as Bun.Server<undefined>;
+      const response = capturedFetch!.call(server, new Request("http://127.0.0.1:43128/v1/projects"), server);
+      let requestSettled = false;
+      void Promise.resolve(response).then(() => {
+        requestSettled = true;
+      });
+      await Promise.resolve();
+      expect(requestSettled).toBe(false);
+
+      appReady.resolve({
+        app: {
+          fetch: (request) =>
+            new URL(request.url).pathname === "/runtime/ready"
+              ? Response.json({ instanceId: "runtime-early-bind", protocolVersion: 1 })
+              : new Response("app-ready"),
+        },
+        close: async () => {},
+      });
+
+      expect(await (await response).text()).toBe("app-ready");
+      await starting;
+    } finally {
+      appReady.resolve({ app: { fetch: () => new Response("app-ready") }, close: async () => {} });
+      await starting.catch(() => {});
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+});
 
 describe("serveApp", () => {
   it("publishes the actual port-zero origin and promotes ownership through the runtime host", async () => {
@@ -17,8 +88,9 @@ describe("serveApp", () => {
 
     try {
       const serveApp = createServeApp({
-        createApp: async (host) => {
+        createApp: async (host, onDatabaseLockAcquired) => {
           runtimeHost = host;
+          onDatabaseLockAcquired?.();
           return {
             app: {
               fetch: () =>
@@ -117,18 +189,19 @@ describe("serveApp", () => {
     }
   });
 
-  it("closes the app when server startup throws", async () => {
-    let closed = false;
+  it("does not create the app when server startup throws", async () => {
+    let created = false;
 
     const serveApp = createServeApp({
-      createApp: async () => ({
-        app: {
-          fetch: () => new Response("ok"),
-        },
-        close: async () => {
-          closed = true;
-        },
-      }),
+      createApp: async () => {
+        created = true;
+        return {
+          app: {
+            fetch: () => new Response("ok"),
+          },
+          close: async () => {},
+        };
+      },
       injectConfig: (html) => html,
       isCompiledBinary: () => false,
       loadEmbeddedAssets: () => new Map(),
@@ -141,7 +214,7 @@ describe("serveApp", () => {
     });
 
     await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("EADDRINUSE");
-    expect(closed).toBe(true);
+    expect(created).toBe(false);
   });
 
   it("reports the error through startup logging when server startup throws", async () => {
@@ -293,20 +366,23 @@ describe("serveApp dashboard config", () => {
 
     try {
       const serveApp = createServeApp({
-        createApp: async (host) => ({
-          app: {
-            fetch: () =>
-              new Response(
-                JSON.stringify({
-                  instanceId: host!.instanceId,
-                  ok: true,
-                  ownerType: host!.ownerType(),
-                  protocolVersion: 1,
-                }),
-              ),
-          },
-          close: async () => {},
-        }),
+        createApp: async (host, onDatabaseLockAcquired) => {
+          onDatabaseLockAcquired?.();
+          return {
+            app: {
+              fetch: () =>
+                new Response(
+                  JSON.stringify({
+                    instanceId: host!.instanceId,
+                    ok: true,
+                    ownerType: host!.ownerType(),
+                    protocolVersion: 1,
+                  }),
+                ),
+            },
+            close: async () => {},
+          };
+        },
         injectConfig: (html) => html,
         isCompiledBinary: () => false,
         loadEmbeddedAssets: () => new Map(),

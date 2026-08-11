@@ -82,7 +82,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   return { fsBundle: dataFile, wasmModule };
 };
 
-export const createDb = async (options?: { path?: string }) => {
+export const createDb = async (options?: { path?: string; onLockAcquired?: () => void }) => {
   const requestedPath = resolveDbPath(options?.path);
   ensureDbDirectory(requestedPath);
   const dbPath = requestedPath === ":memory:" ? requestedPath : fs.realpathSync(requestedPath);
@@ -90,6 +90,7 @@ export const createDb = async (options?: { path?: string }) => {
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
   try {
+    options?.onLockAcquired?.();
     const pgliteOpts = await resolvePgliteOptions();
     const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
     await pglite.waitReady;

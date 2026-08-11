@@ -61,7 +61,7 @@ import { createSyncService } from "./services/sync-service";
 import { createTemplateService } from "./services/template-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
-import { deferStartupTasks, runStartupTasks } from "./startup";
+import { runStartupTasks } from "./startup";
 import type { AppBindings } from "./types";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
@@ -78,6 +78,7 @@ interface AppOptions {
   /** Test seam: overrides the extension-backed harness registry. */
   harnessRegistry?: HarnessRegistryService;
   runtimeHost?: RuntimeHost;
+  onDatabaseLockAcquired?: () => void;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -151,9 +152,9 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string | undefined) => {
   return `PGlite failed to open ${resolved}. ${pgliteRecoverySteps(resolved)}.`;
 };
 
-const openDb = async (dbPath: string | undefined) => {
+const openDb = async (dbPath: string | undefined, onLockAcquired?: () => void) => {
   try {
-    return await createDb({ path: dbPath });
+    return await createDb({ path: dbPath, onLockAcquired });
   } catch (err) {
     const hint = pgliteRecoveryHint(err, dbPath);
     apiLogger.error({ dataDir: dbPath, err, event: "db.open.failed", hint }, hint ?? "PGlite database failed to open");
@@ -237,7 +238,7 @@ const startNotificationWakeTimer = (notificationService: ReturnType<typeof creat
 
 export const createApp = async (options: AppOptions) => {
   const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
-  const { db, close: closeDb } = await openDb(dbPath);
+  const { db, close: closeDb } = await openDb(dbPath, options.onDatabaseLockAcquired);
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
   const securityToken = apiToken ?? options.runtimeHost?.token;
   const app = new OpenAPIHono<AppBindings>();
@@ -441,11 +442,9 @@ export const createApp = async (options: AppOptions) => {
   });
 
   const startupAbort = new AbortController();
-  const startupDone = deferStartupTasks(() =>
-    runStartupTasks(deps, startupAbort.signal, {
-      recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
-    }),
-  ).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
+  const startupDone = runStartupTasks(deps, startupAbort.signal, {
+    recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
+  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
   let closePromise: Promise<void> | null = null;
   const close = async () => {
@@ -462,5 +461,5 @@ export const createApp = async (options: AppOptions) => {
 
     await closePromise;
   };
-  return { app, close, deps, eventBus, startupDone };
+  return { app, close, deps, eventBus };
 };

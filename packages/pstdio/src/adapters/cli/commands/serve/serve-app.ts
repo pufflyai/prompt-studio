@@ -25,7 +25,7 @@ type AppHandle = {
 };
 
 type ServeAppDeps = {
-  createApp: (runtimeHost?: RuntimeHost) => Promise<AppHandle>;
+  createApp: (runtimeHost?: RuntimeHost, onDatabaseLockAcquired?: () => void) => Promise<AppHandle>;
   injectConfig: typeof injectConfig;
   isCompiledBinary: typeof isCompiledBinary;
   loadEmbeddedAssets: typeof loadEmbeddedAssets;
@@ -72,7 +72,8 @@ const reportStartupError = (error: Error) => {
 };
 
 const defaultDeps: ServeAppDeps = {
-  createApp: async (runtimeHost) => createApp({ filesRoot: await resolveFilesRoot(), runtimeHost }),
+  createApp: async (runtimeHost, onDatabaseLockAcquired) =>
+    createApp({ filesRoot: await resolveFilesRoot(), onDatabaseLockAcquired, runtimeHost }),
   injectConfig,
   isCompiledBinary,
   loadEmbeddedAssets,
@@ -92,7 +93,7 @@ const isApiPath = (pathname: string) =>
   pathname.startsWith("/v1") || pathname.startsWith("/runtime/") || pathname === "/healthz" || pathname === "/readyz";
 
 const createRequestHandler = (
-  app: AppHandle["app"],
+  appReady: Promise<AppHandle>,
   assets: Map<string, Blob>,
   deps: Pick<ServeAppDeps, "injectConfig" | "resolveMimeType">,
   runtimeHost: RuntimeHost | undefined,
@@ -114,9 +115,9 @@ const createRequestHandler = (
       : new Response(blob, { headers: { "Content-Type": mimeType } });
   };
 
-  return (request: Request, server: object) => {
+  return async (request: Request, server: object) => {
     const pathname = new URL(request.url).pathname;
-    if (isApiPath(pathname)) return app.fetch(request, server);
+    if (isApiPath(pathname)) return (await appReady).app.fetch(request, server);
 
     // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
     const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -128,25 +129,12 @@ const createRequestHandler = (
   };
 };
 
-const publishRuntimeWhenReady = async (input: {
-  app: AppHandle["app"];
+const publishBoundRuntime = (input: {
   baseUrl: string;
   log: ServeAppDeps["log"];
   runtime: NonNullable<ReturnType<typeof createServeRuntime>>;
-  server: ReturnType<typeof Bun.serve>;
 }) => {
-  const { app, baseUrl, log, runtime, server } = input;
-  const ready = await app.fetch(
-    new Request(`${baseUrl}/runtime/ready`, {
-      headers: { authorization: `Bearer ${runtime.host.token}` },
-    }),
-    server,
-  );
-  const identity = ready.ok ? ((await ready.json()) as Record<string, unknown>) : null;
-  if (identity?.instanceId !== runtime.host.instanceId || identity.protocolVersion !== 1) {
-    throw new Error("pstdio runtime did not become ready after binding");
-  }
-
+  const { baseUrl, log, runtime } = input;
   runtime.publish(baseUrl as `http://127.0.0.1:${number}`);
   log(`${JSON.stringify({ instanceId: runtime.host.instanceId, origin: baseUrl, type: "runtime_ready" })}\n`);
 };
@@ -169,19 +157,25 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
   return async (options: ServeAppOptions) => {
     const { port, host } = options;
     let appHandle: AppHandle | null = null;
+    const appReady = Promise.withResolvers<AppHandle>();
+    void appReady.promise.catch(() => {});
     let server: ReturnType<typeof Bun.serve> | null = null;
     let runtime: ReturnType<typeof createServeRuntime> = null;
 
     let closed = false;
     const closeApp = async () => {
-      if (closed || !appHandle) {
+      if (closed) {
         return;
       }
 
       closed = true;
       await (server as { stop?: () => void | Promise<void> } | null)?.stop?.();
-      await appHandle.close();
-      runtime?.cleanup();
+      try {
+        const handle = appHandle ?? (await appReady.promise.catch(() => null));
+        await handle?.close();
+      } finally {
+        runtime?.cleanup();
+      }
     };
 
     const removeShutdownListeners = () => {
@@ -216,8 +210,6 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     const runtimeHost = runtime?.host;
 
     try {
-      appHandle = await deps.createApp(runtimeHost);
-      const { app } = appHandle;
       deps.onSignal("SIGINT", shutdown);
       deps.onSignal("SIGTERM", shutdown);
       deps.onFatal("uncaughtException", fatalShutdown);
@@ -229,17 +221,23 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
         idleTimeout: 20,
         hostname: host,
         port,
-        fetch: createRequestHandler(app, assets, deps, runtimeHost),
+        fetch: createRequestHandler(appReady.promise, assets, deps, runtimeHost),
         websocket: apiWebSocket,
       });
 
       const boundPort = server.port || port;
       if (!boundPort) throw new Error("pstdio serve did not report its bound port");
       const baseUrl = runtimeHost ? `http://127.0.0.1:${boundPort}` : `http://${host}:${boundPort}`;
+      const publishRuntime = () => {
+        if (runtime) publishBoundRuntime({ baseUrl, log: deps.log, runtime });
+      };
 
-      if (runtime) await publishRuntimeWhenReady({ app, baseUrl, log: deps.log, runtime, server });
       logServeUrls(host, baseUrl, deps.log);
+
+      appHandle = await deps.createApp(runtimeHost, publishRuntime);
+      appReady.resolve(appHandle);
     } catch (error) {
+      appReady.reject(error);
       removeShutdownListeners();
       await closeApp();
       if (error instanceof Error) {
