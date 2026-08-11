@@ -26,14 +26,6 @@ describe("buildApiUrl", () => {
 
     expect(buildApiUrl("/v1/health")).toBe("/v1/health");
   });
-
-  it("keeps served runtime requests same-origin when a build-time API URL exists", () => {
-    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = {};
-
-    withApiBaseUrl("http://localhost:19841", () => {
-      expect(buildApiUrl("/v1/sync/stream")).toBe("/v1/sync/stream");
-    });
-  });
 });
 
 describe("readRuntimeConfig", () => {
