@@ -49,12 +49,11 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `PSTDIO_API_URL` | discovered runtime origin | Explicit API base URL override. Normally the CLI sets this from the validated runtime descriptor. |
+| `PSTDIO_API_URL` | discovered runtime origin | Explicit API base URL override. Normally the CLI sets this from the validated runtime descriptor. Dashboard dev and preview servers use it as their API proxy target when set. |
 | `PSTDIO_API_PORT` | unset (`0` for descriptor startup) | Explicit port for an auto-started sidecar. Port `0` lets the operating system select an available port. |
 | `PSTDIO_DISABLE_API_AUTO_START` | unset | Set to `1` when another process manager already owns the API process, such as `bun run dev` or `bun run dev:isolated`. |
 | `PSTDIO_DISABLE_EMBED_MANIFEST` | unset | Set to `1` in source/dev mode to skip loading the compiled embedded-assets manifest. |
 | `PORT` | `19840` | API server port when running `packages/pstdio-api` directly. |
-| `VITE_API_BASE_URL` | `/` in isolated dev, otherwise configured by Vite | Dashboard dev-server API base URL/proxy input. |
 
 ### API behavior
 

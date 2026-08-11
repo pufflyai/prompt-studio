@@ -181,6 +181,8 @@ type ReattachInput = {
   agentSessionId: string;
   agentId: string;
   cwd?: string;
+  submittedAttachmentFileIds?: string[];
+  submittedQueuePosition?: number;
 };
 
 // Reattaches to a harness session that was orphaned (e.g. by a server restart)
@@ -203,7 +205,10 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
   );
 
   deps.sessionService.store.setSession(input.sessionId, session);
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
+    submittedAttachmentFileIds: input.submittedAttachmentFileIds ?? [],
+    submittedQueuePosition: input.submittedQueuePosition,
+  });
 
   return session;
 };
