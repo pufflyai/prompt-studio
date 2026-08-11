@@ -49,8 +49,19 @@ describe("serve command", () => {
       log: () => {},
     });
 
-    await handler({ foreground: true, host: "127.0.0.1", owner: "desktop", port: 0 });
+    await handler({
+      foreground: true,
+      host: "127.0.0.1",
+      instanceId: "runtime-one",
+      owner: "desktop",
+      port: 0,
+    });
 
-    expect(options).toEqual({ host: "127.0.0.1", ownerType: "desktop", port: 0 });
+    expect(options).toEqual({
+      host: "127.0.0.1",
+      instanceId: "runtime-one",
+      ownerType: "desktop",
+      port: 0,
+    });
   });
 });

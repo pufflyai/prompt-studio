@@ -1,5 +1,5 @@
 import { renameSync, rmSync } from "node:fs";
-import { loadExtensionSource } from "./extension-runtime";
+import { type LoadedExtension, loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
 import {
@@ -226,9 +226,13 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return current.signature === result.signature ? currentRow : null;
   };
 
-  const refreshRow = async (row: InstalledSourceWithManifest, active: Set<string>) => {
+  const refreshRow = async (
+    row: InstalledSourceWithManifest,
+    active: Set<string>,
+    validatedSource?: LoadedExtension,
+  ) => {
     if (disposed) return;
-    const loaded = await loadExtensionSource(row.source_path);
+    const loaded = validatedSource ?? (await loadExtensionSource(row.source_path));
     if (disposed) return;
 
     const managedWebviews = collectExtensionWebviews(loaded).filter(
@@ -254,13 +258,13 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     );
   };
 
-  const refreshSource = async (sourcePath: string) => {
+  const refreshSource = async (sourcePath: string, validatedSource?: LoadedExtension) => {
     if (disposed) return;
     const rows = (await input.listInstalledSources()).filter((row) => row.source_path === sourcePath);
     await Promise.all(
       rows.map(async (row) => {
         try {
-          await refreshRow(row, new Set());
+          await refreshRow(row, new Set(), validatedSource);
         } catch (error) {
           input.onError?.(error);
         }
@@ -297,8 +301,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
   };
 
-  const refresh = (sourcePath?: string) => {
-    if (sourcePath) return refreshSource(sourcePath);
+  const refresh = (sourcePath?: string, validatedSource?: LoadedExtension) => {
+    if (sourcePath) return refreshSource(sourcePath, validatedSource);
     const nextRefresh = refreshQueue.then(refreshNow, refreshNow);
     refreshQueue = nextRefresh.catch(() => {});
     return nextRefresh;

@@ -21,9 +21,20 @@ const descriptor = {
 
 describe("desktop runtime controller", () => {
   test("spawns a desktop-owned loopback runtime without putting secrets in arguments", () => {
-    const args = createSidecarLaunchArguments();
+    const args = createSidecarLaunchArguments("runtime-one");
 
-    expect(args).toEqual(["serve", "--foreground", "--owner", "desktop", "--host", "127.0.0.1", "--port", "0"]);
+    expect(args).toEqual([
+      "serve",
+      "--foreground",
+      "--owner",
+      "desktop",
+      "--instance-id",
+      "runtime-one",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "0",
+    ]);
     expect(args.join(" ")).not.toContain("token");
   });
 

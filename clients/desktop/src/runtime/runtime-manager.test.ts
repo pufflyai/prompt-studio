@@ -21,6 +21,36 @@ class RuntimeChild extends EventEmitter {
 }
 
 describe("DesktopRuntimeManager", () => {
+  test("refuses a different runtime that publishes the descriptor while the sidecar starts", async () => {
+    const child = new RuntimeChild();
+    const replacement = { ...descriptor, instanceId: "replacement-runtime" };
+    const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor: replacement }];
+    let spawnedArgs: string[] = [];
+    const manager = new DesktopRuntimeManager(
+      {
+        descriptorPath: "/tmp/runtime.json",
+        resolveSidecarPath: () => "/app/pstdio",
+        onIntentionalShutdown: () => {},
+        onUnexpectedExit: () => {},
+        onPhase: () => {},
+      },
+      {
+        createInstanceId: () => descriptor.instanceId,
+        discoverRuntime: async () => discoveries.shift()!,
+        existsSync: () => true,
+        observeRuntimeShutdown: async () => {},
+        sleep: async () => {},
+        spawn: (_path, args) => {
+          spawnedArgs = args;
+          return child;
+        },
+      },
+    );
+
+    await expect(manager.start()).rejects.toThrow("unexpected_exit");
+    expect(spawnedArgs).toContain("--instance-id");
+  });
+
   test("reports an unexpected child exit after a spawned runtime became ready", async () => {
     const child = new RuntimeChild();
     const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor }];
@@ -36,6 +66,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
         observeRuntimeShutdown: async () => {},
@@ -69,6 +100,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
         observeRuntimeShutdown: async (_runtime, onShutdown) => onShutdown(),

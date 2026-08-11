@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import {
@@ -47,6 +48,7 @@ type RuntimeSpawnOptions = {
 };
 
 type RuntimeManagerDeps = {
+  createInstanceId: () => string;
   discoverRuntime: typeof discoverRuntime;
   existsSync: typeof existsSync;
   observeRuntimeShutdown: typeof observeRuntimeShutdown;
@@ -59,6 +61,7 @@ type RuntimeManagerDeps = {
 };
 
 const defaultDeps: RuntimeManagerDeps = {
+  createInstanceId: randomUUID,
   discoverRuntime,
   existsSync,
   observeRuntimeShutdown,
@@ -126,7 +129,8 @@ export class DesktopRuntimeManager {
 
     this.#options.onPhase("spawning");
     this.#output = "";
-    const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(), {
+    const instanceId = this.#deps.createInstanceId();
+    const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(instanceId), {
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -151,7 +155,7 @@ export class DesktopRuntimeManager {
     this.#options.onPhase("readiness");
     try {
       const descriptor = await Promise.race([
-        waitForDesktopRuntime(this.#options.descriptorPath, null, {
+        waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
           discover: this.#deps.discoverRuntime,
           now: Date.now,
           sleep: this.#deps.sleep,

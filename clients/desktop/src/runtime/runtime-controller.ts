@@ -3,11 +3,13 @@ import type { RuntimeDescriptor, RuntimeDiscovery } from "pstdio/runtime";
 export const DESKTOP_RUNTIME_TIMEOUT_MS = 15_000;
 const DISCOVERY_INTERVAL_MS = 50;
 
-export const createSidecarLaunchArguments = () => [
+export const createSidecarLaunchArguments = (instanceId: string) => [
   "serve",
   "--foreground",
   "--owner",
   "desktop",
+  "--instance-id",
+  instanceId,
   "--host",
   "127.0.0.1",
   "--port",

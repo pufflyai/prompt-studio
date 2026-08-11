@@ -1,13 +1,17 @@
 import { dirname } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
+import {
+  checkExtensionSource,
+  hashExtensionSource,
+  type LoadedExtension,
+} from "../features/extensions/extension-runtime";
 
 type JsonRecord = Record<string, unknown>;
 
 type ReloadDeps = {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
-  notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
+  notifyInstalledSourcesChanged: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
   hashExtension?: typeof hashExtensionSource;
   checkExtension?: typeof checkExtensionSource;
 };
@@ -59,7 +63,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
 
-    await deps.notifyInstalledSourcesChanged(existing.source_path);
+    await deps.notifyInstalledSourcesChanged(existing.source_path, result.loaded);
     const refreshed = await deps.installedExtensionSourcesService.get(existing.id);
     if (!refreshed) throw new Error(`Installed extension not found: ${existing.id}`);
 

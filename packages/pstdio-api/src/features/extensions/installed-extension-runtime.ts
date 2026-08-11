@@ -7,6 +7,7 @@ import type { createProjectService } from "../../services/project-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
+import type { LoadedExtension } from "./extension-runtime";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
@@ -16,7 +17,7 @@ import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
   dispose: () => void;
-  refresh: (sourcePath?: string) => Promise<void>;
+  refresh: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
 };
 
 // An installed source whose directory has been removed (project deleted/moved, extension
@@ -113,10 +114,10 @@ export const createInstalledExtensionRuntime = async (input: {
     await sourceWatcher.refresh();
   };
 
-  const refresh = async (sourcePath?: string) => {
+  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
     if (sourcePath) {
       await sourceWatcher.refresh(sourcePath);
-      await webviewBuildManager.refresh(sourcePath);
+      await webviewBuildManager.refresh(sourcePath, validatedSource);
       return;
     }
     await refreshWatchers();

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
+import { loadExtensionSource } from "./extension-runtime";
 
 const waitFor = async (predicate: () => boolean, message: string) => {
   for (let attempt = 0; attempt < 50; attempt++) {
@@ -67,6 +68,37 @@ const writeSingleWebviewExtension = (root: string) => {
 };
 
 describe("createExtensionWebviewBuildManager targeted refresh scheduling", () => {
+  test("reuses the extension loaded by source validation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-loaded-source-test-"));
+    const sourcePath = join(root, "extension");
+    writeSingleWebviewExtension(sourcePath);
+    const loaded = await loadExtensionSource(sourcePath);
+    rmSync(join(sourcePath, "extension.ts"));
+    let buildCount = 0;
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async () => {},
+      buildWebview: async (input) => {
+        buildCount++;
+        mkdirSync(input.outdir, { recursive: true });
+        return { success: true, details: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh(sourcePath, loaded);
+      expect(buildCount).toBe(1);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("starts a changed source rebuild while an unchanged sibling build is still running", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-targeted-refresh-test-"));
     const sourcePath = join(root, "extension");

@@ -3,7 +3,11 @@ import type {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
-import type { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
+import type {
+  checkExtensionSource,
+  hashExtensionSource,
+  LoadedExtension,
+} from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
 import {
   type PruneProjectExtensionInstancesInput,
@@ -70,7 +74,7 @@ type ExtensionServiceDeps = {
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
   hashExtension?: typeof hashExtensionSource;
-  onInstalledSourcesChanged?: (sourcePath?: string) => Promise<void> | void;
+  onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> | void;
   checkExtension?: typeof checkExtensionSource;
   projectService: ReturnType<typeof createProjectService>;
 };
@@ -145,8 +149,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.eventBus?.emit("extension_instances", "set", instance);
   };
 
-  const notifyInstalledSourcesChanged = async (sourcePath?: string) => {
-    await deps.onInstalledSourcesChanged?.(sourcePath);
+  const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+    await deps.onInstalledSourcesChanged?.(sourcePath, validatedSource);
   };
 
   const reloadDeps = {
