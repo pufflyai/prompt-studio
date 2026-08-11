@@ -31,4 +31,4 @@ We recommend adding `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` 
 
 Learn more about the CLI using `pst --help`.
 
-Run `pst serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. The serve command has no authentication, so do not bind it to untrusted networks.
+`pst serve` uses an authenticated loopback runtime. Open the dashboard through the exact `127.0.0.1` URL printed by the command. Other hosts and LAN origins are rejected.

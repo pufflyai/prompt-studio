@@ -13,7 +13,7 @@ type UninstallProjectExtensionDeps = {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
-  notifyInstalledSourcesChanged: () => Promise<void>;
+  notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
 };
 
 type UninstallProjectExtensionInput = {

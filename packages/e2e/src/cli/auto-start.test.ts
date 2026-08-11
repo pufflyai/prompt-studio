@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runPstdio, runPstdioSafe, shutdownApiViaHttp } from "./helpers";
+import { runPstdio, runPstdioSafe } from "./helpers";
 import { getFreePort } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
 
@@ -40,7 +40,7 @@ describe("ensureApi auto-start", () => {
     dirs.length = 0;
 
     if (portToCleanup) {
-      await shutdownApiViaHttp(`http://localhost:${portToCleanup}`);
+      runPstdioSafe("close", process.cwd(), {});
       portToCleanup = null;
     }
   });

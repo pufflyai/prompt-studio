@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLogger, resolveDefaultLogPath } from "./index";
+import { createLogger, redactSensitiveText, resolveDefaultLogPath } from "./index";
 
 const readJsonLines = (filePath: string) =>
   readFileSync(filePath, "utf8")
@@ -201,5 +201,22 @@ describe("createLogger", () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe("redactSensitiveText", () => {
+  test("removes bearer, named, URL, command, and known runtime secrets", () => {
+    const secret = "runtime-secret-value";
+    const redacted = redactSensitiveText(
+      `Authorization: Bearer bearer-value token=named-value http://localhost/?api_token=url-value --password command-value ${secret}`,
+      [secret],
+    );
+
+    expect(redacted).not.toContain("bearer-value");
+    expect(redacted).not.toContain("named-value");
+    expect(redacted).not.toContain("url-value");
+    expect(redacted).not.toContain("command-value");
+    expect(redacted).not.toContain(secret);
+    expect(redacted).toContain("[Redacted]");
   });
 });

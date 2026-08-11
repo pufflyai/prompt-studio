@@ -38,12 +38,12 @@ export const renderRead: ToolRenderer = (invocation) => {
   } satisfies Item;
 };
 
-export const renderBash: ToolRenderer = (invocation) => {
+const renderCommand = (invocation: Parameters<ToolRenderer>[0], label: string) => {
   const input = getInputObject(invocation);
   const output = getOutputObject(invocation);
   const command = getStringValue(input?.command) ?? undefined;
 
-  const title = buildBaseTitle(invocation, command, "Run command");
+  const title = buildBaseTitle(invocation, command, label, "monospace");
   const blocks: Block[] = [];
 
   const outputText = getOutputText(invocation);
@@ -66,6 +66,10 @@ export const renderBash: ToolRenderer = (invocation) => {
     blocks: prependErrorBlock(invocation, blocks),
   } satisfies Item;
 };
+
+export const renderBash: ToolRenderer = (invocation) => renderCommand(invocation, "Run command");
+
+export const renderShell: ToolRenderer = (invocation) => renderCommand(invocation, "Shell");
 
 export const renderGrep: ToolRenderer = (invocation) => {
   const input = getInputObject(invocation);

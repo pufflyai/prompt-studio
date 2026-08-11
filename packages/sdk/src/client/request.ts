@@ -60,15 +60,26 @@ const readErrorMessage = (errorBody: unknown, status: number) => {
   return `Request failed: ${status}`;
 };
 
+const processEnvironment = () => (typeof process !== "undefined" && process.env ? process.env : undefined);
+
 export const resolveBaseUrl = (options: ClientOptions) =>
-  options.baseUrl ??
-  (typeof process !== "undefined" ? process.env.PSTDIO_API_URL : undefined) ??
-  "http://localhost:19840";
+  options.baseUrl ?? processEnvironment()?.PSTDIO_API_URL ?? "http://127.0.0.1:19840";
 
 export const resolveClientUrl = (baseUrl: string, path: string) =>
   path.startsWith("http://") || path.startsWith("https://") ? path : `${baseUrl}${path}`;
 
+const isSameOriginTarget = (baseUrl: string, path: string, url: string) => {
+  if (!path.startsWith("http://") && !path.startsWith("https://")) return true;
+  try {
+    return new URL(url).origin === new URL(baseUrl).origin;
+  } catch {
+    return false;
+  }
+};
+
 export const resolveFetch = (options: ClientOptions) => options.fetch ?? globalThis.fetch;
+
+const resolveToken = (options: ClientOptions) => options.token ?? processEnvironment()?.PSTDIO_API_TOKEN;
 
 export const createRequestHeaders = (
   options: ClientOptions,
@@ -76,7 +87,8 @@ export const createRequestHeaders = (
 ) => {
   const headers = new Headers(reqOpts.headers);
   if (reqOpts.hasJsonBody && !headers.has("content-type")) headers.set("content-type", "application/json");
-  if (options.token) headers.set("authorization", `Bearer ${options.token}`);
+  const token = resolveToken(options);
+  if (token) headers.set("authorization", `Bearer ${token}`);
   return headers;
 };
 
@@ -98,17 +110,19 @@ export const createRequest = (options: ClientOptions): RequestFn => {
   const fetchFn = resolveFetch(options);
 
   return async <T>(path: string, reqOpts: RequestOptions = {}): Promise<T> => {
+    const url = resolveClientUrl(baseUrl, path);
     const headers = createRequestHeaders(options, {
       headers: reqOpts.headers,
       hasJsonBody: reqOpts.body !== undefined && !isBinaryBody(reqOpts.body),
     });
-    const url = resolveClientUrl(baseUrl, path);
+    if (!isSameOriginTarget(baseUrl, path, url)) headers.delete("authorization");
     const response = await fetchFn(url, {
       method: reqOpts.method ?? "GET",
       headers: Object.fromEntries(headers.entries()),
       body: reqOpts.body !== undefined ? serializeRequestBody(reqOpts.body) : undefined,
       signal: reqOpts.signal,
       cache: reqOpts.cache,
+      credentials: "same-origin",
     });
 
     if (!response.ok) {

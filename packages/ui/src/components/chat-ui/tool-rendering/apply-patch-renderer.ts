@@ -2,8 +2,10 @@ import type { Block, Item } from "../components/timeline";
 import {
   buildApplyPatchMetadataTitleSegments,
   buildBaseTitle,
+  buildFileLinkSegment,
   buildIndicator,
   getApplyPatchDiffText,
+  getApplyPatchInputFilePaths,
   getApplyPatchMetadataFiles,
   getApplyPatchMetadataReferences,
   getDiffBlocks,
@@ -16,13 +18,16 @@ import type { ToolRenderer } from "./types";
 export const renderApplyPatch: ToolRenderer = (invocation) => {
   const diffText = getApplyPatchDiffText(invocation);
   const metadataFiles = getApplyPatchMetadataFiles(invocation);
+  const inputFilePaths = getApplyPatchInputFilePaths(invocation);
 
   const title = buildBaseTitle(invocation, undefined, "Apply patch");
   const diffSegments = getDiffTitleSegments(diffText);
   if (diffSegments.length > 0) {
     title.push(...diffSegments);
-  } else {
+  } else if (metadataFiles.length > 0) {
     title.push(...buildApplyPatchMetadataTitleSegments(metadataFiles));
+  } else {
+    title.push(...inputFilePaths.map((filePath) => buildFileLinkSegment(filePath, "bubble")));
   }
 
   const blocks: Block[] = [...getDiffBlocks(diffText)];
@@ -44,6 +49,9 @@ export const renderApplyPatch: ToolRenderer = (invocation) => {
     const references = getDiffReferences(diffText);
     if (references.length === 0) {
       references.push(...getApplyPatchMetadataReferences(metadataFiles));
+    }
+    if (references.length === 0) {
+      references.push(...inputFilePaths);
     }
     if (references.length > 0) {
       blocks.push({ type: "references", references });

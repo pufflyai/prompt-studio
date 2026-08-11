@@ -9,10 +9,12 @@ class TestWebSocket extends EventTarget {
   static latest: TestWebSocket;
 
   readonly sent: string[] = [];
+  readonly url: string;
   readyState = TestWebSocket.OPEN;
 
-  constructor(_url: string | URL) {
+  constructor(url: string | URL) {
     super();
+    this.url = String(url);
     TestWebSocket.latest = this;
   }
 
@@ -44,6 +46,19 @@ afterEach(() => {
 });
 
 describe("openDashboardTerminalSession", () => {
+  test("opens a same-origin cookie-authenticated URL without credentials in the query", async () => {
+    globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+
+    const sessionPromise = openDashboardTerminalSession({ cols: 80, rows: 24 });
+    TestWebSocket.latest.emitOpen();
+    TestWebSocket.latest.emitMessage({ type: "open", sessionId: "session-1" });
+    const session = await sessionPromise;
+
+    expect(TestWebSocket.latest.url).toBe("ws://localhost/v1/terminal");
+    expect(TestWebSocket.latest.url).not.toContain("token");
+    session.kill();
+  });
+
   test("reports an unexpected connection loss after the session opens", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
 

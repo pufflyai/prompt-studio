@@ -71,15 +71,28 @@ export const buildIndicator = (invocation: ToolPart) => {
     return { type: "icon", icon: "danger" } as const;
   }
 
-  return { type: "icon", icon: toolTypeToIconName(getToolType(invocation)) } as const;
+  return {
+    type: "icon",
+    icon: toolTypeToIconName(getToolType(invocation)),
+  } as const;
 };
 
-export const buildBaseTitle = (invocation: ToolPart, detail?: string, labelOverride?: string) => {
+export const buildBaseTitle = (
+  invocation: ToolPart,
+  detail?: string,
+  labelOverride?: string,
+  detailStyle?: "monospace",
+) => {
   const label = labelOverride ?? getToolLabel(invocation.tool ?? "tool");
   const title: TitleSegment[] = [{ kind: "text", text: label, bold: true }];
 
   if (detail) {
-    title.push({ kind: "text", text: detail, muted: true });
+    title.push({
+      kind: "text",
+      text: detail,
+      muted: true,
+      ...(detailStyle === "monospace" ? { truncate: true, monospace: true } : {}),
+    });
   }
 
   const stateLabel = getStateLabel(invocation);
@@ -162,6 +175,17 @@ export const getApplyPatchMetadataFiles = (invocation: ToolPart) => {
   return files;
 };
 
+export const getApplyPatchInputFilePaths = (invocation: ToolPart) => {
+  const input = getInputObject(invocation);
+  const changes = Array.isArray(input?.changes) ? input.changes : [];
+  const filePaths = changes
+    .map((change) => getStringValue(getObjectValue(change)?.path))
+    .filter((filePath): filePath is string => Boolean(filePath))
+    .map(normalizeFilePath);
+
+  return Array.from(new Set(filePaths));
+};
+
 export const getApplyPatchDiffText = (invocation: ToolPart) => {
   const input = getInputObject(invocation);
   const inputDiff = getStringValue(input?.diff);
@@ -240,17 +264,21 @@ export const getSkillName = (invocation: ToolPart) => {
   );
 };
 
-export const buildFileLinkSegment = (filePath: string): TitleSegment => {
+export const buildFileLinkSegment = (filePath: string, variant?: "default" | "bubble"): TitleSegment => {
   return {
     kind: "link",
     text: basenameSafe(filePath),
     filePath,
+    ...(variant ? { variant } : {}),
   };
 };
 
 export const prependErrorBlock = (invocation: ToolPart, blocks: Block[]): Block[] => {
   if (!isErrorState(invocation) || !invocation.state?.errorText) return blocks;
-  const errorBlock: Block = { type: "comment", text: invocation.state.errorText };
+  const errorBlock: Block = {
+    type: "comment",
+    text: invocation.state.errorText,
+  };
   return [errorBlock, ...blocks];
 };
 

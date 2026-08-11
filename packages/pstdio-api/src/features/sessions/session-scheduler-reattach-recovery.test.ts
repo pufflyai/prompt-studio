@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +8,9 @@ import { createApp } from "../../app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
 const OPENCODE_ID = testHarnessId("opencode");
+const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+
+process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
 
 const pendingSession = (agentSessionId: string): HarnessSession => {
   const exit = Promise.withResolvers<HarnessExit>();
@@ -20,41 +23,77 @@ const pendingSession = (agentSessionId: string): HarnessSession => {
   };
 };
 
+const completedSession = (agentSessionId: string): HarnessSession => ({
+  agentSessionId,
+  done: Promise.resolve({ status: "completed" }),
+  stop: () => {},
+  timeoutStrategy: "provider",
+});
+
 const startSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession("replayed-start"));
 const resumeSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession("replayed-resume"));
 const reattachSession = mock((_ctx: HarnessContext, input: { agentSessionId: string }) =>
   pendingSession(input.agentSessionId),
 );
+const reattachCompletedSession = mock((_ctx: HarnessContext, input: { agentSessionId: string }) =>
+  completedSession(input.agentSessionId),
+);
 const failedReattachSession = mock(() => {
   throw new Error("reattach failed");
 });
 
-const createReattachRegistry = (options?: { reattachFails?: boolean }) =>
-  createTestHarnessRegistry([
+const createReattachRegistry = (options?: { reattachFails?: boolean; reattachCompletes?: boolean }) => {
+  let reattach = reattachSession;
+  if (options?.reattachFails) {
+    reattach = failedReattachSession;
+  } else if (options?.reattachCompletes) {
+    reattach = reattachCompletedSession;
+  }
+
+  return createTestHarnessRegistry([
     createTestHarnessRecord("opencode", {
       provider: {
         capabilities: () => ["SessionReattach"],
-        reattach: options?.reattachFails ? failedReattachSession : reattachSession,
+        reattach,
         resume: resumeSession,
         start: startSession,
       },
     }),
   ]);
+};
 
 afterEach(() => {
   failedReattachSession.mockClear();
+  reattachCompletedSession.mockClear();
   reattachSession.mockClear();
   resumeSession.mockClear();
   startSession.mockClear();
 });
 
+afterAll(() => {
+  if (previousDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  }
+});
+
 describe("session scheduler reattach recovery", () => {
-  test("reattaches an active attachment session instead of replaying its dispatch-started row", async () => {
+  test("cleans dispatch-started attachment rows after a reattached session completes", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-attachment-recovery-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createReattachRegistry() });
+    const firstApp = await createApp({
+      dbPath,
+      storagePath,
+      filesRoot: "",
+      extensionWebviewBuilds: false,
+      harnessRegistry: createReattachRegistry(),
+    });
+    await Bun.sleep(100);
+    let projectId = "";
     let sessionId = "";
+    let fileId = "";
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -64,6 +103,7 @@ describe("session scheduler reattach recovery", () => {
       });
       expect(projectRes.status).toBe(201);
       const project = (await projectRes.json()) as { id: string };
+      projectId = project.id;
 
       const uploadRes = await firstApp.app.request(`/v1/projects/${project.id}/session-attachments`, {
         method: "POST",
@@ -75,6 +115,7 @@ describe("session scheduler reattach recovery", () => {
       });
       expect(uploadRes.status).toBe(201);
       const attachment = (await uploadRes.json()) as { file_id: string };
+      fileId = attachment.file_id;
 
       const session = await firstApp.deps.sessionService.create({
         project_id: project.id,
@@ -99,19 +140,27 @@ describe("session scheduler reattach recovery", () => {
       dbPath,
       storagePath,
       filesRoot: "",
-      harnessRegistry: createReattachRegistry(),
+      extensionWebviewBuilds: false,
+      harnessRegistry: createReattachRegistry({ reattachCompletes: true }),
     });
 
     try {
       for (let attempt = 0; attempt < 40; attempt += 1) {
-        if (reattachSession.mock.calls.length > 0 || startSession.mock.calls.length > 0) break;
+        const session = await recoveredApp.deps.sessionService.get(sessionId);
+        if (session?.status === "completed" || startSession.mock.calls.length > 0) break;
         await Bun.sleep(25);
       }
 
-      expect(reattachSession).toHaveBeenCalledTimes(1);
+      expect(reattachCompletedSession).toHaveBeenCalledTimes(1);
       expect(startSession).not.toHaveBeenCalled();
       expect(resumeSession).not.toHaveBeenCalled();
-      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
+      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "completed" });
+      expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+
+      const deleteRes = await recoveredApp.app.request(`/v1/projects/${projectId}/session-attachments/${fileId}`, {
+        method: "DELETE",
+      });
+      expect(deleteRes.status).toBe(204);
     } finally {
       await recoveredApp.close();
       rmSync(tempRoot, { recursive: true, force: true });
@@ -122,7 +171,14 @@ describe("session scheduler reattach recovery", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-failure-cleanup-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createReattachRegistry() });
+    const firstApp = await createApp({
+      dbPath,
+      storagePath,
+      filesRoot: "",
+      extensionWebviewBuilds: false,
+      harnessRegistry: createReattachRegistry(),
+    });
+    await Bun.sleep(100);
     let projectId = "";
     let sessionId = "";
     let fileId = "";
@@ -172,6 +228,7 @@ describe("session scheduler reattach recovery", () => {
       dbPath,
       storagePath,
       filesRoot: "",
+      extensionWebviewBuilds: false,
       harnessRegistry: createReattachRegistry({ reattachFails: true }),
     });
 
@@ -184,6 +241,7 @@ describe("session scheduler reattach recovery", () => {
 
       expect(failedReattachSession).toHaveBeenCalledTimes(1);
       expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+      expect(recoveredApp.deps.sessionService.store.get(sessionId)).toBeNull();
 
       const deleteRes = await recoveredApp.app.request(`/v1/projects/${projectId}/session-attachments/${fileId}`, {
         method: "DELETE",

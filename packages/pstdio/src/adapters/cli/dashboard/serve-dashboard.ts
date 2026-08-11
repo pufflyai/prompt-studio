@@ -27,14 +27,14 @@ const MIME_TYPES: Record<string, string> = {
 export const resolveMimeType = (ext: string) => MIME_TYPES[ext] ?? "application/octet-stream";
 
 export const injectConfig = (html: string, config: DashboardConfig) => {
-  const script = `<script>window.__PSTDIO_CONFIG__=${JSON.stringify(config)}</script>`;
+  const metadata = `<meta name="pstdio-config" content="${encodeURIComponent(JSON.stringify(config))}">`;
   const headClose = "</head>";
 
   if (!html.includes(headClose)) {
     return html;
   }
 
-  return html.replace(headClose, `${script}${headClose}`);
+  return html.replace(headClose, `${metadata}${headClose}`);
 };
 
 type FileResult = { kind: "file" | "fallback"; filePath: string };

@@ -1,5 +1,6 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
+import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
@@ -175,7 +176,10 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     <Dialog.Root open={open} size="lg" scrollBehavior="inside" onOpenChange={(details) => !details.open && close()}>
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content maxH="calc(100% - 48px)">
+        <Dialog.Content
+          maxH="calc(100% - 48px)"
+          onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting)}
+        >
           <Dialog.Header>
             <Text textStyle="heading/M/semibold">{config.title}</Text>
             <Dialog.CloseTrigger asChild>

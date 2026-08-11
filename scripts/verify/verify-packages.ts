@@ -3,7 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadEmbedConfig } from "../build/embed-manifest";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
-import { shouldRunPackagedRuntimeSmoke } from "./packaged-runtime-smoke";
+import { resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
 
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
@@ -46,20 +46,17 @@ if (failed) {
   process.exit(1);
 }
 
-if (shouldRunPackagedRuntimeSmoke(platformPackage)) {
-  process.stdout.write("\nRunning packaged e2e checks...\n");
-  const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
-  const packagedE2e = spawnSync("bun", ["run", "--cwd", "packages/e2e", "test:packaged"], {
-    stdio: "inherit",
-    env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
-  });
+process.stdout.write("\nRunning packaged e2e checks...\n");
+const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
+const packagedE2e = spawnSync("bun", resolvePackagedRuntimeTestArgs(platformPackage), {
+  cwd: "./packages/e2e",
+  stdio: "inherit",
+  env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
+});
 
-  if (packagedE2e.status !== 0) {
-    process.stderr.write("\nVerification failed: packaged e2e checks failed.\n");
-    process.exit(packagedE2e.status ?? 1);
-  }
-} else {
-  process.stdout.write(`\nSkipping packaged e2e checks for ${platformPackage.pkg}.\n`);
+if (packagedE2e.status !== 0) {
+  process.stderr.write("\nVerification failed: packaged e2e checks failed.\n");
+  process.exit(packagedE2e.status ?? 1);
 }
 
 process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");

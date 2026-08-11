@@ -113,7 +113,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     }
   });
 
-  test("reports successful rebuilds only after all managed webviews finish", async () => {
+  test("reports each successful rebuild without waiting for other managed webviews", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-success-barrier-test-"));
     const sourcePath = join(root, "extension");
     writeTwoWebviewExtension(sourcePath);
@@ -165,7 +165,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       releaseFirst();
       await Bun.sleep(10);
 
-      expect(successes).toEqual([]);
+      expect(successes).toEqual(["lab.first"]);
 
       releaseSecond();
       await refresh;
@@ -176,7 +176,9 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("createExtensionWebviewBuildManager refresh serialization", () => {
   test("serializes overlapping refreshes so unchanged webviews are not rebuilt", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-race-test-"));
     const sourcePath = join(root, "extension");
@@ -218,7 +220,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     }
   });
 
-  test("does not report success for an obsolete build when a newer source hash is queued", async () => {
+  test("does not report success for an obsolete build when newer build inputs are queued", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-obsolete-build-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
@@ -256,6 +258,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       const firstRefresh = manager.refresh();
       await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
 
+      writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('updated webview');");
       sourceHash = "hash-2";
       const secondRefresh = manager.refresh();
       releaseFirst();

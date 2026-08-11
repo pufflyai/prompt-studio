@@ -11,17 +11,20 @@ import {
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
   createProjectTemplateDefaultsDBService,
+  createReposDBService,
   createTemplatesDBService,
 } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
+import { createProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
 import { createExtensionService } from "./extension-service";
 import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
+import { createRepoService } from "./repo-service";
 import { createTemplateService } from "./template-service";
 
 // Writes a minimal installed-extension source that contributes a single
 // prompt template, so the override path can be exercised end-to-end.
-const writeExtensionWithTemplate = (root: string, templateKey: string) => {
+const writeExtensionWithTemplate = (root: string, templateKey: string, importCountPath?: string) => {
   mkdirSync(root, { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -36,7 +39,14 @@ const writeExtensionWithTemplate = (root: string, templateKey: string) => {
   );
   writeFileSync(
     join(root, "extension.ts"),
-    `export default {
+    `${
+      importCountPath
+        ? `const countPath = ${JSON.stringify(importCountPath)};
+const currentCount = Number(await Bun.file(countPath).text().catch(() => "0"));
+await Bun.write(countPath, String(currentCount + 1));
+`
+        : ""
+    }export default {
   templates: {
     ${templateKey}: {
       title: "Review code",
@@ -47,6 +57,40 @@ const writeExtensionWithTemplate = (root: string, templateKey: string) => {
 };`,
   );
   writeFileSync(join(root, "review-code.md"), "EXTENSION CONTENT\n");
+};
+
+const emptyRuntime = {
+  artifactMounts: [],
+  cli: [],
+  commandPaletteResources: [],
+  commands: [],
+  controlsRenderers: [],
+  dataTableRenderers: [],
+  diagnostics: [],
+  extensions: [],
+  fileIconThemes: [],
+  fileRenderers: [],
+  harnesses: [],
+  hooks: [],
+  kanbanRenderers: [],
+  keybindings: [],
+  middlewares: [],
+  modes: [],
+  navigation: [],
+  panels: [],
+  routes: [],
+  schedules: [],
+  settings: [],
+  settingsPanels: [],
+  settingsSections: [],
+  skills: [],
+  templateTypes: [],
+  templates: [],
+  themes: [],
+  translations: [],
+  treeItems: [],
+  treeRenderers: [],
+  workspaceTypes: [],
 };
 
 describe("TemplateService", () => {
@@ -67,7 +111,7 @@ describe("TemplateService", () => {
     const list = mock(async () => templates);
     const service = createTemplateService({
       templatesDBService: { list },
-      extensionService: { listEnabledSourcesForProject: mock(async () => []) },
+      extensionRuntimeCatalog: { getProjectRuntime: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
       extensionTemplatePreferencesDBService: { list: mock(async () => []) },
       projectTemplateDefaultsDBService: { list: mock(async () => []) },
     } as unknown as Parameters<typeof createTemplateService>[0]);
@@ -85,6 +129,7 @@ describe("TemplateService", () => {
     writeExtensionWithTemplate(extensionRoot, "review_code");
 
     const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
+    const repoService = createRepoService({ reposDBService: createReposDBService(db) });
     const extensionService = createExtensionService({
       extensionInstancesService: createExtensionInstancesDBService(db),
       extensionUserDataService: createExtensionUserDataDBService(db),
@@ -96,7 +141,7 @@ describe("TemplateService", () => {
       filesStorageService: createFilesStorageService(join(tempRoot, "storage")),
     });
     const service = createTemplateService({
-      extensionService,
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
       extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
       fileService,
       projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
@@ -140,6 +185,52 @@ describe("TemplateService", () => {
       title: "Custom review",
       content: "PROJECT OVERRIDE",
     });
+
+    await close();
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  test("list reads extension templates from the runtime snapshot without re-importing", async () => {
+    const { db, close } = await createDb({ path: ":memory:" });
+    const tempRoot = mkdtempSync(join(tmpdir(), "tpl-svc-runtime-"));
+    const extensionRoot = join(tempRoot, "review-extension");
+    const importCountPath = join(tempRoot, "imports.txt");
+    writeExtensionWithTemplate(extensionRoot, "review_code", importCountPath);
+
+    const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
+    const repoService = createRepoService({ reposDBService: createReposDBService(db) });
+    const extensionService = createExtensionService({
+      extensionInstancesService: createExtensionInstancesDBService(db),
+      extensionUserDataService: createExtensionUserDataDBService(db),
+      installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
+      projectService,
+    });
+    const service = createTemplateService({
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+      extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
+      fileService: createFileService({
+        filesDBService: createFilesDBService(db),
+        filesStorageService: createFilesStorageService(join(tempRoot, "storage")),
+      }),
+      projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
+      templatesDBService: createTemplatesDBService(db),
+    });
+
+    const project = await projectService.create({ name: "Runtime Project" });
+    await extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "review-extension",
+      extensionId: "pstdio.review-extension",
+      name: "review-extension",
+      displayName: "Review Extension",
+      sourceKind: "local_path",
+      sourcePath: extensionRoot,
+      manifest: {},
+    });
+
+    expect(await service.list(project.id)).toHaveLength(1);
+    expect(await service.list(project.id)).toHaveLength(1);
+    expect(await Bun.file(importCountPath).text()).toBe("1");
 
     await close();
     rmSync(tempRoot, { recursive: true, force: true });

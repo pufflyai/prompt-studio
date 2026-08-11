@@ -6,7 +6,8 @@
     "./app": "./src/app.ts",
     "./dto": "./src/dto.ts",
     "./extensions/install-extension-source": "./src/features/extensions/install-extension-source.ts",
-    "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts"
+    "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts",
+    "./runtime": "./src/features/runtime/routes.ts"
   },
   "scripts": {
     "start": "bun run src/server.ts",

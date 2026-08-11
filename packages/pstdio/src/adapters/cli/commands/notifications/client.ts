@@ -7,7 +7,7 @@ import type {
   UpdateNotificationInput,
 } from "@pstdio/sdk/api";
 import { createClient } from "@pstdio/sdk/client";
-import { API_URL } from "@/features/api-url";
+import { resolveApiUrl } from "@/features/api-url";
 
 type NotificationsApi = {
   list(projectId: string, query?: ListNotificationsQuery): Promise<ListNotificationsResponse>;
@@ -24,5 +24,5 @@ type NotificationsApi = {
   ): Promise<{ resolved: number; notifications: Notification[] }>;
 };
 
-export const createNotificationsApi = (baseUrl = API_URL) =>
+export const createNotificationsApi = (baseUrl = resolveApiUrl()) =>
   (createClient({ baseUrl }) as unknown as { notifications: NotificationsApi }).notifications;

@@ -7,6 +7,7 @@ import type {
   TerminalSessionHandle,
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
+import { createExtensionProcessEnvironment } from "pstdio-extensions";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
@@ -86,7 +87,7 @@ const readForegroundProcessName = (shellPid: number, fallback: string) => {
 };
 
 const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
-  const env = { ...process.env, ...requestEnv };
+  const env = createExtensionProcessEnvironment(process.env, requestEnv);
   const hasExplicitTerm = Boolean(requestEnv?.TERM);
   const hasExplicitColorTerm = Boolean(requestEnv?.COLORTERM);
 
@@ -97,6 +98,7 @@ const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
 };
 
 interface TerminalSession {
+  label: string;
   pid: number;
   kill(signal?: NodeJS.Signals): Promise<void>;
 }
@@ -157,8 +159,8 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         terminal.close();
       });
 
-      const kill = async (signal?: NodeJS.Signals) => {
-        logger.info("terminal session kill", { id, signal: signal ?? null });
+      const kill = async (signal: NodeJS.Signals = "SIGTERM") => {
+        logger.info("terminal session kill", { id, signal });
         child.kill(signal);
         await child.exited;
       };
@@ -180,7 +182,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         },
       };
 
-      sessions.set(id, { pid: child.pid, kill });
+      sessions.set(id, { label: fallbackTitle, pid: child.pid, kill });
       logger.info("terminal session opened", { id, pid: child.pid });
       return handle;
     },
@@ -191,5 +193,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
     sessions.clear();
   };
 
-  return { api, dispose };
+  const activity = () => [...sessions].map(([id, session]) => ({ id, label: session.label }));
+
+  return { activity, api, dispose };
 };

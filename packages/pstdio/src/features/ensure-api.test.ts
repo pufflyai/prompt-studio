@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { appendFileSync, rmSync } from "node:fs";
 import { type EnsureApiDeps, ensureApi } from "./ensure-api";
+import type { RuntimeDescriptor, RuntimeDiscovery } from "./runtime/runtime-descriptor";
 
 const originalDisableAutoStart = process.env.PSTDIO_DISABLE_API_AUTO_START;
+const originalApiUrl = process.env.PSTDIO_API_URL;
+const originalApiToken = process.env.PSTDIO_API_TOKEN;
 const originalLogPath = process.env.PSTDIO_LOG_PATH;
 const originalDbPath = process.env.PSTDIO_DB_PATH;
 const logPath = "/tmp/pstdio-test-logs.jsonl";
@@ -42,35 +45,156 @@ const unhealthyThenHealthyDeps = (spies = { runApiCalled: false }): EnsureApiDep
   },
 });
 
-describe("ensureApi", () => {
-  afterEach(() => {
-    rmSync(logPath, { force: true });
+afterEach(() => {
+  rmSync(logPath, { force: true });
 
-    if (originalDisableAutoStart === undefined) {
-      delete process.env.PSTDIO_DISABLE_API_AUTO_START;
-    } else {
-      process.env.PSTDIO_DISABLE_API_AUTO_START = originalDisableAutoStart;
-    }
+  if (originalDisableAutoStart === undefined) {
+    delete process.env.PSTDIO_DISABLE_API_AUTO_START;
+  } else {
+    process.env.PSTDIO_DISABLE_API_AUTO_START = originalDisableAutoStart;
+  }
 
-    if (originalLogPath === undefined) {
-      delete process.env.PSTDIO_LOG_PATH;
-    } else {
-      process.env.PSTDIO_LOG_PATH = originalLogPath;
-    }
+  if (originalLogPath === undefined) {
+    delete process.env.PSTDIO_LOG_PATH;
+  } else {
+    process.env.PSTDIO_LOG_PATH = originalLogPath;
+  }
 
-    if (originalDbPath === undefined) {
-      delete process.env.PSTDIO_DB_PATH;
-    } else {
-      process.env.PSTDIO_DB_PATH = originalDbPath;
-    }
-  });
+  if (originalDbPath === undefined) {
+    delete process.env.PSTDIO_DB_PATH;
+  } else {
+    process.env.PSTDIO_DB_PATH = originalDbPath;
+  }
 
+  if (originalApiUrl === undefined) delete process.env.PSTDIO_API_URL;
+  else process.env.PSTDIO_API_URL = originalApiUrl;
+  if (originalApiToken === undefined) delete process.env.PSTDIO_API_TOKEN;
+  else process.env.PSTDIO_API_TOKEN = originalApiToken;
+});
+
+describe("ensureApi fixed URL", () => {
   it("does nothing when api is already healthy", async () => {
     const spies = { runApiCalled: false };
     await ensureApi("http://localhost:3000", healthyDeps(spies));
     expect(spies.runApiCalled).toBe(false);
   });
 
+  it("publishes a matching descriptor token for an already healthy loopback URL", async () => {
+    const runtime: RuntimeDescriptor = {
+      schemaVersion: 1,
+      protocolVersion: 1,
+      pid: 1234,
+      instanceId: "runtime-one",
+      ownerType: "persistent",
+      origin: "http://127.0.0.1:43127",
+      token: "runtime-secret",
+      appVersion: "0.25.2",
+      startedAt: "2026-08-06T08:00:00.000Z",
+    };
+    const deps = healthyDeps();
+    deps.discoverRuntime = async () => ({ state: "healthy", descriptor: runtime });
+    deps.resolveDescriptorPath = () => "/tmp/runtime.json";
+
+    await ensureApi("http://localhost:43127", deps);
+
+    expect(process.env.PSTDIO_API_TOKEN).toBe("runtime-secret");
+    expect(process.env.PSTDIO_API_URL).not.toBe(runtime.origin);
+  });
+});
+
+describe("ensureApi descriptor discovery", () => {
+  it("discovers an authenticated ephemeral runtime and publishes it to later CLI clients", async () => {
+    const previousApiUrl = process.env.PSTDIO_API_URL;
+    const previousApiToken = process.env.PSTDIO_API_TOKEN;
+    const runtime: RuntimeDescriptor = {
+      schemaVersion: 1,
+      protocolVersion: 1,
+      pid: 1234,
+      instanceId: "runtime-one",
+      ownerType: "desktop",
+      origin: "http://127.0.0.1:43127",
+      token: "runtime-secret",
+      appVersion: "0.25.2",
+      startedAt: "2026-08-06T08:00:00.000Z",
+    };
+    let spawned = false;
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {},
+      runApi: () => {
+        spawned = true;
+        return null;
+      },
+      discoverRuntime: async () => ({ state: "healthy", descriptor: runtime }),
+      resolveDescriptorPath: () => "/tmp/runtime.json",
+    };
+
+    try {
+      expect(await ensureApi(undefined, deps)).toEqual(runtime);
+      expect(spawned).toBe(false);
+      expect(process.env.PSTDIO_API_URL).toBe(runtime.origin);
+      expect(process.env.PSTDIO_API_TOKEN).toBe(runtime.token);
+    } finally {
+      if (previousApiUrl === undefined) delete process.env.PSTDIO_API_URL;
+      else process.env.PSTDIO_API_URL = previousApiUrl;
+      if (previousApiToken === undefined) delete process.env.PSTDIO_API_TOKEN;
+      else process.env.PSTDIO_API_TOKEN = previousApiToken;
+    }
+  });
+
+  it("starts one descriptor runtime when none exists and attaches once it is ready", async () => {
+    const runtime = {
+      schemaVersion: 1,
+      protocolVersion: 1,
+      pid: 1234,
+      instanceId: "runtime-one",
+      ownerType: "persistent",
+      origin: "http://127.0.0.1:43127",
+      token: "runtime-secret",
+      appVersion: "0.25.2",
+      startedAt: "2026-08-06T08:00:00.000Z",
+    } satisfies RuntimeDescriptor;
+    const discoveries: RuntimeDiscovery[] = [
+      { state: "missing" },
+      { state: "missing" },
+      { state: "healthy", descriptor: runtime },
+    ];
+    let spawned = 0;
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {},
+      runApi: () => {
+        spawned += 1;
+        return { apiRoot: "/fake", child: {} };
+      },
+      discoverRuntime: async () => discoveries.shift() ?? { state: "healthy", descriptor: runtime },
+      resolveDescriptorPath: () => "/tmp/runtime.json",
+      sleep: async () => {},
+    };
+
+    expect(await ensureApi(undefined, deps)).toEqual(runtime);
+    expect(spawned).toBe(1);
+  });
+
+  it("refuses to replace a descriptor whose ownership is uncertain", async () => {
+    let spawned = false;
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {},
+      runApi: () => {
+        spawned = true;
+        return null;
+      },
+      discoverRuntime: async () => ({ state: "unsafe", reason: "ownership_uncertain" }),
+      resolveDescriptorPath: () => "/tmp/runtime.json",
+    };
+
+    await expect(ensureApi(undefined, deps)).rejects.toThrow("ownership is uncertain");
+    expect(spawned).toBe(false);
+  });
+});
+
+describe("ensureApi fixed URL startup", () => {
   it("starts api when not healthy", async () => {
     const spies = { runApiCalled: false };
     let stdio: string | undefined;
@@ -101,6 +225,31 @@ describe("ensureApi", () => {
 
     await ensureApi("http://localhost:4000", deps);
     expect(waitUrl).toBe("http://localhost:4000/healthz");
+  });
+
+  it("publishes the spawned runtime token after fixed-url readiness", async () => {
+    const runtime: RuntimeDescriptor = {
+      schemaVersion: 1,
+      protocolVersion: 1,
+      pid: 1234,
+      instanceId: "runtime-one",
+      ownerType: "persistent",
+      origin: "http://127.0.0.1:4000",
+      token: "runtime-secret",
+      appVersion: "0.25.2",
+      startedAt: "2026-08-06T08:00:00.000Z",
+    };
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {},
+      runApi: () => ({ apiRoot: "/fake", child: {} }),
+      discoverRuntime: async () => ({ state: "healthy", descriptor: runtime }),
+      resolveDescriptorPath: () => "/tmp/runtime.json",
+    };
+
+    await ensureApi("http://localhost:4000", deps);
+
+    expect(process.env.PSTDIO_API_TOKEN).toBe("runtime-secret");
   });
 
   it("throws when api fails to start and runApi returns null", async () => {

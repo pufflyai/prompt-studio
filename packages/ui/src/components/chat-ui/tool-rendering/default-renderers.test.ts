@@ -6,6 +6,125 @@ const renderInvocation = (invocation: ToolPart) => {
   return buildTimelineDocFromInvocations([invocation]).items[0];
 };
 
+describe("shell renderer", () => {
+  it("renders the command in the title and only output in the disclosure", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "completed",
+      state: {
+        status: "completed",
+        input: { command: "bun run validate" },
+        output: "Validated 42 projects",
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
+    ]);
+    expect(item.blocks).toEqual([{ type: "code", language: "text", code: "Validated 42 projects" }]);
+  });
+
+  it("keeps a pending command visible without an empty disclosure", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "pending",
+      state: {
+        status: "pending",
+        input: { command: "bun run validate" },
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
+      { kind: "text", text: "queued", muted: true },
+    ]);
+    expect(item.blocks).toEqual([]);
+  });
+
+  it("keeps a failed command visible with the existing error treatment", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "shell",
+      status: "failed",
+      state: {
+        status: "failed",
+        input: { command: "bun run validate" },
+        errorText: "Validation failed",
+      },
+    });
+
+    expect(item.indicator).toEqual({ type: "icon", icon: "danger" });
+    expect(item.title).toEqual([
+      { kind: "text", text: "Shell", bold: true },
+      {
+        kind: "text",
+        text: "bun run validate",
+        muted: true,
+        truncate: true,
+        monospace: true,
+      },
+      { kind: "text", text: "failed", muted: true },
+    ]);
+    expect(item.blocks).toEqual([{ type: "comment", text: "Validation failed" }]);
+  });
+});
+
+describe("apply patch renderer", () => {
+  it("renders Codex file changes when the event does not include diff content", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "apply_patch",
+      status: "completed",
+      state: {
+        input: {
+          changes: [
+            { path: "packages/ui/src/example.ts", kind: "update" },
+            { path: "packages/ui/src/new-file.ts", kind: "add" },
+          ],
+        },
+      },
+    });
+
+    expect(item.title).toEqual([
+      { kind: "text", text: "Apply patch", bold: true },
+      {
+        kind: "link",
+        text: "example.ts",
+        filePath: "packages/ui/src/example.ts",
+        variant: "bubble",
+      },
+      {
+        kind: "link",
+        text: "new-file.ts",
+        filePath: "packages/ui/src/new-file.ts",
+        variant: "bubble",
+      },
+    ]);
+    expect(item.blocks).toEqual([
+      {
+        type: "references",
+        references: ["packages/ui/src/example.ts", "packages/ui/src/new-file.ts"],
+      },
+    ]);
+  });
+});
+
 describe("todowrite renderer", () => {
   it("renders Claude TodoWrite payloads with the shared readonly todo list", () => {
     const item = renderInvocation({
@@ -48,8 +167,16 @@ describe("todowrite renderer", () => {
         status: "completed",
         input: {
           todos: [
-            { content: "Implement API", status: "in_progress", priority: "high" },
-            { content: "Run validate", status: "completed", priority: "medium" },
+            {
+              content: "Implement API",
+              status: "in_progress",
+              priority: "high",
+            },
+            {
+              content: "Run validate",
+              status: "completed",
+              priority: "medium",
+            },
           ],
         },
       },

@@ -33,6 +33,27 @@ Run the landing page separately when working on it:
 bun run dev:landing-page
 ```
 
+### Desktop development
+
+Start the Electron client against its Docker-isolated unified runtime:
+
+```bash
+bun run dev:desktop
+```
+
+The command builds the desktop renderer, creates the fixed `pstdio-desktop` Compose stack, seeds a project, and opens Electron. Runtime data stays under the ignored repository path `__test-tmp__/dev-isolated/pstdio-desktop/`, never the production `~/.pstdio` home. Closing Electron tears down the stack and its volumes.
+
+Use `bun run dev` for the source API plus Vite dashboard and `bun run dev:isolated` for the browser-only Docker workflow. See [Desktop application foundation](/architecture/desktop) for process boundaries, packaging, sidecar validation, and troubleshooting.
+
+Local desktop `package` and `make` commands create unsigned development builds.
+After creating a local package, run its packaged smoke suite with:
+
+```bash
+bun run --cwd clients/desktop test:packaged
+```
+
+This launches the packaged application and its bundled sidecar from temporary homes.
+
 ## Playwright Validation
 
 Start the fixed-name isolated stack used for manual Playwright validation:

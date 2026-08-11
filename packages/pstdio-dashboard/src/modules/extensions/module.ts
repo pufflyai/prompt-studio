@@ -2,7 +2,13 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import type { Disposable, ResourceRef, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import type {
+  Disposable,
+  LayoutPersistenceAdapter,
+  ResourceRef,
+  WorkbenchModuleContext,
+  WorkbenchModuleContribution,
+} from "@pstdio/workbench";
 import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
@@ -42,6 +48,9 @@ import {
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import { reconcileStoredExtensionLayouts, registerExtensionLayoutResetCommands } from "./extension-layout-persistence";
+import { reconcileExtensionLayout } from "./extension-layout-reconciliation";
+import { refreshExtensionRenderers, registerExtensionResourceKinds } from "./extension-module-setup";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
@@ -52,6 +61,7 @@ type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExten
 
 interface CreateExtensionsModuleInput {
   executeCommand?: ExecuteDashboardExtensionCommand;
+  layoutPersistence?: LayoutPersistenceAdapter;
   loadAppearance?: LoadDashboardExtensionAppearance;
   loadMetadata?: LoadDashboardExtensionMetadata;
 }
@@ -97,13 +107,12 @@ const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId:
   return createDashboardExtensionRouteResource({ icon: resource.icon, projectId: routeProjectId, route });
 };
 
-// Extension metadata is fetched per project and re-applied whenever the active
-// project or installed-extension collections change.
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
   ({
     id: "dashboard.extensions",
     activate(ctx: WorkbenchModuleContext) {
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
+      const layoutPersistence = input.layoutPersistence;
       const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;
       const loadMetadata = input.loadMetadata ?? getProjectExtensionMetadata;
       let projectId = getDashboardSelectedProjectId(ctx);
@@ -141,6 +150,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
         rawMetadata = nextMetadata;
         metadata = nextResolvedMetadata;
+        const previousCompatibility = reconcileStoredExtensionLayouts({
+          layoutPersistence,
+          metadata,
+          projectId: nextProjectId,
+        });
         setCachedDashboardExtensionMetadata(nextProjectId, metadata);
         if (contributionsAreCurrent) {
           primaryResourceBeforeRefresh = undefined;
@@ -159,7 +173,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             console.error(`[dashboard.extensions:${extensionId}] contribution registration failed: ${message}`);
           },
         });
-        restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
+        contributionDisposables.push(
+          ...registerExtensionLayoutResetCommands({ ctx, layoutPersistence, metadata, projectId: nextProjectId }),
+        );
+        restoreExtensionContributionRefreshLayout(ctx, {
+          ...refreshLayout,
+          layout: reconcileExtensionLayout({ layout: refreshLayout.layout, metadata, previousCompatibility }),
+        });
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }
@@ -227,18 +247,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         applyMetadata(projectId, rawMetadata);
       };
 
-      // Extension tree renderers (e.g. the ticket "Workspaces" list) fetch their body
-      // imperatively, so a row inserted by a command like run-attempt only appears after a
-      // refresh. Re-run them whenever the realtime collection feed reports a domain-data
-      // change instead of re-syncing by hand.
-      const refreshExtensionRenderers = () => {
-        for (const record of metadata?.treeRenderers ?? []) {
-          if (ctx.renderers.getTreeRenderer(record.id)) ctx.renderers.refresh(record.id);
-        }
-      };
-
-      ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
-      ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
+      registerExtensionResourceKinds(ctx);
       registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
       ctx.layout.registerPanel(
         {
@@ -265,11 +274,6 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         kind: dashboardExtensionRouteKind,
         list: () => buildDashboardExtensionRouteEntries({ metadata, projectId }),
       });
-      // A mode-layout view docked in the primary region (e.g. an extension overview) is recorded
-      // as an `extension-view` history landmark. Back/Forward replay reopens it through this
-      // presenter, which re-derives the view from the cached manifest and re-places the widget.
-      // Without it, replaying that entry would silently leave the primary region desynced from the
-      // history cursor (there is no presenter for the synthetic `extension-view` kind otherwise).
       ctx.resources.registerPresenter({
         id: "dashboard.extensions.panel-presenter",
         priority: 1000,
@@ -320,7 +324,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           refreshProject();
           return;
         }
-        refreshExtensionRenderers();
+        refreshExtensionRenderers(ctx, metadata);
       });
 
       return {

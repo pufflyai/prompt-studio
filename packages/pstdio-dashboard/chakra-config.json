@@ -13074,7 +13074,8 @@
             "display": "flex",
             "flexDirection": "column",
             "width": "full",
-            "gap": "2"
+            "gap": "0",
+            "paddingBottom": "0"
           },
           "title": {
             "display": "flex",

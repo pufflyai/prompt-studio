@@ -4,29 +4,27 @@ import {
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
-import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { clearDashboardNavigationState, syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
-import {
-  clearDashboardProjectSelection,
-  getDashboardSelectedProjectId,
-  selectDashboardProject,
-  subscribeDashboardSelectedProject,
-} from "@/shared/app/project-context";
+import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
+import {
+  clearSelectedProject,
+  closeProjectSelectionOverlays,
+  type DashboardProjectSelectionContext,
+  registerPersistedProjectSelection,
+  registerProjectWorkbenchScope,
+  registerSelectedProjectDeletionSync,
+  registerSingleProjectSelectionSync,
+  resetProjectModeOnProjectChange,
+} from "./project-selection-sync";
 
 interface CreateProjectsModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
-
-type DashboardProjectSelectionContext = {
-  context: Pick<WorkbenchModuleContext["context"], "delete" | "set">;
-};
 
 const projectSelectionContentRegions = [
   "sidenav",
@@ -38,180 +36,6 @@ const projectSelectionContentRegions = [
   "side",
   "overlay",
 ] as const;
-
-const projectSelectionOverlayWidgetIds = new Set<string>([
-  dashboardWidgetIds.projectPicker,
-  dashboardWidgetIds.createProject,
-]);
-
-const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContext) => {
-  const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;
-
-  for (const placement of overlayWidgets) {
-    if (projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
-      ctx.layout.removeWidgetPlacement(placement.widgetId);
-    }
-  }
-};
-
-const resetProjectModeOnProjectChange = (
-  ctx: WorkbenchModuleContext,
-  previousProjectId: string | undefined,
-  nextProjectId: string,
-) => {
-  if (previousProjectId === nextProjectId) return;
-
-  ctx.modes.setActiveMode(undefined);
-};
-
-const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
-  let currentProjectId = getDashboardSelectedProjectId(ctx);
-
-  const syncScope = () => {
-    const projectId = getDashboardSelectedProjectId(ctx);
-    if (projectId !== currentProjectId) {
-      clearDashboardNavigationState(ctx);
-      currentProjectId = projectId;
-    }
-    ctx.history.setPersistenceScope(projectId ? `project:${projectId}` : undefined);
-    syncDashboardLayoutPersistenceScope(ctx);
-  };
-
-  syncScope();
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, syncScope);
-  const modeSubscription = ctx.modes.onDidChangeActive(() => syncDashboardLayoutPersistenceScope(ctx));
-  return {
-    dispose: () => {
-      unsubscribeProject();
-      modeSubscription.dispose();
-    },
-  };
-};
-
-const clearSelectedProject = (
-  ctx: WorkbenchModuleContext,
-  selectedProjectContext: DashboardProjectSelectionContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  clearDashboardProjectSelection(selectedProjectContext, persistence);
-  ctx.modes.setActiveMode("project-selection");
-  // Drop the project-scoped back-stack last (after the mode switch settles its own placements):
-  // with no project selected, replaying those entries would hit the route project guard and
-  // strand the history cursor on a view that never renders.
-  ctx.history.clear();
-};
-
-const selectPersistedProject = (
-  ctx: WorkbenchModuleContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  const projectId = persistence?.getSelectedProjectId();
-  if (!projectId || getDashboardSelectedProjectId(ctx)) return undefined;
-
-  const project = findDashboardProject(projectId);
-  if (!project) return undefined;
-
-  resetProjectModeOnProjectChange(ctx, getDashboardSelectedProjectId(ctx), project.id);
-  selectDashboardProject({ context: ctx.context.createScope("dashboard.selectedProject") }, project, persistence);
-  return project;
-};
-
-const registerPersistedProjectSelection = (
-  ctx: WorkbenchModuleContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  if (!persistence?.getSelectedProjectId()) return undefined;
-  if (selectPersistedProject(ctx, persistence)) return undefined;
-
-  const unsubscribeDashboardData = subscribeDashboardData(() => {
-    if (getDashboardSelectedProjectId(ctx)) {
-      unsubscribeDashboardData();
-      return;
-    }
-
-    if (selectPersistedProject(ctx, persistence)) unsubscribeDashboardData();
-  });
-
-  return { dispose: unsubscribeDashboardData };
-};
-
-const registerSelectedProjectDeletionSync = (
-  ctx: WorkbenchModuleContext,
-  selectedProjectContext: DashboardProjectSelectionContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  let selectedProjectWasSynced = Boolean(
-    getDashboardSelectedProjectId(ctx) && findDashboardProject(getDashboardSelectedProjectId(ctx)),
-  );
-
-  const refreshSelectedProjectTracking = () => {
-    const currentProjectId = getDashboardSelectedProjectId(ctx);
-    selectedProjectWasSynced = Boolean(currentProjectId && findDashboardProject(currentProjectId));
-  };
-
-  const unsubscribeSelectedProject = subscribeDashboardSelectedProject(ctx, refreshSelectedProjectTracking);
-  const unsubscribeDashboardData = subscribeDashboardData((change) => {
-    if (change?.table && change.table !== "projects") return;
-    if (!isInitialCollectionsSyncComplete()) return;
-
-    const currentProjectId = getDashboardSelectedProjectId(ctx);
-    if (!currentProjectId) {
-      refreshSelectedProjectTracking();
-      return;
-    }
-
-    if (findDashboardProject(currentProjectId)) {
-      refreshSelectedProjectTracking();
-      return;
-    }
-
-    if (!selectedProjectWasSynced) return;
-    clearSelectedProject(ctx, selectedProjectContext, persistence);
-    selectedProjectWasSynced = false;
-  });
-
-  return {
-    dispose() {
-      unsubscribeSelectedProject();
-      unsubscribeDashboardData();
-    },
-  };
-};
-
-const selectOnlySyncedProject = (
-  ctx: WorkbenchModuleContext,
-  selectedProjectContext: DashboardProjectSelectionContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  if (getDashboardSelectedProjectId(ctx)) return false;
-  if (!isInitialCollectionsSyncComplete()) return false;
-
-  const projects = createDashboardProjects();
-  if (projects.length !== 1) return false;
-
-  resetProjectModeOnProjectChange(ctx, undefined, projects[0].id);
-  selectDashboardProject(selectedProjectContext, projects[0], persistence);
-  closeProjectSelectionOverlays(ctx);
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  }
-  return true;
-};
-
-const registerSingleProjectSelectionSync = (
-  ctx: WorkbenchModuleContext,
-  selectedProjectContext: DashboardProjectSelectionContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
-  selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
-
-  const unsubscribeDashboardData = subscribeDashboardData((change) => {
-    if (change?.table && change.table !== "projects") return;
-    selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
-  });
-
-  return { dispose: unsubscribeDashboardData };
-};
 
 const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({

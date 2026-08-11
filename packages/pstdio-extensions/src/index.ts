@@ -28,6 +28,8 @@ export {
   checkExtensions,
   createCommandRunner,
   createDiagnostic,
+  createExtensionInstallEnvironment,
+  createExtensionProcessEnvironment,
   DEFAULT_MAX_COMMAND_DEPTH,
   type DependencyInstallReport,
   dashboardExtensionHostCapabilities,

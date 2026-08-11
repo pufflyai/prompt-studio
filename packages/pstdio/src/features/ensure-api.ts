@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "pstdio-api/pglite-recovery-hint";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
+import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
 import { runApi as defaultRunApi, shouldAutoStartApi } from "@/adapters/cli/dashboard/api";
 import {
   isHealthy as defaultIsHealthy,
@@ -8,6 +9,11 @@ import {
 } from "@/adapters/cli/dashboard/health-check";
 import { resolveDefaultDbPath } from "@/adapters/cli/dashboard/state-paths";
 import { readStartupDiagnostics, resolveStartupLogOffset } from "./api-startup-diagnostics";
+import {
+  discoverRuntime as defaultDiscoverRuntime,
+  type RuntimeDescriptor,
+  type RuntimeDiscovery,
+} from "./runtime/runtime-descriptor";
 
 /**
  * Ensures the pstdio API server is running before CLI commands that need it.
@@ -23,6 +29,9 @@ export type EnsureApiDeps = {
   isHealthy: typeof defaultIsHealthy;
   waitForHealthy: typeof defaultWaitForHealthy;
   runApi: typeof defaultRunApi;
+  discoverRuntime?: (path: string) => Promise<RuntimeDiscovery>;
+  resolveDescriptorPath?: () => string;
+  sleep?: (milliseconds: number) => Promise<void>;
 };
 
 const defaultDeps: EnsureApiDeps = {
@@ -32,6 +41,8 @@ const defaultDeps: EnsureApiDeps = {
 };
 
 const API_HEALTH_TIMEOUT_MS = 15_000;
+const RUNTIME_DISCOVERY_INTERVAL_MS = 50;
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -87,10 +98,35 @@ const apiStartupError = (detail: string, data: Record<string, unknown> = {}) => 
   return error;
 };
 
-export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDeps) => {
+const matchesConfiguredRuntime = (apiUrl: string, runtimeOrigin: string) => {
+  try {
+    const configured = new URL(apiUrl);
+    const runtime = new URL(runtimeOrigin);
+    const sameHost =
+      configured.hostname === runtime.hostname ||
+      (LOOPBACK_HOSTS.has(configured.hostname) && LOOPBACK_HOSTS.has(runtime.hostname));
+    return configured.protocol === runtime.protocol && configured.port === runtime.port && sameHost;
+  } catch {
+    return false;
+  }
+};
+
+const publishConfiguredRuntimeToken = async (apiUrl: string, deps: EnsureApiDeps) => {
+  const descriptorPath = (deps.resolveDescriptorPath ?? resolvePstdioRuntimeDescriptorPath)();
+  const discovery = await (deps.discoverRuntime ?? defaultDiscoverRuntime)(descriptorPath);
+  if (discovery.state !== "healthy" || !matchesConfiguredRuntime(apiUrl, discovery.descriptor.origin)) return;
+  process.env.PSTDIO_API_TOKEN = discovery.descriptor.token;
+};
+
+export const ensureApi = async (apiUrl?: string, deps: EnsureApiDeps = defaultDeps) => {
+  if (!apiUrl) return ensureDescriptorRuntime(deps);
+
   const healthUrl = `${apiUrl}/healthz`;
 
-  if (await deps.isHealthy(healthUrl)) return;
+  if (await deps.isHealthy(healthUrl)) {
+    await publishConfiguredRuntimeToken(apiUrl, deps);
+    return;
+  }
 
   if (!shouldAutoStartApi(process.env)) {
     throw apiStartupError("API auto-start is disabled (PSTDIO_DISABLE_API_AUTO_START=1); run `pstdio serve`.");
@@ -122,6 +158,7 @@ export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDep
       childMonitor.promise,
     ]);
     childMonitor.dispose();
+    await publishConfiguredRuntimeToken(apiUrl, deps);
   } catch (error) {
     controller.abort();
     childMonitor.dispose();
@@ -136,4 +173,52 @@ export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDep
       diagnostics,
     });
   }
+};
+
+const publishRuntime = (descriptor: RuntimeDescriptor) => {
+  process.env.PSTDIO_API_URL = descriptor.origin;
+  process.env.PSTDIO_API_TOKEN = descriptor.token;
+  return descriptor;
+};
+
+const unsafeRuntimeError = (reason: Extract<RuntimeDiscovery, { state: "unsafe" }>["reason"]) => {
+  const detail = reason === "invalid_descriptor" ? "descriptor is invalid" : "ownership is uncertain";
+  return apiStartupError(`Runtime ${detail}; refusing to start a competing database owner.`);
+};
+
+const ensureDescriptorRuntime = async (deps: EnsureApiDeps) => {
+  const descriptorPath = (deps.resolveDescriptorPath ?? resolvePstdioRuntimeDescriptorPath)();
+  const discover = deps.discoverRuntime ?? defaultDiscoverRuntime;
+  const sleep = deps.sleep ?? Bun.sleep;
+  const initial = await discover(descriptorPath);
+  if (initial.state === "healthy") return publishRuntime(initial.descriptor);
+  if (initial.state === "unsafe") throw unsafeRuntimeError(initial.reason);
+
+  if (!shouldAutoStartApi(process.env)) {
+    throw apiStartupError("API auto-start is disabled (PSTDIO_DISABLE_API_AUTO_START=1); run `pstdio serve`.");
+  }
+
+  const autostartId = randomUUID();
+  let result: ReturnType<EnsureApiDeps["runApi"]>;
+  try {
+    result = deps.runApi(process.cwd(), {
+      stdio: "ignore",
+      detached: true,
+      env: { ...process.env, PSTDIO_AUTOSTART_ID: autostartId },
+    });
+  } catch (error) {
+    throw apiStartupError(`Runtime process failed to spawn: ${errorMessage(error)}. Run \`pstdio serve\`.`);
+  }
+  if (!result) throw apiStartupError("Runtime process could not be launched; run `pstdio serve`.");
+
+  const deadline = Date.now() + API_HEALTH_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const discovery = await discover(descriptorPath);
+    if (discovery.state === "healthy") return publishRuntime(discovery.descriptor);
+    if (discovery.state === "unsafe") throw unsafeRuntimeError(discovery.reason);
+    await sleep(RUNTIME_DISCOVERY_INTERVAL_MS);
+  }
+
+  result.child.kill?.();
+  throw apiStartupError("Runtime did not publish a healthy descriptor in 15s.", { autostartId });
 };

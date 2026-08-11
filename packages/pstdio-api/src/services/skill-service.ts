@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 import type { Skill, SkillFile } from "pstdio-api-contracts";
 import type { createExtensionSkillPreferencesDBService, createSkillsDBService } from "pstdio-db";
-import { loadExtensionSource } from "../features/extensions/extension-runtime";
+import {
+  type ProjectExtensionRuntimeCatalog,
+  type ProjectExtensionRuntimeSnapshot,
+  resolveEnabledSourceForRecord,
+} from "../features/extensions/project-extension-runtime-catalog";
 import {
   catalogId,
   catalogNameFromKey,
@@ -10,7 +14,6 @@ import {
   readSkillPackageAssetFiles,
   sourceRootForAsset,
 } from "./extension-asset-catalog";
-import type { createExtensionService } from "./extension-service";
 import type { createFileService } from "./file-service";
 
 type DbSkill = Awaited<ReturnType<ReturnType<typeof createSkillsDBService>["getByName"]>>;
@@ -21,15 +24,13 @@ type InternalSkill = Skill & {
 };
 
 export type SkillServiceDeps = {
-  extensionService: ReturnType<typeof createExtensionService>;
+  extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSkillPreferencesDBService: ReturnType<typeof createExtensionSkillPreferencesDBService>;
   fileService: ReturnType<typeof createFileService>;
   skillsDBService: ReturnType<typeof createSkillsDBService>;
 };
 
-type EnabledExtensionSource = Awaited<
-  ReturnType<SkillServiceDeps["extensionService"]["listEnabledSourcesForProject"]>
->[number];
+type EnabledExtensionSource = ProjectExtensionRuntimeSnapshot["enabledSources"][number];
 type ExtensionSkillPreference = Awaited<
   ReturnType<SkillServiceDeps["extensionSkillPreferencesDBService"]["list"]>
 >[number];
@@ -138,8 +139,8 @@ const toExtensionSkill = (input: {
 };
 
 const listExtensionSkills = async (deps: SkillServiceDeps, projectId: string, input: { includeDisabled: boolean }) => {
-  const [enabledSources, preferences] = await Promise.all([
-    deps.extensionService.listEnabledSourcesForProject(projectId),
+  const [snapshot, preferences] = await Promise.all([
+    deps.extensionRuntimeCatalog.getProjectRuntime(projectId),
     deps.extensionSkillPreferencesDBService.list(projectId),
   ]);
   const preferenceByKey = new Map(
@@ -147,25 +148,20 @@ const listExtensionSkills = async (deps: SkillServiceDeps, projectId: string, in
   );
   const items: InternalSkill[] = [];
 
-  for (const { instance, installedSource } of enabledSources) {
-    if (installedSource.status !== "loaded") continue;
+  for (const skill of snapshot.runtime.skills) {
+    const source = resolveEnabledSourceForRecord(skill.sourcePath, snapshot.enabledSources);
+    if (!source) continue;
 
-    const loaded = await loadExtensionSource(installedSource.source_path);
-    const skills = loaded.definition.skills;
-    if (!isRecord(skills)) continue;
-
-    for (const [key, contribution] of Object.entries(skills)) {
-      const item = toExtensionSkill({
-        contribution,
-        includeDisabled: input.includeDisabled,
-        installedSource,
-        instance,
-        key,
-        pref: preferenceByKey.get(preferenceKey(instance.id, key)),
-        projectId,
-      });
-      if (item) items.push(item);
-    }
+    const item = toExtensionSkill({
+      contribution: skill.contribution,
+      includeDisabled: input.includeDisabled,
+      installedSource: source.installedSource,
+      instance: source.instance,
+      key: skill.localId,
+      pref: preferenceByKey.get(preferenceKey(source.instance.id, skill.localId)),
+      projectId,
+    });
+    if (item) items.push(item);
   }
 
   return items;

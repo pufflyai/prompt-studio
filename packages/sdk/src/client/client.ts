@@ -4,6 +4,7 @@ import { createNotificationsClient, type NotificationsClient } from "./notificat
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
+import { createRuntimeClient, type RuntimeClient } from "./runtime";
 import { createSessionClient, type SessionClient } from "./sessions";
 import { createSettingsClient, type SettingsClient } from "./settings";
 import { createSkillClient, type SkillClient } from "./skills";
@@ -22,6 +23,7 @@ export type PstdioClient = {
   extensions: ExtensionClient;
   settings: SettingsClient;
   sync: SyncClient;
+  runtime: RuntimeClient;
 };
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
@@ -37,5 +39,6 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     extensions: createExtensionClient(request),
     settings: createSettingsClient(request),
     sync: createSyncClient(options),
+    runtime: createRuntimeClient(request),
   };
 };

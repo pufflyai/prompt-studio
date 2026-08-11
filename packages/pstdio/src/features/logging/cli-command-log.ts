@@ -1,4 +1,4 @@
-import { createLogger } from "pstdio-logging";
+import { createLogger, redactSensitiveText } from "pstdio-logging";
 
 const normalized = (token: string) => (token === "workspaces" ? "workspace" : token);
 const normalizeCommandPath = (tokens: string[]) => tokens.map(normalized).join(" ").trim();
@@ -111,7 +111,6 @@ export const createCliCommandTracker = (input: TrackerInput) => {
       {
         command: commandPath(),
         event: "cli.command.start",
-        raw_args: input.rawArgs,
         session_id: input.sessionId,
       },
       "CLI mutating command started",
@@ -132,11 +131,15 @@ export const createCliCommandTracker = (input: TrackerInput) => {
         return;
       }
 
+      const redact = (value: string) => redactSensitiveText(value, [process.env.PSTDIO_API_TOKEN ?? ""]);
       logger().error(
         {
           command: commandPath(),
           duration_ms: Math.max(0, now() - startedAt),
-          error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+          error:
+            error instanceof Error
+              ? { message: redact(error.message), stack: error.stack ? redact(error.stack) : undefined }
+              : redact(String(error)),
           event: "cli.command.failed",
           session_id: input.sessionId,
         },

@@ -111,7 +111,11 @@ describe("createExtensionWebviewBuildManager", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -134,16 +138,23 @@ describe("createExtensionWebviewBuildManager", () => {
 });
 
 describe("createExtensionWebviewBuildManager lifecycle", () => {
-  test("rebuilds when source hash changes and tracks multiple webviews independently", async () => {
+  test("rebuilds only the webview whose build inputs changed", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-restart-test-"));
     const sourcePath = join(root, "extension");
-    writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
+    writeExtension(sourcePath, {
+      first: "src/first.tsx",
+      second: "src/second.tsx",
+    });
     const builtEntries: string[] = [];
     let sourceHash = "hash-1";
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: sourceHash,
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -160,10 +171,13 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       await manager.refresh();
       expect(builtEntries).toHaveLength(2);
 
+      writeFileSync(join(sourcePath, "src/first.tsx"), "console.log('updated first webview');");
       sourceHash = "hash-2";
       await manager.refresh();
 
-      expect(builtEntries).toHaveLength(4);
+      expect(builtEntries).toHaveLength(3);
+      expect(builtEntries.filter((entry) => entry.endsWith("first.tsx"))).toHaveLength(2);
+      expect(builtEntries.filter((entry) => entry.endsWith("second.tsx"))).toHaveLength(1);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -174,11 +188,19 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-failure-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
-    const failures: { installName: string; webviewId: string; error: unknown }[] = [];
+    const failures: {
+      installName: string;
+      webviewId: string;
+      error: unknown;
+    }[] = [];
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async (installName, webviewId, error) => {
         failures.push({ installName, webviewId, error });
@@ -201,7 +223,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     }
   });
 
-  test("does not retry a failed unchanged source until its hash changes", async () => {
+  test("does not retry a failed unchanged source until its build inputs change", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-backoff-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
@@ -211,7 +233,11 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: sourceHash,
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async (_installName, webviewId) => {
         failures.push(webviewId);
@@ -230,6 +256,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       expect(runCount).toBe(1);
       expect(failures).toEqual(["lab.labPage"]);
 
+      writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('fixed webview');");
       sourceHash = "hash-2";
       await manager.refresh();
 
@@ -251,7 +278,11 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "unchanged-hash",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -281,12 +312,17 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-dependency-recovery-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" }, { dependencies: { "webview-dep": "^1.0.0" } });
+    writeFileSync(join(sourcePath, "src", "main.tsx"), 'import "webview-dep";\n');
     const failures: string[] = [];
     let runCount = 0;
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "unchanged-hash",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async (_installName, _webviewId, error) => {
         failures.push(String(error));
@@ -319,16 +355,21 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
     }
   });
 
-  test("invalidates successful builds for manifest, lockfile, and dependency metadata changes", async () => {
+  test("invalidates builds for manifest and imported dependency changes but not lockfile-only changes", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-input-invalidation-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" }, { dependencies: { "webview-dep": "^1.0.0" } });
+    writeFileSync(join(sourcePath, "src", "main.tsx"), 'import "webview-dep";\n');
     writeDependency(sourcePath, "webview-dep", "1.0.0");
     let runCount = 0;
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "unchanged-hash", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "unchanged-hash",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -350,16 +391,17 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
         { labPage: "src/main.tsx" },
         { dependencies: { "webview-dep": "^1.0.0" }, version: "1.0.1" },
       );
+      writeFileSync(join(sourcePath, "src", "main.tsx"), 'import "webview-dep";\n');
       await manager.refresh();
       expect(runCount).toBe(2);
 
       writeFileSync(join(sourcePath, "bun.lock"), "lockfile revision one");
       await manager.refresh();
-      expect(runCount).toBe(3);
+      expect(runCount).toBe(2);
 
       writeDependency(sourcePath, "webview-dep", "2.0.0");
       await manager.refresh();
-      expect(runCount).toBe(4);
+      expect(runCount).toBe(3);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -377,7 +419,11 @@ describe("createExtensionWebviewBuildManager resilience", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       onError: (error) => {
         managerErrors.push(error);
@@ -409,12 +455,20 @@ describe("createExtensionWebviewBuildManager resilience", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-command-error-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
-    const failures: { installName: string; webviewId: string; error: unknown }[] = [];
+    const failures: {
+      installName: string;
+      webviewId: string;
+      error: unknown;
+    }[] = [];
     const managerErrors: unknown[] = [];
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       onError: (error) => {
         managerErrors.push(error);
@@ -424,7 +478,9 @@ describe("createExtensionWebviewBuildManager resilience", () => {
       },
       reportBuildSuccess: async () => {},
       buildWebview: async () => {
-        throw Object.assign(new Error("ENFILE: file table overflow"), { code: "ENFILE" });
+        throw Object.assign(new Error("ENFILE: file table overflow"), {
+          code: "ENFILE",
+        });
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -455,7 +511,11 @@ describe("createExtensionWebviewBuildManager resilience", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async (_installName, webviewId) => {

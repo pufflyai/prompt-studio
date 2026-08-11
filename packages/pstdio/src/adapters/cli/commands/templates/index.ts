@@ -1,5 +1,4 @@
 import type { Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { ensureApi } from "@/features/ensure-api";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
@@ -22,7 +21,7 @@ export const builder = (yargs: Argv) => {
     .command(writeCommand);
 };
 
-export const middlewares = [() => ensureApi(API_URL)];
+export const middlewares = [() => ensureApi(process.env.PSTDIO_API_URL)];
 
 export const handler = () => {
   _yargs.showHelp();
