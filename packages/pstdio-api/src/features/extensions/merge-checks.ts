@@ -113,7 +113,7 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.skills.push(...source.skills);
   target.diagnostics.push(...source.diagnostics);
   target.hostCompatibility = {
-    ...target.hostCompatibility,
+    ...source.hostCompatibility,
     diagnostics: [...target.hostCompatibility.diagnostics, ...source.hostCompatibility.diagnostics],
   };
 };

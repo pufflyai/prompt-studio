@@ -134,6 +134,7 @@ Current dashboard capability names:
 | `panel.data-table-renderer.v1` | Data table renderer panel bodies. |
 | `route.webview.v1` | Webview routes. |
 | `tree-item.v1` | Project sidenav tree items. |
+| `settings.section.v1` | Settings navigation sections. |
 | `settings.panel.webview.v1` | Settings webview panels. |
 | `settings.definition.v1` | Extension setting definitions. |
 | `renderer.kanban.v1` | Native kanban renderers. |

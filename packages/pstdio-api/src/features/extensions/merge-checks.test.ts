@@ -59,4 +59,24 @@ describe("mergeCheck", () => {
 
     expect(target.controlsRenderers).toEqual(source.controlsRenderers);
   });
+
+  test("preserves an unverified host compatibility result", () => {
+    const target = check();
+    const source = check({
+      hostCompatibility: {
+        status: "unverified",
+        diagnostics: [
+          {
+            code: "extension_host_capability_check_unverified",
+            severity: "warning",
+            message: "Host compatibility was not verified",
+          },
+        ],
+      },
+    });
+
+    mergeCheck(target, source);
+
+    expect(target.hostCompatibility).toEqual(source.hostCompatibility);
+  });
 });
