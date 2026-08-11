@@ -46,13 +46,21 @@ The command builds the desktop renderer, creates the fixed `pstdio-desktop` Comp
 Use `bun run dev` for the source API plus Vite dashboard and `bun run dev:isolated` for the browser-only Docker workflow. See [Desktop application foundation](/architecture/desktop) for process boundaries, packaging, sidecar validation, and troubleshooting.
 
 Local desktop `package` and `make` commands create unsigned development builds.
+Production release mode is available only through the native release workflow;
+`PSTDIO_DESKTOP_RELEASE=1` fails when the host signing or notarization credentials
+are incomplete. Do not place certificate files in the repository or weaken
+signature checks for local convenience. See [Desktop distribution and
+updates](/product/platform/desktop-distribution) for the native matrix and
+required repository secrets.
+
 After creating a local package, run its packaged smoke suite with:
 
 ```bash
 bun run --cwd clients/desktop test:packaged
 ```
 
-This launches the packaged application and its bundled sidecar from temporary homes.
+This launches the packaged application and its bundled sidecar from temporary
+homes. It is not equivalent to the signed native matrix.
 
 ## Playwright Validation
 

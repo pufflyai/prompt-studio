@@ -3,9 +3,17 @@ import { join } from "node:path";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { resolveDesktopSigning } from "./src/release/release-config";
 
 const desktopRoot = import.meta.dirname;
 const assetsRoot = join(desktopRoot, "assets");
+const signing = resolveDesktopSigning({
+  platform: process.platform,
+  arch: process.arch,
+  desktopRoot,
+  release: process.env.PSTDIO_DESKTOP_RELEASE === "1",
+  env: process.env,
+});
 const run = (args: string[]) => {
   const result = spawnSync("bun", args, { cwd: desktopRoot, stdio: "inherit" });
   if (result.status !== 0) throw new Error(`Desktop package preparation failed: bun ${args.join(" ")}`);
@@ -33,6 +41,9 @@ const config: ForgeConfig = {
       /^\/vite\.config\.ts$/,
     ],
     prune: false,
+    osxSign: signing.osxSign,
+    osxNotarize: signing.osxNotarize,
+    windowsSign: signing.windowsSign,
   },
   hooks: {
     prePackage: async (_forgeConfig, platform, arch) => {
@@ -44,7 +55,7 @@ const config: ForgeConfig = {
     {
       name: "@electron-forge/maker-squirrel",
       platforms: ["win32"],
-      config: { name: "PromptStudio" },
+      config: { name: "PromptStudio", windowsSign: signing.squirrelWindowsSign },
     },
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "linux"], config: {} },
     {

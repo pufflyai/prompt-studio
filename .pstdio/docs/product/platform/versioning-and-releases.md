@@ -58,6 +58,9 @@ The release path is:
 3. On push to `main`, `.github/workflows/release-packages.yml` runs `changesets/action`.
 4. The action either opens or updates the version PR, or publishes packages through `bun run release`.
 5. When packages publish successfully, the workflow creates GitHub releases for each published `<name>@<version>` tag.
+6. A published `pstdio` package holds its GitHub release in draft while the native
+   desktop workflow builds, signs, notarizes, launches, and verifies the complete
+   target matrix. The release becomes public only after desktop checks pass.
 
 ## Interface
 
@@ -74,12 +77,16 @@ The release path is:
 | ---------------------------------------- | ------------------------------------------ |
 | `.github/workflows/release-packages.yml` | Automates version PR creation and publish. |
 | `.changeset/config.json`                 | Changesets repo configuration.             |
+| `.github/workflows/release-desktop.yml`  | Builds and verifies native desktop assets. |
 
 ## Rules & Constraints
 
 - Do not edit package versions manually.
 - Private packages are not meant to be published, even if the monorepo still builds and tests them.
 - Release behavior should stay aligned with the root `release` script and the Changesets action.
+- `clients/desktop/package.json` is private but must carry the same version as
+  `pstdio`; `scripts/release/version.sh` synchronizes it during the version PR.
+- Desktop assets are attached to the matching `pstdio@<version>` release.
 
 ## Errors
 
@@ -87,3 +94,4 @@ The release path is:
 | --------------------- | ------------------------------------------------------------- |
 | No version PR appears | No pending changesets were merged to `main`.                  |
 | Publish step fails    | Registry auth, package metadata, or build output was invalid. |
+| Desktop release stays draft | A native build, credential, signature, notarization, launch, fuse, checksum, or version check failed. |

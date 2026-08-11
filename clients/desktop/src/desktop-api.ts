@@ -14,6 +14,7 @@ export interface PromptStudioDesktopApi {
   openLogs: () => Promise<void>;
   revealInFinder: (path: string) => Promise<void>;
   copyDiagnostics: () => Promise<void>;
+  checkForUpdates: () => Promise<void>;
   quitApp: () => Promise<void>;
 }
 
@@ -26,5 +27,6 @@ export const DESKTOP_CHANNELS = {
   openLogs: "pstdio:desktop:open-logs",
   revealInFinder: "pstdio:desktop:reveal-in-finder",
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
+  checkForUpdates: "pstdio:desktop:check-for-updates",
   quitApp: "pstdio:desktop:quit-app",
 } as const;

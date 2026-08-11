@@ -30,7 +30,7 @@ Several CLI commands produce incorrect paths or crash on Windows.
 
 ## Non-Goals
 
-- MSI packaging; the desktop application uses a Squirrel installer.
+- MSI packaging; the desktop application uses a signed Squirrel installer.
 - PowerShell-native extension authoring.
 - Windows-specific UI shell integration (e.g. Explorer context menus).
 
@@ -101,7 +101,9 @@ The changes fall into five areas, ordered by severity.
 
 ### Operational Requirements
 
-- Desktop packages build and launch on native Linux x64, Windows x64, macOS arm64, and macOS x64 hosts.
+- CI builds and launches desktop distributions on native Linux x64, Windows x64,
+  macOS arm64, and macOS x64 runners. Windows and macOS release jobs also verify
+  the platform signature before publication.
 
 ## Rules & Constraints
 

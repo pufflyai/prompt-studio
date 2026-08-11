@@ -1,0 +1,281 @@
+name: Release Desktop
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      tag:
+        required: true
+        type: string
+    secrets:
+      MACOS_CERTIFICATE:
+        required: true
+      MACOS_CERTIFICATE_PASSWORD:
+        required: true
+      MACOS_SIGN_IDENTITY:
+        required: true
+      APPLE_API_KEY:
+        required: true
+      APPLE_API_KEY_ID:
+        required: true
+      APPLE_API_ISSUER:
+        required: true
+      WINDOWS_CERTIFICATE:
+        required: true
+      WINDOWS_CERTIFICATE_PASSWORD:
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing pstdio package and desktop version
+        required: true
+        type: string
+      tag:
+        description: Existing draft GitHub release tag
+        required: true
+        type: string
+
+concurrency:
+  group: desktop-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            platform: darwin
+            arch: arm64
+            os: macos-15
+          - target: darwin-x64
+            platform: darwin
+            arch: x64
+            os: macos-15-intel
+          - target: win32-x64
+            platform: win32
+            arch: x64
+            os: windows-latest
+          - target: linux-x64
+            platform: linux
+            arch: x64
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify release version
+        env:
+          DESKTOP_RELEASE_VERSION: ${{ inputs.version }}
+          DESKTOP_RELEASE_TAG: ${{ inputs.tag }}
+        run: >-
+          bun -e 'const desktop = await Bun.file("clients/desktop/package.json").json();
+          const runtime = await Bun.file("packages/pstdio/package.json").json();
+          if (desktop.version !== process.env.DESKTOP_RELEASE_VERSION || runtime.version !== desktop.version ||
+          process.env.DESKTOP_RELEASE_TAG !== `pstdio@${desktop.version}`) throw new Error("Desktop release version drift");'
+
+      - name: Import macOS signing credentials
+        if: matrix.platform == 'darwin'
+        shell: bash
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+          CERTIFICATE_PATH: ${{ runner.temp }}/pstdio-desktop.p12
+          APPLE_API_KEY_PATH: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
+        run: |
+          set -euo pipefail
+          test -n "$MACOS_CERTIFICATE"
+          test -n "$MACOS_CERTIFICATE_PASSWORD"
+          test -n "$APPLE_API_KEY_CONTENT"
+          bun -e 'await Bun.write(process.env.CERTIFICATE_PATH, Buffer.from(process.env.MACOS_CERTIFICATE, "base64")); await Bun.write(process.env.APPLE_API_KEY_PATH, Buffer.from(process.env.APPLE_API_KEY_CONTENT, "base64"));'
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+      - name: Decode Windows signing certificate
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_FILE: ${{ runner.temp }}/pstdio-desktop.pfx
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) { throw "WINDOWS_CERTIFICATE is required" }
+          [IO.File]::WriteAllBytes($env:WINDOWS_CERTIFICATE_FILE, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+
+      - name: Build signed macOS distributions
+        if: matrix.platform == 'darwin'
+        env:
+          PSTDIO_DESKTOP_RELEASE: "1"
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_API_KEY: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      - name: Build signed Windows distributions
+        if: matrix.platform == 'win32'
+        env:
+          PSTDIO_DESKTOP_RELEASE: "1"
+          WINDOWS_CERTIFICATE_FILE: ${{ runner.temp }}/pstdio-desktop.pfx
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      - name: Build Linux distributions
+        if: matrix.platform == 'linux'
+        env:
+          PSTDIO_DESKTOP_RELEASE: "1"
+        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      - name: Verify Electron fuse policy
+        run: bun run --cwd clients/desktop verify:fuses
+
+      - name: Smoke packaged application
+        if: matrix.platform != 'linux'
+        run: bun run --cwd clients/desktop test:packaged
+
+      - name: Smoke packaged Linux application
+        if: matrix.platform == 'linux'
+        run: xvfb-run -a bun run --cwd clients/desktop test:packaged
+
+      - name: Upload packaged release-readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-${{ matrix.target }}
+          path: clients/desktop/test-results/packaged-release-readiness.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify macOS signatures and notarization
+        if: matrix.platform == 'darwin'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          codesign --verify --strict --verbose=2 "$APP_PATH/Contents/Resources/bin/pstdio"
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --type execute --verbose=2 "$APP_PATH"
+
+      - name: Verify Windows signatures
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          $paths = @(
+            "clients/desktop/out/Prompt Studio-win32-x64/Prompt Studio.exe",
+            "clients/desktop/out/Prompt Studio-win32-x64/resources/bin/pstdio.exe",
+            (Get-ChildItem "clients/desktop/out/make" -Recurse -Filter "*Setup.exe" | Select-Object -First 1 -ExpandProperty FullName)
+          )
+          foreach ($path in $paths) {
+            $signature = Get-AuthenticodeSignature $path
+            if ($signature.Status -ne "Valid") { throw "Invalid Authenticode signature: $path ($($signature.Status))" }
+          }
+
+      - name: Verify Linux package
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB=$(find clients/desktop/out/make -type f -name '*.deb' -print -quit)
+          test -n "$DEB"
+          dpkg-deb --info "$DEB"
+
+      - name: Extract desktop release notes
+        shell: bash
+        run: bun run --cwd scripts release:changelog -- pstdio "${{ inputs.version }}" > "${{ runner.temp }}/desktop-release-notes.md"
+
+      - name: Prepare release artifacts
+        env:
+          PSTDIO_DESKTOP_PUBLISHED_AT: ${{ github.event.repository.updated_at }}
+        run: >-
+          bun run --cwd clients/desktop release:prepare -- --target ${{ matrix.target }}
+          --notes-file "${{ runner.temp }}/desktop-release-notes.md"
+
+      - name: Upload verified native artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: clients/desktop/out/release/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove macOS signing keychain
+        if: always() && matrix.platform == 'darwin'
+        shell: bash
+        env:
+          KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
+        run: security delete-keychain "$KEYCHAIN_PATH" || true
+
+  publish:
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: desktop-release
+
+      - name: Verify and flatten release set
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun clients/desktop/scripts/verify-release-set.ts desktop-release
+          mkdir desktop-publish
+          find desktop-release -type f -exec cp '{}' desktop-publish/ \;
+          cd desktop-publish
+          for checksums in checksums-*.sha256; do sha256sum -c "$checksums"; done
+          cat checksums-*.sha256 | sort > "checksums-desktop-${{ inputs.version }}.sha256"
+
+      - name: Publish desktop release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view '${{ inputs.tag }}' --json isDraft -q .isDraft)" = "true"
+          gh release upload "${{ inputs.tag }}" desktop-publish/* --clobber
+          gh release edit "${{ inputs.tag }}" --draft=false

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { app, clipboard, ipcMain, protocol, shell } from "electron";
+import { app, autoUpdater, clipboard, ipcMain, Menu, protocol, shell } from "electron";
 import electronSquirrelStartup from "electron-squirrel-startup";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
@@ -11,6 +11,8 @@ import {
   initialDesktopState,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
+import { createApplicationMenuTemplate } from "./release/application-menu";
+import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { DesktopRuntimeManager } from "./runtime/runtime-manager";
 import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
@@ -32,6 +34,18 @@ let allowQuit = false;
 let quitting = false;
 let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
+const updateManager = new DesktopUpdateManager({
+  platform: process.platform,
+  arch: process.arch,
+  packaged: app.isPackaged,
+  updater: autoUpdater,
+  openExternal: (url) => shell.openExternal(url),
+});
+const reportUpdateError = (error: Error) => {
+  logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
+};
+autoUpdater.on("error", reportUpdateError);
+
 const setState = (next: DesktopState) => {
   state = next;
   logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
@@ -193,6 +207,13 @@ const confirmQuit = async () => {
 };
 
 const bootstrap = async () => {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      createApplicationMenuTemplate(process.platform, () => {
+        void updateManager.checkForUpdates().catch(reportUpdateError);
+      }),
+    ),
+  );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
   windowController = await DesktopWindowController.create(preloadPath);
   windowController.window.on("close", (event) => {
@@ -234,6 +255,7 @@ const bootstrap = async () => {
         ),
       );
     },
+    checkForUpdates: () => updateManager.checkForUpdates(),
     quitApp: requestQuit,
   });
   await startRuntime();
