@@ -76,6 +76,7 @@ export type {
   KeybindingRegistry,
   KeybindingSequence,
   LastResourcePersistenceAdapter,
+  LayoutPersistenceAdapter,
   MenuItem,
   MenuPath,
   MenuRegistry,
@@ -195,6 +196,7 @@ export type {
   WorkbenchTerminalSessionSink,
   WorkbenchTerminalSessionStatus,
   WorkbenchTerminalState,
+  WorkbenchWidgetPlacement,
 } from "./core";
 
 export {

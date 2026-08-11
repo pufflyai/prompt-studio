@@ -1,4 +1,4 @@
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbenchCore, type LayoutPersistenceAdapter } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
@@ -40,6 +40,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 type CreateDashboardModulesInput = {
+  layoutPersistence?: LayoutPersistenceAdapter;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
@@ -49,7 +50,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createDashboardViewsModule(),
   createSidenavModule(),
   createWorkspacesModule(),
-  createExtensionsModule(),
+  createExtensionsModule({ layoutPersistence: input.layoutPersistence }),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
   createHeadersModule(),
   createKeyboardShortcutsModule(),
@@ -86,17 +87,20 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const sessionSelectionPersistence = createDashboardSessionSelectionPersistence(scopedByProject);
   const sessionDraftPersistence = createDashboardSessionDraftPersistence(scopedByProject);
 
+  const persistence = createLocalStorageWorkbenchPersistence({
+    namespace: dashboardWorkbenchStorageNamespace,
+    storage,
+  });
+
   const workbench = createWorkbenchCore({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
-    ...createLocalStorageWorkbenchPersistence({
-      namespace: dashboardWorkbenchStorageNamespace,
-      storage,
-    }),
+    ...persistence,
     lastResourcePersistence: createDashboardLastResourcePersistence(scopedByProject),
   });
 
   const modules = createDashboardModules({
+    layoutPersistence: persistence.layoutPersistence,
     projectSelectionPersistence,
     sessionDraftPersistence,
     sessionSelectionPersistence,
