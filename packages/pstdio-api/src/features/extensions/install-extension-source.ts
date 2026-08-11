@@ -140,6 +140,15 @@ const copyExtensionSource = (sourcePath: string, targetPath: string) => {
   });
 };
 
+const removeDirectory = (path: string) => rmSync(path, { recursive: true, force: true });
+
+// Cleanup must not replace a completed install or the error that caused an install to fail.
+export const removePathBestEffort = (path: string, remove: (path: string) => void = removeDirectory) => {
+  try {
+    remove(path);
+  } catch {}
+};
+
 const promotePreparedSource = (preparedPath: string, targetPath: string, replaceExisting: boolean) => {
   const backupPath = join(dirname(preparedPath), ".previous");
 
@@ -154,8 +163,6 @@ const promotePreparedSource = (preparedPath: string, targetPath: string, replace
     if (existsSync(backupPath)) renameSync(backupPath, targetPath);
     throw error;
   }
-
-  rmSync(backupPath, { recursive: true, force: true });
 };
 
 const cloneRepoSparse = async (
@@ -334,7 +341,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       targetPath,
     };
   } finally {
-    if (stagingRoot) rmSync(stagingRoot, { recursive: true, force: true });
-    rmSync(tempDir, { recursive: true, force: true });
+    if (stagingRoot) removePathBestEffort(stagingRoot);
+    removePathBestEffort(tempDir);
   }
 };

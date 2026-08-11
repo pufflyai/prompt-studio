@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installExtensionSource } from "./install-extension-source";
+import { installExtensionSource, removePathBestEffort } from "./install-extension-source";
 
 let root: string;
 let pstdioHome: string;
@@ -46,6 +46,15 @@ afterEach(() => {
 });
 
 describe("installExtensionSource replacement", () => {
+  test("does not let cleanup errors replace the install result", () => {
+    const remove = mock(() => {
+      throw new Error("cleanup failed");
+    });
+
+    expect(() => removePathBestEffort("/locked/staging", remove)).not.toThrow();
+    expect(remove).toHaveBeenCalledWith("/locked/staging");
+  });
+
   test("force=true replaces an existing install", async () => {
     writeExistingInstall();
 
