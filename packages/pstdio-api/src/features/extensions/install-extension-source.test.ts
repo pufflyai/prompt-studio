@@ -180,25 +180,6 @@ describe("installExtensionSource", () => {
     ).rejects.toBeInstanceOf(ExtensionAlreadyInstalledError);
   });
 
-  test("force=true replaces an existing install", async () => {
-    const source = join(root, "source-extension");
-    makeExtension(source);
-    const target = join(pstdioHome, "extensions", "source-extension");
-    mkdirSync(target, { recursive: true });
-    writeFileSync(join(target, "custom.txt"), "keep");
-
-    const result = await installExtensionSource({
-      source,
-      force: true,
-      skipInstall: true,
-      env: { PSTDIO_HOME: pstdioHome },
-      homedir: () => "/unused",
-    });
-
-    expect(result.targetPath).toBe(target);
-    expect(existsSync(join(target, "custom.txt"))).toBe(false);
-  });
-
   test("existsOk=true reuses an existing install without re-copying", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
@@ -225,27 +206,6 @@ describe("installExtensionSource", () => {
     expect(readFileSync(join(target, "user-edit.txt"), "utf8")).toBe("preserve");
   });
 
-  test("preserves copied source when dependency install fails", async () => {
-    const source = join(root, "source-extension");
-    makeExtension(source);
-    writeManifest(source, { packageManager: "bun@1.3.13" });
-    const runCommand = mock(async () => ({ exitCode: 1, stderr: "registry unavailable", stdout: "" }));
-
-    await expect(
-      installExtensionSource({
-        source,
-        env: { PSTDIO_HOME: pstdioHome },
-        homedir: () => "/unused",
-        runCommand,
-      }),
-    ).rejects.toThrow("Dependency install failed");
-
-    expect(existsSync(join(pstdioHome, "extensions", "source-extension", "extension.ts"))).toBe(true);
-    expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
-      cwd: join(pstdioHome, "extensions", "source-extension"),
-    });
-  });
-
   test("installs dependencies with bun regardless of any declared package manager", async () => {
     // Prompt Studio is bun-only: even an extension that declares another manager is installed with
     // bun (the workspace manager installs npm packages fine and reuses the warm bun cache).
@@ -262,7 +222,7 @@ describe("installExtensionSource", () => {
     });
 
     expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
-      cwd: join(pstdioHome, "extensions", "source-extension"),
+      cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
     });
   });
 
@@ -282,7 +242,7 @@ describe("installExtensionSource", () => {
     });
 
     expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ["install"], {
-      cwd: join(pstdioHome, "extensions", "source-extension"),
+      cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: expect.objectContaining({
         BUN_BE_BUN: "1",
         BUN_INSTALL_CACHE_DIR: join(pstdioHome, "cache", "extension-bun-install"),

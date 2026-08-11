@@ -65,6 +65,25 @@ test("dashboard selects the only project on first load", async ({ page, request 
     .toBeTruthy();
 });
 
+test("dashboard clears a saved project that no longer exists", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  const firstProject = await createProjectViaApi(request, "Current Project");
+  const secondProject = await createProjectViaApi(request, "Other Project");
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem("dashboard-wb:selected-project:global", "deleted-project");
+  });
+
+  await page.goto("/");
+
+  await expect(page.getByText(firstProject.name, { exact: true })).toBeVisible();
+  await expect(page.getByText(secondProject.name, { exact: true })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .toBeNull();
+});
+
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);

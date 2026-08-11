@@ -26,12 +26,7 @@ const resolveApiBaseUrl = () => {
     return runtimeConfig.apiBaseUrl.replace(/\/$/, "");
   }
 
-  const envBaseUrl = import.meta.env?.VITE_API_BASE_URL;
-
-  if (envBaseUrl && envBaseUrl.trim().length > 0) {
-    return envBaseUrl.trim().replace(/\/$/, "");
-  }
-
+  // Packaged dashboards share an origin with the API. Vite development uses its proxy.
   return "";
 };
 
