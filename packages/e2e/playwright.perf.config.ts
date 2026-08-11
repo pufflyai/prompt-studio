@@ -54,7 +54,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 90_000,
       env: {
-        VITE_API_BASE_URL: `http://localhost:${apiPort}`,
+        PSTDIO_API_URL: `http://localhost:${apiPort}`,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: homePath,
       },
