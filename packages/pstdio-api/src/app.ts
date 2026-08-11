@@ -32,8 +32,8 @@ import {
 import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
-import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import type { LoadedExtension } from "./features/extensions/extension-runtime";
+import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
@@ -280,10 +280,8 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
     workspaceService,
   } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
-  let refreshInstalledExtensionProcesses: (
-    sourcePath?: string,
-    validatedSource?: LoadedExtension,
-  ) => Promise<void> = async () => {};
+  let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
+    async () => {};
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,

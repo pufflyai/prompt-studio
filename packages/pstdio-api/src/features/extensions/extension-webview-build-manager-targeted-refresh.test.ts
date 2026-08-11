@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { loadExtensionSource } from "./extension-runtime";
+import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
 const waitFor = async (predicate: () => boolean, message: string) => {
   for (let attempt = 0; attempt < 50; attempt++) {

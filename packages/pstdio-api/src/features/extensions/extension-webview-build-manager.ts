@@ -70,16 +70,7 @@ type WebviewBuildResult =
       webviewId: string;
     };
 
-export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
-  const built = new Map<string, string>();
-  const building = new Map<string, string>();
-  const backoff = createWebviewBuildBackoff();
-  const activeBuilds = new Set<AbortController>();
-  let disposed = false;
-  let refreshQueue = Promise.resolve();
-  const buildWebview = input.buildWebview ?? buildExtensionWebview;
-  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
-
+const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) => {
   const reportFailure = async (
     installName: string,
     webviewId: string,
@@ -102,6 +93,20 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       return false;
     }
   };
+
+  return { reportFailure, reportSuccess };
+};
+
+export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
+  const built = new Map<string, string>(),
+    building = new Map<string, string>();
+  const backoff = createWebviewBuildBackoff();
+  const activeBuilds = new Set<AbortController>();
+  let disposed = false,
+    refreshQueue = Promise.resolve();
+  const buildWebview = input.buildWebview ?? buildExtensionWebview;
+  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
+  const { reportFailure, reportSuccess } = createBuildReporters(input);
 
   const buildNewManagedWebview = async (input: {
     buildInputs: ReturnType<typeof inspectManagedWebviewBuildInputs>;
