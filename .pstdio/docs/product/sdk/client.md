@@ -11,7 +11,7 @@ core SDK domain clients.
 import { createClient } from "@pstdio/sdk/client";
 
 const client = createClient({
-  baseUrl: "http://127.0.0.1:43123", // default: PSTDIO_API_URL env or http://localhost:19840
+  baseUrl: "http://127.0.0.1:43123", // default: PSTDIO_API_URL env or http://127.0.0.1:19840
   token: "...", // optional: defaults to PSTDIO_API_TOKEN outside the browser
 });
 ```
@@ -24,7 +24,7 @@ REST and SSE without exposing the bearer token to JavaScript.
 
 | Option    | Type           | Default                                                  | Description                                      |
 | --------- | -------------- | -------------------------------------------------------- | ------------------------------------------------ |
-| `baseUrl` | `string`       | `process.env.PSTDIO_API_URL` or `http://localhost:19840` | API server URL                                   |
+| `baseUrl` | `string`       | `process.env.PSTDIO_API_URL` or `http://127.0.0.1:19840` | API server URL                                   |
 | `token`   | `string`       | `process.env.PSTDIO_API_TOKEN` outside the browser       | Bearer token for authenticated requests          |
 | `fetch`   | `typeof fetch` | `globalThis.fetch`                                       | Custom fetch implementation (useful for testing) |
 
