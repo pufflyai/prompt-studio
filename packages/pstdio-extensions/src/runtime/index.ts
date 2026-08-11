@@ -49,7 +49,7 @@ export {
   type ReadPackageManifestResult,
   readPackageManifest,
 } from "./package-manifest";
-export { createExtensionProcessEnvironment } from "./process-environment";
+export { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 export {
   type RunPackageInstallOptions,
   type RunPackageInstallResult,

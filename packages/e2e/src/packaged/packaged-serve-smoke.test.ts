@@ -3,7 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { writeExtensionWithDependency } from "./extension-fixtures";
+import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
@@ -176,10 +176,17 @@ describe("packaged pstdio — self-hosted serve", () => {
 
       try {
         const extensionSource = writeExtensionWithDependency(tempRoot);
+        const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
         const started = await startPackagedServe(tempRoot, {
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
             { source: extensionSource, installName: "dep-ext", skipInstall: true },
+            { source: installEnvironmentProbe, installName: "install-env-probe" },
           ]),
+          HTTPS_PROXY: "http://127.0.0.1:9",
+          NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
+          NPM_TOKEN: "registry-secret",
+          GITHUB_TOKEN: "source-control-secret",
+          OPENAI_API_KEY: "provider-secret",
         });
         child = started.child;
 
@@ -204,6 +211,14 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(extension).toMatchObject({
           enabled: true,
           name: "dep-ext",
+        });
+
+        expect(JSON.parse(readFileSync(join(tempRoot, "install-env.json"), "utf8"))).toEqual({
+          httpsProxy: "http://127.0.0.1:9",
+          npmRegistry: "http://127.0.0.1:9",
+          npmToken: "registry-secret",
+          sourceControlToken: null,
+          providerKey: null,
         });
       } finally {
         if (child) {

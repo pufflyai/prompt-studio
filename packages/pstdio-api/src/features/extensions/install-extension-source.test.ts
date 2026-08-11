@@ -257,14 +257,26 @@ describe("installExtensionSource", () => {
 
     await installExtensionSource({
       source,
-      env: { PATH: "/bin", PSTDIO_API_TOKEN: "runtime-secret", PSTDIO_HOME: pstdioHome },
+      env: {
+        PATH: "/bin",
+        HTTPS_PROXY: "https://proxy.example.com",
+        NPM_CONFIG_REGISTRY: "https://registry.example.com",
+        NODE_EXTRA_CA_CERTS: "/certs/company.pem",
+        PSTDIO_API_TOKEN: "runtime-secret",
+        PSTDIO_HOME: pstdioHome,
+      },
       homedir: () => "/unused",
       runCommand,
     });
 
     expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
       cwd: join(pstdioHome, "extensions", "source-extension"),
-      env: { PATH: "/bin" },
+      env: {
+        PATH: "/bin",
+        HTTPS_PROXY: "https://proxy.example.com",
+        NPM_CONFIG_REGISTRY: "https://registry.example.com",
+        NODE_EXTRA_CA_CERTS: "/certs/company.pem",
+      },
     });
   });
 
