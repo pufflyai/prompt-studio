@@ -18,6 +18,7 @@ export const dashboardExtensionHostCapabilities = {
     "panel.data-table-renderer.v1": { version: 1, since: "0.25.2" },
     "route.webview.v1": { version: 1, since: "0.1.0" },
     "tree-item.v1": { version: 1, since: "0.23.0" },
+    "settings.section.v1": { version: 1, since: "0.25.2" },
     "settings.panel.webview.v1": { version: 1, since: "0.1.0" },
     "settings.definition.v1": { version: 1, since: "0.24.0" },
     "renderer.kanban.v1": { version: 1, since: "0.23.0" },
@@ -94,6 +95,7 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
   ...runtime.panels.flatMap(panelBodyRequirements),
   ...runtime.routes.map((record) => requirement(record, record.id, "route", "route.webview.v1")),
   ...runtime.treeItems.map((record) => requirement(record, record.id, "treeItem", "tree-item.v1")),
+  ...runtime.settingsSections.map((record) => requirement(record, record.id, "settingsSection", "settings.section.v1")),
   ...runtime.settingsPanels.map((record) =>
     requirement(record, record.id, "settingsPanel", "settings.panel.webview.v1"),
   ),
@@ -114,6 +116,9 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     requirement(record, record.id, "controlsRenderer", "renderer.controls.v1"),
   ),
   ...runtime.keybindings.map((record) => requirement(record, record.id, "keybinding", "keybinding.v1")),
+  ...runtime.panels
+    .filter((record) => record.contribution.resourceKind)
+    .map((record) => requirement(record, record.id, "resourceView", "resource-view.v1")),
 ];
 
 const missingCapabilityDiagnostic = (

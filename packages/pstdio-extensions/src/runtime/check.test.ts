@@ -216,7 +216,7 @@ describe("checkExtensions", () => {
 });
 
 describe("checkExtensionHostCompatibility", () => {
-  test("flags data table surfaces when the dashboard does not advertise the bridge", () => {
+  test("flags registered dashboard surfaces when the host does not advertise their bridges", () => {
     const runtime = {
       extensions: [],
       commands: [],
@@ -233,13 +233,28 @@ describe("checkExtensionHostCompatibility", () => {
           extensionId: "pstdio.lab",
           name: "lab",
           sourcePath: "/extension/extension.ts",
-          contribution: { title: "Rows", region: "main", closable: true, dataTableRenderer: "rows" },
+          contribution: {
+            title: "Rows",
+            region: "main",
+            closable: true,
+            dataTableRenderer: "rows",
+            resourceKind: "ticket",
+          },
         },
       ],
       routes: [],
       navigation: [],
       treeItems: [],
-      settingsSections: [],
+      settingsSections: [
+        {
+          id: "lab.section",
+          localId: "section",
+          extensionId: "pstdio.lab",
+          name: "lab",
+          sourcePath: "/extension/extension.ts",
+          contribution: { title: "Lab" },
+        },
+      ],
       settingsPanels: [],
       kanbanRenderers: [],
       dataTableRenderers: [
@@ -273,7 +288,11 @@ describe("checkExtensionHostCompatibility", () => {
       hostVersion: "0.25.1",
       capabilities: Object.fromEntries(
         Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
-          ([name]) => name !== "renderer.data-table.v1" && name !== "panel.data-table-renderer.v1",
+          ([name]) =>
+            name !== "renderer.data-table.v1" &&
+            name !== "panel.data-table-renderer.v1" &&
+            name !== "settings.section.v1" &&
+            name !== "resource-view.v1",
         ),
       ),
     };
@@ -281,25 +300,11 @@ describe("checkExtensionHostCompatibility", () => {
     const result = checkExtensionHostCompatibility(runtime, host);
 
     expect(result.status).toBe("verified");
-    expect(result.diagnostics).toEqual([
-      expect.objectContaining({
-        code: "extension_host_capability_missing",
-        severity: "error",
-        metadata: expect.objectContaining({
-          contributionId: "lab.panel",
-          missingCapability: "panel.data-table-renderer.v1",
-          requiredSince: "0.25.2",
-        }),
-      }),
-      expect.objectContaining({
-        code: "extension_host_capability_missing",
-        severity: "error",
-        metadata: expect.objectContaining({
-          contributionId: "lab.rows",
-          missingCapability: "renderer.data-table.v1",
-          requiredSince: "0.25.2",
-        }),
-      }),
+    expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
+      "panel.data-table-renderer.v1",
+      "settings.section.v1",
+      "renderer.data-table.v1",
+      "resource-view.v1",
     ]);
   });
 });
