@@ -60,10 +60,10 @@ const readErrorMessage = (errorBody: unknown, status: number) => {
   return `Request failed: ${status}`;
 };
 
+const processEnvironment = () => (typeof process !== "undefined" && process.env ? process.env : undefined);
+
 export const resolveBaseUrl = (options: ClientOptions) =>
-  options.baseUrl ??
-  (typeof process !== "undefined" ? process.env.PSTDIO_API_URL : undefined) ??
-  "http://localhost:19840";
+  options.baseUrl ?? processEnvironment()?.PSTDIO_API_URL ?? "http://127.0.0.1:19840";
 
 export const resolveClientUrl = (baseUrl: string, path: string) =>
   path.startsWith("http://") || path.startsWith("https://") ? path : `${baseUrl}${path}`;
@@ -79,8 +79,7 @@ const isSameOriginTarget = (baseUrl: string, path: string, url: string) => {
 
 export const resolveFetch = (options: ClientOptions) => options.fetch ?? globalThis.fetch;
 
-const resolveToken = (options: ClientOptions) =>
-  options.token ?? (typeof process !== "undefined" ? process.env.PSTDIO_API_TOKEN : undefined);
+const resolveToken = (options: ClientOptions) => options.token ?? processEnvironment()?.PSTDIO_API_TOKEN;
 
 export const createRequestHeaders = (
   options: ClientOptions,

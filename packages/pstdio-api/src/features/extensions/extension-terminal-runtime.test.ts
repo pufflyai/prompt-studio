@@ -140,7 +140,7 @@ describe("terminal supervisor", () => {
   });
 
   test("reports live terminal activity with a stable id and display label", async () => {
-    const { logger } = createRecordingLogger();
+    const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
     const handle = supervisor.api.openSession({ command: ["/bin/sh"], cols: 80, rows: 24 });
     void (async () => {
@@ -151,5 +151,9 @@ describe("terminal supervisor", () => {
 
     await handle.kill();
     expect(supervisor.activity()).toEqual([]);
+    expect(records).toContainEqual({
+      message: "terminal session kill",
+      metadata: { id: handle.id, signal: "SIGTERM" },
+    });
   });
 });

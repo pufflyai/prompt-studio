@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createRequest, PstdioApiError } from "./request";
+import { createRequest, PstdioApiError, resolveBaseUrl } from "./request";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -7,6 +7,18 @@ const jsonResponse = (body: unknown, status = 200) =>
 const mockFetchFn = (fn: (...args: unknown[]) => Promise<Response>) => fn as unknown as typeof fetch;
 
 describe("createRequest", () => {
+  it("defaults to the IPv4 loopback runtime origin", () => {
+    const previous = process.env.PSTDIO_API_URL;
+    delete process.env.PSTDIO_API_URL;
+
+    try {
+      expect(resolveBaseUrl({})).toBe("http://127.0.0.1:19840");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_URL;
+      else process.env.PSTDIO_API_URL = previous;
+    }
+  });
+
   it("makes a GET request to the base URL + path", async () => {
     const calls: unknown[][] = [];
     const request = createRequest({

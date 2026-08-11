@@ -279,17 +279,17 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
     workspaceService,
   } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
-  let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
+  let refreshInstalledExtensionProcesses: (sourcePath?: string) => Promise<void> = async () => {};
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService: createExtensionUserDataDBService(db),
     eventBus,
-    onInstalledSourcesChanged: async () => {
+    onInstalledSourcesChanged: async (sourcePath) => {
       // An in-place source reload keeps the same paths, so the registry's path-set
       // signature won't change on its own — drop its cache explicitly.
       harnessRegistry.invalidate();
-      await refreshInstalledExtensionProcesses();
+      await refreshInstalledExtensionProcesses(sourcePath);
     },
     projectService,
   });

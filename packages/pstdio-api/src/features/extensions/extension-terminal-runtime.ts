@@ -159,7 +159,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         terminal.close();
       });
 
-      const kill = async (signal: NodeJS.Signals = "SIGKILL") => {
+      const kill = async (signal: NodeJS.Signals = "SIGTERM") => {
         logger.info("terminal session kill", { id, signal });
         child.kill(signal);
         await child.exited;

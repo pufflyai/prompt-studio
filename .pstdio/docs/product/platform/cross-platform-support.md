@@ -30,7 +30,7 @@ Several CLI commands produce incorrect paths or crash on Windows.
 
 ## Non-Goals
 
-- Native Windows installer or MSI packaging.
+- MSI packaging; the desktop application uses a Squirrel installer.
 - PowerShell-native extension authoring.
 - Windows-specific UI shell integration (e.g. Explorer context menus).
 
@@ -101,7 +101,7 @@ The changes fall into five areas, ordered by severity.
 
 ### Operational Requirements
 
-- CI runs tests on Ubuntu and macOS (current), and adds a Windows runner for at least the unit test suite.
+- Desktop packages build and launch on native Linux x64, Windows x64, macOS arm64, and macOS x64 hosts.
 
 ## Rules & Constraints
 

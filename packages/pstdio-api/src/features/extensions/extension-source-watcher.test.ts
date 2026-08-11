@@ -95,6 +95,57 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
+  test("does not overlap reloads when changes arrive during a running reload", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(sourcePath, { recursive: true });
+    const watchers: FakeWatcher[] = [];
+    let activeReloads = 0;
+    let maxActiveReloads = 0;
+    let reloadCount = 0;
+    let releaseFirstReload: () => void = () => {};
+    const firstReloadReleased = new Promise<void>((resolve) => {
+      releaseFirstReload = resolve;
+    });
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async () => {
+        reloadCount++;
+        activeReloads++;
+        maxActiveReloads = Math.max(maxActiveReloads, activeReloads);
+        if (reloadCount === 1) await firstReloadReleased;
+        activeReloads--;
+      },
+      watch: (_path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchers.push(fake);
+        return fake;
+      },
+    });
+
+    try {
+      watchers[0]?.listener("change", "extension.ts");
+      await delay(15);
+
+      watchers[0]?.listener("change", "bun.lock");
+      await delay(15);
+
+      expect(reloadCount).toBe(1);
+      expect(maxActiveReloads).toBe(1);
+
+      releaseFirstReload();
+      await delay(15);
+
+      expect(reloadCount).toBe(2);
+      expect(maxActiveReloads).toBe(1);
+    } finally {
+      releaseFirstReload();
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("briefly debounces changed sources by default", async () => {
     const sourcePath = join(root, "watched");
     mkdirSync(sourcePath, { recursive: true });
@@ -387,6 +438,40 @@ describe("createExtensionSourceWatcher registrations", () => {
       await delay(15);
 
       expect(reloaded.sort()).toEqual([firstPath, secondPath].sort());
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("refreshes only the requested source registration", async () => {
+    const firstPath = join(root, "repo-a", "shared");
+    const secondPath = join(root, "repo-b", "shared");
+    mkdirSync(firstPath, { recursive: true });
+    mkdirSync(secondPath, { recursive: true });
+    const rows = [
+      { install_name: "first", source_path: firstPath },
+      { install_name: "second", source_path: secondPath },
+    ];
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      listInstalledSources: async () => rows,
+      reloadInstalledSource: async (sourcePath) => {
+        reloaded.push(sourcePath);
+      },
+      watch: (_path, listener) => new FakeWatcher(listener),
+    });
+
+    try {
+      rmSync(firstPath, { recursive: true });
+      rmSync(secondPath, { recursive: true });
+      mkdirSync(firstPath, { recursive: true });
+      mkdirSync(secondPath, { recursive: true });
+
+      await (watcher.refresh as (sourcePath?: string) => Promise<void>)(firstPath);
+
+      expect(reloaded).toEqual([firstPath]);
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });

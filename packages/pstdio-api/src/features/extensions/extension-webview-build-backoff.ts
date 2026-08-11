@@ -1,6 +1,4 @@
 type InstalledSourceSignatureInput = {
-  install_name: string;
-  source_hash?: string | null;
   source_path: string;
 };
 
@@ -11,7 +9,7 @@ export const signatureFor = (
   webviewId: string,
   entryPath: string,
   buildInputsSignature: string,
-) => [row.source_path, row.source_hash ?? "", webviewId, entryPath, buildInputsSignature].join("\0");
+) => [row.source_path, webviewId, entryPath, buildInputsSignature].join("\0");
 
 export const createWebviewBuildBackoff = () => {
   const failedBuilds = new Map<string, string>();

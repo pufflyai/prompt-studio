@@ -134,7 +134,7 @@ describe("createExtensionWebviewBuildManager", () => {
 });
 
 describe("createExtensionWebviewBuildManager lifecycle", () => {
-  test("rebuilds when source hash changes and tracks multiple webviews independently", async () => {
+  test("rebuilds only the webview whose build inputs changed", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-restart-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
@@ -160,10 +160,13 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       await manager.refresh();
       expect(builtEntries).toHaveLength(2);
 
+      writeFileSync(join(sourcePath, "src/first.tsx"), "console.log('updated first webview');");
       sourceHash = "hash-2";
       await manager.refresh();
 
-      expect(builtEntries).toHaveLength(4);
+      expect(builtEntries).toHaveLength(3);
+      expect(builtEntries.filter((entry) => entry.endsWith("first.tsx"))).toHaveLength(2);
+      expect(builtEntries.filter((entry) => entry.endsWith("second.tsx"))).toHaveLength(1);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -201,7 +204,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     }
   });
 
-  test("does not retry a failed unchanged source until its hash changes", async () => {
+  test("does not retry a failed unchanged source until its build inputs change", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-backoff-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
@@ -230,6 +233,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       expect(runCount).toBe(1);
       expect(failures).toEqual(["lab.labPage"]);
 
+      writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('fixed webview');");
       sourceHash = "hash-2";
       await manager.refresh();
 

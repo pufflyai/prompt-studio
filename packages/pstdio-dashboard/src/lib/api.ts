@@ -19,7 +19,12 @@ export const readRuntimeConfig = (): PstdioConfig | null => {
   if (w.__PSTDIO_CONFIG__) return w.__PSTDIO_CONFIG__;
 
   const encodedConfig = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
-  return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as PstdioConfig) : null;
+  if (!encodedConfig) return null;
+  try {
+    return JSON.parse(decodeURIComponent(encodedConfig)) as PstdioConfig;
+  } catch {
+    return null;
+  }
 };
 
 const resolveApiBaseUrl = () => {

@@ -5,8 +5,9 @@
 
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
 const PROJECT_PREFIX = "pstdio-cmp";
@@ -20,6 +21,7 @@ const usage = `Usage:
   bun run dev:isolated -- --name <id>           # pin a stable compose project name
   bun run dev:isolated -- --down                # tear the stack down (incl. volumes)
   bun run dev:isolated -- --logs                # follow logs
+  bun run dev:isolated -- --desktop             # unified runtime for Electron development
 
 Multiple instances: each --name produces an independent stack with its own ports,
 state volumes, and demo project. Omit --name to get a random suffix.`;
@@ -53,33 +55,60 @@ interface HostPorts {
   api: number;
 }
 
-const composeEnv = (repoRoot: string, hostPorts?: HostPorts) => ({
+export const resolveContainerPorts = (hostPorts: HostPorts, desktopMode: boolean) => ({
+  dashboard: CONTAINER_DASHBOARD_PORT,
+  api: desktopMode ? hostPorts.api : CONTAINER_API_PORT,
+});
+
+export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(projectName)) {
+    throw new Error(`Invalid isolated stack name: ${projectName}`);
+  }
+  return resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName, "pstdio-home");
+};
+
+const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
+  HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
+  PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
   ...(hostPorts
     ? {
         HOST_DASHBOARD_PORT: String(hostPorts.dashboard),
         HOST_API_PORT: String(hostPorts.api),
+        CONTAINER_API_PORT: String(resolveContainerPorts(hostPorts, desktopMode).api),
         BROWSER_API_BASE_URL: `http://localhost:${hostPorts.api}`,
       }
     : {}),
 });
 
-const runCompose = (projectName: string, repoRoot: string, extraArgs: string[], hostPorts?: HostPorts) => {
+const runCompose = (
+  projectName: string,
+  repoRoot: string,
+  extraArgs: string[],
+  hostPorts?: HostPorts,
+  desktopMode = false,
+) => {
   const result = spawnSync("docker", ["compose", "-f", COMPOSE_FILE, "-p", projectName, ...extraArgs], {
     cwd: repoRoot,
-    env: composeEnv(repoRoot, hostPorts),
+    env: composeEnv(repoRoot, projectName, hostPorts, desktopMode),
     stdio: "inherit",
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-const lookupHostPort = (projectName: string, repoRoot: string, containerPort: number, hostPorts: HostPorts) => {
+const lookupHostPort = (
+  projectName: string,
+  repoRoot: string,
+  containerPort: number,
+  hostPorts: HostPorts,
+  desktopMode: boolean,
+) => {
   const result = spawnSync(
     "docker",
     ["compose", "-f", COMPOSE_FILE, "-p", projectName, "port", SERVICE, String(containerPort)],
-    { cwd: repoRoot, env: composeEnv(repoRoot, hostPorts), encoding: "utf8" },
+    { cwd: repoRoot, env: composeEnv(repoRoot, projectName, hostPorts, desktopMode), encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(`docker compose port failed: ${result.stderr.trim()}`);
@@ -110,10 +139,28 @@ const reserveHostPorts = async (): Promise<HostPorts> => {
   return { dashboard, api: await reserveHostPort() };
 };
 
-const waitForSeededProject = async (apiPort: number) => {
+const waitForRuntimeDescriptor = async (pstdioHome: string) => {
+  const path = join(pstdioHome, "runtime.json");
+  for (let attempt = 0; attempt < 90; attempt += 1) {
+    if (existsSync(path)) {
+      try {
+        const descriptor = JSON.parse(readFileSync(path, "utf8")) as { token?: unknown };
+        if (typeof descriptor.token === "string" && descriptor.token) return descriptor.token;
+      } catch {
+        // The runtime may still be replacing the descriptor atomically.
+      }
+    }
+    await Bun.sleep(1_000);
+  }
+  throw new Error("Timed out waiting for the isolated desktop runtime descriptor.");
+};
+
+const waitForSeededProject = async (apiPort: number, token?: string) => {
   for (let attempt = 0; attempt < 90; attempt += 1) {
     try {
-      const response = await fetch(`http://localhost:${apiPort}/v1/projects`);
+      const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
+        headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      });
       if (response.ok) {
         const projects = (await response.json()) as Array<{ id: string; name: string }>;
         const project = projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0];
@@ -139,9 +186,12 @@ const main = async () => {
 
   const repoRoot = resolve(import.meta.dir, "../..");
   const projectName = parseFlagValue(args, "--name") ?? `${PROJECT_PREFIX}-${randomBytes(2).toString("hex")}`;
+  const desktopMode = hasFlag(args, "--desktop");
+  const pstdioHome = resolveIsolatedHome(repoRoot, projectName);
 
   if (hasFlag(args, "--down")) {
     runCompose(projectName, repoRoot, ["down", "-v"]);
+    rmSync(resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName), { recursive: true, force: true });
     return;
   }
 
@@ -151,13 +201,23 @@ const main = async () => {
   }
 
   const hostPorts = await reserveHostPorts();
-  runCompose(projectName, repoRoot, ["up", "-d", "--build"], hostPorts);
+  mkdirSync(pstdioHome, { recursive: true });
+  runCompose(projectName, repoRoot, ["up", "-d", "--build"], hostPorts, desktopMode);
 
-  const port = lookupHostPort(projectName, repoRoot, CONTAINER_DASHBOARD_PORT, hostPorts);
-  const apiPort = lookupHostPort(projectName, repoRoot, CONTAINER_API_PORT, hostPorts);
-  const project = await waitForSeededProject(apiPort);
+  const containerPorts = resolveContainerPorts(hostPorts, desktopMode);
+  const apiPort = lookupHostPort(projectName, repoRoot, containerPorts.api, hostPorts, desktopMode);
+  const port = desktopMode
+    ? apiPort
+    : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
+  const token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome) : undefined;
+  const project = await waitForSeededProject(apiPort, token);
+  writeFileSync(
+    resolve(pstdioHome, "..", "connection.json"),
+    `${JSON.stringify({ apiPort, dashboardUrl: `http://127.0.0.1:${port}/`, pstdioHome }, null, 2)}\n`,
+  );
   process.stdout.write(`\nStack:     ${projectName}\n`);
   process.stdout.write(`Dashboard: http://localhost:${port}/\n`);
+  if (desktopMode) process.stdout.write(`Desktop home: ${pstdioHome}\n`);
   process.stdout.write(`Project:   http://localhost:${port}/projects/${project.id}/\n`);
   process.stdout.write(`Sessions:  http://localhost:${port}/projects/${project.id}/sessions\n`);
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);

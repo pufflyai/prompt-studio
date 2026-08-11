@@ -48,6 +48,10 @@ layer-map change.
    `e2e` compose lower layers into product workflows. They must import workspace
    packages through declared package dependencies and package exports.
 
+   The private `@pstdio/desktop` client may consume the public runtime lifecycle
+   subpath from `pstdio`, path/logging utilities, and `@pstdio/ui`. It must not
+   import API domain services, database packages, or another client.
+
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled artifacts and
    embedded defaults. Cross-package relative imports are only allowed for the

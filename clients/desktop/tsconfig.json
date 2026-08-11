@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["bun", "node", "vite/client"]
+  },
+  "include": ["src", "scripts", "forge.config.ts", "vite.config.ts"]
+}
