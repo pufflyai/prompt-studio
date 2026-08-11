@@ -71,7 +71,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return loading;
   };
 
-  const getProjectRuntime = async (projectId: string): Promise<ProjectExtensionRuntimeSnapshot> => {
+  const getProjectRuntime = async (projectId: string) => {
     const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
     const repos = await deps.repoService.listByProject(projectId);
     const cachedSources: CachedSource[] = [];
