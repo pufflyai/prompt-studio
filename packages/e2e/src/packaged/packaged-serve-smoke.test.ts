@@ -101,6 +101,32 @@ beforeAll(() => {
 
 describe("packaged pstdio — self-hosted serve", () => {
   test(
+    "serves the dashboard and API from the same origin",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        const started = await startPackagedServe(tempRoot);
+        child = started.child;
+
+        const dashboardRes = await fetch(started.baseUrl);
+        expect(dashboardRes.status).toBe(200);
+        expect(dashboardRes.headers.get("content-type")).toContain("text/html");
+
+        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`);
+        expect(projectsRes.status).toBe(200);
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
     "creates project without internal catalog seeds and with repo bootstrap artifacts",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));

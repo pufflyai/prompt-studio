@@ -61,7 +61,6 @@ const composeEnv = (repoRoot: string, hostPorts?: HostPorts) => ({
     ? {
         HOST_DASHBOARD_PORT: String(hostPorts.dashboard),
         HOST_API_PORT: String(hostPorts.api),
-        BROWSER_API_BASE_URL: `http://localhost:${hostPorts.api}`,
       }
     : {}),
 });

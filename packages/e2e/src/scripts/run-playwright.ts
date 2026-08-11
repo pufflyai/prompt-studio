@@ -15,7 +15,6 @@ export const buildPlaywrightEnv = (
 
   delete cleanEnv.PSTDIO_API_PORT;
   delete cleanEnv.PSTDIO_API_URL;
-  delete cleanEnv.VITE_API_BASE_URL;
 
   return {
     ...cleanEnv,
