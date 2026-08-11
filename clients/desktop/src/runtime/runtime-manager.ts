@@ -36,6 +36,7 @@ type RuntimeManagerOptions = {
 };
 
 type RuntimeProcess = {
+  kill: (signal?: NodeJS.Signals | number) => boolean;
   stdout: { on: (event: "data", listener: (chunk: unknown) => void) => unknown };
   stderr: { on: (event: "data", listener: (chunk: unknown) => void) => unknown };
   once: EventEmitter["once"];
@@ -165,6 +166,9 @@ export class DesktopRuntimeManager {
       ready = true;
       return this.#attach(descriptor, false);
     } catch (error) {
+      try {
+        child.kill("SIGTERM");
+      } catch {}
       const failure = classifyRuntimeFailure(error instanceof Error ? error.message : String(error));
       throw new Error(`${failure.code}: ${failure.message}`);
     }

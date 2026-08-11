@@ -16,8 +16,14 @@ const descriptor = {
 };
 
 class RuntimeChild extends EventEmitter {
+  killedWith: NodeJS.Signals | number | undefined;
   stdout = new PassThrough();
   stderr = new PassThrough();
+
+  kill(signal?: NodeJS.Signals | number) {
+    this.killedWith = signal;
+    return true;
+  }
 }
 
 describe("DesktopRuntimeManager", () => {
@@ -49,6 +55,7 @@ describe("DesktopRuntimeManager", () => {
 
     await expect(manager.start()).rejects.toThrow("unexpected_exit");
     expect(spawnedArgs).toContain("--instance-id");
+    expect(child.killedWith).toBe("SIGTERM");
   });
 
   test("reports an unexpected child exit after a spawned runtime became ready", async () => {
