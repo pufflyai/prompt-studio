@@ -25,6 +25,14 @@ export type LayoutScope = string;
 export interface LayoutPersistenceAdapter {
   getLayout(scope?: LayoutScope): WorkbenchLayout | undefined;
   setLayout(layout: WorkbenchLayout, scope?: LayoutScope): void;
+  listScopes?(projectId: string): LayoutScope[];
+  transformLayouts?(
+    projectId: string,
+    transform: (layout: WorkbenchLayout, scope: LayoutScope) => WorkbenchLayout | undefined,
+  ): void;
+  getCompatibilityMarker?(key: string): string | undefined;
+  setCompatibilityMarker?(key: string, value: string): void;
+  advanceWriteGeneration?(): number;
   flush?(): void;
   dispose?(): void;
 }

@@ -220,6 +220,40 @@ describe("local storage workbench persistence recovery", () => {
     expect(listeners).toHaveLength(0);
   });
 
+  test("rejects queued layout writes after the local generation advances", async () => {
+    const storage = createStore();
+    const listeners = new Set<() => void>();
+    const eventTarget = {
+      addEventListener: (_event: "pagehide", listener: () => void) => listeners.add(listener),
+      removeEventListener: (_event: "pagehide", listener: () => void) => listeners.delete(listener),
+    };
+    const persistence = createLocalStorageLayoutPersistence({
+      debounceMs: 20,
+      eventTarget,
+      namespace: "demo",
+      storage,
+    });
+    const stale = createDefaultWorkbenchLayout();
+    const current = { ...stale, activeWidgetId: "current" };
+    const scope = "project/one/mode/project/aggregate/workspaces";
+    const key = workbenchStoragePersistenceKey("demo", "layout", scope);
+
+    persistence.setLayout(stale, scope);
+    persistence.advanceWriteGeneration?.();
+    storage.setItem(key, JSON.stringify({ version: 2, layout: current }));
+
+    for (const listener of listeners) listener();
+    expect(persistence.getLayout(scope)).toEqual(current);
+    await Bun.sleep(25);
+    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 2, layout: current });
+
+    persistence.setLayout(stale, scope);
+    persistence.advanceWriteGeneration?.();
+    storage.setItem(key, JSON.stringify({ version: 2, layout: current }));
+    persistence.dispose?.();
+    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 2, layout: current });
+  });
+
   test("retains only the 50 most recent resource layouts per project", () => {
     const storage = createStore();
     const persistence = createLocalStorageLayoutPersistence({
@@ -281,6 +315,36 @@ describe("local storage workbench persistence recovery", () => {
     });
     expect(persistence.getLayout(firstScope)).toEqual(layout);
     expect(persistence.getLayout(secondScope)).toEqual(layout);
+  });
+
+  test("enumerates and transforms project layout scopes without touching other projects", () => {
+    const storage = createStore();
+    const persistence = createLocalStorageLayoutPersistence({
+      debounceMs: 60_000,
+      namespace: "demo",
+      storage,
+    });
+    const one = createDefaultWorkbenchLayout();
+    const two = { ...one, activeWidgetId: "two" };
+    const other = { ...one, activeWidgetId: "other" };
+
+    persistence.setLayout(one, "project/one");
+    persistence.setLayout(two, "project/one/mode/workspace/resource/workspace://two");
+    persistence.setLayout(other, "project/two");
+    persistence.flush?.();
+
+    expect(persistence.listScopes?.("one")).toEqual([
+      "project/one",
+      "project/one/mode/workspace/resource/workspace://two",
+    ]);
+
+    persistence.transformLayouts?.("one", (layout) => ({ ...layout, activeWidgetId: "changed" }));
+
+    expect(persistence.getLayout("project/one")?.activeWidgetId).toBe("changed");
+    expect(persistence.getLayout("project/one/mode/workspace/resource/workspace://two")?.activeWidgetId).toBe(
+      "changed",
+    );
+    expect(persistence.getLayout("project/two")?.activeWidgetId).toBe("other");
   });
 });
 

@@ -174,4 +174,12 @@ Declare every package imported by a managed TypeScript or JavaScript webview in 
 
 While Prompt Studio is running, edits to a webview's local import graph, `package.json`, `bun.lock` or `bun.lockb`, and installed dependency package metadata trigger a rebuild automatically. Creating or removing a top-level dependency under `node_modules` also retries a previously failed build, so dependency fixes do not require an API restart. Repeated refreshes with unchanged inputs reuse a successful bundle or preserve the existing failure backoff.
 
+### Local layout recovery
+
+The dashboard stores workbench layouts in the browser profile. These layouts are not synced through the API, SDK, CLI, or extension instances.
+
+When an extension changes a panel from a webview to a native renderer, renames a panel, or removes a panel, the dashboard reconciles locally stored layouts for the selected project. Current panels keep their tab order and state where possible. Removed extension panels are pruned. Native dashboard panels and panels from other extensions are preserved.
+
+Each enabled extension also registers a command palette action named `Reset <extension> layout`. Use it to remove that extension's local placements from the current project's stored layouts and the active workbench. The reset is local to the current browser profile.
+
 For the full extension API surface, see [the product extension API docs](../.pstdio/docs/product/extensions/pstdio-extension-api.md). For loader internals, see [the extension runtime loader architecture doc](../.pstdio/docs/architecture/extensions-runtime.md).
