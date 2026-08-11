@@ -177,6 +177,7 @@ export const createIsolatedApp = async (harnessOptions?: Parameters<typeof creat
     filesRoot: "",
     harnessRegistry: harness.registry,
   });
+  await appHandle.startupDone;
 
   return { ...appHandle, harness };
 };

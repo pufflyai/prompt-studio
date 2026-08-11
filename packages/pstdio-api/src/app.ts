@@ -462,5 +462,5 @@ export const createApp = async (options: AppOptions) => {
 
     await closePromise;
   };
-  return { app, close, deps, eventBus };
+  return { app, close, deps, eventBus, startupDone };
 };

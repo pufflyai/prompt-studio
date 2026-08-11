@@ -130,6 +130,7 @@ describe("session scheduler startup recovery", () => {
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
     const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    await firstApp.startupDone;
     let projectId = "";
 
     try {
@@ -163,11 +164,7 @@ describe("session scheduler startup recovery", () => {
     const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (startSession.mock.calls.length > 0) break;
-        await Bun.sleep(25);
-      }
-
+      await recoveredApp.startupDone;
       expect(startSession).toHaveBeenCalledTimes(1);
       const [ctx, input] = startSession.mock.calls[0] ?? [];
       expect(ctx?.projectId).toBe(projectId);
@@ -184,6 +181,7 @@ describe("session scheduler startup recovery", () => {
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
     const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    await firstApp.startupDone;
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -219,11 +217,7 @@ describe("session scheduler startup recovery", () => {
     const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (startSession.mock.calls.length > 0) break;
-        await Bun.sleep(25);
-      }
-
+      await recoveredApp.startupDone;
       expect(startSession).toHaveBeenCalledTimes(1);
       const [, input] = startSession.mock.calls[0] ?? [];
       expect(input).toMatchObject({ prompt: "recover claimed prompt" });
