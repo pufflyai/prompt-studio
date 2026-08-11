@@ -67,9 +67,7 @@ export const restoreExtensionContributionRefreshLayout = (
   snapshot: ExtensionContributionRefreshLayout,
 ) => {
   const activeModeWasRemoved =
-    snapshot.activeModeId !== undefined &&
-    ctx.modes.getActiveModeId() === undefined &&
-    ctx.modes.getMode(snapshot.activeModeId) === undefined;
+    snapshot.activeModeId !== undefined && ctx.modes.getMode(snapshot.activeModeId) === undefined;
   if (activeModeWasRemoved) return;
 
   if (snapshot.activeModeId && ctx.modes.getActiveModeId() !== snapshot.activeModeId) {

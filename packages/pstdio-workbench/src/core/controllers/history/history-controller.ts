@@ -244,10 +244,15 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
       const scope = getPersistenceScope();
       let pending: Promise<unknown> | undefined;
       if (entry) {
-        runSilent(() => {
-          const result = activateEntry(entry, { replayCurrentLocation: true });
-          if (result instanceof Promise) pending = result;
-        });
+        try {
+          runSilent(() => {
+            const result = activateEntry(entry, { replayCurrentLocation: true });
+            if (result instanceof Promise) pending = result;
+          });
+        } catch {
+          finishRestore(scope, entry.entryId);
+          return entry;
+        }
       }
       if (pending)
         void pending.then(
@@ -477,7 +482,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   };
 
   const restoreMode = (entry: WorkbenchNavigationEntry) => {
-    if (input.modes && input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
+    if (!input.modes || !entry.modeId || !input.modes.getMode(entry.modeId)) return;
+    if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
   };
 
   const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined, replaceActive: boolean) => {
