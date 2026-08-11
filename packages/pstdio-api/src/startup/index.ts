@@ -14,11 +14,6 @@ interface StartupTaskOptions {
   recoverQueuedSessions?: () => Promise<void>;
 }
 
-export const deferStartupTasks = async (run: () => Promise<void>) => {
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  await run();
-};
-
 const ensureDefaultExtensionsInstalled = async () => {
   try {
     await installDefaultExtensions({

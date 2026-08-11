@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Bind the runtime before starting background setup work.
+Bind the runtime before database startup while publishing only after database ownership is acquired.
