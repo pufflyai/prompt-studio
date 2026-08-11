@@ -3,8 +3,22 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createApp } from "../app";
+import { deferStartupTasks } from ".";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
+
+test("defers startup work until the server can bind", async () => {
+  const order: string[] = [];
+  const startup = deferStartupTasks(async () => {
+    order.push("startup");
+  });
+
+  order.push("bind");
+  expect(order).toEqual(["bind"]);
+
+  await startup;
+  expect(order).toEqual(["bind", "startup"]);
+});
 
 describe("startup default extensions", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-default-extensions-"));
