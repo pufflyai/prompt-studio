@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { createExtensionProcessEnvironment } from "./process-environment";
+import { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 
 export type RunPackageInstallOptions = {
   extensionPath: string;
@@ -30,7 +30,7 @@ export const runPackageInstall = (options: RunPackageInstallOptions): RunPackage
     cwd: options.extensionPath,
     stdio: "pipe",
     encoding: "utf8",
-    env: createExtensionProcessEnvironment(),
+    env: createExtensionInstallEnvironment(),
   });
 
   return {
