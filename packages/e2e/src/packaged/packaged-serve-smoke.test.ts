@@ -124,7 +124,9 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(dashboardRes.status).toBe(200);
         expect(dashboardRes.headers.get("content-type")).toContain("text/html");
 
-        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`);
+        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
         expect(projectsRes.status).toBe(200);
       } finally {
         if (child) {

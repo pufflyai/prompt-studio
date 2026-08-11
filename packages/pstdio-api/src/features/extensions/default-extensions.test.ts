@@ -140,6 +140,43 @@ describe("resolveDefaultExtensionsConfig", () => {
 });
 
 describe("installDefaultExtensions", () => {
+  test("serializes concurrent default extension setup", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-serialized-"));
+    const source = join(root, "pstdio-planner");
+    writeExtension(source, "pstdio-planner");
+    const firstInstallReleased = Promise.withResolvers<void>();
+    const firstInstallStarted = Promise.withResolvers<void>();
+    let calls = 0;
+    const install = mock(async () => {
+      calls++;
+      if (calls === 1) {
+        firstInstallStarted.resolve();
+        await firstInstallReleased.promise;
+      }
+      return installed;
+    });
+    const input = {
+      config: { defaultExtensions: [{ source }] },
+      installExtensionSource: install,
+    };
+
+    try {
+      const first = installDefaultExtensions(input);
+      await firstInstallStarted.promise;
+      const second = installDefaultExtensions(input);
+      await Bun.sleep(0);
+
+      expect(install).toHaveBeenCalledTimes(1);
+
+      firstInstallReleased.resolve();
+      await Promise.all([first, second]);
+      expect(install).toHaveBeenCalledTimes(2);
+    } finally {
+      firstInstallReleased.resolve();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("uses local source packages for production defaults when running from source", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
