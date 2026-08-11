@@ -116,7 +116,14 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
           workbench.commandPalette.open({ view: "mode" });
           return;
         }
-        if (!workbench.modes.getMode(args.modeId)) throw new Error(`Workbench mode not registered: ${args.modeId}`);
+        if (!workbench.modes.getMode(args.modeId)) {
+          workbench.notifications.show({
+            level: "error",
+            title: "Mode unavailable",
+            message: `Workbench mode not registered: ${args.modeId}`,
+          });
+          return;
+        }
         workbench.modes.setActiveMode(args.modeId);
       },
     },

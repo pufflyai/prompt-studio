@@ -42,7 +42,6 @@ describe("readRuntimeConfig", () => {
 
     expect(readRuntimeConfig()).toEqual(config);
   });
-
   it("ignores malformed runtime metadata", () => {
     (globalThis as { document?: Pick<Document, "querySelector"> }).document = {
       querySelector: () => ({ content: "%broken" }) as HTMLMetaElement,
