@@ -14,6 +14,7 @@ import { createHistoryExampleModule } from "./history/module";
 import { createKanbanRendererStoryModule } from "./kanban-renderer/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
+import { createModeChromeExampleModule } from "./mode-chrome/module";
 import { createNavigationExampleModule } from "./navigation/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createPreviewTabsExampleModule } from "./preview-tabs/module";
@@ -47,6 +48,9 @@ helloWorldWorkbench.registerModule(createHelloWorldModule());
 
 const workbenchModesWorkbench = createWorkbenchCore();
 workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
+
+const modeChromeWorkbench = createWorkbenchCore();
+modeChromeWorkbench.registerModule(createModeChromeExampleModule());
 
 const workbenchModesWorkspaceWorkbench = createWorkbenchCore();
 workbenchModesWorkspaceWorkbench.registerModule(createWorkbenchModesExampleModule("workspace"));
@@ -168,6 +172,10 @@ export const HelloWorld: Story = {
 
 export const WorkbenchModes: Story = {
   render: () => <WorkbenchStory workbench={workbenchModesWorkbench} />,
+};
+
+export const ModeChrome: Story = {
+  render: () => <WorkbenchStory workbench={modeChromeWorkbench} />,
 };
 
 export const WorkbenchModesWorkspace: Story = {

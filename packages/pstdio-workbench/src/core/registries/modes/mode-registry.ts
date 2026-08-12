@@ -224,6 +224,12 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       if (locationEstablished) return;
       const primary = context.layout.getActivePanel("main");
       if (!primary) return;
+      // Sub Panels cannot become Locations; keep waiting for a Location-capable
+      // placement instead of consuming the one-shot on a tab.
+      const placement = context.layout
+        .getLayout()
+        .regions.main.widgets.find((candidate) => candidate.widgetId === primary.instanceId);
+      if (placement && (placement.role === "sub-panel" || placement.role === "panel-menu")) return;
       locationEstablished = true;
       unsubscribeMainPanel();
       input.establishLocation?.(primary.instanceId);
