@@ -36,10 +36,18 @@ interface ControlsViewState {
 
 const initialState: ControlsViewState = { params: [], groups: [], values: {}, readOnly: false, loading: true };
 
+// Panels and menus unmount when they deactivate; the last state renders instantly
+// on the next mount while the fresh query runs.
+const lastStates = new Map<string, ControlsViewState>();
+
+const stateCacheKey = (contributionId: string, placement: WorkbenchPanelInstance) =>
+  `${contributionId} ${placement.resource?.uri ?? ""}`;
+
 export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
   const { workbench, contribution, placement } = props;
   const resource = placement.resource;
-  const [state, setState] = useState<ControlsViewState>(initialState);
+  const cacheKey = stateCacheKey(contribution.id, placement);
+  const [state, setState] = useState<ControlsViewState>(() => lastStates.get(cacheKey) ?? initialState);
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -50,13 +58,15 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
       Promise.resolve(contribution.executeQuery(resource)).then((result) => {
         if (cancelled || requestRef.current !== requestId) return;
         const values = { ...(contribution.defaultValues ?? {}), ...(result.values ?? {}) } as ParamValueMap;
-        setState({
+        const next = {
           params: (result.params ?? []) as Param[],
           groups: (result.groups ?? []) as InputGroup[],
           values,
           readOnly: Boolean(result.readOnly),
           loading: false,
-        });
+        };
+        lastStates.set(cacheKey, next);
+        setState(next);
       });
     };
     runQuery();
@@ -71,18 +81,18 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
       else subscription?.dispose();
       refreshSubscription.dispose();
     };
-  }, [contribution, resource, workbench]);
+  }, [cacheKey, contribution, resource, workbench]);
 
   const readOnly = state.readOnly || (!contribution.updateValue && !contribution.apply);
   const hasControls = state.params.length > 0 || state.groups.length > 0;
   const showFooter = !readOnly && (Boolean(contribution.apply) || Boolean(contribution.reset));
 
   const handleChange = (id: string, value: ParamValue) => {
-    setState((prev) => {
-      const values = { ...prev.values, [id]: value };
-      if (contribution.updateValue) void contribution.updateValue({ controlId: id, value, values, resource });
-      return { ...prev, values };
-    });
+    // The command runs outside the setState updater: React may invoke updaters
+    // twice (StrictMode), which would double-execute the update command.
+    const values = { ...state.values, [id]: value };
+    if (contribution.updateValue) void contribution.updateValue({ controlId: id, value, values, resource });
+    setState((prev) => ({ ...prev, values: { ...prev.values, [id]: value } }));
   };
 
   return (

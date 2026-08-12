@@ -8,6 +8,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import { modeOwnsNavigation, registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
 import {
   dashboardExtensionViewKind,
   extensionModeLayoutRegion,
@@ -23,6 +24,23 @@ type DashboardExtensionPanel = DashboardExtensionMetadata["panels"][number];
 type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layout"]>["open"]>[number];
 
 const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
+const openableLayoutRegions = new Set(["sidenav", "main", "secondary", "side", "activity", "status"]);
+// Activity and status placements are not mode-scoped by the workbench, so extension
+// chrome staged there must be swept when a mode that does not declare it takes over.
+const modeScopedChromeRegions = ["activity", "status"] as const;
+
+const modeStagesActivityChrome = (mode: DashboardExtensionMode) =>
+  Boolean(mode.layout?.open?.some((entry) => extensionModeLayoutRegion(entry.region) === "activity"));
+
+const resourceKindForMode = (mode: DashboardExtensionMode) =>
+  nativeModeResourceKinds.get(mode.modeId) ??
+  (mode.resourceKind
+    ? {
+        kind: mode.resourceKind,
+        label: resolveLocalizableString(mode.label, mode.extensionId),
+        icon: mode.icon,
+      }
+    : undefined);
 
 const createExtensionViewResource = (input: {
   projectId: string;
@@ -32,6 +50,7 @@ const createExtensionViewResource = (input: {
   kind: dashboardExtensionViewKind,
   uri: `dashboard-workbench://project/${input.projectId}/extension-views/${input.panel.id}`,
   id: input.panel.id,
+  icon: input.panel.icon,
   label: input.title
     ? resolveLocalizableString(input.title, input.panel.extensionId)
     : resolveLocalizableString(input.panel.title, input.panel.extensionId),
@@ -53,9 +72,17 @@ const seedModeEntry = (input: {
   entry: ModeLayoutOpenEntry;
   projectId: string;
   panelById: Map<string, DashboardExtensionPanel>;
+  replacePanelInstanceId?: string;
 }) => {
-  const { ctx, entry, projectId, panelById } = input;
+  const { ctx, entry, projectId, panelById, replacePanelInstanceId } = input;
   const region = extensionModeLayoutRegion(entry.region);
+  if (openableLayoutRegions.has(region)) {
+    ctx.panels.setOpen(region, true);
+    ctx.layout.setRegionVisible(region, true);
+  }
+  // The Side Panel renders only while the shell presentation is attached, so a mode that
+  // stages a side view must also reveal the panel itself.
+  if (region === "side") ctx.sidePanel.setMode("attached");
 
   if (entry.panel) {
     const panel = panelById.get(entry.panel);
@@ -63,7 +90,9 @@ const seedModeEntry = (input: {
     return ctx.layout.openPanel(extensionViewWidgetIdFor(panel), {
       region,
       pinned: entry.pinned,
-      strategy: { kind: "persistent" },
+      strategy: replacePanelInstanceId
+        ? { kind: "replace-panel", instanceId: replacePanelInstanceId }
+        : { kind: "persistent" },
       resource: createExtensionViewResource({ projectId, title: entry.title, panel }),
       title: entry.title
         ? resolveLocalizableString(entry.title, panel.extensionId)
@@ -100,9 +129,39 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
+  if (modeStagesActivityChrome(mode) || modeOwnsNavigation(mode.modeId)) ctx.layout.clearRegion("sidenav");
+
   for (const entry of entries) {
     if (isResourceBoundModeEntry(entry, mode, panelById)) continue;
     seedModeEntry({ ctx, entry, projectId, panelById });
+  }
+};
+
+const activateExtensionModePanels = (input: {
+  ctx: WorkbenchModuleContext;
+  metadata: DashboardExtensionMetadata;
+  mode: DashboardExtensionMode;
+  projectId: string;
+}) => {
+  const panelById = new Map(input.metadata.panels.map((panel) => [panel.id, panel]));
+  for (const entry of input.mode.layout?.open ?? []) {
+    if (!entry.panel || extensionModeLayoutRegion(entry.region) === "main") continue;
+    const panel = panelById.get(entry.panel);
+    if (!panel) continue;
+    const contributionId = extensionViewWidgetIdFor(panel);
+    if (!input.ctx.layout.getPanel(contributionId)) continue;
+    const region = extensionModeLayoutRegion(entry.region);
+    const placement = input.ctx.layout
+      .getLayout()
+      .regions[region].widgets.filter((candidate) => candidate.contributionId === contributionId)
+      .at(-1);
+    seedModeEntry({
+      ctx: input.ctx,
+      entry,
+      projectId: input.projectId,
+      panelById,
+      replacePanelInstanceId: placement?.widgetId,
+    });
   }
 };
 
@@ -171,17 +230,23 @@ const registerExtensionViews = (
                     : undefined,
                 }
               : undefined,
-          panelMenus: panel.panelMenus?.map((menu, menuIndex) => ({
-            id: extensionViewWidgetId(menu.id),
-            title: resolveLocalizableString(menu.title, menu.extensionId),
-            side: menu.side,
-            rendererId: dashboardWidgetIds.extensionView,
-            config: { projectId },
-            ...toWorkbenchExtensionPlacementMetadata({
-              placement: menu.placement,
-              declarationIndex: menuOffsets[index]! + menuIndex,
-            }),
-          })),
+          panelMenus: panel.panelMenus?.map((menu, menuIndex) => {
+            // Native-bodied menus render through their own renderer; only webview
+            // menus mount in the generic extension-view widget.
+            const nativeRendererId =
+              menu.treeRendererId ?? menu.fileRendererId ?? menu.controlsRendererId ?? menu.dataTableRendererId;
+            return {
+              id: nativeRendererId ? menu.id : extensionViewWidgetId(menu.id),
+              title: resolveLocalizableString(menu.title, menu.extensionId),
+              side: menu.side,
+              rendererId: nativeRendererId ?? dashboardWidgetIds.extensionView,
+              config: nativeRendererId ? undefined : { projectId },
+              ...toWorkbenchExtensionPlacementMetadata({
+                placement: menu.placement,
+                declarationIndex: menuOffsets[index]! + menuIndex,
+              }),
+            };
+          }),
         },
       }),
     );
@@ -197,13 +262,17 @@ const registerExtensionModes = (
 ) => {
   const disposables: Disposable[] = [];
 
+  const modeIdsWithActivityItems = new Set((metadata.activityItems ?? []).flatMap((item) => [...item.modes]));
+
   for (const mode of metadata.modes) {
-    const resourceKind = nativeModeResourceKinds.get(mode.modeId);
+    const resourceKind = resourceKindForMode(mode);
     if (resourceKind && !ctx.resources.getKind(resourceKind.kind)) {
       disposables.push(ctx.resources.registerKind(resourceKind));
     }
 
     if (!ctx.modes.getMode(mode.modeId)) {
+      const ownsNavigation = modeStagesActivityChrome(mode) || modeIdsWithActivityItems.has(mode.modeId);
+      if (ownsNavigation) disposables.push(registerNavigationOwningMode(mode.modeId));
       disposables.push(
         ctx.modes.registerMode({
           id: mode.modeId,
@@ -213,7 +282,12 @@ const registerExtensionModes = (
           seed(modeCtx) {
             activateExtensionModeLayout({ ctx: modeCtx, metadata, mode, projectId });
           },
-          enter: (modeCtx) => activateModeChromeContributions(modeCtx, mode.modeId),
+          enter: (modeCtx) => {
+            const chrome = activateModeChromeContributions(modeCtx, mode.modeId);
+            if (ownsNavigation) modeCtx.layout.clearRegion("sidenav");
+            activateExtensionModePanels({ ctx: modeCtx, metadata, mode, projectId });
+            return chrome;
+          },
         }),
       );
     }
@@ -222,8 +296,32 @@ const registerExtensionModes = (
   return disposables;
 };
 
+// Activity/status placements survive mode switches in the workbench, so extension
+// chrome staged there is swept as soon as a mode it is not eligible for takes over.
+const registerModeScopedChromeSweep = (ctx: WorkbenchModuleContext) =>
+  ctx.modes.onDidChangeActive(() => {
+    const activeModeId = ctx.modes.getActiveModeId();
+    if (!activeModeId) return;
+    for (const region of modeScopedChromeRegions) {
+      for (const placement of ctx.layout.getLayout().regions[region].widgets) {
+        const modeIds = ctx.layout.getPanel(placement.contributionId)?.eligibleLocations?.modeIds;
+        if (modeIds && !modeIds.includes(activeModeId)) ctx.layout.removeWidgetPlacement(placement.widgetId);
+      }
+    }
+  });
+
 export const registerExtensionModeContributions = (
   ctx: WorkbenchModuleContext,
   metadata: DashboardExtensionMetadata,
   projectId: string,
-) => [...registerExtensionViews(ctx, metadata, projectId), ...registerExtensionModes(ctx, metadata, projectId)];
+) => {
+  const disposables = [
+    ...registerExtensionViews(ctx, metadata, projectId),
+    ...registerExtensionModes(ctx, metadata, projectId),
+  ];
+  const chromeRegions: readonly string[] = modeScopedChromeRegions;
+  if (metadata.panels.some((panel) => chromeRegions.includes(panel.region))) {
+    disposables.push(registerModeScopedChromeSweep(ctx));
+  }
+  return disposables;
+};

@@ -32,6 +32,14 @@ export const DefaultChecked: Story = {
   },
 };
 
+export const CompactParameterToggle: Story = {
+  args: {
+    size: "xs",
+    defaultChecked: true,
+    children: "Preserve context",
+  },
+};
+
 export const WithLabel: Story = {
   args: {
     children: "Enable notifications",

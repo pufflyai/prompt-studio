@@ -1,7 +1,7 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
 import { toaster, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchTerminalController } from "@pstdio/workbench";
+import type { WorkbenchCore, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createTerminalSessionCapability } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
@@ -20,6 +20,7 @@ import {
 } from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../use-project-extensions";
+import { executeWebviewCommand } from "./extension-webview-command";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
 
 type WebviewDescriptor = {
@@ -38,17 +39,13 @@ interface ExtensionWebviewFrameProps {
   extensionInstanceId?: string;
   installName?: string;
   projectId: string | undefined;
-  // Resource the webview is bound to (e.g. a ticket). Forwarded to the guest so
-  // resource-scoped editors know which resource to load.
-  resource?: { id: string; label?: string };
-  // Workbench terminal controller; the `terminal.session` capability is only
-  // offered when present.
+  resource?: { id: string; label?: string; metadata?: Record<string, unknown> };
   terminal?: WorkbenchTerminalController;
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
+  workbench?: WorkbenchCore;
 }
-
 const isDarkPreference = (preference: string) => /dark/i.test(preference);
 
 // Mirrors the workbench main region background (editor.background). That token lives
@@ -153,7 +150,10 @@ const BridgedWebviewSurface = (props: {
         capabilities={capabilities}
         hostEvents={hostEvents}
         title={view.label}
-        onReady={() => setReady(true)}
+        onReady={() => {
+          setError(null);
+          setReady(true);
+        }}
         onError={(err) => setError(err.message)}
       />
     </Box>
@@ -240,10 +240,21 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   const capabilities = {
     "commands.execute": async (params: unknown) => {
-      const { commandId, params: commandParams } = params as { commandId: string; params?: Record<string, unknown> };
-      return executeCommand.mutateAsync({
-        commandId,
-        body: { params: commandParams, source: "dashboard" },
+      const commandInput = params as Parameters<typeof executeWebviewCommand>[0];
+      return executeWebviewCommand({
+        ...commandInput,
+        workbench: props.workbench,
+        executeExtensionCommand: (input) =>
+          executeCommand.mutateAsync({
+            commandId: input.commandId,
+            body: {
+              metadata: input.metadata,
+              params: input.params,
+              repo: input.repo,
+              resource: input.resource,
+              source: "dashboard",
+            },
+          }),
       });
     },
     "notification.show": (params: unknown) => {

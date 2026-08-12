@@ -207,6 +207,7 @@ const toPanelRecord = (
     id: panel.id,
     extensionId: panel.extensionId,
     title: panel.contribution.title,
+    icon: panel.contribution.icon,
     region: panel.contribution.region,
     closable: panel.contribution.closable,
     group: panel.contribution.group,
@@ -428,6 +429,19 @@ const toControlsRendererRecord = (
   };
 };
 
+const toActivityItemRecord = (
+  item: ExtensionRuntime["activityItems"][number],
+): NonNullable<WorkbenchExtensionMetadata["activityItems"]>[number] => ({
+  id: item.id,
+  extensionId: item.extensionId,
+  title: item.contribution.title,
+  icon: item.contribution.icon,
+  modes: [...item.contribution.modes],
+  placement: item.contribution.placement,
+  commandId: resolveOptionalContributionId(item.name, refIdOf(item.contribution.command)) ?? "unknown",
+  params: item.contribution.params as Record<string, unknown> | undefined,
+});
+
 const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution => {
   const action = item.contribution.action;
   return {
@@ -528,6 +542,7 @@ export const createWorkbenchExtensionMetadata = (
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
     navigation: [],
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
+    activityItems: input.runtime.activityItems.map(toActivityItemRecord),
     settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
     kanbanRenderers: compact(input.runtime.kanbanRenderers.map(toKanbanRendererRecord)),

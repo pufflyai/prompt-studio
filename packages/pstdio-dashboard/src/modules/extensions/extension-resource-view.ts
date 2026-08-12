@@ -52,7 +52,7 @@ const resourceModeEntryForView = (panel: ExtensionPanelRecord, resourceMode: Ext
 };
 
 const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId: string }) =>
-  group.primary.extensionId === event.extensionId ||
+  group.primary?.extensionId === event.extensionId ||
   group.companions.some((companion) => companion.extensionId === event.extensionId);
 
 const companionViewRegion = (panel: ExtensionPanelRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
@@ -111,18 +111,20 @@ const updateResourceGroupTitles = (
   metadata: DashboardExtensionMetadata,
   resource: ResourceRef,
 ) => {
-  updatePlacementForResource(ctx, {
-    panelId: widgetIdFor(group.primary),
-    resource,
-    title: resource.label,
-  });
-  for (const menu of group.primary.panelMenus ?? []) {
+  if (group.primary) {
     updatePlacementForResource(ctx, {
-      panelId: panelMenuWidgetIdFor(menu),
+      panelId: widgetIdFor(group.primary),
       resource,
-      title: menu.side === "left" ? resource.label : resolveLocalizableString(menu.title, menu.extensionId),
-      pinned: true,
+      title: resource.label,
     });
+    for (const menu of group.primary.panelMenus ?? []) {
+      updatePlacementForResource(ctx, {
+        panelId: panelMenuWidgetIdFor(menu),
+        resource,
+        title: menu.side === "left" ? resource.label : resolveLocalizableString(menu.title, menu.extensionId),
+        pinned: true,
+      });
+    }
   }
 
   const resourceMode = resourceModeFor(metadata, resource.kind);
@@ -155,7 +157,7 @@ const removeManagedCompanions = (
 const openResourceViewGroup = (
   ctx: WorkbenchModuleContext,
   input: {
-    group: ResourceEditorGroup;
+    group: ResourceEditorGroup & { primary: ExtensionPanelRecord };
     openInput: { replaceActive?: boolean };
     resource: ResourceRef;
     resourceMode?: ExtensionModeRecord;
@@ -184,6 +186,7 @@ const openResourceCompanionViews = (
   },
 ) => {
   const { companions, resource, resourceMode } = input;
+  const placements = [];
 
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
@@ -193,14 +196,38 @@ const openResourceCompanionViews = (
     const title = companionViewTitle(companion, resource, region);
 
     // A companion is part of the resource's layout, not a peek at it, so it keeps its tab.
-    ctx.layout.openPanel(widgetId, {
-      resource,
-      region,
-      pinned: modeEntry?.pinned,
-      title,
-      strategy: { kind: "persistent" },
-    });
+    placements.push(
+      ctx.layout.openPanel(widgetId, {
+        resource,
+        region,
+        pinned: modeEntry?.pinned,
+        title,
+        strategy: { kind: "persistent" },
+      }),
+    );
   }
+
+  return placements;
+};
+
+// A side-only kind opens as an inspector: the Side Panel shows the bound views while the
+// current mode, main content, and navigation all stay in place.
+const openResourceInspectorGroup = (
+  ctx: WorkbenchModuleContext,
+  input: {
+    companions: ExtensionPanelRecord[];
+    resource: ResourceRef;
+    resourceMode?: ExtensionModeRecord;
+  },
+) => {
+  ctx.panels.setOpen("side", true);
+  ctx.layout.setRegionVisible("side", true);
+  ctx.sidePanel.setMode("attached");
+  const placements = openResourceCompanionViews(ctx, input);
+  const active = placements.at(-1);
+  if (!active) throw new Error(`No inspector panel opened for resource kind: ${input.resource.kind}`);
+  ctx.layout.activatePanel(active.instanceId);
+  return active;
 };
 
 // A view that declares a `resourceKind` is the primary view for that kind. Opening a domain
@@ -218,6 +245,37 @@ export const registerExtensionResourceView = (
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
 
   for (const { kind, primary, companions } of groups) {
+    if (!primary) {
+      const inspector = companions.find((companion) => companion.region === "side");
+      if (!ctx.resources.getKind(kind)) {
+        disposables.push(
+          ctx.resources.registerKind({
+            kind,
+            label: inspector ? resolveLocalizableString(inspector.title, inspector.extensionId) : kind,
+            icon: inspector?.icon,
+          }),
+        );
+      }
+      disposables.push(
+        ctx.resources.registerPresenter({
+          id: `dashboard.extensions.resource-inspector.${kind}`,
+          priority: 1100,
+          canOpen: (resource) => resource.kind === kind,
+          open: (resource) => {
+            const resourceMode = resourceModeFor(input.metadata, kind);
+            const selectedResource = withExtensionResourceContext(resource, {
+              kind,
+              metadata: input.metadata,
+              projectId: input.projectId,
+            });
+            removeManagedCompanions(ctx, managedCompanionWidgetIds, new Set(companions.map(widgetIdFor)));
+            return openResourceInspectorGroup(ctx, { companions, resource: selectedResource, resourceMode });
+          },
+        }),
+      );
+      continue;
+    }
+
     disposables.push(
       ctx.resources.registerPresenter({
         id: `dashboard.extensions.resource-view.${kind}`,

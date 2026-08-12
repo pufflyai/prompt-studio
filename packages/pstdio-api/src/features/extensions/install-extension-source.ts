@@ -36,6 +36,7 @@ import { linkUsableNodeModules } from "./install-extension-source-node-modules";
 export { checkExtensionsRoot, formatExtensionsCheck };
 
 const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
+export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
 export class ExtensionAlreadyInstalledError extends Error {
   targetPath: string;

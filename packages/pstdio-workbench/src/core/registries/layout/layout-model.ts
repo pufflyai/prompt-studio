@@ -105,7 +105,11 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
   const layout = input.getLayout();
   const found = findPlacementByWidgetId(layout, instanceId);
   if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
-  if (found.regionId !== "main") return input.panelMethods.activatePanel(instanceId);
+  // Sub Panels and Panel Menus stay tabs beside their Location: promoting one would
+  // create a second Location and clone every Sub Panel per Location.
+  if (found.regionId !== "main" || found.placement.role === "sub-panel" || found.placement.role === "panel-menu") {
+    return input.panelMethods.activatePanel(instanceId);
+  }
 
   const placement = { ...found.placement, role: "location" as const };
   const ownedPanelMenuIds = new Set(input.getWidget(placement.contributionId)?.ownedPanelMenuIds ?? []);

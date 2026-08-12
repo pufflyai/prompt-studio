@@ -21,6 +21,7 @@ import { extensionHostCompatibilitySchema } from "./host-capabilities";
 import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import {
+  extensionActivityItemRecordSchema,
   extensionModeRecordSchema,
   extensionNavigationRecordSchema,
   extensionPanelRecordSchema,
@@ -58,6 +59,7 @@ export const extensionsCheckResponseSchema = z.object({
   routes: z.array(extensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema),
+  activityItems: z.array(extensionActivityItemRecordSchema).optional(),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
   kanbanRenderers: z.array(extensionKanbanRendererRecordSchema),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
@@ -97,6 +99,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   routes: z.array(workbenchExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
+  activityItems: z.array(extensionActivityItemRecordSchema).optional(),
   settingsSections: z.array(extensionSettingsSectionRecordSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   kanbanRenderers: z.array(extensionKanbanRendererRecordSchema).optional(),

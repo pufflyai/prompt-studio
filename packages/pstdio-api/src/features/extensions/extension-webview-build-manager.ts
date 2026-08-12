@@ -1,4 +1,4 @@
-import { renameSync, rmSync } from "node:fs";
+import { existsSync, renameSync, rmSync } from "node:fs";
 import { type LoadedExtension, loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
@@ -152,7 +152,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         return null;
       }
 
-      const builtSuccessfully = await runExtensionWebviewBuild({
+      const buildOutcome = await runExtensionWebviewBuild({
         activeBuilds,
         building,
         buildWebview,
@@ -165,8 +165,10 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         signature,
         webviewId: webview.id,
       });
-      if (!builtSuccessfully || disposed) {
-        if (!disposed && building.get(key) === signature) backoff.recordBuildFailure(key, signature);
+      if (buildOutcome !== "success" || disposed) {
+        if (!disposed && buildOutcome === "failure" && building.get(key) === signature) {
+          backoff.recordBuildFailure(key, signature);
+        }
         rmSync(stageDir, { recursive: true, force: true });
         return null;
       }
@@ -198,7 +200,14 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const { packageName, row, webview } = input;
     const key = processKey(row.install_name, webview.id);
     const { buildInputs, signature, sourceEntryPath } = inspectWebviewBuild(row, packageName, webview);
-    if (built.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
+    const paths = resolveManagedWebviewPaths({
+      installName: row.install_name,
+      webviewCacheRoot,
+      webviewId: webview.id,
+    });
+    if (built.get(key) === signature && existsSync(paths.distDir)) {
+      return { builtNow: false, key, signature, webviewId: webview.id };
+    }
     if (building.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
     if (backoff.isBuildBlocked(key, signature)) return null;
     return buildNewManagedWebview({ buildInputs, key, packageName, row, signature, sourceEntryPath, webview });

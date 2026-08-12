@@ -9,6 +9,7 @@ import type {
   SetupContext,
 } from "./context";
 import type {
+  ActivityItemContribution,
   ArtifactMountContribution,
   CliContribution,
   CommandPaletteContribution,
@@ -149,6 +150,7 @@ export interface UiContributions {
   routes?: Record<string, RouteContribution>;
   panels?: Record<string, PanelContribution>;
   treeItems?: Record<string, TreeItemContribution>;
+  activityItems?: Record<string, ActivityItemContribution>;
   treeRenderers?: Record<string, TreeRendererContribution>;
   fileRenderers?: Record<string, FileRendererContribution>;
   controlsRenderers?: Record<string, ControlsRendererContribution>;

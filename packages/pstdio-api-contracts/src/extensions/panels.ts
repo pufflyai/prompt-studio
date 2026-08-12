@@ -58,6 +58,7 @@ const extensionPanelRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   title: localizableStringSchema,
+  icon: z.string().optional(),
   region: workbenchRegionSchema,
   closable: z.boolean(),
   group: z.string().optional(),
@@ -105,6 +106,17 @@ const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("route"), route: z.string() }),
   z.object({ kind: z.literal("href"), href: z.string() }),
 ]);
+
+export const extensionActivityItemRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  icon: z.string(),
+  modes: z.array(z.string()),
+  placement: extensionPlacementSchema.optional(),
+  commandId: z.string(),
+  params: jsonObjectSchema.optional(),
+});
 
 export const extensionTreeItemContributionSchema = z.object({
   id: z.string(),
@@ -173,6 +185,7 @@ export type ExtensionPanelRecord = z.infer<typeof extensionPanelRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
 export type ExtensionTreeItemContribution = z.infer<typeof extensionTreeItemContributionSchema>;
+export type ExtensionActivityItemRecord = z.infer<typeof extensionActivityItemRecordSchema>;
 export type ModeLayoutContributionRecord = z.infer<typeof modeLayoutContributionRecordSchema>;
 export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type WorkbenchExtensionPanelRecord = z.infer<typeof workbenchExtensionPanelRecordSchema>;

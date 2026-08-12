@@ -12,6 +12,7 @@ import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
 
 const dashboardWorkbench = createDashboardWorkbench();
+(window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;
 const queryClient = new QueryClient();
 const renderParamField = createDashboardParamFieldRenderer(dashboardWorkbench);
 

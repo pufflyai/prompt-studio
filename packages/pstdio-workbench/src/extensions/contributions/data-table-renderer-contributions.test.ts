@@ -28,6 +28,8 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       region: "main",
       dataTableRendererId: "lab.health",
     } satisfies ViewRecord;
+    const refreshes: string[] = [];
+    workbench.renderers.onDidRefreshDataTableRenderer((event) => refreshes.push(event.dataTableRendererId));
 
     registerWorkbenchExtensionDataTableRenderers(
       {
@@ -89,5 +91,6 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       commandId: "lab.restartSelected",
       body: { params: { rowIds: ["api", "worker"] } },
     });
+    expect(refreshes).toEqual(["lab.health"]);
   });
 });

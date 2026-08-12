@@ -54,7 +54,9 @@ const findReusablePlacement = (
       const index = region.widgets.findIndex(
         (candidate) =>
           candidate.contributionId === widget.id &&
-          candidate.ownerResourceUri === ownerResourceUri &&
+          // Pinned placements are structural chrome, not per-location content, so they are
+          // reused across location switches instead of accumulating one instance per owner.
+          (candidate.pinned === true || candidate.ownerResourceUri === ownerResourceUri) &&
           (!openInput.resource || candidate.resourceUri === openInput.resource.uri),
       );
       if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };

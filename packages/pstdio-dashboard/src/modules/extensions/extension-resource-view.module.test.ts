@@ -11,6 +11,73 @@ import { createWorkspacesModule } from "../workspaces/module";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
+describe("createExtensionsModule resource inspectors", () => {
+  test("opens side-only resource kinds as inspectors without leaving the active mode", async () => {
+    const inspectorMetadata = {
+      ...metadataWithTickets,
+      modes: [],
+      kanbanRenderers: [],
+      treeRenderers: [],
+      panels: [
+        {
+          id: "extension-lab.labArtifactDetail",
+          extensionId: "pstdio.extension-lab",
+          title: "Artifact",
+          icon: "package-search",
+          region: "side" as const,
+          closable: true,
+          resourceKind: "glass-lab-artifact",
+          webview: {
+            entry: {
+              kind: "package-asset" as const,
+              path: "./src/views/lab-artifact.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/extension-lab/webviews/lab-artifact/module.js",
+          },
+        },
+      ],
+    };
+    const loadMetadata = mock(async () => inspectorMetadata);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.modes.setActiveMode("project");
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const artifact = {
+        kind: "glass-lab-artifact",
+        uri: "dashboard-workbench://glass-lab-artifact/artifact-1",
+        id: "artifact-1",
+        label: "Sealed Observation mirror",
+        metadata: { projectId: "project-1" },
+      } satisfies ResourceRef;
+      const primaryBefore = workbench.getPrimaryResource();
+
+      await workbench.resources.openResource(artifact, { replaceActive: true });
+
+      const side = workbench.layout.getLayout().regions.side;
+      expect(side.widgets.map((widget) => widget.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.extension-lab.labArtifactDetail",
+      ]);
+      expect(side.widgets[0]?.resource?.id).toBe("artifact-1");
+      expect(workbench.sidePanel.getMode()).toBe("attached");
+      // Inspectors open in place: no mode switch, no navigation change.
+      expect(workbench.modes.getActiveModeId()).toBe("project");
+      expect(workbench.getPrimaryResource()?.uri).toBe(primaryBefore?.uri);
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+});
+
 describe("createExtensionsModule resource views", () => {
   test("restores the Tickets Location through Back after opening a ticket", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);

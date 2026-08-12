@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "@pstdio/workbench";
+import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { registerExtensionContributions } from "./extension-contribution-registration";
+import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
 
 const stubWebview = (name: string) => ({
   entry: {
@@ -118,6 +119,56 @@ describe("registerExtensionContributions", () => {
       error: expect.any(Error),
     });
     expect(workbench.settings.getPanel("pstdio-planner.ticketStatuses")?.title).toBe("Ticket statuses");
+  });
+
+  test("refreshes extension data tables after successful non-query commands", () => {
+    const workbench = createWorkbenchCore();
+    const refreshes: string[] = [];
+    const artifactDataTableMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      dataTableRenderers: [
+        {
+          id: "extension-lab.artifacts",
+          extensionId: "pstdio.extension-lab",
+          title: "Artifacts",
+          queryCommandId: "extension-lab.artifacts.query",
+        },
+      ],
+    } satisfies DashboardExtensionMetadata;
+
+    workbench.renderers.onDidRefreshDataTableRenderer((event) => refreshes.push(event.dataTableRendererId));
+    const disposable = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async () => ({
+        commandId: "extension-lab.artifacts.query",
+        extensionId: "pstdio.extension-lab",
+        outcome: { ok: true, status: "success", value: { rows: [] } },
+      }),
+      metadata: artifactDataTableMetadata,
+      projectId: "project-1",
+    });
+
+    try {
+      publishExtensionCommandEvent({
+        commandId: "extension-lab.artifacts.query",
+        extensionId: "pstdio.extension-lab",
+        outcome: { ok: true, status: "success" },
+      });
+      publishExtensionCommandEvent({
+        commandId: "extension-lab.artifacts.create",
+        extensionId: "other.extension",
+        outcome: { ok: true, status: "success" },
+      });
+      publishExtensionCommandEvent({
+        commandId: "extension-lab.artifacts.create",
+        extensionId: "pstdio.extension-lab",
+        outcome: { ok: true, status: "success" },
+      });
+
+      expect(refreshes).toEqual(["extension-lab.artifacts"]);
+    } finally {
+      disposeExtensionContributions(disposable);
+    }
   });
 
   test("registers extension DataTable renderers and their panels", () => {

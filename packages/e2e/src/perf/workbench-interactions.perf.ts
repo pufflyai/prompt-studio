@@ -102,7 +102,10 @@ test.describe("PS-165 workbench interactions", () => {
     await preparePage(page, project.id);
 
     await page.goto(`/projects/${project.id}`);
-    await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+    const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+    if (await showSecondary.isVisible()) await showSecondary.click();
+    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
     await expect(separator).toBeVisible();
     await expect(page.locator(".xterm").first()).toBeVisible();

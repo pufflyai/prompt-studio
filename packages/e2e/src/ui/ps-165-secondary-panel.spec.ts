@@ -64,7 +64,7 @@ test("PS-165 starts the Secondary Panel closed and preserves that state after re
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   await expect(showSecondary).toBeVisible();
 
-  await page.getByRole("option", { name: "Open terminal", exact: true }).click();
+  await addTerminal(page);
   const hideSecondary = page.getByRole("button", { name: "Hide Secondary Panel" });
   await expect(hideSecondary).toBeVisible();
   await hideSecondary.click();

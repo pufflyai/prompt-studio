@@ -23,6 +23,52 @@ import {
   metadataWithTickets,
 } from "./module-test-fixtures";
 
+describe("createExtensionsModule activity rail", () => {
+  test("opens the native activity rail for modes with activity items and removes it elsewhere", async () => {
+    const loadMetadata = mock(async () => ({
+      ...metadataWithLabMode,
+      activityItems: [
+        {
+          id: "extension-lab.home",
+          extensionId: "pstdio.extension-lab",
+          title: "Project home",
+          icon: "house",
+          modes: ["pstdio.extension-lab.lab"],
+          commandId: "workbench.action.switchMode",
+          params: { modeId: "project" },
+        },
+      ],
+    }));
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.modes.setActiveMode("project");
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const railPlacements = () =>
+        workbench.layout
+          .getLayout()
+          .regions.activity.widgets.filter((widget) => widget.contributionId === dashboardWidgetIds.activityRail);
+
+      expect(railPlacements()).toHaveLength(0);
+
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+      expect(railPlacements()).toHaveLength(1);
+
+      workbench.modes.setActiveMode("project");
+      expect(railPlacements()).toHaveLength(0);
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+});
+
 describe("createExtensionsModule mode layout", () => {
   test("attaches Panel Menus to the Location established by mode navigation", async () => {
     const overviewId = "extension-lab.labOverview";

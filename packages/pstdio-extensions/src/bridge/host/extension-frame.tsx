@@ -96,6 +96,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const onErrorRef = useRef(onError);
   const onDiagnosticsRef = useRef(onDiagnostics);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  // Bumped when the browser reloads the iframe (e.g. a DOM reparent while the Side
+  // Panel floats). The bump remounts a fresh iframe so a single clean connection
+  // owns the new browsing context.
+  const [frameEpoch, setFrameEpoch] = useState(0);
 
   propsRef.current = extensionProps;
   themeRef.current = theme;
@@ -114,12 +118,23 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const connectedKey = `${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
-    if (connectedKeyRef.current === connectedKey) return;
+    // Moving the iframe in the DOM (e.g. the Side Panel switching between attached and
+    // floating hosts) reloads it to about:blank because the src attribute is empty. A
+    // load event after a completed boot therefore means the runtime document is gone;
+    // bumping the epoch remounts a fresh iframe and re-runs this effect. The listener
+    // attaches before the connected guard so StrictMode's dev-only remount cannot
+    // leave the iframe without one.
+    const onFrameLoad = () => {
+      if (!initializedRef.current) return;
+      setFrameEpoch((epoch) => epoch + 1);
+    };
+    iframe.addEventListener("load", onFrameLoad);
+    const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
+
+    const connectedKey = `${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
+    if (connectedKeyRef.current === connectedKey) return removeLoadListener;
     connectedKeyRef.current = connectedKey;
 
-    initializedRef.current = false;
-    remoteRef.current = null;
     // Snapshot styles at connect time so subsequent parent re-renders that produce a
     // new array reference don't affect what we send in init.
     const stylesAtConnect = view.webview.styles;
@@ -151,42 +166,47 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       },
     };
 
-    const connection = host.connect(iframe, hostApi);
-    // A sandboxed iframe without allow-same-origin posts messages with origin "null".
-    // Leaving the iframe src attribute empty lets rimless validate the guest by
-    // contentWindow identity while still loading the API-owned runtime document.
-    iframe.contentWindow?.location.replace(view.webview.runtimeUrl);
+    const connect = () => {
+      initializedRef.current = false;
+      remoteRef.current = null;
 
-    connection
-      .then(async (conn) => {
-        const remote = conn.remote as GuestRemote;
-        remoteRef.current = remote;
-        hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
+      const connection = host.connect(iframe, hostApi);
+      // A sandboxed iframe without allow-same-origin posts messages with origin "null".
+      // Leaving the iframe src attribute empty lets rimless validate the guest by
+      // contentWindow identity while still loading the API-owned runtime document.
+      iframe.contentWindow?.location.replace(view.webview.runtimeUrl);
 
-        await remote.init({
-          moduleUrl: moduleUrlAtConnect,
-          styles: stylesAtConnect,
-          props: propsRef.current,
-          theme: resolveActiveTheme(themeRef.current),
-          themeVariables: collectChakraThemeVariables(),
+      connection
+        .then(async (conn) => {
+          const remote = conn.remote as GuestRemote;
+          remoteRef.current = remote;
+          hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
+
+          await remote.init({
+            moduleUrl: moduleUrlAtConnect,
+            styles: stylesAtConnect,
+            props: propsRef.current,
+            theme: resolveActiveTheme(themeRef.current),
+            themeVariables: collectChakraThemeVariables(),
+          });
+          initializedRef.current = true;
+          setRuntimeError(null);
+          onReadyRef.current?.();
+        })
+        .catch((error) => {
+          const normalized = normalizeRuntimeError(error);
+          setRuntimeError(normalized.message);
+          onErrorRef.current?.(normalized);
         });
-        initializedRef.current = true;
-        setRuntimeError(null);
-        onReadyRef.current?.();
-      })
-      .catch((error) => {
-        const normalized = normalizeRuntimeError(error);
-        setRuntimeError(normalized.message);
-        onErrorRef.current?.(normalized);
-      });
+    };
+
+    connect();
 
     // Intentionally no connection.close() in cleanup. The iframe runtime handshakes once
     // at iframe load and binds to that connection ID. Closing during React StrictMode's
     // dev-only cleanup would leave the live iframe with no host listener.
-    return () => {
-      // No-op. We deliberately keep the live connection.
-    };
-  }, [view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+    return removeLoadListener;
+  }, [frameEpoch, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.
@@ -250,6 +270,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         </div>
       ) : null}
       <iframe
+        key={frameEpoch}
         ref={iframeRef}
         title={title ?? view.label}
         allow="fullscreen"
@@ -258,6 +279,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
         style={{ ...iframeStyle, colorScheme: theme }}
+        // Moving the iframe in the DOM (e.g. the Side Panel switching between attached
+        // and floating hosts) reloads it to about:blank because the src attribute is
+        // empty. A load event after a completed boot therefore means the runtime
+        // document is gone; bumping the epoch remounts a fresh iframe and reconnects.
+        onLoad={() => {
+          if (initializedRef.current) setFrameEpoch((epoch) => epoch + 1);
+        }}
         onError={() => {
           const message = `Failed to load extension runtime at ${view.webview.runtimeUrl}`;
           setRuntimeError(message);

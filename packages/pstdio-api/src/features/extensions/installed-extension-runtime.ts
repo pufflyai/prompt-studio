@@ -11,7 +11,7 @@ import { createExtensionRootWatcher } from "./extension-root-watcher";
 import type { LoadedExtension } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
-import { resolvePstdioHome } from "./install-extension-source";
+import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
@@ -27,7 +27,7 @@ type RuntimeProcess = {
 export const selectExistingSources = <T extends { source_path: string }>(
   rows: T[],
   exists: (path: string) => boolean = existsSync,
-) => rows.filter((row) => exists(row.source_path));
+) => rows.filter((row) => exists(row.source_path) && !exists(join(row.source_path, EXTENSION_INSTALLING_MARKER)));
 
 export const createInstalledExtensionRuntime = async (input: {
   createRootWatcher?: typeof createExtensionRootWatcher;

@@ -119,7 +119,6 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   expect(breadcrumbBox).not.toBeNull();
   expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
   await expectGlobalHeader(sidenav);
-  await expect(sidenav.getByRole("option", { name: "Lab coding mode", exact: true })).toBeVisible();
 
   const stableElements = [await projectButton.elementHandle()];
   for (const name of globalRowNames) stableElements.push(await row(sidenav, name).elementHandle());

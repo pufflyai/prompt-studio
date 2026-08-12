@@ -280,6 +280,7 @@ describe("checkExtensionHostCompatibility", () => {
       routes: [],
       navigation: [],
       treeItems: [],
+      activityItems: [],
       settingsSections: [
         {
           id: "lab.section",

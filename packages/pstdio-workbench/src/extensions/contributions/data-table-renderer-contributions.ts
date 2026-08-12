@@ -118,7 +118,10 @@ const registerRenderer = (
       label: localize(action.label, action.id),
       icon: action.icon ? createElement(WorkbenchIcon, { name: action.icon, size: 16 }) : undefined,
       destructive: action.destructive,
-      run: (row) => run(action.commandId, { rowId: row.id }, row.resource).then(() => undefined),
+      run: async (row) => {
+        await run(action.commandId, { rowId: row.id }, row.resource);
+        context.workbench.renderers.refreshDataTableRenderer(record.id);
+      },
     })),
   });
 };

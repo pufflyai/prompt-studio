@@ -1,4 +1,5 @@
 import type {
+  ActivityItemContribution,
   CommandMiddlewareHandler,
   CommandPaletteContribution,
   CommandPaletteResourceContribution,
@@ -173,6 +174,15 @@ export interface RuntimeTreeItemRecord {
   name: string;
   sourcePath: string;
   contribution: TreeItemContribution;
+}
+
+export interface RuntimeActivityItemRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ActivityItemContribution;
 }
 
 export interface RuntimeModeRecord {
@@ -408,6 +418,7 @@ export interface ExtensionRuntime {
   routes: RuntimeRouteRecord[];
   navigation: never[];
   treeItems: RuntimeTreeItemRecord[];
+  activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
   kanbanRenderers: RuntimeKanbanRendererRecord[];

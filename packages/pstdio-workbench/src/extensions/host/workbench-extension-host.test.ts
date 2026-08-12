@@ -62,7 +62,10 @@ const metadata = {
       label: "Review",
       layout: {
         panels: ["main"],
-        open: [{ region: "main", panel: "lab.ticketPanel", pinned: true }],
+        open: [
+          { region: "main", panel: "lab.ticketPanel", pinned: true },
+          { region: "side", panel: "lab.rows" },
+        ],
       },
     },
   ],
@@ -234,6 +237,8 @@ describe("registerWorkbenchExtensionContributions", () => {
       panelId: "lab.ticketPanel",
       pinned: true,
     });
+    expect(workbench.layout.listPanelInstances("side").at(-1)).toMatchObject({ panelId: "lab.rows" });
+    expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
   });
 
   test("keeps webview command executions in the extension command response envelope", async () => {

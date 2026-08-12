@@ -29,10 +29,18 @@ interface WorkbenchDataTableViewProps {
 
 const initialResult: DataTableRendererQueryResult = { rows: [] };
 
+// Tabs unmount when they deactivate, so without a cache every revisit flashes a
+// loading state. The last result renders instantly while the fresh query runs.
+const lastResults = new Map<string, DataTableRendererQueryResult>();
+
+const resultCacheKey = (contributionId: string, placement: WorkbenchPanelInstance) =>
+  `${contributionId} ${placement.resource?.uri ?? ""}`;
+
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
-  const [result, setResult] = useState(initialResult);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = resultCacheKey(contribution.id, placement);
+  const [result, setResult] = useState(() => lastResults.get(cacheKey) ?? initialResult);
+  const [loading, setLoading] = useState(() => !lastResults.has(cacheKey));
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -44,6 +52,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         contribution.executeQuery({ resource: placement.resource, modeId: workbench.modes.getActiveModeId() }),
       ).then((next) => {
         if (cancelled || requestRef.current !== requestId) return;
+        lastResults.set(cacheKey, next);
         setResult(next);
         setLoading(false);
       });
@@ -59,7 +68,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       else subscription?.dispose();
       refreshSubscription.dispose();
     };
-  }, [contribution, placement.resource, workbench]);
+  }, [cacheKey, contribution, placement.resource, workbench]);
 
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
   const model = useMemo(() => buildDataTableRendererData(result.rows, columns), [columns, result.rows]);

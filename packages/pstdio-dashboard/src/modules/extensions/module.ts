@@ -41,6 +41,7 @@ import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { syncActiveResourceContext } from "./active-resource-context";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
+import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import {
@@ -105,6 +106,47 @@ const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId:
   if (!route) throw new Error(`Extension route is not available: ${routePath}`);
   if (!routeProjectId) throw new Error(`Extension route has no project: ${routePath}`);
   return createDashboardExtensionRouteResource({ icon: resource.icon, projectId: routeProjectId, route });
+};
+
+const registerExtensionResourcePresenters = (ctx: WorkbenchModuleContext, getProjectId: () => string | undefined) => {
+  ctx.resources.registerPresenter({
+    id: "dashboard.extensions.panel-presenter",
+    priority: 1000,
+    canOpen: (resource) => resource.kind === dashboardExtensionViewKind,
+    open: (resource, openInput) => {
+      const viewProjectId =
+        typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : getProjectId();
+      const view = getCachedDashboardExtensionMetadata(viewProjectId)?.panels.find(
+        (candidate) => candidate.id === resource.id,
+      );
+      if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
+      selectDashboardNavigationResource(ctx, resource);
+      return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
+        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
+        resource,
+        region: extensionViewRegion(view.region),
+        title: resource.label,
+      });
+    },
+  });
+  ctx.resources.registerPresenter({
+    id: "dashboard.extensions.route-presenter",
+    priority: 1000,
+    canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
+    open: (resource, openInput) => {
+      const availableResource = resolveAvailableRouteResource(resource, getProjectId());
+      selectDashboardNavigationResource(ctx, availableResource, { modeId: "project" });
+      setResourceBreadcrumb(ctx, availableResource);
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+        ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
+      }
+      return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
+        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
+        resource: availableResource,
+        title: availableResource.label,
+      });
+    },
+  });
 };
 
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
@@ -184,6 +226,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }
         refreshOpenExtensionRoutes(ctx, metadata, nextProjectId);
+        activityRail.sync();
         restorePrimaryResourceIfRefreshClearedIt(ctx, {
           projectId: nextProjectId,
           resource: primaryResourceBeforeRefresh,
@@ -269,49 +312,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         id: dashboardWidgetIds.extensionView,
         render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
       });
+      const activityRail = registerDashboardActivityRail(ctx, () => metadata);
       ctx.resources.registerProvider({
         id: "dashboard-workbench.extension-routes",
         kind: dashboardExtensionRouteKind,
         list: () => buildDashboardExtensionRouteEntries({ metadata, projectId }),
       });
-      ctx.resources.registerPresenter({
-        id: "dashboard.extensions.panel-presenter",
-        priority: 1000,
-        canOpen: (resource) => resource.kind === dashboardExtensionViewKind,
-        open: (resource, openInput) => {
-          const viewProjectId =
-            typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : projectId;
-          const view = getCachedDashboardExtensionMetadata(viewProjectId)?.panels.find(
-            (candidate) => candidate.id === resource.id,
-          );
-          if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
-          selectDashboardNavigationResource(ctx, resource);
-          return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-            resource,
-            region: extensionViewRegion(view.region),
-            title: resource.label,
-          });
-        },
-      });
-      ctx.resources.registerPresenter({
-        id: "dashboard.extensions.route-presenter",
-        priority: 1000,
-        canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
-        open: (resource, openInput) => {
-          const availableResource = resolveAvailableRouteResource(resource, projectId);
-          selectDashboardNavigationResource(ctx, availableResource, { modeId: "project" });
-          setResourceBreadcrumb(ctx, availableResource);
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, availableResource.uri);
-          }
-          return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
-            strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-            resource: availableResource,
-            title: availableResource.label,
-          });
-        },
-      });
+      registerExtensionResourcePresenters(ctx, () => projectId);
 
       const activeResourceContext = syncActiveResourceContext(ctx);
 
@@ -338,6 +345,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearContributions();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);
+          activityRail.dispose();
           unsubscribeProject();
           unsubscribeSync();
         },

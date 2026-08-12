@@ -135,6 +135,46 @@ describe("createLayoutModel Location-owned placements", () => {
     ]);
   });
 
+  test("never promotes a Sub Panel placement into a Location", () => {
+    const layout = createLayoutModel();
+
+    layout.registerPanel({
+      closable: false,
+      id: "lab.overview",
+      title: "Overview",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerPanel({
+      closable: false,
+      eligibleLocations: {},
+      id: "lab.cams",
+      title: "Cams",
+      region: "main",
+      rendererId: "test.renderer",
+    });
+
+    const overview = layout.openPanel("lab.overview", {
+      resource: { kind: "extension-view", uri: "pstdio://view/overview", label: "Overview" },
+      strategy: { kind: "persistent" },
+    });
+    layout.establishLocation(overview.instanceId);
+    const cams = layout.openPanel("lab.cams", {
+      resource: { kind: "extension-view", uri: "pstdio://view/cams", label: "Cams" },
+      strategy: { kind: "persistent" },
+    });
+
+    // Seeding or navigation may hand any active placement to establishLocation; a
+    // Sub Panel must stay a tab beside the Location, or Sub Panels get cloned per
+    // accidental Location.
+    layout.establishLocation(cams.instanceId);
+
+    const placements = layout.getLayout().regions.main.widgets;
+    expect(placements.find((placement) => placement.widgetId === cams.instanceId)?.role).toBe("sub-panel");
+    expect(placements.filter((placement) => placement.role === "location")).toHaveLength(1);
+  });
+
   test("keeps singleton Sub Panels scoped to their Location when switching Locations", () => {
     const layout = createLayoutModel();
 
@@ -169,6 +209,37 @@ describe("createLayoutModel Location-owned placements", () => {
       ]),
     );
     expect(layout.getLayout().regions.main.activeWidgetId).toBe(alphaNotes.widgetId);
+  });
+
+  test("reuses a pinned Sub Panel across Locations instead of duplicating chrome", () => {
+    const layout = createLayoutModel();
+
+    layout.registerLocation({
+      id: "project.location",
+      title: "Project",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerSubPanel({
+      id: "lab.sidenav",
+      title: "Lab Sidenav",
+      region: "side",
+      rendererId: "test.renderer",
+    });
+
+    const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
+    const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
+    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true });
+    const first = layout.openWidget("lab.sidenav", { pinned: true });
+    layout.openWidget("project.location", { resource: betaResource, replaceActive: true });
+    const second = layout.openWidget("lab.sidenav", { pinned: true });
+
+    expect(second.widgetId).toBe(first.widgetId);
+    const placements = layout
+      .getLayout()
+      .regions.side.widgets.filter((placement) => placement.contributionId === "lab.sidenav");
+    expect(placements).toHaveLength(1);
   });
 
   test("keeps singleton Panel Menus scoped to their Location", () => {

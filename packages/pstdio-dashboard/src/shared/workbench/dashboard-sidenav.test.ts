@@ -5,8 +5,30 @@ import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidenavContribution } from "./contributions/sidenav-tree-contributions";
 import { registerDashboardSidenav } from "./dashboard-sidenav";
+import { registerNavigationOwningMode } from "./mode-navigation-ownership";
 
 describe("registerDashboardSidenav", () => {
+  test("keeps the sidenav hidden while a navigation-owning mode is active", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    workbench.modes.registerMode({ id: "other", label: "Other", activate: () => undefined });
+    const ownership = registerNavigationOwningMode("lab");
+    registerDashboardSidenav(workbench);
+
+    try {
+      workbench.modes.setActiveMode("lab");
+      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
+
+      workbench.modes.setActiveMode("other");
+      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
+        dashboardWidgetIds.dashboardSidenav,
+      ]);
+    } finally {
+      ownership.dispose();
+    }
+  });
+
   test("defaults the Sessions group to expanded", () => {
     const workbench = createWorkbenchCore();
 

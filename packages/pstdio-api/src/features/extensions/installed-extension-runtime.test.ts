@@ -12,8 +12,8 @@ import {
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { resolvePstdioHome } from "./install-extension-source";
-import { createInstalledExtensionRuntime } from "./installed-extension-runtime";
+import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
+import { createInstalledExtensionRuntime, selectExistingSources } from "./installed-extension-runtime";
 
 const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -62,6 +62,25 @@ const writeExtension = (dir: string, name: string) => {
   );
   writeFileSync(join(dir, "extension.ts"), "export default {};\n");
 };
+
+describe("selectExistingSources", () => {
+  test("does not watch or build an installed source while it is being replaced", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-installing-runtime-source-"));
+    const readySource = join(root, "ready");
+    const installingSource = join(root, "installing");
+    mkdirSync(readySource);
+    mkdirSync(installingSource);
+    writeFileSync(join(installingSource, EXTENSION_INSTALLING_MARKER), "");
+
+    try {
+      expect(selectExistingSources([{ source_path: readySource }, { source_path: installingSource }])).toEqual([
+        { source_path: readySource },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("createInstalledExtensionRuntime", () => {
   test("lets the extension service own runtime refresh after a watched source reload", async () => {

@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { ExtensionWebviewBuilder } from "./extension-webview-builder";
+import { EXTENSION_INSTALLING_MARKER } from "./install-extension-source";
 
 export type InstalledSourceWithManifest = {
   install_name: string;
@@ -12,6 +15,8 @@ type ExpectedWebviewBuildSource = {
 };
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const isSourceChanging = (sourcePath: string) => existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER));
 
 export const webviewBuildFailure = (installName: string, webviewId: string, details: string) =>
   new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
@@ -39,7 +44,7 @@ export const runExtensionWebviewBuild = async (input: {
   signature: string;
   webviewId: string;
 }) => {
-  if (input.isDisposed()) return false;
+  if (input.isDisposed()) return "failure";
 
   const controller = new AbortController();
   input.activeBuilds.add(controller);
@@ -51,6 +56,7 @@ export const runExtensionWebviewBuild = async (input: {
       signal: controller.signal,
     });
   } catch (error) {
+    if (isSourceChanging(input.row.source_path)) return "source-changing";
     if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
       await input.reportFailure(
         input.row.install_name,
@@ -59,12 +65,13 @@ export const runExtensionWebviewBuild = async (input: {
         expectedWebviewBuildSource(input.row),
       );
     }
-    return false;
+    return "failure";
   } finally {
     input.activeBuilds.delete(controller);
   }
 
-  if (result.success) return true;
+  if (result.success) return "success";
+  if (isSourceChanging(input.row.source_path)) return "source-changing";
   if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
     await input.reportFailure(
       input.row.install_name,
@@ -73,5 +80,5 @@ export const runExtensionWebviewBuild = async (input: {
       expectedWebviewBuildSource(input.row),
     );
   }
-  return false;
+  return "failure";
 };

@@ -17,6 +17,7 @@ import {
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { suppressesSidenavTabStrip } from "./region-tabs-visibility";
 
 const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
 
@@ -143,7 +144,13 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
     workbenchRegionTabLeadingMenuPath(region),
   );
 
-  return shouldShowRegionTabs(locationTabs.length > 1 ? [...locationTabs, ...placements] : placements, {
+  const tabPlacements = suppressesSidenavTabStrip(region, placements)
+    ? []
+    : locationTabs.length > 1
+      ? [...locationTabs, ...placements]
+      : placements;
+
+  return shouldShowRegionTabs(tabPlacements, {
     hasLeadingActions: leadingItems.length > 0,
     hasAddAction:
       isWorkbenchPanelRegion(region) &&

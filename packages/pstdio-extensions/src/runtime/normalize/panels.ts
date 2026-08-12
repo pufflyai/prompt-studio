@@ -1,5 +1,6 @@
 import type {
   NormalizedExtension,
+  RuntimeActivityItemRecord,
   RuntimePanelRecord,
   RuntimeRouteRecord,
   RuntimeSettingsPanelRecord,
@@ -189,6 +190,21 @@ const registerTreeItems = (ext: NormalizedExtension, source: LoadedExtensionSour
   }
 };
 
+const registerActivityItems = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  for (const [localId, item] of Object.entries(source.definition.activityItems ?? {})) {
+    if (!isRecord(item) || !isLocalizableString(item.title) || typeof item.icon !== "string") continue;
+    if (!Array.isArray(item.modes) || item.modes.length === 0) continue;
+    runtime.activityItems.push({
+      id: contributionId(ext, localId),
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: item as RuntimeActivityItemRecord["contribution"],
+    });
+  }
+};
+
 const registerRoutes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, route] of Object.entries(source.definition.routes ?? {})) {
     if (!isRecord(route) || typeof route.path !== "string" || !isLocalizableString(route.label)) continue;
@@ -290,6 +306,7 @@ export const registerPanelContributions = (
   registerPanels(ext, source, runtime);
   registerRoutes(ext, source, runtime);
   registerTreeItems(ext, source, runtime);
+  registerActivityItems(ext, source, runtime);
   reportUnsupportedNavigation(ext, source, runtime);
   registerSettingsSections(ext, source, runtime);
   registerSettingsPanels(ext, source, runtime);

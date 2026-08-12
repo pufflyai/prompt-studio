@@ -53,6 +53,18 @@ export interface CommandPaletteContribution<TParams extends Struct = Struct> {
   params?: Partial<TParams>;
 }
 
+// An icon-only action in the workbench activity rail. The host renders the rail
+// natively for the declared modes; there is no webview involved.
+export interface ActivityItemContribution<TParams extends Struct = Struct> {
+  title: Localizable<string>;
+  icon: string;
+  /** Mode ids whose activity rail shows this item. */
+  modes: readonly string[];
+  placement?: "first" | "default" | "last";
+  command: CommandRef<TParams, unknown> | string;
+  params?: Partial<TParams>;
+}
+
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
   label: Localizable<string>;
@@ -115,6 +127,8 @@ export interface WorkbenchLocationEligibility {
 
 export interface PanelContributionBase {
   title: Localizable<string>;
+  /** Icon shown on the panel's tab and on resources opened for the panel. */
+  icon?: string;
   region: WorkbenchRegion;
   closable: boolean;
   group?: string;

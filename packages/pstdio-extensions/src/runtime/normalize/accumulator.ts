@@ -48,6 +48,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   routes: [],
   navigation: [],
   treeItems: [],
+  activityItems: [],
   settingsSections: [],
   settingsPanels: [],
   kanbanRenderers: [],

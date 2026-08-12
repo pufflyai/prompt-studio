@@ -7,7 +7,10 @@ import {
 } from "@pstdio/workbench/extensions";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
-import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  publishExtensionCommandEvent,
+  subscribeToExtensionCommandFeed,
+} from "@/shared/extensions/extension-webview-broadcast";
 import {
   buildDashboardExtensionCommandPaletteRegistrations,
   buildDashboardExtensionMenuRegistrations,
@@ -73,6 +76,7 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     settingsPanels: scoped(metadata.settingsPanels) ?? [],
     settingsDefinitions: scoped(metadata.settingsDefinitions),
     treeItems: scoped(metadata.treeItems),
+    activityItems: scoped(metadata.activityItems),
     panels: scoped(metadata.panels) ?? [],
   } satisfies ResolvedWorkbenchExtensionMetadata;
 };
@@ -158,6 +162,17 @@ const registerSingleExtensionContributions = (
       ),
     );
     disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
+    if (metadata.dataTableRenderers?.length) {
+      const dataTableQueryCommandIds = new Set(metadata.dataTableRenderers.map((renderer) => renderer.queryCommandId));
+      disposables.push({
+        dispose: subscribeToExtensionCommandFeed((event) => {
+          if (!event.outcome.ok || dataTableQueryCommandIds.has(event.commandId)) return;
+          for (const renderer of metadata.dataTableRenderers ?? []) {
+            if (renderer.extensionId === event.extensionId) ctx.renderers.refreshDataTableRenderer(renderer.id);
+          }
+        }),
+      });
+    }
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
     disposables.push(
       registerWorkbenchExtensionFileRenderers({

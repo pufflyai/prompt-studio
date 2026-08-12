@@ -29,7 +29,7 @@ describe("groupResourceEditorViews", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.kind).toBe("ticket");
     // The editor (target main) is primary even though it is listed after the panel.
-    expect(groups[0]?.primary.id).toBe("editor");
+    expect(groups[0]?.primary?.id).toBe("editor");
     expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["properties"]);
   });
 
@@ -39,8 +39,25 @@ describe("groupResourceEditorViews", () => {
 
     const groups = groupResourceEditorViews([files, editor]);
 
-    expect(groups[0]?.primary.id).toBe("editor");
+    expect(groups[0]?.primary?.id).toBe("editor");
     expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["files"]);
+  });
+
+  test("groups side-only kinds as inspector groups without a primary", () => {
+    const detail = panel({ id: "detail", resourceKind: "artifact", region: "side" });
+
+    const groups = groupResourceEditorViews([detail]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.kind).toBe("artifact");
+    expect(groups[0]?.primary).toBeUndefined();
+    expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["detail"]);
+  });
+
+  test("still drops kinds with neither a main nor a side panel", () => {
+    const files = panel({ id: "files", resourceKind: "artifact", region: "sidenav" });
+
+    expect(groupResourceEditorViews([files])).toHaveLength(0);
   });
 
   test("excludes modal and kind-less views, and keeps kinds independent", () => {

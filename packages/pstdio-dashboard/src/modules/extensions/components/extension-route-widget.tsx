@@ -34,6 +34,7 @@ export const ExtensionRouteWidget = (props: { input: WorkbenchPanelRenderInput }
       title={resolveLocalizableString(route.label, route.extensionId)}
       webview={route.webview}
       webviewId={route.id}
+      workbench={input.workbench}
     />
   );
 };

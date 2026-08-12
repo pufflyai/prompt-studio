@@ -338,6 +338,10 @@ const openModePanel = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExte
     title: text(entry.title),
     strategy: { kind: "persistent" },
   });
+  // Seeding a Side Panel arrangement is ingress — reveal the region so the mode's
+  // declared layout is actually visible the first time the mode opens.
+  const region = entry.region ?? ctx.layout.getPanel(entry.panel)?.region;
+  if (region === "side") ctx.shell.setSidePanelPresentation("attached");
 };
 
 const openModeResource = (

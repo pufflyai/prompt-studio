@@ -10,6 +10,7 @@ export const dashboardWidgetIds = {
   dashboardSidenav: "dashboard-workbench.sidenav",
   extensionRoute: "dashboard-workbench.extension-route",
   extensionView: "dashboard-workbench.extension-view",
+  activityRail: "dashboard-workbench.activity-rail",
   settings: "dashboard-workbench.settings",
   session: "dashboard-workbench.session",
   notificationsModal: "dashboard-workbench.notifications-modal",

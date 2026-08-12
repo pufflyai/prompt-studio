@@ -9,6 +9,7 @@ import {
   getSidenavContributionSections,
   subscribeSidenavContributions,
 } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 
 // The unified sidenav composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions/workspace) and extension-declared
@@ -56,7 +57,7 @@ export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId
 
 const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
-  if (!mode || mode === "project-selection") return;
+  if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) return;
   showDashboardSidenav(ctx);
 };
 

@@ -5,7 +5,10 @@ import {
 } from "@pstdio/workbench/extensions";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { localizeExtensionValue } from "@/shared/extensions/extension-localization";
-import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  publishExtensionCommandEvent,
+  subscribeToExtensionCommandFeed,
+} from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 export const registerExtensionControlsRenderers = (
@@ -24,7 +27,9 @@ export const registerExtensionControlsRenderers = (
   const commandContext: WorkbenchExtensionCommandContext = {
     executeCommand: async (commandId, body) => {
       const response = await executeExtensionCommand(projectId, commandId, body);
-      return queryCommandIds.has(commandId) ? localizeExtensionValue(response, records[0]?.extensionId) : response;
+      const isQueryCommand = queryCommandIds.has(commandId);
+      if (!isQueryCommand) publishExtensionCommandEvent(response);
+      return isQueryCommand ? localizeExtensionValue(response, records[0]?.extensionId) : response;
     },
     projectId,
     workbench: ctx,
