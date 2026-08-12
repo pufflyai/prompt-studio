@@ -113,6 +113,40 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
 | `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                     |
 
+## Host Capability Validation
+
+`pst extensions check` validates declared dashboard UI surfaces against the dashboard build that will load them. Contract-valid extensions can still fail if the host does not advertise the bridge for a surface. The diagnostic code is `extension_host_capability_missing`; its metadata includes `contributionId`, `missingCapability`, `hostVersion`, and `requiredSince` when known.
+
+If no host descriptor is available, the check reports `hostCompatibility.status: "unverified"`. This means the extension contract was checked, but dashboard bridge support was not proven.
+
+Current dashboard capability names:
+
+| Capability | Surface |
+| --- | --- |
+| `command.v1` | Dashboard command execution. |
+| `menu.v1` | Menu command entries. |
+| `command-palette.v1` | Command palette entries. |
+| `mode.v1` | Workbench modes and resource layouts. |
+| `panel.webview.v1` | Webview panel bodies. |
+| `panel.tree-renderer.v1` | Tree renderer panel bodies. |
+| `panel.file-renderer.v1` | File renderer panel bodies. |
+| `panel.controls-renderer.v1` | Controls renderer panel bodies and menus. |
+| `panel.data-table-renderer.v1` | Data table renderer panel bodies. |
+| `route.webview.v1` | Webview routes. |
+| `tree-item.v1` | Project sidenav tree items. |
+| `settings.section.v1` | Settings navigation sections. |
+| `settings.panel.webview.v1` | Settings webview panels. |
+| `settings.definition.v1` | Extension setting definitions. |
+| `renderer.kanban.v1` | Native kanban renderers. |
+| `renderer.data-table.v1` | Native data table renderers. |
+| `renderer.command-palette-resource.v1` | Command palette resource providers. |
+| `renderer.tree.v1` | Native tree renderers. |
+| `renderer.file.v1` | Native file renderers. |
+| `renderer.controls.v1` | Native controls renderers. |
+| `keybinding.v1` | Dashboard keybindings. |
+| `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
+| `resource-view.v1` | Resource detail views. |
+
 ## Commands And Params
 
 Commands can be exposed to the CLI with `cli: true` or `cli: { path, description, examples }`. Add dashboard entry

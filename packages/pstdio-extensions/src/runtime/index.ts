@@ -14,6 +14,10 @@ export {
   pstdioHomeRoot,
 } from "./discovery";
 export {
+  checkExtensionHostCompatibility,
+  dashboardExtensionHostCapabilities,
+} from "./host-capabilities";
+export {
   type DependencyInstallReport,
   ExtensionInstallError,
   type FetchGithubExtensionInput,

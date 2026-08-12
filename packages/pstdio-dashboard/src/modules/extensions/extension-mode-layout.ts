@@ -1,5 +1,9 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
-import { registerWorkbenchExtensionPanel } from "@pstdio/workbench/extensions";
+import {
+  panelMenuDeclarationOffsets,
+  registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
+} from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -136,9 +140,10 @@ const registerExtensionViews = (
 ) => {
   const disposables: Disposable[] = [];
   const modeIdsByViewId = getModeIdsByViewId(metadata);
+  const menuOffsets = panelMenuDeclarationOffsets(metadata.panels);
 
-  for (const panel of metadata.panels) {
-    if (!panel.webview) continue;
+  metadata.panels.forEach((panel, index) => {
+    if (!panel.webview) return;
     const modeIds = modeIdsByViewId.get(panel.id);
     const isModeLocation = panel.region === "main" && Boolean(modeIds?.length);
     const eligibleModeIds = isModeLocation ? undefined : modeIds;
@@ -156,6 +161,7 @@ const registerExtensionViews = (
           rendererId: dashboardWidgetIds.extensionView,
           config: { ...(panel.region === "overlay" ? modalOverlayConfig : {}), projectId },
           resourceKinds,
+          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
           eligibleLocations:
             eligibleModeIds || panel.eligibleLocations
               ? {
@@ -165,17 +171,21 @@ const registerExtensionViews = (
                     : undefined,
                 }
               : undefined,
-          panelMenus: panel.panelMenus?.map((menu) => ({
+          panelMenus: panel.panelMenus?.map((menu, menuIndex) => ({
             id: extensionViewWidgetId(menu.id),
             title: resolveLocalizableString(menu.title, menu.extensionId),
             side: menu.side,
             rendererId: dashboardWidgetIds.extensionView,
             config: { projectId },
+            ...toWorkbenchExtensionPlacementMetadata({
+              placement: menu.placement,
+              declarationIndex: menuOffsets[index]! + menuIndex,
+            }),
           })),
         },
       }),
     );
-  }
+  });
 
   return disposables;
 };

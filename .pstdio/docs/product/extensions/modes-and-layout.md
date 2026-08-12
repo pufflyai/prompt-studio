@@ -32,6 +32,7 @@ export default defineExtension({
 - `layout.reset: true` clears all mode-layout areas before opening mode content. A reset array can target specific areas.
 - `layout.open` can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
 - Mode-specific visibility belongs in `when.mode` on the UI contribution. If a `treeItems` contribution omits `when.mode`, it appears in every active mode where the host left tree exists.
+- Extension panel `placement` controls relative tab order inside each region. `layout.open` still controls which panels open, and open order can still choose the active panel until the future views presentation model replaces this behavior.
 
 ## Resource-Owned Modes
 

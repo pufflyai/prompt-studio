@@ -2,7 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExtensionRuntime } from "../types/runtime";
 import { checkExtensions, formatCheckReport } from "./check";
+import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "./host-capabilities";
 
 const tempDirs: string[] = [];
 
@@ -199,5 +201,110 @@ describe("checkExtensions", () => {
 
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("invalid_schedule_command");
+  });
+
+  test("reports unverified host compatibility when no descriptor is available", async () => {
+    const home = createTempHome();
+    writeExtension(home, "extension-lab", validExtensionSource);
+
+    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false, hostCapabilities: null });
+
+    expect(result.hostCompatibility.status).toBe("unverified");
+    expect(result.warningCount).toBe(1);
+    expect(formatCheckReport(result)).toContain("Host compatibility: unverified");
+  });
+});
+
+describe("checkExtensionHostCompatibility", () => {
+  test("flags registered dashboard surfaces when the host does not advertise their bridges", () => {
+    const runtime = {
+      extensions: [],
+      commands: [],
+      middlewares: [],
+      hooks: [],
+      cli: [],
+      schedules: [],
+      artifactMounts: [],
+      modes: [],
+      panels: [
+        {
+          id: "lab.panel",
+          localId: "panel",
+          extensionId: "pstdio.lab",
+          name: "lab",
+          sourcePath: "/extension/extension.ts",
+          contribution: {
+            title: "Rows",
+            region: "main",
+            closable: true,
+            dataTableRenderer: "rows",
+            resourceKind: "ticket",
+          },
+        },
+      ],
+      routes: [],
+      navigation: [],
+      treeItems: [],
+      settingsSections: [
+        {
+          id: "lab.section",
+          localId: "section",
+          extensionId: "pstdio.lab",
+          name: "lab",
+          sourcePath: "/extension/extension.ts",
+          contribution: { title: "Lab" },
+        },
+      ],
+      settingsPanels: [],
+      kanbanRenderers: [],
+      dataTableRenderers: [
+        {
+          id: "lab.rows",
+          localId: "rows",
+          extensionId: "pstdio.lab",
+          name: "lab",
+          sourcePath: "/extension/extension.ts",
+          contribution: { title: "Rows", queryCommand: "query" },
+        },
+      ],
+      commandPaletteResources: [],
+      treeRenderers: [],
+      fileRenderers: [],
+      controlsRenderers: [],
+      keybindings: [],
+      settings: [],
+      templateTypes: [],
+      templates: [],
+      skills: [],
+      themes: [],
+      fileIconThemes: [],
+      translations: [],
+      harnesses: [],
+      workspaceTypes: [],
+      diagnostics: [],
+    } satisfies ExtensionRuntime;
+    const host = {
+      ...dashboardExtensionHostCapabilities,
+      hostVersion: "0.25.1",
+      capabilities: Object.fromEntries(
+        Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
+          ([name]) =>
+            name !== "renderer.data-table.v1" &&
+            name !== "panel.data-table-renderer.v1" &&
+            name !== "settings.section.v1" &&
+            name !== "resource-view.v1",
+        ),
+      ),
+    };
+
+    const result = checkExtensionHostCompatibility(runtime, host);
+
+    expect(result.status).toBe("verified");
+    expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
+      "panel.data-table-renderer.v1",
+      "settings.section.v1",
+      "renderer.data-table.v1",
+      "resource-view.v1",
+    ]);
   });
 });

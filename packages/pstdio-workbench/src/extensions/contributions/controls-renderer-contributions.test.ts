@@ -6,6 +6,66 @@ import { registerWorkbenchExtensionControlsRenderers } from "./controls-renderer
 type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionControlsRenderers", () => {
+  test("honors panel placement when registering and opening controls-backed panels", () => {
+    const workbench = createWorkbenchCore();
+    const record = {
+      id: "inspector",
+      extensionId: "acme.image-tools",
+      title: "Inspector",
+      queryCommandId: "image-tools.load",
+    } satisfies WorkbenchExtensionControlsRendererRecord;
+    const panels = [
+      {
+        id: "inspector-last",
+        extensionId: "acme.image-tools",
+        title: "Last",
+        closable: false,
+        region: "main",
+        placement: "last",
+        controlsRendererId: "inspector",
+      },
+      {
+        id: "inspector-default",
+        extensionId: "acme.image-tools",
+        title: "Default",
+        closable: false,
+        region: "main",
+        controlsRendererId: "inspector",
+      },
+      {
+        id: "inspector-first",
+        extensionId: "acme.image-tools",
+        title: "First",
+        closable: false,
+        region: "main",
+        placement: "first",
+        controlsRendererId: "inspector",
+      },
+    ] satisfies ControlsViewRecord[];
+
+    registerWorkbenchExtensionControlsRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({}) },
+      [record],
+      panels,
+    );
+
+    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual([
+      "inspector-first",
+      "inspector-default",
+      "inspector-last",
+    ]);
+
+    workbench.layout.openPanel("inspector-last", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("inspector-default", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("inspector-first", { strategy: { kind: "persistent" } });
+
+    expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
+      "inspector-first",
+      "inspector-default",
+      "inspector-last",
+    ]);
+  });
+
   test("wires query/update/reset commands and registers a widget for the controls panel", async () => {
     const workbench = createWorkbenchCore();
     const executed: string[] = [];

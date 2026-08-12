@@ -6,6 +6,7 @@ export * from "./common";
 export * from "./controls-renderer";
 export * from "./data-table-renderer";
 export * from "./execute";
+export * from "./host-capabilities";
 export * from "./install";
 export * from "./kanban-renderer";
 export * from "./keybindings";

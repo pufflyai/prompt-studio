@@ -37,7 +37,9 @@ import {
 import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-renderer-contributions";
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import {
+  panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
   toWorkbenchPanelMenus,
 } from "../contributions/panel-contributions";
@@ -205,8 +207,9 @@ const registerCommandPaletteContributions = (
   ]);
 };
 
-const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.panels.flatMap((panel) => {
+const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInput) => {
+  const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
+  return input.metadata.panels.flatMap((panel, index) => {
     if (!panel.webview) return [];
     return [
       registerWorkbenchExtensionPanel({
@@ -220,7 +223,8 @@ const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInp
           singleton: true,
           resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
           eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-          panelMenus: toWorkbenchPanelMenus(panel.panelMenus),
+          panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuOffsets[index]!),
+          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
           config: {
             ...toBridgeWebviewConfig(panel.webview),
             ...(panel.region === "overlay"
@@ -231,6 +235,7 @@ const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInp
       }),
     ];
   });
+};
 
 const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = [];

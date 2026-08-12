@@ -33,6 +33,11 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   templates: [],
   skills: [],
   diagnostics: [],
+  hostCompatibility: {
+    status: "verified",
+    host: { host: "dashboard", hostVersion: "0.25.2", capabilities: {} },
+    diagnostics: [],
+  },
   ...overrides,
 });
 
@@ -53,5 +58,25 @@ describe("mergeCheck", () => {
     mergeCheck(target, source);
 
     expect(target.controlsRenderers).toEqual(source.controlsRenderers);
+  });
+
+  test("preserves an unverified host compatibility result", () => {
+    const target = check();
+    const source = check({
+      hostCompatibility: {
+        status: "unverified",
+        diagnostics: [
+          {
+            code: "extension_host_capability_check_unverified",
+            severity: "warning",
+            message: "Host compatibility was not verified",
+          },
+        ],
+      },
+    });
+
+    mergeCheck(target, source);
+
+    expect(target.hostCompatibility).toEqual(source.hostCompatibility);
   });
 });

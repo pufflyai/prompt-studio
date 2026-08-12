@@ -1,8 +1,10 @@
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { ExtensionHostCapabilities, ExtensionHostCompatibility } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../types/runtime";
 import { pstdioExtensionsRoot, pstdioHomeRoot } from "./discovery";
+import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "./host-capabilities";
 import { type LoadExtensionRuntimeInput, loadExtensionRuntime } from "./runtime";
 
 export type CheckExtensionsInput = LoadExtensionRuntimeInput & {
@@ -10,6 +12,8 @@ export type CheckExtensionsInput = LoadExtensionRuntimeInput & {
   homeRoot?: string;
   /** Override the extensions root; defaults to <homeRoot>/extensions. */
   extensionsRoot?: string;
+  /** Dashboard capabilities to verify against; omit when no host descriptor is available. */
+  hostCapabilities?: ExtensionHostCapabilities | null;
 };
 
 export type CheckExtensionsResult = {
@@ -18,6 +22,7 @@ export type CheckExtensionsResult = {
   extensionsRootExists: boolean;
   installedExtensionDirs: string[];
   runtime: ExtensionRuntime;
+  hostCompatibility: ExtensionHostCompatibility;
   errorCount: number;
   warningCount: number;
 };
@@ -45,8 +50,13 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
     extensionPackages: input.extensionPackages,
   });
 
-  const errorCount = runtime.diagnostics.filter((d) => d.severity === "error").length;
-  const warningCount = runtime.diagnostics.filter((d) => d.severity === "warning").length;
+  const hostCompatibility = checkExtensionHostCompatibility(
+    runtime,
+    input.hostCapabilities === undefined ? dashboardExtensionHostCapabilities : input.hostCapabilities,
+  );
+  const diagnostics = [...runtime.diagnostics, ...hostCompatibility.diagnostics];
+  const errorCount = diagnostics.filter((d) => d.severity === "error").length;
+  const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
 
   return {
     homeRoot,
@@ -54,6 +64,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
     extensionsRootExists,
     installedExtensionDirs: listInstalledDirs(extensionsRoot),
     runtime,
+    hostCompatibility,
     errorCount,
     warningCount,
   };
@@ -158,7 +169,7 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
 };
 
 export const formatCheckReport = (result: CheckExtensionsResult): string => {
-  const { runtime, extensionsRoot, extensionsRootExists, errorCount, warningCount } = result;
+  const { runtime, extensionsRoot, extensionsRootExists, errorCount, warningCount, hostCompatibility } = result;
   const lines: string[] = [];
 
   lines.push("Extensions check");
@@ -166,6 +177,12 @@ export const formatCheckReport = (result: CheckExtensionsResult): string => {
   lines.push(`Installed extensions: ${runtime.extensions.length}`);
   lines.push(`Errors: ${errorCount}`);
   lines.push(`Warnings: ${warningCount}`);
+
+  lines.push(
+    `Host compatibility: ${hostCompatibility.status}${
+      hostCompatibility.host ? ` (${hostCompatibility.host.host} ${hostCompatibility.host.hostVersion})` : ""
+    }`,
+  );
 
   if (!extensionsRootExists || runtime.extensions.length === 0) {
     lines.push("");
@@ -177,10 +194,11 @@ export const formatCheckReport = (result: CheckExtensionsResult): string => {
     lines.push(...formatExtensionSection(ext, runtime));
   }
 
-  if (runtime.diagnostics.length > 0) {
+  const diagnostics = [...runtime.diagnostics, ...hostCompatibility.diagnostics];
+  if (diagnostics.length > 0) {
     lines.push("");
     lines.push("Diagnostics");
-    for (const diag of runtime.diagnostics) {
+    for (const diag of diagnostics) {
       lines.push("");
       lines.push(`${diag.severity} ${diag.code}`);
       lines.push(...indent([diag.message], "  "));
