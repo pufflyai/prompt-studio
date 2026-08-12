@@ -15,7 +15,7 @@ pst extensions add ./extensions/extension-lab
 This:
 
 1. Copies the source to the user or repo extension root, skipping `node_modules`, `.git`, `dist`, `.turbo`, `.next`.
-2. Runs a package manager (`bun`, `yarn`, or `npm`) inside the installed folder when a `package.json` is present (skip with `--skip-install`). Selection: prefer the PM the extension declares (`packageManager` field, then lockfile: `bun.lock`/`bun.lockb` → bun, `yarn.lock` → yarn, otherwise npm); if that PM is not on the user's `PATH`, fall back to the first of `bun`, `yarn`, `npm` that is. If none are installed, fail with a clear message (or skip with `--skip-install`).
+2. Runs `bun install` inside the installed folder when a `package.json` is present (skip with `--skip-install`).
 3. Loads the installed copy through the v2 runtime to validate the default export and report diagnostics.
 4. Auto-enables the extension for the current project (when run inside one).
 
@@ -45,6 +45,28 @@ Fix errors before using the extension. Review warnings too; they call out valid 
 `eligibleLocations: {}` creating a supporting tab that is eligible everywhere.
 
 `pst extensions check` validates the extension contract and the dashboard host capabilities. If an extension declares a UI surface that the current dashboard does not support, the command exits non-zero and names the missing capability plus the Prompt Studio version that first supports it when known. With `--json`, read `hostCompatibility.status`, `hostCompatibility.host`, and each diagnostic `metadata.missingCapability`.
+
+## Local Development Loop
+
+Run the development command from a linked git project while Prompt Studio is running:
+
+```bash
+pst extensions dev ./path/to/my-extension
+```
+
+The command performs one validated refresh, enables the extension for the current project, then watches the source. It uses the same ignore rules as extension installation. Source edits are copied to the installed extension through an atomic staging folder. The current package-local `node_modules` is reused when `package.json`, `bun.lock`, and `bun.lockb` are unchanged. A dependency input change runs `bun install` in the staged copy before it becomes active.
+
+Successful refreshes print the extension and contribution IDs. Managed webview refreshes print their view IDs. Validation, registration, and build failures go to stderr with their complete diagnostics. The command keeps watching after a failure, and the last valid installed source and webview bundle stay active.
+
+Press Ctrl+C or send SIGTERM to stop. The command waits for an active refresh to finish or abort, removes its watchers and staging folders, and leaves the last valid installed extension enabled.
+
+| Problem | What to do |
+| --- | --- |
+| The command says the project is not linked | Run `pst projects create` or `pst projects link`, then start `extensions dev` from that git repo. |
+| Contract or host capability validation fails | Fix the named contribution and capability. Saving the source triggers another check. |
+| `bun install` fails | Fix `package.json`, `bun.lock`, `bun.lockb`, registry access, or the local dependency path. Save a dependency input to retry. |
+| A webview build fails | Read the printed view ID and Bun diagnostics. The last successful bundle remains visible while you fix the source. |
+| A save produces no refresh | Confirm the file is not excluded by the extension `.gitignore` or the standard extension ignore rules. |
 
 ## Dev Workflow (in-monorepo)
 
@@ -104,17 +126,15 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 }
 ```
 
-### Installing an extension into the dev environment
+### Watching an extension in the dev environment
 
-Always install through the `pst extensions add` command with the dev home set explicitly:
+Use the watch command as the primary authoring loop. Run it inside the linked Prompt Studio repo:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/extension-lab --force
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/extension-lab
 ```
 
-Because `extension-lab` uses the default user scope and `PSTDIO_HOME` is set to
-`~/.pstdio-dev`, this lands at
-`~/.pstdio-dev/extensions/extension-lab/`.
+Because `extension-lab` uses user scope and `PSTDIO_HOME` is set to `~/.pstdio-dev`, each valid snapshot is published at `~/.pstdio-dev/extensions/extension-lab/`. Use `pst extensions add --force` separately for a production-like install smoke test.
 
 ### Workspace SDK During Local Development
 
@@ -122,7 +142,7 @@ First-party extensions depend on `@pstdio/sdk`. User/global install smoke tests 
 installation and leave package-local dependencies under the installed extension root.
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/extension-lab --force
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/extension-lab
 ```
 
 Do not use `--skip-install` or link workspace `node_modules` into `~/.pstdio` for production-like
@@ -177,7 +197,7 @@ Reference: `extensions/extension-lab/` shows commands, middlewares, hooks, sched
 
 ### Managed webview dependencies
 
-Declare every package imported by a managed TypeScript or JavaScript webview in the extension's `dependencies` or `peerDependencies`. Install those packages in the extension source directory with `bun install`; otherwise Prompt Studio reports the complete missing-package list and leaves the previous successful bundle untouched.
+Declare every package imported by a managed TypeScript or JavaScript webview in the extension's `dependencies` or `peerDependencies`. `pst extensions dev` runs `bun install` in the staged installed copy when package or Bun lock inputs change. Prompt Studio reports the complete missing-package list and leaves the previous successful bundle untouched when installation or building fails.
 
 While Prompt Studio is running, edits to a webview's local import graph, `package.json`, `bun.lock` or `bun.lockb`, and installed dependency package metadata trigger a rebuild automatically. Creating or removing a top-level dependency under `node_modules` also retries a previously failed build, so dependency fixes do not require an API restart. Repeated refreshes with unchanged inputs reuse a successful bundle or preserve the existing failure backoff.
 

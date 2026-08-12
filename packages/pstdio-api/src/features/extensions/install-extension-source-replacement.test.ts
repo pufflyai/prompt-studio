@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { syncExtensionDevelopmentSource } from "./extension-development";
 import { installExtensionSource, removePathBestEffort } from "./install-extension-source";
 
 let root: string;
@@ -90,6 +91,53 @@ describe("installExtensionSource replacement", () => {
 
     expect(readFileSync(join(target, "extension.ts"), "utf8")).toContain("commands");
     expect(existsSync(join(target, "old.txt"))).toBe(false);
+  });
+
+  test("reuses package-local dependencies when dependency inputs are unchanged", async () => {
+    writeExistingInstall();
+    mkdirSync(join(target, "node_modules", "example"), { recursive: true });
+    writeFileSync(join(target, "package.json"), readFileSync(join(source, "package.json")));
+    const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
+
+    await installExtensionSource({
+      source,
+      force: true,
+      reuseInstalledDependencies: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      runCommand,
+    });
+
+    expect(runCommand).not.toHaveBeenCalled();
+    expect(existsSync(join(target, "node_modules", "example"))).toBe(true);
+    expect(lstatSync(join(target, "node_modules")).isSymbolicLink()).toBe(false);
+  });
+
+  test("reinstalls dependencies when package inputs changed", async () => {
+    writeExistingInstall();
+    mkdirSync(join(target, "node_modules", "example"), { recursive: true });
+    writeFileSync(join(target, "package.json"), readFileSync(join(source, "package.json")));
+    writeFileSync(join(target, "bun.lock"), "old lock");
+    writeFileSync(join(source, "bun.lock"), "new lock");
+    const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {
+      mkdirSync(join(options.cwd, "node_modules", "example"), { recursive: true });
+      return { exitCode: 0, stderr: "", stdout: "" };
+    });
+
+    await syncExtensionDevelopmentSource({
+      source,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledWith(
+      "bun",
+      ["install", "--no-save"],
+      expect.objectContaining({
+        cwd: expect.stringContaining(".extension-install-"),
+      }),
+    );
   });
 
   test("preserves the live install when replacement preparation fails", async () => {

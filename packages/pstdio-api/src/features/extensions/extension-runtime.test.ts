@@ -6,6 +6,7 @@ import { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
+  formatExtensionsCheck,
   hashExtensionSource,
   loadExtensionSource,
 } from "./extension-runtime";
@@ -255,6 +256,7 @@ describe("checkExtensionSource host compatibility", () => {
           }),
         ]),
       );
+      expect(formatExtensionsCheck(result.check)).toContain("Contribution: host-capability-check.rows");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

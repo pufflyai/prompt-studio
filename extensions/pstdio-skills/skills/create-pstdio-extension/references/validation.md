@@ -25,6 +25,18 @@ bun run --cwd <path-to-extension> typecheck
 Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
 tests next to the relevant extension file or in the package that owns the runtime behavior.
 
+## Local Authoring Loop
+
+Run Prompt Studio and start the extension watcher from a linked git project:
+
+```bash
+pst extensions dev <path-to-extension>
+```
+
+The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` run `bun install` before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
+
+Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
+
 ## Install And Runtime Smoke
 
 Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
@@ -40,9 +52,7 @@ load as a supporting tab that is eligible everywhere.
 
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
 dependencies under the installed extension root so the packaged runtime does not depend on workspace
-`node_modules` symlinks or repo paths under `~/Documents`. Use `--skip-install` only for a deliberate
-dev-link scenario where dependency installation has already been handled and the result will not be
-treated as a production-like installed extension.
+`node_modules` symlinks or repo paths under `~/Documents`.
 
 If the extension contributes CLI commands, inspect the generated help and run a happy-path command:
 

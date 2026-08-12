@@ -41,9 +41,10 @@ metadata:
    - Do not add tests for docs-only, config-only, generated wording, or UI-only changes.
 5. Validate the extension.
    - Read [references/validation.md](references/validation.md) for commands and smoke-test expectations.
+   - Use `pst extensions dev <path>` as the primary local authoring loop inside a linked project.
    - Do not use `--skip-install` for user/global install smoke tests. Installed extensions must have package-local dependencies.
    - Run focused tests first, then your project's full validation command before handoff unless the change is documentation-only.
-   - If bundled runtime artifacts changed, reinstall the extension and re-run `pst extensions check`.
+   - If bundled runtime artifacts changed, stop the dev loop, run a production-like `pst extensions add --force`, and re-run `pst extensions check`.
 6. Add a changeset when changing released extension source or assets.
 
 ## References

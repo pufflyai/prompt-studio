@@ -40,10 +40,12 @@ export type ExtensionSourceWatcher = {
 
 export type CreateExtensionSourceWatcherInput = {
   debounceMs?: number;
+  includeIgnoredPath?: (path: string) => boolean;
   listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
   onError?: (error: unknown) => void;
   reloadInstalledSource: (sourcePath: string) => Promise<unknown>;
   watch?: WatchSource;
+  watchDependencies?: boolean;
 };
 
 // Watches a single directory (non-recursive). fs errors — e.g. the directory
@@ -92,6 +94,7 @@ export const createExtensionSourceWatcher = async (
   const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
   const watch = input.watch ?? defaultWatch;
+  const watchDependencies = input.watchDependencies ?? true;
   let disposed = false;
 
   const disposeRegistration = (registration: WatchedRegistration) => {
@@ -172,7 +175,7 @@ export const createExtensionSourceWatcher = async (
 
   const watchCreatedDirectory = (registration: WatchedRegistration, eventPath: string) => {
     if (eventPath === join(registration.sourcePath, "node_modules")) {
-      watchDependencyRoot(registration);
+      if (watchDependencies) watchDependencyRoot(registration);
       return;
     }
     if (registration.watchers.has(eventPath)) return;
@@ -194,7 +197,9 @@ export const createExtensionSourceWatcher = async (
     const relativePath = relative(registration.sourcePath, eventPath);
     const dependencyRoot = join(registration.sourcePath, "node_modules");
     const isDependencyEvent = directoryPath === dependencyRoot || eventPath === dependencyRoot;
-    if (!isDependencyEvent && relativePath && registration.matcher.ignores(relativePath)) return;
+    const includedIgnoredPath = relativePath && input.includeIgnoredPath?.(relativePath);
+    if (!isDependencyEvent && relativePath && registration.matcher.ignores(relativePath) && !includedIgnoredPath)
+      return;
 
     if (directoryPath !== dependencyRoot) watchCreatedDirectory(registration, eventPath);
     scheduleReload(registration);
@@ -213,7 +218,7 @@ export const createExtensionSourceWatcher = async (
 
     registrations.set(row.source_path, registration);
     watchDirectoryTree(registration, row.source_path);
-    watchDependencyRoot(registration);
+    if (watchDependencies) watchDependencyRoot(registration);
   };
 
   const refreshRegistration = async (

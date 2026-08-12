@@ -6,6 +6,7 @@ import type {
   EnableInstalledExtensionResponse,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
+  ListProjectExtensionsResponse,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
 } from "pstdio-api-contracts";
@@ -24,6 +25,7 @@ export type ExtensionClient = {
   ): Promise<UpdateInstalledExtensionTemplateResponse>;
   listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
   listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
+  listProject(projectId: string): Promise<ListProjectExtensionsResponse>;
   execute(commandId: string, request: CommandExecuteRequest): Promise<CommandExecuteResponse>;
   dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
 };
@@ -44,6 +46,7 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
     ),
   listAppearance: (projectId) => request(`/v1/projects/${projectId}/extensions/appearance`),
   listCommands: (projectId) => request(`/v1/projects/${projectId}/extensions/commands`),
+  listProject: (projectId) => request(`/v1/projects/${projectId}/extensions`),
   execute: (commandId, input) => {
     const { projectId, ...body } = input;
     return request(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/execute`, {

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -110,6 +110,13 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 describe("packaged pstdio — self-hosted serve", () => {
+  test("includes the extension development command", () => {
+    const result = spawnSync(BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("extensions dev <source>");
+  });
+
   test(
     "serves the dashboard and API from the same origin",
     async () => {

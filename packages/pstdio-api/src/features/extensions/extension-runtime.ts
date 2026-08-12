@@ -322,7 +322,9 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
   for (const diagnostic of check.diagnostics) {
     lines.push("", `${diagnostic.severity.toUpperCase()}: ${diagnostic.message}`);
     const missingCapability = diagnostic.metadata?.missingCapability;
+    const contributionId = diagnostic.metadata?.contributionId;
     const requiredSince = diagnostic.metadata?.requiredSince;
+    if (typeof contributionId === "string") lines.push(`  Contribution: ${contributionId}`);
     if (typeof missingCapability === "string") lines.push(`  Missing capability: ${missingCapability}`);
     if (typeof requiredSince === "string") lines.push(`  Supported since: ${requiredSince}`);
     if (diagnostic.sourcePath) lines.push(`  Source: ${diagnostic.sourcePath}`);

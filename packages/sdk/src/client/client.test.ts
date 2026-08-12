@@ -193,6 +193,17 @@ describe("createClient", () => {
     expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated" });
   });
 
+  it("client.extensions.listProject calls GET /v1/projects/:id/extensions", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.extensions.listProject("project-1");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/project-1/extensions");
+    expect(calls[0]!.method).toBe("GET");
+  });
+
   it("client.skills.updatePreferences calls PUT /v1/projects/:id/skills/:name", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });

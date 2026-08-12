@@ -115,11 +115,14 @@ Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-ticket
 ```bash
 pst extensions add <source> [--name <name>] # Install an extension source using package scope
 pst extensions check [--json]               # Validate user and repo-local extension roots
+pst extensions dev <path> [--name <name>]   # Watch, validate, install, and refresh a local source
 ```
 
 `pst extensions check` also compares declared dashboard UI surfaces with the dashboard capability descriptor. Text output prints `Host compatibility: verified` with the dashboard version. JSON output includes `hostCompatibility.status`, `hostCompatibility.host`, and diagnostics with `metadata.missingCapability` and `metadata.requiredSince`.
 
 If no host descriptor is available, `hostCompatibility.status` is `unverified`. Contract validation still ran, but dashboard bridge support was not proven.
+
+Run `pst extensions dev` inside a linked git project. It validates the extension and host capabilities before publishing an atomic installed snapshot. It reuses package-local dependencies for source-only edits, runs `bun install` after package or Bun lock changes, refreshes the enabled project instance, and prints contribution and webview IDs. Validation and build errors stay on stderr while the process keeps watching. Ctrl+C and SIGTERM stop cleanly and leave the last valid snapshot enabled.
 
 To smoke-test an extension you are developing, install it into a throwaway Prompt Studio home so the
 install cannot disturb your real one:
@@ -163,6 +166,9 @@ Use `pst serve --host 0.0.0.0` to expose the API and dashboard to other devices 
 - **"Project not found"**: Run `pst projects list` to verify the project exists, then `pst projects link --project-id <id>`.
 - **Skills not installed**: Run `pst agents install-skills <agent-id>` to reinstall missing skills.
 - **Extensions not available**: Run `pst extensions check` and reinstall the extension with `pst extensions add` if needed.
+- **Extension dev does not start**: Run it inside a linked git project and confirm the Prompt Studio host uses the same `PSTDIO_HOME` and API URL.
+- **Extension dev dependency failure**: Fix `package.json`, `bun.lock`, `bun.lockb`, registry access, or the local dependency path. Save a dependency input to retry.
+- **Extension dev webview failure**: Use the printed view ID and full Bun diagnostics. The watcher keeps the last successful webview active.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pst projects create` or `pst projects link`.
 - **API not reachable**: Run `pst serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
 - **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).

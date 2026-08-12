@@ -1,4 +1,14 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+} from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
@@ -13,7 +23,9 @@ import {
   hashExtensionSource,
   loadExtensionSource,
 } from "./extension-runtime";
+import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
 import {
+  type CommandOptions,
   type CommandResult,
   installDependencies,
   runCommand,
@@ -46,12 +58,11 @@ export type InstallExtensionSourceInput = {
   bunCacheDir?: string;
   prepareNamedSource?: (name: string, tempDir: string) => Promise<{ path: string; ref: string }>;
   processExecPath?: string;
-  runCommand?: (
-    command: string,
-    args: string[],
-    options: { cwd: string; env?: NodeJS.ProcessEnv },
-  ) => Promise<CommandResult>;
+  reuseInstalledDependencies?: boolean;
+  runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
+  saveLockfile?: boolean;
   skipInstall?: boolean;
+  signal?: AbortSignal;
   source: string;
 };
 
@@ -149,7 +160,12 @@ export const removePathBestEffort = (path: string, remove: (path: string) => voi
   } catch {}
 };
 
-const promotePreparedSource = (preparedPath: string, targetPath: string, replaceExisting: boolean) => {
+const promotePreparedSource = (
+  preparedPath: string,
+  targetPath: string,
+  replaceExisting: boolean,
+  preserveDependencies: boolean,
+) => {
   const backupPath = join(dirname(preparedPath), ".previous");
 
   if (existsSync(targetPath)) {
@@ -159,10 +175,54 @@ const promotePreparedSource = (preparedPath: string, targetPath: string, replace
 
   try {
     renameSync(preparedPath, targetPath);
+    const previousNodeModules = join(backupPath, "node_modules");
+    if (preserveDependencies && existsSync(previousNodeModules)) {
+      renameSync(previousNodeModules, join(targetPath, "node_modules"));
+    }
   } catch (error) {
+    removePathBestEffort(targetPath);
     if (existsSync(backupPath)) renameSync(backupPath, targetPath);
     throw error;
   }
+};
+
+const linkInstalledDependencies = (sourcePath: string, targetPath: string, installPath: string) => {
+  if (!existsSync(targetPath)) return false;
+  if (hashExtensionDependencyInputs(sourcePath) !== hashExtensionDependencyInputs(targetPath)) return false;
+  const installedNodeModules = join(targetPath, "node_modules");
+  const stagedNodeModules = join(installPath, "node_modules");
+  if (!existsSync(installedNodeModules) || existsSync(stagedNodeModules)) return false;
+  symlinkSync(installedNodeModules, stagedNodeModules, "junction");
+  return true;
+};
+
+type PreparedExtensionSource =
+  | { kind: "local"; path: string; ref?: string }
+  | { kind: "named"; name: string; path: string; ref: string };
+
+const prepareInstallDependencies = async (input: {
+  installInput: InstallExtensionSourceInput;
+  installPath: string;
+  source: PreparedExtensionSource;
+  targetPath: string;
+}) => {
+  const { installInput, installPath, source, targetPath } = input;
+  let linkedInstalledDependencies = installInput.reuseInstalledDependencies
+    ? linkInstalledDependencies(source.path, targetPath, installPath)
+    : false;
+
+  if (installInput.skipInstall && source.kind === "local") {
+    linkUsableNodeModules(source.path, installPath);
+  }
+
+  if (installInput.skipInstall || !shouldInstallDependencies(installPath)) return linkedInstalledDependencies;
+
+  if (linkedInstalledDependencies) {
+    unlinkSync(join(installPath, "node_modules"));
+    linkedInstalledDependencies = false;
+  }
+  await installDependencies(installPath, installInput);
+  return linkedInstalledDependencies;
 };
 
 const cloneRepoSparse = async (
@@ -309,13 +369,12 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       copyExtensionSource(resolvedSource.path, installPath);
     }
 
-    if (input.skipInstall && resolvedSource.kind === "local") {
-      linkUsableNodeModules(resolvedSource.path, installPath);
-    }
-
-    if (!input.skipInstall && shouldInstallDependencies(installPath)) {
-      await installDependencies(installPath, input);
-    }
+    const linkedInstalledDependencies = await prepareInstallDependencies({
+      installInput: input,
+      installPath,
+      source: resolvedSource,
+      targetPath,
+    });
 
     const loaded = await loadExtensionSource(installPath);
     const { check } = await checkExtensionSource(installPath, extensionsRoot);
@@ -324,7 +383,9 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     }
 
     if (installPath !== targetPath) {
-      promotePreparedSource(installPath, targetPath, Boolean(input.force));
+      const preserveDependencies = linkedInstalledDependencies;
+      if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
+      promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
       for (const extension of check.extensions) extension.sourcePath = targetPath;
     }
 

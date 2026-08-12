@@ -274,6 +274,41 @@ describe("createExtensionSourceWatcher", () => {
 });
 
 describe("createExtensionSourceWatcher registrations", () => {
+  test("can watch dependency inputs without watching node_modules", async () => {
+    const sourcePath = join(root, "watched");
+    const nodeModulesPath = join(sourcePath, "node_modules");
+    mkdirSync(nodeModulesPath, { recursive: true });
+    writeFileSync(join(sourcePath, ".gitignore"), "bun.lock\n");
+    const watchersByPath = new Map<string, FakeWatcher>();
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      includeIgnoredPath: (path) => path === "bun.lock",
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async (path) => {
+        reloaded.push(path);
+      },
+      watchDependencies: false,
+      watch: (path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchersByPath.set(path, fake);
+        return fake;
+      },
+    });
+
+    try {
+      expect(watchersByPath.has(nodeModulesPath)).toBe(false);
+
+      watchersByPath.get(sourcePath)?.listener("change", "bun.lock");
+      await delay(15);
+      expect(reloaded).toEqual([sourcePath]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("reloads for dependency availability changes without watching inside packages", async () => {
     const sourcePath = join(root, "watched");
     const nodeModulesPath = join(sourcePath, "node_modules");

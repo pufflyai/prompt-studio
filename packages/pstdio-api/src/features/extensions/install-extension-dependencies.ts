@@ -11,22 +11,31 @@ export type CommandResult = {
   stdout: string;
 };
 
+export type CommandOptions = {
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  signal?: AbortSignal;
+};
+
 export type DependencyInstallInput = {
   bunCacheDir?: string;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   homedir?: () => string;
   isPackagedRuntime?: () => boolean;
   processExecPath?: string;
-  runCommand?: (
-    command: string,
-    args: string[],
-    options: { cwd: string; env?: NodeJS.ProcessEnv },
-  ) => Promise<CommandResult>;
+  runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
+  saveLockfile?: boolean;
+  signal?: AbortSignal;
 };
 
-export const runCommand = (command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv }) =>
+export const runCommand = (command: string, args: string[], options: CommandOptions) =>
   new Promise<CommandResult>((resolveResult) => {
-    const child = spawn(command, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      signal: options.signal,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
 
@@ -79,17 +88,18 @@ export const installDependencies = async (targetPath: string, input: DependencyI
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
   const command = packaged
     ? resolveManagedBunCommand({
-        args: ["install"],
+        args: ["install", ...(input.saveLockfile === false ? ["--no-save"] : [])],
         bunCacheDir: input.bunCacheDir ?? join(resolvePstdioHome(input), "cache", "extension-bun-install"),
         env,
         isPackaged: true,
         processExecPath: input.processExecPath ?? process.execPath,
       })
-    : { file: "bun", args: ["install"], env };
+    : { file: "bun", args: ["install", ...(input.saveLockfile === false ? ["--no-save"] : [])], env };
 
   const result = await run(command.file, command.args, {
     cwd: targetPath,
     ...(command.env ? { env: command.env } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
   });
   if (result.exitCode !== 0) {
     const details = result.stderr.trim() || result.stdout.trim();
