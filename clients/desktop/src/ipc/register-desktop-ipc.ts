@@ -5,6 +5,8 @@ import { isAllowedIpcSender } from "../security/ipc-security";
 
 type DesktopIpcOptions = {
   appInfo: () => { platform: string; version: string };
+  cancelQuit: () => Promise<void>;
+  confirmQuit: () => Promise<void>;
   copyDiagnostics: () => void;
   getState: () => DesktopState;
   ipcMain: IpcMain;
@@ -41,6 +43,8 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     });
   };
 
+  handle(DESKTOP_CHANNELS.cancelQuit, options.cancelQuit);
+  handle(DESKTOP_CHANNELS.confirmQuit, options.confirmQuit);
   handle(DESKTOP_CHANNELS.appInfo, options.appInfo);
   handle(DESKTOP_CHANNELS.startupState, options.getState);
   handle(DESKTOP_CHANNELS.retryRuntime, options.retryRuntime);

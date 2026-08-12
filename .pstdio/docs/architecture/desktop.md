@@ -11,6 +11,8 @@ Prompt Studio desktop is a private Electron client in `clients/desktop`. Electro
 
 The lifecycle state machine distinguishes discovery, spawn, readiness, workbench, active-work confirmation, closing, recovery, retry, and persistent detach. Electron creates the runtime instance ID before spawn and accepts only a descriptor with that exact ID, so a competing process cannot replace the child during readiness. A runtime control event marks an exit as intentional; a desktop-started child exit without that event opens recovery instead of leaving a blank dashboard.
 
+Active-work confirmation stays inside the bundled lifecycle renderer instead of using a native message box. The renderer receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel reloads the existing workbench; confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
+
 ## Runtime ownership
 
 Desktop attaches to any healthy descriptor for the default `PSTDIO_HOME`. A desktop-owned runtime is stopped only after the authenticated shutdown endpoint accepts the request. Active work returns a backend-authoritative summary and requires confirmation before cancellation. Desktop waits without a shutdown timeout and does not escalate to process signals.
@@ -30,6 +32,8 @@ BrowserWindow enables sandboxing, context isolation, web security, and disables 
 - denies permissions by default;
 - applies a restrictive content security policy;
 - validates the expected WebContents, main frame, and exact renderer origin for every IPC handler.
+
+The confirmation view uses an alert-dialog role, focuses the safe action first, supports keyboard-only choice, and uses the shared destructive button variant for cancellation. Startup and closing progress indicators are omitted when the operating system requests reduced motion.
 
 ## Recovery and diagnostics
 

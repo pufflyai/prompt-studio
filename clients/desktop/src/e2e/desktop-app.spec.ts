@@ -103,7 +103,16 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(authenticatedReady).toBe(true);
     expect(
       await window.evaluate(() => Object.keys((globalThis as unknown as Window).promptStudioDesktop).sort()),
-    ).toEqual(["copyDiagnostics", "getAppInfo", "getStartupState", "openLogs", "quitApp", "retryRuntime"]);
+    ).toEqual([
+      "cancelQuit",
+      "confirmQuit",
+      "copyDiagnostics",
+      "getAppInfo",
+      "getStartupState",
+      "openLogs",
+      "quitApp",
+      "retryRuntime",
+    ]);
     expect(
       await electronApp.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0]?.webContents.session.isPersistent(),

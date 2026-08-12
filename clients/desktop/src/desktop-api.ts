@@ -6,6 +6,8 @@ export interface DesktopAppInfo {
 }
 
 export interface PromptStudioDesktopApi {
+  cancelQuit: () => Promise<void>;
+  confirmQuit: () => Promise<void>;
   getAppInfo: () => Promise<DesktopAppInfo>;
   getStartupState: () => Promise<DesktopState>;
   retryRuntime: () => Promise<void>;
@@ -15,6 +17,8 @@ export interface PromptStudioDesktopApi {
 }
 
 export const DESKTOP_CHANNELS = {
+  cancelQuit: "pstdio:desktop:cancel-quit",
+  confirmQuit: "pstdio:desktop:confirm-quit",
   appInfo: "pstdio:desktop:app-info",
   startupState: "pstdio:desktop:startup-state",
   retryRuntime: "pstdio:desktop:retry-runtime",

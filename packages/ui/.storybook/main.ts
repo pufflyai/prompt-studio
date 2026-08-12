@@ -12,7 +12,11 @@ function getAbsolutePath(value: string) {
 }
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const config: StorybookConfig = {
-  stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  stories: [
+    "../src/**/*.mdx",
+    "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../../../clients/desktop/src/renderer/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+  ],
   addons: [
     "@storybook/addon-themes",
     getAbsolutePath("@storybook/addon-docs"),
@@ -29,6 +33,7 @@ const config: StorybookConfig = {
     mergeConfig(config, {
       resolve: {
         alias: {
+          "@pstdio/ui": resolve(rootDir, "../src/index.ts"),
           "@": resolve(rootDir, "../src"),
           $fonts: resolve(rootDir, "../public/font"),
         },
