@@ -163,8 +163,6 @@ const syncDevelopmentCycle = async (input: DevelopmentCycleInput) => {
   const sourceChanged = sourceHash !== input.state.lastSourceHash || dependencyHash !== input.state.lastDependencyHash;
   if (!input.initial && !sourceChanged) return null;
 
-  input.state.lastDependencyHash = dependencyHash;
-  input.state.lastSourceHash = sourceHash;
   if (dependenciesChanged) input.deps.log(`dependency inputs changed for ${input.installName}`);
 
   const installed = await input.deps.syncExtensionDevelopmentSource({
@@ -174,6 +172,8 @@ const syncDevelopmentCycle = async (input: DevelopmentCycleInput) => {
     source: input.sourcePath,
   });
   const instance = await input.deps.refreshDevelopmentExtension(input.projectId, installed);
+  input.state.lastDependencyHash = dependencyHash;
+  input.state.lastSourceHash = sourceHash;
   return { installed, instance };
 };
 

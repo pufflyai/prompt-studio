@@ -279,6 +279,28 @@ describe("extensions dev", () => {
     await running;
   });
 
+  test("retries unchanged inputs after a transient sync failure", async () => {
+    const target = makeDeps();
+    target.deps.syncExtensionDevelopmentSource = mock()
+      .mockResolvedValueOnce(installed)
+      .mockRejectedValueOnce(new Error("registry unavailable"))
+      .mockResolvedValueOnce(installed);
+    const handler = createHandler(target.deps as never);
+    const running = handler(argv);
+    await waitFor(() => target.refreshDevelopmentExtension.mock.calls.length === 1, "Initial sync did not finish.");
+
+    target.setDependencyHash("dependencies-b");
+    await target.reload();
+    expect(target.errors).toContain("registry unavailable");
+
+    await target.reload();
+    expect(target.deps.syncExtensionDevelopmentSource).toHaveBeenCalledTimes(3);
+    expect(target.refreshDevelopmentExtension).toHaveBeenCalledTimes(2);
+
+    target.signals.emit("SIGINT");
+    await running;
+  });
+
   test("aborts an active dependency install before exiting", async () => {
     const target = makeDeps();
     let installAborted = false;
