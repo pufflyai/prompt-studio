@@ -3,6 +3,7 @@ import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardViewPath } from "@/shared/app/browser-location";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
+import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import {
   createDashboardProjectSelectionPersistence,
@@ -32,8 +33,7 @@ import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 
-// Names every storage key the dashboard owns; hosts and tests build the same keys from it.
-export const dashboardWorkbenchStorageNamespace = "dashboard-wb";
+export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 
 interface CreateDashboardWorkbenchInput {
   initialViewPath?: string;

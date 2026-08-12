@@ -1,6 +1,7 @@
 import type { LastResourcePersistenceAdapter, ResourceRef } from "@pstdio/workbench";
 import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "./dashboard-storage";
+import { dashboardLastResourceStorageKey } from "./dashboard-workbench-storage-keys";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 interface CreateDashboardLastResourcePersistenceInput {
@@ -17,8 +18,7 @@ export interface DashboardLastResourcePersistence extends LastResourcePersistenc
 const isResourceRef = (value: unknown): value is ResourceRef =>
   Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
 
-export const dashboardLastResourceStorageKey = (namespace: string, projectId: string) =>
-  `${namespace}:last-resource:${projectId}`;
+export { dashboardLastResourceStorageKey } from "./dashboard-workbench-storage-keys";
 
 const readResource = (storage: WorkbenchStorageLike, key: string) => {
   const raw = storage.getItem(key);

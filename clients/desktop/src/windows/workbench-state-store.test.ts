@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DesktopWorkbenchStateStore } from "./workbench-state-store";
@@ -18,12 +18,12 @@ describe("DesktopWorkbenchStateStore", () => {
     const path = join(root, "workbench-state.json");
 
     const first = new DesktopWorkbenchStateStore(path);
-    first.setItem("dashboard-wb:selected-project:global", "project-one");
-    first.setItem("dashboard-wb:last-resource:project-one", '{"kind":"workspace","uri":"workspace://one"}');
+    first.setSelectedProjectId("project-one");
+    first.setLastResource("project-one", '{"kind":"workspace","uri":"workspace://one"}');
 
-    expect(new DesktopWorkbenchStateStore(path).getAll()).toEqual({
-      "dashboard-wb:last-resource:project-one": '{"kind":"workspace","uri":"workspace://one"}',
-      "dashboard-wb:selected-project:global": "project-one",
+    expect(new DesktopWorkbenchStateStore(path).getState()).toEqual({
+      lastResources: { "project-one": '{"kind":"workspace","uri":"workspace://one"}' },
+      selectedProjectId: "project-one",
     });
   });
 
@@ -32,9 +32,27 @@ describe("DesktopWorkbenchStateStore", () => {
     roots.push(root);
     const store = new DesktopWorkbenchStateStore(join(root, "workbench-state.json"));
 
-    store.setItem("dashboard-wb:selected-project:global", "project-one");
-    store.setItem("dashboard-wb:selected-project:global", null);
+    store.setSelectedProjectId("project-one");
+    store.setSelectedProjectId(null);
 
-    expect(store.getAll()).toEqual({});
+    expect(store.getState()).toEqual({ lastResources: {} });
+  });
+
+  test("does not load or persist session drafts", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-state-"));
+    roots.push(root);
+    const path = join(root, "workbench-state.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        selectedProjectId: "project-one",
+        lastResources: {},
+        sessionDrafts: { "session-one": "private draft" },
+      }),
+    );
+
+    const store = new DesktopWorkbenchStateStore(path);
+
+    expect(store.getState()).toEqual({ lastResources: {}, selectedProjectId: "project-one" });
   });
 });

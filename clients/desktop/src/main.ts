@@ -259,8 +259,9 @@ const bootstrap = async () => {
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
     quitApp: requestQuit,
-    getWorkbenchState: () => workbenchState.getAll(),
-    setWorkbenchStateItem: (key, value) => workbenchState.setItem(key, value),
+    getWorkbenchState: () => workbenchState.getState(),
+    setLastResource: (projectId, value) => workbenchState.setLastResource(projectId, value),
+    setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });
   await startRuntime();
 };

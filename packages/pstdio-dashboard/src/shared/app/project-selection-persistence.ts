@@ -1,5 +1,6 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "./dashboard-storage";
+import { dashboardProjectSelectionStorageKey } from "./dashboard-workbench-storage-keys";
 
 export interface DashboardProjectSelectionPersistence {
   getSelectedProjectId(): string | undefined;
@@ -11,13 +12,11 @@ interface CreateDashboardProjectSelectionPersistenceInput {
   storage?: WorkbenchStorageLike;
 }
 
-const projectSelectionStorageKey = (namespace: string) => `${namespace}:selected-project:global`;
-
 export const createDashboardProjectSelectionPersistence = (
   input: CreateDashboardProjectSelectionPersistenceInput,
 ): DashboardProjectSelectionPersistence => {
   const storage = resolveDashboardStorage(input.storage);
-  const key = projectSelectionStorageKey(input.namespace);
+  const key = dashboardProjectSelectionStorageKey(input.namespace);
 
   return {
     getSelectedProjectId: () => {

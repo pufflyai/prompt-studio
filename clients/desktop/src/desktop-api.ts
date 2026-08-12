@@ -5,6 +5,11 @@ export interface DesktopAppInfo {
   version: string;
 }
 
+export interface DesktopWorkbenchState {
+  selectedProjectId?: string;
+  lastResources: Record<string, string>;
+}
+
 export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;
   confirmQuit: () => Promise<void>;
@@ -16,8 +21,9 @@ export interface PromptStudioDesktopApi {
   copyDiagnostics: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
   quitApp: () => Promise<void>;
-  getWorkbenchState: () => Promise<Record<string, string>>;
-  setWorkbenchStateItem: (key: string, value: string | null) => Promise<void>;
+  getWorkbenchState: () => Promise<DesktopWorkbenchState>;
+  setLastResource: (projectId: string, value: string | null) => Promise<void>;
+  setSelectedProjectId: (projectId: string | null) => Promise<void>;
 }
 
 export const DESKTOP_CHANNELS = {
@@ -32,5 +38,6 @@ export const DESKTOP_CHANNELS = {
   checkForUpdates: "pstdio:desktop:check-for-updates",
   quitApp: "pstdio:desktop:quit-app",
   getWorkbenchState: "pstdio:desktop:get-workbench-state",
-  setWorkbenchStateItem: "pstdio:desktop:set-workbench-state-item",
+  setLastResource: "pstdio:desktop:set-last-resource",
+  setSelectedProjectId: "pstdio:desktop:set-selected-project-id",
 } as const;

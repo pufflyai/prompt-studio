@@ -1,36 +1,51 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import type { DesktopWorkbenchState } from "../desktop-api";
 
 const readState = (path: string) => {
-  if (!existsSync(path)) return {};
+  if (!existsSync(path)) return { lastResources: {} };
   try {
     const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-    return Object.fromEntries(
-      Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-    );
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { lastResources: {} };
+    const state = value as Partial<DesktopWorkbenchState>;
+    const selectedProjectId = typeof state.selectedProjectId === "string" ? state.selectedProjectId : undefined;
+    const lastResources =
+      state.lastResources && typeof state.lastResources === "object" && !Array.isArray(state.lastResources)
+        ? Object.fromEntries(Object.entries(state.lastResources).filter((entry) => typeof entry[1] === "string"))
+        : {};
+    return { lastResources, ...(selectedProjectId ? { selectedProjectId } : {}) };
   } catch {
-    return {};
+    return { lastResources: {} };
   }
 };
 
 export class DesktopWorkbenchStateStore {
   readonly #path: string;
-  readonly #values: Record<string, string>;
+  readonly #state: DesktopWorkbenchState;
 
   constructor(path: string) {
     this.#path = path;
-    this.#values = readState(path);
+    this.#state = readState(path);
   }
 
-  getAll() {
-    return { ...this.#values };
+  getState() {
+    return { ...this.#state, lastResources: { ...this.#state.lastResources } };
   }
 
-  setItem(key: string, value: string | null) {
-    if (value === null) delete this.#values[key];
-    else this.#values[key] = value;
+  setSelectedProjectId(projectId: string | null) {
+    if (projectId) this.#state.selectedProjectId = projectId;
+    else delete this.#state.selectedProjectId;
+    this.#write();
+  }
+
+  setLastResource(projectId: string, value: string | null) {
+    if (value === null) delete this.#state.lastResources[projectId];
+    else this.#state.lastResources[projectId] = value;
+    this.#write();
+  }
+
+  #write() {
     mkdirSync(dirname(this.#path), { recursive: true });
-    writeFileSync(this.#path, `${JSON.stringify(this.#values, null, 2)}\n`, "utf8");
+    writeFileSync(this.#path, `${JSON.stringify(this.#state, null, 2)}\n`, "utf8");
   }
 }

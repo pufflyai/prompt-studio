@@ -84,15 +84,15 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const created = await createProjectThroughBrowser(first, "Relaunch persistence project");
     expect(created).toMatchObject({ status: 201 });
     const projectId = created.body.id;
-    expect(projectId).toBeTruthy();
+    if (!projectId) throw new Error("Packaged project creation did not return an id");
     await first.page.getByRole("option", { name: /Workspaces/ }).click();
     await expect(first.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
     await expect(first.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
     await expect
       .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
-      .toMatchObject({ "dashboard-wb:selected-project:global": projectId });
+      .toMatchObject({ selectedProjectId: projectId });
     const firstState = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
-    const lastResource = firstState[`dashboard-wb:last-resource:${projectId}`];
+    const lastResource = firstState.lastResources[projectId];
     expect(JSON.parse(lastResource ?? "null")).toMatchObject({
       id: "workspaces",
       kind: "dashboard-view",
@@ -121,8 +121,8 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
     expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
-      [`dashboard-wb:last-resource:${projectId}`]: lastResource,
-      "dashboard-wb:selected-project:global": projectId,
+      lastResources: { [projectId]: lastResource },
+      selectedProjectId: projectId,
     });
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Persist desktop workbench state across application relaunches.
+Persist non-secret desktop project and resource selection across application relaunches.
