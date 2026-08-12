@@ -9,8 +9,6 @@ const desktopRoot = import.meta.dirname;
 const assetsRoot = join(desktopRoot, "assets");
 const signing = resolveDesktopSigning({
   platform: process.platform,
-  arch: process.arch,
-  desktopRoot,
   release: process.env.PSTDIO_DESKTOP_RELEASE === "1",
   env: process.env,
 });

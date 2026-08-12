@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { rcompare, valid } from "semver";
 
 const RELEASE_REPOSITORY = "pufflyai/prompt-studio";
@@ -32,14 +31,12 @@ type UpdateFeedInput = {
 
 type SigningInput = {
   platform: NodeJS.Platform;
-  arch: string;
-  desktopRoot: string;
   release: boolean;
   env: ReleaseEnvironment;
 };
 
 export type DesktopSigningConfig = {
-  osxSign?: { identity: string; binaries: string[] };
+  osxSign?: { identity: string };
   osxNotarize?: { appleApiKey: string; appleApiKeyId: string; appleApiIssuer: string };
   windowsSign?: { certificateFile: string; certificatePassword: string };
   squirrelWindowsSign?: { certificateFile: string; certificatePassword: string };
@@ -64,18 +61,6 @@ export const resolveDesktopSigning = (input: SigningInput): DesktopSigningConfig
     return {
       osxSign: {
         identity: values.MACOS_SIGN_IDENTITY,
-        binaries: [
-          join(
-            input.desktopRoot,
-            "out",
-            `Prompt Studio-darwin-${input.arch}`,
-            "Prompt Studio.app",
-            "Contents",
-            "Resources",
-            "bin",
-            "pstdio",
-          ),
-        ],
       },
       osxNotarize: {
         appleApiKey: values.APPLE_API_KEY,

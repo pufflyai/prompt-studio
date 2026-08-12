@@ -11,8 +11,6 @@ describe("desktop release configuration", () => {
     expect(() =>
       resolveDesktopSigning({
         platform: "darwin",
-        arch: "arm64",
-        desktopRoot: "/repo/clients/desktop",
         release: true,
         env: { MACOS_SIGN_IDENTITY: "Developer ID Application: Prompt Studio" },
       }),
@@ -21,8 +19,6 @@ describe("desktop release configuration", () => {
     expect(
       resolveDesktopSigning({
         platform: "darwin",
-        arch: "arm64",
-        desktopRoot: "/repo/clients/desktop",
         release: true,
         env: {
           MACOS_SIGN_IDENTITY: "Developer ID Application: Prompt Studio",
@@ -34,9 +30,6 @@ describe("desktop release configuration", () => {
     ).toEqual({
       osxSign: {
         identity: "Developer ID Application: Prompt Studio",
-        binaries: [
-          "/repo/clients/desktop/out/Prompt Studio-darwin-arm64/Prompt Studio.app/Contents/Resources/bin/pstdio",
-        ],
       },
       osxNotarize: {
         appleApiKey: "/tmp/AuthKey_KEY.p8",
@@ -50,8 +43,6 @@ describe("desktop release configuration", () => {
     expect(() =>
       resolveDesktopSigning({
         platform: "win32",
-        arch: "x64",
-        desktopRoot: "C:/repo/clients/desktop",
         release: true,
         env: { WINDOWS_CERTIFICATE_FILE: "C:/temp/certificate.pfx" },
       }),
@@ -60,8 +51,6 @@ describe("desktop release configuration", () => {
     expect(
       resolveDesktopSigning({
         platform: "win32",
-        arch: "x64",
-        desktopRoot: "C:/repo/clients/desktop",
         release: false,
         env: {},
       }),
