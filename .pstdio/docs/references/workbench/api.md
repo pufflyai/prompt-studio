@@ -139,9 +139,7 @@ ctx.layout.registerPanel({
 });
 ```
 
-PS-214 tracks replacing this implicit role selection with an explicit
-presentation model. Until then, use `eligibleLocations` only when the Panel is
-intended to be supporting UI.
+Use `eligibleLocations` only when the Panel is intended to be supporting UI.
 
 ### Panel Menus
 
@@ -207,9 +205,9 @@ ctx.layout.openPanel("tickets");
 ```ts
 const ticket: ResourceRef = {
   kind: "ticket",
-  uri: "pstdio://ticket/PS-199",
-  id: "PS-199",
-  label: "Clean Workbench API",
+  uri: "pstdio://ticket/example-ticket",
+  id: "example-ticket",
+  label: "Example ticket",
 };
 
 ctx.resources.registerKind({

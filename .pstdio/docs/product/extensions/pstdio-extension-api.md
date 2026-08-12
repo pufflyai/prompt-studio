@@ -386,7 +386,7 @@ Panel role is currently selected by `eligibleLocations`:
 - use `eligibleLocations: {}` for a supporting sub-panel/tab that is eligible everywhere
 - use `eligibleLocations: { resourceKinds: ["ticket"] }` for a supporting sub-panel/tab constrained to ticket resources
 
-The empty object form is valid, but `pst extensions check` warns with `extension_panel_empty_eligible_locations` so authors notice the everywhere-eligible tab behavior. PS-214 tracks an explicit presentation model that can replace this implicit contract later.
+The empty object form is valid, but `pst extensions check` warns with `extension_panel_empty_eligible_locations` so authors notice the everywhere-eligible tab behavior.
 
 Visibility can be limited with `when`:
 
