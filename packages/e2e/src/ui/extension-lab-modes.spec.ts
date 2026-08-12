@@ -67,7 +67,7 @@ test("Extension Lab demonstrates mode-owned layouts and restores prior Panel sta
     timeout: 30_000,
   });
 
-  await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+  // Entering the mode stages its declared layout, so the Secondary Panel opens itself.
   await expect(modeFrame(page, "Experiment console").getByRole("heading", { name: "Experiment console" })).toBeVisible({
     timeout: 30_000,
   });
@@ -88,7 +88,6 @@ test("Extension Lab demonstrates mode-owned layouts and restores prior Panel sta
   await expect(modeFrame(page, "Change review").getByRole("heading", { name: "Change review" })).toBeVisible({
     timeout: 30_000,
   });
-  await page.getByRole("button", { name: "Show Secondary Panel" }).click();
   await expect(modeFrame(page, "Review checks").getByRole("heading", { name: "Review checks" })).toBeVisible({
     timeout: 30_000,
   });
@@ -104,8 +103,7 @@ test("Extension Lab demonstrates mode-owned layouts and restores prior Panel sta
   await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+  // Re-entering the mode stages its layout again, reopening the declared console.
   await expect(modeFrame(page, "Experiment console").getByRole("heading", { name: "Experiment console" })).toBeVisible({
     timeout: 30_000,
   });

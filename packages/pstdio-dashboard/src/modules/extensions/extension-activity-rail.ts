@@ -27,9 +27,10 @@ export const registerDashboardActivityRail = (
     const activeModeId = ctx.modes.getActiveModeId();
     const items = getMetadata()?.activityItems ?? [];
     const hasItems = Boolean(activeModeId && items.some((item) => item.modes.includes(activeModeId)));
+    // Layouts persisted before the rail existed have no activity region entry.
     const placement = ctx.layout
       .getLayout()
-      .regions.activity.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.activityRail);
+      .regions.activity?.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.activityRail);
     if (!hasItems) {
       if (placement) ctx.layout.removeWidgetPlacement(placement.widgetId);
       return;

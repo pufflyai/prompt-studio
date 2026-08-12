@@ -151,9 +151,8 @@ const activateExtensionModePanels = (input: {
     const contributionId = extensionViewWidgetIdFor(panel);
     if (!input.ctx.layout.getPanel(contributionId)) continue;
     const region = extensionModeLayoutRegion(entry.region);
-    const placement = input.ctx.layout
-      .getLayout()
-      .regions[region].widgets.filter((candidate) => candidate.contributionId === contributionId)
+    const placement = (input.ctx.layout.getLayout().regions[region]?.widgets ?? [])
+      .filter((candidate) => candidate.contributionId === contributionId)
       .at(-1);
     seedModeEntry({
       ctx: input.ctx,
@@ -303,7 +302,7 @@ const registerModeScopedChromeSweep = (ctx: WorkbenchModuleContext) =>
     const activeModeId = ctx.modes.getActiveModeId();
     if (!activeModeId) return;
     for (const region of modeScopedChromeRegions) {
-      for (const placement of ctx.layout.getLayout().regions[region].widgets) {
+      for (const placement of ctx.layout.getLayout().regions[region]?.widgets ?? []) {
         const modeIds = ctx.layout.getPanel(placement.contributionId)?.eligibleLocations?.modeIds;
         if (modeIds && !modeIds.includes(activeModeId)) ctx.layout.removeWidgetPlacement(placement.widgetId);
       }
