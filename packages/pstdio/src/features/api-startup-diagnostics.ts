@@ -1,4 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
+import { redactSensitiveText } from "pstdio-logging";
 
 const MAX_DIAGNOSTIC_BYTES = 8_192;
 
@@ -55,5 +56,8 @@ export const readStartupDiagnostics = (input: StartupDiagnosticsInput) => {
     }
   }
 
-  return [...details].join("\n").slice(0, MAX_DIAGNOSTIC_BYTES);
+  return redactSensitiveText([...details].join("\n"), [process.env.PSTDIO_API_TOKEN ?? ""]).slice(
+    0,
+    MAX_DIAGNOSTIC_BYTES,
+  );
 };

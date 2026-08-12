@@ -21,6 +21,11 @@ const removeDispatchStartedEntriesForSession = async (deps: Deps, sessionId: str
   }
 };
 
+const getDispatchStartedEntryForSession = async (deps: Deps, sessionId: string) => {
+  const entries = await deps.sessionQueueEntriesService.listDispatchStarted();
+  return entries.find((entry) => entry.session_id === sessionId);
+};
+
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionService.listByStatus("in_progress");
   if (staleSessions.length === 0) return;
@@ -42,6 +47,7 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
     }
 
     try {
+      const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id);
       await reattachAgentSession(
         {
           sessionId: session.id,
@@ -49,6 +55,8 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
           agentSessionId: session.agent_session_id!,
           agentId: session.agent!,
           cwd: session.cwd ?? undefined,
+          submittedAttachmentFileIds: dispatchEntry?.attachments_json?.map((attachment) => attachment.file_id),
+          submittedQueuePosition: dispatchEntry?.queue_position,
         },
         deps,
       );
@@ -57,6 +65,7 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
         { err, event: "session.reattach.failed", session_id: session.id },
         "Failed to reattach orphaned session; marking disconnected",
       );
+      deps.sessionService.store.remove(session.id);
       await removeDispatchStartedEntriesForSession(deps, session.id);
       await deps.sessionService.transitionStatus(session.id, "disconnected");
     }

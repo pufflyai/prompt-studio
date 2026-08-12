@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo, shutdownApiViaHttp } from "../cli/helpers";
+import { cleanupDirs, createGitRepo } from "../cli/helpers";
 import { type ApiInstance, getFreePort, startApi } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
 import { buildBinary, runPackaged, runPackagedSafe } from "./packaged-helpers";
@@ -90,7 +90,7 @@ describe("packaged pstdio — auto-start", () => {
           await Bun.sleep(50);
         }
       } finally {
-        await shutdownApiViaHttp(url);
+        runPackagedSafe("close", repo, { PSTDIO_HOME: homePath });
       }
     },
     TEST_TIMEOUT,

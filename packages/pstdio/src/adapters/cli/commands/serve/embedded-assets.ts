@@ -1,4 +1,5 @@
 import { extname } from "node:path";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 
 type EmbeddedFile = Blob & { name: string };
 
@@ -39,8 +40,9 @@ export const loadEmbeddedAssets = () => {
   const assets = new Map<string, Blob>();
 
   for (const file of getEmbeddedFiles()) {
-    if (file.name.startsWith(DASHBOARD_PREFIX)) {
-      assets.set(file.name.slice(DASHBOARD_PREFIX.length), file);
+    const name = normalizeEmbeddedFileName(file.name);
+    if (name.startsWith(DASHBOARD_PREFIX)) {
+      assets.set(name.slice(DASHBOARD_PREFIX.length), file);
     }
   }
 

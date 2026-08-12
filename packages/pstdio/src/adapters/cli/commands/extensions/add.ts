@@ -6,7 +6,6 @@ import {
   installExtensionSource,
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
 import { installDefaultSkills } from "@/features/skills/install-default-skills";
@@ -40,7 +39,7 @@ export const builder = (yargs: Argv) =>
 type Deps = {
   cwd: () => string;
   enableInstalledExtension: (projectId: string, installed: InstalledExtensionSource) => Promise<unknown>;
-  ensureApi: typeof ensureApi;
+  ensureApi: (apiUrl?: string) => Promise<unknown>;
   findGitRoot: typeof findGitRoot;
   installExtensionSource: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   installDefaultSkills: typeof installDefaultSkills;
@@ -93,7 +92,7 @@ export const createHandler =
       return;
     }
 
-    await deps.ensureApi(API_URL);
+    await deps.ensureApi(process.env.PSTDIO_API_URL);
     await deps.enableInstalledExtension(project.projectId, installed);
     await deps.installDefaultSkills(project.root, project.projectId);
     deps.log(formatInstallOutput(installed, { state: "enabled", projectId: project.projectId }));

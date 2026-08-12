@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createExtensionInstallEnvironment } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 
@@ -75,15 +76,16 @@ export const installDependencies = async (targetPath: string, input: DependencyI
 
   const run = input.runCommand ?? runCommand;
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
+  const env = createExtensionInstallEnvironment(input.env ?? process.env);
   const command = packaged
     ? resolveManagedBunCommand({
         args: ["install"],
         bunCacheDir: input.bunCacheDir ?? join(resolvePstdioHome(input), "cache", "extension-bun-install"),
-        env: (input.env ?? process.env) as NodeJS.ProcessEnv,
+        env,
         isPackaged: true,
         processExecPath: input.processExecPath ?? process.execPath,
       })
-    : { file: "bun", args: ["install"], env: undefined };
+    : { file: "bun", args: ["install"], env };
 
   const result = await run(command.file, command.args, {
     cwd: targetPath,

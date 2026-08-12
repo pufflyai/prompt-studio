@@ -58,6 +58,22 @@ afterEach(() => {
 });
 
 describe("launch", () => {
+  test("opens the discovered runtime origin in compiled mode", async () => {
+    const { calls, deps } = createStubDeps();
+    const previousApiUrl = process.env.PSTDIO_API_URL;
+    process.env.PSTDIO_API_URL = "http://127.0.0.1:43123";
+
+    try {
+      await launch({ apiPort: 19840, dashboardPort: 5555, openBrowser: true }, deps, true);
+    } finally {
+      if (previousApiUrl === undefined) delete process.env.PSTDIO_API_URL;
+      else process.env.PSTDIO_API_URL = previousApiUrl;
+    }
+
+    expect(calls.openBrowser).toEqual(["http://127.0.0.1:43123"]);
+    expect(calls.serveDashboard).toEqual([]);
+  });
+
   test("injects the package version into dashboard runtime config", async () => {
     const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
     const previousVersion = process.env.PSTDIO_VERSION;

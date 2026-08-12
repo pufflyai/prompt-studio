@@ -8,6 +8,7 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
+    "@pstdio/desktop",
     "@pstdio/landing-page",
     "e2e",
     "pstdio-api",

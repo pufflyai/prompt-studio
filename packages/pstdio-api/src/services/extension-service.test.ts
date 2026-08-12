@@ -394,7 +394,9 @@ describe("extensionService webview build status", () => {
       3,
     );
 
-    const rebuilt = await buildService.reportWebviewBuildSuccess("lab", "lab.labPage");
+    const rebuilt = await buildService.reportWebviewBuildSuccess("lab", "lab.labPage", {
+      sourcePath: "/extensions/lab",
+    });
 
     expect(rebuilt.loaded_revision).toBeString();
     expect(rebuilt.loaded_revision).not.toBe(recovered.loaded_revision);

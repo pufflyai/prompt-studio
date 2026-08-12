@@ -1,10 +1,152 @@
 import { describe, expect, it } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { apiWebSocket } from "pstdio-api/app";
+import type { RuntimeHost } from "pstdio-api/runtime";
 import packageData from "../../../../../package.json";
 
 import { createServeApp } from "./serve-app";
 
+describe("serveApp startup ordering", () => {
+  it("binds and publishes before app initialization finishes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-serve-early-bind-"));
+    const descriptorPath = join(root, "runtime.json");
+    const appReady = Promise.withResolvers<{
+      app: { fetch: (request: Request) => Response };
+      close: () => Promise<void>;
+    }>();
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+    const serveApp = createServeApp({
+      createApp: (_host, onDatabaseLockAcquired) => {
+        onDatabaseLockAcquired?.();
+        return appReady.promise;
+      },
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        capturedFetch = options.fetch;
+        return { port: 43128, stop: () => {} } as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      onFatal: () => {},
+      offFatal: () => {},
+      log: () => {},
+    });
+    const starting = serveApp({
+      descriptorPath,
+      host: "127.0.0.1",
+      instanceId: "runtime-early-bind",
+      ownerType: "desktop",
+      port: 0,
+      token: "runtime-secret",
+    });
+
+    try {
+      await Promise.resolve();
+      expect(existsSync(descriptorPath)).toBe(true);
+
+      const server = {} as Bun.Server<undefined>;
+      const response = capturedFetch!.call(server, new Request("http://127.0.0.1:43128/v1/projects"), server);
+      let requestSettled = false;
+      void Promise.resolve(response).then(() => {
+        requestSettled = true;
+      });
+      await Promise.resolve();
+      expect(requestSettled).toBe(false);
+
+      appReady.resolve({
+        app: {
+          fetch: (request) =>
+            new URL(request.url).pathname === "/runtime/ready"
+              ? Response.json({ instanceId: "runtime-early-bind", protocolVersion: 1 })
+              : new Response("app-ready"),
+        },
+        close: async () => {},
+      });
+
+      const resolvedResponse = await response;
+      if (!(resolvedResponse instanceof Response)) throw new Error("Expected the queued API response");
+      expect(await resolvedResponse.text()).toBe("app-ready");
+      await starting;
+    } finally {
+      appReady.resolve({ app: { fetch: () => new Response("app-ready") }, close: async () => {} });
+      await starting.catch(() => {});
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+});
+
 describe("serveApp", () => {
+  it("publishes the actual port-zero origin and promotes ownership through the runtime host", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-serve-runtime-"));
+    const descriptorPath = join(root, "runtime.json");
+    const logs: string[] = [];
+    let runtimeHost: RuntimeHost | undefined;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async (host, onDatabaseLockAcquired) => {
+          runtimeHost = host;
+          onDatabaseLockAcquired?.();
+          return {
+            app: {
+              fetch: () =>
+                new Response(
+                  JSON.stringify({
+                    instanceId: host!.instanceId,
+                    ok: true,
+                    ownerType: host!.ownerType(),
+                    protocolVersion: 1,
+                  }),
+                ),
+            },
+            close: async () => {},
+          };
+        },
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map(),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: () => ({ port: 43127, stop: () => {} }) as ReturnType<typeof Bun.serve>,
+        onSignal: () => {},
+        offSignal: () => {},
+        onFatal: () => {},
+        offFatal: () => {},
+        log: (message) => logs.push(message),
+      });
+
+      await serveApp({
+        descriptorPath,
+        host: "127.0.0.1",
+        instanceId: "runtime-one",
+        ownerType: "desktop",
+        port: 0,
+        token: "runtime-secret",
+      });
+
+      expect(JSON.parse(readFileSync(descriptorPath, "utf8"))).toMatchObject({
+        instanceId: "runtime-one",
+        origin: "http://127.0.0.1:43127",
+        ownerType: "desktop",
+        pid: process.pid,
+        token: "runtime-secret",
+      });
+      expect(logs.join("")).toContain('"origin":"http://127.0.0.1:43127"');
+      expect(logs.join("")).not.toContain("runtime-secret");
+
+      await runtimeHost!.promote();
+      expect(JSON.parse(readFileSync(descriptorPath, "utf8")).ownerType).toBe("persistent");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("leaves state path defaults to the app runtime", async () => {
     const previousDbPath = process.env.PSTDIO_DB_PATH;
     const previousStoragePath = process.env.PSTDIO_STORAGE_PATH;
@@ -49,18 +191,19 @@ describe("serveApp", () => {
     }
   });
 
-  it("closes the app when server startup throws", async () => {
-    let closed = false;
+  it("does not create the app when server startup throws", async () => {
+    let created = false;
 
     const serveApp = createServeApp({
-      createApp: async () => ({
-        app: {
-          fetch: () => new Response("ok"),
-        },
-        close: async () => {
-          closed = true;
-        },
-      }),
+      createApp: async () => {
+        created = true;
+        return {
+          app: {
+            fetch: () => new Response("ok"),
+          },
+          close: async () => {},
+        };
+      },
       injectConfig: (html) => html,
       isCompiledBinary: () => false,
       loadEmbeddedAssets: () => new Map(),
@@ -73,7 +216,7 @@ describe("serveApp", () => {
     });
 
     await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("EADDRINUSE");
-    expect(closed).toBe(true);
+    expect(created).toBe(false);
   });
 
   it("reports the error through startup logging when server startup throws", async () => {
@@ -219,6 +362,68 @@ describe("serveApp WebSocket transport", () => {
 });
 
 describe("serveApp dashboard config", () => {
+  it("bootstraps exact-origin browser auth with an HttpOnly strict cookie", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-dashboard-auth-"));
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async (host, onDatabaseLockAcquired) => {
+          onDatabaseLockAcquired?.();
+          return {
+            app: {
+              fetch: () =>
+                new Response(
+                  JSON.stringify({
+                    instanceId: host!.instanceId,
+                    ok: true,
+                    ownerType: host!.ownerType(),
+                    protocolVersion: 1,
+                  }),
+                ),
+            },
+            close: async () => {},
+          };
+        },
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map(),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: (options) => {
+          capturedFetch = options.fetch;
+          return { port: 43123 } as ReturnType<typeof Bun.serve>;
+        },
+        onSignal: () => {},
+        offSignal: () => {},
+        onFatal: () => {},
+        offFatal: () => {},
+        log: () => {},
+      });
+
+      await serveApp({
+        descriptorPath: join(root, "runtime.json"),
+        host: "127.0.0.1",
+        instanceId: "runtime-one",
+        ownerType: "persistent",
+        port: 0,
+        token: "runtime-secret",
+      });
+
+      const server = {} as Bun.Server<undefined>;
+      const response = await capturedFetch?.call(server, new Request("http://127.0.0.1:43123/"), server);
+      const foreign = await capturedFetch?.call(server, new Request("http://localhost:43123/"), server);
+
+      expect(response?.headers.get("set-cookie")).toBe(
+        "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
+      );
+      expect(await response?.text()).not.toContain("runtime-secret");
+      expect(foreign?.headers.get("set-cookie")).toBeNull();
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("does not inject an absolute apiBaseUrl into the dashboard config", async () => {
     let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
     let injectedApiBaseUrl: string | undefined;

@@ -26,6 +26,8 @@ export const expandHomePath = (value: string, homePath = resolveUserHome()) => {
   return value;
 };
 
+export const normalizeEmbeddedFileName = (value: string) => value.replaceAll("\\", "/");
+
 export const resolvePstdioHome = (input: ResolvePstdioHomeInput = {}) => {
   const env = input.env ?? process.env;
   const homePath = resolveUserHome({ ...input, env });
@@ -35,6 +37,12 @@ export const resolvePstdioHome = (input: ResolvePstdioHomeInput = {}) => {
 };
 
 export const resolvePstdioDbPath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "pstdio.db");
+
+export const resolvePstdioLogPath = (input: ResolvePstdioHomeInput = {}) =>
+  join(resolvePstdioHome(input), "logs.jsonl");
+
+export const resolvePstdioRuntimeDescriptorPath = (input: ResolvePstdioHomeInput = {}) =>
+  join(resolvePstdioHome(input), "runtime.json");
 
 export const resolvePstdioStoragePath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "storage");

@@ -24,6 +24,7 @@ import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
+import type { RuntimeRouteDeps } from "./runtime/routes";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -39,7 +40,6 @@ export interface RouteDeps {
   filesRoot: string;
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
-  shutdown: () => Promise<void>;
   eventBus: EventBus;
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
@@ -66,4 +66,5 @@ export interface RouteDeps {
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
   terminal?: ExtensionTerminalApi;
+  runtime?: RuntimeRouteDeps;
 }

@@ -1,5 +1,5 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
+import { resolveApiUrl } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listSessions as defaultListSessions } from "@/features/sessions/api/list-sessions";
 
@@ -51,7 +51,7 @@ export const createHandler =
       projectId = config.project_id;
     }
 
-    const sessions = await deps.listSessions(API_URL, projectId, {
+    const sessions = await deps.listSessions(resolveApiUrl(), projectId, {
       status: argv.status,
       agent: argv.agent,
       workspaceId: argv["workspace-id"],

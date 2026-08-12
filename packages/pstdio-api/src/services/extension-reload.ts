@@ -1,13 +1,17 @@
 import { dirname } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
+import {
+  checkExtensionSource,
+  hashExtensionSource,
+  type LoadedExtension,
+} from "../features/extensions/extension-runtime";
 
 type JsonRecord = Record<string, unknown>;
 
 type ReloadDeps = {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
-  notifyInstalledSourcesChanged: () => Promise<void>;
+  notifyInstalledSourcesChanged: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
   hashExtension?: typeof hashExtensionSource;
   checkExtension?: typeof checkExtensionSource;
 };
@@ -51,28 +55,42 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
       display_name: result.loaded.metadata.displayName,
       extension_id: result.loaded.metadata.id,
-      loaded_revision: nextRevision,
       manifest_json: result.loaded.manifest,
       source_hash: nextSourceHash,
-      status: "loaded",
+      status: "pending",
       version: result.loaded.metadata.version ?? null,
-      last_loaded_at: new Date().toISOString(),
       last_error_json: null,
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
+
+    await deps.notifyInstalledSourcesChanged(existing.source_path, result.loaded);
+    const refreshed = await deps.installedExtensionSourcesService.get(existing.id);
+    if (!refreshed) throw new Error(`Installed extension not found: ${existing.id}`);
+
+    const completed =
+      refreshed.status === "pending"
+        ? await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
+            loaded_revision:
+              refreshed.loaded_revision !== existing.loaded_revision ? refreshed.loaded_revision : nextRevision,
+            status: "loaded",
+            last_loaded_at: new Date().toISOString(),
+            last_error_json: null,
+          })
+        : refreshed;
+    if (!completed) throw new Error(`Installed extension not found: ${existing.id}`);
 
     await deps.installedExtensionSourcesService.recordReload({
       installed_extension_id: existing.id,
       previous_source_hash: existing.source_hash,
       next_source_hash: nextSourceHash,
       previous_revision: existing.loaded_revision,
-      next_revision: nextRevision,
-      status: "success",
+      next_revision: completed.loaded_revision,
+      status: completed.status === "error" ? "error" : "success",
+      ...(completed.status === "error" ? { error_json: completed.last_error_json } : {}),
     });
 
-    deps.emitInstalledSource(updated);
-    await deps.notifyInstalledSourcesChanged();
-    return { installedSource: updated, check: result.check };
+    deps.emitInstalledSource(completed);
+    return { installedSource: completed, check: result.check };
   } catch (error) {
     const currentErrorJson = buildErrorJson("extension_reload_failed", error);
     const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
@@ -93,7 +111,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     });
 
     deps.emitInstalledSource(updated);
-    await deps.notifyInstalledSourcesChanged();
+    await deps.notifyInstalledSourcesChanged(existing.source_path);
     return { installedSource: updated, check: null };
   }
 };
@@ -159,7 +177,8 @@ export const reportWebviewBuildSuccess = async (
   if (!existing) throw new Error(`Installed extension not found: ${installName}`);
   if (
     expectedSource &&
-    (existing.source_hash !== (expectedSource.sourceHash ?? null) || existing.source_path !== expectedSource.sourcePath)
+    (existing.source_path !== expectedSource.sourcePath ||
+      (expectedSource.sourceHash !== undefined && existing.source_hash !== expectedSource.sourceHash))
   ) {
     return existing;
   }

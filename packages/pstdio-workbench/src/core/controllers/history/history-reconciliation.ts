@@ -32,6 +32,7 @@ const reconcileEntry = (input: {
   resources: ResourceRegistry;
 }) => {
   const { entry, layout, modes, resources } = input;
+  if (entry.modeId && modes && !modes.getMode(entry.modeId)) return undefined;
   if (entry.closedSubPanel && layout.getWidget(entry.closedSubPanel.reference.contributionId)?.role !== "sub-panel") {
     return undefined;
   }

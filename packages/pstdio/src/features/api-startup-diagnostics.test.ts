@@ -62,4 +62,21 @@ describe("readStartupDiagnostics", () => {
   test("returns an empty string when the log is missing", () => {
     expect(readStartupDiagnostics({ autostartId: "current", logPath: "/missing/logs.jsonl", offset: 0 })).toBe("");
   });
+
+  test("redacts the discovered runtime token from rendered diagnostics", () => {
+    const previous = process.env.PSTDIO_API_TOKEN;
+    const { logPath, offset } = createLog();
+    process.env.PSTDIO_API_TOKEN = "runtime-secret";
+    appendFileSync(
+      logPath,
+      `${JSON.stringify({ autostartId: "current", level: 50, message: "failed with runtime-secret" })}\n`,
+    );
+
+    try {
+      expect(readStartupDiagnostics({ autostartId: "current", logPath, offset })).toBe("failed with [Redacted]");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_TOKEN;
+      else process.env.PSTDIO_API_TOKEN = previous;
+    }
+  });
 });

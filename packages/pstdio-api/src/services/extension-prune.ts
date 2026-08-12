@@ -17,7 +17,7 @@ type PruneProjectExtensionInstancesDeps = {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
-  notifyInstalledSourcesChanged: () => Promise<void>;
+  notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
 };
 
 type ExtensionInstance = Awaited<ReturnType<ReturnType<typeof createExtensionInstancesDBService>["list"]>>[number];

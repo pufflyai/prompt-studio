@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
@@ -140,6 +140,31 @@ const copyExtensionSource = (sourcePath: string, targetPath: string) => {
   });
 };
 
+const removeDirectory = (path: string) => rmSync(path, { recursive: true, force: true });
+
+// Cleanup must not replace a completed install or the error that caused an install to fail.
+export const removePathBestEffort = (path: string, remove: (path: string) => void = removeDirectory) => {
+  try {
+    remove(path);
+  } catch {}
+};
+
+const promotePreparedSource = (preparedPath: string, targetPath: string, replaceExisting: boolean) => {
+  const backupPath = join(dirname(preparedPath), ".previous");
+
+  if (existsSync(targetPath)) {
+    if (!replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
+    renameSync(targetPath, backupPath);
+  }
+
+  try {
+    renameSync(preparedPath, targetPath);
+  } catch (error) {
+    if (existsSync(backupPath)) renameSync(backupPath, targetPath);
+    throw error;
+  }
+};
+
 const cloneRepoSparse = async (
   checkoutPath: string,
   paths: string[],
@@ -255,6 +280,7 @@ const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: s
 export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
   const pstdioHome = resolvePstdioHome(input);
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
+  let stagingRoot: string | null = null;
 
   try {
     const resolvedSource = await resolveSource(input, tempDir);
@@ -275,26 +301,31 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       throw new ExtensionAlreadyInstalledError(targetPath);
     }
 
-    if (targetExists && input.force) {
-      rmSync(targetPath, { recursive: true, force: true });
-    }
-
+    let installPath = targetPath;
     if (!reuseExisting) {
-      copyExtensionSource(resolvedSource.path, targetPath);
+      mkdirSync(extensionsRoot, { recursive: true });
+      stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
+      installPath = join(stagingRoot, installName);
+      copyExtensionSource(resolvedSource.path, installPath);
     }
 
     if (input.skipInstall && resolvedSource.kind === "local") {
-      linkUsableNodeModules(resolvedSource.path, targetPath);
+      linkUsableNodeModules(resolvedSource.path, installPath);
     }
 
-    if (!input.skipInstall && shouldInstallDependencies(targetPath)) {
-      await installDependencies(targetPath, input);
+    if (!input.skipInstall && shouldInstallDependencies(installPath)) {
+      await installDependencies(installPath, input);
     }
 
-    const loaded = await loadExtensionSource(targetPath);
-    const { check } = await checkExtensionSource(targetPath, extensionsRoot);
+    const loaded = await loadExtensionSource(installPath);
+    const { check } = await checkExtensionSource(installPath, extensionsRoot);
     if (check.errorCount > 0) {
       throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+    }
+
+    if (installPath !== targetPath) {
+      promotePreparedSource(installPath, targetPath, Boolean(input.force));
+      for (const extension of check.extensions) extension.sourcePath = targetPath;
     }
 
     return {
@@ -310,6 +341,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       targetPath,
     };
   } finally {
-    rmSync(tempDir, { recursive: true, force: true });
+    if (stagingRoot) removePathBestEffort(stagingRoot);
+    removePathBestEffort(tempDir);
   }
 };

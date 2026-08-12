@@ -25,9 +25,8 @@ type LaunchOptions = {
 };
 
 const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrowser">) => {
-  // In compiled mode, `ensureApi` already spawned `pstdio serve` on apiPort.
-  // That process serves both API and dashboard. Just open the browser.
-  const url = `http://localhost:${options.apiPort}`;
+  // Startup middleware publishes the descriptor origin before the dashboard command runs.
+  const url = process.env.PSTDIO_API_URL ?? `http://127.0.0.1:${options.apiPort}`;
 
   if (options.openBrowser) {
     deps.openBrowser(url);
@@ -35,14 +34,10 @@ const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrow
 
   process.stdout.write(`Dashboard: ${url}\n`);
   process.stdout.write(`API:       ${url}/v1\n`);
-
-  const shutdown = () => process.exit(0);
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
 };
 
-export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps) => {
-  if (isCompiledBinary()) {
+export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps, compiled = isCompiledBinary()) => {
+  if (compiled) {
     launchCompiled(options, deps);
     return;
   }

@@ -49,6 +49,7 @@ describe("createCliCommandTracker", () => {
 
     expect(events).toHaveLength(2);
     expect(events[0]?.data.event).toBe("cli.command.start");
+    expect(events[0]?.data).not.toHaveProperty("raw_args");
     expect(events[1]?.data.event).toBe("cli.command.completed");
     expect(events[1]?.data.command).toBe("tickets update");
     expect(events[1]?.data.duration_ms).toBe(5);
@@ -69,5 +70,29 @@ describe("createCliCommandTracker", () => {
     tracker.logSuccess();
 
     expect(events).toHaveLength(0);
+  });
+
+  test("redacts the runtime token from command failures", () => {
+    const previous = process.env.PSTDIO_API_TOKEN;
+    const events: { data: Record<string, unknown> }[] = [];
+    process.env.PSTDIO_API_TOKEN = "runtime-secret";
+
+    try {
+      const tracker = createCliCommandTracker({
+        logger: {
+          error: (data) => events.push({ data }),
+          info: (data) => events.push({ data }),
+        },
+        rawArgs: ["tickets", "update", "--content", "runtime-secret"],
+      });
+      tracker.captureArgv({ _: ["tickets", "update"] });
+      tracker.logFailure(new Error("failed with runtime-secret"));
+
+      expect(JSON.stringify(events)).not.toContain("runtime-secret");
+      expect(JSON.stringify(events)).toContain("[Redacted]");
+    } finally {
+      if (previous === undefined) delete process.env.PSTDIO_API_TOKEN;
+      else process.env.PSTDIO_API_TOKEN = previous;
+    }
   });
 });

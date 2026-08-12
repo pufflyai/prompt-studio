@@ -164,6 +164,7 @@ export const createSyncClient = (clientOptions: ClientOptions): SyncClient => ({
           {
             headers: Object.fromEntries(createRequestHeaders(clientOptions).entries()),
             signal: abortController.signal,
+            credentials: "same-origin",
           },
         );
         if (!response.ok || !response.body) throw new Error("SSE connection failed");

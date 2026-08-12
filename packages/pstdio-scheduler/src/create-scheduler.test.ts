@@ -102,6 +102,27 @@ describe("createScheduler diff/sync", () => {
 });
 
 describe("createScheduler live firing", () => {
+  test("reports in-flight jobs with stable run ids and display labels", async () => {
+    const cron = createTestCronDriver();
+    const blocker = Promise.withResolvers<void>();
+    const scheduler = createScheduler({
+      cron: cron.factory,
+      now: () => new Date("2026-04-20T09:00:00.000Z"),
+      listJobs: async () => [{ key: "project/heartbeat", cron: "* * * * *", timeoutMs: 1_000 }],
+      runJob: async () => blocker.promise,
+    });
+    schedulers.push(scheduler);
+
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
+    await waitFor(() => scheduler.activity().length === 1);
+
+    expect(scheduler.activity()).toEqual([{ id: expect.any(String), label: "project/heartbeat" }]);
+
+    blocker.resolve();
+    await waitFor(() => scheduler.activity().length === 0);
+  });
+
   test("dispatches live runs from the injected cron driver", async () => {
     const cron = createTestCronDriver();
     const fireTimes: string[] = [];

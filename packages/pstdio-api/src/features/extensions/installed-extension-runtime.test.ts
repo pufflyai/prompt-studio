@@ -42,7 +42,7 @@ class FakeWatcher {
   }
 }
 
-const createProcess = (onRefresh?: () => Promise<void>) => ({
+const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
 });
@@ -64,6 +64,54 @@ const writeExtension = (dir: string, name: string) => {
 };
 
 describe("createInstalledExtensionRuntime", () => {
+  test("lets the extension service own runtime refresh after a watched source reload", async () => {
+    let reloadInstalledSource: ((sourcePath: string) => Promise<unknown>) | undefined;
+    let resolveSourceReload: (() => void) | undefined;
+    let webviewRefreshCount = 0;
+    const refreshedSourcePaths: Array<string | undefined> = [];
+    const sourceReload = new Promise<void>((resolve) => {
+      resolveSourceReload = resolve;
+    });
+
+    const runtime = await createInstalledExtensionRuntime({
+      harnessRegistry: {} as never,
+      extensionService: {
+        reloadInstalledSourceBySourcePath: async () => sourceReload,
+        reportBuildFailure: async () => {},
+        reportBuildSuccess: async () => {},
+      } as never,
+      installedExtensionSourcesService: { list: async () => [] } as never,
+      projectService: { list: async () => [] } as never,
+      repoService: {} as never,
+      webviewBuilds: true,
+      createRootWatcher: async () => createProcess(),
+      createSourceWatcher: async (config) => {
+        reloadInstalledSource = config.reloadInstalledSource;
+        return createProcess();
+      },
+      createWebviewBuildManager: () =>
+        createProcess(async (sourcePath) => {
+          webviewRefreshCount += 1;
+          refreshedSourcePaths.push(sourcePath);
+        }),
+    });
+
+    try {
+      const reload = reloadInstalledSource?.("/extensions/lab");
+      await wait();
+
+      expect(webviewRefreshCount).toBe(1);
+      expect(refreshedSourcePaths).toEqual([undefined]);
+
+      resolveSourceReload?.();
+      await reload;
+      await wait();
+      expect(refreshedSourcePaths).toEqual([undefined]);
+    } finally {
+      runtime.dispose();
+    }
+  });
+
   test("does not wait for webview builds when refreshing after source changes", async () => {
     let resolveBackgroundBuild: (() => void) | undefined;
     let webviewRefreshCount = 0;

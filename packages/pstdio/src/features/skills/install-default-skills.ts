@@ -3,7 +3,7 @@ import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { type AgentInfo, harnessLocalId } from "@pstdio/sdk/resources";
-import { API_URL } from "@/features/api-url";
+import { resolveApiUrl } from "@/features/api-url";
 import { listSkillsWithFiles } from "./api/list-skills";
 
 type SkillFile = {
@@ -87,7 +87,14 @@ const writeSkillTree = (targetDir: string, files: SkillFile[]) => {
 };
 
 export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
-  const { root, agentId, projectId, global: isGlobal = false, homedir = defaultHomedir(), baseUrl = API_URL } = options;
+  const {
+    root,
+    agentId,
+    projectId,
+    global: isGlobal = false,
+    homedir = defaultHomedir(),
+    baseUrl = resolveApiUrl(),
+  } = options;
   if (!projectId) return [];
 
   const agent = findAgentInfo(await listAvailableAgents(baseUrl), agentId);
@@ -115,7 +122,7 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
 export const installDefaultSkills = async (
   root: string,
   projectId: string,
-  baseUrl = API_URL,
+  baseUrl = resolveApiUrl(),
   homedir = defaultHomedir(),
 ) => {
   const agents = (await listAvailableAgents(baseUrl, projectId)).filter(

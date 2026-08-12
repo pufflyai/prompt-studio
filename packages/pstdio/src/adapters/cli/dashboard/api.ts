@@ -38,13 +38,13 @@ const readApiPackageName = (apiRoot: string) => {
   }
 };
 
-const isApiWorkspace = (apiRoot: string) => readApiPackageName(apiRoot) === "pstdio-api";
+const isApiWorkspace = (apiRoot: string) => readApiPackageName(apiRoot) === "pstdio";
 
 export const resolveApiRoot = (startDir: string) => {
   let current = resolve(startDir);
 
   while (true) {
-    const candidate = join(current, "packages", "pstdio-api");
+    const candidate = join(current, "packages", "pstdio");
     if (isApiWorkspace(candidate)) {
       return candidate;
     }
@@ -82,13 +82,28 @@ export const buildCompiledApiCommand = (
   detached = true,
 ) => ({
   command: process.execPath,
-  args: apiPort ? ["serve", "--port", apiPort] : ["serve"],
+  args: ["serve", "--foreground", "--owner", "persistent", "--host", "127.0.0.1", "--port", apiPort ?? "0"],
   options: { cwd: undefined as string | undefined, stdio, detached },
 });
 
-export const buildApiStartCommand = (apiRoot: string, stdio: ApiSpawnOptions["stdio"] = "ignore", detached = true) => ({
+export const buildApiStartCommand = (
+  apiRoot: string,
+  apiPort: string | undefined,
+  stdio: ApiSpawnOptions["stdio"] = "ignore",
+  detached = true,
+) => ({
   command: "bun",
-  args: ["run", "start"],
+  args: [
+    "./src/index.ts",
+    "serve",
+    "--foreground",
+    "--owner",
+    "persistent",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    apiPort ?? "0",
+  ],
   options: { cwd: apiRoot, stdio, detached },
 });
 
@@ -100,18 +115,6 @@ const buildBundledApiCommand = (serverEntry: string, stdio: ApiSpawnOptions["std
 
 export const shouldAutoStartApi = (env: NodeJS.ProcessEnv = process.env) => env.PSTDIO_DISABLE_API_AUTO_START !== "1";
 
-const resolveApiEnv = (env: NodeJS.ProcessEnv) => {
-  const resolved = { ...env };
-
-  if (!resolved.PSTDIO_API_PORT) {
-    return resolved;
-  }
-
-  resolved.PORT = resolved.PSTDIO_API_PORT;
-
-  return resolved;
-};
-
 export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   const { spawner = spawn, env = process.env, stdio = "ignore", detached = true, bundledCliPath } = options;
 
@@ -121,9 +124,8 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
 
   // Path 1: compiled binary — self-spawn with `serve` subcommand
   if (isCompiledBinary()) {
-    const compiledEnv = resolveApiEnv(env);
     const { command, args, options: spawnOptions } = buildCompiledApiCommand(env.PSTDIO_API_PORT, stdio, detached);
-    const child = spawner(command, args, { ...spawnOptions, env: compiledEnv });
+    const child = spawner(command, args, { ...spawnOptions, env });
 
     if (detached) {
       child.unref?.();
@@ -137,10 +139,14 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   const apiRoot = resolveApiRoot(startDir) ?? (cliPath ? resolveApiRoot(dirname(resolve(cliPath))) : null);
 
   if (apiRoot) {
-    const { command, args, options: spawnOptions } = buildApiStartCommand(apiRoot, stdio, detached);
+    const {
+      command,
+      args,
+      options: spawnOptions,
+    } = buildApiStartCommand(apiRoot, env.PSTDIO_API_PORT, stdio, detached);
     const child = spawner(command, args, {
       ...spawnOptions,
-      env: resolveApiEnv(env),
+      env,
     });
 
     if (detached) {
@@ -154,9 +160,8 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   const bundledEntry = cliPath ? resolveBundledApiEntry(cliPath) : null;
 
   if (bundledEntry) {
-    const bundledEnv = resolveApiEnv(env);
     const { command, args, options: spawnOptions } = buildBundledApiCommand(bundledEntry, stdio, detached);
-    const child = spawner(command, args, { ...spawnOptions, env: bundledEnv });
+    const child = spawner(command, args, { ...spawnOptions, env });
 
     if (detached) {
       child.unref?.();

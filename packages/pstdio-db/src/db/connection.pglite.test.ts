@@ -145,6 +145,19 @@ describe("resolvePgliteOptions", () => {
     expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
   });
 
+  it("recognizes Windows-style embedded PGlite asset names", async () => {
+    const wasmFile = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\pglite.wasm", EMPTY_WASM);
+    const dataFile = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\pglite.data", new Uint8Array([1, 2, 3]));
+
+    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never])) as {
+      fsBundle: typeof dataFile;
+      wasmModule: WebAssembly.Module;
+    };
+
+    expect(opts.fsBundle).toBe(dataFile);
+    expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+  });
+
   it("throws when only one of the two PGlite assets is embedded", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     await expect(resolvePgliteOptions([wasmFile as never])).rejects.toThrow(/Partial PGlite embed/);
@@ -174,6 +187,25 @@ describe("resolveMigrationsFolder", () => {
     expect(fs.existsSync(path.join(extractionRoot, "meta", "_journal.json"))).toBe(true);
 
     fs.rmSync(tempRoot, { force: true, recursive: true });
+  });
+
+  it("extracts migrations with Windows-style embedded names", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-migrations-windows-"));
+    const embedded = toEmbedded("0000_lush_corsair.sql", "-- migration");
+    embedded.name = embedded.name.replaceAll("/", "\\");
+
+    try {
+      const folder = await resolveMigrationsFolder({
+        tmpDir: tempRoot,
+        embeddedFiles: [embedded],
+        logger: () => {},
+      });
+
+      expect(folder).toBe(path.join(tempRoot, "pstdio-drizzle"));
+      expect(fs.existsSync(path.join(folder, "0000_lush_corsair.sql"))).toBe(true);
+    } finally {
+      fs.rmSync(tempRoot, { force: true, recursive: true });
+    }
   });
 
   it("cleans up stale files from previous extractions", async () => {

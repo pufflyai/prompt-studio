@@ -8,15 +8,17 @@ import type { createRepoService } from "../../services/repo-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
+import type { LoadedExtension } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { resolvePstdioHome } from "./install-extension-source";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
   dispose: () => void;
-  refresh: () => Promise<void>;
+  refresh: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
 };
 
 // An installed source whose directory has been removed (project deleted/moved, extension
@@ -42,6 +44,10 @@ export const createInstalledExtensionRuntime = async (input: {
   const createRootWatcher = input.createRootWatcher ?? createExtensionRootWatcher;
   const createSourceWatcher = input.createSourceWatcher ?? createExtensionSourceWatcher;
   const createWebviewBuildManager = input.createWebviewBuildManager ?? createExtensionWebviewBuildManager;
+  const projectRuntimeCatalog = createProjectExtensionRuntimeCatalog({
+    extensionService: input.extensionService,
+    repoService: input.repoService,
+  });
   const reportError = (err: unknown) =>
     apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed");
   // Forward reference to refresh(): a repo root sync that marks sources missing must reconcile the
@@ -89,11 +95,6 @@ export const createInstalledExtensionRuntime = async (input: {
   });
   const listExistingInstalledSources = async () =>
     selectExistingSources(await input.installedExtensionSourcesService.list());
-  const sourceWatcher = await createSourceWatcher({
-    listInstalledSources: listExistingInstalledSources,
-    reloadInstalledSource: (sourcePath) => input.extensionService.reloadInstalledSourceBySourcePath(sourcePath),
-    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
-  });
   const webviewBuildManager: RuntimeProcess = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
@@ -104,17 +105,27 @@ export const createInstalledExtensionRuntime = async (input: {
         onError: reportError,
       })
     : { dispose: () => {}, refresh: async () => {} };
+  const refreshWebviewsInBackground = (sourcePath?: string) => {
+    webviewBuildManager.refresh(sourcePath).catch(reportError);
+  };
+  const sourceWatcher = await createSourceWatcher({
+    listInstalledSources: listExistingInstalledSources,
+    reloadInstalledSource: (sourcePath) => input.extensionService.reloadInstalledSourceBySourcePath(sourcePath),
+    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
+  });
 
   const refreshWatchers = async () => {
     await rootWatcher.refresh();
     await sourceWatcher.refresh();
   };
 
-  const refreshWebviewsInBackground = () => {
-    webviewBuildManager.refresh().catch(reportError);
-  };
-
-  const refresh = async () => {
+  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+    projectRuntimeCatalog.refresh();
+    if (sourcePath) {
+      await sourceWatcher.refresh(sourcePath);
+      await webviewBuildManager.refresh(sourcePath, validatedSource);
+      return;
+    }
     await refreshWatchers();
     refreshWebviewsInBackground();
   };
@@ -129,6 +140,7 @@ export const createInstalledExtensionRuntime = async (input: {
       sourceWatcher.dispose();
       webviewBuildManager.dispose();
     },
+    projectRuntimeCatalog,
     refresh,
   };
 };

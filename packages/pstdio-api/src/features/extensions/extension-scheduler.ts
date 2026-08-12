@@ -168,6 +168,7 @@ export const createExtensionScheduler = (input: Input) => {
   });
 
   return {
+    activity: scheduler.activity,
     refresh: scheduler.refresh,
     async dispose() {
       unsubscribe?.();

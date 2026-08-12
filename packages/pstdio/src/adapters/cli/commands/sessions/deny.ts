@@ -1,6 +1,6 @@
 import { createClient } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
+import { resolveApiUrl } from "@/features/api-url";
 import { getSession as defaultGetSession } from "@/features/sessions/api/get-session";
 
 export const command = "deny";
@@ -44,7 +44,7 @@ export const createHandler =
       throw new Error("Session is not awaiting input");
     }
 
-    await deps.sendApproval(API_URL, argv.id, argv["approval-id"], "deny");
+    await deps.sendApproval(resolveApiUrl(), argv.id, argv["approval-id"], "deny");
     deps.log(`Denied tool request for session ${argv.id}.\nSession ${argv.id} resumed.`);
   };
 

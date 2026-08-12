@@ -39,13 +39,13 @@ afterEach(() => {
 describe("sync client", () => {
   it("connects to the sync stream and projects init rows", async () => {
     const stream = createSseStream();
-    const calls: string[] = [];
+    const calls: Array<{ init: RequestInit; url: string }> = [];
     const rows: Array<{ id: string; [key: string]: unknown }> = [];
-    const fetchFn = ((url: string) => {
-      calls.push(String(url));
+    const fetchFn = ((url: string, init: RequestInit) => {
+      calls.push({ init, url: String(url) });
       return Promise.resolve(stream.response);
     }) as unknown as typeof fetch;
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn, token: "secret" });
 
     const connection = client.sync.start({
       getWriter: () => ({
@@ -61,7 +61,10 @@ describe("sync client", () => {
     stream.send("init", { tables: { projects: [{ id: "p1", name: "Project 1" }] }, seq: 5 });
 
     await waitFor(() => rows.length === 1);
-    expect(calls).toEqual(["http://test:1234/v1/sync/stream"]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe("http://test:1234/v1/sync/stream");
+    expect(calls[0]?.init.credentials).toBe("same-origin");
+    expect((calls[0]?.init.headers as Record<string, string>).authorization).toBe("Bearer secret");
     expect(rows).toEqual([{ id: "p1", name: "Project 1" }]);
     expect(connection.connected).toBe(true);
   });

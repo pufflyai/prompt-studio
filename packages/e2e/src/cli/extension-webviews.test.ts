@@ -91,8 +91,8 @@ describe("extension webview setup", () => {
       const labRoute = metadata.routes.find((route) => route.path === "lab");
 
       expect(labRoute?.webview.runtimeUrl).toBe("/v1/extensions/runtime");
-      expect(labRoute?.webview.moduleUrl).toBe(
-        "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
+      expect(labRoute?.webview.moduleUrl).toMatch(
+        /^\/v1\/extensions\/installed\/extension-lab\/webviews\/extension-lab\.labPage\/module\.js\?h=.+$/,
       );
 
       const module = await waitForOk(`${api.url}${labRoute!.webview.moduleUrl}`);

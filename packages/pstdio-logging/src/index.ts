@@ -48,6 +48,12 @@ type CreateLoggerInput = ResolveLogPathInput & {
 
 const DEFAULT_LOG_FILE_NAME = "logs.jsonl";
 const REDACTED = "[Redacted]";
+const SENSITIVE_TEXT_PATTERNS = [
+  /(\bbearer\s+)[A-Za-z0-9._~+/=-]+/gi,
+  /(\b(?:authorization|api[_-]?token|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[:=]\s*)[^\s,;&]+/gi,
+  /([?&](?:api[_-]?token|access[_-]?token|refresh[_-]?token|token|password|secret)=)[^&#\s]*/gi,
+  /(--(?:api[_-]?token|token|password|secret)\s+)[^\s]+/gi,
+] as const;
 const DEFAULT_REDACT_PATHS = [
   "apiToken",
   "*.apiToken",
@@ -64,6 +70,17 @@ const DEFAULT_REDACT_PATHS = [
   "token",
   "*.token",
 ];
+
+export const redactSensitiveText = (value: string, secrets: string[] = []) => {
+  let redacted = value;
+  for (const secret of secrets.filter(Boolean).sort((left, right) => right.length - left.length)) {
+    redacted = redacted.replaceAll(secret, REDACTED);
+  }
+  for (const pattern of SENSITIVE_TEXT_PATTERNS) {
+    redacted = redacted.replace(pattern, `$1${REDACTED}`);
+  }
+  return redacted;
+};
 
 const resolveStateDirectory = (input: ResolveLogPathInput = {}) => {
   const env = input.env ?? process.env;
