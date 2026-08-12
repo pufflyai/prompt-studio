@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { DesktopLifecycleView } from "./desktop-lifecycle-app";
 
 const actions = {
@@ -56,6 +57,12 @@ export const ActiveWorkConfirmation: Story = {
         jobs: [{ id: "job-one", label: "Package verification" }],
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Keep Prompt Studio open" })).toHaveFocus();
+    await userEvent.tab();
+    await expect(canvas.getByRole("button", { name: "Cancel work and quit" })).toHaveFocus();
   },
 };
 

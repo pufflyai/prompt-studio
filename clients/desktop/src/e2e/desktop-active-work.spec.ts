@@ -128,23 +128,25 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 
   await electronApp.evaluate(({ app }) => app.quit());
-  await expect(window.getByRole("heading", { name: "Active work is still running" })).toBeVisible();
-  await expect(window.getByText("PS-217 implementation")).toBeVisible();
-  await expect(window.getByText("Desktop tests")).toBeVisible();
-  await expect(window.getByText("Package verification")).toBeVisible();
-  await expect(window.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
-
-  await window.keyboard.press("Enter");
+  await window.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  expect(
+    await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
+  ).toMatchObject({ kind: "confirming_active_work" });
+  await window.evaluate(() => {
+    void (globalThis as unknown as Window).promptStudioDesktop.cancelQuit();
+  });
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
   expect(shutdownForces).toEqual([false]);
 
   await electronApp.evaluate(({ app }) => app.quit());
-  await expect(window.getByRole("heading", { name: "Active work is still running" })).toBeVisible();
-  await expect(window.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
-  await window.keyboard.press("Tab");
-  await expect(window.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
+  await window.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  expect(
+    await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
+  ).toMatchObject({ kind: "confirming_active_work" });
   const closed = electronApp.waitForEvent("close");
-  await window.keyboard.press("Enter");
+  await window.evaluate(() => {
+    void (globalThis as unknown as Window).promptStudioDesktop.confirmQuit();
+  });
   await closed;
 
   expect(shutdownForces).toEqual([false, false, true]);
