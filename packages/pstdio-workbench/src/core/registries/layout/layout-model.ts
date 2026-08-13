@@ -135,6 +135,18 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
     "main",
     placement,
   );
+  // A sub-panels-only Location presents no content of its own: hand the active
+  // slot to its first Sub Panel as soon as one exists.
+  if (input.getWidget(placement.contributionId)?.subPanelsOnly) {
+    const subPanel = input
+      .getLayout()
+      .regions.main.widgets.find(
+        (candidate) =>
+          candidate.role === "sub-panel" &&
+          (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
+      );
+    if (subPanel) return input.panelMethods.activatePanel(subPanel.widgetId);
+  }
   return input.panelMethods.getActivePanel("main")!;
 };
 

@@ -77,11 +77,15 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
           (placement) => (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location",
         )
       : [];
+  // A sub-panels-only Location presents no tab of its own; only its Sub Panels do.
+  const tabbedLocationPanels = locationPanels.filter(
+    (placement) => !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
+  );
   const visiblePlacements =
-    locationPanels.length + visibleSubPanels.length > 1
+    tabbedLocationPanels.length + visibleSubPanels.length > 1
       ? regionState.widgets.filter(
           (placement) =>
-            locationPanels.some((location) => location.widgetId === placement.widgetId) ||
+            tabbedLocationPanels.some((location) => location.widgetId === placement.widgetId) ||
             visibleSubPanelIds.has(placement.widgetId),
         )
       : visibleSubPanels;

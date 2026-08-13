@@ -1,6 +1,8 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
 import {
   ChromeActivityRail,
+  ChromeBoardHost,
+  ChromeBoardView,
   ChromeExtraPanel,
   ChromeItemInspector,
   ChromeLibraryPage,
@@ -130,6 +132,57 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     render: (input) => <ChromeItemInspector input={input} />,
   });
 
+  // A sub-panels-only Location: it anchors the resource but renders no tab and
+  // no content of its own — its Sub Panels are the content.
+  ctx.layout.registerPanel({
+    closable: false,
+    id: chromeWidgetIds.boardHost,
+    title: "Board",
+    region: "main",
+    singleton: true,
+    subPanelsOnly: true,
+    rendererId: chromeWidgetIds.boardHost,
+  });
+  ctx.renderers.registerRenderer({ id: chromeWidgetIds.boardHost, render: () => <ChromeBoardHost /> });
+  ctx.layout.registerPanel({
+    closable: true,
+    id: chromeWidgetIds.boardColumns,
+    title: "Columns",
+    region: "main",
+    singleton: true,
+    eligibleLocations: {},
+    resourceKinds: [viewKind],
+    rendererId: chromeWidgetIds.boardColumns,
+  });
+  ctx.renderers.registerRenderer({
+    id: chromeWidgetIds.boardColumns,
+    render: () => (
+      <ChromeBoardView
+        name="Columns"
+        hint="The first Sub Panel activates automatically: the Board Location never shows its own tab or content."
+      />
+    ),
+  });
+  ctx.layout.registerPanel({
+    closable: true,
+    id: chromeWidgetIds.boardSwimlanes,
+    title: "Swimlanes",
+    region: "main",
+    singleton: true,
+    eligibleLocations: {},
+    resourceKinds: [viewKind],
+    rendererId: chromeWidgetIds.boardSwimlanes,
+  });
+  ctx.renderers.registerRenderer({
+    id: chromeWidgetIds.boardSwimlanes,
+    render: () => (
+      <ChromeBoardView
+        name="Swimlanes"
+        hint="A second Sub Panel beside Columns; the tab strip shows only the Sub Panels."
+      />
+    ),
+  });
+
   ctx.layout.registerPanel({
     closable: false,
     id: chromeWidgetIds.libraryPage,
@@ -191,6 +244,38 @@ const registerModes = (ctx: WorkbenchModuleContext) => {
     },
   });
   ctx.modes.registerMode({
+    id: chromeModes.board.id,
+    label: chromeModes.board.label,
+    panels: ["main"],
+    activate: () => undefined,
+    seed(modeCtx) {
+      // Each mode stages its own Main content; without this the previous mode's
+      // Location would carry over as an extra document tab.
+      modeCtx.layout.clearRegion("main");
+      modeCtx.layout.openPanel(chromeWidgetIds.rail, { pinned: true });
+      modeCtx.layout.openPanel(chromeWidgetIds.status, { pinned: true });
+      const boardResource = viewResource("board", "Board", "kanban");
+      modeCtx.layout.openPanel(chromeWidgetIds.boardHost, {
+        resource: boardResource,
+        strategy: { kind: "persistent" },
+      });
+      modeCtx.layout.openPanel(chromeWidgetIds.boardColumns, {
+        resource: boardResource,
+        title: "Columns",
+        strategy: { kind: "persistent" },
+      });
+      modeCtx.layout.openPanel(chromeWidgetIds.boardSwimlanes, {
+        resource: boardResource,
+        title: "Swimlanes",
+        strategy: { kind: "persistent" },
+      });
+      modeCtx.layout.openPanel(chromeWidgetIds.boardHost, {
+        resource: boardResource,
+        strategy: { kind: "persistent" },
+      });
+    },
+  });
+  ctx.modes.registerMode({
     id: chromeModes.library.id,
     label: chromeModes.library.label,
     panels: ["main"],
@@ -200,6 +285,7 @@ const registerModes = (ctx: WorkbenchModuleContext) => {
       // both regions — the studio re-stages them on its next entry.
       modeCtx.layout.clearRegion("activity");
       modeCtx.layout.clearRegion("status");
+      modeCtx.layout.clearRegion("main");
       modeCtx.layout.openPanel(chromeWidgetIds.libraryPage, {
         resource: viewResource("library", "Library", "book-open"),
         strategy: { kind: "persistent" },

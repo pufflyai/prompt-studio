@@ -1,5 +1,6 @@
 export const chromeModes = {
   studio: { id: "mode-chrome.studio", label: "Studio", icon: "flask-conical" },
+  board: { id: "mode-chrome.board", label: "Board", icon: "kanban" },
   library: { id: "mode-chrome.library", label: "Library", icon: "book-open" },
 } as const;
 
@@ -11,6 +12,9 @@ export const chromeWidgetIds = {
   notes: "mode-chrome.notes",
   inspector: "mode-chrome.inspector",
   libraryPage: "mode-chrome.library-page",
+  boardHost: "mode-chrome.board-host",
+  boardColumns: "mode-chrome.board-columns",
+  boardSwimlanes: "mode-chrome.board-swimlanes",
 } as const;
 
 export const chromeItemKind = "mode-chrome.item";

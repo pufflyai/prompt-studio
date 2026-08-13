@@ -111,3 +111,18 @@ export const ChromeExtraPanel = (props: { name: string }) => (
     <Text color="fg.muted">Added from the header's plus menu.</Text>
   </Box>
 );
+
+export const ChromeBoardHost = () => (
+  <Box padding="lg">
+    <Text color="fg.muted">This Location presents only Sub Panels. Add one from the plus menu.</Text>
+  </Box>
+);
+
+export const ChromeBoardView = (props: { name: string; hint: string }) => (
+  <Box padding="lg">
+    <Stack gap="sm" maxW="34rem">
+      <Heading size="sm">{props.name}</Heading>
+      <Text color="fg.muted">{props.hint}</Text>
+    </Stack>
+  </Box>
+);

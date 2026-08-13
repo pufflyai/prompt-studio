@@ -104,6 +104,9 @@ export interface WidgetContribution {
   // Non-closeable widgets opt into the tab visibility menu; closeable widgets
   // ignore this and use the X button for dismissal.
   hiddenByDefault?: boolean;
+  // A Location that presents only its Sub Panels: it renders no tab and no
+  // content of its own — establishing it activates its first Sub Panel.
+  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
@@ -153,6 +156,7 @@ export interface WorkbenchPanelContribution {
   reuse?: WorkbenchPanelReusePolicy;
   mountStrategy?: WorkbenchPanelMountStrategy;
   hiddenByDefault?: boolean;
+  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
