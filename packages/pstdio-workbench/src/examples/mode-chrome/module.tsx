@@ -1,6 +1,7 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
 import {
   ChromeActivityRail,
+  ChromeExtraPanel,
   ChromeItemInspector,
   ChromeLibraryPage,
   ChromeNotes,
@@ -98,6 +99,23 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     rendererId: chromeWidgetIds.notes,
   });
   ctx.renderers.registerRenderer({ id: chromeWidgetIds.notes, render: () => <ChromeNotes /> });
+
+  // Addable Sub Panels: registered but not opened by the seed, so they appear in
+  // the header's "+" menu and each add must create a tab with its own title.
+  for (const extra of ["Timeline", "Metrics", "Console"]) {
+    const id = `mode-chrome.extra-${extra.toLowerCase()}`;
+    ctx.layout.registerPanel({
+      closable: true,
+      id,
+      title: extra,
+      region: "main",
+      singleton: true,
+      eligibleLocations: {},
+      resourceKinds: [viewKind],
+      rendererId: id,
+    });
+    ctx.renderers.registerRenderer({ id, render: () => <ChromeExtraPanel name={extra} /> });
+  }
 
   ctx.layout.registerPanel({
     closable: true,

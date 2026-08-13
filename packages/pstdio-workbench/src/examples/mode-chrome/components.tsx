@@ -104,3 +104,10 @@ export const ChromeItemInspector = (props: { input: WorkbenchPanelRenderInput })
     </Box>
   );
 };
+
+export const ChromeExtraPanel = (props: { name: string }) => (
+  <Box padding="lg">
+    <Heading size="sm">{props.name}</Heading>
+    <Text color="fg.muted">Added from the header's plus menu.</Text>
+  </Box>
+);

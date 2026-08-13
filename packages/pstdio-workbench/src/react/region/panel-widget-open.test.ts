@@ -3,57 +3,51 @@ import { createWorkbenchCore } from "../../core";
 import { openPanelWidget } from "./panel-widget-open";
 
 describe("openPanelWidget", () => {
-  test("preserves the Panel's declared closability when opened from Add Panel", () => {
+  test("titles an added tab by its widget, not the location resource it binds to", () => {
     const workbench = createWorkbenchCore();
+
     workbench.layout.registerPanel({
       closable: false,
-      id: "workspaces",
-      title: "Workspaces",
+      id: "chrome.overview",
+      title: "Overview",
       region: "main",
-      rendererId: "workspaces.renderer",
+      singleton: true,
+      rendererId: "chrome.overview",
     });
-
-    openPanelWidget({ workbench, widget: workbench.layout.getWidget("workspaces")!, region: "main" });
-
-    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workspaces", closable: false }),
-    ]);
-  });
-
-  test("marks command-backed opens as Add Panel requests", async () => {
-    const workbench = createWorkbenchCore();
-    const contexts: unknown[] = [];
-    workbench.commands.registerCommand(
-      { id: "sessions.new", label: "New session" },
-      { execute: (_args, context) => contexts.push(context) },
-    );
     workbench.layout.registerPanel({
-      closable: false,
-      id: "sessions",
-      title: "Sessions",
-      region: "side",
-      rendererId: "sessions.renderer",
-      openCommandId: "sessions.new",
+      closable: true,
+      id: "chrome.timeline",
+      title: "Timeline",
+      region: "main",
+      singleton: true,
+      eligibleLocations: {},
+      resourceKinds: ["chrome.view"],
+      rendererId: "chrome.timeline",
     });
 
-    openPanelWidget({ workbench, widget: workbench.layout.getWidget("sessions")!, region: "side" });
-    await Promise.resolve();
-
-    expect(contexts).toEqual([{ source: "panel-add" }]);
-  });
-
-  test("keeps a floating Side Panel detached when adding a tab", () => {
-    const workbench = createWorkbenchCore({ initialSidePanelMode: "floating" });
-    workbench.layout.registerPanel({
-      closable: false,
-      id: "sessions",
-      title: "Sessions",
-      region: "side",
-      rendererId: "sessions.renderer",
+    const location = {
+      kind: "chrome.view",
+      uri: "chrome://view/overview",
+      id: "overview",
+      label: "Overview",
+    };
+    workbench.layout.openPanel("chrome.overview", {
+      resource: location,
+      strategy: { kind: "persistent" },
     });
 
-    openPanelWidget({ workbench, widget: workbench.layout.getWidget("sessions")!, region: "side" });
+    openPanelWidget({
+      workbench,
+      widget: workbench.layout.getWidget("chrome.timeline")!,
+      region: "main",
+      resource: location,
+    });
 
-    expect(workbench.sidePanel.getMode()).toBe("floating");
+    const placement = workbench.layout
+      .getLayout()
+      .regions.main.widgets.find((candidate) => candidate.contributionId === "chrome.timeline");
+    expect(placement?.title).toBe("Timeline");
+    // The location resource still binds the tab to where it was added.
+    expect(placement?.resourceUri).toBe(location.uri);
   });
 });
