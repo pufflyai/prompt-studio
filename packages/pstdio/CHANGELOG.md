@@ -1,5 +1,50 @@
 # pstdio
 
+## 0.26.0
+
+_2026-08-13_
+
+### Minor Changes
+
+- 660ec29: Add the secure Electron lifecycle and runtime client foundation.
+- 0ade6ec: Add a watch-based extension development workflow with dependency recovery.
+- cf7f9d4: Secure local runtime REST, SSE, WebSocket, and extension process transport.
+- 0818856: Redesign extension settings with a grouped list, per-extension detail page, default-on automation toggles, and retry/attempt-fix actions for load errors.
+- 660ec29: Package the desktop sidecar and isolated development workflow.
+- 5e57bf7: Let extensions contribute their own settings sections through a `settingsSections` contribution that panels opt into with `section`, and group the planner's Ticket status and Ticket tags panels under a Planner section; adopt status ring and level bar glyphs as the default status and tag icons
+- 4e25f08: Discover, share, promote, and gracefully stop one authenticated ephemeral-port runtime.
+
+### Patch Changes
+
+- 0cfd2c8: Persist Side Panel tabs, presentation, session selection, and chat drafts while showing ticket workspace sessions.
+- e66bcae: Validate extension dashboard capability compatibility during extension checks.
+- 0917cfb: Recover navigation when persisted extension modes are no longer registered.
+- aadc46f: Clean stale attachment dispatch rows after session reattach.
+- 541ec5d: Honor extension panel placement when registering and opening workbench tabs.
+- 1b8ac94: Rebuild managed extension webviews when source files, manifests, lockfiles, or dependencies change.
+- 78e3af9: Rework the Extension Lab into a single Lab mode: native activity items with a project-home shortcut, a status strip, panel menus for creating artifacts and picking cameras, and a Side Panel artifact inspector.
+- e777925: Reconcile extension-owned layouts in local dashboard storage.
+- 1de89fd: Keep extension replacements available, recover deleted project selections, and keep packaged dashboard API routing runtime-owned.
+- 0665a9a: Keep active chat turns sticky and preserve live follow-up order
+- d9b7d32: Restore terminal connections in Vite development through runtime WebSocket configuration.
+- 9bfcaf1: Build every command parameter form from param editor rows so ticket actions like refine and break into sub-tickets match the run attempt form
+- c9fffc3: Keep run parameter menus interactive above dialogs and add icon-aware searchable grouped selections to the standard editor layout
+- f924ca2: Show the created-at date in the ticket properties panel next to the updated-at date
+- 6603da2: Show the latest workspace session status on ticket cards and open that session in the Side Panel from the workspace badge indicator
+- d248bdd: Route extension file ownership mutations through a dedicated domain service so upload/delete own their persistence and live-sync events instead of route handlers
+- 5e57bf7: Rebuild the tag editor as flat hairline rows with a combined colour/icon swatch, an appearance popover carrying status ring and level bar glyphs from the new prompt-studio-icons font, inline renaming of tag definitions, a shared segmented control, and one header save bar per settings screen that marks unsaved edits and offers Reset
+- cf7f9d4: Bind the runtime before database startup while publishing only after database ownership is acquired.
+- 650bbfa: Keep extension sidenav navigation visible in custom modes.
+- 7bf5d83: Warn when extension panels use empty eligibleLocations and document panel role choices for extension authors.
+- 6766c64: Preserve actionable Bun diagnostics when managed extension webview builds fail.
+- b8059df: Ensure workspace terminals use their effective directories and render content when the bottom panel first opens
+- 6216218: Route extension template and skill catalogs through the runtime snapshot.
+- 78e3af9: Improve Extension Lab modes and Glass Lab artifact workflows
+- 78e3af9: Keep first-party extension UI dependencies aligned with the host UI package
+- 8d1b072: Show Panel icons in tab dropdowns and on added Sub Panel tabs; render data tables instantly with a skeleton while the first query loads
+- 660ec29: Rebuild only webviews affected by extension dependency changes.
+- 8d1b072: Add workbench foundations for extension mode chrome: panel icons, native activity items with a host-rendered rail, mode-scoped activity/status regions with sidenav ownership, Side Panel resource inspectors for side-only kinds, native-bodied panel menus on webview panels, a guard that keeps Sub Panels out of Locations, instant cached rendering for table and controls panels, and reconnecting extension webviews after iframe reparent reloads.
+
 ## 0.25.2
 
 _2026-08-04_

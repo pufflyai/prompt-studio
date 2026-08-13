@@ -1,5 +1,17 @@
 # Prompt Studio Skills
 
+## 0.3.1
+
+_2026-08-13_
+
+### Patch Changes
+
+- e66bcae: Validate extension dashboard capability compatibility during extension checks.
+- 0ade6ec: Document the watch-based extension development workflow.
+- 7bf5d83: Warn when extension panels use empty eligibleLocations and document panel role choices for extension authors.
+- b4daee0: Add explicit, non-overwriting change request and review report workflows with no default report template.
+- Updated internal dependencies: `@pstdio/sdk@0.17.0`
+
 ## 0.3.0
 
 _2026-07-28_

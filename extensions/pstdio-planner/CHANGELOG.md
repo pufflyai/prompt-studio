@@ -1,5 +1,23 @@
 # pstdio-planner
 
+## 0.10.0
+
+_2026-08-13_
+
+### Minor Changes
+
+- 5e57bf7: Let extensions contribute their own settings sections through a `settingsSections` contribution that panels opt into with `section`, and group the planner's Ticket status and Ticket tags panels under a Planner section; adopt status ring and level bar glyphs as the default status and tag icons
+- 5e57bf7: Rebuild the tag editor as flat hairline rows with a combined colour/icon swatch, an appearance popover carrying status ring and level bar glyphs from the new prompt-studio-icons font, inline renaming of tag definitions, a shared segmented control, and one header save bar per settings screen that marks unsaved edits and offers Reset
+- b4daee0: Add explicit, non-overwriting change request and review report workflows with no default report template.
+
+### Patch Changes
+
+- 0cfd2c8: Persist Side Panel tabs, presentation, session selection, and chat drafts while showing ticket workspace sessions.
+- f924ca2: Show the created-at date in the ticket properties panel next to the updated-at date
+- 6603da2: Show the latest workspace session status on ticket cards and open that session in the Side Panel from the workspace badge indicator
+- 78e3af9: Keep first-party extension UI dependencies aligned with the host UI package
+- Updated internal dependencies: `@pstdio/sdk@0.17.0`, `@pstdio/ui@0.19.0`
+
 ## 0.9.0
 
 _2026-08-04_

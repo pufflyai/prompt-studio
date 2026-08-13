@@ -1,5 +1,16 @@
 # extension-lab
 
+## 0.7.2
+
+_2026-08-13_
+
+### Patch Changes
+
+- 78e3af9: Rework the Extension Lab into a single Lab mode: native activity items with a project-home shortcut, a status strip, panel menus for creating artifacts and picking cameras, and a Side Panel artifact inspector.
+- 78e3af9: Improve Extension Lab modes and Glass Lab artifact workflows
+- 78e3af9: Keep first-party extension UI dependencies aligned with the host UI package
+- Updated internal dependencies: `@pstdio/sdk@0.17.0`, `@pstdio/ui@0.19.0`
+
 ## 0.7.1
 
 _2026-08-04_

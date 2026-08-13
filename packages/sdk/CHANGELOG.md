@@ -1,5 +1,18 @@
 # @pstdio/sdk
 
+## 0.17.0
+
+_2026-08-13_
+
+### Minor Changes
+
+- 0ade6ec: Add a watch-based extension development workflow with dependency recovery.
+- cf7f9d4: Secure local runtime REST, SSE, WebSocket, and extension process transport.
+
+### Patch Changes
+
+- 0818856: Re-export extension automation, harness, and attempt-fix API types.
+
 ## 0.16.0
 
 _2026-07-28_

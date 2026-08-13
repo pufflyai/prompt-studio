@@ -1,6 +1,6 @@
 {
   "name": "font-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Prompt Studio Font Editor",
   "description": "Edit, rebuild, and verify the repository's icon font.",
   "publisher": "pstdio",
@@ -17,8 +17,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.16.0",
-    "@pstdio/ui": "^0.18.0",
+    "@pstdio/sdk": "^0.17.0",
+    "@pstdio/ui": "^0.19.0",
     "fonteditor-core": "^2.6.3",
     "pako": "^2.1.0",
     "react": "^19.0.0",

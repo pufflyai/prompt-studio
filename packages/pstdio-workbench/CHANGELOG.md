@@ -1,5 +1,29 @@
 # @pstdio/workbench
 
+## 0.5.0
+
+_2026-08-13_
+
+### Minor Changes
+
+- 0818856: Add a settings overlay header, widen the settings dialog, make settings nav groups non-collapsable, support contentWidth/contentMaxWidth on overlay widgets, and keep overlay dialogs open when interacting with nested overlays.
+
+### Patch Changes
+
+- 0cfd2c8: Persist Side Panel tabs, presentation, session selection, and chat drafts while showing ticket workspace sessions.
+- 0917cfb: Recover navigation when persisted extension modes are no longer registered.
+- 541ec5d: Honor extension panel placement when registering and opening workbench tabs.
+- e777925: Reconcile extension-owned layouts in local dashboard storage.
+- d9b7d32: Restore terminal connections in Vite development through runtime WebSocket configuration.
+- 9bfcaf1: Build every command parameter form from param editor rows so ticket actions like refine and break into sub-tickets match the run attempt form
+- c9fffc3: Keep run parameter menus interactive above dialogs and add icon-aware searchable grouped selections to the standard editor layout
+- b66ef5d: Add Mod+Enter accept shortcuts to modal submit actions.
+- b8059df: Ensure workspace terminals use their effective directories and render content when the bottom panel first opens
+- 8d1b072: Show Panel icons in tab dropdowns and on added Sub Panel tabs; render data tables instantly with a skeleton while the first query loads
+- d9b7d32: Restore terminal tab selection after project layout changes.
+- 8d1b072: Add workbench foundations for extension mode chrome: panel icons, native activity items with a host-rendered rail, mode-scoped activity/status regions with sidenav ownership, Side Panel resource inspectors for side-only kinds, native-bodied panel menus on webview panels, a guard that keeps Sub Panels out of Locations, instant cached rendering for table and controls panels, and reconnecting extension webviews after iframe reparent reloads.
+- Updated internal dependencies: `@pstdio/sdk@0.17.0`, `@pstdio/ui@0.19.0`
+
 ## 0.4.0
 
 _2026-08-04_

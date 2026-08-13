@@ -1,5 +1,26 @@
 # @pstdio/ui
 
+## 0.19.0
+
+_2026-08-13_
+
+### Minor Changes
+
+- 5e57bf7: Rebuild the tag editor as flat hairline rows with a combined colour/icon swatch, an appearance popover carrying status ring and level bar glyphs from the new prompt-studio-icons font, inline renaming of tag definitions, a shared segmented control, and one header save bar per settings screen that marks unsaved edits and offers Reset
+
+### Patch Changes
+
+- 0a529ad: update Mermaid to 11.16.1 to resolve security vulnerabilities
+- 8ef2814: Render Codex Shell commands in timeline titles with output-only disclosures
+- b4daee0: Show an Add view tooltip in Kanban and data-table headers.
+- 0665a9a: Keep active chat turns sticky and preserve live follow-up order
+- 9bfcaf1: Build every command parameter form from param editor rows so ticket actions like refine and break into sub-tickets match the run attempt form
+- c9fffc3: Keep run parameter menus interactive above dialogs and add icon-aware searchable grouped selections to the standard editor layout
+- b66ef5d: Add Mod+Enter accept shortcuts to modal submit actions.
+- 6603da2: Show the latest workspace session status on ticket cards and open that session in the Side Panel from the workspace badge indicator
+- 8d1b072: Show Panel icons in tab dropdowns and on added Sub Panel tabs; render data tables instantly with a skeleton while the first query loads
+- 0818856: Harden DeleteConfirmationModal (portal, explicit-only dismissal), add a tabs tray variant, and pin the switch track radius against Chakra's default merge.
+
 ## 0.18.0
 
 _2026-08-04_
