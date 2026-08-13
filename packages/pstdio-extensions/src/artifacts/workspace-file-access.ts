@@ -1,6 +1,6 @@
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
-import type { SafeFileRoot } from "./safe-file-root";
+import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
 
 export interface WorkspaceMountEntry {
   path: string;
@@ -21,9 +21,9 @@ export interface WorkspaceMountFile {
 }
 
 export class WorkspaceFileAccessError extends Error {
-  readonly code: "not-found" | "not-file" | "too-large";
+  readonly code: "already-exists" | "not-found" | "not-file" | "too-large";
 
-  constructor(message: string, code: "not-found" | "not-file" | "too-large") {
+  constructor(message: string, code: "already-exists" | "not-found" | "not-file" | "too-large") {
     super(message);
     this.name = "WorkspaceFileAccessError";
     this.code = code;
@@ -75,6 +75,32 @@ const requireExistingFile = async (safeRoot: SafeFileRoot, path: string) => {
     throw new WorkspaceFileAccessError(`Workspace file is not a regular file: ${path}`, "not-file");
   }
   return { fileStats, resolved };
+};
+
+const fileSize = (value: string, maxBytes: number, path: string) => {
+  const size = Buffer.byteLength(value, "utf8");
+  if (size > maxBytes) {
+    throw new WorkspaceFileAccessError(`Workspace file is too large: ${path}`, "too-large");
+  }
+  return size;
+};
+
+const requireExistingParent = async (safeRoot: SafeFileRoot, path: string) => {
+  const normalizedPath = normalizeMountRelativePath(path);
+  const parentPath = posix.dirname(normalizedPath);
+  try {
+    const parent = await safeRoot.resolveExisting(parentPath === "." ? "" : parentPath);
+    if (!(await stat(parent.operationPath)).isDirectory()) {
+      throw new WorkspaceFileAccessError(`Workspace directory not found: ${parentPath}`, "not-found");
+    }
+  } catch (error) {
+    if (error instanceof WorkspaceFileAccessError) throw error;
+    if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new WorkspaceFileAccessError(`Workspace directory not found: ${parentPath}`, "not-found");
+    }
+    throw error;
+  }
+  return normalizedPath;
 };
 
 interface WorkspaceSearchContext {
@@ -143,13 +169,32 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
   },
 
   async writeTextFile(path: string, value: string, maxBytes: number) {
-    const size = Buffer.byteLength(value, "utf8");
-    if (size > maxBytes) {
-      throw new WorkspaceFileAccessError(`Workspace file is too large: ${path}`, "too-large");
-    }
+    fileSize(value, maxBytes, path);
     await requireExistingFile(safeRoot, path);
     const resolved = await safeRoot.resolveExisting(path);
     await writeFile(resolved.operationPath, value, "utf8");
+  },
+
+  async createTextFile(path: string, value: string, maxBytes: number) {
+    fileSize(value, maxBytes, path);
+    const normalizedPath = await requireExistingParent(safeRoot, path);
+    if (await safeRoot.tryResolveExisting(normalizedPath)) {
+      throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
+    }
+    const resolved = await safeRoot.resolveForWrite(normalizedPath);
+    try {
+      await writeFile(resolved.operationPath, value, { encoding: "utf8", flag: "wx" });
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
+      }
+      throw error;
+    }
+  },
+
+  async deleteFile(path: string) {
+    const { resolved } = await requireExistingFile(safeRoot, path);
+    await unlink(resolved.operationPath);
   },
 });
 

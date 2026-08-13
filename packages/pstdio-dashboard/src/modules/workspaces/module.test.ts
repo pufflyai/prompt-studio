@@ -63,6 +63,7 @@ describe("createWorkspacesModule", () => {
         )
         .map((widget) => widget.title),
     ).toEqual(["Files", "Diffs"]);
+    expect(workbench.layout.getPanel(dashboardWidgetIds.workspaceDiffs)?.icon).toBe("FileDiff");
     expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({
         contributionId: dashboardWidgetIds.workspaceFileTree,

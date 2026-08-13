@@ -6,6 +6,10 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import {
+  createWorkspaceFileHandler,
+  createWorkspaceFileRoute,
+  deleteWorkspaceFileHandler,
+  deleteWorkspaceFileRoute,
   getWorkspaceFileHandler,
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
@@ -48,7 +52,9 @@ beforeEach(() => {
   app = new OpenAPIHono<AppBindings>();
   app.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
+  app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   app.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
+  app.openapi(deleteWorkspaceFileRoute, deleteWorkspaceFileHandler(deps));
 });
 
 afterEach(() => {
@@ -190,5 +196,53 @@ describe("GET and PUT /workspaces/:id/file", () => {
     for (const path of unsafePaths) {
       expect((await app.request(requestPath("workspace-1", path))).status).toBe(400);
     }
+  });
+});
+
+describe("POST and DELETE /workspaces/:id/file", () => {
+  test("creates an empty text file and deletes it", async () => {
+    mkdirSync(join(root, "docs"));
+    const path = requestPath("workspace-1", "docs/new.md");
+
+    const createResponse = await app.request(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "" }),
+    });
+    expect(createResponse.status).toBe(201);
+    expect(await createResponse.json()).toMatchObject({
+      workspace_id: "workspace-1",
+      path: "docs/new.md",
+      encoding: "utf8",
+      content: "",
+      editable: true,
+    });
+    expect(readFileSync(join(root, "docs/new.md"), "utf8")).toBe("");
+
+    const deleteResponse = await app.request(path, { method: "DELETE" });
+    expect(deleteResponse.status).toBe(204);
+    expect(() => readFileSync(join(root, "docs/new.md"), "utf8")).toThrow();
+  });
+
+  test("rejects duplicate, missing-parent, directory, and unsafe targets", async () => {
+    writeFileSync(join(root, "existing.md"), "keep");
+    mkdirSync(join(root, "docs"));
+
+    const duplicate = await app.request(requestPath("workspace-1", "existing.md"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "replace" }),
+    });
+    expect(duplicate.status).toBe(409);
+    expect(readFileSync(join(root, "existing.md"), "utf8")).toBe("keep");
+
+    const missingParent = await app.request(requestPath("workspace-1", "missing/new.md"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "new" }),
+    });
+    expect(missingParent.status).toBe(404);
+    expect((await app.request(requestPath("workspace-1", "docs"), { method: "DELETE" })).status).toBe(415);
+    expect((await app.request(requestPath("workspace-1", "../outside.md"), { method: "DELETE" })).status).toBe(400);
   });
 });

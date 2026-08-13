@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchCore } from "../../../core";
-import { expandDefaultTreeSections, loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
+import {
+  expandDefaultTreeSections,
+  loadExpandedTreeChildren,
+  loadTreeData,
+  shouldShowTreeLoading,
+} from "./tree-view-load";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -27,13 +32,25 @@ export const useTreeData = (
       if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
       setError(null);
       void loadTreeData(workbench.renderers, treeViewId, { resource, viewId, filter })
-        .then((data) => {
+        .then(async (data) => {
+          if (cancelled || loadRevision !== loadRevisionRef.current) return;
+          const treeStillRegistered = workbench.renderers.getTreeRenderer(treeViewId);
+          const children =
+            data && treeStillRegistered
+              ? await loadExpandedTreeChildren(
+                  workbench.renderers,
+                  treeViewId,
+                  data,
+                  workbench.renderers.getTreeState(treeViewId).expandedNodeIds,
+                  { resource, viewId, filter },
+                )
+              : {};
           if (cancelled || loadRevision !== loadRevisionRef.current) return;
           loadedTreeIdRef.current = treeViewId;
           setHeader(data?.header ?? []);
           setBody(data?.body ?? []);
           setFooter(data?.footer ?? []);
-          setChildrenByNodeId({});
+          setChildrenByNodeId(children);
           setLoading(false);
         })
         .catch((loadError) => {

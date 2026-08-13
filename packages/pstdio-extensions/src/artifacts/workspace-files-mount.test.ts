@@ -97,10 +97,14 @@ describe("createWorkspaceFilesMount browsing", () => {
     expect(result.entries.every((entry) => !entry.path.startsWith(".git"))).toBe(true);
   });
 
-  test("reads bounded files and only writes existing text files", async () => {
+  test("creates, reads, updates, and deletes regular text files", async () => {
     const root = createTempDir();
+    mkdirSync(join(root, "docs"));
     writeFileSync(join(root, "notes.txt"), "before");
     const mount = createWorkspaceFilesMount(root);
+
+    await mount.createTextFile("docs/new.md", "new", 16);
+    expect(readFileSync(join(root, "docs/new.md"), "utf8")).toBe("new");
 
     const file = await mount.readFile("notes.txt", 16);
     expect(new TextDecoder().decode(file.bytes)).toBe("before");
@@ -108,7 +112,13 @@ describe("createWorkspaceFilesMount browsing", () => {
 
     await mount.writeTextFile("notes.txt", "after", 16);
     expect(readFileSync(join(root, "notes.txt"), "utf8")).toBe("after");
+    await mount.deleteFile("notes.txt");
+    expect(existsSync(join(root, "notes.txt"))).toBe(false);
+
+    await expect(mount.createTextFile("docs/new.md", "duplicate", 16)).rejects.toThrow(/already exists/i);
+    await expect(mount.createTextFile("missing/new.md", "new", 16)).rejects.toThrow(/not found/i);
     await expect(mount.writeTextFile("missing.txt", "new", 16)).rejects.toThrow(/not found/i);
-    await expect(mount.writeTextFile("notes.txt", "too long", 3)).rejects.toThrow(/too large/i);
+    await expect(mount.createTextFile("large.txt", "too long", 3)).rejects.toThrow(/too large/i);
+    await expect(mount.deleteFile("docs")).rejects.toThrow(/regular file/i);
   });
 });

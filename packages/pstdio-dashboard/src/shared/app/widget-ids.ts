@@ -9,6 +9,7 @@ export const dashboardWidgetIds = {
   workspaceDiffs: "dashboard-workbench.workspace.diffs",
   workspaceFileTree: "dashboard-workbench.workspace.file-tree",
   workspaceFileRenderer: "dashboard-workbench.workspace.file-renderer",
+  deleteWorkspaceFile: "dashboard-workbench.delete-workspace-file",
   createWorkspace: "dashboard-workbench.create-workspace",
   renameWorkspace: "dashboard-workbench.rename-workspace",
   dashboardSidenav: "dashboard-workbench.sidenav",

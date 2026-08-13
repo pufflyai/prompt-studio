@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
@@ -104,6 +104,15 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
 
     await filesTab.click();
     const search = page.getByRole("textbox", { name: "Search files" });
+    const assets = page.getByRole("option").filter({ hasText: "assets" }).first();
+    await assets.getByText("assets", { exact: true }).click();
+    await expect(assets).toHaveAttribute("aria-expanded", "true");
+    const nestedLogo = page.getByRole("option").filter({ hasText: "logo.png" }).first();
+    await nestedLogo.getByText("logo.png", { exact: true }).click();
+    await expect(page.getByRole("img", { name: "logo.png" })).toBeVisible();
+    await expect(assets).toHaveAttribute("aria-expanded", "true");
+    await expect(nestedLogo).toBeVisible();
+
     await search.fill("README");
     await page.getByRole("option", { name: "README.md" }).click();
     const editor = page.locator(".monaco-editor");
@@ -139,6 +148,33 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await search.fill("LICENSE");
     await page.getByRole("option", { name: "LICENSE" }).click();
     await expect(page.locator(".monaco-editor")).toBeVisible();
+
+    await search.fill("");
+    const filesTree = page.getByRole("region", { name: "Files" });
+    await filesTree.getByText("Files", { exact: true }).hover();
+    await filesTree.getByRole("button", { name: "New file" }).first().click();
+    const createDialog = page.getByRole("dialog").filter({ hasText: "New file" });
+    await createDialog.getByRole("textbox").fill("created.md");
+    const createResponse = page.waitForResponse(
+      (response) => response.url().includes("/file?path=created.md") && response.request().method() === "POST",
+    );
+    await createDialog.getByRole("button", { name: "Create" }).click();
+    expect((await createResponse).status()).toBe(201);
+    await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(true);
+    await expect(page.locator(".monaco-editor")).toBeVisible();
+
+    const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();
+    await createdFile.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Delete file" }).click();
+    const deleteDialog = page.getByRole("dialog").filter({ hasText: "Delete file" });
+    await expect(deleteDialog.getByText("Delete created.md? This action cannot be undone.")).toBeVisible();
+    const deleteResponse = page.waitForResponse(
+      (response) => response.url().includes("/file?path=created.md") && response.request().method() === "DELETE",
+    );
+    await deleteDialog.getByRole("button", { name: "Delete file", exact: true }).click();
+    expect((await deleteResponse).status()).toBe(204);
+    await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(false);
+    await expect(page.getByText("Select a file", { exact: true })).toBeVisible();
 
     const unsafe = await request.get(
       `${apiBase}/v1/workspaces/${attempt.workspace.id}/file?path=${encodeURIComponent("../README.md")}`,

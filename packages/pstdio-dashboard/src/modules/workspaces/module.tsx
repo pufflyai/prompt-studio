@@ -14,6 +14,7 @@ import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
+import { DeleteWorkspaceFileWidget } from "./components/delete-workspace-file-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
@@ -132,6 +133,20 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
     render: (input) => <RenameWorkspaceWidget input={input} />,
   });
 
+  ctx.layout.registerPanel({
+    id: dashboardWidgetIds.deleteWorkspaceFile,
+    title: "Delete file",
+    region: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dashboardWidgetIds.deleteWorkspaceFile,
+    config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+  });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.deleteWorkspaceFile,
+    render: (input) => <DeleteWorkspaceFileWidget input={input} />,
+  });
+
   ctx.layout.registerPanel(
     {
       id: dashboardWidgetIds.workspace,
@@ -174,7 +189,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
     {
       id: dashboardWidgetIds.workspaceDiffs,
       title: "Diffs",
-      icon: "Diff",
+      icon: "FileDiff",
       region: "main",
       rendererId: dashboardWidgetIds.workspaceDiffs,
       singleton: true,

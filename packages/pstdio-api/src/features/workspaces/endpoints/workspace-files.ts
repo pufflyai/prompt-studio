@@ -1,15 +1,21 @@
-import { createRoute, z } from "@hono/zod-openapi";
 import { createWorkspaceFilesMount, WorkspaceFileAccessError, type WorkspaceMountEntry } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
-import {
-  listWorkspaceFilesQuerySchema,
-  notFoundResponseSchema,
-  workspaceFileContentSchema,
-  workspaceFilePathQuerySchema,
-  workspaceFilesResponseSchema,
-  writeWorkspaceFileBodySchema,
-} from "../dto";
+import type {
+  createWorkspaceFileRoute,
+  deleteWorkspaceFileRoute,
+  getWorkspaceFileRoute,
+  listWorkspaceFilesRoute,
+  writeWorkspaceFileRoute,
+} from "./workspace-file-routes";
+
+export {
+  createWorkspaceFileRoute,
+  deleteWorkspaceFileRoute,
+  getWorkspaceFileRoute,
+  listWorkspaceFilesRoute,
+  writeWorkspaceFileRoute,
+} from "./workspace-file-routes";
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const DEFAULT_LIST_LIMIT = 500;
@@ -40,75 +46,6 @@ const mimeTypesByExtension: Record<string, string> = {
   yaml: "application/yaml",
   yml: "application/yaml",
 };
-
-const errorResponse = {
-  description: "Workspace file request failed.",
-  content: { "application/json": { schema: notFoundResponseSchema } },
-};
-
-export const listWorkspaceFilesRoute = createRoute({
-  method: "get",
-  path: "/workspaces/{id}/files",
-  description: "List or search files in a workspace.",
-  tags: ["Workspaces"],
-  request: {
-    params: z.object({ id: z.string() }).strict(),
-    query: listWorkspaceFilesQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "Workspace file entries.",
-      content: { "application/json": { schema: workspaceFilesResponseSchema } },
-    },
-    400: errorResponse,
-    404: errorResponse,
-    413: errorResponse,
-    415: errorResponse,
-  },
-});
-
-export const getWorkspaceFileRoute = createRoute({
-  method: "get",
-  path: "/workspaces/{id}/file",
-  description: "Read an existing workspace text file or supported image.",
-  tags: ["Workspaces"],
-  request: {
-    params: z.object({ id: z.string() }).strict(),
-    query: workspaceFilePathQuerySchema,
-  },
-  responses: {
-    200: {
-      description: "Workspace file content.",
-      content: { "application/json": { schema: workspaceFileContentSchema } },
-    },
-    400: errorResponse,
-    404: errorResponse,
-    413: errorResponse,
-    415: errorResponse,
-  },
-});
-
-export const writeWorkspaceFileRoute = createRoute({
-  method: "put",
-  path: "/workspaces/{id}/file",
-  description: "Replace an existing workspace UTF-8 text file.",
-  tags: ["Workspaces"],
-  request: {
-    params: z.object({ id: z.string() }).strict(),
-    query: workspaceFilePathQuerySchema,
-    body: { content: { "application/json": { schema: writeWorkspaceFileBodySchema } }, required: true },
-  },
-  responses: {
-    200: {
-      description: "Updated workspace file content.",
-      content: { "application/json": { schema: workspaceFileContentSchema } },
-    },
-    400: errorResponse,
-    404: errorResponse,
-    413: errorResponse,
-    415: errorResponse,
-  },
-});
 
 class UnsupportedWorkspaceFileError extends Error {}
 
@@ -182,6 +119,7 @@ const readWorkspaceFile = async (
 
 const mapFileError = (error: unknown) => {
   if (error instanceof WorkspaceFileAccessError) {
+    if (error.code === "already-exists") throw error;
     if (error.code === "too-large") return { message: error.message, status: 413 as const };
     if (error.code === "not-found") return { message: error.message, status: 404 as const };
     return { message: error.message, status: 415 as const };
@@ -194,6 +132,13 @@ const mapFileError = (error: unknown) => {
     return { message: "Workspace file not found.", status: 404 as const };
   }
   throw error;
+};
+
+const mapCreateFileError = (error: unknown) => {
+  if (error instanceof WorkspaceFileAccessError && error.code === "already-exists") {
+    return { message: error.message, status: 409 as const };
+  }
+  return mapFileError(error);
 };
 
 export const listWorkspaceFilesHandler = (
@@ -267,6 +212,45 @@ export const writeWorkspaceFileHandler = (
       if (!current.editable) throw new UnsupportedWorkspaceFileError(`Workspace file is not editable: ${path}`);
       await context.mount.writeTextFile(path, content, MAX_FILE_BYTES);
       return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 200);
+    } catch (error) {
+      const mapped = mapFileError(error);
+      return c.json({ error: mapped.message }, mapped.status);
+    }
+  };
+};
+
+export const createWorkspaceFileHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof createWorkspaceFileRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { path } = c.req.valid("query");
+    const { content } = c.req.valid("json");
+    const context = await resolveWorkspaceMount(deps, id);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
+
+    try {
+      await context.mount.createTextFile(path, content, MAX_FILE_BYTES);
+      return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 201);
+    } catch (error) {
+      const mapped = mapCreateFileError(error);
+      return c.json({ error: mapped.message }, mapped.status);
+    }
+  };
+};
+
+export const deleteWorkspaceFileHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof deleteWorkspaceFileRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { path } = c.req.valid("query");
+    const context = await resolveWorkspaceMount(deps, id);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
+
+    try {
+      await context.mount.deleteFile(path);
+      return c.body(null, 204);
     } catch (error) {
       const mapped = mapFileError(error);
       return c.json({ error: mapped.message }, mapped.status);

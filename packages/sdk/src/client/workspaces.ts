@@ -19,8 +19,10 @@ export type WorkspaceClient = {
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   listFiles(workspaceId: string, input?: ListWorkspaceFilesInput): Promise<WorkspaceFilesResponse>;
+  createFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
   writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
+  deleteFile(workspaceId: string, path: string): Promise<void>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
 };
@@ -38,11 +40,24 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     const params = new URLSearchParams({ path });
     return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`);
   },
+  createFile: (workspaceId, path, input) => {
+    const params = new URLSearchParams({ path });
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
+      method: "POST",
+      body: input,
+    });
+  },
   writeFile: (workspaceId, path, input) => {
     const params = new URLSearchParams({ path });
     return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
       method: "PUT",
       body: input,
+    });
+  },
+  deleteFile: (workspaceId, path) => {
+    const params = new URLSearchParams({ path });
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
+      method: "DELETE",
     });
   },
   listActivity: (workspaceId, input = {}) => {
