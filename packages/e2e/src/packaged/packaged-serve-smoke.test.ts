@@ -265,7 +265,9 @@ describe("packaged pstdio — self-hosted serve", () => {
     },
     SMOKE_TEST_TIMEOUT,
   );
+});
 
+describe("packaged pstdio — core default extensions", () => {
   test(
     "loads packaged core default extensions",
     async () => {
