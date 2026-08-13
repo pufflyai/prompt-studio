@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
@@ -8,14 +8,12 @@ import type { WorkspacesRouteDeps } from "../deps";
 import {
   createWorkspaceFileHandler,
   createWorkspaceFileRoute,
-  deleteWorkspaceFileHandler,
-  deleteWorkspaceFileRoute,
+  deleteWorkspaceEntryHandler,
+  deleteWorkspaceEntryRoute,
   getWorkspaceFileHandler,
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
   listWorkspaceFilesRoute,
-  revealWorkspaceFileHandler,
-  revealWorkspaceFileRoute,
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./workspace-files";
@@ -28,7 +26,6 @@ let repoRoot: string;
 let outside: string;
 const workspaces = new Map<string, { id: string; project_id: string; worktree_path: string | null }>();
 const reposByProject = new Map<string, Array<{ path: string }>>();
-const revealedEntries: Array<{ absolutePath: string; type: "file" | "directory" }> = [];
 
 const deps = {
   workspaceService: {
@@ -41,6 +38,8 @@ const deps = {
 
 const requestPath = (workspaceId: string, path: string) =>
   `/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`;
+const entryPath = (workspaceId: string, path: string) =>
+  `/workspaces/${workspaceId}/entry?path=${encodeURIComponent(path)}`;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-"));
@@ -48,7 +47,6 @@ beforeEach(() => {
   outside = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-outside-"));
   workspaces.clear();
   reposByProject.clear();
-  revealedEntries.length = 0;
   workspaces.set("workspace-1", { id: "workspace-1", project_id: "project-1", worktree_path: root });
   workspaces.set("default", { id: "default", project_id: "project-1", worktree_path: null });
   workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", worktree_path: null });
@@ -58,13 +56,7 @@ beforeEach(() => {
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   app.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
-  app.openapi(deleteWorkspaceFileRoute, deleteWorkspaceFileHandler(deps));
-  app.openapi(
-    revealWorkspaceFileRoute,
-    revealWorkspaceFileHandler(deps, async (entry) => {
-      revealedEntries.push(entry);
-    }),
-  );
+  app.openapi(deleteWorkspaceEntryRoute, deleteWorkspaceEntryHandler(deps));
 });
 
 afterEach(() => {
@@ -209,7 +201,7 @@ describe("GET and PUT /workspaces/:id/file", () => {
   });
 });
 
-describe("POST and DELETE /workspaces/:id/file", () => {
+describe("POST /workspaces/:id/file and DELETE /workspaces/:id/entry", () => {
   test("creates an empty text file and deletes it", async () => {
     mkdirSync(join(root, "docs"));
     const path = requestPath("workspace-1", "docs/new.md");
@@ -229,14 +221,17 @@ describe("POST and DELETE /workspaces/:id/file", () => {
     });
     expect(readFileSync(join(root, "docs/new.md"), "utf8")).toBe("");
 
-    const deleteResponse = await app.request(path, { method: "DELETE" });
+    const deleteResponse = await app.request(entryPath("workspace-1", "docs/new.md"), { method: "DELETE" });
     expect(deleteResponse.status).toBe(204);
     expect(() => readFileSync(join(root, "docs/new.md"), "utf8")).toThrow();
   });
 
-  test("rejects duplicate, missing-parent, directory, and unsafe targets", async () => {
+  test("rejects duplicate, missing-parent, and unsafe targets and deletes directories", async () => {
     writeFileSync(join(root, "existing.md"), "keep");
-    mkdirSync(join(root, "docs"));
+    mkdirSync(join(root, ".git"));
+    writeFileSync(join(root, ".git/config"), "protected");
+    mkdirSync(join(root, "docs/nested"), { recursive: true });
+    writeFileSync(join(root, "docs/nested/file.md"), "nested");
 
     const duplicate = await app.request(requestPath("workspace-1", "existing.md"), {
       method: "POST",
@@ -252,30 +247,10 @@ describe("POST and DELETE /workspaces/:id/file", () => {
       body: JSON.stringify({ content: "new" }),
     });
     expect(missingParent.status).toBe(404);
-    expect((await app.request(requestPath("workspace-1", "docs"), { method: "DELETE" })).status).toBe(415);
-    expect((await app.request(requestPath("workspace-1", "../outside.md"), { method: "DELETE" })).status).toBe(400);
-  });
-});
-
-describe("POST /workspaces/:id/reveal", () => {
-  test("resolves files and directories inside the workspace before revealing them", async () => {
-    mkdirSync(join(root, "docs"));
-    writeFileSync(join(root, "docs/readme.md"), "readme");
-
-    const directoryResponse = await app.request("/workspaces/workspace-1/reveal?path=docs", { method: "POST" });
-    const fileResponse = await app.request("/workspaces/workspace-1/reveal?path=docs%2Freadme.md", { method: "POST" });
-
-    expect(directoryResponse.status).toBe(204);
-    expect(fileResponse.status).toBe(204);
-    expect(revealedEntries).toEqual([
-      { absolutePath: realpathSync(join(root, "docs")), type: "directory" },
-      { absolutePath: realpathSync(join(root, "docs/readme.md")), type: "file" },
-    ]);
-  });
-
-  test("rejects missing and unsafe entries before invoking the file manager", async () => {
-    expect((await app.request("/workspaces/workspace-1/reveal?path=missing.md", { method: "POST" })).status).toBe(404);
-    expect((await app.request("/workspaces/workspace-1/reveal?path=..%2Fsecret", { method: "POST" })).status).toBe(400);
-    expect(revealedEntries).toEqual([]);
+    expect((await app.request(entryPath("workspace-1", "docs"), { method: "DELETE" })).status).toBe(204);
+    expect(existsSync(join(root, "docs"))).toBe(false);
+    expect((await app.request(entryPath("workspace-1", ".git"), { method: "DELETE" })).status).toBe(415);
+    expect(existsSync(join(root, ".git/config"))).toBe(true);
+    expect((await app.request(entryPath("workspace-1", "../outside.md"), { method: "DELETE" })).status).toBe(400);
   });
 });

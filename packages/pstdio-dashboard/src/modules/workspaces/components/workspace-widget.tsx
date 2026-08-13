@@ -6,13 +6,11 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   type WorkspaceDiffSummaryFile,
+  workspaceDiffFilePath,
   workspaceDiffFileQueryOptions,
   workspaceDiffFilesQueryOptions,
 } from "../data/workspace-queries";
 import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
-
-const diffPath = (diff: Pick<WorkspaceDiffSummaryFile, "filePath" | "newPath" | "oldPath">) =>
-  diff.newPath ?? diff.oldPath ?? diff.filePath;
 
 const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({
   change: summary.change,
@@ -36,13 +34,13 @@ const useWorkspaceDiffs = (workspaceId: string | undefined) => {
     bodyQueries
       .map((query) => query.data)
       .filter((body): body is WorkspaceDiffSummaryFile => Boolean(body))
-      .map((body) => [diffPath(body), body]),
+      .map((body) => [workspaceDiffFilePath(body), body]),
   );
   const files = summary.data?.files ?? [];
 
   return {
-    diffs: files.map((file) => toDiff(file, bodiesByPath.get(diffPath(file)))),
-    paths: files.map(diffPath),
+    diffs: files.map((file) => toDiff(file, bodiesByPath.get(workspaceDiffFilePath(file)))),
+    paths: files.map(workspaceDiffFilePath),
     loading: summary.isLoading,
     error: summary.error,
     loadDiff: async (path: string) => {

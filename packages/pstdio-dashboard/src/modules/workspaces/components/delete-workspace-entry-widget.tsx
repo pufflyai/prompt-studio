@@ -1,21 +1,25 @@
 import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useState } from "react";
-import { deleteWorkspaceFile } from "../workspace-file-contributions";
+import { deleteWorkspaceEntry } from "../workspace-file-contributions";
 
 const closeCurrentPlacement = (input: WorkbenchPanelRenderInput) => {
   input.workbench.layout.removeWidgetPlacement(input.instance.instanceId);
 };
 
-const filePathOf = (input: WorkbenchPanelRenderInput) => {
-  const path = input.instance.resource?.metadata?.workspaceFilePath;
-  return typeof path === "string" ? path : "this file";
+const entryPathOf = (input: WorkbenchPanelRenderInput) => {
+  const path = input.instance.resource?.metadata?.workspaceDeletePath;
+  return typeof path === "string" ? path : "this entry";
 };
 
-export const DeleteWorkspaceFileWidget = (props: { input: WorkbenchPanelRenderInput }) => {
+const entryTypeOf = (input: WorkbenchPanelRenderInput) =>
+  input.instance.resource?.metadata?.workspaceDeleteType === "directory" ? "folder" : "file";
+
+export const DeleteWorkspaceEntryWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const resource = input.instance.resource;
-  const path = filePathOf(input);
+  const path = entryPathOf(input);
+  const entryType = entryTypeOf(input);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -24,10 +28,10 @@ export const DeleteWorkspaceFileWidget = (props: { input: WorkbenchPanelRenderIn
     setDeleting(true);
     setError("");
     try {
-      await deleteWorkspaceFile(input.workbench, resource);
+      await deleteWorkspaceEntry(input.workbench, resource);
       closeCurrentPlacement(input);
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "The file could not be deleted.");
+      setError(deleteError instanceof Error ? deleteError.message : `The ${entryType} could not be deleted.`);
     } finally {
       setDeleting(false);
     }
@@ -36,7 +40,7 @@ export const DeleteWorkspaceFileWidget = (props: { input: WorkbenchPanelRenderIn
   return (
     <>
       <Dialog.Header py="xs" px="sm">
-        <Dialog.Title textStyle="label/S/medium">Delete file</Dialog.Title>
+        <Dialog.Title textStyle="label/S/medium">Delete {entryType}</Dialog.Title>
       </Dialog.Header>
       <Dialog.Body px="sm" py="sm">
         <Stack gap="xs">
@@ -54,7 +58,7 @@ export const DeleteWorkspaceFileWidget = (props: { input: WorkbenchPanelRenderIn
             Cancel
           </Button>
           <Button variant="destructive" loading={deleting} onClick={() => void handleDelete()}>
-            Delete file
+            Delete {entryType}
           </Button>
         </Stack>
       </Dialog.Footer>

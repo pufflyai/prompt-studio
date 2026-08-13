@@ -8,6 +8,7 @@ const actions = {
   copyDiagnostics: async () => {},
   openLogs: async () => {},
   quitApp: async () => {},
+  revealInFinder: async () => {},
   retryRuntime: async () => {},
 };
 

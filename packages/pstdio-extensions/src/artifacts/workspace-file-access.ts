@@ -1,4 +1,4 @@
-import { readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
 import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
 
@@ -220,9 +220,16 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
     }
   },
 
-  async deleteFile(path: string) {
-    const { resolved } = await requireExistingFile(safeRoot, path);
-    await unlink(resolved.operationPath);
+  async deleteEntry(path: string) {
+    const normalizedPath = normalizeMountRelativePath(path);
+    if (normalizedPath === ".git" || normalizedPath.startsWith(".git/")) {
+      throw new WorkspaceFileAccessError("Git metadata cannot be deleted.", "not-file");
+    }
+    const { resolved } = await requireExistingEntry(safeRoot, normalizedPath);
+    if (!resolved.relativePath) {
+      throw new WorkspaceFileAccessError("The workspace root cannot be deleted.", "not-file");
+    }
+    await rm(resolved.operationPath, { recursive: true });
   },
 });
 

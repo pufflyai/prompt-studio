@@ -23,14 +23,12 @@ import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startu
 import {
   createWorkspaceFileHandler,
   createWorkspaceFileRoute,
-  deleteWorkspaceFileHandler,
-  deleteWorkspaceFileRoute,
+  deleteWorkspaceEntryHandler,
+  deleteWorkspaceEntryRoute,
   getWorkspaceFileHandler,
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
   listWorkspaceFilesRoute,
-  revealWorkspaceFileHandler,
-  revealWorkspaceFileRoute,
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./endpoints/workspace-files";
@@ -51,8 +49,7 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   routes.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   routes.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
-  routes.openapi(deleteWorkspaceFileRoute, deleteWorkspaceFileHandler(deps));
-  routes.openapi(revealWorkspaceFileRoute, revealWorkspaceFileHandler(deps));
+  routes.openapi(deleteWorkspaceEntryRoute, deleteWorkspaceEntryHandler(deps));
   routes.openapi(deleteWorkspaceRoute, deleteWorkspaceHandler(deps));
   routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));
   routes.openapi(removeWorkspaceWorktreeRoute, removeWorkspaceWorktreeHandler(deps));

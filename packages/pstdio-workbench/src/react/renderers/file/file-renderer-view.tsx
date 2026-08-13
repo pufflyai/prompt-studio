@@ -1,4 +1,4 @@
-import { Button, Center, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   FileRendererContent,
@@ -22,6 +22,7 @@ import {
 } from "./file-renderer-edit-state";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
+import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -279,16 +280,26 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   };
 
   return (
-    <FileRendererContentView
-      content={currentLoaded}
-      editorKey={editorKey}
-      errorNotice={errorNotice}
-      contributionCanSave={Boolean(contribution.save)}
-      onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
-      onChange={handleChange}
-      rendererRef={rendererRef}
-      sectionNavigation={editorSectionNavigation}
-      title={contribution.title}
-    />
+    <Flex direction="column" h="full" minH="0" bg="bg">
+      {currentLoaded.filePath ? (
+        <FileRendererPathHeader
+          fileName={currentLoaded.fileName ?? currentLoaded.filePath}
+          filePath={currentLoaded.filePath}
+        />
+      ) : null}
+      <Box flex="1" minH="0">
+        <FileRendererContentView
+          content={currentLoaded}
+          editorKey={editorKey}
+          errorNotice={errorNotice}
+          contributionCanSave={Boolean(contribution.save)}
+          onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
+          onChange={handleChange}
+          rendererRef={rendererRef}
+          sectionNavigation={editorSectionNavigation}
+          title={contribution.title}
+        />
+      </Box>
+    </Flex>
   );
 };

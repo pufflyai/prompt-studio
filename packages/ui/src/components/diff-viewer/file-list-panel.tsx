@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import type { TreeListNode } from "../tree-list/tree-list.types";
 import { buildChangedFilesTree } from "./build-changed-files-tree";
+import { FileChangeBadge } from "./file-change-badge";
 import type { ChangedFilesViewMode, ChangedFileTreeNode, FileIconInfo } from "./types";
 
 interface FileListPanelProps {
@@ -22,41 +23,6 @@ interface FileListPanelProps {
   resolveFileIcon?: (path: string, options?: { isFolder?: boolean; isExpanded?: boolean }) => FileIconInfo | undefined;
   changeByPath?: Map<string, string>;
 }
-
-const changeLabels: Record<string, string> = {
-  added: "A",
-  copied: "C",
-  deleted: "D",
-  modified: "U",
-  permissionChange: "M",
-  renamed: "R",
-};
-
-const changeColors: Record<string, string> = {
-  added: "green",
-  copied: "purple",
-  deleted: "red",
-  modified: "blue",
-  permissionChange: "yellow",
-  renamed: "orange",
-};
-
-const changeSemanticStyles: Record<string, { color: string; backgroundColor: string }> = {
-  added: { color: "fg.success", backgroundColor: "bg.success" },
-  deleted: { color: "fg.error", backgroundColor: "bg.error" },
-};
-
-const filterInputChromeProps = {
-  bg: "transparent",
-  border: "0",
-  borderColor: "transparent",
-  borderRadius: "0",
-  boxShadow: "none",
-  _hover: { borderColor: "transparent" },
-  _active: { borderColor: "transparent" },
-  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-} as const;
 
 const getFilePathParts = (filePath: string) => {
   const lastSlashIndex = filePath.lastIndexOf("/");
@@ -108,20 +74,12 @@ const toTreeListNodes = (input: {
     const filePath = node.id.replace(/^file:/, "");
     const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="16px" />, color: "fg.subtle" };
     const change = changeByPath?.get(filePath);
-    const changeBadgeProps = change
-      ? (changeSemanticStyles[change] ?? { colorPalette: changeColors[change] ?? "gray" })
-      : {};
-
     return {
       id: node.id,
       label: renderFileLabel(node, viewMode, filePath),
       icon: fileIcon.icon,
       iconColor: fileIcon.color,
-      endContent: change ? (
-        <Badge size="xs" variant="subtle" flexShrink={0} {...changeBadgeProps}>
-          {changeLabels[change] ?? change}
-        </Badge>
-      ) : undefined,
+      endContent: change ? <FileChangeBadge change={change} /> : undefined,
       onActivate: () => onSelectPath(filePath),
     };
   });
@@ -163,9 +121,9 @@ export const FileListPanel = (props: FileListPanelProps) => {
           <Input
             size="sm"
             mx="xs"
+            variant="borderless"
             placeholder="Filter files"
             value={searchQuery}
-            {...filterInputChromeProps}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>

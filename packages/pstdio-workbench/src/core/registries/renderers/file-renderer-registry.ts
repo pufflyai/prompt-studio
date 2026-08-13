@@ -10,6 +10,8 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 // `mimeType`; text-ish files carry `content`, images carry `dataUrl`.
 export interface FileRendererContent {
   fileName?: string;
+  /** Workspace-relative path shown above the file preview. */
+  filePath?: string;
   mimeType?: string;
   content?: string;
   dataUrl?: string;

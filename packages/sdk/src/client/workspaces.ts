@@ -22,8 +22,7 @@ export type WorkspaceClient = {
   createFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
   writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
-  revealFile(workspaceId: string, path: string): Promise<void>;
-  deleteFile(workspaceId: string, path: string): Promise<void>;
+  deleteEntry(workspaceId: string, path: string): Promise<void>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
 };
@@ -55,15 +54,9 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
       body: input,
     });
   },
-  revealFile: (workspaceId, path) => {
+  deleteEntry: (workspaceId, path) => {
     const params = new URLSearchParams({ path });
-    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/reveal?${params.toString()}`, {
-      method: "POST",
-    });
-  },
-  deleteFile: (workspaceId, path) => {
-    const params = new URLSearchParams({ path });
-    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${params.toString()}`, {
       method: "DELETE",
     });
   },

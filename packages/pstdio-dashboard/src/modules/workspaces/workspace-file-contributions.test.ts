@@ -6,7 +6,13 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createWorkspacesModule } from "./module";
 
 const originalFetch = globalThis.fetch;
-const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+const runtime = globalThis as typeof globalThis & {
+  __PSTDIO_CONFIG__?: { apiBaseUrl?: string };
+  promptStudioDesktop?: {
+    getAppInfo(): Promise<{ platform: string }>;
+    revealInFinder(path: string): Promise<void>;
+  };
+};
 let apiBaseUrlId = 0;
 
 const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef => ({
@@ -30,6 +36,7 @@ afterEach(() => {
   dashboardQueryClient.clear();
   globalThis.fetch = originalFetch;
   delete runtime.__PSTDIO_CONFIG__;
+  delete runtime.promptStudioDesktop;
 });
 
 describe("workspace file contributions", () => {
@@ -76,6 +83,7 @@ describe("workspace file contributions", () => {
           editable: true,
         });
       }
+      if (url.includes("/diff-files?")) return jsonResponse({ workspace_id: "workspace-1", files: [] });
       if (url.includes("/file?")) {
         return jsonResponse({
           workspace_id: "workspace-1",
@@ -125,7 +133,9 @@ describe("workspace file contributions", () => {
 
     expect(opened?.uri).toBe(workspace.uri);
     expect(opened?.metadata?.workspaceFilePath).toBe("README.md");
-    expect(loaded).toEqual(expect.objectContaining({ content: "# Readme", editable: true, textRenderer: "monaco" }));
+    expect(loaded).toEqual(
+      expect.objectContaining({ filePath: "README.md", content: "# Readme", editable: true, textRenderer: "monaco" }),
+    );
     expect(calls[0]?.url).toContain("/v1/workspaces/workspace-1/files?query=read&limit=500");
     expect(calls.some((call) => call.url.includes("/file?path=README.md") && call.method === "GET")).toBe(true);
     expect(calls.some((call) => call.method === "PUT" && call.body === '{"content":"# Updated"}')).toBe(true);
@@ -137,7 +147,6 @@ describe("workspace file contributions", () => {
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
-      if (init?.method === "POST" && url.includes("/reveal?")) return new Response(null, { status: 204 });
       if (init?.method === "POST") {
         return new Response(
           JSON.stringify({
@@ -152,6 +161,12 @@ describe("workspace file contributions", () => {
           }),
           { status: 201, headers: { "content-type": "application/json" } },
         );
+      }
+      if (url.includes("/diff-files?")) {
+        return jsonResponse({
+          workspace_id: "workspace-1",
+          files: [{ filePath: "README.md", change: "modified", additions: 1, deletions: 0 }],
+        });
       }
       return jsonResponse({
         workspace_id: "workspace-1",
@@ -192,22 +207,74 @@ describe("workspace file contributions", () => {
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
 
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
+    expect(folder?.iconElement).toBeDefined();
     expect(folder?.actions).toBeUndefined();
-    expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual(["New file", "Reveal in Finder"]);
+    expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual([
+      "New file",
+      "Copy path",
+      "Copy relative path",
+      "Delete folder",
+    ]);
 
     const file = sections[0]?.nodes.find((node) => node.id === "README.md");
+    expect(file?.iconElement).toBeDefined();
+    expect(file?.endContent).toMatchObject({ props: { change: "modified" } });
     expect(file?.actions).toBeUndefined();
-    expect(file?.contextMenuActions?.map((action) => action.label)).toEqual(["Reveal in Finder", "Delete file"]);
+    expect(file?.contextMenuActions?.map((action) => action.label)).toEqual([
+      "Copy path",
+      "Copy relative path",
+      "Delete file",
+    ]);
     expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
 
-    await file?.contextMenuActions?.find((action) => action.id === "workspace-file.reveal")?.run?.();
-    expect(calls.some((call) => call.method === "POST" && call.url.includes("/reveal?path=README.md"))).toBe(true);
-
-    const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-file.delete");
+    const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete");
     await deleteAction?.run?.();
     const confirmation = workbench.layout
       .getLayout()
-      .regions.overlay.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.deleteWorkspaceFile);
-    expect(confirmation?.resource?.metadata?.workspaceFilePath).toBe("README.md");
+      .regions.overlay.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.deleteWorkspaceEntry);
+    expect(confirmation?.resource?.metadata?.workspaceDeletePath).toBe("README.md");
+    expect(confirmation?.resource?.metadata?.workspaceDeleteType).toBe("file");
+
+    await folder?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete")?.run?.();
+    const folderConfirmation = workbench.layout
+      .getLayout()
+      .regions.overlay.widgets.find(
+        (widget) =>
+          widget.contributionId === dashboardWidgetIds.deleteWorkspaceEntry &&
+          widget.resource?.metadata?.workspaceDeleteType === "directory",
+      );
+    expect(folderConfirmation?.resource?.metadata?.workspaceDeletePath).toBe("docs");
+  });
+});
+
+describe("workspace Finder action", () => {
+  test("offers Finder reveal only through the macOS desktop bridge", async () => {
+    const revealedPaths: string[] = [];
+    runtime.promptStudioDesktop = {
+      getAppInfo: async () => ({ platform: "darwin" }),
+      revealInFinder: async (path) => {
+        revealedPaths.push(path);
+      },
+    };
+    globalThis.fetch = mock(async (input: string | URL | Request) => {
+      if (String(input).includes("/diff-files?")) return jsonResponse({ workspace_id: "workspace-1", files: [] });
+      return jsonResponse({
+        workspace_id: "workspace-1",
+        path: "",
+        entries: [{ path: "README.md", name: "README.md", type: "file", size: 8 }],
+        truncated: false,
+      });
+    }) as unknown as typeof fetch;
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const workspace = workspaceResource({ workspacePath: "/repo/worktree", workspaceView: "files" });
+
+    const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
+    const reveal = sections[0]?.nodes[0]?.contextMenuActions?.find((action) => action.id === "workspace-entry.reveal");
+    await reveal?.run?.();
+
+    expect(reveal?.label).toBe("Reveal in Finder");
+    expect(revealedPaths).toEqual(["/repo/worktree/README.md"]);
   });
 });

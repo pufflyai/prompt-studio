@@ -14,7 +14,7 @@ import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
-import { DeleteWorkspaceFileWidget } from "./components/delete-workspace-file-widget";
+import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
@@ -134,17 +134,17 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   });
 
   ctx.layout.registerPanel({
-    id: dashboardWidgetIds.deleteWorkspaceFile,
-    title: "Delete file",
+    id: dashboardWidgetIds.deleteWorkspaceEntry,
+    title: "Delete entry",
     region: "overlay",
     singleton: true,
     closable: true,
-    rendererId: dashboardWidgetIds.deleteWorkspaceFile,
+    rendererId: dashboardWidgetIds.deleteWorkspaceEntry,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
   ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.deleteWorkspaceFile,
-    render: (input) => <DeleteWorkspaceFileWidget input={input} />,
+    id: dashboardWidgetIds.deleteWorkspaceEntry,
+    render: (input) => <DeleteWorkspaceEntryWidget input={input} />,
   });
 
   ctx.layout.registerPanel(
@@ -188,7 +188,7 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel(
     {
       id: dashboardWidgetIds.workspaceDiffs,
-      title: "Diffs",
+      title: "Changes",
       icon: "FileDiff",
       region: "main",
       rendererId: dashboardWidgetIds.workspaceDiffs,
@@ -220,7 +220,7 @@ const openWorkspaceSubPanels = (ctx: WorkbenchModuleContext, resource: ResourceR
     closable: false,
     resource,
     strategy: { kind: "persistent" },
-    title: "Diffs",
+    title: "Changes",
   });
 
   const requestedView = metadataString(resource, "workspaceView");

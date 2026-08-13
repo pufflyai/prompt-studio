@@ -97,7 +97,7 @@ describe("createWorkspaceFilesMount browsing", () => {
     expect(result.entries.every((entry) => !entry.path.startsWith(".git"))).toBe(true);
   });
 
-  test("creates, reads, updates, and deletes regular text files", async () => {
+  test("creates, reads, updates, and deletes workspace entries", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "docs"));
     writeFileSync(join(root, "notes.txt"), "before");
@@ -120,13 +120,23 @@ describe("createWorkspaceFilesMount browsing", () => {
 
     await mount.writeTextFile("notes.txt", "after", 16);
     expect(readFileSync(join(root, "notes.txt"), "utf8")).toBe("after");
-    await mount.deleteFile("notes.txt");
+    await mount.deleteEntry("notes.txt");
     expect(existsSync(join(root, "notes.txt"))).toBe(false);
+
+    mkdirSync(join(root, "delete-me/nested"), { recursive: true });
+    writeFileSync(join(root, "delete-me/nested/file.txt"), "nested");
+    await mount.deleteEntry("delete-me");
+    expect(existsSync(join(root, "delete-me"))).toBe(false);
+
+    mkdirSync(join(root, ".git"));
+    writeFileSync(join(root, ".git/config"), "protected");
+    await expect(mount.deleteEntry(".git")).rejects.toThrow(/git metadata/i);
+    expect(existsSync(join(root, ".git/config"))).toBe(true);
 
     await expect(mount.createTextFile("docs/new.md", "duplicate", 16)).rejects.toThrow(/already exists/i);
     await expect(mount.createTextFile("missing/new.md", "new", 16)).rejects.toThrow(/not found/i);
     await expect(mount.writeTextFile("missing.txt", "new", 16)).rejects.toThrow(/not found/i);
     await expect(mount.createTextFile("large.txt", "too long", 3)).rejects.toThrow(/too large/i);
-    await expect(mount.deleteFile("docs")).rejects.toThrow(/regular file/i);
+    await expect(mount.deleteEntry("")).rejects.toThrow(/workspace root/i);
   });
 });

@@ -100,35 +100,17 @@ export const createWorkspaceFileRoute = createRoute({
   },
 });
 
-export const deleteWorkspaceFileRoute = createRoute({
+export const deleteWorkspaceEntryRoute = createRoute({
   method: "delete",
-  path: "/workspaces/{id}/file",
-  description: "Delete an existing regular workspace file.",
+  path: "/workspaces/{id}/entry",
+  description: "Delete an existing workspace file or directory.",
   tags: ["Workspaces"],
   request: {
     params: z.object({ id: z.string() }).strict(),
     query: workspaceFilePathQuerySchema,
   },
   responses: {
-    204: { description: "Workspace file deleted." },
-    400: errorResponse,
-    404: errorResponse,
-    413: errorResponse,
-    415: errorResponse,
-  },
-});
-
-export const revealWorkspaceFileRoute = createRoute({
-  method: "post",
-  path: "/workspaces/{id}/reveal",
-  description: "Reveal an existing workspace file or directory in the system file manager.",
-  tags: ["Workspaces"],
-  request: {
-    params: z.object({ id: z.string() }).strict(),
-    query: workspaceFilePathQuerySchema,
-  },
-  responses: {
-    204: { description: "Workspace entry revealed." },
+    204: { description: "Workspace entry deleted." },
     400: errorResponse,
     404: errorResponse,
     415: errorResponse,

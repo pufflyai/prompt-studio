@@ -68,7 +68,7 @@ const seedWorkspaceQueries = () => {
     content: [
       "# Prompt Studio",
       "",
-      "A workspace keeps its Files and Diffs views on the same resource.",
+      "A workspace keeps its Files and Changes views on the same resource.",
       "",
       "## PS-118",
       "",
@@ -104,7 +104,7 @@ const seedWorkspaceQueries = () => {
   dashboardQueryClient.setQueryData(workspaceDiffFileQueryKey(WORKSPACE_ID, "README.md"), {
     ...readmeDiff,
     oldContent: "# Prompt Studio\n\nThe old workspace diff view.\n",
-    newContent: "# Prompt Studio\n\nFiles and Diffs are workspace tabs.\n\nText opens in Monaco.\n",
+    newContent: "# Prompt Studio\n\nFiles and Changes are workspace tabs.\n\nText opens in Monaco.\n",
   });
 };
 
@@ -137,7 +137,7 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
 };
 
 const meta = {
-  title: "Modules/Workspaces/Files and Diffs",
+  title: "Modules/Workspaces/Files and Changes",
   component: WorkspaceFilesStory,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof WorkspaceFilesStory>;
@@ -146,7 +146,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const DiffsSelected: Story = { args: { state: "diffs" } };
+export const ChangesSelected: Story = { args: { state: "diffs" } };
 
 export const FilesNoSelection: Story = { args: { state: "files" } };
 

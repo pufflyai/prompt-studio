@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add safe workspace file browsing, inline file actions, stable Monaco editing, diffs, and file-manager reveal.
+Add workspace file browsing, stable Monaco editing, file and folder actions, themed icons, change badges, visible separators, a Changes view, and macOS Finder reveal.

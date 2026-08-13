@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
-const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.emphasized" } };
+const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.inverted" } };
 
 interface ResizeHandleProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
@@ -45,7 +45,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
         bottom: 0,
         insetInlineStart: "50%",
         w: "1px",
-        bg: showResizeSeparator ? "border.subtle" : "transparent",
+        bg: showResizeSeparator ? "border" : "transparent",
         transform: "translateX(-50%)",
       }
     : {
@@ -54,7 +54,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
         insetInline: 0,
         top: "50%",
         h: "1px",
-        bg: showResizeSeparator ? "border.subtle" : "transparent",
+        bg: showResizeSeparator ? "border" : "transparent",
         transform: "translateY(-50%)",
       };
   return (

@@ -1,4 +1,5 @@
-import { Flex, Input, InputGroup } from "@chakra-ui/react";
+import { Input, InputGroup } from "@chakra-ui/react";
+import { Header } from "@pstdio/ui";
 import { WorkbenchIcon } from "../../shared/icon";
 
 interface TreeViewSearchProps {
@@ -13,16 +14,17 @@ export const TreeViewSearch = (props: TreeViewSearchProps) => {
   if (!visible) return null;
 
   return (
-    <Flex flexShrink={0} px="xs" py="xs" borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
+    <Header variant="input" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
       <InputGroup startElement={<WorkbenchIcon name="search" size={14} />} width="full">
         <Input
           size="sm"
+          variant="borderless"
           aria-label={placeholder}
           placeholder={placeholder}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
       </InputGroup>
-    </Flex>
+    </Header>
   );
 };

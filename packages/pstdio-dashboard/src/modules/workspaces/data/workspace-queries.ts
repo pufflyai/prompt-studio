@@ -12,6 +12,9 @@ export interface WorkspaceDiffFilesResponse {
   files: WorkspaceDiffSummaryFile[];
 }
 
+export const workspaceDiffFilePath = (diff: Pick<WorkspaceDiffSummaryFile, "filePath" | "newPath" | "oldPath">) =>
+  diff.newPath ?? diff.oldPath ?? diff.filePath;
+
 export const workspaceFileQueryKey = (workspaceId: string, path: string) =>
   ["workspace-files", workspaceId, "file", path] as const;
 
