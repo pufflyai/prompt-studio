@@ -1,6 +1,7 @@
 import { createWorkspaceFilesMount, WorkspaceFileAccessError, type WorkspaceMountEntry } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
+import { resolveWorkspaceRoot } from "../resolve-workspace-root";
 import type {
   createWorkspaceFileRoute,
   deleteWorkspaceEntryRoute,
@@ -76,12 +77,9 @@ const toApiEntry = (entry: WorkspaceMountEntry) => ({
 });
 
 const resolveWorkspaceMount = async (deps: WorkspacesRouteDeps, id: string) => {
-  const workspace = await deps.workspaceService.get(id);
-  if (!workspace) return undefined;
-  const [projectRepo] = workspace.worktree_path ? [] : await deps.repoService.listByProject(workspace.project_id);
-  const root = workspace.worktree_path ?? projectRepo?.path;
-  if (!root) return undefined;
-  return { mount: createWorkspaceFilesMount(root), workspace };
+  const context = await resolveWorkspaceRoot(deps, id);
+  if (!context) return undefined;
+  return { mount: createWorkspaceFilesMount(context.root), workspace: context.workspace };
 };
 
 const readWorkspaceFile = async (

@@ -21,10 +21,17 @@ let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let workspaceSetupQueue = Promise.resolve();
 let diffTestQueue = Promise.resolve();
-const workspaceRecords = new Map<string, { id: string; branch: string; worktree_path: string }>();
+const workspaceRecords = new Map<
+  string,
+  { id: string; branch: string; project_id: string; worktree_path: string | null }
+>();
+const reposByProject = new Map<string, Array<{ path: string }>>();
 const deps = {
   workspaceService: {
     get: async (id: string) => workspaceRecords.get(id) ?? null,
+  },
+  repoService: {
+    listByProject: async (projectId: string) => reposByProject.get(projectId) ?? [],
   },
 } as unknown as WorkspacesRouteDeps;
 
@@ -38,6 +45,7 @@ beforeAll(() => {
 
 afterAll(() => {
   workspaceRecords.clear();
+  reposByProject.clear();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -61,7 +69,7 @@ const createWorkspaceWithDiff = async (repoName: string) => {
     const workspaceShorthand = repoName.replace(/[^a-zA-Z0-9_-]/g, "_");
     const branch = `workspace/${workspaceShorthand}`;
     const worktreePath = join(tempRoot, "worktrees", workspaceShorthand);
-    const workspace = { id: randomUUID(), branch, worktree_path: worktreePath };
+    const workspace = { id: randomUUID(), branch, project_id: randomUUID(), worktree_path: worktreePath };
 
     mkdirSync(join(tempRoot, "worktrees"), { recursive: true });
     await createWorktree({ repoRoot, branch, path: worktreePath, base: "HEAD" });
@@ -182,6 +190,26 @@ describe("GET /workspaces/:id/diff", () => {
       const diffBody = asDiffSummary(body);
       expect(diffBody.files.length).toBe(1);
       expect(diffBody.files[0].filePath).toBe("dirty.txt");
+    }));
+
+  test("current mode resolves a default workspace through its linked repository", () =>
+    runDiffTest(async () => {
+      const repoRoot = createGitRepo("diff-current-default");
+      const workspace = {
+        id: randomUUID(),
+        branch: "main",
+        project_id: randomUUID(),
+        worktree_path: null,
+      };
+      workspaceRecords.set(workspace.id, workspace);
+      reposByProject.set(workspace.project_id, [{ path: repoRoot }]);
+      writeFileSync(join(repoRoot, "README.md"), "# changed default workspace\n");
+
+      const response = await app.request(`/workspaces/${workspace.id}/diff-files?mode=current`);
+
+      expect(response.status).toBe(200);
+      const body = asDiffSummary(await response.json());
+      expect(body.files).toEqual([expect.objectContaining({ filePath: "README.md", change: "modified" })]);
     }));
 
   test("fork_point mode — returns all changes since branch diverged", () =>

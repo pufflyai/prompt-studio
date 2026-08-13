@@ -10,17 +10,13 @@ import { createElement } from "react";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
+import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
 import {
   workspaceDiffFilePath,
   workspaceDiffFilesQueryOptions,
   workspaceFilesQueryOptions,
 } from "./data/workspace-queries";
-import {
-  absoluteWorkspaceEntryPath,
-  workspaceDeleteResource,
-  workspaceIdOf,
-  workspaceMetadataString,
-} from "./workspace-file-resource";
+import { absoluteWorkspaceEntryPath, workspaceDeleteResource, workspaceIdOf } from "./workspace-file-resource";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
@@ -142,7 +138,6 @@ const fileNode = (
     return {
       id: entry.path,
       label: entry.name,
-      iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name, directory: true }),
       collapsible: true,
       contextMenuActions: [createAction, ...copyActions, ...revealAction, deleteAction],
       showContextMenuTrigger: false,
@@ -152,7 +147,7 @@ const fileNode = (
   return {
     id: entry.path,
     label: entry.name,
-    iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name, directory: false }),
+    iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name }),
     endContent: options.change ? createElement(WorkspaceFileChangeBadge, { change: options.change }) : undefined,
     target: { kind: "command", commandId: OPEN_WORKSPACE_FILE_COMMAND, args: { path: entry.path } },
     contextMenuActions: [...copyActions, ...revealAction, deleteAction],
@@ -174,6 +169,7 @@ export const loadWorkspaceFileEntries = async (
   const resource = context.resource;
   const workspaceId = workspaceIdOf(resource);
   if (!resource || !workspaceId) return unsupportedSection("Files unavailable", "Workspace details are missing.");
+  const diffRequest = resolveWorkspaceDiffRequest({ resourceId: resource.id, metadata: resource.metadata });
 
   const [response, diffSummary, revealInFinder] = await Promise.all([
     dashboardQueryClient.fetchQuery(
@@ -183,8 +179,8 @@ export const loadWorkspaceFileEntries = async (
         limit: 500,
       }),
     ),
-    workspaceMetadataString(resource, "workspaceType") === "worktree"
-      ? dashboardQueryClient.fetchQuery(workspaceDiffFilesQueryOptions(workspaceId))
+    diffRequest
+      ? dashboardQueryClient.fetchQuery(workspaceDiffFilesQueryOptions(diffRequest.workspaceId, diffRequest.mode))
       : Promise.resolve(null),
     finderAvailable(),
   ]);

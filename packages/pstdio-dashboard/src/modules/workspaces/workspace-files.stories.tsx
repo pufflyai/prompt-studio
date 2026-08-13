@@ -97,15 +97,17 @@ const seedWorkspaceQueries = () => {
     oldPath: "README.md",
     newPath: "README.md",
   };
-  dashboardQueryClient.setQueryData(workspaceDiffFilesQueryKey(WORKSPACE_ID), {
-    workspace_id: WORKSPACE_ID,
-    files: [readmeDiff],
-  });
-  dashboardQueryClient.setQueryData(workspaceDiffFileQueryKey(WORKSPACE_ID, "README.md"), {
-    ...readmeDiff,
-    oldContent: "# Prompt Studio\n\nThe old workspace diff view.\n",
-    newContent: "# Prompt Studio\n\nFiles and Changes are workspace tabs.\n\nText opens in Monaco.\n",
-  });
+  for (const mode of ["current", "fork_point"] as const) {
+    dashboardQueryClient.setQueryData(workspaceDiffFilesQueryKey(WORKSPACE_ID, mode), {
+      workspace_id: WORKSPACE_ID,
+      files: [readmeDiff],
+    });
+    dashboardQueryClient.setQueryData(workspaceDiffFileQueryKey(WORKSPACE_ID, mode, "README.md"), {
+      ...readmeDiff,
+      oldContent: "# Prompt Studio\n\nThe old workspace diff view.\n",
+      newContent: "# Prompt Studio\n\nFiles and Changes are workspace tabs.\n\nText opens in Monaco.\n",
+    });
+  }
 };
 
 const createStoryWorkbench = (state: WorkspaceStoryState) => {

@@ -203,7 +203,6 @@ export const DiffViewer = (props: DiffViewerProps) => {
         minW="0"
         resizablePanel={
           <FileListPanel
-            title="Changed files"
             paths={filteredFilePaths}
             selectedPath={resolvedSelectedPath}
             viewMode={viewMode}

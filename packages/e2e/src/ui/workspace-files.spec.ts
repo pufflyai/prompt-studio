@@ -110,6 +110,11 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await expect(changesTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Diffs" })).toHaveCount(0);
     await expect(page.getByTestId("diff-viewer")).toBeVisible();
+    await expect(page.getByText("Changed files", { exact: true })).toHaveCount(0);
+    const changesSearch = page.getByRole("textbox", { name: "Search files" });
+    const changesSearchHeaderHeight = await changesSearch.evaluate(
+      (element) => element.closest("header")?.getBoundingClientRect().height,
+    );
     const changesSeparator = page.getByRole("separator", { name: "Resize file list panel" });
     await expect(changesSeparator).toBeVisible();
     const changesSeparatorColors = await getResizeSeparatorColors(changesSeparator);
@@ -120,6 +125,10 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
 
     await filesTab.click();
     const search = page.getByRole("textbox", { name: "Search files" });
+    const filesSearchHeaderHeight = await search.evaluate(
+      (element) => element.closest("header")?.getBoundingClientRect().height,
+    );
+    expect(changesSearchHeaderHeight).toBe(filesSearchHeaderHeight);
     await expect(search).toHaveCSS("border-top-width", "0px");
     await expect(search).toHaveCSS("border-radius", "0px");
     await expect(search).toHaveCSS("margin-left", "0px");
@@ -129,6 +138,8 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     const filesSeparatorColors = await getResizeSeparatorColors(filesSeparator);
     expect(filesSeparatorColors.actual).toBe(filesSeparatorColors.expected);
     const assets = page.getByRole("option").filter({ hasText: "assets" }).first();
+    await expect(assets.locator("svg.lucide-folder")).toHaveCount(0);
+    await expect(assets.locator('span[aria-hidden="true"]')).toHaveCount(0);
     await assets.getByText("assets", { exact: true }).click();
     await expect(assets).toHaveAttribute("aria-expanded", "true");
     const nestedLogo = page.getByRole("option").filter({ hasText: "logo.png" }).first();
@@ -165,7 +176,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     const readmeBodyResponse = page.waitForResponse(
       (response) => response.url().includes("/diff-file?mode=fork_point&path=README.md") && response.ok(),
     );
-    await diffViewer.getByPlaceholder("Filter files").fill("README");
+    await diffViewer.getByPlaceholder("Search files").fill("README");
     await readmeBodyResponse;
     await expect(diffViewer.getByRole("option", { name: /README\.md/ })).toBeVisible();
     await expect(diffViewer.getByRole("row", { name: /Edited through Monaco/ })).toBeVisible();
@@ -290,6 +301,22 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
     await page.keyboard.insertText(appendedReadme);
     expect((await saveResponse).ok()).toBe(true);
     await expect.poll(() => readFileSync(join(repoRoot, "README.md"), "utf8")).toContain(appendedReadme);
+
+    const readmeBodyResponse = page.waitForResponse(
+      (response) => response.url().includes("/diff-file?mode=current&path=README.md") && response.ok(),
+    );
+    const changesTab = page.getByRole("tab", { name: "Changes" });
+    await changesTab.click();
+    await page.getByRole("textbox", { name: "Search files" }).fill("README");
+    await readmeBodyResponse;
+    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: /README\.md/ })).toBeVisible();
+    await expect(
+      page.getByTestId("diff-viewer").getByRole("row", { name: /Edited in the default workspace/ }),
+    ).toBeVisible();
+
+    await page.getByRole("tab", { name: "Files" }).click();
+    await page.getByRole("textbox", { name: "Search files" }).fill("README");
+    await expect(page.getByRole("option", { name: /README\.md/ }).getByText("M", { exact: true })).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

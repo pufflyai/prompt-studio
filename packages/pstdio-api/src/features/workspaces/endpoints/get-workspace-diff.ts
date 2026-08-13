@@ -4,6 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase, resolveHeadLabel } from "../resolve-base";
+import { resolveWorkspaceRoot } from "../resolve-workspace-root";
 
 const fileDiffSchema = z.object({
   filePath: z.string(),
@@ -52,7 +53,7 @@ export const getWorkspaceDiffRoute = createRoute({
       content: { "application/json": { schema: workspaceDiffResponseSchema } },
     },
     404: {
-      description: "Workspace not found or has no worktree.",
+      description: "Workspace not found or has no linked file root.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
   },
@@ -73,7 +74,7 @@ export const getWorkspaceDiffFilesRoute = createRoute({
       content: { "application/json": { schema: workspaceDiffFilesResponseSchema } },
     },
     404: {
-      description: "Workspace not found or has no worktree.",
+      description: "Workspace not found or has no linked file root.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
   },
@@ -94,27 +95,20 @@ export const getWorkspaceDiffFileRoute = createRoute({
       content: { "application/json": { schema: fileDiffSchema } },
     },
     404: {
-      description: "Workspace, worktree, or file not found.",
+      description: "Workspace, file root, or file not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
   },
 });
 
 const resolveWorkspaceDiffContext = async (deps: WorkspacesRouteDeps, id: string, mode: "current" | "fork_point") => {
-  const workspace = await deps.workspaceService.get(id);
+  const context = await resolveWorkspaceRoot(deps, id);
+  if (!context) return { error: { message: `Workspace has no linked file root: ${id}`, status: 404 as const } };
 
-  if (!workspace) {
-    return { error: { message: `Workspace not found: ${id}`, status: 404 as const } };
-  }
+  const resolved = mode === "current" ? { sha: "HEAD", label: "HEAD" } : await resolveBase(context.root);
+  const headLabel = await resolveHeadLabel(context.root);
 
-  if (!workspace.worktree_path) {
-    return { error: { message: `Workspace has no worktree: ${id}`, status: 404 as const } };
-  }
-
-  const resolved = mode === "current" ? { sha: "HEAD", label: "HEAD" } : await resolveBase(workspace.worktree_path);
-  const headLabel = await resolveHeadLabel(workspace.worktree_path);
-
-  return { workspace, worktreePath: workspace.worktree_path, resolved, headLabel };
+  return { workspace: context.workspace, workspaceRoot: context.root, resolved, headLabel };
 };
 
 export const getWorkspaceDiffHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
@@ -128,7 +122,7 @@ export const getWorkspaceDiffHandler = (deps: WorkspacesRouteDeps): AppRouteHand
     }
 
     const diff = await getWorktreeDiff({
-      worktreePath: context.worktreePath,
+      worktreePath: context.workspaceRoot,
       base: context.resolved.sha,
     });
 
@@ -158,7 +152,7 @@ export const getWorkspaceDiffFilesHandler = (
     }
 
     const diff = await getWorktreeDiffSummaryFiles({
-      worktreePath: context.worktreePath,
+      worktreePath: context.workspaceRoot,
       base: context.resolved.sha,
     });
 
@@ -188,7 +182,7 @@ export const getWorkspaceDiffFileHandler = (
     }
 
     const file = await getWorktreeDiffFile({
-      worktreePath: context.worktreePath,
+      worktreePath: context.workspaceRoot,
       base: context.resolved.sha,
       filePath: path,
     });

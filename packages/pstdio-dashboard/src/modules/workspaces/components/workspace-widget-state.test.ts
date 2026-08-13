@@ -1,31 +1,31 @@
 import { describe, expect, test } from "bun:test";
-import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
+import { resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
-describe("resolveWorkspaceForkPointDiffWorkspaceId", () => {
-  test("skips current-branch workspaces because they have no fork point", () => {
+describe("resolveWorkspaceDiffRequest", () => {
+  test("loads current changes for current-branch workspaces", () => {
     expect(
-      resolveWorkspaceForkPointDiffWorkspaceId({
+      resolveWorkspaceDiffRequest({
         resourceId: "workspace-current",
         metadata: { workspaceType: "current_branch" },
       }),
-    ).toBeUndefined();
+    ).toEqual({ workspaceId: "workspace-current", mode: "current" });
   });
 
   test("loads fork-point diffs for worktree workspaces", () => {
     expect(
-      resolveWorkspaceForkPointDiffWorkspaceId({
+      resolveWorkspaceDiffRequest({
         resourceId: "workspace-worktree",
         metadata: { workspaceType: "worktree" },
       }),
-    ).toBe("workspace-worktree");
+    ).toEqual({ workspaceId: "workspace-worktree", mode: "fork_point" });
   });
 
   test("uses workspace metadata id when the resource id is not the workspace id", () => {
     expect(
-      resolveWorkspaceForkPointDiffWorkspaceId({
+      resolveWorkspaceDiffRequest({
         resourceId: "workspace-resource",
         metadata: { workspaceId: "workspace-metadata", workspaceType: "worktree" },
       }),
-    ).toBe("workspace-metadata");
+    ).toEqual({ workspaceId: "workspace-metadata", mode: "fork_point" });
   });
 });

@@ -4,6 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase } from "../resolve-base";
+import { resolveWorkspaceRoot } from "../resolve-workspace-root";
 
 const diffSummaryResponseSchema = z.object({
   workspace_id: z.string(),
@@ -29,7 +30,7 @@ export const getWorkspaceDiffSummaryRoute = createRoute({
       content: { "application/json": { schema: diffSummaryResponseSchema } },
     },
     404: {
-      description: "Workspace not found or has no worktree.",
+      description: "Workspace not found or has no linked file root.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
   },
@@ -41,19 +42,12 @@ export const getWorkspaceDiffSummaryHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
-    const workspace = await deps.workspaceService.get(id);
+    const context = await resolveWorkspaceRoot(deps, id);
+    if (!context) return c.json({ error: `Workspace has no linked file root: ${id}` }, 404);
 
-    if (!workspace) {
-      return c.json({ error: `Workspace not found: ${id}` }, 404);
-    }
+    const resolved = mode === "current" ? { sha: "HEAD" } : await resolveBase(context.root);
+    const summary = await getWorktreeDiffSummary({ worktreePath: context.root, base: resolved.sha });
 
-    if (!workspace.worktree_path) {
-      return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
-    }
-
-    const resolved = mode === "current" ? { sha: "HEAD" } : await resolveBase(workspace.worktree_path);
-    const summary = await getWorktreeDiffSummary({ worktreePath: workspace.worktree_path, base: resolved.sha });
-
-    return c.json({ workspace_id: workspace.id, ...summary }, 200);
+    return c.json({ workspace_id: context.workspace.id, ...summary }, 200);
   };
 };

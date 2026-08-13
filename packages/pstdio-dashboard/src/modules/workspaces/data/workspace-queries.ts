@@ -12,6 +12,8 @@ export interface WorkspaceDiffFilesResponse {
   files: WorkspaceDiffSummaryFile[];
 }
 
+export type WorkspaceDiffMode = "current" | "fork_point";
+
 export const workspaceDiffFilePath = (diff: Pick<WorkspaceDiffSummaryFile, "filePath" | "newPath" | "oldPath">) =>
   diff.newPath ?? diff.oldPath ?? diff.filePath;
 
@@ -21,11 +23,11 @@ export const workspaceFileQueryKey = (workspaceId: string, path: string) =>
 export const workspaceFilesQueryKey = (workspaceId: string, input: ListWorkspaceFilesInput) =>
   ["workspace-files", workspaceId, "list", input] as const;
 
-export const workspaceDiffFilesQueryKey = (workspaceId: string) =>
-  ["workspace-diffs", workspaceId, "files", "fork_point"] as const;
+export const workspaceDiffFilesQueryKey = (workspaceId: string, mode: WorkspaceDiffMode) =>
+  ["workspace-diffs", workspaceId, "files", mode] as const;
 
-export const workspaceDiffFileQueryKey = (workspaceId: string, path: string) =>
-  ["workspace-diffs", workspaceId, "file", "fork_point", path] as const;
+export const workspaceDiffFileQueryKey = (workspaceId: string, mode: WorkspaceDiffMode, path: string) =>
+  ["workspace-diffs", workspaceId, "file", mode, path] as const;
 
 export const workspaceFilesQueryOptions = (workspaceId: string, input: ListWorkspaceFilesInput) =>
   queryOptions({
@@ -39,21 +41,21 @@ export const workspaceFileQueryOptions = (workspaceId: string, path: string) =>
     queryFn: () => getApiClient().workspaces.readFile(workspaceId, path),
   });
 
-export const workspaceDiffFilesQueryOptions = (workspaceId: string) =>
+export const workspaceDiffFilesQueryOptions = (workspaceId: string, mode: WorkspaceDiffMode) =>
   queryOptions({
-    queryKey: workspaceDiffFilesQueryKey(workspaceId),
+    queryKey: workspaceDiffFilesQueryKey(workspaceId, mode),
     queryFn: () =>
-      apiRequest<WorkspaceDiffFilesResponse | null>(`/v1/workspaces/${workspaceId}/diff-files?mode=fork_point`, {
+      apiRequest<WorkspaceDiffFilesResponse | null>(`/v1/workspaces/${workspaceId}/diff-files?mode=${mode}`, {
         allowNotFound: true,
       }),
   });
 
-export const workspaceDiffFileQueryOptions = (workspaceId: string, path: string) =>
+export const workspaceDiffFileQueryOptions = (workspaceId: string, mode: WorkspaceDiffMode, path: string) =>
   queryOptions({
-    queryKey: workspaceDiffFileQueryKey(workspaceId, path),
+    queryKey: workspaceDiffFileQueryKey(workspaceId, mode, path),
     queryFn: () =>
       apiRequest<WorkspaceDiffSummaryFile | null>(
-        `/v1/workspaces/${workspaceId}/diff-file?mode=fork_point&path=${encodeURIComponent(path)}`,
+        `/v1/workspaces/${workspaceId}/diff-file?mode=${mode}&path=${encodeURIComponent(path)}`,
         { allowNotFound: true },
       ),
   });

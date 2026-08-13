@@ -41,14 +41,20 @@ afterEach(() => {
 
 describe("workspace file contributions", () => {
   test("loads files for a current-branch workspace through the API", async () => {
-    const fetchMock = mock(async (_input: string | URL | Request) =>
-      jsonResponse({
+    const fetchMock = mock(async (input: string | URL | Request) => {
+      if (String(input).includes("/diff-files?")) {
+        return jsonResponse({
+          workspace_id: "workspace-1",
+          files: [{ filePath: "README.md", change: "modified", additions: 1, deletions: 0 }],
+        });
+      }
+      return jsonResponse({
         workspace_id: "workspace-1",
         path: "",
         entries: [{ path: "README.md", name: "README.md", type: "file", size: 8 }],
         truncated: false,
-      }),
-    );
+      });
+    });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const workbench = createWorkbenchCore();
     workbench.registerModule(createWorkspacesModule());
@@ -58,12 +64,19 @@ describe("workspace file contributions", () => {
     const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const file = await workbench.renderers.getFileRenderer(dashboardWidgetIds.workspaceFileRenderer)?.load(workspace);
 
-    expect(sections[0]?.nodes).toEqual([expect.objectContaining({ id: "README.md", label: "README.md" })]);
+    expect(sections[0]?.nodes).toEqual([
+      expect.objectContaining({
+        id: "README.md",
+        label: "README.md",
+        endContent: expect.objectContaining({ props: { change: "modified" } }),
+      }),
+    ]);
     expect(file?.emptyState).toEqual({
       title: "Select a file",
       description: "Choose a file from the Files panel.",
     });
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/v1/workspaces/workspace-1/files?limit=500");
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/diff-files?mode=current"))).toBe(true);
   });
 
   test("searches, opens, loads, and saves a workspace text file through one resource", async () => {
@@ -207,7 +220,7 @@ describe("workspace file contributions", () => {
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
 
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
-    expect(folder?.iconElement).toBeDefined();
+    expect(folder?.iconElement).toBeUndefined();
     expect(folder?.actions).toBeUndefined();
     expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual([
       "New file",

@@ -1,4 +1,4 @@
-import { Badge, Box, HStack, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { Box, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import { FileText, Search } from "lucide-react";
 import { useRef } from "react";
 import { Header } from "@/components/layout/header";
@@ -11,7 +11,6 @@ import { FileChangeBadge } from "./file-change-badge";
 import type { ChangedFilesViewMode, ChangedFileTreeNode, FileIconInfo } from "./types";
 
 interface FileListPanelProps {
-  title: string;
   paths: string[];
   selectedPath: string | null;
   viewMode: ChangedFilesViewMode;
@@ -87,7 +86,6 @@ const toTreeListNodes = (input: {
 
 export const FileListPanel = (props: FileListPanelProps) => {
   const {
-    title,
     paths,
     selectedPath,
     viewMode,
@@ -106,28 +104,18 @@ export const FileListPanel = (props: FileListPanelProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden" bg="bg">
-      <Header variant="main" justifyContent="space-between" borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
-        <HStack gap="2xs" minW="0">
-          <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-            {title}
-          </Text>
-          <Badge size="sm" variant="number" flexShrink={0} colorPalette="gray">
-            {paths.length}
-          </Badge>
-        </HStack>
-      </Header>
-      <Stack gap="xs" borderBottomWidth="1px" bg="bg">
+      <Header variant="input" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
         <InputGroup startElement={<Search size={14} />}>
           <Input
             size="sm"
-            mx="xs"
             variant="borderless"
-            placeholder="Filter files"
+            aria-label="Search files"
+            placeholder="Search files"
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>
-      </Stack>
+      </Header>
       <ScrollArea
         flex="1"
         minH="0"

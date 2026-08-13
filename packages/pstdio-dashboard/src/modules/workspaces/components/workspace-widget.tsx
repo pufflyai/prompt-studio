@@ -5,12 +5,13 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+  type WorkspaceDiffMode,
   type WorkspaceDiffSummaryFile,
   workspaceDiffFilePath,
   workspaceDiffFileQueryOptions,
   workspaceDiffFilesQueryOptions,
 } from "../data/workspace-queries";
-import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
+import { resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({
   change: summary.change,
@@ -21,13 +22,19 @@ const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFi
   ...(body ? { oldContent: body.oldContent ?? "", newContent: body.newContent ?? "" } : {}),
 });
 
-const useWorkspaceDiffs = (workspaceId: string | undefined) => {
+const useWorkspaceDiffs = (request: { workspaceId: string; mode: WorkspaceDiffMode } | undefined) => {
   const queryClient = useQueryClient();
-  const [requested, setRequested] = useState<{ workspaceId?: string; paths: string[] }>({ paths: [] });
-  const requestedPaths = requested.workspaceId === workspaceId ? requested.paths : [];
-  const summary = useQuery({ ...workspaceDiffFilesQueryOptions(workspaceId ?? ""), enabled: Boolean(workspaceId) });
+  const [requested, setRequested] = useState<{ requestKey?: string; paths: string[] }>({ paths: [] });
+  const workspaceId = request?.workspaceId;
+  const mode = request?.mode ?? "fork_point";
+  const requestKey = request ? `${request.workspaceId}:${request.mode}` : undefined;
+  const requestedPaths = requested.requestKey === requestKey ? requested.paths : [];
+  const summary = useQuery({
+    ...workspaceDiffFilesQueryOptions(workspaceId ?? "", mode),
+    enabled: Boolean(workspaceId),
+  });
   const bodyQueries = useQueries({
-    queries: workspaceId ? requestedPaths.map((path) => workspaceDiffFileQueryOptions(workspaceId, path)) : [],
+    queries: workspaceId ? requestedPaths.map((path) => workspaceDiffFileQueryOptions(workspaceId, mode, path)) : [],
   });
 
   const bodiesByPath = new Map(
@@ -46,21 +53,21 @@ const useWorkspaceDiffs = (workspaceId: string | undefined) => {
     loadDiff: async (path: string) => {
       if (!workspaceId) return;
       setRequested((current) => {
-        const paths = current.workspaceId === workspaceId ? current.paths : [];
-        return { workspaceId, paths: paths.includes(path) ? paths : [...paths, path] };
+        const paths = current.requestKey === requestKey ? current.paths : [];
+        return { requestKey, paths: paths.includes(path) ? paths : [...paths, path] };
       });
-      await queryClient.fetchQuery(workspaceDiffFileQueryOptions(workspaceId, path));
+      await queryClient.fetchQuery(workspaceDiffFileQueryOptions(workspaceId, mode, path));
     },
   };
 };
 
 export const WorkspaceDiffsPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const workspaceId = resolveWorkspaceForkPointDiffWorkspaceId({
+  const request = resolveWorkspaceDiffRequest({
     resourceId: input.instance.resource?.id,
     metadata: input.instance.resource?.metadata,
   });
-  const { diffs, paths, loading, error, loadDiff } = useWorkspaceDiffs(workspaceId);
+  const { diffs, paths, loading, error, loadDiff } = useWorkspaceDiffs(request);
   const { activeFileIconTheme } = useFileIconThemePreference();
 
   if (error) {
