@@ -7,6 +7,7 @@ import { createWorkspacesModule } from "./module";
 
 const originalFetch = globalThis.fetch;
 const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+let apiBaseUrlId = 0;
 
 const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef => ({
   kind: "workspace",
@@ -21,7 +22,8 @@ const jsonResponse = (value: unknown) =>
 
 beforeEach(() => {
   dashboardQueryClient.clear();
-  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://workspace-files.test" };
+  apiBaseUrlId += 1;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: `http://workspace-files-${apiBaseUrlId}.test` };
 });
 
 afterEach(() => {
@@ -31,24 +33,30 @@ afterEach(() => {
 });
 
 describe("workspace file contributions", () => {
-  test("does not request files for a current-branch workspace", async () => {
-    const fetchMock = mock(async () => jsonResponse({}));
+  test("loads files for a current-branch workspace through the API", async () => {
+    const fetchMock = mock(async (_input: string | URL | Request) =>
+      jsonResponse({
+        workspace_id: "workspace-1",
+        path: "",
+        entries: [{ path: "README.md", name: "README.md", type: "file", size: 8 }],
+        truncated: false,
+      }),
+    );
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const workbench = createWorkbenchCore();
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceType: "current_branch", workspaceView: "files" });
 
-    await workbench.resources.openResource(workspace, { replaceActive: true });
     const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const file = await workbench.renderers.getFileRenderer(dashboardWidgetIds.workspaceFileRenderer)?.load(workspace);
 
-    expect(sections[0]?.emptyState).toEqual({
-      title: "Files unavailable",
-      description: "File browsing requires a worktree-backed workspace.",
+    expect(sections[0]?.nodes).toEqual([expect.objectContaining({ id: "README.md", label: "README.md" })]);
+    expect(file?.emptyState).toEqual({
+      title: "Select a file",
+      description: "Choose a file from the Files panel.",
     });
-    expect(file?.emptyState).toEqual(sections[0]?.emptyState);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/v1/workspaces/workspace-1/files?limit=500");
   });
 
   test("searches, opens, loads, and saves a workspace text file through one resource", async () => {

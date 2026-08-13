@@ -36,7 +36,7 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
 const openWorkspace = async (page: Page, shorthand: string) => {
   const row = page.getByRole("option").filter({ hasText: shorthand }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  await row.getByRole("paragraph").filter({ hasText: shorthand }).click();
+  await row.getByText(shorthand, { exact: true }).click();
 };
 
 test("PS-118 browses and edits workspace files, then refreshes the lazy diff", async ({ page, request }) => {
@@ -144,6 +144,58 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
       `${apiBase}/v1/workspaces/${attempt.workspace.id}/file?path=${encodeURIComponent("../README.md")}`,
     );
     expect(unsafe.status()).toBe(400);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("PS-118 browses and edits files in the default workspace", async ({ page, request }) => {
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: { name: "PS-118 Default Workspace Files" },
+  });
+  expect(projectResponse.ok()).toBe(true);
+  const project = (await projectResponse.json()) as { id: string };
+  const repoRoot = createGitRepo("pstdio-ps-118-default-", "Default workspace files e2e");
+
+  try {
+    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-118-default-repo", repoRoot);
+    const workspacesResponse = await request.get(
+      `${apiBase}/v1/workspaces?project_id=${encodeURIComponent(project.id)}`,
+    );
+    expect(workspacesResponse.ok()).toBe(true);
+    const workspaces = (await workspacesResponse.json()) as Array<{
+      id: string;
+      is_default: boolean;
+      workspace_shorthand: string;
+    }>;
+    const workspace = workspaces.find((candidate) => candidate.is_default);
+    expect(workspace).toBeDefined();
+    if (!workspace) throw new Error("Default workspace was not created.");
+
+    await prepareDashboard(page, project.id, repo.id);
+    await page.goto(`/projects/${project.id}/workspaces`);
+    await page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
+      .first()
+      .click();
+    await openWorkspace(page, workspace.workspace_shorthand);
+
+    await page.getByRole("tab", { name: "Files" }).click();
+    const search = page.getByRole("textbox", { name: "Search files" });
+    await search.fill("README");
+    await page.getByRole("option", { name: "README.md" }).click();
+    const editor = page.locator(".monaco-editor");
+    await expect(editor).toBeVisible();
+
+    const appendedReadme = "# Edited in the default workspace\n";
+    const saveResponse = page.waitForResponse(
+      (response) => response.url().includes("/file?path=README.md") && response.request().method() === "PUT",
+    );
+    await editor.locator(".view-lines").click();
+    await page.keyboard.insertText(appendedReadme);
+    expect((await saveResponse).ok()).toBe(true);
+    await expect.poll(() => readFileSync(join(repoRoot, "README.md"), "utf8")).toContain(appendedReadme);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

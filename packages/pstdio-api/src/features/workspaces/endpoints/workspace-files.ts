@@ -49,7 +49,7 @@ const errorResponse = {
 export const listWorkspaceFilesRoute = createRoute({
   method: "get",
   path: "/workspaces/{id}/files",
-  description: "List or search files in a worktree-backed workspace.",
+  description: "List or search files in a workspace.",
   tags: ["Workspaces"],
   request: {
     params: z.object({ id: z.string() }).strict(),
@@ -141,8 +141,10 @@ const toApiEntry = (entry: WorkspaceMountEntry) => ({
 const resolveWorkspaceMount = async (deps: WorkspacesRouteDeps, id: string) => {
   const workspace = await deps.workspaceService.get(id);
   if (!workspace) return undefined;
-  if (!workspace.worktree_path) return undefined;
-  return { mount: createWorkspaceFilesMount(workspace.worktree_path), workspace };
+  const [projectRepo] = workspace.worktree_path ? [] : await deps.repoService.listByProject(workspace.project_id);
+  const root = workspace.worktree_path ?? projectRepo?.path;
+  if (!root) return undefined;
+  return { mount: createWorkspaceFilesMount(root), workspace };
 };
 
 const readWorkspaceFile = async (
@@ -201,7 +203,7 @@ export const listWorkspaceFilesHandler = (
     const { id } = c.req.valid("param");
     const { limit = DEFAULT_LIST_LIMIT, path = "", query } = c.req.valid("query");
     const context = await resolveWorkspaceMount(deps, id);
-    if (!context) return c.json({ error: `Workspace not found or has no worktree: ${id}` }, 404);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
       if (query) {
@@ -239,7 +241,7 @@ export const getWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHand
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
     const context = await resolveWorkspaceMount(deps, id);
-    if (!context) return c.json({ error: `Workspace not found or has no worktree: ${id}` }, 404);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
       return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 200);
@@ -258,7 +260,7 @@ export const writeWorkspaceFileHandler = (
     const { path } = c.req.valid("query");
     const { content } = c.req.valid("json");
     const context = await resolveWorkspaceMount(deps, id);
-    if (!context) return c.json({ error: `Workspace not found or has no worktree: ${id}` }, 404);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
       const current = await readWorkspaceFile(context.workspace, context.mount, path);

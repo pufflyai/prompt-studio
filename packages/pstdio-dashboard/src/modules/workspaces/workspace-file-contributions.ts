@@ -49,9 +49,6 @@ const loadFileEntries = async (context: TreeContext, path?: string) => {
   const workspaceId = workspaceIdOf(context.resource);
   if (!context.resource || !workspaceId)
     return unsupportedSection("Files unavailable", "Workspace details are missing.");
-  if (context.resource.metadata?.workspaceType === "current_branch") {
-    return unsupportedSection("Files unavailable", "File browsing requires a worktree-backed workspace.");
-  }
 
   const response = await dashboardQueryClient.fetchQuery(
     workspaceFilesQueryOptions(workspaceId, {
@@ -116,15 +113,6 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
     load: async (resource) => {
       const workspaceId = workspaceIdOf(resource);
       const path = metadataString(resource, "workspaceFilePath");
-      if (resource?.metadata?.workspaceType === "current_branch") {
-        return {
-          editable: false,
-          emptyState: {
-            title: "Files unavailable",
-            description: "File browsing requires a worktree-backed workspace.",
-          },
-        };
-      }
       if (!workspaceId || !path) {
         return {
           editable: false,

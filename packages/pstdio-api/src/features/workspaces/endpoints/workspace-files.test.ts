@@ -18,12 +18,17 @@ const MAX_FILE_BYTES = 1024 * 1024;
 
 let app: OpenAPIHono<AppBindings>;
 let root: string;
+let repoRoot: string;
 let outside: string;
-const workspaces = new Map<string, { id: string; worktree_path: string | null }>();
+const workspaces = new Map<string, { id: string; project_id: string; worktree_path: string | null }>();
+const reposByProject = new Map<string, Array<{ path: string }>>();
 
 const deps = {
   workspaceService: {
     get: async (id: string) => workspaces.get(id) ?? null,
+  },
+  repoService: {
+    listByProject: async (projectId: string) => reposByProject.get(projectId) ?? [],
   },
 } as unknown as WorkspacesRouteDeps;
 
@@ -32,10 +37,14 @@ const requestPath = (workspaceId: string, path: string) =>
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-"));
+  repoRoot = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-repo-"));
   outside = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-outside-"));
   workspaces.clear();
-  workspaces.set("workspace-1", { id: "workspace-1", worktree_path: root });
-  workspaces.set("default", { id: "default", worktree_path: null });
+  reposByProject.clear();
+  workspaces.set("workspace-1", { id: "workspace-1", project_id: "project-1", worktree_path: root });
+  workspaces.set("default", { id: "default", project_id: "project-1", worktree_path: null });
+  workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", worktree_path: null });
+  reposByProject.set("project-1", [{ path: repoRoot }]);
   app = new OpenAPIHono<AppBindings>();
   app.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
@@ -44,6 +53,7 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
+  rmSync(repoRoot, { recursive: true, force: true });
   rmSync(outside, { recursive: true, force: true });
 });
 
@@ -79,8 +89,20 @@ describe("GET /workspaces/:id/files", () => {
     expect(search.truncated).toBe(true);
   });
 
-  test("returns 404 for a workspace without a worktree", async () => {
-    expect((await app.request("/workspaces/default/files")).status).toBe(404);
+  test("lists files from the linked repository for a default workspace", async () => {
+    writeFileSync(join(repoRoot, "README.md"), "default workspace");
+
+    const response = await app.request("/workspaces/default/files");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      workspace_id: "default",
+      entries: [{ path: "README.md", type: "file" }],
+    });
+  });
+
+  test("returns 404 for a workspace without a linked file root", async () => {
+    expect((await app.request("/workspaces/orphan/files")).status).toBe(404);
     expect((await app.request("/workspaces/missing/files")).status).toBe(404);
   });
 });
@@ -108,6 +130,27 @@ describe("GET and PUT /workspaces/:id/file", () => {
     });
     expect(writeResponse.status).toBe(200);
     expect(readFileSync(join(root, "notes.md"), "utf8")).toBe("after");
+  });
+
+  test("reads and replaces a default workspace file in the linked repository", async () => {
+    writeFileSync(join(repoRoot, "notes.md"), "before");
+
+    const readResponse = await app.request(requestPath("default", "notes.md"));
+    expect(readResponse.status).toBe(200);
+    expect(await readResponse.json()).toMatchObject({
+      workspace_id: "default",
+      path: "notes.md",
+      content: "before",
+      editable: true,
+    });
+
+    const writeResponse = await app.request(requestPath("default", "notes.md"), {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "after" }),
+    });
+    expect(writeResponse.status).toBe(200);
+    expect(readFileSync(join(repoRoot, "notes.md"), "utf8")).toBe("after");
   });
 
   test("returns a supported image as a read-only data URL", async () => {

@@ -17,10 +17,10 @@ import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
 
-type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "unsupported" | "collapsed";
+type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed";
 
 const selectedPathForStory = (state: WorkspaceStoryState) => {
-  if (state === "text" || state === "collapsed") return "README.md";
+  if (state === "text" || state === "default" || state === "collapsed") return "README.md";
   if (state === "image") return "assets/logo.png";
   return undefined;
 };
@@ -37,7 +37,7 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
       workspaceShorthand: WORKSPACE_ID,
-      workspaceType: state === "unsupported" ? "current_branch" : "worktree",
+      workspaceType: state === "default" ? "current_branch" : "worktree",
       workspaceView: state === "diffs" ? "diffs" : "files",
       ...(selectedPath ? { workspaceFilePath: selectedPath } : {}),
     },
@@ -154,6 +154,6 @@ export const MonacoTextFile: Story = { args: { state: "text" } };
 
 export const ImagePreview: Story = { args: { state: "image" } };
 
-export const UnsupportedCurrentBranch: Story = { args: { state: "unsupported" } };
+export const DefaultWorkspace: Story = { args: { state: "default" } };
 
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
