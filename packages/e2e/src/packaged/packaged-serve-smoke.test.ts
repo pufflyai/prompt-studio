@@ -3,6 +3,7 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary } from "./packaged-helpers";
 
@@ -270,9 +271,18 @@ describe("packaged pstdio — self-hosted serve", () => {
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
       let child: ChildProcess | null = null;
+      let closeRegistry: (() => Promise<void>) | null = null;
 
       try {
+        const npmConfigPath = join(tempRoot, ".npmrc");
+        const registry = await startLocalWorkspaceRegistry({
+          configPath: npmConfigPath,
+          outputRoot: tempRoot,
+          packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
+        });
+        closeRegistry = registry.close;
         const started = await startPackagedServe(tempRoot, {
+          NPM_CONFIG_USERCONFIG: npmConfigPath,
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
             defaultExtensions: [
               "harness-claude-code",
@@ -294,7 +304,8 @@ describe("packaged pstdio — self-hosted serve", () => {
         });
         expect(createRes.status).toBe(201);
 
-        const project = (await createRes.json()) as { id: string };
+        const project = (await createRes.json()) as { extension_warnings?: unknown[]; id: string };
+        expect(project.extension_warnings).toBeUndefined();
         const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
           headers: runtimeAuthorization(started.descriptor),
         });
@@ -357,6 +368,9 @@ describe("packaged pstdio — self-hosted serve", () => {
       } finally {
         if (child) {
           await stopProcess(child);
+        }
+        if (closeRegistry) {
+          await closeRegistry();
         }
         rmSync(tempRoot, { recursive: true, force: true });
       }

@@ -6,3 +6,5 @@ bun run --cwd scripts release:stamp-dates
 bun run --cwd scripts release:platforms:sync
 # update the lock file
 bun install
+bun run --cwd scripts release:lockfile:sync
+bun run --cwd scripts verify:lockfile
