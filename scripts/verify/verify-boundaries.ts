@@ -84,7 +84,9 @@ interface WorkspacePackage {
   name: string;
   dir: string;
   declared: Set<string>;
+  dependencies: Record<string, string>;
   isExtension: boolean;
+  version?: string;
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8"));
@@ -99,18 +101,26 @@ const discoverPackages = () => {
   const packages: WorkspacePackage[] = [];
   for (const dir of dirs) {
     const manifestPath = path.join(ROOT, dir, "package.json");
-    let manifest: { name?: string; [key: string]: unknown };
+    let manifest: { name?: string; version?: string; [key: string]: unknown };
     try {
       manifest = readJson(manifestPath);
     } catch {
       continue;
     }
     if (!manifest.name) continue;
+    const dependencies = (manifest.dependencies as Record<string, string>) ?? {};
     const declared = new Set<string>();
     for (const key of ["dependencies", "devDependencies", "peerDependencies"]) {
       for (const dep of Object.keys((manifest[key] as Record<string, string>) ?? {})) declared.add(dep);
     }
-    packages.push({ name: manifest.name, dir, declared, isExtension: dir.startsWith("extensions/") });
+    packages.push({
+      name: manifest.name,
+      dir,
+      declared,
+      dependencies,
+      isExtension: dir.startsWith("extensions/"),
+      version: manifest.version,
+    });
   }
   return packages;
 };
@@ -188,6 +198,15 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
   }
 };
 
+const checkExtensionUiVersion = (pkg: WorkspacePackage, uiVersion: string, errors: string[]) => {
+  const declaredVersion = pkg.dependencies["@pstdio/ui"];
+  if (pkg.isExtension && declaredVersion && declaredVersion !== uiVersion) {
+    errors.push(
+      `${pkg.dir}: must pin @pstdio/ui to the workspace version "${uiVersion}" instead of "${declaredVersion}"`,
+    );
+  }
+};
+
 const checkSpecifier = (
   specifier: string,
   context: { pkg: WorkspacePackage; pkgRoot: string; file: string; relativeFile: string; workspaceNames: Set<string> },
@@ -230,6 +249,8 @@ const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, 
 const main = () => {
   const packages = discoverPackages();
   const workspaceNames = new Set(packages.map((pkg) => pkg.name));
+  const uiVersion = packages.find((pkg) => pkg.name === "@pstdio/ui")?.version;
+  if (!uiVersion) throw new Error("@pstdio/ui must declare a workspace version");
   const errors: string[] = [];
 
   for (const cycle of findCycles(packages)) {
@@ -237,6 +258,7 @@ const main = () => {
   }
   for (const pkg of packages) {
     checkDeclaredDeps(pkg, workspaceNames, errors);
+    checkExtensionUiVersion(pkg, uiVersion, errors);
     checkSourceImports(pkg, workspaceNames, errors);
   }
 

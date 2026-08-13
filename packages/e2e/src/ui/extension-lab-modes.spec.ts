@@ -33,112 +33,113 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-const modeFrame = (page: import("@playwright/test").Page, title: string) =>
+const labFrame = (page: import("@playwright/test").Page, title: string) =>
   page.frameLocator(`iframe[title="${title}"]`);
 
-const switchMode = async (page: import("@playwright/test").Page, label: string) => {
-  await page.keyboard.press("ControlOrMeta+KeyK");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("textbox").fill("> switch mode");
-  await dialog.getByText("Switch Mode", { exact: true }).click();
-  await dialog.getByPlaceholder("Search modes").fill(label);
-  await dialog.getByText(label, { exact: true }).click();
-  await expect(dialog).toBeHidden();
+const openLabMode = async (page: import("@playwright/test").Page) => {
+  await page.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+  await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };
 
-test("Extension Lab demonstrates mode-owned layouts and restores prior Panel state", async ({ page, request }) => {
+test("the Lab mode swaps the sidenav for activity and status chrome without a terminal", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  const projectSidenav = page.locator('[data-workbench-region="sidenav"]');
-  await projectSidenav.getByRole("option", { name: "Lab coding mode", exact: true }).click({ timeout: 30_000 });
+  await openLabMode(page);
 
-  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(modeFrame(page, "Coding tools").getByRole("heading", { name: "Coding tools" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(modeFrame(page, "Inspector").getByRole("heading", { name: "Inspector" })).toBeVisible({
-    timeout: 30_000,
-  });
+  // One mode, three main tabs.
+  await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Cams", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  const overviewFrame = labFrame(page, "Overview");
+  await expect(overviewFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
 
-  // Entering the mode stages its declared layout, so the Secondary Panel opens itself.
-  await expect(modeFrame(page, "Experiment console").getByRole("heading", { name: "Experiment console" })).toBeVisible({
-    timeout: 30_000,
-  });
+  // The native activity rail replaces the sidenav and the status strip reports lab state.
+  const activityRail = page.locator('[data-workbench-region="activity"]');
+  await expect(activityRail).toBeVisible({ timeout: 30_000 });
+  await expect(activityRail.getByRole("button", { name: "Create artifact" })).toBeVisible();
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
+  const statusBar = labFrame(page, "Lab status");
+  await expect(statusBar.getByText("Extension Lab")).toBeVisible({ timeout: 30_000 });
 
-  await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
-  await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
-
-  await switchMode(page, "Lab design");
-  await expect(modeFrame(page, "Prototype canvas").getByRole("heading", { name: "Prototype canvas" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(modeFrame(page, "Design palette").getByRole("heading", { name: "Design palette" })).toBeVisible({
-    timeout: 30_000,
-  });
+  // No secondary panel means no place to open a terminal in the Lab.
   await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
 
-  await switchMode(page, "Lab review");
-  await expect(modeFrame(page, "Change review").getByRole("heading", { name: "Change review" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(modeFrame(page, "Review checks").getByRole("heading", { name: "Review checks" })).toBeVisible({
-    timeout: 30_000,
-  });
-
-  await switchMode(page, "Lab focus");
-  await expect(modeFrame(page, "Focus").getByRole("heading", { name: "Main only" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
-  await expect(page.locator('[data-workbench-panel-menu^="main-"]')).toHaveCount(0);
-
-  await switchMode(page, "Lab coding");
-  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
-    timeout: 30_000,
-  });
-  // Re-entering the mode stages its layout again, reopening the declared console.
-  await expect(modeFrame(page, "Experiment console").getByRole("heading", { name: "Experiment console" })).toBeVisible({
-    timeout: 30_000,
-  });
+  // Leaving through the rail's home item restores the dashboard sidenav.
+  await activityRail.getByRole("button", { name: "Project home" }).click();
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
 });
 
-test("Extension Lab keeps project navigation available inside a custom mode", async ({ page, request }) => {
+test("the Cameras tree menu drives the cams player", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await sidenav.getByRole("option", { name: "Lab coding mode", exact: true }).click({ timeout: 30_000 });
-  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
-    timeout: 30_000,
-  });
+  await openLabMode(page);
+  await page.getByRole("tab", { name: "Cams", exact: true }).click();
 
-  const labRow = sidenav.getByRole("option", { name: "Lab", exact: true });
-  await expect(labRow).toBeVisible();
-  await labRow.click();
-  await expect(modeFrame(page, "Lab").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
-    timeout: 30_000,
-  });
+  const camsFrame = labFrame(page, "Cams");
+  await expect(camsFrame.getByText(/Session 1/)).toBeVisible({ timeout: 30_000 });
 
-  await sidenav.getByRole("option", { name: "Lab coding mode", exact: true }).click();
-  await expect(modeFrame(page, "Lab overview").getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
-    timeout: 30_000,
-  });
+  const camsMenu = page.locator('[data-workbench-panel-menu="main-left"]');
+  await expect(camsMenu.getByText("Corridor B — night sweep")).toBeVisible({ timeout: 30_000 });
+  const selectResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/extensions/commands/extension-lab.cams.select/execute") &&
+      response.request().method() === "POST",
+  );
+  await camsMenu.getByText("Corridor B — night sweep").click();
+  expect((await selectResponse).ok()).toBe(true);
+  await expect(camsFrame.getByText(/Corridor B/)).toBeVisible({ timeout: 15_000 });
+});
 
-  await sidenav
-    .getByRole("option", { name: /^Workspaces/ })
-    .first()
-    .click();
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
-  ).toBeVisible({ timeout: 30_000 });
+test("artifacts are created from the panel menu and inspected in the Side Panel", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${project.id}`);
+
+  await openLabMode(page);
+  await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
+
+  // The Create artifacts menu lives on the Artifacts panel itself.
+  const createMenu = page.locator('[data-workbench-panel-menu="main-right"]');
+  await expect(createMenu.getByText("Catalog intake")).toBeVisible({ timeout: 30_000 });
+  const createResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/extensions/commands/extension-lab.artifact-menu.update/execute") &&
+      response.request().method() === "POST",
+  );
+  await createMenu.getByRole("button", { name: "Random artifact" }).click();
+  expect((await createResponse).ok()).toBe(true);
+
+  const dataTable = page.locator("table.data-table");
+  await expect(dataTable.locator("tbody tr")).toHaveCount(1, { timeout: 15_000 });
+  const artifactTitle = await dataTable.locator("td[data-column-id='artifact']").first().textContent();
+
+  // Selecting a row opens the Side Panel inspector without leaving the Lab.
+  await dataTable.locator("td[data-column-id='artifact']").first().click();
+  const detailFrame = labFrame(page, "Artifact");
+  await expect(detailFrame.getByRole("heading", { name: artifactTitle! })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+  await expect(page.locator('[data-workbench-region="activity"]')).toBeVisible();
+
+  // Row actions still delete artifacts.
+  await dataTable.locator("tbody tr").first().locator('button[aria-label="Row actions"]').click();
+  const deleteResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/extension-lab.glass-lab-artifacts.delete/execute",
+      ) && response.request().method() === "POST",
+  );
+  await page.getByRole("menuitem", { name: "Delete artifact" }).click();
+  expect((await deleteResponse).ok()).toBe(true);
+  await expect(page.getByRole("heading", { name: "No artifacts found" })).toBeVisible({ timeout: 15_000 });
 });

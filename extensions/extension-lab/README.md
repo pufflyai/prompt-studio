@@ -49,7 +49,11 @@ Everything below uses only host-owned workbench targets and lab-internal command
 | `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
 | `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
 | `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
-| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns Glass Lab artifact rows used by the demo kanban renderer.                           |
+| `glass-lab-artifacts.create` | `lab.glass-lab-artifacts.create` | no | Creates a randomized artifact in project-scoped extension storage.                       |
+| `glass-lab-artifacts.delete` | `lab.glass-lab-artifacts.delete` | no | Deletes the selected artifact from extension storage.                                    |
+| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns stored Glass Lab artifact rows for the data table renderer.                        |
+| `parameters.query/update/apply` | `lab.parameters.*` | no | Loads and persists Parameter Lab controls; applying them creates an artifact.              |
+| `review-checklist.query/update` | `lab.review-checklist.*` | no | Loads and persists the Review Lab checklist.                                               |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
 | `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
 | `heartbeat`       | `lab.heartbeat`       | no   | Invoked by the schedule below.                                                           |
@@ -72,27 +76,25 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Modes, routes, views, and tree items
 
-- `modes.lab` demonstrates the full Coding frame: both Main Panel menus, Main content, Secondary content,
-  the host-owned Sidenav, and Side Panel availability.
-- `modes.labDesign` demonstrates a distinct Main + Side frame with its own left menu, Main content, and restored
-  Inspector.
-- `modes.labReview` demonstrates a second full frame with different Main and Secondary content.
-- `modes.labFocus` demonstrates a Main-only frame and exposes in-view switching while optional Panels are unavailable.
-- Switching away and back exercises one-time mode seeding, per-mode layout persistence, unavailable-Panel removal,
-  pinned views, shared views, and restoration without rebuilding project chrome.
+- `modes.lab` is the single Lab mode: Overview, Artifacts, and Cams as Main tabs, a native activity rail, and a status strip. It omits the `secondary` panel, so no terminal can open inside the Lab.
+- `activityItems` stage the native activity rail for the Lab mode: a create-artifact action and a `Project home` item that returns to Project mode. The rail replaces the dashboard sidenav while the Lab is active.
+- `panels.labStatusBar` is a webview strip in the `status` region showing the artifact count and the selected camera.
+- `panels.labArtifacts` is a Main Sub Panel with a `Create artifacts` panel menu (a controls renderer) on its right side.
+- `panels.labCams` is a Main Sub Panel hosting the footage player, with a `Cameras` tree-renderer panel menu on its left side.
+- `panels.labArtifactDetail` is a side-region inspector bound to `glass-lab-artifact`: selecting a table row opens the detail in the Side Panel without leaving the Lab.
+- Switching away and back exercises mode seeding, chrome ownership (sidenav restore), and per-mode layout persistence.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
-- Four mode tree items enter each layout from Project mode. Once inside a custom mode, use the host `Workspaces`
-  entry or `Switch Mode` in the workbench Command Palette to leave the mode or compare layouts.
-- `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon. Tree items
-  without `when.mode` stay visible in custom modes where the host left tree is present.
+- `treeItems.labPage` adds a left-tree entry that switches directly into the Lab mode, with the `flask-conical` icon.
 
 ### Storage
 
-- Counter state lives in extension storage at key `counter`, scoped to the current project.
+- Counter and Glass Lab artifact state live in extension storage, scoped to the current project.
 
-### Templates and skills
+### Renderers, templates, and skills
 
-- `kanbanRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with themed artifact rows.
+- `dataTableRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with row deletion and a Side Panel inspector.
+- `controlsRenderers.labArtifactCreate` backs the `Create artifacts` panel menu on the Artifacts panel.
+- `treeRenderers.labCams` lists the surveillance cameras in the Cams panel menu; selecting one drives the procedural canvas "video" player.
 - `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
 
 > Color themes and file icon themes now ship in the `pstdio-base-themes` extension; the lab no longer contributes appearance assets.
@@ -119,7 +121,7 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a wa
 ## Trying it from the dashboard
 
 - The workbench top actions show **Lab: Say hello** on the lab route and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
-- The project sidenav shows lab entries for the mode, route, and host terminal. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`; the terminal entry opens a workbench terminal tab.
+- The project Sidenav shows a Lab entry that switches straight into the Build lab mode (Overview and Artifacts tabs). The Lab Sidenav remains mounted while modes rearrange the workbench.
 
 ## Layout
 

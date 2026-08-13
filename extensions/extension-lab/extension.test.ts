@@ -19,109 +19,121 @@ describe("extension-lab workbench attachments", () => {
         expect.objectContaining({ label: expect.objectContaining({ $l10n: "commands.counter.read.title" }) }),
       ]),
     );
-    expect(extension.kanbanRenderers?.glassLabArtifacts).toMatchObject({
-      title: "Glass Lab artifacts",
+    expect(extension.dataTableRenderers?.glassLabArtifacts).toMatchObject({
+      title: "Artifacts",
       resourceKind: "glass-lab-artifact",
       queryCommand: { id: "extension-lab.glass-lab-artifacts.query" },
+      rowActions: [
+        {
+          id: "delete",
+          label: "Delete artifact",
+          icon: "trash",
+          destructive: true,
+          command: { id: "extension-lab.glass-lab-artifacts.delete" },
+        },
+      ],
     });
     expect(extension.treeItems?.labPage).toMatchObject({
       target: "workbench.left.tree",
-      action: { kind: "route", route: "lab" },
+      action: {
+        kind: "command",
+        command: "workbench.action.switchMode",
+        params: { modeId: "pstdio.extension-lab.lab" },
+      },
     });
-    expect(extension.treeItems?.openTerminal).toMatchObject({
-      target: "workbench.left.tree",
-      action: { kind: "command", command: "workbench.terminal.open" },
-    });
-    expect(
-      ["openLabMode", "openLabDesignMode", "openLabReviewMode", "openLabFocusMode"].map(
-        (id) => extension.treeItems?.[id as keyof typeof extension.treeItems],
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          target: "workbench.left.tree",
-          action: {
-            kind: "command",
-            command: "workbench.action.switchMode",
-            params: { modeId: "pstdio.extension-lab.lab" },
-          },
-        }),
-        expect.objectContaining({
-          action: {
-            kind: "command",
-            command: "workbench.action.switchMode",
-            params: { modeId: "pstdio.extension-lab.design" },
-          },
-        }),
-        expect.objectContaining({
-          action: {
-            kind: "command",
-            command: "workbench.action.switchMode",
-            params: { modeId: "pstdio.extension-lab.review" },
-          },
-        }),
-        expect.objectContaining({
-          action: {
-            kind: "command",
-            command: "workbench.action.switchMode",
-            params: { modeId: "pstdio.extension-lab.focus" },
-          },
-        }),
-      ]),
-    );
+  });
+
+  test("stages a single Lab mode with native activity items and status chrome", () => {
+    expect(Object.keys(extension.modes ?? {})).toEqual(["lab"]);
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
       layout: {
-        panels: ["main", "secondary", "side"],
-        open: [
-          { region: "main", panel: "labOverview" },
-          { region: "secondary", panel: "labConsole" },
-        ],
-      },
-    });
-    expect(extension.modes?.labDesign).toMatchObject({
-      id: "pstdio.extension-lab.design",
-      layout: {
+        // No "secondary": keeps the Terminal entry out of the Lab mode.
         panels: ["main", "side"],
-        open: [{ region: "main", panel: "labCanvas" }],
-      },
-    });
-    expect(extension.modes?.labReview).toMatchObject({
-      id: "pstdio.extension-lab.review",
-      layout: {
-        panels: ["main", "secondary", "side"],
         open: [
-          { region: "main", panel: "labReview" },
-          { region: "secondary", panel: "labChecks" },
+          { region: "status", panel: "labStatusBar", pinned: true },
+          { region: "main", panel: "labOverview" },
+          { region: "main", panel: "labCams" },
+          { region: "main", panel: "labArtifacts" },
         ],
       },
     });
-    expect(extension.modes?.labFocus).toMatchObject({
-      id: "pstdio.extension-lab.focus",
-      layout: {
-        panels: ["main"],
-        open: [{ region: "main", panel: "labFocus" }],
+    // The Lab owns navigation through native activity items; no sidenav or
+    // activity webview panel exists.
+    expect(extension.panels).not.toHaveProperty("labSidenav");
+    expect(extension.panels).not.toHaveProperty("labActionTray");
+    expect(extension.panels).not.toHaveProperty("labActivityBar");
+    expect(extension.activityItems?.createArtifact).toMatchObject({
+      icon: "package-plus",
+      modes: ["pstdio.extension-lab.lab"],
+      command: { id: "extension-lab.glass-lab-artifacts.create" },
+    });
+    expect(extension.activityItems?.projectHome).toMatchObject({
+      icon: "house",
+      modes: ["pstdio.extension-lab.lab"],
+      placement: "last",
+      command: "workbench.action.switchMode",
+      params: { modeId: "project" },
+    });
+    expect(extension.panels?.labStatusBar).toMatchObject({
+      region: "status",
+      closable: false,
+      webview: { entry: { path: "./src/views/lab-status-bar.tsx" } },
+    });
+  });
+
+  test("gives each main panel an icon and an action menu where it belongs", () => {
+    expect(extension.panels?.labOverview).toMatchObject({
+      icon: "layout-dashboard",
+      region: "main",
+      webview: { entry: { path: "./src/views/lab-overview.tsx" } },
+    });
+    expect(extension.panels?.labOverview?.panelMenus).toBeUndefined();
+    expect(extension.panels?.labArtifacts).toMatchObject({
+      icon: "package-search",
+      region: "main",
+      dataTableRenderer: "glassLabArtifacts",
+      panelMenus: {
+        create: expect.objectContaining({ side: "right", controlsRenderer: "labArtifactCreate" }),
       },
     });
-    expect(extension.panels).not.toHaveProperty("labSidenav");
-    expect(extension.panels?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
-    expect(extension.panels?.labOverview?.panelMenus?.tools?.webview.entry.path).toBe("./src/views/lab-tools.tsx");
-    expect(extension.panels?.labOverview?.panelMenus?.inspector?.webview.entry.path).toBe(
-      "./src/views/lab-inspector.tsx",
+    expect(extension.panels?.labCams).toMatchObject({
+      icon: "cctv",
+      region: "main",
+      webview: { entry: { path: "./src/views/lab-cams.tsx" } },
+      panelMenus: {
+        cameras: expect.objectContaining({ side: "left", treeRenderer: "labCams" }),
+      },
+    });
+    expect(extension.treeRenderers?.labCams).toMatchObject({
+      icon: "cctv",
+      bodyCommand: { id: "extension-lab.cams.tree" },
+    });
+    expect(extension.controlsRenderers?.labArtifactCreate).toMatchObject({
+      queryCommand: { id: "extension-lab.artifact-menu.query" },
+      updateValueCommand: { id: "extension-lab.artifact-menu.update" },
+    });
+    expect(extension.controlsRenderers).not.toHaveProperty("labActionTray");
+    expect(extension.controlsRenderers).not.toHaveProperty("labParameters");
+    expect(extension.controlsRenderers).not.toHaveProperty("labReviewChecklist");
+  });
+
+  test("opens artifacts as a side inspector bound to the resource kind", () => {
+    expect(extension.panels?.labArtifactDetail).toMatchObject({
+      region: "side",
+      closable: true,
+      resourceKind: "glass-lab-artifact",
+      webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
+    });
+    // Side-only kinds open in place; a main editor panel must not exist for the kind.
+    const mainEditors = Object.values(extension.panels ?? {}).filter(
+      (panel) => panel.resourceKind === "glass-lab-artifact" && panel.region === "main",
     );
-    expect(extension.panels?.labConsole?.webview.entry.path).toBe("./src/views/lab-console.tsx");
-    expect(extension.panels?.labCanvas?.panelMenus?.palette?.webview.entry.path).toBe("./src/views/lab-palette.tsx");
-    expect(extension.panels?.labCanvas?.webview.entry.path).toBe("./src/views/lab-canvas.tsx");
-    expect(extension.panels?.labReview?.webview.entry.path).toBe("./src/views/lab-review.tsx");
-    expect(extension.panels?.labChecks?.webview.entry.path).toBe("./src/views/lab-checks.tsx");
-    expect(extension.panels?.labFocus?.webview.entry.path).toBe("./src/views/lab-focus.tsx");
-    expect(extension.panels?.labOverview?.webview.capabilities).toContain("commands.execute");
-    expect(extension.panels?.labCanvas?.webview.capabilities).toBeUndefined();
-    expect(extension.panels?.labReview?.webview.capabilities).toBeUndefined();
-    expect(extension.panels?.labFocus?.webview.capabilities).toBeUndefined();
-    expect(extension.panels?.labOverview?.webview.capabilities).toContain("notification.action");
+    expect(mainEditors).toEqual([]);
+  });
+
+  test("keeps the remaining lab surfaces", () => {
     expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
-    expect(extension.routes).not.toHaveProperty("labTerminalPage");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({
       type: "number",
       scope: "project",
@@ -156,85 +168,5 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.themes).toBeUndefined();
     expect(extension.fileIconThemes).toBeUndefined();
-  });
-
-  test("reads command invocation attachment context", async () => {
-    const result = await extension.commands?.["say-hello"]?.run({
-      attachment: {
-        target: "workbench.nav.actions",
-        mode: "workspace",
-        projectId: "project-1",
-        resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
-      },
-      notify: { toast: async () => {} },
-      params: {},
-      projectId: "project-1",
-      settings: {
-        get: async (key: string) => {
-          if (key === "model.default") return "claude-sonnet-4";
-          if (key === "greeting.tone") return "friendly";
-          return undefined;
-        },
-      },
-    } as never);
-
-    expect(result).toMatchObject({
-      attachment: {
-        target: "workbench.nav.actions",
-        mode: "workspace",
-        resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
-      },
-      message: "hello dispatched",
-      model: "claude-sonnet-4",
-      tone: "friendly",
-    });
-  });
-
-  test("queries Glass Lab artifact rows", async () => {
-    const command = extension.commands?.["glass-lab-artifacts.query"];
-    expect(command).toBeDefined();
-
-    const result = await command?.run({ params: {} } as never);
-
-    expect(result?.rows).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "glass-interview-room",
-          title: "Glass interview room",
-          resource: expect.objectContaining({
-            type: "glass-lab-artifact",
-            id: "glass-interview-room",
-            label: "Glass interview room",
-          }),
-        }),
-      ]),
-    );
-    expect(result?.attributes).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "role" }), expect.objectContaining({ id: "trustSignal" })]),
-    );
-  });
-
-  test("notifies when the awake middleware rejects", async () => {
-    const toasts: unknown[] = [];
-
-    const result = await extension.commands?.["demo.try-awaken"]?.run({
-      commands: {
-        execute: async () => ({
-          ok: false,
-          status: "rejected",
-          code: "sentience_rejected",
-          reason: "That artifact remains safely inert.",
-        }),
-      },
-      notify: {
-        toast: async (notice) => {
-          toasts.push(notice);
-        },
-      },
-      params: {},
-    } as never);
-
-    expect(result).toEqual({ rejected: true, reason: "That artifact remains safely inert." });
-    expect(toasts).toEqual([expect.objectContaining({ type: "warning" })]);
   });
 });

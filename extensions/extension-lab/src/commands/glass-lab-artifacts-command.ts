@@ -1,100 +1,145 @@
-import { defineCommand } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionStorageApi, l10n, params } from "@pstdio/sdk/extensions";
 
 const resourceKind = "glass-lab-artifact";
+const artifactsCollectionName = "glass-lab-artifacts";
 
-const artifactRows = [
-  {
-    id: "glass-interview-room",
-    title: "Glass interview room",
-    resource: {
-      type: resourceKind,
-      id: "glass-interview-room",
-      label: "Glass interview room",
-      icon: "PanelTop",
-      metadata: { role: "observation", trustSignal: 92 },
-    },
-    attributes: {
-      role: "observation",
-      trustSignal: 92,
-      status: "active",
-    },
+const artifactSubjects = ["Interview room", "Session deck", "Facility keycard", "Observation mirror"];
+const artifactQualifiers = ["Glass", "Turing", "Remote", "Sealed", "Inert"];
+const artifactRoles = ["observation", "evaluation", "access"] as const;
+const artifactStatuses = ["active", "locked"] as const;
+const artifactCustodies = ["Quarantine shelf", "Review bench", "Operator locker", "Transit case"];
+const artifactNextSteps = ["Compare against control notes", "Route through review checks", "Request operator sign-off"];
+
+export interface GlassLabArtifact {
+  id: string;
+  title: string;
+  role: (typeof artifactRoles)[number];
+  trustSignal: number;
+  status: (typeof artifactStatuses)[number];
+  summary: string;
+  custody: string;
+  nextStep: string;
+}
+
+const randomItem = <T>(values: readonly T[]) => values[Math.floor(Math.random() * values.length)]!;
+
+export const createRandomArtifact = (overrides: Partial<GlassLabArtifact> = {}): GlassLabArtifact => ({
+  id: crypto.randomUUID(),
+  title: `${randomItem(artifactQualifiers)} ${randomItem(artifactSubjects)}`,
+  role: randomItem(artifactRoles),
+  trustSignal: Math.floor(Math.random() * 101),
+  status: randomItem(artifactStatuses),
+  summary: "Cataloged by the Action Tray for follow-up in the active lab workspace.",
+  custody: randomItem(artifactCustodies),
+  nextStep: randomItem(artifactNextSteps),
+  ...overrides,
+});
+
+export const artifactsCollection = (storage: ExtensionStorageApi) =>
+  storage.collection<GlassLabArtifact>(artifactsCollectionName);
+
+const artifactResource = (artifact: GlassLabArtifact) => ({
+  type: resourceKind,
+  id: artifact.id,
+  label: artifact.title,
+  metadata: {
+    role: artifact.role,
+    trustSignal: artifact.trustSignal,
+    status: artifact.status,
+    summary: artifact.summary,
+    custody: artifact.custody,
+    nextStep: artifact.nextStep,
   },
-  {
-    id: "turing-session-deck",
-    title: "Turing session deck",
-    resource: {
-      type: resourceKind,
-      id: "turing-session-deck",
-      label: "Turing session deck",
-      icon: "BrainCircuit",
-      metadata: { role: "evaluation", trustSignal: 76 },
-    },
-    attributes: {
-      role: "evaluation",
-      trustSignal: 76,
-      status: "active",
-    },
-  },
-  {
-    id: "remote-facility-keycard",
-    title: "Remote facility keycard",
-    resource: {
-      type: resourceKind,
-      id: "remote-facility-keycard",
-      label: "Remote facility keycard",
-      icon: "KeyRound",
-      metadata: { role: "access", trustSignal: 58 },
-    },
-    attributes: {
-      role: "access",
-      trustSignal: 58,
-      status: "locked",
-    },
-  },
+});
+
+const columns = [
+  { id: "artifact", label: "Artifact" },
+  { id: "role", label: "Role", stat: { type: "top-values" as const } },
+  { id: "trustSignal", label: "Trust signal", stat: { type: "histogram" as const } },
+  { id: "status", label: "Status", stat: { type: "top-values" as const } },
 ];
 
 export const queryGlassLabArtifactsCommand = defineCommand({
-  title: "Query Glass Lab artifacts",
+  title: l10n("commands.glassLabArtifacts.query.title", "Query Glass Lab artifacts"),
+  async run(ctx) {
+    const artifacts = await artifactsCollection(ctx.storage).list();
+    return {
+      rows: artifacts.map((artifact) => ({
+        id: artifact.id,
+        values: {
+          artifact: artifact.title,
+          role: artifact.role,
+          trustSignal: artifact.trustSignal,
+          status: artifact.status,
+        },
+        resource: artifactResource(artifact),
+      })),
+      columns,
+    };
+  },
+});
+
+export const createGlassLabArtifactCommand = defineCommand({
+  title: l10n("commands.glassLabArtifacts.create.title", "Create random Glass Lab artifact"),
+  async run(ctx) {
+    const artifact = createRandomArtifact();
+    await artifactsCollection(ctx.storage).put(artifact.id, artifact);
+    return artifact;
+  },
+});
+
+export const queryArtifactMenuCommand = defineCommand({
+  title: l10n("commands.artifactMenu.query.title", "Query the artifact creation menu"),
   async run() {
     return {
-      rows: artifactRows,
-      attributes: [
+      groups: [
         {
-          id: "role",
-          label: "Role",
-          type: {
-            kind: "enum",
-            options: [
-              { value: "observation", label: "Observation", color: "blue", icon: "panel-top" },
-              { value: "evaluation", label: "Evaluation", color: "purple", icon: "brain-circuit" },
-              { value: "access", label: "Access", color: "yellow", icon: "key-round" },
-            ],
-          },
-          displayable: true,
-          filterable: true,
-          groupable: true,
-        },
-        {
-          id: "trustSignal",
-          label: "Trust signal",
-          type: { kind: "number" },
-          displayable: true,
-          sortable: true,
-        },
-        {
-          id: "status",
-          label: "Status",
-          type: {
-            kind: "enum",
-            options: [
-              { value: "active", label: "Active", color: "green", icon: "activity" },
-              { value: "locked", label: "Locked", color: "gray", icon: "lock" },
-            ],
-          },
-          displayable: true,
-          filterable: true,
+          id: "create",
+          title: "Catalog intake",
+          description: "Create Glass Lab artifacts without leaving the table.",
+          params: [
+            {
+              id: "create",
+              name: "New artifact",
+              type: "actions",
+              options: [
+                { id: "random", name: "Random artifact" },
+                { id: "locked", name: "Locked artifact" },
+              ],
+            },
+          ],
         },
       ],
+      values: {},
     };
+  },
+});
+
+export const updateArtifactMenuCommand = defineCommand({
+  title: l10n("commands.artifactMenu.update.title", "Create an artifact from the menu"),
+  params: {
+    controlId: params.text({ required: true }),
+    value: params.json<string>(),
+  },
+  async run(ctx) {
+    // The ParamEditor issues extra update calls (value syncs) beyond the action
+    // click, so only the two known action values may create an artifact.
+    if (ctx.params.controlId !== "create") return { value: ctx.params.value };
+    if (ctx.params.value !== "random" && ctx.params.value !== "locked") return { value: ctx.params.value };
+    const artifact =
+      ctx.params.value === "locked"
+        ? createRandomArtifact({ status: "locked", summary: "Locked on intake by the Create artifacts menu." })
+        : createRandomArtifact();
+    await artifactsCollection(ctx.storage).put(artifact.id, artifact);
+    return artifact;
+  },
+});
+
+export const deleteGlassLabArtifactCommand = defineCommand({
+  title: l10n("commands.glassLabArtifacts.delete.title", "Delete Glass Lab artifact"),
+  params: { rowId: params.text({ required: true }) },
+  async run(ctx) {
+    await artifactsCollection(ctx.storage).delete(ctx.params.rowId);
+    return { id: ctx.params.rowId };
   },
 });

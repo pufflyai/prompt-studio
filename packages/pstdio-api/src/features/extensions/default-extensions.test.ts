@@ -209,7 +209,7 @@ describe("installDefaultExtensions", () => {
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
     ).toBe(true);
-    expect(calls.every((call) => call.skipInstall === undefined)).toBe(true);
+    expect(calls.every((call) => call.skipInstall === true)).toBe(true);
     expect(calls.every((call) => call.force === true)).toBe(true);
   });
 

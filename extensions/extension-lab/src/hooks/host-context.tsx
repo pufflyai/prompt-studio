@@ -5,6 +5,11 @@ export interface LabHostProps {
   locale?: string;
   projectId?: string;
   themePreference?: string;
+  resource?: {
+    id: string;
+    label?: string;
+    metadata?: Record<string, unknown>;
+  };
   lastCommand?: {
     commandId: string;
     extensionId: string;

@@ -159,7 +159,8 @@ test.describe("Extension webviews", () => {
       .toBe(200);
 
     await bypassOnboarding(page, project.id, undefined, labRoute);
-    await page.setViewportSize({ width: 1280, height: 600 });
+    // Short enough that the trimmed Lab page still overflows and can scroll.
+    await page.setViewportSize({ width: 1280, height: 420 });
 
     await openExtensionLab(page, project.id);
     const labIframe = page.locator('iframe[title="Lab"]');

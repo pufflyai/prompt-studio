@@ -3,44 +3,18 @@ import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdi
 export const labModes = {
   lab: {
     id: "pstdio.extension-lab.lab",
-    label: l10n("modes.lab.label", "Lab coding"),
+    label: l10n("modes.lab.label", "Lab"),
     icon: "flask-conical",
     layout: {
-      panels: ["main", "secondary", "side"],
-      open: [
-        { region: "main", panel: "labOverview" },
-        { region: "secondary", panel: "labConsole" },
-      ],
-    },
-  },
-  labDesign: {
-    id: "pstdio.extension-lab.design",
-    label: l10n("modes.labDesign.label", "Lab design"),
-    icon: "palette",
-    layout: {
+      // No "secondary": the Lab has no use for it, and omitting it removes the
+      // secondary panel chrome — including the Terminal entry in its "+" menu.
       panels: ["main", "side"],
-      open: [{ region: "main", panel: "labCanvas" }],
-    },
-  },
-  labReview: {
-    id: "pstdio.extension-lab.review",
-    label: l10n("modes.labReview.label", "Lab review"),
-    icon: "scan-search",
-    layout: {
-      panels: ["main", "secondary", "side"],
       open: [
-        { region: "main", panel: "labReview" },
-        { region: "secondary", panel: "labChecks" },
+        { region: "status", panel: "labStatusBar", pinned: true },
+        { region: "main", panel: "labOverview" },
+        { region: "main", panel: "labCams" },
+        { region: "main", panel: "labArtifacts" },
       ],
-    },
-  },
-  labFocus: {
-    id: "pstdio.extension-lab.focus",
-    label: l10n("modes.labFocus.label", "Lab focus"),
-    icon: "panel-top",
-    layout: {
-      panels: ["main"],
-      open: [{ region: "main", panel: "labFocus" }],
     },
   },
 } satisfies NonNullable<ExtensionDefinition["modes"]>;
@@ -48,7 +22,8 @@ export const labModes = {
 export const createLabPanels = (baseUrl: string) =>
   ({
     labOverview: {
-      title: l10n("panels.labOverview.title", "Lab overview"),
+      title: l10n("panels.labOverview.title", "Overview"),
+      icon: "layout-dashboard",
       region: "main",
       closable: false,
       webview: {
@@ -59,69 +34,60 @@ export const createLabPanels = (baseUrl: string) =>
           "notification.show",
           "preferences.get",
           "preferences.set",
+          "resource.open",
         ],
       },
+    },
+    labArtifacts: {
+      title: l10n("panels.labArtifacts.title", "Artifacts"),
+      icon: "package-search",
+      region: "main",
+      closable: false,
+      dataTableRenderer: "glassLabArtifacts",
+      eligibleLocations: { resourceKinds: ["extension-view"] },
       panelMenus: {
-        tools: {
-          title: l10n("panels.labTools.title", "Coding tools"),
+        create: {
+          title: l10n("panels.labArtifacts.menus.create", "Create artifacts"),
+          side: "right",
+          controlsRenderer: "labArtifactCreate",
+        },
+      },
+    },
+    labCams: {
+      title: l10n("panels.labCams.title", "Cams"),
+      icon: "cctv",
+      region: "main",
+      closable: false,
+      // Like the Artifacts table: a sub-panel tab beside the Overview location.
+      eligibleLocations: { resourceKinds: ["extension-view"] },
+      webview: {
+        entry: packageAsset("./src/views/lab-cams.tsx", baseUrl),
+        capabilities: ["commands.execute"],
+      },
+      panelMenus: {
+        cameras: {
+          title: l10n("panels.labCams.menus.cameras", "Cameras"),
           side: "left",
-          webview: { entry: packageAsset("./src/views/lab-tools.tsx", baseUrl) },
-        },
-        inspector: {
-          title: l10n("panels.labInspector.title", "Inspector"),
-          side: "right",
-          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
+          treeRenderer: "labCams",
         },
       },
     },
-    labConsole: {
-      title: l10n("panels.labConsole.title", "Experiment console"),
-      region: "secondary",
+    labStatusBar: {
+      title: l10n("panels.labStatusBar.title", "Lab status"),
+      region: "status",
+      closable: false,
+      webview: {
+        entry: packageAsset("./src/views/lab-status-bar.tsx", baseUrl),
+        capabilities: ["commands.execute"],
+      },
+    },
+    labArtifactDetail: {
+      title: l10n("panels.labArtifactDetail.title", "Artifact"),
+      icon: "package-search",
+      region: "side",
       closable: true,
-      webview: { entry: packageAsset("./src/views/lab-console.tsx", baseUrl) },
-    },
-    labCanvas: {
-      title: l10n("panels.labCanvas.title", "Prototype canvas"),
-      region: "main",
-      closable: false,
-      webview: { entry: packageAsset("./src/views/lab-canvas.tsx", baseUrl) },
-      panelMenus: {
-        palette: {
-          title: l10n("panels.labPalette.title", "Design palette"),
-          side: "left",
-          webview: { entry: packageAsset("./src/views/lab-palette.tsx", baseUrl) },
-        },
-        inspector: {
-          title: l10n("panels.labInspector.title", "Inspector"),
-          side: "right",
-          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
-        },
-      },
-    },
-    labReview: {
-      title: l10n("panels.labReview.title", "Change review"),
-      region: "main",
-      closable: false,
-      webview: { entry: packageAsset("./src/views/lab-review.tsx", baseUrl) },
-      panelMenus: {
-        inspector: {
-          title: l10n("panels.labInspector.title", "Inspector"),
-          side: "right",
-          webview: { entry: packageAsset("./src/views/lab-inspector.tsx", baseUrl) },
-        },
-      },
-    },
-    labChecks: {
-      title: l10n("panels.labChecks.title", "Review checks"),
-      region: "secondary",
-      closable: true,
-      webview: { entry: packageAsset("./src/views/lab-checks.tsx", baseUrl) },
-    },
-    labFocus: {
-      title: l10n("panels.labFocus.title", "Focus"),
-      region: "main",
-      closable: false,
-      webview: { entry: packageAsset("./src/views/lab-focus.tsx", baseUrl) },
+      resourceKind: "glass-lab-artifact",
+      webview: { entry: packageAsset("./src/views/lab-artifact.tsx", baseUrl) },
     },
   }) satisfies NonNullable<ExtensionDefinition["panels"]>;
 
@@ -138,6 +104,7 @@ export const createLabRoutes = (baseUrl: string) =>
           "notification.show",
           "preferences.get",
           "preferences.set",
+          "resource.open",
         ],
       },
     },
@@ -150,64 +117,34 @@ export const createLabRoutes = (baseUrl: string) =>
     },
   }) satisfies NonNullable<ExtensionDefinition["routes"]>;
 
+export const labActivityItems = {
+  createArtifact: {
+    title: l10n("activityItems.createArtifact.title", "Create artifact"),
+    icon: "package-plus",
+    modes: ["pstdio.extension-lab.lab"],
+    command: commandRef("extension-lab.glass-lab-artifacts.create"),
+  },
+  projectHome: {
+    title: l10n("activityItems.projectHome.title", "Project home"),
+    icon: "house",
+    modes: ["pstdio.extension-lab.lab"],
+    placement: "last",
+    command: "workbench.action.switchMode",
+    params: { modeId: "project" },
+  },
+} satisfies NonNullable<ExtensionDefinition["activityItems"]>;
+
 export const labTreeItems = {
-  openLabMode: {
+  labPage: {
     target: "workbench.left.tree",
     group: "Lab",
-    label: l10n("tree.openLabMode.label", "Lab coding mode"),
+    label: l10n("routes.lab.label", "Lab"),
     icon: "flask-conical",
     action: {
       kind: "command",
       command: "workbench.action.switchMode",
       params: { modeId: "pstdio.extension-lab.lab" },
     },
-  },
-  openLabDesignMode: {
-    target: "workbench.left.tree",
-    group: "Lab",
-    label: l10n("tree.openLabDesignMode.label", "Lab design mode"),
-    icon: "palette",
-    action: {
-      kind: "command",
-      command: "workbench.action.switchMode",
-      params: { modeId: "pstdio.extension-lab.design" },
-    },
-  },
-  openLabReviewMode: {
-    target: "workbench.left.tree",
-    group: "Lab",
-    label: l10n("tree.openLabReviewMode.label", "Lab review mode"),
-    icon: "scan-search",
-    action: {
-      kind: "command",
-      command: "workbench.action.switchMode",
-      params: { modeId: "pstdio.extension-lab.review" },
-    },
-  },
-  openLabFocusMode: {
-    target: "workbench.left.tree",
-    group: "Lab",
-    label: l10n("tree.openLabFocusMode.label", "Lab focus mode"),
-    icon: "panel-top",
-    action: {
-      kind: "command",
-      command: "workbench.action.switchMode",
-      params: { modeId: "pstdio.extension-lab.focus" },
-    },
-  },
-  labPage: {
-    target: "workbench.left.tree",
-    group: "Lab",
-    label: l10n("routes.lab.label", "Lab"),
-    icon: "flask-conical",
-    action: { kind: "route", route: "lab" },
-  },
-  openTerminal: {
-    target: "workbench.left.tree",
-    group: "Lab",
-    label: l10n("tree.openTerminal.label", "Open terminal"),
-    icon: "square-terminal",
-    action: { kind: "command", command: "workbench.terminal.open" },
   },
   faultyPage: {
     target: "workbench.left.tree",
@@ -218,22 +155,42 @@ export const labTreeItems = {
   },
 } satisfies NonNullable<ExtensionDefinition["treeItems"]>;
 
-export const labKanbanRenderers = {
+export const labDataTableRenderers = {
   glassLabArtifacts: {
-    title: "Glass Lab artifacts",
+    title: "Artifacts",
     resourceKind: "glass-lab-artifact",
     queryCommand: commandRef("extension-lab.glass-lab-artifacts.query"),
-    defaultSettings: {
-      viewMode: "list",
-      columnGrouping: "none",
-      rowGrouping: "none",
-      ordering: { attributeId: "trustSignal", direction: "desc" },
-      displayProperties: ["role", "trustSignal", "status"],
-    },
+    rowActions: [
+      {
+        id: "delete",
+        label: "Delete artifact",
+        icon: "trash",
+        destructive: true,
+        command: commandRef("extension-lab.glass-lab-artifacts.delete"),
+      },
+    ],
     emptyTitle: "No artifacts found",
-    emptyDescription: "The sealed research facility has not cataloged any artifacts yet.",
+    emptyDescription: "Create one from the panel's Create artifacts menu to begin the catalog.",
   },
-} satisfies NonNullable<ExtensionDefinition["kanbanRenderers"]>;
+} satisfies NonNullable<ExtensionDefinition["dataTableRenderers"]>;
+
+export const labTreeRenderers = {
+  labCams: {
+    title: l10n("treeRenderers.labCams.title", "Cameras"),
+    icon: "cctv",
+    bodyCommand: commandRef("extension-lab.cams.tree"),
+    defaultExpandedSectionIds: ["cameras"],
+  },
+} satisfies NonNullable<ExtensionDefinition["treeRenderers"]>;
+
+export const labControlsRenderers = {
+  labArtifactCreate: {
+    title: l10n("controls.labArtifactCreate.title", "Create artifacts"),
+    queryCommand: commandRef("extension-lab.artifact-menu.query"),
+    updateValueCommand: commandRef("extension-lab.artifact-menu.update"),
+    defaultValues: {},
+  },
+} satisfies NonNullable<ExtensionDefinition["controlsRenderers"]>;
 
 export const createLabSettingsPanels = (baseUrl: string) =>
   ({

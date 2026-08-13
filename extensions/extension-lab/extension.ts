@@ -8,9 +8,12 @@ import {
   createLabPanels,
   createLabRoutes,
   createLabSettingsPanels,
-  labKanbanRenderers,
+  labActivityItems,
+  labControlsRenderers,
+  labDataTableRenderers,
   labModes,
   labTreeItems,
+  labTreeRenderers,
 } from "./src/renderers/ui-contributions";
 
 const extension = defineExtension({
@@ -31,7 +34,10 @@ const extension = defineExtension({
   panels: createLabPanels(import.meta.url),
   routes: createLabRoutes(import.meta.url),
   treeItems: labTreeItems,
-  kanbanRenderers: labKanbanRenderers,
+  activityItems: labActivityItems,
+  controlsRenderers: labControlsRenderers,
+  dataTableRenderers: labDataTableRenderers,
+  treeRenderers: labTreeRenderers,
   commandPaletteResources: {
     slides: {
       title: l10n("commandPaletteResources.slides.title", "Lab slides"),

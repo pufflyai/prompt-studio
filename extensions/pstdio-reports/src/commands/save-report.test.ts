@@ -16,7 +16,7 @@ const failReportPutAndBlobDeletes = (storage: ExtensionStorageApi): ExtensionSto
 
     return {
       ...collection,
-      async put(id, value) {
+      async put(_id, _value) {
         throw new Error("storage write failed");
       },
       attachments(itemId) {
