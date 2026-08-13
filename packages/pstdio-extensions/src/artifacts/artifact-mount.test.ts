@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createArtifactMount, createFileMount } from "./artifact-mount";
@@ -101,6 +101,23 @@ describe("createFileMount", () => {
 
     await expect(mount.writeText("../evil.md", "x")).rejects.toThrow(/escapes/);
     await expect(mount.writeText("/abs.md", "x")).rejects.toThrow(/escapes/);
+    await expect(mount.writeText("C:/evil.md", "x")).rejects.toThrow(/escapes/);
+    await expect(mount.writeText("nested\\evil.md", "x")).rejects.toThrow(/escapes/);
+  });
+
+  test("rejects existing symlinks that leave the mount root", async () => {
+    const root = createTempDir();
+    const outside = createTempDir();
+    mkdirSync(join(outside, "private"), { recursive: true });
+    writeFileSync(join(outside, "private/secret.txt"), "secret");
+    symlinkSync(join(outside, "private"), join(root, "escape"), "dir");
+    const mount = createFileMount(root);
+
+    await expect(mount.readText("escape/secret.txt")).rejects.toThrow(/escapes/);
+    await expect(mount.writeText("escape/secret.txt", "changed")).rejects.toThrow(/escapes/);
+    await expect(mount.list("escape/**")).rejects.toThrow(/escapes/);
+    await expect(mount.listDirs("escape")).rejects.toThrow(/escapes/);
+    expect(await Bun.file(join(outside, "private/secret.txt")).text()).toBe("secret");
   });
 
   test("scopes the walk to a pattern's literal directory prefix", async () => {

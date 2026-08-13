@@ -348,6 +348,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     id: record.id,
     title: text(record.title, record.id),
     icon: record.icon,
+    searchable: record.searchable,
+    searchPlaceholder: text(record.searchPlaceholder, "Search files"),
     defaultExpandedNodeIds: record.defaultExpandedNodeIds,
     defaultExpandedSectionIds: record.defaultExpandedSectionIds,
     getHeader: (ctx) =>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorkspaceFilesMount } from "./artifact-mount";
@@ -55,5 +55,60 @@ describe("createWorkspaceFilesMount.syncDir", () => {
     );
     expect(existsSync(join(root, ".claude/outside.txt"))).toBe(false);
     expect(existsSync(join(root, "outside.txt"))).toBe(false);
+  });
+});
+
+describe("createWorkspaceFilesMount browsing", () => {
+  test("lists immediate files and directories without exposing .git", async () => {
+    const root = createTempDir();
+    mkdirSync(join(root, ".git/objects"), { recursive: true });
+    mkdirSync(join(root, "src/nested"), { recursive: true });
+    writeFileSync(join(root, ".git/config"), "private");
+    writeFileSync(join(root, "README.md"), "readme");
+    writeFileSync(join(root, "src/index.ts"), "export {};");
+    const mount = createWorkspaceFilesMount(root);
+
+    expect((await mount.listEntries()).map(({ name, path, type }) => ({ name, path, type }))).toEqual([
+      { name: "README.md", path: "README.md", type: "file" },
+      { name: "src", path: "src", type: "directory" },
+    ]);
+    expect((await mount.listEntries("src")).map(({ path, type }) => ({ path, type }))).toEqual([
+      { path: "src/index.ts", type: "file" },
+      { path: "src/nested", type: "directory" },
+    ]);
+  });
+
+  test("searches files and directories in stable order and stops after limit plus one", async () => {
+    const root = createTempDir();
+    mkdirSync(join(root, ".git"), { recursive: true });
+    mkdirSync(join(root, "docs"), { recursive: true });
+    mkdirSync(join(root, "match-dir"), { recursive: true });
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, ".git/match-secret"), "private");
+    writeFileSync(join(root, "docs/match-notes.md"), "notes");
+    writeFileSync(join(root, "match-dir/file.txt"), "text");
+    writeFileSync(join(root, "src/match.ts"), "export {};");
+    const mount = createWorkspaceFilesMount(root);
+
+    const result = await mount.searchEntries("match", 2);
+
+    expect(result.entries.map((entry) => entry.path)).toEqual(["docs/match-notes.md", "match-dir"]);
+    expect(result.truncated).toBe(true);
+    expect(result.entries.every((entry) => !entry.path.startsWith(".git"))).toBe(true);
+  });
+
+  test("reads bounded files and only writes existing text files", async () => {
+    const root = createTempDir();
+    writeFileSync(join(root, "notes.txt"), "before");
+    const mount = createWorkspaceFilesMount(root);
+
+    const file = await mount.readFile("notes.txt", 16);
+    expect(new TextDecoder().decode(file.bytes)).toBe("before");
+    expect(file.size).toBe(6);
+
+    await mount.writeTextFile("notes.txt", "after", 16);
+    expect(readFileSync(join(root, "notes.txt"), "utf8")).toBe("after");
+    await expect(mount.writeTextFile("missing.txt", "new", 16)).rejects.toThrow(/not found/i);
+    await expect(mount.writeTextFile("notes.txt", "too long", 3)).rejects.toThrow(/too large/i);
   });
 });

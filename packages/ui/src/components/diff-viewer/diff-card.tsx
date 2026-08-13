@@ -45,10 +45,25 @@ export const shouldAutoLoadDiffContent = (input: {
   requestedPath: string | null;
   filePath: string;
 }) => {
-  const { isExpanded, hasDiffContent, isLargeDiff, isGeneratedDiff, isBinaryDiff, requestedPath, filePath } = input;
+  const {
+    isExpanded,
+    isSelected,
+    hasDiffContent,
+    isLargeDiff,
+    isGeneratedDiff,
+    isBinaryDiff,
+    requestedPath,
+    filePath,
+  } = input;
 
   return (
-    isExpanded && !hasDiffContent && !isLargeDiff && !isGeneratedDiff && !isBinaryDiff && requestedPath !== filePath
+    isExpanded &&
+    isSelected &&
+    !hasDiffContent &&
+    !isLargeDiff &&
+    !isGeneratedDiff &&
+    !isBinaryDiff &&
+    requestedPath !== filePath
   );
 };
 

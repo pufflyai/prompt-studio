@@ -269,7 +269,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     );
   }
 
-  const isEditable = Boolean(contribution.save) && !currentLoaded.dataUrl;
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
@@ -289,7 +288,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       content={currentLoaded}
       editorKey={editorKey}
       errorNotice={errorNotice}
-      isEditable={isEditable}
+      contributionCanSave={Boolean(contribution.save)}
       onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
       onChange={handleChange}
       rendererRef={rendererRef}

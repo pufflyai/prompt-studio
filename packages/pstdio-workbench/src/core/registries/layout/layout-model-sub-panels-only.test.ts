@@ -18,6 +18,14 @@ const registerBoard = (layout: ReturnType<typeof createLayoutModel>) => {
     eligibleLocations: {},
     resourceKinds: ["board.view"],
     rendererId: "board.columns",
+    panelMenus: [
+      {
+        id: "board.files-menu",
+        title: "Files",
+        side: "left",
+        rendererId: "board.files-menu",
+      },
+    ],
   });
   layout.registerPanel({
     id: "board.timeline",
@@ -49,9 +57,10 @@ describe("sub-panels-only locations", () => {
       title: "Timeline",
       strategy: { kind: "persistent" },
     });
+    layout.unregisterWidget("board.timeline");
 
-    // Re-establishing the Location (e.g. on mode re-entry) must land on a Sub
-    // Panel: the Location presents no content of its own.
+    // With no valid restored selection, the Location falls back to its first
+    // Sub Panel because it presents no content of its own.
     layout.establishLocation(host.instanceId);
 
     const main = layout.getLayout().regions.main;
@@ -67,5 +76,55 @@ describe("sub-panels-only locations", () => {
     layout.establishLocation(host.instanceId);
 
     expect(layout.getLayout().regions.main.activeWidgetId).toBe(host.instanceId);
+  });
+
+  test("keeps a valid restored Sub Panel selection when re-establishing the Location", () => {
+    const layout = createLayoutModel();
+    registerBoard(layout);
+
+    const host = layout.openPanel("board.host", { resource: boardResource, strategy: { kind: "persistent" } });
+    layout.establishLocation(host.instanceId);
+    layout.openPanel("board.columns", { resource: boardResource, strategy: { kind: "persistent" } });
+    const timeline = layout.openPanel("board.timeline", { resource: boardResource, strategy: { kind: "persistent" } });
+
+    layout.activatePanel(timeline.instanceId);
+    layout.establishLocation(host.instanceId);
+
+    expect(layout.getLayout().regions.main.activeWidgetId).toBe(timeline.instanceId);
+  });
+
+  test("propagates same-URI Location metadata without replacing a different child resource", () => {
+    const layout = createLayoutModel();
+    registerBoard(layout);
+    const initialResource = { ...boardResource, metadata: { workspaceView: "diffs" } };
+    const updatedResource = {
+      ...boardResource,
+      metadata: { workspaceView: "files", workspaceFilePath: "src/index.ts" },
+    };
+    const sessionResource = { kind: "session", uri: "session://preview", id: "session", label: "Session" };
+
+    const host = layout.openPanel("board.host", { resource: initialResource, strategy: { kind: "persistent" } });
+    layout.establishLocation(host.instanceId);
+    const columns = layout.openPanel("board.columns", {
+      resource: initialResource,
+      strategy: { kind: "persistent" },
+    });
+    const preview = layout.openPanel("board.timeline", {
+      resource: sessionResource,
+      strategy: { kind: "persistent" },
+    });
+
+    layout.openPanel("board.host", { resource: updatedResource, strategy: { kind: "persistent" } });
+
+    const current = layout.getLayout();
+    expect(current.regions.main.widgets.find((item) => item.widgetId === columns.instanceId)?.resource).toEqual(
+      updatedResource,
+    );
+    expect(
+      current.regions["main-left-menu"].widgets.find((item) => item.contributionId === "board.files-menu")?.resource,
+    ).toEqual(updatedResource);
+    expect(current.regions.main.widgets.find((item) => item.widgetId === preview.instanceId)?.resource).toEqual(
+      sessionResource,
+    );
   });
 });

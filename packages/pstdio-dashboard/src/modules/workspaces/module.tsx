@@ -15,8 +15,9 @@ import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
-import { WorkspaceWidget } from "./components/workspace-widget";
+import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
+import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
@@ -104,6 +105,7 @@ const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContext) => {
 };
 
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
+  registerWorkspaceFileContributions(ctx);
   ctx.layout.registerPanel({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
@@ -138,13 +140,77 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
       rendererId: dashboardWidgetIds.workspace,
       singleton: true,
       resourceKinds: ["workspace"],
+      subPanelsOnly: true,
     },
     { priority: 70 },
   );
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.workspace,
-    render: (input) => <WorkspaceWidget input={input} />,
+    render: () => null,
   });
+
+  ctx.layout.registerPanel(
+    {
+      id: dashboardWidgetIds.workspaceFiles,
+      title: "Files",
+      icon: "Files",
+      region: "main",
+      rendererId: dashboardWidgetIds.workspaceFileRenderer,
+      singleton: true,
+      eligibleLocations: { resourceKinds: ["workspace"] },
+      panelMenus: [
+        {
+          id: dashboardWidgetIds.workspaceFileTree,
+          title: "Files",
+          icon: "Files",
+          side: "left",
+          rendererId: dashboardWidgetIds.workspaceFileTree,
+        },
+      ],
+    },
+    { priority: 80 },
+  );
+  ctx.layout.registerPanel(
+    {
+      id: dashboardWidgetIds.workspaceDiffs,
+      title: "Diffs",
+      icon: "Diff",
+      region: "main",
+      rendererId: dashboardWidgetIds.workspaceDiffs,
+      singleton: true,
+      eligibleLocations: { resourceKinds: ["workspace"] },
+    },
+    { priority: 70 },
+  );
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.workspaceDiffs,
+    render: (input) => <WorkspaceDiffsPanel input={input} />,
+  });
+};
+
+const openWorkspaceSubPanels = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const ownedPanels = () =>
+    ctx.layout.listPanelInstances("main").filter((panel) => panel.ownerResourceUri === resource.uri);
+  let files = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceFiles);
+  let diffs = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceDiffs);
+  const firstOpen = !files && !diffs;
+
+  files ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceFiles, {
+    closable: false,
+    resource,
+    strategy: { kind: "persistent" },
+    title: "Files",
+  });
+  diffs ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceDiffs, {
+    closable: false,
+    resource,
+    strategy: { kind: "persistent" },
+    title: "Diffs",
+  });
+
+  const requestedView = metadataString(resource, "workspaceView");
+  if (requestedView === "files") ctx.layout.activatePanel(files.instanceId);
+  else if (requestedView === "diffs" || firstOpen) ctx.layout.activatePanel(diffs.instanceId);
 };
 
 // The workspaces slice owns the project navigation shell, the workspaces board,
@@ -249,9 +315,9 @@ export const createWorkspacesModule = () =>
           setResourceBreadcrumb(ctx, resource);
           showDashboardSidenav(ctx, { selectedNode: null });
         },
-        afterOpen: ({ resource, placement }) => {
+        afterOpen: ({ resource }) => {
           ensureWorkspaceTerminalResource(ctx, resource);
-          ctx.layout.activatePanel(placement.instanceId);
+          openWorkspaceSubPanels(ctx, resource);
         },
       });
     },

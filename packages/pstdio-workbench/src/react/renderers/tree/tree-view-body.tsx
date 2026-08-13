@@ -14,6 +14,7 @@ const TreeViewSkeleton = () => (
 );
 
 interface TreeViewBodyProps {
+  error?: string | null;
   loading: boolean;
   moduleLoading?: boolean;
   sections: TreeListSection[];
@@ -33,6 +34,7 @@ interface TreeViewBodyProps {
 
 export const TreeViewBody = (props: TreeViewBodyProps) => {
   const {
+    error,
     loading,
     moduleLoading,
     sections,
@@ -50,6 +52,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onNavigate,
   } = props;
 
+  if (error) return <EmptyState title="Could not load files" description={error} />;
   if (loading) return null;
   if (moduleLoading) return <TreeViewSkeleton />;
 

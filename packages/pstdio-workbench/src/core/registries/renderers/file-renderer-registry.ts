@@ -15,6 +15,15 @@ export interface FileRendererContent {
   dataUrl?: string;
   // Shown by the editor when the content is empty (editable text only).
   placeholder?: string;
+  /** Override contribution-level save support for one loaded file. */
+  editable?: boolean;
+  /** Request Monaco for text that automatic dispatch would open as markdown. */
+  textRenderer?: "automatic" | "monaco";
+  /** Represent a deliberate no-file selection without an editable blank document. */
+  emptyState?: {
+    title: string;
+    description?: string;
+  };
   /** Ordered backing-store revision when one is available. */
   revision?: string;
 }

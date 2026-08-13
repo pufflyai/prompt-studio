@@ -6,6 +6,7 @@
 export type FileKind = "markdown" | "code" | "image";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "ico"]);
+const PROSE_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 
 // Extension → Monaco language id. Markdown/plain text intentionally absent so
 // they fall through to the prose editor.
@@ -48,6 +49,9 @@ const CODE_LANGUAGE_BY_EXTENSION: Record<string, string> = {
   dockerfile: "dockerfile",
   graphql: "graphql",
   gql: "graphql",
+  md: "markdown",
+  markdown: "markdown",
+  txt: "plaintext",
 };
 
 const extensionOf = (fileName: string | undefined) => {
@@ -64,7 +68,8 @@ const isImage = (fileName: string | undefined, mimeType: string | undefined) => 
 
 export const pickFileKind = (fileName: string | undefined, mimeType: string | undefined): FileKind => {
   if (isImage(fileName, mimeType)) return "image";
-  if (extensionOf(fileName) in CODE_LANGUAGE_BY_EXTENSION) return "code";
+  const extension = extensionOf(fileName);
+  if (!PROSE_EXTENSIONS.has(extension) && extension in CODE_LANGUAGE_BY_EXTENSION) return "code";
   return "markdown";
 };
 

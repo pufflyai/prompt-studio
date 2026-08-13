@@ -38,4 +38,9 @@ describe("codeLanguageFor", () => {
     expect(codeLanguageFor("a.unknownext")).toBe("plaintext");
     expect(codeLanguageFor(undefined)).toBe("plaintext");
   });
+
+  test("maps prose file names when Monaco is requested explicitly", () => {
+    expect(codeLanguageFor("README.md")).toBe("markdown");
+    expect(codeLanguageFor("notes.txt")).toBe("plaintext");
+  });
 });

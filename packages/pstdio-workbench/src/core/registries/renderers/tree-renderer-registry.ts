@@ -85,6 +85,8 @@ export interface TreeRendererContribution {
   id: string;
   title: string;
   icon?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];

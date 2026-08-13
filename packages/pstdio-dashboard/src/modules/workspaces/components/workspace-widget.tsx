@@ -1,71 +1,77 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Center, Flex, Text } from "@chakra-ui/react";
 import { resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 import { type Diff, DiffViewer } from "@pstdio/ui/diff";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  type WorkspaceDiffSummaryFile,
+  workspaceDiffFileQueryOptions,
+  workspaceDiffFilesQueryOptions,
+} from "../data/workspace-queries";
 import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
 
-interface WorkspaceDiffResponseFile extends Diff {
-  filePath: string;
-}
+const diffPath = (diff: Pick<WorkspaceDiffSummaryFile, "filePath" | "newPath" | "oldPath">) =>
+  diff.newPath ?? diff.oldPath ?? diff.filePath;
 
-interface WorkspaceDiffResponse {
-  files: WorkspaceDiffResponseFile[];
-}
-
-const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
-
-const toDiff = (file: WorkspaceDiffResponseFile): Diff => ({
-  change: file.change,
-  oldPath: file.oldPath ?? file.filePath,
-  newPath: file.newPath ?? file.filePath,
-  oldContent: file.oldContent,
-  newContent: file.newContent,
-  additions: file.additions,
-  deletions: file.deletions,
+const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({
+  change: summary.change,
+  oldPath: summary.oldPath ?? summary.filePath,
+  newPath: summary.newPath ?? summary.filePath,
+  additions: summary.additions,
+  deletions: summary.deletions,
+  ...(body ? { oldContent: body.oldContent ?? "", newContent: body.newContent ?? "" } : {}),
 });
 
 const useWorkspaceDiffs = (workspaceId: string | undefined) => {
-  const [diffs, setDiffs] = useState<Diff[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const [requested, setRequested] = useState<{ workspaceId?: string; paths: string[] }>({ paths: [] });
+  const requestedPaths = requested.workspaceId === workspaceId ? requested.paths : [];
+  const summary = useQuery({ ...workspaceDiffFilesQueryOptions(workspaceId ?? ""), enabled: Boolean(workspaceId) });
+  const bodyQueries = useQueries({
+    queries: workspaceId ? requestedPaths.map((path) => workspaceDiffFileQueryOptions(workspaceId, path)) : [],
+  });
 
-  useEffect(() => {
-    if (!workspaceId) {
-      setDiffs([]);
-      setLoading(false);
-      return;
-    }
+  const bodiesByPath = new Map(
+    bodyQueries
+      .map((query) => query.data)
+      .filter((body): body is WorkspaceDiffSummaryFile => Boolean(body))
+      .map((body) => [diffPath(body), body]),
+  );
+  const files = summary.data?.files ?? [];
 
-    let disposed = false;
-    setLoading(true);
-    void apiRequest<WorkspaceDiffResponse | null>(`/v1/workspaces/${workspaceId}/diff?mode=fork_point`, {
-      allowNotFound: true,
-    })
-      .then((response) => {
-        if (!disposed) setDiffs(response?.files.map(toDiff) ?? []);
-      })
-      .finally(() => {
-        if (!disposed) setLoading(false);
+  return {
+    diffs: files.map((file) => toDiff(file, bodiesByPath.get(diffPath(file)))),
+    paths: files.map(diffPath),
+    loading: summary.isLoading,
+    error: summary.error,
+    loadDiff: async (path: string) => {
+      if (!workspaceId) return;
+      setRequested((current) => {
+        const paths = current.workspaceId === workspaceId ? current.paths : [];
+        return { workspaceId, paths: paths.includes(path) ? paths : [...paths, path] };
       });
-
-    return () => {
-      disposed = true;
-    };
-  }, [workspaceId]);
-
-  return { diffs, loading };
+      await queryClient.fetchQuery(workspaceDiffFileQueryOptions(workspaceId, path));
+    },
+  };
 };
 
-const WorkspaceChangesTab = (props: { input: WorkbenchPanelRenderInput }) => {
+export const WorkspaceDiffsPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const workspaceId = resolveWorkspaceForkPointDiffWorkspaceId({
     resourceId: input.instance.resource?.id,
     metadata: input.instance.resource?.metadata,
   });
-  const { diffs, loading } = useWorkspaceDiffs(workspaceId);
-  const changedFilePaths = diffs.map(getDiffPath);
+  const { diffs, paths, loading, error, loadDiff } = useWorkspaceDiffs(workspaceId);
   const { activeFileIconTheme } = useFileIconThemePreference();
+
+  if (error) {
+    return (
+      <Center h="full" minH="0" bg="bg" p="md">
+        <Text color="fg.error">{error instanceof Error ? error.message : "Failed to load workspace changes."}</Text>
+      </Center>
+    );
+  }
 
   const resolveFileIcon = (path: string) => {
     const fileName = path.split("/").pop() ?? path;
@@ -73,26 +79,17 @@ const WorkspaceChangesTab = (props: { input: WorkbenchPanelRenderInput }) => {
   };
 
   return (
-    <DiffViewer
-      diffs={diffs}
-      changedFilePaths={changedFilePaths}
-      defaultSelectedPath={changedFilePaths[0]}
-      loading={loading}
-      resolveFileIcon={resolveFileIcon}
-    />
-  );
-};
-
-export const WorkspaceWidget = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
-
-  return (
     <Flex direction="column" h="full" minH="0" minW="0" bg="bg">
-      {/* Absolute fill gives the diff viewer a definite height so its file tree
-          and diff list scroll independently instead of growing the whole widget. */}
       <Box position="relative" flex="1" minH="0" minW="0">
         <Box position="absolute" inset="0" display="flex" minH="0" minW="0" overflow="hidden">
-          <WorkspaceChangesTab input={input} />
+          <DiffViewer
+            diffs={diffs}
+            changedFilePaths={paths}
+            defaultSelectedPath={paths[0]}
+            loading={loading}
+            onLoadDiff={loadDiff}
+            resolveFileIcon={resolveFileIcon}
+          />
         </Box>
       </Box>
     </Flex>

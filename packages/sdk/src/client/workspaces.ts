@@ -2,8 +2,12 @@ import type {
   CreateWorkspaceInput,
   ListWorkspaceActivityInput,
   ListWorkspaceActivityResponse,
+  ListWorkspaceFilesInput,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
+  WorkspaceFileContent,
+  WorkspaceFilesResponse,
+  WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
@@ -14,11 +18,33 @@ export type WorkspaceClient = {
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
+  listFiles(workspaceId: string, input?: ListWorkspaceFilesInput): Promise<WorkspaceFilesResponse>;
+  readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
+  writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
+  listFiles: (workspaceId, input = {}) => {
+    const params = new URLSearchParams();
+    if (input.path !== undefined) params.append("path", input.path);
+    if (input.query !== undefined) params.append("query", input.query);
+    if (input.limit !== undefined) params.append("limit", String(input.limit));
+    const query = params.toString();
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/files${query ? `?${query}` : ""}`);
+  },
+  readFile: (workspaceId, path) => {
+    const params = new URLSearchParams({ path });
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`);
+  },
+  writeFile: (workspaceId, path, input) => {
+    const params = new URLSearchParams({ path });
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
+      method: "PUT",
+      body: input,
+    });
+  },
   listActivity: (workspaceId, input = {}) => {
     const params = new URLSearchParams();
     if (input.event_type) params.append("event_type", input.event_type);

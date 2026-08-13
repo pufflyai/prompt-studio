@@ -1,29 +1,15 @@
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join, posix, resolve } from "node:path";
+import { readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { join, posix, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { normalizeArtifactMountPath } from "./path-normalization";
+import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
+import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
 
 type CreateArtifactMountInput = {
   repoRoot: string;
   /** Package name of the owning extension. */
   name: string;
   mountPath: string;
-};
-
-const normalizeRelativePath = (path: string) => {
-  if (path.includes("\0")) throw new Error("Artifact path escapes mount root");
-
-  const slashPath = path.replaceAll("\\", "/");
-  if (slashPath.startsWith("/")) throw new Error("Artifact path escapes mount root");
-
-  const normalized = posix.normalize(slashPath);
-  if (normalized === ".") return "";
-  if (normalized === ".." || normalized.startsWith("../")) {
-    throw new Error("Artifact path escapes mount root");
-  }
-
-  return normalized.replace(/\/$/, "");
 };
 
 const globPatternToRegExp = (pattern: string) => {
@@ -71,56 +57,52 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[]) =
 };
 
 /** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
-export const createFileMount = (mountRoot: string): ArtifactMount => {
-  const resolvePath = (relativePath: string) => {
-    const safe = normalizeRelativePath(relativePath);
-    return {
-      absolutePath: safe ? resolve(mountRoot, ...safe.split("/")) : mountRoot,
-      relativePath: safe,
-    };
-  };
-
-  return {
-    exists: async (path) => existsSync(resolvePath(path).absolutePath),
-    readText: async (path) => readFile(resolvePath(path).absolutePath, "utf8"),
+const createFileMountState = (mountRoot: string) => {
+  const safeRoot = createSafeFileRoot(mountRoot);
+  const mount: ArtifactMount = {
+    exists: async (path) => Boolean(await safeRoot.tryResolveExisting(path)),
+    readText: async (path) => readFile((await safeRoot.resolveExisting(path)).operationPath, "utf8"),
     writeText: async (path, value) => {
-      const { absolutePath } = resolvePath(path);
-      await mkdir(dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, value, "utf8");
+      const { operationPath } = await safeRoot.resolveForWrite(path);
+      await writeFile(operationPath, value, "utf8");
     },
-    readBytes: async (path) => new Uint8Array(await readFile(resolvePath(path).absolutePath)),
+    readBytes: async (path) => new Uint8Array(await readFile((await safeRoot.resolveExisting(path)).operationPath)),
     writeBytes: async (path, value) => {
-      const { absolutePath } = resolvePath(path);
-      await mkdir(dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, value);
+      const { operationPath } = await safeRoot.resolveForWrite(path);
+      await writeFile(operationPath, value);
     },
     list: async (pattern) => {
       // The scoped-walk shortcut must honor the same escape guard as every other
       // op: a pattern like "../../etc/**" would otherwise walk outside mountRoot.
-      const prefix = pattern ? normalizeRelativePath(literalPrefixDir(pattern)) : "";
-      const startDir = prefix ? resolve(mountRoot, ...prefix.split("/")) : mountRoot;
-      if (!existsSync(startDir)) return [];
+      const prefix = pattern ? normalizeMountRelativePath(literalPrefixDir(pattern)) : "";
+      const start = await safeRoot.tryResolveExisting(prefix);
+      if (!start) return [];
+      const startDir = start.operationPath;
       const files: ArtifactFile[] = [];
-      await walkFiles(mountRoot, startDir, files);
+      await walkFiles((await safeRoot.resolveExisting("")).operationPath, startDir, files);
       const matcher = pattern ? globPatternToRegExp(pattern) : null;
       return files.filter((file) => !matcher || matcher.test(file.path)).sort((a, b) => a.path.localeCompare(b.path));
     },
     listDirs: async (path = "") => {
-      const { absolutePath, relativePath } = resolvePath(path);
-      if (!existsSync(absolutePath)) return [];
-      const entries = await readdir(absolutePath, { withFileTypes: true });
+      const resolved = await safeRoot.tryResolveExisting(path);
+      if (!resolved) return [];
+      const entries = await readdir(resolved.operationPath, { withFileTypes: true });
       return entries
         .filter((entry) => entry.isDirectory())
-        .map((entry) => toPosixPath(posix.join(relativePath, entry.name)))
+        .map((entry) => toPosixPath(posix.join(resolved.relativePath, entry.name)))
         .sort((a, b) => a.localeCompare(b));
     },
     delete: async (path) => {
-      const { absolutePath, relativePath } = resolvePath(path);
+      const { operationPath, relativePath } = await safeRoot.resolveExisting(path);
       if (!relativePath) throw new Error("Artifact path is required");
-      await rm(absolutePath, { recursive: true, force: true });
+      await rm(operationPath, { recursive: true, force: true });
     },
   };
+  return { mount, safeRoot };
 };
+
+/** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
+export const createFileMount = (mountRoot: string): ArtifactMount => createFileMountState(mountRoot).mount;
 
 let syncTmpCounter = 0;
 
@@ -129,14 +111,14 @@ let syncTmpCounter = 0;
  * each file written atomically (temp + rename), anything else under `dir` pruned. Harness extensions use
  * it to materialize their agent dir (e.g. `.claude/skills`) from the project skill catalog.
  */
-export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMount => {
-  const mount = createFileMount(mountRoot);
+export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMount & WorkspaceFileAccess => {
+  const { mount, safeRoot } = createFileMountState(mountRoot);
 
   const syncDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
-    const dirRel = normalizeRelativePath(dir);
+    const dirRel = normalizeMountRelativePath(dir);
     const wanted = new Map<string, string>();
     for (const file of files) {
-      const rel = normalizeRelativePath(posix.join(dirRel, file.path));
+      const rel = normalizeMountRelativePath(posix.join(dirRel, file.path));
       // normalizeRelativePath only guards the mount root; a path like "../x" stays in the
       // root but escapes `dir`, so it would be written outside the synced subtree and never
       // pruned. Reject anything that does not land strictly under `dir`.
@@ -147,9 +129,9 @@ export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMoun
     }
 
     for (const [rel, content] of wanted) {
-      const absolutePath = resolve(mountRoot, ...rel.split("/"));
-      await mkdir(dirname(absolutePath), { recursive: true });
-      const tmpPath = `${absolutePath}.${process.pid}.${syncTmpCounter++}.tmp`;
+      const absolutePath = (await safeRoot.resolveForWrite(rel)).operationPath;
+      const tmpRelativePath = `${rel}.${process.pid}.${syncTmpCounter++}.tmp`;
+      const tmpPath = (await safeRoot.resolveForWrite(tmpRelativePath)).operationPath;
       await writeFile(tmpPath, content, "utf8");
       await rename(tmpPath, absolutePath);
     }
@@ -159,7 +141,7 @@ export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMoun
     }
   };
 
-  return { ...mount, syncDir };
+  return { ...mount, ...createWorkspaceFileAccess(safeRoot), syncDir };
 };
 
 export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {

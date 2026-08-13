@@ -12,6 +12,10 @@ export {
   readPackageAssetText,
   resolvePackageAsset,
   resolvePackageAssetPath,
+  WorkspaceFileAccessError,
+  type WorkspaceMountEntry,
+  type WorkspaceMountFile,
+  type WorkspaceMountSearchResult,
 } from "./artifacts";
 
 export {

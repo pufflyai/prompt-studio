@@ -22,6 +22,21 @@ describe("shouldAutoLoadDiffContent", () => {
     ).toBe(true);
   });
 
+  it("does not auto-load an expanded summary until it is selected", () => {
+    expect(
+      shouldAutoLoadDiffContent({
+        isExpanded: true,
+        isSelected: false,
+        hasDiffContent: false,
+        isLargeDiff: false,
+        isGeneratedDiff: false,
+        isBinaryDiff: false,
+        requestedPath: null,
+        filePath: "src/other.ts",
+      }),
+    ).toBe(false);
+  });
+
   it("does not auto-load when content is already available", () => {
     expect(
       shouldAutoLoadDiffContent({
