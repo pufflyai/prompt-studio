@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
+import type { WorkbenchModeActivationContext, WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
 import {
   ChromeActivityRail,
   ChromeBoardHost,
@@ -215,11 +215,20 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
 };
 
 const registerModes = (ctx: WorkbenchModuleContext) => {
+  // The rail and strip live in mode-agnostic regions, so every chrome-owning
+  // mode re-stages them on entry — a mode that cleared them may have run since.
+  const stageChrome = (modeCtx: WorkbenchModeActivationContext) => {
+    modeCtx.layout.openPanel(chromeWidgetIds.rail, { pinned: true });
+    modeCtx.layout.openPanel(chromeWidgetIds.status, { pinned: true });
+    return undefined;
+  };
+
   ctx.modes.registerMode({
     id: chromeModes.studio.id,
     label: chromeModes.studio.label,
     panels: ["main", "side"],
     activate: () => undefined,
+    enter: stageChrome,
     seed(modeCtx) {
       modeCtx.layout.openPanel(chromeWidgetIds.rail, { pinned: true });
       modeCtx.layout.openPanel(chromeWidgetIds.status, { pinned: true });
@@ -248,6 +257,7 @@ const registerModes = (ctx: WorkbenchModuleContext) => {
     label: chromeModes.board.label,
     panels: ["main"],
     activate: () => undefined,
+    enter: stageChrome,
     seed(modeCtx) {
       // Each mode stages its own Main content; without this the previous mode's
       // Location would carry over as an extra document tab.
