@@ -214,6 +214,7 @@ const registerExtensionViews = (
         contribution: {
           id: extensionViewWidgetId(panel.id),
           title: resolveLocalizableString(panel.title, panel.extensionId),
+          icon: panel.icon,
           region: extensionViewRegionForPlacement(panel.region),
           closable: panel.closable,
           rendererId: dashboardWidgetIds.extensionView,

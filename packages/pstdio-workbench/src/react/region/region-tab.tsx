@@ -7,6 +7,7 @@ import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { resolveTabIconName } from "./region-tabs-visibility";
 
 interface WorkbenchRegionTabProps {
   workbench: WorkbenchCore;
@@ -251,10 +252,11 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const isActive = placement.widgetId === activeWidgetId;
   const label = placement.title ?? placement.contributionId;
   const widget = workbench.layout.getWidget(placement.contributionId);
-  const icon =
-    placement.resource?.icon ??
-    (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined) ??
-    widget?.icon;
+  const icon = resolveTabIconName(
+    placement,
+    widget,
+    placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined,
+  );
   const contentRendererId = placement.tab?.contentRendererId;
   const behavior = useRegionTabBehavior(props);
   const { isDragging, listeners, setNodeRef, transform, transition } = behavior.sortableState;

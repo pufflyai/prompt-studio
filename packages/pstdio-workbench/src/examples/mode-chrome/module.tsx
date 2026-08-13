@@ -54,6 +54,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: false,
     id: chromeWidgetIds.overview,
     title: "Overview",
+    icon: "layout-dashboard",
     region: "main",
     singleton: true,
     rendererId: chromeWidgetIds.overview,
@@ -85,6 +86,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: false,
     id: chromeWidgetIds.catalog,
     title: "Catalog",
+    icon: "package-search",
     region: "main",
     eligibleLocations: {},
     resourceKinds: [viewKind],
@@ -95,6 +97,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: false,
     id: chromeWidgetIds.notes,
     title: "Notes",
+    icon: "notebook-pen",
     region: "main",
     eligibleLocations: {},
     resourceKinds: [viewKind],
@@ -104,12 +107,18 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
 
   // Addable Sub Panels: registered but not opened by the seed, so they appear in
   // the header's "+" menu and each add must create a tab with its own title.
-  for (const extra of ["Timeline", "Metrics", "Console"]) {
+  const extraPanels = [
+    { title: "Timeline", icon: "chart-gantt" },
+    { title: "Metrics", icon: "chart-line" },
+    { title: "Console", icon: "square-terminal" },
+  ];
+  for (const { title: extra, icon } of extraPanels) {
     const id = `mode-chrome.extra-${extra.toLowerCase()}`;
     ctx.layout.registerPanel({
       closable: true,
       id,
       title: extra,
+      icon,
       region: "main",
       singleton: true,
       eligibleLocations: {},
@@ -123,6 +132,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: true,
     id: chromeWidgetIds.inspector,
     title: "Item",
+    icon: "package-search",
     region: "side",
     singleton: true,
     rendererId: chromeWidgetIds.inspector,
@@ -148,6 +158,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: true,
     id: chromeWidgetIds.boardColumns,
     title: "Columns",
+    icon: "columns-3",
     region: "main",
     singleton: true,
     eligibleLocations: {},
@@ -167,6 +178,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: true,
     id: chromeWidgetIds.boardSwimlanes,
     title: "Swimlanes",
+    icon: "rows-3",
     region: "main",
     singleton: true,
     eligibleLocations: {},
@@ -187,6 +199,7 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     closable: false,
     id: chromeWidgetIds.libraryPage,
     title: "Library",
+    icon: "book-open",
     region: "main",
     singleton: true,
     rendererId: chromeWidgetIds.libraryPage,

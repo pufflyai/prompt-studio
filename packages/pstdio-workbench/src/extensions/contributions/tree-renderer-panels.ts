@@ -24,6 +24,7 @@ export const registerTreeViewWidget = (
     contribution: {
       id: panel.id,
       title: text(panel.title, panel.id),
+      icon: panel.icon,
       region: panel.region,
       closable: panel.closable,
       rendererId: panel.treeRendererId,

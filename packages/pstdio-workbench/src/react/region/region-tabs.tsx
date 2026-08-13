@@ -27,7 +27,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
-import { resolveDisplayedActiveWidgetId, toTabKey } from "./region-tabs-visibility";
+import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
 import { isPlacementEligibleForRegion, shouldShowRegionTabs } from "./region-tabs-visibility-hooks";
 import { SortableRegionTabList } from "./sortable-region-tab-list";
 
@@ -46,6 +46,15 @@ interface WorkbenchRegionTabsProps {
 
 const isWorkbenchPanelRegion = (region: WorkbenchRegionId): region is WorkbenchPanelRegion =>
   workbenchPanelRegions.some((panelRegion) => panelRegion === region);
+
+const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
+  const iconName = resolveTabIconName(
+    placement,
+    workbench.layout.getWidget(placement.contributionId),
+    placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined,
+  );
+  return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
+};
 
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
@@ -93,13 +102,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
-  const resolvePlacementIcon = (placement: WorkbenchWidgetPlacement) => {
-    const iconName =
-      placement.resource?.icon ??
-      (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined);
-    return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
-  };
-
   const menuActions = buildTabVisibilityMenuActions(
     subPanelPlacements,
     tabOverrides,
@@ -113,7 +115,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    resolvePlacementIcon,
+    (placement) => resolvePlacementIcon(workbench, placement),
   );
   const hasVisibilityMenu = menuActions.length > 0;
   const leadingItems = listWorkbenchMenuItemsFromState(

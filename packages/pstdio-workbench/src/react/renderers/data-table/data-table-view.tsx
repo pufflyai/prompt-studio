@@ -1,10 +1,11 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import {
   DataTable,
   type DataTableColumnRenderer,
   type DataTableColumnStat,
   type DataTableRowAction,
+  DataTableSkeleton,
   type RowData,
 } from "@pstdio/ui/data-table";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -110,12 +111,15 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   };
 
   if (loading) {
+    // The table chrome renders instantly: declared columns become real headers
+    // and only the row values shimmer until the first query resolves.
+    const skeletonColumns = (contribution.columns ?? [])
+      .filter((column) => !column.hidden)
+      .map((column) => ({ id: column.id, label: column.label ?? column.id }));
     return (
-      <Box p="md">
-        <Text textStyle="label/S/regular" color="fg.muted">
-          Loading…
-        </Text>
-      </Box>
+      <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
+        <DataTableSkeleton columns={skeletonColumns.length > 0 ? skeletonColumns : undefined} />
+      </Stack>
     );
   }
 
