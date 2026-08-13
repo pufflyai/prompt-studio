@@ -14,6 +14,7 @@ export interface StoredReport {
   workspaceShorthand: string;
   workspaceId: string | null;
   name: string;
+  directoryName?: string;
   kind: string;
   source: string | null;
   body: string;

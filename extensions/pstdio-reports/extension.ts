@@ -1,4 +1,5 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import { reportTemplates } from "./report-templates";
 import { deleteReportCommand } from "./src/commands/delete-report";
 import { saveReportCommand } from "./src/commands/save-report";
 import { writeReportCommand } from "./src/commands/write-report";
@@ -15,13 +16,7 @@ export default defineExtension({
       description: "Report templates",
     },
   },
-  templates: {
-    report: {
-      title: "Workspace report",
-      type: "report",
-      source: packageAsset("./templates/report.md", import.meta.url),
-    },
-  },
+  templates: reportTemplates,
   skills: {
     use_reports: {
       title: "Use reports",

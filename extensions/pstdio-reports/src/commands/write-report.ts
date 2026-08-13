@@ -1,11 +1,21 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { putReport } from "../data/collections";
-import { reportFilesDir, reportMarkdownPath, reportToMarkdown, requireRepoFiles } from "../data/draft-storage";
-import { findReport, resolveReportName, resolveWorkspace } from "../data/resolve";
+import { reportTemplateNames } from "../../report-templates";
+import { putReport, reportsCollection } from "../data/collections";
+import {
+  reportFilesDir,
+  reportInstanceName,
+  reportMarkdownPath,
+  reportToMarkdown,
+  requireRepoFiles,
+} from "../data/draft-storage";
+import { resolveReportName, resolveWorkspace } from "../data/resolve";
 
 const resolveTemplateBody = async (ctx: CommandContext<{ template?: string }>) => {
-  const name = ctx.params.template ?? "report";
+  const name = ctx.params.template;
+  if (!name) {
+    throw new Error(`Report template is required. Available templates: ${reportTemplateNames.join(", ")}`);
+  }
   const template = await ctx.templates.get(name);
   if (!template) {
     throw new Error(`Unknown report template "${name}"`);
@@ -14,11 +24,33 @@ const resolveTemplateBody = async (ctx: CommandContext<{ template?: string }>) =
   return template.content;
 };
 
+const resolveAvailableReport = async (
+  ctx: CommandContext<Record<string, unknown>>,
+  repoFiles: NonNullable<CommandContext["repoFiles"]>,
+  workspaceShorthand: string,
+  directoryName: string,
+) => {
+  const reports = (await reportsCollection(ctx.storage).list()).filter(
+    (report) => report.workspaceShorthand === workspaceShorthand,
+  );
+  let sequence = 0;
+
+  while (true) {
+    const name = reportInstanceName(directoryName, sequence);
+    const path = reportMarkdownPath(directoryName, sequence);
+    const nameExists = reports.some((report) => report.name === name);
+    if (!nameExists && !(await repoFiles.exists(path))) {
+      return { name, path, filesPath: reportFilesDir(directoryName, sequence) };
+    }
+    sequence += 1;
+  }
+};
+
 export const writeReportCommand = defineCommand({
   title: "Write report",
   cli: {
     globalAliases: [["reports", "write"]],
-    examples: ["pstdio reports write --kind review"],
+    examples: ["pstdio reports write --kind review --template review"],
   },
   params: {
     workspace: params.text(),
@@ -30,12 +62,10 @@ export const writeReportCommand = defineCommand({
   async run(ctx) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
     const kind = ctx.params.kind ?? "report";
-    const name = resolveReportName(ctx.params.name, kind);
+    const directoryName = resolveReportName(ctx.params.name, kind);
+    const templateBody = await resolveTemplateBody(ctx);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, ctx.params.workspace);
-    const existing = await findReport(ctx.storage, workspaceShorthand, name);
-    if (existing) {
-      return { workspace: workspaceShorthand, name, path: reportMarkdownPath(name), filesPath: reportFilesDir(name) };
-    }
+    const { name, path, filesPath } = await resolveAvailableReport(ctx, repoFiles, workspaceShorthand, directoryName);
 
     const now = new Date().toISOString();
     const report = await putReport(ctx.storage, {
@@ -43,16 +73,17 @@ export const writeReportCommand = defineCommand({
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
+      directoryName,
       kind,
       source: ctx.params.source ?? null,
-      body: await resolveTemplateBody(ctx),
+      body: templateBody,
       files: [],
       draft: true,
       createdAt: now,
       updatedAt: now,
     });
 
-    await repoFiles.writeText(reportMarkdownPath(name), reportToMarkdown(report));
+    await repoFiles.writeText(path, reportToMarkdown(report));
     await ctx.events.emit("pstdio-reports.report.created", {
       projectId: ctx.projectId,
       workspaceShorthand,
@@ -60,9 +91,9 @@ export const writeReportCommand = defineCommand({
       name,
       kind,
       source: report.source,
-      path: reportMarkdownPath(name),
+      path,
     });
 
-    return { workspace: workspaceShorthand, name, path: reportMarkdownPath(name), filesPath: reportFilesDir(name) };
+    return { workspace: workspaceShorthand, name, path, filesPath };
   },
 });

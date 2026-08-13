@@ -56,7 +56,7 @@ describe("report workflow", () => {
     const result = await writeReportCommand.run(
       makeCommandContext({
         storage,
-        params: { kind: "review", source: "review-changes" },
+        params: { kind: "review", source: "review-changes", template: "review" },
         overrides: {
           events: recordEvents(events),
           repoFiles,
@@ -132,7 +132,7 @@ describe("report workflow", () => {
     expect(stripFrontmatter(markdown)).toContain("Selected body.");
   });
 
-  test("write requires the default report template to be registered", async () => {
+  test("write requires an explicit report template and lists the available templates", async () => {
     const { storage, repoFiles } = setup();
 
     await expect(
@@ -140,10 +140,10 @@ describe("report workflow", () => {
         makeCommandContext({
           storage,
           params: { workspace: "PS-116_A1", kind: "review" },
-          overrides: { repoFiles, templates: { get: async () => null } },
+          overrides: { repoFiles },
         }),
       ),
-    ).rejects.toThrow('Unknown report template "report"');
+    ).rejects.toThrow("Report template is required. Available templates: change-request, review");
   });
 
   test("write infers the workspace from the current worktree path when config has no workspace id", async () => {
@@ -154,7 +154,7 @@ describe("report workflow", () => {
     const result = await writeReportCommand.run(
       makeCommandContext({
         storage,
-        params: { kind: "review" },
+        params: { kind: "review", template: "review" },
         overrides: {
           repo: { projectId: "proj-1", repoId: "repo-1", path: worktreePath },
           repoFiles,
@@ -179,7 +179,7 @@ describe("report workflow", () => {
     const result = await writeReportCommand.run(
       makeCommandContext({
         storage,
-        params: { kind: "review" },
+        params: { kind: "review", template: "review" },
         overrides: {
           repo: { projectId: "proj-1", repoId: "repo-1", path: worktreePath },
           repoFiles,
@@ -194,18 +194,22 @@ describe("report workflow", () => {
     expect(result.workspace).toBe("PS-116_A1");
   });
 
-  test("write returns an existing path without clobbering local edits", async () => {
+  test("write increments the report file instead of reusing an existing report", async () => {
     const { storage, repoFiles, events } = setup();
 
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
     repoFiles.files.set(reportMarkdownPath("review"), new TextEncoder().encode("local edits"));
 
     const result = await writeReportCommand.run(
       makeCommandContext({
         storage,
-        params: { workspace: "PS-116_A1", kind: "review" },
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
         overrides: {
           events: recordEvents(events),
           repoFiles,
@@ -213,17 +217,99 @@ describe("report workflow", () => {
       }),
     );
 
-    expect(result.path).toBe(reportMarkdownPath("review"));
+    expect(result).toMatchObject({
+      name: "review_01",
+      path: ".pstdio/reports/review/report_01.md",
+      filesPath: ".pstdio/reports/review/files_01",
+    });
     expect(new TextDecoder().decode(repoFiles.files.get(reportMarkdownPath("review"))!)).toBe("local edits");
-    expect(events).toEqual([]);
+    expect(repoFiles.files.has(".pstdio/reports/review/report_01.md")).toBe(true);
+    expect(await reportsCollection(storage).list()).toHaveLength(2);
+    expect(events).toHaveLength(1);
+
+    const third = await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
+    );
+
+    expect(third).toMatchObject({
+      name: "review_02",
+      path: ".pstdio/reports/review/report_02.md",
+      filesPath: ".pstdio/reports/review/files_02",
+    });
+  });
+
+  test("write increments when an untracked report file already exists", async () => {
+    const { storage, repoFiles } = setup();
+    repoFiles.files.set(reportMarkdownPath("review"), new TextEncoder().encode("untracked review"));
+
+    const result = await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
+    );
+
+    expect(result).toMatchObject({
+      name: "review_01",
+      path: ".pstdio/reports/review/report_01.md",
+      filesPath: ".pstdio/reports/review/files_01",
+    });
+    expect(new TextDecoder().decode(repoFiles.files.get(reportMarkdownPath("review"))!)).toBe("untracked review");
   });
 });
 
 describe("saved report workflow", () => {
+  test("save and delete target a numbered report without changing the base report", async () => {
+    const { storage, repoFiles } = setup();
+    await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
+    );
+    const numbered = await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
+    );
+    repoFiles.files.set(numbered.path, new TextEncoder().encode("Numbered review"));
+
+    await saveReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", name: numbered.name },
+        overrides: { repoFiles },
+      }),
+    );
+    await deleteReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", name: numbered.name },
+        overrides: { repoFiles },
+      }),
+    );
+
+    expect(repoFiles.files.has(reportMarkdownPath("review"))).toBe(true);
+    expect(repoFiles.files.has(numbered.path)).toBe(false);
+    expect((await reportsCollection(storage).list()).map((report) => report.name)).toEqual(["review"]);
+  });
+
   test("save round-trips body, kind/source edits, and binary files", async () => {
     const { storage, repoFiles, events } = setup();
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
 
     repoFiles.files.set(
@@ -285,7 +371,11 @@ describe("saved report workflow", () => {
   test("save succeeds when old attachment cleanup fails after storage update", async () => {
     const { storage, repoFiles } = setup();
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
     repoFiles.files.set(`${reportFilesDir("review")}/first.txt`, new TextEncoder().encode("first"));
     await saveReportCommand.run(
@@ -311,7 +401,11 @@ describe("saved report workflow", () => {
   test("delete removes storage and local report directory", async () => {
     const { storage, repoFiles, events } = setup();
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
 
     await deleteReportCommand.run(
@@ -333,7 +427,11 @@ describe("saved report workflow", () => {
   test("delete removes the report even when attachment cleanup fails", async () => {
     const { storage, repoFiles } = setup();
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
     repoFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
     await saveReportCommand.run(
@@ -359,7 +457,11 @@ describe("saved report workflow", () => {
 
     await expect(
       writeReportCommand.run(
-        makeCommandContext({ storage, params: { workspace: "../x", kind: "review" }, overrides: { repoFiles } }),
+        makeCommandContext({
+          storage,
+          params: { workspace: "../x", kind: "review", template: "review" },
+          overrides: { repoFiles },
+        }),
       ),
     ).rejects.toThrow("Unsafe workspace");
 
@@ -367,7 +469,7 @@ describe("saved report workflow", () => {
       writeReportCommand.run(
         makeCommandContext({
           storage,
-          params: { workspace: "PS-116_A1", kind: "review", name: "files" },
+          params: { workspace: "PS-116_A1", kind: "review", name: "files", template: "review" },
           overrides: { repoFiles },
         }),
       ),

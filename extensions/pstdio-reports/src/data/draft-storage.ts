@@ -5,10 +5,31 @@ import type { StoredReport } from "./types";
 export const REPORTS_DIR = ".pstdio/reports";
 
 export const reportDir = (name: string) => `${REPORTS_DIR}/${name}`;
-export const reportMarkdownPath = (name: string) => `${reportDir(name)}/report.md`;
-export const reportFilesDir = (name: string) => `${reportDir(name)}/files`;
-export const reportFilesPattern = (name: string) => `${reportFilesDir(name)}/**`;
-export const fileNameFromPath = (name: string, path: string) => path.slice(`${reportFilesDir(name)}/`.length);
+const reportSuffix = (sequence: number) => (sequence === 0 ? "" : `_${sequence.toString().padStart(2, "0")}`);
+
+export const reportInstanceName = (name: string, sequence = 0) => `${name}${reportSuffix(sequence)}`;
+export const reportMarkdownPath = (name: string, sequence = 0) =>
+  `${reportDir(name)}/report${reportSuffix(sequence)}.md`;
+export const reportFilesDir = (name: string, sequence = 0) => `${reportDir(name)}/files${reportSuffix(sequence)}`;
+
+const reportInstanceSuffix = (report: StoredReport) => {
+  const directoryName = report.directoryName ?? report.name;
+  return report.name.startsWith(directoryName) ? report.name.slice(directoryName.length) : "";
+};
+
+export const reportMarkdownPathFor = (report: StoredReport) => {
+  const directoryName = report.directoryName ?? report.name;
+  return `${reportDir(directoryName)}/report${reportInstanceSuffix(report)}.md`;
+};
+
+export const reportFilesDirFor = (report: StoredReport) => {
+  const directoryName = report.directoryName ?? report.name;
+  return `${reportDir(directoryName)}/files${reportInstanceSuffix(report)}`;
+};
+
+export const reportFilesPattern = (report: StoredReport) => `${reportFilesDirFor(report)}/**`;
+export const fileNameFromPath = (report: StoredReport, path: string) =>
+  path.slice(`${reportFilesDirFor(report)}/`.length);
 
 export const reportToMarkdown = (report: StoredReport) =>
   applyFrontmatter(
@@ -22,8 +43,8 @@ export const reportToMarkdown = (report: StoredReport) =>
     report.body,
   );
 
-export const readReportMarkdown = async (repoFiles: ArtifactMount, name: string) => {
-  const path = reportMarkdownPath(name);
+export const readReportMarkdown = async (repoFiles: ArtifactMount, report: StoredReport) => {
+  const path = reportMarkdownPathFor(report);
   if (!(await repoFiles.exists(path))) return null;
   return repoFiles.readText(path);
 };

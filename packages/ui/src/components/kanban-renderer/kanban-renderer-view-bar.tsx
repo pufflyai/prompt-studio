@@ -2,6 +2,7 @@ import { Box, Button, chakra, Dialog, HStack, Icon, IconButton, Input, Stack, Ta
 import { Copy, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { FilterCategoryView } from "./kanban-renderer-helpers";
 import type { KanbanRendererFilterState, KanbanRendererSavedView } from "./types";
 import { isActiveKanbanRendererViewDirty, useKanbanRendererStore } from "./use-kanban-renderer-store";
@@ -202,14 +203,16 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
             ))}
           </Tabs.List>
         </Tabs.Root>
-        <IconButton
-          aria-label="New view"
-          size="2xs"
-          variant="ghost"
-          onClick={() => createView(nextViewIdentity(views))}
-        >
-          <Icon as={Plus} />
-        </IconButton>
+        <Tooltip content="Add view">
+          <IconButton
+            aria-label="Add view"
+            size="2xs"
+            variant="ghost"
+            onClick={() => createView(nextViewIdentity(views))}
+          >
+            <Icon as={Plus} />
+          </IconButton>
+        </Tooltip>
         {align === "split" ? <Box flex="1" /> : null}
         {filterControl}
         {displayControl}

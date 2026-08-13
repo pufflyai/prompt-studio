@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
@@ -148,6 +148,16 @@ export default meta;
 export const Default = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="960px" height="420px" marginX="auto" />;
+  },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+    const addViewButton = canvas.getByRole("button", { name: "Add view" });
+    const body = within(document.body);
+
+    await userEvent.hover(addViewButton);
+    await expect(await body.findByRole("tooltip")).toHaveTextContent("Add view");
+    await userEvent.unhover(addViewButton);
+    await waitFor(() => expect(body.queryByRole("tooltip")).not.toBeInTheDocument());
   },
 };
 

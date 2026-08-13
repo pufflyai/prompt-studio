@@ -4,7 +4,7 @@ import {
   fileNameFromPath,
   readReportMarkdown,
   reportFilesPattern,
-  reportMarkdownPath,
+  reportMarkdownPathFor,
   reportToMarkdown,
   requireRepoFiles,
 } from "../data/draft-storage";
@@ -33,11 +33,11 @@ const mimeTypeFor = (name: string) => {
 const readReportFiles = async (repoFiles: ArtifactMount, report: StoredReport) => {
   const now = new Date().toISOString();
   const previous = new Map(report.files.map((file) => [file.name, file]));
-  const entries = await repoFiles.list(reportFilesPattern(report.name));
+  const entries = await repoFiles.list(reportFilesPattern(report));
 
   return Promise.all(
     entries.map(async (entry): Promise<{ file: StoredReportFile; bytes: Uint8Array }> => {
-      const name = fileNameFromPath(report.name, entry.path);
+      const name = fileNameFromPath(report, entry.path);
       assertSafeReportFileName(name);
       const bytes = await repoFiles.readBytes(entry.path);
       const existing = previous.get(name);
@@ -85,7 +85,7 @@ export const saveReportCommand = defineCommand({
     const report = await findReport(ctx.storage, workspaceShorthand, name);
     if (!report) throw new Error(`Unknown report "${name}" in workspace "${workspaceShorthand}"`);
 
-    const raw = await readReportMarkdown(repoFiles, name);
+    const raw = await readReportMarkdown(repoFiles, report);
     if (raw === null) throw new Error(`No local report file for ${name}`);
     const frontmatter = parseReportFrontmatter(raw);
     const body = stripFrontmatter(raw).replace(/^\n+/, "");
@@ -116,7 +116,7 @@ export const saveReportCommand = defineCommand({
     }
     const oldBlobIds = new Set(report.files.map((file) => file.blobId));
     await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
-    await repoFiles.writeText(reportMarkdownPath(name), reportToMarkdown(next));
+    await repoFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next));
 
     await ctx.events.emit("pstdio-reports.report.saved", {
       projectId: ctx.projectId,

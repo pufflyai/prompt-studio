@@ -38,7 +38,11 @@ describe("save report", () => {
     const storage = createMemoryStorage();
     const repoFiles = createMemoryRepoFiles();
     await writeReportCommand.run(
-      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
     );
     repoFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
 

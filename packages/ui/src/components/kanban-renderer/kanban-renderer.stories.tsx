@@ -260,6 +260,16 @@ export const SavedViews: Story = {
   render: () => (
     <Wrapper storageKey="storybook-kanban-renderer-saved-views" defaultViews={SAVED_VIEWS} defaultActiveViewId="all" />
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const addViewButton = canvas.getByRole("button", { name: "Add view" });
+    const body = within(document.body);
+
+    await userEvent.hover(addViewButton);
+    await expect(await body.findByRole("tooltip")).toHaveTextContent("Add view");
+    await userEvent.unhover(addViewButton);
+    await waitFor(() => expect(body.queryByRole("tooltip")).not.toBeInTheDocument());
+  },
 };
 
 export const SavedFilteredView: Story = {

@@ -1,6 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
-import { reportDir, requireRepoFiles } from "../data/draft-storage";
+import { reportDir, reportFilesDirFor, reportMarkdownPathFor, requireRepoFiles } from "../data/draft-storage";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import { assertSafeReportName } from "../data/validation";
 
@@ -26,7 +26,18 @@ export const deleteReportCommand = defineCommand({
     const blobs = collection.attachments(report.id);
     await collection.delete(report.id);
     await Promise.allSettled(report.files.map((file) => blobs.delete(file.blobId)));
-    await repoFiles.delete(reportDir(name));
+    const directoryName = report.directoryName ?? report.name;
+    const siblingExists = (await collection.list()).some(
+      (candidate) =>
+        candidate.workspaceShorthand === workspaceShorthand &&
+        (candidate.directoryName ?? candidate.name) === directoryName,
+    );
+    if (siblingExists) {
+      await repoFiles.delete(reportMarkdownPathFor(report));
+      await repoFiles.delete(reportFilesDirFor(report));
+    } else {
+      await repoFiles.delete(reportDir(directoryName));
+    }
     await ctx.events.emit("pstdio-reports.report.deleted", {
       projectId: ctx.projectId,
       workspaceShorthand,

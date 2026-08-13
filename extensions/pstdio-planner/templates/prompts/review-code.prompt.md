@@ -14,7 +14,9 @@ Focus on:
 
 ### Output
 
-Scaffold the review report by running `pst reports write --kind review --name review --source review-changes`, then fill in `.pstdio/reports/review/report.md` with status, findings grouped by severity, test coverage, and conclusion. Save it by running `pst reports save --name review`.
+Scaffold the review report by running `pst reports write --kind review --name review --template review --source review-changes`. Read the returned JSON, then fill in its `path` with scope, confidence, validation evidence, prioritized change requests, relevant resources, and follow-up work. Save it with `pst reports save --name <returned-name>`. Repeated reviews receive numbered names and files, so they do not overwrite earlier reviews.
+
+This is an independent code review. Create a `review` report, not a `change_request` report. The implementation agent owns the change request report.
 
 ### Final Action
 

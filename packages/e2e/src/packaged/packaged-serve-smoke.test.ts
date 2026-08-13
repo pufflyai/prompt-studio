@@ -316,6 +316,34 @@ describe("packaged pstdio — self-hosted serve", () => {
           ]),
         );
 
+        const templatesRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/templates`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(templatesRes.status).toBe(200);
+
+        const templates = (await templatesRes.json()) as Array<{
+          install_name?: string;
+          is_default: boolean;
+          name: string;
+          template_type: string;
+        }>;
+        expect(templates).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              install_name: "pstdio-reports",
+              is_default: false,
+              name: "review",
+              template_type: "report",
+            }),
+            expect.objectContaining({
+              install_name: "pstdio-reports",
+              is_default: false,
+              name: "change-request",
+              template_type: "report",
+            }),
+          ]),
+        );
+
         const runtimeRes = await fetch(`${started.baseUrl}/v1/extensions/runtime.js`, {
           headers: runtimeAuthorization(started.descriptor),
         });

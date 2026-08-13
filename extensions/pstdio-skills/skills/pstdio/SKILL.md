@@ -2,7 +2,7 @@
 name: pstdio
 description: Guidance for Prompt Studio and the pstdio CLI for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up Prompt Studio", "configuring agents", "how does pst work", "what commands are available", or general Prompt Studio questions.
 metadata:
-  version: 0.0.3
+  version: 0.0.5
 ---
 
 # Prompt Studio
@@ -75,8 +75,8 @@ Conversations between users and agents, tracked in the database. Sessions can be
 │       └── files/        # Supporting ticket files (research, screenshots)
 ├── reports/              # Workspace reports and generated evidence
 │   └── <name>/
-│       ├── report.md     # Report content created with pst reports write
-│       └── files/        # Report artifacts (tests, builds, logs, screenshots)
+│       ├── report*.md    # Numbered report content created with pst reports write
+│       └── files*/       # Matching report artifacts (tests, builds, logs, screenshots)
 ├── templates/            # Project-level template overrides
 ├── skills/               # Project-level skill overrides
 └── prompts/              # Project-level prompt template overrides

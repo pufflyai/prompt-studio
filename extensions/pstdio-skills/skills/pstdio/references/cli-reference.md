@@ -94,7 +94,12 @@ pst reports save [--workspace <shorthand>] [--name <name>]
 pst reports delete [--workspace <shorthand>] [--name <name>]
 ```
 
-Reports are workspace-scoped review or validation documents under `.pstdio/reports/<name>/`. Use `reports write` to create a draft from a registered report template, place supporting evidence under `.pstdio/reports/<name>/files/`, then run `reports save` to persist the report and attachments.
+Reports are workspace-scoped handoff documents under `.pstdio/reports/<name>/`. `reports write` requires `--template`; there is no default report template. Available templates are `change-request` and `review`.
+
+- After implementation, run `pst reports write --kind change_request --name change_request --template change-request`.
+- When reviewing code, run `pst reports write --kind review --name review --template review`.
+
+Read the JSON returned by `reports write`. Edit its `path`, place supporting evidence under its `filesPath`, then run `reports save --name <returned-name>` to persist the report and attachments. Reusing a name never overwrites an existing report. The command increments the returned name and file, for example `review_01` at `.pstdio/reports/review/report_01.md`. If `--template` is omitted, the command lists the available templates.
 
 ## Templates
 
