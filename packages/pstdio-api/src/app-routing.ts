@@ -95,7 +95,7 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
   });
 };
 
-const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
+const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, terminalOrigins: string[]) => {
   app.route("/", createHealthRoutes(deps));
   if (deps.runtime) app.route("/runtime", createRuntimeRoutes(deps.runtime));
   app.route("/v1", createProjectRoutes(deps));
@@ -109,7 +109,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
-  app.route("/v1", createTerminalRoutes(deps));
+  app.route("/v1", createTerminalRoutes(deps, { allowedOrigins: terminalOrigins }));
 };
 
 const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity | undefined) => {
@@ -135,10 +135,10 @@ const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>, security: Runtim
 export const registerApi = (
   app: OpenAPIHono<AppBindings>,
   deps: RouteDeps,
-  input: { security: RuntimeSecurity | undefined },
+  input: { security: RuntimeSecurity | undefined; terminalOrigins: string[] },
 ) => {
   registerApiMiddleware(app, input.security);
-  registerApiRoutes(app, deps);
+  registerApiRoutes(app, deps, input.terminalOrigins);
   registerApiErrorHandler(app, input.security);
   swagger(app);
 };

@@ -1,6 +1,6 @@
 import type { WorkbenchTerminalSessionExit, WorkbenchTerminalSessionOpener } from "@pstdio/workbench";
 import type { TerminalWebSocketClientMessage, TerminalWebSocketServerMessage } from "pstdio-api-contracts";
-import { buildAbsoluteApiUrl } from "@/lib/api";
+import { buildAbsoluteApiUrl, readRuntimeConfig } from "@/lib/api";
 
 const encodeBase64 = (data: string | Uint8Array) => {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -58,6 +58,9 @@ const createSessionEventHub = () => {
 };
 
 const terminalWebSocketUrl = () => {
+  const configuredUrl = readRuntimeConfig()?.terminalWebSocketUrl;
+  if (configuredUrl) return configuredUrl;
+
   const url = new URL(buildAbsoluteApiUrl("/v1/terminal"));
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();

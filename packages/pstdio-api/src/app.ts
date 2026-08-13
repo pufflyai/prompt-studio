@@ -78,8 +78,14 @@ interface AppOptions {
   /** Test seam: overrides the extension-backed harness registry. */
   harnessRegistry?: HarnessRegistryService;
   runtimeHost?: RuntimeHost;
+  terminalOrigins?: string[];
   onDatabaseLockAcquired?: () => void;
 }
+
+const readTerminalOrigins = () =>
+  process.env.PSTDIO_TERMINAL_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
   if (!value) return undefined;
@@ -439,6 +445,7 @@ export const createApp = async (options: AppOptions) => {
           ...(options.runtimeHost ? { origin: options.runtimeHost.origin } : {}),
         }
       : undefined,
+    terminalOrigins: options.terminalOrigins ?? readTerminalOrigins(),
   });
 
   const startupAbort = new AbortController();

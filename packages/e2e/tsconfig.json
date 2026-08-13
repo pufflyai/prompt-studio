@@ -7,5 +7,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["playwright.config.ts", "scripts", "src"]
+  "include": ["playwright*.config.ts", "scripts", "src"]
 }

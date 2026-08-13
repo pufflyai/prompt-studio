@@ -15,7 +15,8 @@ services:
       PSTDIO_DEFAULT_EXTENSIONS: '["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]'
       PSTDIO_HOME: ${HOST_PSTDIO_HOME:?HOST_PSTDIO_HOME is required}
       PSTDIO_DESKTOP_FLOW: ${PSTDIO_DESKTOP_FLOW:-0}
-      VITE_API_BASE_URL: ${BROWSER_API_BASE_URL:-/}
+      PSTDIO_TERMINAL_ORIGINS: ${PSTDIO_TERMINAL_ORIGINS:?PSTDIO_TERMINAL_ORIGINS is required}
+      PSTDIO_TERMINAL_WEBSOCKET_URL: ${PSTDIO_TERMINAL_WEBSOCKET_URL:?PSTDIO_TERMINAL_WEBSOCKET_URL is required}
     command:
       - bash
       - -lc

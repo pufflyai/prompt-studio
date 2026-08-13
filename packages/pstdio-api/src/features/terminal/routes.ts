@@ -9,6 +9,16 @@ import type {
 import type { AppBindings } from "../../types";
 import type { TerminalRouteDeps } from "./deps";
 
+interface TerminalRouteOptions {
+  allowedOrigins?: string[];
+}
+
+export const isTerminalWebSocketOriginAllowed = (request: Request, allowedOrigins: string[] = []) => {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  return origin === new URL(request.url).origin || allowedOrigins.includes(origin);
+};
+
 const sendMessage = (socket: WSContext, message: TerminalWebSocketServerMessage) => {
   socket.send(JSON.stringify(message));
 };
@@ -80,8 +90,14 @@ export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents
 };
 
 /** One bidirectional WebSocket owns one PTY session and its full lifecycle. */
-export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
+export const createTerminalRoutes = (deps: TerminalRouteDeps, options: TerminalRouteOptions = {}) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.use("/terminal", async (context, next) => {
+    if (!isTerminalWebSocketOriginAllowed(context.req.raw, options.allowedOrigins)) {
+      return context.json({ error: "Forbidden" }, 403);
+    }
+    await next();
+  });
   routes.get(
     "/terminal",
     upgradeWebSocket(() => createTerminalWebSocketEvents(deps)),

@@ -70,6 +70,7 @@ export default defineConfig({
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
+        PSTDIO_TERMINAL_ORIGINS: `http://localhost:${dashboardPort}`,
         HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
       },

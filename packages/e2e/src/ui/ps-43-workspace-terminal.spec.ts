@@ -41,26 +41,27 @@ const expectTerminalPwd = async (page: import("@playwright/test").Page, expected
 
 const persistHiddenLauncherAsActive = async (page: import("@playwright/test").Page) => {
   await page.waitForTimeout(300);
-  const updatedKey = await page.evaluate(() => {
-    const key = Object.keys(localStorage).find((candidate) => {
+  const updatedKeys = await page.evaluate(() => {
+    const keys = Object.keys(localStorage).filter((candidate) => {
       if (!candidate.startsWith("dashboard-wb:layout:")) return false;
       return localStorage.getItem(candidate)?.includes('"contributionId":"workbench.terminal"') === true;
     });
-    if (!key) return undefined;
 
-    const persisted = JSON.parse(localStorage.getItem(key) ?? "") as {
-      layout: {
-        activeWidgetId?: string;
-        regions: { secondary: { activeWidgetId?: string } };
+    for (const key of keys) {
+      const persisted = JSON.parse(localStorage.getItem(key) ?? "") as {
+        layout: {
+          activeWidgetId?: string;
+          regions: { secondary: { activeWidgetId?: string } };
+        };
       };
-    };
-    persisted.layout.activeWidgetId = "workbench.terminal.launcher";
-    persisted.layout.regions.secondary.activeWidgetId = "workbench.terminal.launcher";
-    localStorage.setItem(key, JSON.stringify(persisted));
-    return key;
+      persisted.layout.activeWidgetId = "workbench.terminal.launcher";
+      persisted.layout.regions.secondary.activeWidgetId = "workbench.terminal.launcher";
+      localStorage.setItem(key, JSON.stringify(persisted));
+    }
+    return keys;
   });
 
-  expect(updatedKey).toBeTruthy();
+  expect(updatedKeys.length).toBeGreaterThan(0);
 };
 
 test("PS-43 opens default and worktree terminals in their effective workspace directories", async ({
@@ -118,6 +119,7 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
+    await expect(page.getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
 
     const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');

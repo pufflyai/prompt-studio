@@ -3,6 +3,14 @@ import type { TerminalWebSocketServerMessage } from "pstdio-api-contracts";
 import { openDashboardTerminalSession } from "./api-terminal-session-opener";
 
 const nativeWebSocket = globalThis.WebSocket;
+const RUNTIME_CONFIG_KEY = "__PSTDIO_CONFIG__";
+
+type RuntimeConfigWindow = {
+  [RUNTIME_CONFIG_KEY]?: {
+    apiBaseUrl?: string;
+    terminalWebSocketUrl?: string;
+  };
+};
 
 class TestWebSocket extends EventTarget {
   static readonly OPEN = 1;
@@ -43,6 +51,7 @@ class TestWebSocket extends EventTarget {
 
 afterEach(() => {
   globalThis.WebSocket = nativeWebSocket;
+  delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
 });
 
 describe("openDashboardTerminalSession", () => {
@@ -56,6 +65,22 @@ describe("openDashboardTerminalSession", () => {
 
     expect(TestWebSocket.latest.url).toBe("ws://localhost/v1/terminal");
     expect(TestWebSocket.latest.url).not.toContain("token");
+    session.kill();
+  });
+
+  test("uses the complete runtime terminal WebSocket URL", async () => {
+    globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = {
+      apiBaseUrl: "http://dashboard.test",
+      terminalWebSocketUrl: "wss://terminal.test/prefix/pty?channel=dev",
+    };
+
+    const sessionPromise = openDashboardTerminalSession({ cols: 80, rows: 24 });
+    TestWebSocket.latest.emitOpen();
+    TestWebSocket.latest.emitMessage({ type: "open", sessionId: "session-1" });
+    const session = await sessionPromise;
+
+    expect(TestWebSocket.latest.url).toBe("wss://terminal.test/prefix/pty?channel=dev");
     session.kill();
   });
 

@@ -11,6 +11,7 @@ type ApiRequestOptions = {
 
 export type PstdioConfig = {
   apiBaseUrl?: string;
+  terminalWebSocketUrl?: string;
   version?: string;
 };
 

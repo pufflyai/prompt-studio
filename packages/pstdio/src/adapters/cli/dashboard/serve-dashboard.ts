@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 
 type DashboardConfig = {
   apiBaseUrl?: string;
+  terminalWebSocketUrl?: string;
   version?: string;
 };
 

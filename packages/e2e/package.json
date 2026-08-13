@@ -3,11 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun run test:scripts && bun run test:cli && bun run test:ui",
+    "test": "bun run test:scripts && bun run test:cli && bun run test:ui && bun run test:vite-terminal",
     "test:cli": "bun test src/cli --timeout 30000 --silent",
     "test:scripts": "bun test src/scripts --timeout 30000 --silent",
     "test:packaged": "bun test src/packaged --timeout 30000 --silent",
     "test:ui": "bun run src/scripts/run-playwright.ts",
+    "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
     "perf:frontend": "bunx playwright test -c playwright.perf.config.ts",
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.perf.config.ts",
     "report": "playwright show-report"

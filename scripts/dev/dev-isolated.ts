@@ -67,18 +67,23 @@ export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
   return resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName, "pstdio-home");
 };
 
+export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
+  PSTDIO_TERMINAL_ORIGINS: `http://localhost:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
+  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://localhost:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
+});
+
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
   HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
+  ...resolveIsolatedBrowserTransport(hostPorts),
   ...(hostPorts
     ? {
         HOST_DASHBOARD_PORT: String(hostPorts.dashboard),
         HOST_API_PORT: String(hostPorts.api),
         CONTAINER_API_PORT: String(resolveContainerPorts(hostPorts, desktopMode).api),
-        BROWSER_API_BASE_URL: `http://localhost:${hostPorts.api}`,
       }
     : {}),
 });

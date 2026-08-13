@@ -5,7 +5,7 @@ import type {
   TerminalWebSocketClientMessage,
   TerminalWebSocketServerMessage,
 } from "pstdio-api-contracts";
-import { createTerminalWebSocketEvents } from "./routes";
+import { createTerminalWebSocketEvents, isTerminalWebSocketOriginAllowed } from "./routes";
 
 const createSocket = () => {
   const messages: TerminalWebSocketServerMessage[] = [];
@@ -31,6 +31,20 @@ const waitFor = async (condition: () => boolean) => {
 };
 
 describe("terminal WebSocket", () => {
+  test("allows only same-origin or explicitly trusted browser handshakes", () => {
+    const request = (origin?: string) =>
+      new Request("http://localhost:19841/v1/terminal", {
+        headers: origin ? { origin } : undefined,
+      });
+
+    expect(isTerminalWebSocketOriginAllowed(request())).toBe(true);
+    expect(isTerminalWebSocketOriginAllowed(request("http://localhost:19841"))).toBe(true);
+    expect(isTerminalWebSocketOriginAllowed(request("http://localhost:5173"), ["http://localhost:5173"])).toBe(true);
+    expect(isTerminalWebSocketOriginAllowed(request("https://attacker.example"), ["http://localhost:5173"])).toBe(
+      false,
+    );
+  });
+
   test("streams PTY events and closes after exit", async () => {
     const handle: TerminalSessionHandle = {
       id: "session-1",

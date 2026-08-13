@@ -24,10 +24,10 @@ const restoreTerminalSelectionFromLauncher = (ctx: WorkbenchCoreContributionCont
   const secondary = ctx.layout.getLayout().regions.secondary;
   if (secondary.activeWidgetId !== launcherInstanceId) return;
 
-  const terminal = [...secondary.widgets]
+  const fallback = [...secondary.widgets]
     .reverse()
-    .find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
-  if (terminal) ctx.layout.setRegionActiveWidget("secondary", terminal.widgetId);
+    .find((placement) => placement.contributionId !== WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+  if (fallback) ctx.layout.setRegionActiveWidget("secondary", fallback.widgetId);
 };
 
 const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
@@ -145,6 +145,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         rendererId: LAUNCHER_RENDERER_ID,
         regionSize: TERMINAL_PANEL_SIZE,
       }),
+      ctx.layout.onDidChangePersistenceScope(() => ensureTerminalLauncher(ctx)),
       ctx.commands.registerCommand(
         {
           id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
