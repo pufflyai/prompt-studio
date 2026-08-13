@@ -120,7 +120,7 @@ const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry, force: boole
   if (typeof entry !== "string") return entry;
 
   const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
-  if (existsSync(localSource)) return { source: localSource, installName: entry, force, skipInstall: true };
+  if (existsSync(localSource)) return { source: localSource, installName: entry, force };
 
   const bundledSource = await extractEmbeddedDefaultExtension(entry);
   if (!bundledSource) return entry;
