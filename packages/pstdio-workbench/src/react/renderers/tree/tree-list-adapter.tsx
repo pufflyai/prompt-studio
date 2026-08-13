@@ -93,7 +93,8 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   return selectedNodeId;
 };
 
-const canVirtualizeTreeNode = (node: TreeListNode) => node.isContainer !== true && (node.children ?? []).length === 0;
+const canVirtualizeTreeNode = (node: TreeListNode) =>
+  node.inlineInput === undefined && node.isContainer !== true && (node.children ?? []).length === 0;
 
 export const canVirtualizeTreeSections = (sections: TreeListSection[]) =>
   sections.every((section) => section.nodes.every(canVirtualizeTreeNode));
@@ -234,6 +235,8 @@ const toTreeListNode = (
     iconColor: node.iconColor,
     disabled: node.disabled,
     rowVariant: node.rowVariant,
+    inlineInput: node.inlineInput,
+    showContextMenuTrigger: node.showContextMenuTrigger,
     canHide: node.canHide,
     canReorder: node.canReorder,
     hiddenByDefault: node.hiddenByDefault,

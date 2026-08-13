@@ -31,6 +31,14 @@ export interface TreeAction {
 
 export type TreeNodeRowVariant = "empty-state";
 
+export interface TreeNodeInlineInput {
+  ariaLabel: string;
+  defaultValue?: string;
+  placeholder?: string;
+  onCommit(value: string): Promise<void> | void;
+  onCancel?(): void;
+}
+
 export interface TreeNode {
   id: string;
   label: string;
@@ -44,11 +52,13 @@ export interface TreeNode {
   target?: NavigationTarget;
   /** Visual row variant for non-data rows such as placeholders. */
   rowVariant?: TreeNodeRowVariant;
+  inlineInput?: TreeNodeInlineInput;
   actions?: TreeAction[];
   contextMenuActions?: TreeAction[];
   contextMenuPath?: MenuPath;
   menuPath?: MenuPath;
   menuPlacement?: "top-start" | "top-end" | "bottom-start" | "bottom-end" | "right-start" | "left-start";
+  showContextMenuTrigger?: boolean;
   collapsible?: boolean;
   disabled?: boolean;
   children?: TreeNode[];

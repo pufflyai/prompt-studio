@@ -118,6 +118,8 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();
     await page.waitForTimeout(900);
+    const editorElement = await editor.elementHandle();
+    expect(editorElement).not.toBeNull();
     expect(fileWrites).toEqual([]);
     expect(readFileSync(join(worktreePath, "README.md"), "utf8")).toBe("Workspace files e2e\n");
 
@@ -129,6 +131,8 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await page.keyboard.insertText(appendedReadme);
     expect((await saveResponse).ok()).toBe(true);
     await expect.poll(() => readFileSync(join(worktreePath, "README.md"), "utf8")).toContain(appendedReadme);
+    await page.waitForTimeout(900);
+    expect(await editorElement?.evaluate((element) => element.isConnected)).toBe(true);
 
     await diffsTab.click();
     const diffViewer = page.getByTestId("diff-viewer");
@@ -151,20 +155,27 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
 
     await search.fill("");
     const filesTree = page.getByRole("region", { name: "Files" });
+    await assets.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "New file" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toBeVisible();
+    await page.keyboard.press("Escape");
     await filesTree.getByText("Files", { exact: true }).hover();
     await filesTree.getByRole("button", { name: "New file" }).first().click();
-    const createDialog = page.getByRole("dialog").filter({ hasText: "New file" });
-    await createDialog.getByRole("textbox").fill("created.md");
+    await expect(page.getByRole("dialog").filter({ hasText: "New file" })).toHaveCount(0);
+    const newFileInput = filesTree.getByRole("textbox", { name: "New file name" });
+    await newFileInput.fill("created.md");
     const createResponse = page.waitForResponse(
       (response) => response.url().includes("/file?path=created.md") && response.request().method() === "POST",
     );
-    await createDialog.getByRole("button", { name: "Create" }).click();
+    await newFileInput.press("Enter");
     expect((await createResponse).status()).toBe(201);
     await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(true);
     await expect(page.locator(".monaco-editor")).toBeVisible();
 
     const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();
+    await expect(createdFile.getByRole("button", { name: "Resource actions" })).toHaveCount(0);
     await createdFile.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toBeVisible();
     await page.getByRole("menuitem", { name: "Delete file" }).click();
     const deleteDialog = page.getByRole("dialog").filter({ hasText: "Delete file" });
     await expect(deleteDialog.getByText("Delete created.md? This action cannot be undone.")).toBeVisible();

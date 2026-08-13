@@ -117,3 +117,20 @@ export const deleteWorkspaceFileRoute = createRoute({
     415: errorResponse,
   },
 });
+
+export const revealWorkspaceFileRoute = createRoute({
+  method: "post",
+  path: "/workspaces/{id}/reveal",
+  description: "Reveal an existing workspace file or directory in the system file manager.",
+  tags: ["Workspaces"],
+  request: {
+    params: z.object({ id: z.string() }).strict(),
+    query: workspaceFilePathQuerySchema,
+  },
+  responses: {
+    204: { description: "Workspace entry revealed." },
+    400: errorResponse,
+    404: errorResponse,
+    415: errorResponse,
+  },
+});

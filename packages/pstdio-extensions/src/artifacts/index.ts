@@ -14,5 +14,6 @@ export {
   WorkspaceFileAccessError,
   type WorkspaceMountEntry,
   type WorkspaceMountFile,
+  type WorkspaceMountResolvedEntry,
   type WorkspaceMountSearchResult,
 } from "./workspace-file-access";

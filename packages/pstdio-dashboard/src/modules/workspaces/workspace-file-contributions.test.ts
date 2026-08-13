@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createWorkbenchCore, type ResourceRef, type TreeNode } from "@pstdio/workbench";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -115,8 +115,13 @@ describe("workspace file contributions", () => {
       .getLayout()
       .regions.main.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.workspaceFiles)?.resource;
     const fileRenderer = workbench.renderers.getFileRenderer(dashboardWidgetIds.workspaceFileRenderer);
+    const fileRendererRefreshes: string[] = [];
+    const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
+      fileRendererRefreshes.push(event.fileRendererId);
+    });
     const loaded = await fileRenderer?.load(opened);
     await fileRenderer?.save?.(opened, "# Updated");
+    refreshSubscription.dispose();
 
     expect(opened?.uri).toBe(workspace.uri);
     expect(opened?.metadata?.workspaceFilePath).toBe("README.md");
@@ -124,13 +129,15 @@ describe("workspace file contributions", () => {
     expect(calls[0]?.url).toContain("/v1/workspaces/workspace-1/files?query=read&limit=500");
     expect(calls.some((call) => call.url.includes("/file?path=README.md") && call.method === "GET")).toBe(true);
     expect(calls.some((call) => call.method === "PUT" && call.body === '{"content":"# Updated"}')).toBe(true);
+    expect(fileRendererRefreshes).toEqual([]);
   });
 
-  test("creates a file from the tree and opens delete confirmation for file nodes", async () => {
+  test("creates inline and keeps file and folder operations in their context menus", async () => {
     const calls: Array<{ url: string; method: string; body?: string }> = [];
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
+      if (init?.method === "POST" && url.includes("/reveal?")) return new Response(null, { status: 204 });
       if (init?.method === "POST") {
         return new Response(
           JSON.stringify({
@@ -149,7 +156,10 @@ describe("workspace file contributions", () => {
       return jsonResponse({
         workspace_id: "workspace-1",
         path: "",
-        entries: [{ path: "README.md", name: "README.md", type: "file", size: 8 }],
+        entries: [
+          { path: "docs", name: "docs", type: "directory" },
+          { path: "README.md", name: "README.md", type: "file", size: 8 },
+        ],
         truncated: false,
       });
     });
@@ -162,10 +172,18 @@ describe("workspace file contributions", () => {
 
     const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const createAction = sections[0]?.actions?.find((action) => action.id === "workspace-file.create");
-    expect(createAction?.params).toEqual({
-      path: expect.objectContaining({ type: "text", label: "File path", required: true }),
+    expect(createAction?.params).toBeUndefined();
+    await createAction?.run?.();
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+    const creatingSections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, {
+      resource: workspace,
     });
-    await createAction?.run?.({ path: "notes.md" });
+    const inlineNode = creatingSections[0]?.nodes.find((node) => node.id === "workspace-file:new:root") as
+      | (TreeNode & { inlineInput?: { onCommit(value: string): Promise<void> | void } })
+      | undefined;
+    expect(inlineNode?.inlineInput).toEqual(expect.objectContaining({ ariaLabel: "New file name" }));
+    await inlineNode?.inlineInput?.onCommit("notes.md");
 
     const opened = workbench.layout
       .getLayout()
@@ -173,7 +191,19 @@ describe("workspace file contributions", () => {
     expect(opened?.metadata?.workspaceFilePath).toBe("notes.md");
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
 
-    const deleteAction = sections[0]?.nodes[0]?.actions?.find((action) => action.id === "workspace-file.delete");
+    const folder = sections[0]?.nodes.find((node) => node.id === "docs");
+    expect(folder?.actions).toBeUndefined();
+    expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual(["New file", "Reveal in Finder"]);
+
+    const file = sections[0]?.nodes.find((node) => node.id === "README.md");
+    expect(file?.actions).toBeUndefined();
+    expect(file?.contextMenuActions?.map((action) => action.label)).toEqual(["Reveal in Finder", "Delete file"]);
+    expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
+
+    await file?.contextMenuActions?.find((action) => action.id === "workspace-file.reveal")?.run?.();
+    expect(calls.some((call) => call.method === "POST" && call.url.includes("/reveal?path=README.md"))).toBe(true);
+
+    const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-file.delete");
     await deleteAction?.run?.();
     const confirmation = workbench.layout
       .getLayout()

@@ -3,6 +3,7 @@ import { Stack } from "@chakra-ui/react";
 import type { FocusEventHandler } from "react";
 import { ListRow } from "../list-row/list-row";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from "./tree-list.types";
+import { TreeListInlineInputRow } from "./tree-list-inline-input";
 import { hasExpandableChildren, isActiveNode, isInList, isNavigableNode } from "./tree-list-model";
 
 type TreeListRowVariant = "compact" | "tree";
@@ -38,6 +39,10 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     onToggleNode,
   } = props;
 
+  if (node.inlineInput) {
+    return <TreeListInlineInputRow input={node.inlineInput} icon={node.icon} level={level} />;
+  }
+
   const hasChildren = hasExpandableChildren(node);
   const expanded = hasChildren && isInList(node.id, expandedNodeIds);
   const isActive = isActiveNode(node.id, activeNodeId);
@@ -67,7 +72,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
         : undefined,
     })),
   };
-  const { rowVariant: nodeRowVariant, ...listRowItem } = rowItem;
+  const { inlineInput: _inlineInput, rowVariant: nodeRowVariant, ...listRowItem } = rowItem;
 
   const rowProps = {
     ...listRowItem,

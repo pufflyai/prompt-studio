@@ -81,11 +81,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const resource = props.placement?.resource;
   const sectionNavigation = getFileSectionNavigation(resource);
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
-  const loadKey = createFileRendererLoadKey({
-    fileRendererId: contribution.id,
-    resourceUri: resource?.uri,
-    resourceMetadata: resource?.metadata,
-  });
+  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
@@ -127,9 +123,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   // Contribution refresh re-registers an identical contribution as a new
   // object, and a save that changes the document title produces a new resource
-  // object with a fresh label. Identity is the contribution id plus the
-  // resource URI (both inside loadKey); callbacks read the latest objects
-  // through refs so neither replacement resets an open editor.
+  // object with a fresh label. The load key uses resource values instead of
+  // object identity, while callbacks read the latest objects through refs.
   const contributionRef = useRef(contribution);
   const resourceRef = useRef(resource);
   useEffect(() => {

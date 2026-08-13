@@ -20,6 +20,11 @@ export interface WorkspaceMountFile {
   size: number;
 }
 
+export interface WorkspaceMountResolvedEntry {
+  absolutePath: string;
+  type: "file" | "directory";
+}
+
 export class WorkspaceFileAccessError extends Error {
   readonly code: "already-exists" | "not-found" | "not-file" | "too-large";
 
@@ -75,6 +80,24 @@ const requireExistingFile = async (safeRoot: SafeFileRoot, path: string) => {
     throw new WorkspaceFileAccessError(`Workspace file is not a regular file: ${path}`, "not-file");
   }
   return { fileStats, resolved };
+};
+
+const requireExistingEntry = async (safeRoot: SafeFileRoot, path: string) => {
+  let resolved: Awaited<ReturnType<SafeFileRoot["resolveExisting"]>>;
+  try {
+    resolved = await safeRoot.resolveExisting(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new WorkspaceFileAccessError(`Workspace entry not found: ${path}`, "not-found");
+    }
+    throw error;
+  }
+
+  const entryStats = await stat(resolved.realPath);
+  if (!entryStats.isFile() && !entryStats.isDirectory()) {
+    throw new WorkspaceFileAccessError(`Workspace entry is not a regular file or directory: ${path}`, "not-file");
+  }
+  return { entryStats, resolved };
 };
 
 const fileSize = (value: string, maxBytes: number, path: string) => {
@@ -133,6 +156,11 @@ async function searchWorkspaceDirectory(context: WorkspaceSearchContext, directo
 }
 
 export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
+  async resolveEntryPath(path: string): Promise<WorkspaceMountResolvedEntry> {
+    const { entryStats, resolved } = await requireExistingEntry(safeRoot, path);
+    return { absolutePath: resolved.realPath, type: entryStats.isDirectory() ? "directory" : "file" };
+  },
+
   async listEntries(path = "") {
     const directory = await safeRoot.resolveExisting(path);
     const directoryStats = await stat(directory.operationPath);

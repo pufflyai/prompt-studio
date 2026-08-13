@@ -372,6 +372,7 @@ export type {
   TreeAction,
   TreeContext,
   TreeNode,
+  TreeNodeInlineInput,
   TreeRendererContribution,
   TreeRendererImplementation,
   TreeRendererPersistenceAdapter,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorkspaceFilesMount } from "./artifact-mount";
@@ -109,6 +109,14 @@ describe("createWorkspaceFilesMount browsing", () => {
     const file = await mount.readFile("notes.txt", 16);
     expect(new TextDecoder().decode(file.bytes)).toBe("before");
     expect(file.size).toBe(6);
+    expect(await mount.resolveEntryPath("docs")).toEqual({
+      absolutePath: realpathSync(join(root, "docs")),
+      type: "directory",
+    });
+    expect(await mount.resolveEntryPath("notes.txt")).toEqual({
+      absolutePath: realpathSync(join(root, "notes.txt")),
+      type: "file",
+    });
 
     await mount.writeTextFile("notes.txt", "after", 16);
     expect(readFileSync(join(root, "notes.txt"), "utf8")).toBe("after");

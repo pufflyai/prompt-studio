@@ -15,6 +15,7 @@ export {
   WorkspaceFileAccessError,
   type WorkspaceMountEntry,
   type WorkspaceMountFile,
+  type WorkspaceMountResolvedEntry,
   type WorkspaceMountSearchResult,
 } from "./artifacts";
 

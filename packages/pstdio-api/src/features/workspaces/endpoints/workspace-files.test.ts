@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
@@ -14,6 +14,8 @@ import {
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
   listWorkspaceFilesRoute,
+  revealWorkspaceFileHandler,
+  revealWorkspaceFileRoute,
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./workspace-files";
@@ -26,6 +28,7 @@ let repoRoot: string;
 let outside: string;
 const workspaces = new Map<string, { id: string; project_id: string; worktree_path: string | null }>();
 const reposByProject = new Map<string, Array<{ path: string }>>();
+const revealedEntries: Array<{ absolutePath: string; type: "file" | "directory" }> = [];
 
 const deps = {
   workspaceService: {
@@ -45,6 +48,7 @@ beforeEach(() => {
   outside = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-outside-"));
   workspaces.clear();
   reposByProject.clear();
+  revealedEntries.length = 0;
   workspaces.set("workspace-1", { id: "workspace-1", project_id: "project-1", worktree_path: root });
   workspaces.set("default", { id: "default", project_id: "project-1", worktree_path: null });
   workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", worktree_path: null });
@@ -55,6 +59,12 @@ beforeEach(() => {
   app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   app.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
   app.openapi(deleteWorkspaceFileRoute, deleteWorkspaceFileHandler(deps));
+  app.openapi(
+    revealWorkspaceFileRoute,
+    revealWorkspaceFileHandler(deps, async (entry) => {
+      revealedEntries.push(entry);
+    }),
+  );
 });
 
 afterEach(() => {
@@ -244,5 +254,28 @@ describe("POST and DELETE /workspaces/:id/file", () => {
     expect(missingParent.status).toBe(404);
     expect((await app.request(requestPath("workspace-1", "docs"), { method: "DELETE" })).status).toBe(415);
     expect((await app.request(requestPath("workspace-1", "../outside.md"), { method: "DELETE" })).status).toBe(400);
+  });
+});
+
+describe("POST /workspaces/:id/reveal", () => {
+  test("resolves files and directories inside the workspace before revealing them", async () => {
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "docs/readme.md"), "readme");
+
+    const directoryResponse = await app.request("/workspaces/workspace-1/reveal?path=docs", { method: "POST" });
+    const fileResponse = await app.request("/workspaces/workspace-1/reveal?path=docs%2Freadme.md", { method: "POST" });
+
+    expect(directoryResponse.status).toBe(204);
+    expect(fileResponse.status).toBe(204);
+    expect(revealedEntries).toEqual([
+      { absolutePath: realpathSync(join(root, "docs")), type: "directory" },
+      { absolutePath: realpathSync(join(root, "docs/readme.md")), type: "file" },
+    ]);
+  });
+
+  test("rejects missing and unsafe entries before invoking the file manager", async () => {
+    expect((await app.request("/workspaces/workspace-1/reveal?path=missing.md", { method: "POST" })).status).toBe(404);
+    expect((await app.request("/workspaces/workspace-1/reveal?path=..%2Fsecret", { method: "POST" })).status).toBe(400);
+    expect(revealedEntries).toEqual([]);
   });
 });

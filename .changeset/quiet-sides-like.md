@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add safe workspace file browsing, creation, deletion, and Monaco editing.
+Add safe workspace file browsing, inline file actions, stable Monaco editing, diffs, and file-manager reveal.

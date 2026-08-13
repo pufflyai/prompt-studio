@@ -1,11 +1,13 @@
 import { createWorkspaceFilesMount, WorkspaceFileAccessError, type WorkspaceMountEntry } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
+import { revealWorkspaceEntry } from "./reveal-workspace-entry";
 import type {
   createWorkspaceFileRoute,
   deleteWorkspaceFileRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
+  revealWorkspaceFileRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -14,6 +16,7 @@ export {
   deleteWorkspaceFileRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
+  revealWorkspaceFileRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -250,6 +253,26 @@ export const deleteWorkspaceFileHandler = (
 
     try {
       await context.mount.deleteFile(path);
+      return c.body(null, 204);
+    } catch (error) {
+      const mapped = mapFileError(error);
+      return c.json({ error: mapped.message }, mapped.status);
+    }
+  };
+};
+
+export const revealWorkspaceFileHandler = (
+  deps: WorkspacesRouteDeps,
+  reveal: typeof revealWorkspaceEntry = revealWorkspaceEntry,
+): AppRouteHandler<typeof revealWorkspaceFileRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { path } = c.req.valid("query");
+    const context = await resolveWorkspaceMount(deps, id);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
+
+    try {
+      await reveal(await context.mount.resolveEntryPath(path));
       return c.body(null, 204);
     } catch (error) {
       const mapped = mapFileError(error);
