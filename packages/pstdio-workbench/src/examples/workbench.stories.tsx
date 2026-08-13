@@ -1,9 +1,6 @@
-import { Box, Text } from "@chakra-ui/react";
-import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
-import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
@@ -11,6 +8,7 @@ import { createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
+import { createHostTerminalWorkbench, createRestoredHostTerminalWorkbench } from "./host-terminal-story";
 import { createKanbanRendererStoryModule } from "./kanban-renderer/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
@@ -99,52 +97,8 @@ previewTabsWorkbench.registerModule(createPreviewTabsExampleModule());
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
 const treeNavigationWorkbench = createTreeNavigationWorkbench();
-const hostTerminalNotesWidgetId = "host-terminal-story.notes";
-const hostTerminalNotesRendererId = "host-terminal-story.notes.renderer";
-
-// Host-owned terminal surface driven by a deterministic scripted bridge — the
-// panel chrome comes from the workbench `secondary` region, the session registry
-// from `workbench.terminal`.
-const hostTerminalWorkbench = createWorkbenchCore();
-hostTerminalWorkbench.registerModule({
-  id: "host-terminal-story",
-  activate(ctx) {
-    const scriptedTerminal = createScriptedTerminalBridge({
-      initial: [{ data: "workbench host terminal (scripted)\r\n$ " }],
-    });
-    ctx.terminal.setSessionOpener((request) => scriptedTerminal.openSession(request));
-    const terminalDisposables = createWorkbenchTerminalModule().activate(ctx);
-    const notesWidget = ctx.layout.registerPanel({
-      id: hostTerminalNotesWidgetId,
-      title: "notes.md",
-      region: "secondary",
-      singleton: false,
-      closable: true,
-      rendererId: hostTerminalNotesRendererId,
-    });
-    const notesRenderer = ctx.renderers.registerRenderer({
-      id: hostTerminalNotesRendererId,
-      render: () => (
-        <Box h="full" w="full" p="md" bg="bg" color="fg">
-          <Text textStyle="label/S/medium">notes.md</Text>
-          <Text mt="sm" textStyle="paragraph/S/regular" color="fg.muted">
-            build: ready
-            <br />
-            owner: workbench
-          </Text>
-        </Box>
-      ),
-    });
-    openWorkbenchTerminal(ctx);
-    openWorkbenchTerminal(ctx);
-    ctx.layout.openPanel(hostTerminalNotesWidgetId, { title: "notes.md" });
-    return [
-      ...(Array.isArray(terminalDisposables) ? terminalDisposables : terminalDisposables ? [terminalDisposables] : []),
-      notesWidget,
-      notesRenderer,
-    ];
-  },
-});
+const hostTerminalWorkbench = createHostTerminalWorkbench();
+const restoredHostTerminalWorkbench = createRestoredHostTerminalWorkbench();
 
 const findOption = async (canvasElement: HTMLElement, name: string) => {
   const canvas = within(canvasElement);
@@ -302,6 +256,21 @@ export const HostTerminal: Story = {
 
     await userEvent.click(secondTerminalTab);
     await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+// A persisted hidden launcher is never shown as the selected Secondary Panel tab.
+// The latest real tab is restored when the workbench enters the saved layout scope.
+export const RestoredHostTerminal: Story = {
+  render: () => <WorkbenchStory workbench={restoredHostTerminalWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const notesTab = await canvas.findByRole("tab", { name: /notes\.md/ });
+    const terminalTab = await canvas.findByRole("tab", { name: /Terminal 1/ });
+
+    await expect(notesTab).toHaveAttribute("aria-selected", "true");
+    await expect(terminalTab).toHaveAttribute("aria-selected", "false");
+    await expect(await canvas.findByText("build: ready")).toBeVisible();
   },
 };
 
