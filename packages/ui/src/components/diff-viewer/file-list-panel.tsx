@@ -104,7 +104,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden" bg="bg">
-      <Header variant="input" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
+      <Header flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
         <InputGroup startElement={<Search size={14} />}>
           <Input
             size="sm"

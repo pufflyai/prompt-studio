@@ -14,6 +14,8 @@ import {
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
   listWorkspaceFilesRoute,
+  moveWorkspaceFileHandler,
+  moveWorkspaceFileRoute,
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./workspace-files";
@@ -56,6 +58,7 @@ beforeEach(() => {
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   app.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
+  app.openapi(moveWorkspaceFileRoute, moveWorkspaceFileHandler(deps));
   app.openapi(deleteWorkspaceEntryRoute, deleteWorkspaceEntryHandler(deps));
 });
 
@@ -93,7 +96,7 @@ describe("GET /workspaces/:id/files", () => {
     const searchResponse = await app.request("/workspaces/workspace-1/files?query=match&limit=2");
     expect(searchResponse.status).toBe(200);
     const search = (await searchResponse.json()) as { entries: Array<{ path: string }>; truncated: boolean };
-    expect(search.entries.map((entry) => entry.path)).toEqual(["docs/match-notes.md", "match-dir"]);
+    expect(search.entries.map((entry) => entry.path)).toEqual(["match-dir", "docs/match-notes.md"]);
     expect(search.truncated).toBe(true);
   });
 
@@ -224,6 +227,29 @@ describe("POST /workspaces/:id/file and DELETE /workspaces/:id/entry", () => {
     const deleteResponse = await app.request(entryPath("workspace-1", "docs/new.md"), { method: "DELETE" });
     expect(deleteResponse.status).toBe(204);
     expect(() => readFileSync(join(root, "docs/new.md"), "utf8")).toThrow();
+  });
+
+  test("moves a file into a directory without overwriting the destination", async () => {
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "notes.md"), "notes");
+    writeFileSync(join(root, "docs/existing.md"), "keep");
+
+    const moveResponse = await app.request(requestPath("workspace-1", "notes.md"), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ destination_path: "docs/notes.md" }),
+    });
+    expect(moveResponse.status).toBe(204);
+    expect(existsSync(join(root, "notes.md"))).toBe(false);
+    expect(readFileSync(join(root, "docs/notes.md"), "utf8")).toBe("notes");
+
+    const duplicateResponse = await app.request(requestPath("workspace-1", "docs/notes.md"), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ destination_path: "docs/existing.md" }),
+    });
+    expect(duplicateResponse.status).toBe(409);
+    expect(readFileSync(join(root, "docs/existing.md"), "utf8")).toBe("keep");
   });
 
   test("rejects duplicate, missing-parent, and unsafe targets and deletes directories", async () => {

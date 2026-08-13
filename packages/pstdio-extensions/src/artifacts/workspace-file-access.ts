@@ -1,4 +1,4 @@
-import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { link, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
 import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
 
@@ -38,7 +38,17 @@ export class WorkspaceFileAccessError extends Error {
 const sortedDirectoryEntries = async (directory: string) =>
   (await readdir(directory, { withFileTypes: true }))
     .filter((entry) => entry.name !== ".git")
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => {
+      if (left.isDirectory() !== right.isDirectory()) return left.isDirectory() ? -1 : 1;
+      return left.name.localeCompare(right.name);
+    });
+
+const rejectsGitMetadata = (path: string) => path === ".git" || path.startsWith(".git/");
+
+const compareWorkspaceEntries = (left: WorkspaceMountEntry, right: WorkspaceMountEntry) => {
+  if (left.type !== right.type) return left.type === "directory" ? -1 : 1;
+  return left.path.localeCompare(right.path);
+};
 
 const workspaceEntry = async (
   safeRoot: SafeFileRoot,
@@ -184,7 +194,7 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
       },
       path,
     );
-    return { entries: matches.slice(0, limit), truncated: matches.length > limit };
+    return { entries: matches.sort(compareWorkspaceEntries).slice(0, limit), truncated: matches.length > limit };
   },
 
   async readFile(path: string, maxBytes: number): Promise<WorkspaceMountFile> {
@@ -220,9 +230,31 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
     }
   },
 
+  async moveFile(sourcePath: string, destinationPath: string) {
+    const normalizedSource = normalizeMountRelativePath(sourcePath);
+    const normalizedDestination = await requireExistingParent(safeRoot, destinationPath);
+    if (rejectsGitMetadata(normalizedSource) || rejectsGitMetadata(normalizedDestination)) {
+      throw new WorkspaceFileAccessError("Git metadata cannot be moved.", "not-file");
+    }
+    const { resolved: source } = await requireExistingFile(safeRoot, normalizedSource);
+    if (await safeRoot.tryResolveExisting(normalizedDestination)) {
+      throw new WorkspaceFileAccessError(`Workspace file already exists: ${destinationPath}`, "already-exists");
+    }
+    const destination = await safeRoot.resolveForWrite(normalizedDestination);
+    try {
+      await link(source.operationPath, destination.operationPath);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new WorkspaceFileAccessError(`Workspace file already exists: ${destinationPath}`, "already-exists");
+      }
+      throw error;
+    }
+    await unlink(source.operationPath);
+  },
+
   async deleteEntry(path: string) {
     const normalizedPath = normalizeMountRelativePath(path);
-    if (normalizedPath === ".git" || normalizedPath.startsWith(".git/")) {
+    if (rejectsGitMetadata(normalizedPath)) {
       throw new WorkspaceFileAccessError("Git metadata cannot be deleted.", "not-file");
     }
     const { resolved } = await requireExistingEntry(safeRoot, normalizedPath);

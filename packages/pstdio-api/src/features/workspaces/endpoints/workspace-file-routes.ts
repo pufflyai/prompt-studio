@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import {
   listWorkspaceFilesQuerySchema,
+  moveWorkspaceFileBodySchema,
   notFoundResponseSchema,
   workspaceFileContentSchema,
   workspaceFilePathQuerySchema,
@@ -96,6 +97,25 @@ export const createWorkspaceFileRoute = createRoute({
     404: errorResponse,
     409: errorResponse,
     413: errorResponse,
+    415: errorResponse,
+  },
+});
+
+export const moveWorkspaceFileRoute = createRoute({
+  method: "patch",
+  path: "/workspaces/{id}/file",
+  description: "Move an existing workspace file.",
+  tags: ["Workspaces"],
+  request: {
+    params: z.object({ id: z.string() }).strict(),
+    query: workspaceFilePathQuerySchema,
+    body: { content: { "application/json": { schema: moveWorkspaceFileBodySchema } }, required: true },
+  },
+  responses: {
+    204: { description: "Workspace file moved." },
+    400: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
     415: errorResponse,
   },
 });

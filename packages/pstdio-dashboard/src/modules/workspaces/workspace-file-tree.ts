@@ -109,6 +109,7 @@ export interface WorkspaceFileTreeActions {
   beginCreate(resource: ResourceRef, parentPath: string): void;
   cancelCreate(): void;
   commitCreate(resource: ResourceRef, parentPath: string, name: string): Promise<void>;
+  moveFile(resource: ResourceRef, sourcePath: string, parentPath: string): Promise<void>;
 }
 
 const inlineCreateNode = (resource: ResourceRef, parentPath: string, actions: WorkspaceFileTreeActions): TreeNode => ({
@@ -139,6 +140,7 @@ const fileNode = (
       id: entry.path,
       label: entry.name,
       collapsible: true,
+      canDrop: true,
       contextMenuActions: [createAction, ...copyActions, ...revealAction, deleteAction],
       showContextMenuTrigger: false,
     };
@@ -152,6 +154,7 @@ const fileNode = (
     target: { kind: "command", commandId: OPEN_WORKSPACE_FILE_COMMAND, args: { path: entry.path } },
     contextMenuActions: [...copyActions, ...revealAction, deleteAction],
     showContextMenuTrigger: false,
+    canDrag: true,
   };
 };
 

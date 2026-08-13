@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import {
   createWorkspaceInputSchema,
+  moveWorkspaceFileInputSchema,
   renameWorkspaceInputSchema,
   workspaceFileContentSchema,
   workspaceFilesResponseSchema,
@@ -22,6 +23,7 @@ export const listWorkspaceFilesQuerySchema = z
   .strict();
 export const workspaceFilePathQuerySchema = z.object({ path: z.string().min(1) }).strict();
 export const writeWorkspaceFileBodySchema = writeWorkspaceFileInputSchema.strict();
+export const moveWorkspaceFileBodySchema = moveWorkspaceFileInputSchema.strict();
 export { workspaceFileContentSchema, workspaceFilesResponseSchema };
 
 export const uploadStartupLogBodySchema = z.object({ content_base64: z.string() }).strict();

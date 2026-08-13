@@ -35,6 +35,10 @@ export type TreeListNode = ListRowItem & {
   canHide?: boolean;
   /** Opt out of reordering while keeping the node visible in its group. */
   canReorder?: boolean;
+  /** Allow this node to be moved to another tree location. */
+  canDrag?: boolean;
+  /** Allow movable nodes to be dropped on this node. */
+  canDrop?: boolean;
 };
 
 /** Top-level tree section with optional header, actions, empty state, and child nodes. */

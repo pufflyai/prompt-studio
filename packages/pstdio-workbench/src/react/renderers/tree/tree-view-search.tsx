@@ -14,7 +14,7 @@ export const TreeViewSearch = (props: TreeViewSearchProps) => {
   if (!visible) return null;
 
   return (
-    <Header variant="input" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
+    <Header flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
       <InputGroup startElement={<WorkbenchIcon name="search" size={14} />} width="full">
         <Input
           size="sm"

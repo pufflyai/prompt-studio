@@ -3,6 +3,7 @@ import type {
   ListWorkspaceActivityInput,
   ListWorkspaceActivityResponse,
   ListWorkspaceFilesInput,
+  MoveWorkspaceFileInput,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
   WorkspaceFileContent,
@@ -22,6 +23,7 @@ export type WorkspaceClient = {
   createFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
   writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
+  moveFile(workspaceId: string, path: string, destinationPath: string): Promise<void>;
   deleteEntry(workspaceId: string, path: string): Promise<void>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
@@ -52,6 +54,14 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
       method: "PUT",
       body: input,
+    });
+  },
+  moveFile: (workspaceId, path, destinationPath) => {
+    const params = new URLSearchParams({ path });
+    const body: MoveWorkspaceFileInput = { destination_path: destinationPath };
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, {
+      method: "PATCH",
+      body,
     });
   },
   deleteEntry: (workspaceId, path) => {

@@ -75,6 +75,10 @@ export const writeWorkspaceFileInputSchema = z.object({
   content: z.string(),
 });
 
+export const moveWorkspaceFileInputSchema = z.object({
+  destination_path: z.string().min(1),
+});
+
 export const listWorkspaceFilesInputSchema = z.object({
   path: z.string().optional(),
   query: z.string().optional(),
@@ -93,6 +97,7 @@ export type WorkspaceFileEntry = z.infer<typeof workspaceFileEntrySchema>;
 export type WorkspaceFilesResponse = z.infer<typeof workspaceFilesResponseSchema>;
 export type WorkspaceFileContent = z.infer<typeof workspaceFileContentSchema>;
 export type WriteWorkspaceFileInput = z.infer<typeof writeWorkspaceFileInputSchema>;
+export type MoveWorkspaceFileInput = z.infer<typeof moveWorkspaceFileInputSchema>;
 export type ListWorkspaceFilesInput = z.infer<typeof listWorkspaceFilesInputSchema>;
 export type ListWorkspaceActivityInput = z.infer<typeof listWorkspaceActivityInputSchema>;
 export type ListWorkspaceActivityResponse = z.infer<typeof listWorkspaceActivityResponseSchema>;

@@ -49,6 +49,36 @@ const openWorkspace = async (page: Page, shorthand: string) => {
   await row.getByText(shorthand, { exact: true }).click();
 };
 
+const expectStandardFileSearch = async (search: Locator) => {
+  const height = await search.evaluate((element) => element.closest("header")?.getBoundingClientRect().height);
+  expect(height).toBe(40);
+  await expect(search).toHaveCSS("border-top-width", "0px");
+  await expect(search).toHaveCSS("border-radius", "0px");
+  await expect(search).toHaveCSS("margin-left", "0px");
+  await expect(search).toHaveCSS("margin-right", "0px");
+};
+
+const expectFoldersBeforeFiles = async (filesTree: Locator) => {
+  const rootPaths = await filesTree
+    .getByRole("option")
+    .evaluateAll((rows) =>
+      rows
+        .filter((row) => row.getAttribute("aria-level") === "1")
+        .map((row) => row.getAttribute("data-tree-list-node-id")),
+    );
+  expect(rootPaths.indexOf("zzz-folder")).toBeLessThan(rootPaths.indexOf("LICENSE"));
+};
+
+const moveFileToFolder = async (page: Page, filesTree: Locator, fileName: string, folder: Locator) => {
+  const source = filesTree.getByRole("option", { name: fileName }).locator("xpath=..");
+  await expect(source).toHaveAttribute("draggable", "true");
+  const response = page.waitForResponse(
+    (candidate) => candidate.url().includes(`/file?path=${fileName}`) && candidate.request().method() === "PATCH",
+  );
+  await source.dragTo(folder.locator("xpath=.."));
+  expect((await response).status()).toBe(204);
+};
+
 test("PS-118 browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -61,7 +91,9 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
 
   try {
     mkdirSync(join(repoRoot, "assets"));
+    mkdirSync(join(repoRoot, "zzz-folder"));
     writeFileSync(join(repoRoot, "LICENSE"), "Prompt Studio test license\n");
+    writeFileSync(join(repoRoot, "zzz-folder", "keep.txt"), "folder ordering\n");
     writeFileSync(
       join(repoRoot, "assets", "logo.png"),
       Buffer.from(
@@ -69,7 +101,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
         "base64",
       ),
     );
-    execSync("git add LICENSE assets/logo.png", { cwd: repoRoot, stdio: "pipe" });
+    execSync("git add LICENSE assets/logo.png zzz-folder/keep.txt", { cwd: repoRoot, stdio: "pipe" });
     execSync('git commit -m "add browse fixtures"', { cwd: repoRoot, stdio: "pipe" });
 
     const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-118-repo", repoRoot);
@@ -112,9 +144,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await expect(page.getByTestId("diff-viewer")).toBeVisible();
     await expect(page.getByText("Changed files", { exact: true })).toHaveCount(0);
     const changesSearch = page.getByRole("textbox", { name: "Search files" });
-    const changesSearchHeaderHeight = await changesSearch.evaluate(
-      (element) => element.closest("header")?.getBoundingClientRect().height,
-    );
+    await expectStandardFileSearch(changesSearch);
     const changesSeparator = page.getByRole("separator", { name: "Resize file list panel" });
     await expect(changesSeparator).toBeVisible();
     const changesSeparatorColors = await getResizeSeparatorColors(changesSeparator);
@@ -125,19 +155,14 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
 
     await filesTab.click();
     const search = page.getByRole("textbox", { name: "Search files" });
-    const filesSearchHeaderHeight = await search.evaluate(
-      (element) => element.closest("header")?.getBoundingClientRect().height,
-    );
-    expect(changesSearchHeaderHeight).toBe(filesSearchHeaderHeight);
-    await expect(search).toHaveCSS("border-top-width", "0px");
-    await expect(search).toHaveCSS("border-radius", "0px");
-    await expect(search).toHaveCSS("margin-left", "0px");
-    await expect(search).toHaveCSS("margin-right", "0px");
+    await expectStandardFileSearch(search);
     const filesSeparator = page.getByRole("separator", { name: "Resize Main left menu" });
     await expect(filesSeparator).toBeVisible();
     const filesSeparatorColors = await getResizeSeparatorColors(filesSeparator);
     expect(filesSeparatorColors.actual).toBe(filesSeparatorColors.expected);
+    const filesTree = page.getByRole("region", { name: "Files" });
     const assets = page.getByRole("option").filter({ hasText: "assets" }).first();
+    await expectFoldersBeforeFiles(filesTree);
     await expect(assets.locator("svg.lucide-folder")).toHaveCount(0);
     await expect(assets.locator('span[aria-hidden="true"]')).toHaveCount(0);
     await assets.getByText("assets", { exact: true }).click();
@@ -145,7 +170,9 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     const nestedLogo = page.getByRole("option").filter({ hasText: "logo.png" }).first();
     await nestedLogo.getByText("logo.png", { exact: true }).click();
     await expect(page.getByRole("img", { name: "logo.png" })).toBeVisible();
-    await expect(page.getByLabel("File path assets/logo.png")).toBeVisible();
+    const logoPath = page.getByLabel("File path assets/logo.png");
+    await expect(logoPath).toBeVisible();
+    await expect(logoPath.locator("xpath=ancestor::header")).toHaveCSS("border-bottom-width", "0px");
     await expect(assets).toHaveAttribute("aria-expanded", "true");
     await expect(nestedLogo).toBeVisible();
 
@@ -193,7 +220,8 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await expect(page.locator(".monaco-editor")).toBeVisible();
 
     await search.fill("");
-    const filesTree = page.getByRole("region", { name: "Files" });
+    await moveFileToFolder(page, filesTree, "LICENSE", assets);
+    await expect.poll(() => existsSync(join(worktreePath, "assets/LICENSE"))).toBe(true);
     await assets.click({ button: "right" });
     await expect(page.getByRole("menuitem", { name: "New file" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toHaveCount(0);
@@ -217,6 +245,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     expect((await createResponse).status()).toBe(201);
     await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(true);
     await expect(page.locator(".monaco-editor")).toBeVisible();
+    await expect(page.getByText("Created created.md", { exact: true })).toHaveCount(0);
 
     const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();
     await expect(createdFile.getByText("A", { exact: true })).toBeVisible();

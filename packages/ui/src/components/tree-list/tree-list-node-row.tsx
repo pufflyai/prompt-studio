@@ -1,8 +1,9 @@
 import type { StackProps } from "@chakra-ui/react";
 import { Stack } from "@chakra-ui/react";
-import type { FocusEventHandler } from "react";
+import type { FocusEventHandler, DragEvent as ReactDragEvent } from "react";
 import { ListRow } from "../list-row/list-row";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from "./tree-list.types";
+import { readDraggedTreeNodeId, writeDraggedTreeNodeId } from "./tree-list-drag";
 import { TreeListInlineInputRow } from "./tree-list-inline-input";
 import { hasExpandableChildren, isActiveNode, isInList, isNavigableNode } from "./tree-list-model";
 
@@ -21,6 +22,7 @@ interface TreeListNodeRowProps {
   onFocus?: FocusEventHandler<HTMLElement>;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
 }
 
 export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
@@ -37,6 +39,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     onFocus,
     onNavigate,
     onToggleNode,
+    onMoveNode,
   } = props;
 
   if (node.inlineInput) {
@@ -63,6 +66,28 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     node.onActivate?.();
   };
 
+  const handleDragStart = (event: ReactDragEvent<HTMLElement>) => {
+    writeDraggedTreeNodeId(event.dataTransfer, node.id);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    if (!onMoveNode) return;
+    event.stopPropagation();
+    if (!node.canDrop) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (event: ReactDragEvent<HTMLElement>) => {
+    if (!onMoveNode) return;
+    event.stopPropagation();
+    if (!node.canDrop) return;
+    event.preventDefault();
+    const sourceNodeId = readDraggedTreeNodeId(event.dataTransfer);
+    if (sourceNodeId && sourceNodeId !== node.id) onMoveNode(sourceNodeId, node.id);
+  };
+
   const rowItem: TreeListNode = {
     ...node,
     actions: node.actions?.map((action) => ({
@@ -85,6 +110,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     "data-tree-list-focus-id": node.id,
     "aria-level": level + 1,
     "aria-expanded": hasChildren ? expanded : undefined,
+    "data-tree-list-node-id": node.id,
     onFocus,
     onActivate: handleActivate,
     onToggleExpand: () => onToggleNode?.(node.id),
@@ -100,7 +126,16 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     );
 
   return (
-    <Stack gap={nodeGap} w="full" minW="0" maxW="full">
+    <Stack
+      gap={nodeGap}
+      w="full"
+      minW="0"
+      maxW="full"
+      draggable={Boolean(onMoveNode && node.canDrag)}
+      onDragStart={node.canDrag ? handleDragStart : undefined}
+      onDragOver={onMoveNode ? handleDragOver : undefined}
+      onDrop={onMoveNode ? handleDrop : undefined}
+    >
       {row}
     </Stack>
   );

@@ -18,6 +18,7 @@ import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { TreeViewBody } from "./tree-view-body";
+import { createMoveTreeNode } from "./tree-view-move";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
@@ -228,6 +229,15 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
     workbench.renderers.setSectionExpanded(treeViewId, sectionId, !expanded);
   };
+  const moveNode = createMoveTreeNode({
+    workbench,
+    renderer: treeRenderer,
+    resource,
+    viewId,
+    sections: body,
+    childrenByNodeId,
+    onError: onOpenResourceError,
+  });
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
 
@@ -305,6 +315,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             onToggleNode={toggleNode}
             onReorderSections={onReorderSections}
             onReorderNodes={onReorderNodes}
+            onMoveNode={moveNode}
             onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
           />
         </Box>

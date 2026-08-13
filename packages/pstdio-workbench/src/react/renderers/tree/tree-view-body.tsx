@@ -29,6 +29,7 @@ interface TreeViewBodyProps {
   onToggleNode: (nodeId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
 }
 
@@ -49,6 +50,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onToggleNode,
     onReorderSections,
     onReorderNodes,
+    onMoveNode,
     onNavigate,
   } = props;
 
@@ -79,6 +81,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       onToggleNode={onToggleNode}
       onReorderSections={onReorderSections}
       onReorderNodes={onReorderNodes}
+      onMoveNode={onMoveNode}
       onNavigate={onNavigate}
     />
   );

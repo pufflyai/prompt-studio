@@ -7,6 +7,7 @@ import type {
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
+  moveWorkspaceFileRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -15,6 +16,7 @@ export {
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
+  moveWorkspaceFileRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -230,6 +232,24 @@ export const createWorkspaceFileHandler = (
     try {
       await context.mount.createTextFile(path, content, MAX_FILE_BYTES);
       return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 201);
+    } catch (error) {
+      const mapped = mapCreateFileError(error);
+      return c.json({ error: mapped.message }, mapped.status);
+    }
+  };
+};
+
+export const moveWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof moveWorkspaceFileRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { path } = c.req.valid("query");
+    const { destination_path: destinationPath } = c.req.valid("json");
+    const context = await resolveWorkspaceMount(deps, id);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
+
+    try {
+      await context.mount.moveFile(path, destinationPath);
+      return c.body(null, 204);
     } catch (error) {
       const mapped = mapCreateFileError(error);
       return c.json({ error: mapped.message }, mapped.status);

@@ -154,7 +154,9 @@ describe("workspace file contributions", () => {
     expect(calls.some((call) => call.method === "PUT" && call.body === '{"content":"# Updated"}')).toBe(true);
     expect(fileRendererRefreshes).toEqual([]);
   });
+});
 
+describe("workspace file operations", () => {
   test("creates inline and keeps file and folder operations in their context menus", async () => {
     const calls: Array<{ url: string; method: string; body?: string }> = [];
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
@@ -175,6 +177,7 @@ describe("workspace file contributions", () => {
           { status: 201, headers: { "content-type": "application/json" } },
         );
       }
+      if (init?.method === "PATCH") return new Response(null, { status: 204 });
       if (url.includes("/diff-files?")) {
         return jsonResponse({
           workspace_id: "workspace-1",
@@ -218,9 +221,13 @@ describe("workspace file contributions", () => {
       .regions.main.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.workspaceFiles)?.resource;
     expect(opened?.metadata?.workspaceFilePath).toBe("notes.md");
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
+    expect(workbench.notifications.listNotifications()).toEqual([]);
+
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["docs", "README.md"]);
 
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
     expect(folder?.iconElement).toBeUndefined();
+    expect(folder?.canDrop).toBe(true);
     expect(folder?.actions).toBeUndefined();
     expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual([
       "New file",
@@ -231,6 +238,7 @@ describe("workspace file contributions", () => {
 
     const file = sections[0]?.nodes.find((node) => node.id === "README.md");
     expect(file?.iconElement).toBeDefined();
+    expect(file?.canDrag).toBe(true);
     expect(file?.endContent).toMatchObject({ props: { change: "modified" } });
     expect(file?.actions).toBeUndefined();
     expect(file?.contextMenuActions?.map((action) => action.label)).toEqual([
@@ -239,6 +247,16 @@ describe("workspace file contributions", () => {
       "Delete file",
     ]);
     expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
+
+    const treeRenderer = workbench.renderers.getTreeRenderer(dashboardWidgetIds.workspaceFileTree);
+    if (!file || !folder) throw new Error("Expected file and folder nodes.");
+    await treeRenderer?.moveNode?.(file, folder, { resource: workspace });
+    expect(calls).toContainEqual(
+      expect.objectContaining({
+        method: "PATCH",
+        body: '{"destination_path":"docs/README.md"}',
+      }),
+    );
 
     const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete");
     await deleteAction?.run?.();

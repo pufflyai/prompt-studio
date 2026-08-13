@@ -69,6 +69,10 @@ export interface TreeNode {
   canHide?: boolean;
   /** When false, the node stays fixed within its Sidenav group. */
   canReorder?: boolean;
+  /** Allow this node to be moved to another tree location. */
+  canDrag?: boolean;
+  /** Allow movable nodes to be dropped on this node. */
+  canDrop?: boolean;
 }
 
 export interface TreeSectionEmptyState {
@@ -104,6 +108,7 @@ export interface TreeRendererContribution {
   getHeader?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getFooter?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
+  moveNode?(source: TreeNode, target: TreeNode | undefined, ctx: TreeContext): Promise<void> | void;
 }
 
 export interface RegisteredTreeRendererContribution extends TreeRendererContribution, RegisteredContributionMetadata {}

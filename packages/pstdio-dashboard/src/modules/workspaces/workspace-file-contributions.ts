@@ -33,7 +33,29 @@ export const createWorkspaceFile = async (ctx: WorkbenchModuleContext, resource:
   await refreshWorkspaceFiles(ctx, workspaceId);
   ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceFileTree, path);
   await ctx.resources.openResource(workspaceFileResource(resource, path), { replaceActive: true });
-  ctx.notifications.show({ level: "success", title: `Created ${path}` });
+};
+
+const moveWorkspaceFile = async (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  sourcePath: string,
+  parentPath: string,
+) => {
+  const workspaceId = workspaceIdOf(resource);
+  if (!workspaceId) throw new Error("Workspace details are missing.");
+  const fileName = sourcePath.split("/").at(-1);
+  if (!fileName) throw new Error("Workspace file path is missing.");
+  const destinationPath = parentPath ? `${parentPath}/${fileName}` : fileName;
+  if (destinationPath === sourcePath) return;
+  const selected = ctx.renderers.getTreeState(dashboardWidgetIds.workspaceFileTree).selectedNodeId === sourcePath;
+
+  await getApiClient().workspaces.moveFile(workspaceId, sourcePath, destinationPath);
+  dashboardQueryClient.removeQueries({ queryKey: workspaceFileQueryOptions(workspaceId, sourcePath).queryKey });
+  if (parentPath) ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, parentPath, true);
+  await refreshWorkspaceFiles(ctx, workspaceId);
+  if (!selected) return;
+  ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceFileTree, destinationPath);
+  await ctx.resources.openResource(workspaceFileResource(resource, destinationPath), { replaceActive: true });
 };
 
 export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
@@ -86,6 +108,10 @@ const registerWorkspaceFileTree = (
       loadWorkspaceFileEntries(ctx, context, treeActions, pendingCreation(), node.id).then(
         (sections) => sections[0]?.nodes ?? [],
       ),
+    moveNode: (source, target, context) => {
+      if (!context.resource || !source.canDrag || (target && !target.canDrop)) return;
+      return treeActions.moveFile(context.resource, source.id, target?.id ?? "");
+    },
   });
 };
 
@@ -155,6 +181,7 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
         throw error;
       }
     },
+    moveFile: (resource, sourcePath, parentPath) => moveWorkspaceFile(ctx, resource, sourcePath, parentPath),
   };
 
   ctx.commands.registerCommand(

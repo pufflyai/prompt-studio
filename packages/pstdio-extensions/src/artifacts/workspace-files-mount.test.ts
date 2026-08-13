@@ -69,12 +69,12 @@ describe("createWorkspaceFilesMount browsing", () => {
     const mount = createWorkspaceFilesMount(root);
 
     expect((await mount.listEntries()).map(({ name, path, type }) => ({ name, path, type }))).toEqual([
-      { name: "README.md", path: "README.md", type: "file" },
       { name: "src", path: "src", type: "directory" },
+      { name: "README.md", path: "README.md", type: "file" },
     ]);
     expect((await mount.listEntries("src")).map(({ path, type }) => ({ path, type }))).toEqual([
-      { path: "src/index.ts", type: "file" },
       { path: "src/nested", type: "directory" },
+      { path: "src/index.ts", type: "file" },
     ]);
   });
 
@@ -92,7 +92,7 @@ describe("createWorkspaceFilesMount browsing", () => {
 
     const result = await mount.searchEntries("match", 2);
 
-    expect(result.entries.map((entry) => entry.path)).toEqual(["docs/match-notes.md", "match-dir"]);
+    expect(result.entries.map((entry) => entry.path)).toEqual(["match-dir", "docs/match-notes.md"]);
     expect(result.truncated).toBe(true);
     expect(result.entries.every((entry) => !entry.path.startsWith(".git"))).toBe(true);
   });
@@ -138,5 +138,20 @@ describe("createWorkspaceFilesMount browsing", () => {
     await expect(mount.writeTextFile("missing.txt", "new", 16)).rejects.toThrow(/not found/i);
     await expect(mount.createTextFile("large.txt", "too long", 3)).rejects.toThrow(/too large/i);
     await expect(mount.deleteEntry("")).rejects.toThrow(/workspace root/i);
+  });
+
+  test("moves a file into a directory without replacing an existing file", async () => {
+    const root = createTempDir();
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "notes.txt"), "notes");
+    writeFileSync(join(root, "docs/existing.txt"), "keep");
+    const mount = createWorkspaceFilesMount(root);
+
+    await mount.moveFile("notes.txt", "docs/notes.txt");
+
+    expect(existsSync(join(root, "notes.txt"))).toBe(false);
+    expect(readFileSync(join(root, "docs/notes.txt"), "utf8")).toBe("notes");
+    await expect(mount.moveFile("docs/notes.txt", "docs/existing.txt")).rejects.toThrow(/already exists/i);
+    expect(readFileSync(join(root, "docs/existing.txt"), "utf8")).toBe("keep");
   });
 });

@@ -21,7 +21,7 @@ describe("workspace file client", () => {
     ]);
   });
 
-  test("creates, reads, writes, and deletes one encoded workspace path", async () => {
+  test("creates, reads, writes, moves, and deletes one encoded workspace path", async () => {
     const calls: Array<{ path: string; options?: unknown }> = [];
     const request = ((path, options) => {
       calls.push({ path, options });
@@ -32,6 +32,7 @@ describe("workspace file client", () => {
     await client.createFile("workspace 1", "docs/read me.md", { content: "" });
     await client.readFile("workspace 1", "docs/read me.md");
     await client.writeFile("workspace 1", "docs/read me.md", { content: "updated" });
+    await client.moveFile("workspace 1", "docs/read me.md", "archive/read me.md");
     await client.deleteEntry("workspace 1", "docs/read me.md");
 
     expect(calls).toEqual([
@@ -46,6 +47,10 @@ describe("workspace file client", () => {
       {
         path: "/v1/workspaces/workspace%201/file?path=docs%2Fread+me.md",
         options: { method: "PUT", body: { content: "updated" } },
+      },
+      {
+        path: "/v1/workspaces/workspace%201/file?path=docs%2Fread+me.md",
+        options: { method: "PATCH", body: { destination_path: "archive/read me.md" } },
       },
       {
         path: "/v1/workspaces/workspace%201/entry?path=docs%2Fread+me.md",

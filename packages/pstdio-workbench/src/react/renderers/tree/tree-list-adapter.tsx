@@ -239,6 +239,8 @@ const toTreeListNode = (
     showContextMenuTrigger: node.showContextMenuTrigger,
     canHide: node.canHide,
     canReorder: node.canReorder,
+    canDrag: node.canDrag,
+    canDrop: node.canDrop,
     hiddenByDefault: node.hiddenByDefault,
     actions: createTreeActionItems({
       actions: node.actions,
