@@ -1,5 +1,10 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
-import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
+import {
+  extensionWebviewSessionCookie,
+  type RuntimeHost,
+  type RuntimeOwnerType,
+  runtimeSessionCookie,
+} from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
@@ -103,7 +108,8 @@ const createRequestHandler = (
       const injected = deps.injectConfig(html, { version: CLI_VERSION });
       const headers = new Headers({ "Content-Type": "text/html" });
       if (runtimeHost?.origin() === new URL(request.url).origin) {
-        headers.set("set-cookie", runtimeSessionCookie(runtimeHost.token));
+        headers.append("set-cookie", runtimeSessionCookie(runtimeHost.token));
+        headers.append("set-cookie", extensionWebviewSessionCookie(runtimeHost.token));
       }
       return new Response(injected, { headers });
     });

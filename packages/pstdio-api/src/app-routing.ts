@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
 import type { RouteDeps } from "./features/deps";
+import { isOpaqueExtensionWebviewAssetRequest } from "./features/extensions/extension-webview-request-policy";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -35,7 +36,10 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
       return;
     }
 
-    if (!isRuntimeOriginAllowed(c.req.raw, security)) return c.json({ error: "Forbidden" }, 403);
+    const allowOpaqueOrigin = isOpaqueExtensionWebviewAssetRequest(c.req.raw);
+    if (!isRuntimeOriginAllowed(c.req.raw, security) && !allowOpaqueOrigin) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
 
     const origin = c.req.header("origin");
     const expectedOrigin = runtimeOrigin(security);
@@ -50,7 +54,7 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
     }
 
     await next();
-    if (origin && origin === expectedOrigin) {
+    if (origin && (origin === expectedOrigin || allowOpaqueOrigin)) {
       c.header("access-control-allow-origin", origin);
       c.header("access-control-allow-credentials", "true");
       c.header("vary", "Origin");
@@ -79,7 +83,15 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
   });
 
   if (!security) {
-    app.use("*", cors());
+    const permissiveCors = cors();
+    app.use("*", async (c, next) => {
+      if (!isOpaqueExtensionWebviewAssetRequest(c.req.raw)) return permissiveCors(c, next);
+
+      await next();
+      c.header("access-control-allow-origin", "null");
+      c.header("access-control-allow-credentials", "true");
+      c.header("vary", "Origin");
+    });
     return;
   }
 
@@ -90,7 +102,10 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
       await next();
       return;
     }
-    if (!isRuntimeRequestAuthorized(c.req.raw, security)) return c.json({ error: "Unauthorized" }, 401);
+    const allowOpaqueOrigin = isOpaqueExtensionWebviewAssetRequest(c.req.raw);
+    if (!isRuntimeRequestAuthorized(c.req.raw, security, { allowOpaqueOrigin })) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
     await next();
   });
 };

@@ -3,6 +3,9 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { chromium } from "@playwright/test";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { e2eExtensions } from "../default-extensions";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary } from "./packaged-helpers";
@@ -144,6 +147,94 @@ describe("packaged pstdio — self-hosted serve", () => {
       }
     },
     SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
+    "loads authenticated opaque-origin extension webview assets in a browser",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
+      let child: ChildProcess | null = null;
+      let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+
+      try {
+        const started = await startPackagedServe(tempRoot, {
+          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab"),
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
+        });
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          body: JSON.stringify({ name: "packaged-extension-webview" }),
+          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+          method: "POST",
+        });
+        expect(createRes.status).toBe(201);
+        const project = (await createRes.json()) as { id: string };
+
+        let labRoute: WorkbenchExtensionMetadata["routes"][number] | undefined;
+        const deadline = Date.now() + 30_000;
+        while (Date.now() < deadline) {
+          const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+            headers: runtimeAuthorization(started.descriptor),
+          });
+          expect(metadataRes.status).toBe(200);
+          const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+          labRoute = metadata.routes.find((route) => route.path === "lab");
+          if (labRoute?.webview.moduleUrl) {
+            const moduleRes = await fetch(`${started.baseUrl}${labRoute.webview.moduleUrl}`, {
+              headers: runtimeAuthorization(started.descriptor),
+            });
+            if (moduleRes.ok) break;
+          }
+          await Bun.sleep(250);
+        }
+        expect(labRoute?.webview.moduleUrl).toBeTruthy();
+
+        browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
+        const extensionAssetStatuses: number[] = [];
+        page.on("response", (response) => {
+          if (new URL(response.url()).pathname.startsWith("/v1/extensions/")) {
+            extensionAssetStatuses.push(response.status());
+          }
+        });
+        await page.addInitScript(
+          ({ projectId, route }) => {
+            localStorage.setItem("onboarding-complete", "true");
+            localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+            localStorage.setItem(
+              `dashboard-wb:last-resource:${projectId}`,
+              JSON.stringify({
+                id: route.path,
+                kind: "extension-route",
+                label: "Lab",
+                metadata: { projectId, route, routePath: route.path },
+                uri: `dashboard-workbench://project/${projectId}/extensions/${route.path}`,
+              }),
+            );
+          },
+          { projectId: project.id, route: labRoute! },
+        );
+
+        await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
+        const iframe = page.locator('iframe[title="Lab"]');
+        await iframe.waitFor({ state: "visible", timeout: 30_000 });
+        expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");
+
+        const frame = page.frameLocator('iframe[title="Lab"]');
+        await frame.getByRole("heading", { name: "Sandbox webview" }).waitFor({ timeout: 30_000 });
+        await frame.getByRole("button", { name: "Say hello" }).click();
+        await page.getByText("Hello from Extension Lab").waitFor({ timeout: 10_000 });
+
+        expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);
+        expect(extensionAssetStatuses.every((status) => status === 200)).toBe(true);
+      } finally {
+        await browser?.close();
+        if (child) await stopProcess(child);
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT,
   );
 
   test(

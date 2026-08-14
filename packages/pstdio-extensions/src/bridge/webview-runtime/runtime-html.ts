@@ -38,7 +38,7 @@ const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
 export const getExtensionRuntimeScriptUrl = () => new URL("./runtime.bundle.js", import.meta.url).href;
 
 export const renderExtensionRuntimeHtml = (scriptUrl: string) =>
-  renderRuntimeHostDocument(`<script src="${escapeAttribute(scriptUrl)}"></script>`);
+  renderRuntimeHostDocument(`<script crossorigin="use-credentials" src="${escapeAttribute(scriptUrl)}"></script>`);
 
 export const renderInlineExtensionRuntimeHtml = (runtimeScript: string) =>
   renderRuntimeHostDocument(`<script>${escapeScriptContent(runtimeScript)}</script>`);

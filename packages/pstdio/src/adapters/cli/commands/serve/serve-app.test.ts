@@ -414,9 +414,10 @@ describe("serveApp dashboard config", () => {
       const response = await capturedFetch?.call(server, new Request("http://127.0.0.1:43123/"), server);
       const foreign = await capturedFetch?.call(server, new Request("http://localhost:43123/"), server);
 
-      expect(response?.headers.get("set-cookie")).toBe(
+      expect(response?.headers.getSetCookie()).toEqual([
         "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
-      );
+        "pstdio_extension_webview_session=runtime-secret; Path=/v1/extensions; HttpOnly; SameSite=None; Secure",
+      ]);
       expect(await response?.text()).not.toContain("runtime-secret");
       expect(foreign?.headers.get("set-cookie")).toBeNull();
     } finally {
