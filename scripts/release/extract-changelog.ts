@@ -1,16 +1,18 @@
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+
+type RootManifest = {
+  workspaces?: string[];
+};
 
 export const findPackageDir = async (name: string) => {
-  for (const root of ["packages", "extensions"] as const) {
-    const entries = await readdir(root, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const manifestPath = join(root, entry.name, "package.json");
+  const rootManifest = (await Bun.file("package.json").json()) as RootManifest;
+
+  for (const workspace of rootManifest.workspaces ?? []) {
+    const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
+    for await (const manifestPath of manifests.scan({ dot: true, onlyFiles: true })) {
       const manifestFile = Bun.file(manifestPath);
-      if (!(await manifestFile.exists())) continue;
       const manifest = await manifestFile.json();
-      if (manifest.name === name) return join(root, entry.name);
+      if (manifest.name === name) return dirname(manifestPath);
     }
   }
   return null;
