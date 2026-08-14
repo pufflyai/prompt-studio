@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.26.1
+
+_2026-08-14_
+
+### Patch Changes
+
+- b1ea645: Allow authenticated opaque extension webviews to load their read-only runtime assets.
+
 ## 0.26.0
 
 _2026-08-13_
