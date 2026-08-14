@@ -14,6 +14,7 @@
     "release:platforms:sync": "bun --cwd .. ./scripts/release/sync-platform-versions.ts",
     "release:readme": "bun --cwd .. ./scripts/release/sync-package-readme.ts",
     "release:stamp-dates": "bun --cwd .. ./scripts/release/stamp-changelog-dates.ts",
+    "release:tags:push": "bun --cwd .. ./scripts/release/push-release-tags.ts",
     "release:version": "bash ./release/version.sh",
     "test": "bun test --silent",
     "typecheck": "tsc --noEmit",

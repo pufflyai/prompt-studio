@@ -130,14 +130,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push tags
+      - name: Push release tags
+        id: release-packages
         if: steps.changesets.outputs.published == 'true'
-        run: git push --tags
+        env:
+          PSTDIO_PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: bun run --cwd scripts release:tags:push
 
       - name: Create pstdio GitHub Release
         if: steps.changesets.outputs.published == 'true'
         run: |
-          VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
+          VERSION=$(echo '${{ steps.release-packages.outputs.packages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
             RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
@@ -178,7 +181,7 @@ jobs:
         run: |
           set -euo pipefail
           tmp_root="$(mktemp -d)"
-          echo '${{ steps.changesets.outputs.publishedPackages }}' \
+          echo '${{ steps.release-packages.outputs.packages }}' \
             | jq -c '.[] | select(.name != "pstdio")' \
             | while read -r entry; do
             name=$(echo "$entry" | jq -r '.name')
