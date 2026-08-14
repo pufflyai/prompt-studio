@@ -16,6 +16,9 @@ const SMOKE_TEST_TIMEOUT = 30_000;
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const BINARY_PATH = process.env.PSTDIO_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
+// Package verification does not install Playwright browsers on every release runner.
+// Keep this regression active wherever Chromium is available (including the browser E2E job).
+const browserTest = existsSync(chromium.executablePath()) ? test : test.skip;
 type RuntimeDescriptor = {
   pid: number;
   instanceId: string;
@@ -149,7 +152,7 @@ describe("packaged pstdio — self-hosted serve", () => {
     SMOKE_TEST_TIMEOUT,
   );
 
-  test(
+  browserTest(
     "loads authenticated opaque-origin extension webview assets in a browser",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
