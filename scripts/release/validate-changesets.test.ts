@@ -62,6 +62,46 @@ const writeWorkspace = (dependencyField: "dependencies" | "devDependencies") => 
 };
 
 describe("collectChangesetConfigIssues", () => {
+  test("reports repo-local workspaces that are not ignored", async () => {
+    const root = makeTempDir();
+    const packageDir = join(root, ".pstdio", "extensions", "repo-local-extension");
+    mkdirSync(join(root, ".changeset"), { recursive: true });
+    mkdirSync(packageDir, { recursive: true });
+
+    writeJson(join(root, "package.json"), {
+      private: true,
+      workspaces: [".pstdio/extensions/repo-local-extension"],
+    });
+    writeJson(join(root, ".changeset", "config.json"), {
+      changelog: false,
+      commit: false,
+      fixed: [],
+      linked: [],
+      access: "public",
+      baseBranch: "main",
+      updateInternalDependencies: "patch",
+      ignore: [],
+      privatePackages: {
+        version: true,
+        tag: true,
+      },
+    });
+    writeJson(join(packageDir, "package.json"), {
+      name: "repo-local-extension",
+      private: true,
+      version: "0.1.0",
+    });
+
+    const issues = await collectChangesetConfigIssues(root);
+
+    expect(issues).toEqual([
+      {
+        filePath: ".changeset/config.json",
+        message: 'repo-local workspace "repo-local-extension" must be ignored',
+      },
+    ]);
+  });
+
   test("reports releasable packages with runtime dependencies on ignored packages", async () => {
     const issues = await collectChangesetConfigIssues(writeWorkspace("dependencies"));
 

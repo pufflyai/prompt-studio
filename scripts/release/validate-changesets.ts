@@ -1,10 +1,18 @@
 import { readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { read as readChangesetsConfig } from "@changesets/config";
 
 const changesetDirectory = ".changeset";
 const changesetConfigPath = join(changesetDirectory, "config.json");
 const frontmatterEntryPattern = /^"[^"]+": (patch|minor|major)$/;
+
+type RootManifest = {
+  workspaces?: string[];
+};
+
+type WorkspaceManifest = {
+  name?: string;
+};
 
 export type ChangesetValidationIssue = {
   filePath: string;
@@ -96,8 +104,29 @@ export const collectChangesetValidationIssues = async (changesetFiles?: Record<s
 
 export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
   try {
-    await readChangesetsConfig(cwd);
-    return [];
+    const config = await readChangesetsConfig(cwd);
+    const rootManifest = (await Bun.file(join(cwd, "package.json")).json()) as RootManifest;
+    const repoLocalWorkspaceNames = new Set<string>();
+
+    for (const workspace of rootManifest.workspaces ?? []) {
+      const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
+      for await (const manifestPath of manifests.scan({ cwd, dot: true, onlyFiles: true })) {
+        const manifestFullPath = resolve(cwd, manifestPath);
+        const pathFromRoot = relative(cwd, manifestFullPath);
+        if (pathFromRoot.split(sep)[0] !== ".pstdio") continue;
+
+        const manifest = (await Bun.file(manifestFullPath).json()) as WorkspaceManifest;
+        if (manifest.name) repoLocalWorkspaceNames.add(manifest.name);
+      }
+    }
+
+    return [...repoLocalWorkspaceNames]
+      .filter((name) => !config.ignore.includes(name))
+      .sort()
+      .map((name) => ({
+        filePath: changesetConfigPath,
+        message: `repo-local workspace "${name}" must be ignored`,
+      }));
   } catch (error) {
     return [
       {

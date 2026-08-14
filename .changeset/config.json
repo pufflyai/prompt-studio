@@ -11,6 +11,7 @@
     "@pstdio/desktop",
     "@pstdio/landing-page",
     "e2e",
+    "font-editor",
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",
