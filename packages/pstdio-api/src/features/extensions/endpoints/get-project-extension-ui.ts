@@ -4,7 +4,7 @@ import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import { syncInstalledExtensionsForProject } from "../default-extensions";
-import type { ExtensionsRouteDeps } from "../deps";
+import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { assembleWorkbenchMetadata } from "../workbench-metadata-assembly";
@@ -32,7 +32,7 @@ export const getProjectExtensionUiRoute = createRoute({
 });
 
 export const getProjectExtensionUiHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
 ): AppRouteHandler<typeof getProjectExtensionUiRoute> => {
   const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();

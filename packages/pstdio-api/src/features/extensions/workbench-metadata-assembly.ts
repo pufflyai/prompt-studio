@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { ExtensionRuntime } from "pstdio-extensions";
-import type { ExtensionsRouteDeps } from "./deps";
+import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "./deps";
 import { buildAutomationRecords } from "./extension-automations";
 import { resolvePstdioHome } from "./install-extension-source";
 import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
@@ -25,7 +25,7 @@ const toViewRecord = (record: {
 // The workbench metadata payload plus the dashboard-facing record groups
 // (automations with effective enablement, harnesses, skills, templates, themes).
 export const assembleWorkbenchMetadata = async (
-  deps: ExtensionsRouteDeps,
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
   projectId: string,
   runtime: ExtensionRuntime,
   sources: SourceLike[],
@@ -67,6 +67,7 @@ export const assembleWorkbenchMetadata = async (
       installNamesByExtensionId,
       runtime,
       assetRevisionsByExtensionId,
+      webviewUrlIssuer: deps.extensionWebviewAccess,
       webviewCacheRoot,
     }),
     automations,

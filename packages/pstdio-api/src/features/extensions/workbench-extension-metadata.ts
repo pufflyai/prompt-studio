@@ -3,21 +3,13 @@ import type { WorkbenchExtensionMetadata, WorkbenchExtensionRouteRecord } from "
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
-import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
+import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type ExtensionIdMap = Map<string, string>;
 type InstallNameMap = Map<string, string>;
 type AssetRevisionMap = Map<string, string | null | undefined>;
 type ExtensionWebviewRecord = WorkbenchExtensionRouteRecord["webview"];
-
-const RUNTIME_URL = `/v1${EXTENSION_RUNTIME_PATH}`;
-
-const buildAssetUrl = (installName: string, webviewId: string, file: string, sourceHash?: string | null) => {
-  const path = `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/${file}`;
-  if (!sourceHash) return path;
-  return `${path}?h=${encodeURIComponent(sourceHash)}`;
-};
 
 const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRoot: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
@@ -26,6 +18,7 @@ const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRo
 };
 
 interface WebviewAssets {
+  urlIssuer: ExtensionWebviewUrlIssuer;
   installNamesByExtensionId: InstallNameMap;
   assetRevisionsByExtensionId?: AssetRevisionMap;
   webviewCacheRoot: string;
@@ -41,17 +34,19 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
 
     const assetRevision = assets.assetRevisionsByExtensionId?.get(extensionId);
     const cssFiles = listDistCssFiles(installName, id, assets.webviewCacheRoot);
+    const scope = { installName, webviewId: id };
     return {
       ...webview,
-      runtimeUrl: RUNTIME_URL,
-      moduleUrl: buildAssetUrl(installName, id, "module.js", assetRevision),
-      styles: cssFiles.map((file) => buildAssetUrl(installName, id, file, assetRevision)),
+      runtimeUrl: assets.urlIssuer.runtimeUrl(scope),
+      moduleUrl: assets.urlIssuer.assetUrl(scope, "module.js", assetRevision),
+      styles: cssFiles.map((file) => assets.urlIssuer.assetUrl(scope, file, assetRevision)),
     } as ExtensionWebviewRecord;
   };
 };
 
 export interface BuildWorkbenchExtensionMetadataInput {
   runtime: ExtensionRuntime;
+  webviewUrlIssuer: ExtensionWebviewUrlIssuer;
   extensionInstanceIdsByExtensionId?: ExtensionIdMap;
   installedExtensionIdsByExtensionId?: ExtensionIdMap;
   /** Maps an extensionId to the install folder name on disk (used to mint webview asset URLs). */
@@ -80,6 +75,7 @@ export const buildWorkbenchExtensionMetadata = (
     resolveWebview: createResolveWebview({
       assetRevisionsByExtensionId: input.assetRevisionsByExtensionId,
       installNamesByExtensionId: input.installNamesByExtensionId,
+      urlIssuer: input.webviewUrlIssuer,
       webviewCacheRoot: input.webviewCacheRoot,
     }),
   });

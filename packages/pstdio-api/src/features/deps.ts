@@ -23,6 +23,7 @@ import type { createTemplateService } from "../services/template-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
+import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { RuntimeRouteDeps } from "./runtime/routes";
 import type { EventBus } from "./sync/event-bus";
@@ -38,6 +39,7 @@ export interface ReadinessChecks {
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
   filesRoot: string;
+  extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
   eventBus: EventBus;

@@ -64,6 +64,14 @@ Browser requests and credentialed CORS preflights must use the descriptor's exac
 foreign origins receive `403`, and missing or invalid credentials receive `401`. `/healthz` and `/ping` remain public
 because they expose only liveness. `/readyz` is protected because it reports backend readiness.
 
+Sandboxed extension webview assets are a separate security realm. The iframe has an opaque origin and receives
+signed, read-only runtime and build URLs in its protected workbench metadata. The extension-owned access service keeps
+its signing key private and scopes each capability to one installed extension and webview for the life of the API
+instance. `/v1/extensions/webviews/*` accepts only `GET` and `HEAD` with a missing or `null` origin, rejects foreign
+origins, prevents build-directory traversal, redacts the capability from its own logs, and sends
+`Referrer-Policy: no-referrer`. These requests do not enter session middleware. See
+[ADR 0008](../adrs/0008-capability-secured-extension-webview-assets.md).
+
 Runtime tokens and common credential-shaped values are redacted from structured logs, API errors, startup
 diagnostics, and CLI failure records. Mutating-command analytics record the normalized command name, duration, and
 result but never raw arguments.

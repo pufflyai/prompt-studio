@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import type { WebviewCapabilityDeclaration } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
-import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
+import { createExtensionWebviewAccess } from "./extension-webview-access";
+import {
+  type BuildWorkbenchExtensionMetadataInput,
+  buildWorkbenchExtensionMetadata as buildWorkbenchExtensionMetadataWithAccess,
+} from "./workbench-extension-metadata";
+
+const webviewUrlIssuer = createExtensionWebviewAccess({
+  signingKey: Buffer.from("test-webview-signing-key"),
+});
+const buildWorkbenchExtensionMetadata = (input: Omit<BuildWorkbenchExtensionMetadataInput, "webviewUrlIssuer">) =>
+  buildWorkbenchExtensionMetadataWithAccess({ ...input, webviewUrlIssuer });
 
 const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: "file:///extension/extension.ts" });
 
@@ -71,9 +81,12 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
     });
 
     const webview = metadata.routes[0]?.webview;
+    const basePath = webviewUrlIssuer
+      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
+      .replace(/\/runtime$/, "");
 
-    expect(webview?.runtimeUrl).toBe("/v1/extensions/runtime");
-    expect(webview?.moduleUrl).toBe("/v1/extensions/installed/extension-lab/webviews/lab.page/module.js");
+    expect(webview?.runtimeUrl).toBe(`${basePath}/runtime`);
+    expect(webview?.moduleUrl).toBe(`${basePath}/assets/module.js`);
     expect(webview).not.toHaveProperty("assetUrl");
   });
 
@@ -92,9 +105,10 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
       installedExtensionId: "installed-1",
       installName: "extension-lab",
     });
-    expect(metadata.routes[0]?.webview.moduleUrl).toBe(
-      "/v1/extensions/installed/extension-lab/webviews/lab.page/module.js?h=build-2",
-    );
+    const basePath = webviewUrlIssuer
+      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
+      .replace(/\/runtime$/, "");
+    expect(metadata.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
   });
 
   test("keeps pre-build metadata on the previous module URL until build completion changes revision", () => {
@@ -113,12 +127,11 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
       assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),
     });
 
-    expect(beforeBuild.routes[0]?.webview.moduleUrl).toBe(
-      "/v1/extensions/installed/extension-lab/webviews/lab.page/module.js?h=build-1",
-    );
-    expect(afterBuild.routes[0]?.webview.moduleUrl).toBe(
-      "/v1/extensions/installed/extension-lab/webviews/lab.page/module.js?h=build-2",
-    );
+    const basePath = webviewUrlIssuer
+      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
+      .replace(/\/runtime$/, "");
+    expect(beforeBuild.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-1`);
+    expect(afterBuild.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
   });
 
   test("preserves declared webview capabilities in workbench metadata", () => {

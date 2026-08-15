@@ -1,14 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import {
-  extensionWebviewSessionCookie,
   isRuntimeBearerAuthorized,
   isRuntimeOriginAllowed,
   isRuntimeRequestAuthorized,
   runtimeSessionCookie,
 } from "./runtime-auth";
 
-export { extensionWebviewSessionCookie, runtimeSessionCookie } from "./runtime-auth";
+export { runtimeSessionCookie } from "./runtime-auth";
 
 export type RuntimeOwnerType = "desktop" | "persistent";
 
@@ -77,7 +76,6 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
 
   routes.post("/browser-session", (c) => {
     c.header("set-cookie", runtimeSessionCookie(deps.host.token));
-    c.header("set-cookie", extensionWebviewSessionCookie(deps.host.token), { append: true });
     return c.body(null, 204);
   });
 

@@ -90,18 +90,20 @@ describe("extension webview setup", () => {
       const metadata = await fetchMetadata(projectId);
       const labRoute = metadata.routes.find((route) => route.path === "lab");
 
-      expect(labRoute?.webview.runtimeUrl).toBe("/v1/extensions/runtime");
+      expect(labRoute?.webview.runtimeUrl).toMatch(
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/extension-lab\.labPage\/runtime$/,
+      );
       expect(labRoute?.webview.moduleUrl).toMatch(
-        /^\/v1\/extensions\/installed\/extension-lab\/webviews\/extension-lab\.labPage\/module\.js\?h=.+$/,
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/extension-lab\.labPage\/assets\/module\.js\?h=.+$/,
       );
 
       const module = await waitForOk(`${api.url}${labRoute!.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
       const runtimeHtml = await waitForOk(`${api.url}${labRoute!.webview.runtimeUrl}`);
-      const runtimeScript = await waitForOk(`${api.url}/v1/extensions/runtime.js`);
-      expectNoExternalExecutableSource(await runtimeHtml.text());
-      expectNoExternalExecutableSource(await runtimeScript.text());
+      const runtimeContent = await runtimeHtml.text();
+      expectNoExternalExecutableSource(runtimeContent);
+      expect(runtimeContent).toContain("notification.action");
     },
     TEST_TIMEOUT,
   );

@@ -75,7 +75,7 @@ jobs:
         run: bun run build
 
       - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium
+        run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 
       - name: Pre-warm bun install cache for plugin workspaces
         env:
@@ -96,6 +96,7 @@ jobs:
         env:
           BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
           E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+          PSTDIO_REQUIRE_WEBVIEW_BROWSERS: "1"
         run: bun run --cwd packages/e2e test:packaged
 
   build_docker:

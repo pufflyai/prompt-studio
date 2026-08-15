@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  extensionWebviewSessionCookie,
-  isRuntimeRequestAuthorized,
-  RUNTIME_AUTH_COOKIE,
-  runtimeSessionCookie,
-} from "./runtime-auth";
+import { isRuntimeRequestAuthorized, RUNTIME_AUTH_COOKIE, runtimeSessionCookie } from "./runtime-auth";
 
 const origin = "http://127.0.0.1:43123";
 const security = { origin: () => origin, token: "runtime-secret" };
@@ -37,12 +32,6 @@ describe("runtime request authentication", () => {
   test("creates a non-persistent browser cookie with no JavaScript access", () => {
     expect(runtimeSessionCookie("runtime-secret")).toBe(
       `${RUNTIME_AUTH_COOKIE}=runtime-secret; Path=/; HttpOnly; SameSite=Strict`,
-    );
-  });
-
-  test("creates a secure cross-site cookie scoped to extension webview assets", () => {
-    expect(extensionWebviewSessionCookie("runtime-secret")).toBe(
-      "pstdio_extension_webview_session=runtime-secret; Path=/v1/extensions; HttpOnly; SameSite=None; Secure",
     );
   });
 });

@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { ExtensionsRouteDeps } from "./deps";
+import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "./deps";
 import {
   attemptFixProjectExtensionHandler,
   attemptFixProjectExtensionRoute,
@@ -65,8 +65,6 @@ import {
   updateInstalledExtensionTemplateHandler,
   updateInstalledExtensionTemplateRoute,
 } from "./endpoints/update-installed-extension-template";
-import { registerExtensionRuntimeRoutes } from "./extension-runtime-routes";
-import { registerExtensionWebviewAssetRoutes } from "./extension-webview-asset-routes";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -75,7 +73,10 @@ const registerInstalledExtensionRoutes = (routes: ExtensionRoutes, deps: Extensi
   routes.openapi(updateInstalledExtensionTemplateRoute, updateInstalledExtensionTemplateHandler(deps));
 };
 
-const registerExtensionWorkbenchRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
+const registerExtensionWorkbenchRoutes = (
+  routes: ExtensionRoutes,
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
+) => {
   routes.openapi(listExtensionAppearanceRoute, listExtensionAppearanceHandler(deps));
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps));
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps));
@@ -91,7 +92,10 @@ const registerExtensionFileRoutes = (routes: ExtensionRoutes, deps: ExtensionsRo
   routes.openapi(deleteExtensionFileRoute, deleteExtensionFileHandler(deps));
 };
 
-const registerProjectExtensionRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
+const registerProjectExtensionRoutes = (
+  routes: ExtensionRoutes,
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
+) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
@@ -112,7 +116,7 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
   routes.openapi(deleteGlobalExtensionSettingRoute, deleteGlobalExtensionSettingHandler(deps));
 };
 
-export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
+export const createExtensionRoutes = (deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   registerInstalledExtensionRoutes(routes, deps);
@@ -120,8 +124,6 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   registerExtensionFileRoutes(routes, deps);
   registerProjectExtensionRoutes(routes, deps);
   registerExtensionSettingsRoutes(routes, deps);
-  registerExtensionWebviewAssetRoutes(routes, deps);
-  registerExtensionRuntimeRoutes(routes);
 
   return routes;
 };

@@ -36,6 +36,7 @@ import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
+import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
 import {
@@ -390,6 +391,7 @@ export const createApp = async (options: AppOptions) => {
 
   const deps: RouteDeps = {
     filesRoot: options.filesRoot,
+    extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     closeDb,
     eventBus,

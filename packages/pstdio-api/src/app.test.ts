@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "./app";
+import type { ExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeHost } from "./features/runtime/routes";
 import type { AppBindings } from "./types";
 
@@ -16,6 +17,8 @@ let tempRoot: string;
 let closeDb: () => Promise<void>;
 let closeDbAuth: () => Promise<void>;
 let closeDbRuntime: () => Promise<void>;
+let unsecuredWebviewAccess: ExtensionWebviewAccess;
+let runtimeWebviewAccess: ExtensionWebviewAccess;
 
 const runtimeOrigin = "http://127.0.0.1:43123";
 
@@ -29,6 +32,7 @@ beforeAll(async () => {
   });
   app = result.app;
   closeDb = result.close;
+  unsecuredWebviewAccess = result.deps.extensionWebviewAccess;
 
   const resultAuth = await createApp({
     dbPath: ":memory:",
@@ -56,6 +60,7 @@ beforeAll(async () => {
     runtimeHost,
   });
   appWithRuntime = resultRuntime.app;
+  runtimeWebviewAccess = resultRuntime.deps.extensionWebviewAccess;
   appWithRuntime.get("/v1/test-secret-error", () => {
     throw new Error("failed with runtime-secret");
   });
@@ -191,14 +196,17 @@ describe("api authentication", () => {
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
   });
 
-  test("allows credentialed opaque-origin extension assets without runtime transport security", async () => {
-    const res = await app.request("http://127.0.0.1:43123/v1/extensions/runtime.js", {
+  test("allows signed opaque-origin extension assets without runtime transport security", async () => {
+    const basePath = unsecuredWebviewAccess
+      .runtimeUrl({ installName: "missing", webviewId: "missing" })
+      .replace(/\/runtime$/, "");
+    const res = await app.request(`http://127.0.0.1:43123${basePath}/runtime`, {
       headers: { origin: "null" },
     });
 
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe("null");
-    expect(res.headers.get("access-control-allow-credentials")).toBe("true");
+    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
     expect(res.headers.get("vary")).toContain("Origin");
   });
 
@@ -215,7 +223,6 @@ describe("api authentication", () => {
     expect(await res.text()).toBe("");
     expect(res.headers.getSetCookie()).toEqual([
       "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
-      "pstdio_extension_webview_session=runtime-secret; Path=/v1/extensions; HttpOnly; SameSite=None; Secure",
     ]);
   });
 
@@ -242,69 +249,74 @@ describe("api authentication", () => {
     await sse.body?.cancel();
   });
 
-  test("allows authenticated opaque origins only for read-only extension webview assets", async () => {
-    const cookie = "pstdio_extension_webview_session=runtime-secret";
+  test("allows signed read-only webview assets from opaque origins without cookies", async () => {
+    const basePath = runtimeWebviewAccess
+      .runtimeUrl({ installName: "missing", webviewId: "missing" })
+      .replace(/\/runtime$/, "");
 
-    for (const path of [
-      "/v1/extensions/runtime",
-      "/v1/extensions/runtime.js",
-      "/v1/extensions/installed/missing/webviews/missing/module.js",
-    ]) {
+    for (const path of [`${basePath}/runtime`, `${basePath}/assets/module.js`]) {
       const response = await appWithRuntime.request(`${runtimeOrigin}${path}`, {
-        headers: { cookie, origin: "null" },
+        headers: { origin: "null" },
       });
 
       expect(response.status).not.toBe(401);
       expect(response.status).not.toBe(403);
       expect(response.headers.get("access-control-allow-origin")).toBe("null");
-      expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+      expect(response.headers.get("access-control-allow-credentials")).toBeNull();
       expect(response.headers.get("vary")).toContain("Origin");
     }
 
-    const head = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
+    const head = await appWithRuntime.request(`${runtimeOrigin}${basePath}/runtime`, {
       method: "HEAD",
-      headers: { cookie, origin: "null" },
+      headers: { origin: "null" },
     });
     expect(head.status).not.toBe(401);
     expect(head.status).not.toBe(403);
     expect(head.headers.get("access-control-allow-origin")).toBe("null");
 
-    const unauthenticated = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
+    const navigation = await appWithRuntime.request(`${runtimeOrigin}${basePath}/runtime`);
+    expect(navigation.status).toBe(200);
+
+    const invalidCapability = await appWithRuntime.request(`${runtimeOrigin}${basePath}x/runtime`, {
       headers: { origin: "null" },
     });
-    expect(unauthenticated.status).toBe(401);
+    expect(invalidCapability.status).toBe(404);
 
-    const invalidCookie = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
-      headers: { cookie: "pstdio_runtime_session=wrong", origin: "null" },
+    const oldAssetPath = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
+      headers: { origin: "null" },
     });
-    expect(invalidCookie.status).toBe(401);
-
-    const unscopedCookie = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
-      headers: { cookie: "pstdio_runtime_session=runtime-secret", origin: "null" },
-    });
-    expect(unscopedCookie.status).toBe(401);
+    expect(oldAssetPath.status).toBe(403);
 
     const nonAsset = await appWithRuntime.request(`${runtimeOrigin}/v1/projects`, {
-      headers: { cookie, origin: "null" },
+      headers: { origin: "null" },
     });
     expect(nonAsset.status).toBe(403);
 
-    const mutation = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
+    const mutation = await appWithRuntime.request(`${runtimeOrigin}${basePath}/runtime`, {
       method: "POST",
-      headers: { cookie, origin: "null" },
+      headers: { origin: "null" },
     });
-    expect(mutation.status).toBe(403);
+    expect(mutation.status).toBe(404);
 
-    const preflight = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
+    const preflight = await appWithRuntime.request(`${runtimeOrigin}${basePath}/runtime`, {
       method: "OPTIONS",
       headers: { origin: "null", "access-control-request-method": "GET" },
     });
-    expect(preflight.status).toBe(403);
+    expect(preflight.status).toBe(404);
 
-    const foreign = await appWithRuntime.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
-      headers: { cookie, origin: "http://attacker.example" },
+    const foreign = await appWithRuntime.request(`${runtimeOrigin}${basePath}/runtime`, {
+      headers: { origin: "http://attacker.example" },
     });
     expect(foreign.status).toBe(403);
+  });
+
+  test("invalidates webview capabilities when the runtime is replaced", async () => {
+    const staleRuntimeUrl = unsecuredWebviewAccess.runtimeUrl({ installName: "missing", webviewId: "missing" });
+    const response = await appWithRuntime.request(`${runtimeOrigin}${staleRuntimeUrl}`, {
+      headers: { origin: "null" },
+    });
+
+    expect(response.status).toBe(404);
   });
 
   test("rejects arbitrary origins and unauthenticated WebSocket handshakes", async () => {

@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeExtensionSources } from "pstdio-extensions";
-import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
+import { createExtensionWebviewAccess } from "./extension-webview-access";
+import {
+  type BuildWorkbenchExtensionMetadataInput,
+  buildWorkbenchExtensionMetadata as buildWorkbenchExtensionMetadataWithAccess,
+} from "./workbench-extension-metadata";
+
+const webviewUrlIssuer = createExtensionWebviewAccess({ signingKey: Buffer.from("test-webview-signing-key") });
+const buildWorkbenchExtensionMetadata = (input: Omit<BuildWorkbenchExtensionMetadataInput, "webviewUrlIssuer">) =>
+  buildWorkbenchExtensionMetadataWithAccess({ ...input, webviewUrlIssuer });
 
 describe("buildWorkbenchExtensionMetadata controls", () => {
   test("includes workbench controls renderer contributions", () => {

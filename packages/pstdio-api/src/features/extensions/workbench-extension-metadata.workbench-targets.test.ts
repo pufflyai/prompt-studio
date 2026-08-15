@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { packageAsset } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
-import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
+import { createExtensionWebviewAccess } from "./extension-webview-access";
+import {
+  type BuildWorkbenchExtensionMetadataInput,
+  buildWorkbenchExtensionMetadata as buildWorkbenchExtensionMetadataWithAccess,
+} from "./workbench-extension-metadata";
+
+const webviewUrlIssuer = createExtensionWebviewAccess({ signingKey: Buffer.from("test-webview-signing-key") });
+const buildWorkbenchExtensionMetadata = (input: Omit<BuildWorkbenchExtensionMetadataInput, "webviewUrlIssuer">) =>
+  buildWorkbenchExtensionMetadataWithAccess({ ...input, webviewUrlIssuer });
 
 describe("buildWorkbenchExtensionMetadata workbench targets", () => {
   test("preserves workbench targets without projecting tree items into legacy navigation", () => {

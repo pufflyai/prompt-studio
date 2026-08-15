@@ -1,114 +1,19 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { e2eExtensions } from "../default-extensions";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
-import { buildBinary } from "./packaged-helpers";
+import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
-const BINARY_PATH = process.env.PSTDIO_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
-// Package verification does not install Playwright browsers on every release runner.
-// Keep this regression active wherever Chromium is available (including the browser E2E job).
-const browserTest = existsSync(chromium.executablePath()) ? test : test.skip;
-type RuntimeDescriptor = {
-  pid: number;
-  instanceId: string;
-  ownerType: "desktop" | "persistent";
-  origin: string;
-  token: string;
-  protocolVersion: number;
-};
-
-const runtimeAuthorization = (descriptor: RuntimeDescriptor) => ({
-  authorization: `Bearer ${descriptor.token}`,
-});
-
-const waitForReady = async (descriptorPath: string, child: ChildProcess, timeoutMs = 10_000) => {
-  const deadline = Date.now() + timeoutMs;
-
-  while (Date.now() < deadline) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1_000);
-
-    try {
-      if (!existsSync(descriptorPath)) throw new Error("descriptor not published");
-      const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8")) as RuntimeDescriptor;
-      const res = await fetch(`${descriptor.origin}/runtime/ready`, {
-        headers: { authorization: `Bearer ${descriptor.token}` },
-        signal: controller.signal,
-      });
-      const ready = res.ok ? ((await res.json()) as { instanceId: string; protocolVersion: number }) : null;
-      if (
-        descriptor.pid === child.pid &&
-        descriptor.ownerType === "persistent" &&
-        descriptor.origin.startsWith("http://127.0.0.1:") &&
-        ready?.instanceId === descriptor.instanceId &&
-        ready.protocolVersion === descriptor.protocolVersion
-      ) {
-        return descriptor;
-      }
-    } catch {
-      // server not ready yet
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-
-  throw new Error(`Packaged runtime did not become ready within ${timeoutMs}ms`);
-};
-
-const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
-  const descriptorPath = join(tempRoot, "runtime.json");
-  const child = spawn(
-    BINARY_PATH,
-    ["serve", "--foreground", "--owner", "persistent", "--host", "127.0.0.1", "--port", "0"],
-    {
-      // Run outside the repo root so runtime file access cannot rely on local workspace paths.
-      cwd: tempRoot,
-      env: {
-        ...process.env,
-        HOME: tempRoot,
-        PSTDIO_HOME: tempRoot,
-        PSTDIO_DB_PATH: join(tempRoot, "db.sqlite"),
-        PSTDIO_DEFAULT_EXTENSIONS: "[]",
-        PSTDIO_STORAGE_PATH: join(tempRoot, "storage"),
-        ...env,
-      },
-      stdio: "pipe",
-    },
-  );
-
-  let stderr = "";
-  child.stderr?.on("data", (chunk: Buffer | string) => {
-    stderr += chunk.toString();
-  });
-
-  try {
-    const descriptor = await waitForReady(descriptorPath, child);
-    return { child, baseUrl: descriptor.origin, descriptor };
-  } catch (error) {
-    await stopProcess(child);
-    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${stderr}`.trim());
-  }
-};
-
-const stopProcess = async (child: ChildProcess) => {
-  if (child.exitCode === null && child.signalCode === null) {
-    child.kill();
-    await new Promise((resolve) => child.once("exit", resolve));
-  }
-};
 
 beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) {
@@ -118,7 +23,7 @@ beforeAll(() => {
 
 describe("packaged pstdio — self-hosted serve", () => {
   test("includes the extension development command", () => {
-    const result = spawnSync(BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
+    const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("extensions dev <source>");
@@ -150,94 +55,6 @@ describe("packaged pstdio — self-hosted serve", () => {
       }
     },
     SMOKE_TEST_TIMEOUT,
-  );
-
-  browserTest(
-    "loads authenticated opaque-origin extension webview assets in a browser",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
-      let child: ChildProcess | null = null;
-      let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
-
-      try {
-        const started = await startPackagedServe(tempRoot, {
-          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab"),
-          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
-        });
-        child = started.child;
-
-        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          body: JSON.stringify({ name: "packaged-extension-webview" }),
-          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-          method: "POST",
-        });
-        expect(createRes.status).toBe(201);
-        const project = (await createRes.json()) as { id: string };
-
-        let labRoute: WorkbenchExtensionMetadata["routes"][number] | undefined;
-        const deadline = Date.now() + 30_000;
-        while (Date.now() < deadline) {
-          const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
-            headers: runtimeAuthorization(started.descriptor),
-          });
-          expect(metadataRes.status).toBe(200);
-          const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-          labRoute = metadata.routes.find((route) => route.path === "lab");
-          if (labRoute?.webview.moduleUrl) {
-            const moduleRes = await fetch(`${started.baseUrl}${labRoute.webview.moduleUrl}`, {
-              headers: runtimeAuthorization(started.descriptor),
-            });
-            if (moduleRes.ok) break;
-          }
-          await Bun.sleep(250);
-        }
-        expect(labRoute?.webview.moduleUrl).toBeTruthy();
-
-        browser = await chromium.launch({ headless: true });
-        const page = await browser.newPage();
-        const extensionAssetStatuses: number[] = [];
-        page.on("response", (response) => {
-          if (new URL(response.url()).pathname.startsWith("/v1/extensions/")) {
-            extensionAssetStatuses.push(response.status());
-          }
-        });
-        await page.addInitScript(
-          ({ projectId, route }) => {
-            localStorage.setItem("onboarding-complete", "true");
-            localStorage.setItem("dashboard-wb:selected-project:global", projectId);
-            localStorage.setItem(
-              `dashboard-wb:last-resource:${projectId}`,
-              JSON.stringify({
-                id: route.path,
-                kind: "extension-route",
-                label: "Lab",
-                metadata: { projectId, route, routePath: route.path },
-                uri: `dashboard-workbench://project/${projectId}/extensions/${route.path}`,
-              }),
-            );
-          },
-          { projectId: project.id, route: labRoute! },
-        );
-
-        await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
-        const iframe = page.locator('iframe[title="Lab"]');
-        await iframe.waitFor({ state: "visible", timeout: 30_000 });
-        expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");
-
-        const frame = page.frameLocator('iframe[title="Lab"]');
-        await frame.getByRole("heading", { name: "Sandbox webview" }).waitFor({ timeout: 30_000 });
-        await frame.getByRole("button", { name: "Say hello" }).click();
-        await page.getByText("Hello from Extension Lab").waitFor({ timeout: 10_000 });
-
-        expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);
-        expect(extensionAssetStatuses.every((status) => status === 200)).toBe(true);
-      } finally {
-        await browser?.close();
-        if (child) await stopProcess(child);
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT,
   );
 
   test(
@@ -451,7 +268,15 @@ describe("packaged pstdio — core default extensions", () => {
           ]),
         );
 
-        const runtimeRes = await fetch(`${started.baseUrl}/v1/extensions/runtime.js`, {
+        const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(metadataRes.status).toBe(200);
+        const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        const webview = metadata.settingsPanels.find((panel) => panel.webview)?.webview;
+        expect(webview?.runtimeUrl).toBeTruthy();
+
+        const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {
           headers: runtimeAuthorization(started.descriptor),
         });
         expect(runtimeRes.status).toBe(200);

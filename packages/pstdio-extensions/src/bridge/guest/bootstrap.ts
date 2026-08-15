@@ -50,7 +50,6 @@ const injectStyles = (urls: string[]) => {
   for (const url of urls) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.crossOrigin = "use-credentials";
     link.href = url;
     document.head.appendChild(link);
   }

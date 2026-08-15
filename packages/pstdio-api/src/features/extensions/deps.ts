@@ -1,5 +1,6 @@
 import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type { RouteDeps } from "../deps";
+import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 
 export type ExtensionsRouteDeps = Pick<
   RouteDeps,
@@ -29,3 +30,9 @@ export type ExtensionsRouteDeps = Pick<
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
   terminal?: ExtensionTerminalApi;
 };
+
+export type ExtensionWebviewRouteDeps = Pick<RouteDeps, "extensionWebviewAccess">;
+
+export interface ExtensionWebviewMetadataDeps {
+  extensionWebviewAccess: ExtensionWebviewUrlIssuer;
+}

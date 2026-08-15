@@ -146,7 +146,68 @@ describe("serveApp", () => {
       rmSync(root, { force: true, recursive: true });
     }
   });
+});
 
+describe("serveApp shutdown", () => {
+  it("completes runtime shutdown while server connections are still active", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-serve-shutdown-"));
+    const descriptorPath = join(root, "runtime.json");
+    let runtimeHost: RuntimeHost | undefined;
+    let exitCode: number | undefined;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async (host, onDatabaseLockAcquired) => {
+          runtimeHost = host;
+          onDatabaseLockAcquired?.();
+          return {
+            app: { fetch: () => new Response("ok") },
+            close: async () => {},
+          };
+        },
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map(),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: () =>
+          ({
+            port: 43129,
+            stop: async (closeActiveConnections?: boolean) => {
+              if (!closeActiveConnections) throw new Error("active connection is still open");
+            },
+          }) as ReturnType<typeof Bun.serve>,
+        onSignal: () => {},
+        offSignal: () => {},
+        onFatal: () => {},
+        offFatal: () => {},
+        exit: (code = 0) => {
+          exitCode = code;
+          return undefined as never;
+        },
+        log: () => {},
+      });
+
+      await serveApp({
+        descriptorPath,
+        host: "127.0.0.1",
+        instanceId: "runtime-shutdown",
+        ownerType: "persistent",
+        port: 0,
+        token: "runtime-secret",
+      });
+
+      await runtimeHost!.shutdown();
+
+      expect(exitCode).toBe(0);
+      expect(existsSync(descriptorPath)).toBe(false);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+});
+
+describe("serveApp options", () => {
   it("leaves state path defaults to the app runtime", async () => {
     const previousDbPath = process.env.PSTDIO_DB_PATH;
     const previousStoragePath = process.env.PSTDIO_STORAGE_PATH;
@@ -416,7 +477,6 @@ describe("serveApp dashboard config", () => {
 
       expect(response?.headers.getSetCookie()).toEqual([
         "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
-        "pstdio_extension_webview_session=runtime-secret; Path=/v1/extensions; HttpOnly; SameSite=None; Secure",
       ]);
       expect(await response?.text()).not.toContain("runtime-secret");
       expect(foreign?.headers.get("set-cookie")).toBeNull();

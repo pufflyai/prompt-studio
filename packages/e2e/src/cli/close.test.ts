@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PSTDIO_CLI } from "./helpers";
@@ -98,6 +98,49 @@ describe("pstdio close", () => {
       expect(output).toContain("Runtime stopped.");
 
       expect(await waitForUnreachable(url)).toBe(true);
+      runtimeToCleanup = null;
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "shuts down while a dashboard event stream is connected",
+    async () => {
+      const port = await getFreePort();
+      const url = `http://127.0.0.1:${port}`;
+      const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-stream-home-"));
+      runtimeToCleanup = spawn(
+        "bun",
+        ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", "persistent", "--port", String(port)],
+        {
+          cwd: join(import.meta.dirname, "../.."),
+          env: {
+            ...process.env,
+            PSTDIO_DB_PATH: ":memory:",
+            PSTDIO_DEFAULT_EXTENSIONS: "[]",
+            PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+            PSTDIO_HOME: homePath,
+            PSTDIO_STORAGE_PATH: join(homePath, "storage"),
+          },
+          stdio: "pipe",
+        },
+      );
+      await waitForReady(url);
+
+      const descriptor = JSON.parse(readFileSync(join(homePath, "runtime.json"), "utf8")) as { token: string };
+      const stream = await fetch(`${url}/v1/sync/stream`, {
+        headers: { authorization: `Bearer ${descriptor.token}` },
+      });
+      expect(stream.ok).toBe(true);
+      const reader = stream.body!.getReader();
+      const firstEvent = await reader.read();
+      expect(new TextDecoder().decode(firstEvent.value)).toContain("event: init");
+
+      const output = await runClose(homePath);
+
+      expect(output).toContain("Runtime stopped.");
+      expect(await waitForUnreachable(url)).toBe(true);
+      await reader.cancel().catch(() => {});
       runtimeToCleanup = null;
     },
     TEST_TIMEOUT,

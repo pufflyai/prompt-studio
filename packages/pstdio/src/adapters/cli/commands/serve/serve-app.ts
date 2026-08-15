@@ -1,10 +1,5 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
-import {
-  extensionWebviewSessionCookie,
-  type RuntimeHost,
-  type RuntimeOwnerType,
-  runtimeSessionCookie,
-} from "pstdio-api/runtime";
+import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
@@ -109,7 +104,6 @@ const createRequestHandler = (
       const headers = new Headers({ "Content-Type": "text/html" });
       if (runtimeHost?.origin() === new URL(request.url).origin) {
         headers.append("set-cookie", runtimeSessionCookie(runtimeHost.token));
-        headers.append("set-cookie", extensionWebviewSessionCookie(runtimeHost.token));
       }
       return new Response(injected, { headers });
     });
@@ -175,7 +169,8 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       }
 
       closed = true;
-      await (server as { stop?: () => void | Promise<void> } | null)?.stop?.();
+      // Close active connections so shutdown does not hang on open streams (SSE, websockets).
+      await (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
       try {
         const handle = appHandle ?? (await appReady.promise.catch(() => null));
         await handle?.close();

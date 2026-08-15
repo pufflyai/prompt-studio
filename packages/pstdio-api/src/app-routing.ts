@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
 import type { RouteDeps } from "./features/deps";
-import { isOpaqueExtensionWebviewAssetRequest } from "./features/extensions/extension-webview-request-policy";
+import { createExtensionWebviewAssetRoutes } from "./features/extensions/extension-webview-asset-routes";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -36,8 +36,7 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
       return;
     }
 
-    const allowOpaqueOrigin = isOpaqueExtensionWebviewAssetRequest(c.req.raw);
-    if (!isRuntimeOriginAllowed(c.req.raw, security) && !allowOpaqueOrigin) {
+    if (!isRuntimeOriginAllowed(c.req.raw, security)) {
       return c.json({ error: "Forbidden" }, 403);
     }
 
@@ -54,7 +53,7 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
     }
 
     await next();
-    if (origin && (origin === expectedOrigin || allowOpaqueOrigin)) {
+    if (origin && origin === expectedOrigin) {
       c.header("access-control-allow-origin", origin);
       c.header("access-control-allow-credentials", "true");
       c.header("vary", "Origin");
@@ -84,14 +83,7 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
 
   if (!security) {
     const permissiveCors = cors();
-    app.use("*", async (c, next) => {
-      if (!isOpaqueExtensionWebviewAssetRequest(c.req.raw)) return permissiveCors(c, next);
-
-      await next();
-      c.header("access-control-allow-origin", "null");
-      c.header("access-control-allow-credentials", "true");
-      c.header("vary", "Origin");
-    });
+    app.use("*", permissiveCors);
     return;
   }
 
@@ -102,8 +94,7 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
       await next();
       return;
     }
-    const allowOpaqueOrigin = isOpaqueExtensionWebviewAssetRequest(c.req.raw);
-    if (!isRuntimeRequestAuthorized(c.req.raw, security, { allowOpaqueOrigin })) {
+    if (!isRuntimeRequestAuthorized(c.req.raw, security)) {
       return c.json({ error: "Unauthorized" }, 401);
     }
     await next();
@@ -152,6 +143,7 @@ export const registerApi = (
   deps: RouteDeps,
   input: { security: RuntimeSecurity | undefined; terminalOrigins: string[] },
 ) => {
+  app.route("/v1", createExtensionWebviewAssetRoutes(deps));
   registerApiMiddleware(app, input.security);
   registerApiRoutes(app, deps, input.terminalOrigins);
   registerApiErrorHandler(app, input.security);

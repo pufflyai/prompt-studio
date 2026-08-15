@@ -12,7 +12,8 @@ describe("extension runtime html", () => {
 
     expect(scriptUrl).toContain("runtime.bundle.js");
     expect(html).toContain(scriptUrl.replaceAll("&", "&amp;"));
-    expect(html).toContain('<script crossorigin="use-credentials" src=');
+    expect(html).toContain("<script src=");
+    expect(html).not.toContain("use-credentials");
     expect(html).not.toContain('type="module"');
   });
 

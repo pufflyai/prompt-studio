@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { ExtensionsRouteDeps } from "../deps";
+import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
 import { loadInstalledSourceRuntime } from "../extension-command-runtime";
 import { assembleWorkbenchMetadata } from "../workbench-metadata-assembly";
 
@@ -33,7 +33,7 @@ export const getExtensionContributionsRoute = createRoute({
 });
 
 export const getExtensionContributionsHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
 ): AppRouteHandler<typeof getExtensionContributionsRoute> => {
   return async (c) => {
     const { projectId, instanceId } = c.req.valid("param");
