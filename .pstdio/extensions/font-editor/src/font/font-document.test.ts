@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { defaultFontEditorConfig } from "../config";
+import { parseFontEditorConfig } from "../config";
 import {
   addGlyph,
   buildFontArtifacts,
@@ -16,7 +16,9 @@ import {
 
 const sourcePath = resolve(import.meta.dir, "../../../../../packages/ui/public/font/prompt-studio-icons.ttf");
 const cssPath = resolve(import.meta.dir, "../../../../../packages/ui/public/font/css/prompt-studio-icons.css");
+const configPath = resolve(import.meta.dir, "../../../../../.pstdio/configs/font-editor.json");
 const source = () => readFile(sourcePath);
+const repositoryConfig = async () => parseFontEditorConfig(await readFile(configPath, "utf8"));
 const normalizedSource = async () => {
   const [font, css] = await Promise.all([source(), readFile(cssPath, "utf8")]);
   return normalizeFontGlyphs(font, parseCssGlyphNames(css, "icon-"));
@@ -74,8 +76,9 @@ describe("font document", () => {
 
   test("builds and verifies every shipped font format and CSS mapping", async () => {
     const input = await normalizedSource();
-    const artifacts = await buildFontArtifacts(input, defaultFontEditorConfig);
-    const verified = await verifyFontArtifacts(artifacts, defaultFontEditorConfig);
+    const config = await repositoryConfig();
+    const artifacts = await buildFontArtifacts(input, config);
+    const verified = await verifyFontArtifacts(artifacts, config);
 
     expect(Object.keys(artifacts).sort()).toEqual([
       "css/prompt-studio-icons.css",

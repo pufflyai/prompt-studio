@@ -1,10 +1,5 @@
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
-import {
-  defaultFontEditorConfig,
-  FONT_EDITOR_CONFIG_PATH,
-  type FontEditorConfig,
-  parseFontEditorConfig,
-} from "../config";
+import { FONT_EDITOR_CONFIG_PATH, type FontEditorConfig, parseFontEditorConfig } from "../config";
 import {
   addGlyph,
   buildFontArtifacts,
@@ -40,7 +35,9 @@ const joinPath = (...parts: string[]) =>
 const outputPath = (config: FontEditorConfig, path: string) => joinPath(config.outputDir, path);
 
 export const readRepositoryConfig = async (mount: ArtifactMount) => {
-  if (!(await mount.exists(FONT_EDITOR_CONFIG_PATH))) return { ...defaultFontEditorConfig };
+  if (!(await mount.exists(FONT_EDITOR_CONFIG_PATH))) {
+    throw new Error(`Missing font editor config: ${FONT_EDITOR_CONFIG_PATH}`);
+  }
   return parseFontEditorConfig(await mount.readText(FONT_EDITOR_CONFIG_PATH));
 };
 

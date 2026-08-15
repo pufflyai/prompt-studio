@@ -2,16 +2,32 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
-import { defaultFontEditorConfig, FONT_EDITOR_CONFIG_PATH } from "../config";
+import { FONT_EDITOR_CONFIG_PATH, type FontEditorConfig } from "../config";
 import { parseCssGlyphNames } from "../font/font-document";
 import {
   buildRepositoryFont,
   inspectRepositoryFont,
+  readRepositoryConfig,
   renameRepositoryGlyph,
   updateRepositoryConfig,
   verifyRepositoryFont,
 } from "./font-repository";
 
+const expectedConfigPath = ".pstdio/configs/font-editor.json";
+const repositoryConfig: FontEditorConfig = {
+  version: 1,
+  source: "packages/ui/public/font/prompt-studio-icons.ttf",
+  outputDir: "packages/ui/public/font",
+  cssFile: "css/prompt-studio-icons.css",
+  family: "prompt-studio-icons",
+  fileName: "prompt-studio-icons",
+  cssPrefix: "icon-",
+  fontsUrl: "$fonts",
+  formats: ["eot", "svg", "ttf", "woff", "woff2"],
+  startCodepoint: "U+E800",
+  endCodepoint: "U+F8FF",
+  cacheBust: "content-hash",
+};
 const fontPath = resolve(import.meta.dir, "../../../../../packages/ui/public/font/prompt-studio-icons.ttf");
 const cssPath = resolve(import.meta.dir, "../../../../../packages/ui/public/font/css/prompt-studio-icons.css");
 
@@ -60,19 +76,38 @@ class MemoryMount implements ArtifactMount {
 
 const createMount = async () => {
   const mount = new MemoryMount();
-  mount.files.set(defaultFontEditorConfig.source, new Uint8Array(await readFile(fontPath)));
+  mount.files.set(expectedConfigPath, new TextEncoder().encode(JSON.stringify(repositoryConfig)));
+  mount.files.set(repositoryConfig.source, new Uint8Array(await readFile(fontPath)));
   mount.files.set(
-    `${defaultFontEditorConfig.outputDir}/${defaultFontEditorConfig.cssFile}`,
+    `${repositoryConfig.outputDir}/${repositoryConfig.cssFile}`,
     new TextEncoder().encode(await readFile(cssPath, "utf8")),
   );
   return mount;
 };
 
 describe("font repository", () => {
+  test("reads settings from the shared repository config", async () => {
+    const mount = await createMount();
+    mount.files.set(
+      expectedConfigPath,
+      new TextEncoder().encode(JSON.stringify({ ...repositoryConfig, family: "repo-icons" })),
+    );
+
+    expect(FONT_EDITOR_CONFIG_PATH).toBe(expectedConfigPath);
+    expect(await readRepositoryConfig(mount)).toMatchObject({ family: "repo-icons" });
+  });
+
+  test("reports the required repository config when it is missing", async () => {
+    const mount = await createMount();
+    mount.files.delete(expectedConfigPath);
+
+    await expect(readRepositoryConfig(mount)).rejects.toThrow(`Missing font editor config: ${expectedConfigPath}`);
+  });
+
   test("inspects all semantic glyph mappings from the current font and CSS", async () => {
     const mount = await createMount();
     const result = await inspectRepositoryFont(mount);
-    const cssNames = parseCssGlyphNames(await readFile(cssPath, "utf8"), defaultFontEditorConfig.cssPrefix);
+    const cssNames = parseCssGlyphNames(await readFile(cssPath, "utf8"), repositoryConfig.cssPrefix);
 
     expect(result.glyphs.map((glyph) => [glyph.unicode, glyph.name])).toEqual([...cssNames]);
     expect(mount.writes).toEqual([]);
