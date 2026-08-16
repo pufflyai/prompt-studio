@@ -1,11 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import {
-  startStorybook,
-  stopStorybook,
-  storyUrl,
-  waitForStoryPlayback,
-} from "./mermaid-renderer-storybook";
+import { startStorybook, stopStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const largeTableStoryId = "patterns-editors-markdown-editor-tables--editable-large-table";
 const difficultTableStoryId = "patterns-editors-markdown-editor-tables--difficult-table-syntax";
