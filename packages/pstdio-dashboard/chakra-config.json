@@ -4424,6 +4424,17 @@
               "_active": {
                 "bg": "red.700"
               }
+            },
+            "ghost-static": {
+              "color": "fg",
+              "bg": "transparent",
+              "border": "none",
+              "_hover": {
+                "bg": "transparent"
+              },
+              "_active": {
+                "bg": "transparent"
+              }
             }
           }
         },
