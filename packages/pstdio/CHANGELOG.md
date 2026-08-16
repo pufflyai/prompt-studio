@@ -1,5 +1,14 @@
 # pstdio
 
+## 0.26.2
+
+_2026-08-16_
+
+### Patch Changes
+
+- 1d01fc6: Load sandboxed extension webviews across Chromium, Firefox, and Safari/WebKit without cookie authentication.
+- 1d01fc6: Close active runtime connections during graceful shutdown
+
 ## 0.26.1
 
 _2026-08-14_
