@@ -16,6 +16,8 @@ const workspacesViewStoryId = "dashboard-sidenav--workspaces-view";
 const ticketModeStoryId = "dashboard-sidenav--ticket-mode";
 const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
+const extensionModeSelectedStoryId = "dashboard-sidenav--extension-mode-selected";
+const extensionResourceSelectedStoryId = "dashboard-sidenav--extension-resource-selected";
 const globalRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
@@ -245,6 +247,8 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
     ticketModeStoryId,
     ticketWorkspaceBackStoryId,
     sessionModeStoryId,
+    extensionModeSelectedStoryId,
+    extensionResourceSelectedStoryId,
   ]) {
     test(`renders ${storyId} with one persistent global header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
@@ -252,7 +256,13 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
       // Forward history and the trimmed breadcrumb below only exist once this story's play
       // function has navigated in and back, and "PS-164_A1" is absent both before and during
       // that. Playback also covers the first render, so it stands in for the render gate.
-      if (storyId === ticketWorkspaceBackStoryId) await waitForStoryPlayback(page);
+      if (
+        storyId === ticketWorkspaceBackStoryId ||
+        storyId === extensionModeSelectedStoryId ||
+        storyId === extensionResourceSelectedStoryId
+      ) {
+        await waitForStoryPlayback(page);
+      }
 
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await expect(
@@ -273,6 +283,18 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
         await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
         await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
         await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
+      }
+      if (storyId === extensionModeSelectedStoryId) {
+        await expect(sidenav.getByRole("option", { name: "Extension Lab", exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      }
+      if (storyId === extensionResourceSelectedStoryId) {
+        await expect(sidenav.getByRole("option", { name: "Artifacts", exact: true })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
       }
     });
   }
