@@ -169,8 +169,8 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       }
 
       closed = true;
-      // Bun may keep this promise pending for upgraded browser connections. Start transport
-      // teardown, then release owned resources; process exit closes any remaining sockets.
+      // Bun may keep this promise pending for upgraded browser connections. ADR 0009 keeps this
+      // workaround isolated: start teardown, then release resources and let process exit close sockets.
       void (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
       try {
         const handle = appHandle ?? (await appReady.promise.catch(() => null));
