@@ -3,6 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { type Browser, firefox } from "@playwright/test";
 import { PSTDIO_CLI } from "./helpers";
 import { getFreePort, waitForReady } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
@@ -29,7 +30,7 @@ const waitForUnreachable = async (url: string) => {
   return false;
 };
 
-const runClose = async (homePath: string) => {
+const runClose = async (homePath: string, timeoutMs?: number) => {
   const cli = spawn("bun", ["run", PSTDIO_CLI, "close"], {
     cwd: join(import.meta.dirname, "../.."),
     env: {
@@ -49,15 +50,31 @@ const runClose = async (homePath: string) => {
   cli.stderr?.on("data", (chunk) => {
     stderr += String(chunk);
   });
-  const exitCode = await new Promise<number | null>((resolve) => cli.once("exit", resolve));
+  const exitCode = await new Promise<number | null>((resolve, reject) => {
+    const timeout = timeoutMs
+      ? setTimeout(() => {
+          cli.kill();
+          reject(new Error(`pstdio close did not finish within ${timeoutMs}ms\n${stdout}\n${stderr}`));
+        }, timeoutMs)
+      : undefined;
+
+    cli.once("exit", (code) => {
+      if (timeout) clearTimeout(timeout);
+      resolve(code);
+    });
+  });
   if (exitCode !== 0) throw new Error(stderr);
   return stdout;
 };
 
 describe("pstdio close", () => {
+  let browserToCleanup: Browser | null = null;
   let runtimeToCleanup: ChildProcess | null = null;
 
   afterEach(async () => {
+    await browserToCleanup?.close();
+    browserToCleanup = null;
+
     const runtime = runtimeToCleanup;
     runtimeToCleanup = null;
     if (!runtime || runtime.exitCode !== null || runtime.signalCode !== null) return;
@@ -141,6 +158,47 @@ describe("pstdio close", () => {
       expect(output).toContain("Runtime stopped.");
       expect(await waitForUnreachable(url)).toBe(true);
       await reader.cancel().catch(() => {});
+      runtimeToCleanup = null;
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "shuts down while Firefox has the dashboard open",
+    async () => {
+      const port = await getFreePort();
+      const url = `http://127.0.0.1:${port}`;
+      const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-firefox-home-"));
+      runtimeToCleanup = spawn(
+        "bun",
+        ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", "persistent", "--port", String(port)],
+        {
+          cwd: join(import.meta.dirname, "../.."),
+          env: {
+            ...process.env,
+            PSTDIO_DB_PATH: ":memory:",
+            PSTDIO_DEFAULT_EXTENSIONS: "[]",
+            PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+            PSTDIO_HOME: homePath,
+            PSTDIO_STORAGE_PATH: join(homePath, "storage"),
+          },
+          stdio: "pipe",
+        },
+      );
+      await waitForReady(url);
+
+      browserToCleanup = await firefox.launch({ headless: true });
+      const page = await browserToCleanup.newPage();
+      const streamConnected = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === "/v1/sync/stream" && response.status() === 200,
+      );
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      await streamConnected;
+
+      const output = await runClose(homePath, 5_000);
+
+      expect(output).toContain("Runtime stopped.");
+      expect(await waitForUnreachable(url)).toBe(true);
       runtimeToCleanup = null;
     },
     TEST_TIMEOUT,

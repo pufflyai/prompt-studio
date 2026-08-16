@@ -169,8 +169,9 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       }
 
       closed = true;
-      // Close active connections so shutdown does not hang on open streams (SSE, websockets).
-      await (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
+      // Bun may keep this promise pending for upgraded browser connections. Start transport
+      // teardown, then release owned resources; process exit closes any remaining sockets.
+      void (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
       try {
         const handle = appHandle ?? (await appReady.promise.catch(() => null));
         await handle?.close();

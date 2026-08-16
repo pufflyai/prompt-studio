@@ -149,7 +149,7 @@ describe("serveApp", () => {
 });
 
 describe("serveApp shutdown", () => {
-  it("completes runtime shutdown while server connections are still active", async () => {
+  it("does not let server connections block runtime resource cleanup", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-serve-shutdown-"));
     const descriptorPath = join(root, "runtime.json");
     let runtimeHost: RuntimeHost | undefined;
@@ -173,8 +173,9 @@ describe("serveApp shutdown", () => {
         serve: () =>
           ({
             port: 43129,
-            stop: async (closeActiveConnections?: boolean) => {
+            stop: (closeActiveConnections?: boolean) => {
               if (!closeActiveConnections) throw new Error("active connection is still open");
+              return new Promise<void>(() => {});
             },
           }) as ReturnType<typeof Bun.serve>,
         onSignal: () => {},
@@ -197,8 +198,12 @@ describe("serveApp shutdown", () => {
         token: "runtime-secret",
       });
 
-      await runtimeHost!.shutdown();
+      const shutdownResult = await Promise.race([
+        runtimeHost!.shutdown().then(() => "closed" as const),
+        Bun.sleep(100).then(() => "blocked" as const),
+      ]);
 
+      expect(shutdownResult).toBe("closed");
       expect(exitCode).toBe(0);
       expect(existsSync(descriptorPath)).toBe(false);
     } finally {
