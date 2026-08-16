@@ -1,5 +1,5 @@
 {
-  "version": "2.15",
+  "version": "2.17",
   "children": [
     {
       "type": "frame",
@@ -150455,6 +150455,646 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Q1dRGx",
+      "x": 34872,
+      "y": -11632,
+      "name": "Website · Landing · Workbench",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "agnll",
+          "type": "ref",
+          "ref": "V3OnvZ",
+          "name": "Workbench",
+          "width": "fill_container",
+          "height": "fill_container",
+          "descendants": {
+            "O41nFo": {
+              "enabled": false
+            },
+            "UNB4L": {
+              "enabled": false
+            },
+            "hztKv/WG70V": {
+              "flipX": false,
+              "flipY": false,
+              "width": "fit_content",
+              "height": 28,
+              "x": 68,
+              "y": 6,
+              "padding": 0
+            },
+            "hztKv/R8Q6C": {
+              "theme": {
+                "crumb": "current",
+                "size": "sm"
+              }
+            },
+            "hztKv/AZ9VV": {
+              "enabled": false
+            },
+            "hztKv/AZ9VV/v8pXgm": {
+              "enabled": false
+            },
+            "ofAlH": {
+              "fill": "$ds-bg"
+            },
+            "o7SLCl": {
+              "gap": 14
+            },
+            "D7dOkA": {
+              "type": "frame",
+              "id": "VXEd3",
+              "name": "Page Header Marks",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 18,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WEi6C",
+                  "name": "Meta Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zWaeU",
+                      "name": "Cross L",
+                      "width": 9,
+                      "height": 9,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "U0Qjd",
+                          "x": 0,
+                          "y": 4,
+                          "name": "H",
+                          "fill": "$ds-fg-subtle",
+                          "width": 9,
+                          "height": 1
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "dQPlT",
+                          "x": 4,
+                          "y": 0,
+                          "name": "V",
+                          "fill": "$ds-fg-subtle",
+                          "width": 1,
+                          "height": 9
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lvZdM",
+                      "name": "Cross R",
+                      "width": 9,
+                      "height": 9,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "YBTWj",
+                          "x": 0,
+                          "y": 4,
+                          "name": "H",
+                          "fill": "$ds-fg-subtle",
+                          "width": 9,
+                          "height": 1
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "GxPBJ",
+                          "x": 4,
+                          "y": 0,
+                          "name": "V",
+                          "fill": "$ds-fg-subtle",
+                          "width": 1,
+                          "height": 9
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "Na38v": {
+              "content": "A place for your tools to live.",
+              "flipX": false,
+              "flipY": false,
+              "width": 496,
+              "height": 37,
+              "x": 32,
+              "y": 61
+            },
+            "ifkIS": {
+              "content": "Prompt Studio is a workbench that builds itself around your work. Ask your agent for the tools you need and the workbench grows around how your team actually works."
+            },
+            "eESMu": {
+              "type": "frame",
+              "id": "DwaRt",
+              "name": "Start from the CLI",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [
+                10,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n8QFB",
+                  "name": "Rule 01",
+                  "width": "fill_container",
+                  "gap": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "voLGZ",
+                      "name": "No",
+                      "fill": "$ds-fg-subtle",
+                      "content": "01 / start in two commands",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal",
+                      "letterSpacing": 1.8
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "qj0cX",
+                      "name": "Line",
+                      "fill": "$ds-border",
+                      "width": "fill_container",
+                      "height": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QLsCV",
+                  "name": "Terminal",
+                  "width": "fill_container",
+                  "fill": "$ds-code",
+                  "cornerRadius": 6,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "gap": 12,
+                  "padding": [
+                    11,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h8Ovn",
+                      "name": "Lines",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Lk2ds",
+                          "name": "Line bun add -g pstdio@latest",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QcCIB",
+                              "name": "Prompt",
+                              "fill": "$ds-fg-subtle",
+                              "content": "$",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "LnKRd",
+                              "name": "Command",
+                              "fill": "$ds-fg",
+                              "content": "bun add -g pstdio@latest",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "nX7FR",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TzU9X",
+                          "name": "Line pst",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "NQoaf",
+                              "name": "Prompt",
+                              "fill": "$ds-fg-subtle",
+                              "content": "$",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "o88DNq",
+                              "name": "Command",
+                              "fill": "$ds-fg",
+                              "content": "pst",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "A2K5CW",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "id": "rcQoV",
+                      "name": "Copy",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "copy",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            "e6RZW": {
+              "type": "frame",
+              "id": "s71BNx",
+              "name": "SDK and Platform",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 26,
+              "padding": [
+                10,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "I8Azq",
+                  "name": "Bring your own agent",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "l7tZU",
+                      "name": "Rule 03 / bring your own agent",
+                      "width": "fill_container",
+                      "gap": 14,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aavqz",
+                          "name": "No",
+                          "fill": "$ds-fg-subtle",
+                          "content": "02 / bring your own agent",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal",
+                          "letterSpacing": 1.8
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "On54I",
+                          "name": "Line",
+                          "fill": "$ds-border",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g1Kqhh",
+                      "name": "Agent Groups",
+                      "gap": 56,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cqrWe",
+                          "name": "Harness Group",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hx3vu",
+                              "name": "Harness Label",
+                              "fill": "$ds-fg-subtle",
+                              "content": "harnesses",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal",
+                              "letterSpacing": 1.6
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QcKSW",
+                              "name": "Harness Tags",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Ej7AF",
+                                  "type": "ref",
+                                  "ref": "DGbRL",
+                                  "name": "Tag Claude Code",
+                                  "width": 134,
+                                  "descendants": {
+                                    "aTEIy": {
+                                      "icon": "asterisk",
+                                      "library": "lucide"
+                                    },
+                                    "YiPyg": {
+                                      "content": "claude code"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "cgLMq",
+                                  "type": "ref",
+                                  "ref": "DGbRL",
+                                  "name": "Tag Codex",
+                                  "width": 86,
+                                  "descendants": {
+                                    "aTEIy": {
+                                      "icon": "open-ai-logo",
+                                      "library": "phosphor"
+                                    },
+                                    "YiPyg": {
+                                      "content": "codex"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "paEdZ",
+                                  "type": "ref",
+                                  "ref": "DGbRL",
+                                  "name": "Tag OpenCode",
+                                  "width": 108,
+                                  "descendants": {
+                                    "aTEIy": {
+                                      "icon": "square-terminal",
+                                      "library": "lucide"
+                                    },
+                                    "YiPyg": {
+                                      "content": "opencode"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qcuhk",
+                          "name": "Runs On Group",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "k0aHh",
+                              "name": "Runs On Label",
+                              "fill": "$ds-fg-subtle",
+                              "content": "runs on",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal",
+                              "letterSpacing": 1.6
+                            },
+                            {
+                              "type": "frame",
+                              "id": "A2M6J",
+                              "name": "Runs On Tags",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Nihec",
+                                  "type": "ref",
+                                  "ref": "DGbRL",
+                                  "name": "Tag macOS",
+                                  "width": 86,
+                                  "descendants": {
+                                    "aTEIy": {
+                                      "icon": "apple-logo",
+                                      "library": "phosphor"
+                                    },
+                                    "YiPyg": {
+                                      "content": "macos"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "fCslI",
+                                  "type": "ref",
+                                  "ref": "DGbRL",
+                                  "name": "Tag Linux",
+                                  "width": 84,
+                                  "descendants": {
+                                    "aTEIy": {
+                                      "icon": "linux-logo",
+                                      "library": "phosphor"
+                                    },
+                                    "YiPyg": {
+                                      "content": "linux"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "U4gv7W",
+                  "name": "Extend",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bJFu7",
+                      "name": "Rule 02 / extend it with the sdk",
+                      "width": "fill_container",
+                      "gap": 14,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UjUot",
+                          "name": "No",
+                          "fill": "$ds-fg-subtle",
+                          "content": "03 / the tool you need is one prompt away",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal",
+                          "letterSpacing": 1.8
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "t46P2c",
+                          "name": "Line",
+                          "fill": "$ds-border",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FOeL9",
+                      "name": "Extend Body",
+                      "width": "fill_container",
+                      "gap": 32,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zPxxk",
+                          "name": "Extend Copy",
+                          "width": 290,
+                          "layout": "vertical",
+                          "gap": 9,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "FJD1o",
+                              "name": "Extend Lead",
+                              "fill": "$ds-fg",
+                              "content": "Describe the tool. Extend your workbench.",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "FkiTm",
+                              "name": "Extend Desc",
+                              "fill": "$ds-fg-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "A preview deployer, a release dashboard, a client-ready report — whatever your workflow is missing, your agent builds it into the workbench in minutes. No vendor to wait on, no backlog to join.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uGyBE",
+                          "name": "Extend Code",
+                          "width": "fill_container",
+                          "fill": "$ds-code",
+                          "cornerRadius": 6,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Cqkjb",
+                              "name": "Extend Snippet",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "defineExtension({\n  commands: {\n    \"preview.deploy\": {\n      agent: true, // agents get this as a tool\n      run: () => deploy(\"preview\")\n    }\n  }\n})",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "Jl6vw": {
+              "padding": [
+                8,
+                0,
+                0,
+                0
+              ]
+            },
+            "hy0VB": {
+              "content": "Core concepts ↗"
+            },
+            "lnZ1t": {
+              "content": "Real extensions ↗"
+            },
+            "vjtGe": {
+              "content": "Working examples ↗"
+            },
+            "iZtQu": {
+              "enabled": false
+            }
+          }
         }
       ]
     }
