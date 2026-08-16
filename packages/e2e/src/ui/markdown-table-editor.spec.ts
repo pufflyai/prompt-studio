@@ -1,6 +1,11 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import {
+  startStorybook,
+  stopStorybook,
+  storyUrl,
+  waitForStoryPlayback,
+} from "./mermaid-renderer-storybook";
 
 const largeTableStoryId = "patterns-editors-markdown-editor-tables--editable-large-table";
 const difficultTableStoryId = "patterns-editors-markdown-editor-tables--difficult-table-syntax";
@@ -28,6 +33,7 @@ test.describe("markdown table editor storybook", () => {
 
   test("paginates the supplied large table without dropping rows", async ({ page }) => {
     await page.goto(storyUrl(baseUrl, largeTableStoryId));
+    await waitForStoryPlayback(page);
 
     const rows = page.locator("table:visible tbody tr[data-document-row]");
     await expect(rows).toHaveCount(30);
