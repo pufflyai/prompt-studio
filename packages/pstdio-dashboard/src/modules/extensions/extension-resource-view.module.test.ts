@@ -9,7 +9,13 @@ import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workb
 import { getSidenavContributionHeaderNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadataWithLabMode,
+  metadataWithTickets,
+  response,
+} from "./module-test-fixtures";
 
 describe("createExtensionsModule resource inspectors", () => {
   test("opens side-only resource kinds as inspectors without leaving the active mode", async () => {
@@ -79,6 +85,221 @@ describe("createExtensionsModule resource inspectors", () => {
 });
 
 describe("createExtensionsModule resource views", () => {
+  test("opens a persistent resource editor as a tab in its current extension mode location", async () => {
+    const resourceMetadata = {
+      ...metadataWithLabMode,
+      panels: [
+        ...metadataWithLabMode.panels,
+        {
+          id: "extension-lab.labArtifactReport",
+          extensionId: "pstdio.extension-lab",
+          title: "Artifact report",
+          icon: "chart-no-axes-combined",
+          region: "main" as const,
+          closable: true,
+          resourceKind: "glass-lab-artifact",
+          eligibleLocations: { resourceKinds: ["extension-view"] },
+          webview: {
+            entry: {
+              kind: "package-asset" as const,
+              path: "./src/views/lab-artifact.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/extension-lab/webviews/lab-artifact/module.js",
+          },
+        },
+      ],
+    };
+    const loadMetadata = mock(async () => resourceMetadata);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+      const overview = workbench.getPrimaryResource();
+
+      await workbench.resources.openResource({
+        kind: "glass-lab-artifact",
+        uri: "pstdio://extension-resource/glass-lab-artifact/artifact-1",
+        id: "artifact-1",
+        label: "Artifact 1",
+      });
+
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
+      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.resource?.label)).toEqual([
+        "Lab overview",
+        "Artifact 1",
+      ]);
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+      );
+      expect(workbench.getPrimaryResource()).toEqual(overview);
+      expect(workbench.layout.getActivePanel("main")?.resource?.label).toBe("Artifact 1");
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("replaces an eligible extension-mode tab without leaving that mode", async () => {
+    const resourceMetadata = {
+      ...metadataWithLabMode,
+      modes: metadataWithLabMode.modes.map((mode) => ({
+        ...mode,
+        layout: {
+          ...mode.layout,
+          open: [...mode.layout.open, { region: "main" as const, panel: "extension-lab.sourceFiles" }],
+        },
+      })),
+      panels: [
+        ...metadataWithLabMode.panels,
+        {
+          id: "extension-lab.sourceFiles",
+          extensionId: "pstdio.extension-lab",
+          title: "Source files",
+          region: "main" as const,
+          closable: false,
+          eligibleLocations: { resourceKinds: ["extension-view"] },
+          webview: {
+            entry: {
+              kind: "package-asset" as const,
+              path: "./src/source-files.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/extension-lab/webviews/source-files/module.js",
+          },
+        },
+        {
+          id: "extension-lab.sourceEditor",
+          extensionId: "pstdio.extension-lab",
+          title: "Source files",
+          region: "main" as const,
+          closable: false,
+          resourceKind: "lab-source",
+          eligibleLocations: { resourceKinds: ["extension-view"] },
+          webview: {
+            entry: {
+              kind: "package-asset" as const,
+              path: "./src/views/source.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/extension-lab/webviews/source/module.js",
+          },
+        },
+      ],
+    };
+    const workbench = createWorkbenchCore();
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(
+      createExtensionsModule({ loadMetadata: mock(async () => resourceMetadata) }),
+    );
+
+    try {
+      await flushMicrotasks();
+      await flushMicrotasks();
+      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
+      const locationId = workbench.layout.getLayout().activeLocationWidgetId;
+      const sourceFiles = workbench.layout
+        .getLayout()
+        .regions.main.widgets.find((placement) => placement.contributionId.endsWith("sourceFiles"));
+      expect(sourceFiles).toBeDefined();
+      workbench.layout.activatePanel(sourceFiles!.widgetId);
+      expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(sourceFiles!.widgetId);
+
+      await workbench.resources.openResource(
+        {
+          kind: "lab-source",
+          uri: "pstdio://extension-resource/lab-source/source-1",
+          id: "source-1",
+          label: "Source 1",
+        },
+        { replaceActive: true },
+      );
+
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
+      expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+        "dashboard-workbench.extension-view.extension-lab.sourceEditor",
+      ]);
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(locationId);
+      expect(workbench.layout.getActivePanel("main")?.resource).toMatchObject({
+        kind: "lab-source",
+        id: "source-1",
+      });
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+});
+
+describe("createExtensionsModule resource view registration", () => {
+  test("registers and opens a resource kind declared only by a main extension panel", async () => {
+    const resourceMetadata = {
+      ...metadataWithTickets,
+      modes: [],
+      kanbanRenderers: [],
+      treeRenderers: [],
+      panels: [
+        {
+          id: "extension-lab.labArtifactReport",
+          extensionId: "pstdio.extension-lab",
+          title: "Artifact report",
+          icon: "chart-no-axes-combined",
+          region: "main" as const,
+          closable: true,
+          resourceKind: "glass-lab-artifact",
+          webview: {
+            entry: {
+              kind: "package-asset" as const,
+              path: "./src/views/lab-artifact.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl: "/v1/extensions/installed/extension-lab/webviews/lab-artifact/module.js",
+          },
+        },
+      ],
+    };
+    const loadMetadata = mock(async () => resourceMetadata);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      expect(workbench.resources.getKind("glass-lab-artifact")).toMatchObject({
+        kind: "glass-lab-artifact",
+        label: "Artifact report",
+      });
+      workbench.modes.setActiveMode("lab");
+
+      await workbench.resources.openResource({
+        kind: "glass-lab-artifact",
+        uri: "pstdio://extension-resource/glass-lab-artifact/artifact-1",
+        id: "artifact-1",
+        label: "Artifact 1",
+      });
+
+      expect(workbench.getPrimaryResource()).toMatchObject({ kind: "glass-lab-artifact", id: "artifact-1" });
+      expect(workbench.modes.getActiveModeId()).toBe("lab");
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
   test("restores the Tickets Location through Back after opening a ticket", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
@@ -134,7 +355,9 @@ describe("createExtensionsModule resource views", () => {
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
+});
 
+describe("createExtensionsModule resource view menus", () => {
   test("opens ticket detail with its attached Properties Panel Menu", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);

@@ -47,12 +47,12 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
 
   const handleActivate = () => {
     if (isDisabled) return;
-    if (hasChildren) {
-      onToggleNode?.(node.id);
-      return;
-    }
     if (isNavigable && onNavigate) {
       onNavigate({ sectionId, nodeId: node.id, node, intent: node.navigationIntent });
+      return;
+    }
+    if (hasChildren) {
+      onToggleNode?.(node.id);
       return;
     }
     node.onActivate?.();

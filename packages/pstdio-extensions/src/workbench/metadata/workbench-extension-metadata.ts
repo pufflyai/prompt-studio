@@ -235,6 +235,7 @@ const toDataTableRendererRecord = (
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     resourceKind: renderer.contribution.resourceKind,
+    rowOpenStrategy: renderer.contribution.rowOpenStrategy,
     columns: renderer.contribution.columns,
     queryCommandId,
     selectionMode: renderer.contribution.selectionMode,

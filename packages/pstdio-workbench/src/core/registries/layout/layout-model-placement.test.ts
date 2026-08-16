@@ -135,6 +135,62 @@ describe("createLayoutModel Location-owned placements", () => {
     ]);
   });
 
+  test("replaces the selected Sub Panel when the resource presenter targets a Sub Panel", () => {
+    const layout = createLayoutModel();
+
+    layout.registerPanel({
+      closable: false,
+      id: "lab.history",
+      title: "History",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+    layout.registerPanel({
+      closable: false,
+      eligibleLocations: { resourceKinds: ["extension-view"] },
+      id: "lab.files",
+      title: "FDS Files",
+      region: "main",
+      rendererId: "test.renderer",
+    });
+    layout.registerPanel({
+      closable: false,
+      eligibleLocations: { resourceKinds: ["extension-view"] },
+      id: "lab.source",
+      title: "FDS Files",
+      region: "main",
+      rendererId: "test.renderer",
+      resourceKinds: ["fds-source"],
+    });
+
+    const locationResource = { kind: "extension-view", uri: "pstdio://view/fds-history", label: "History" };
+    const history = layout.openPanel("lab.history", {
+      resource: locationResource,
+      strategy: { kind: "persistent" },
+    });
+    layout.establishLocation(history.instanceId);
+    const files = layout.openPanel("lab.files", {
+      resource: { kind: "extension-view", uri: "pstdio://view/fds-files", label: "FDS Files" },
+      strategy: { kind: "persistent" },
+    });
+
+    const sourceResource = { kind: "fds-source", uri: "pstdio://fds-source/core", label: "FDS Core" };
+    const source = layout.openPanel("lab.source", {
+      resource: sourceResource,
+      strategy: { kind: "replace-active" },
+    });
+
+    expect(layout.getLayout().activeLocationWidgetId).toBe(history.instanceId);
+    expect(layout.getLayout().regions.main.widgets).toEqual([
+      expect.objectContaining({ widgetId: history.instanceId, resourceUri: locationResource.uri }),
+      expect.objectContaining({ widgetId: source.instanceId, resourceUri: sourceResource.uri }),
+    ]);
+    expect(layout.getLayout().regions.main.widgets).not.toContainEqual(
+      expect.objectContaining({ widgetId: files.instanceId }),
+    );
+  });
+
   test("never promotes a Sub Panel placement into a Location", () => {
     const layout = createLayoutModel();
 

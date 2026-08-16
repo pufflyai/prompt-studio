@@ -99,6 +99,7 @@ export const toDataTableRendererRecord = (
     columns: renderer.contribution.columns,
     queryCommandId,
     selectionMode: renderer.contribution.selectionMode,
+    rowOpenStrategy: renderer.contribution.rowOpenStrategy,
     selectionActions: compact(
       (renderer.contribution.selectionActions ?? []).map((action) => {
         const commandId = refIdOf(action.command);

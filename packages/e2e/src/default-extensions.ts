@@ -8,6 +8,17 @@ const e2eExtension = (name: string) => ({
   skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
 
+const fdsLabRepo = process.env.E2E_FDS_LAB_REPO;
+const fdsLabExtension = fdsLabRepo
+  ? [
+      {
+        source: resolve(fdsLabRepo, ".pstdio/extensions/fds-lab"),
+        installName: "fds-lab",
+        skipInstall: false,
+      },
+    ]
+  : [];
+
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
   defaultExtensions: [
     e2eExtension("pstdio-base-themes"),
@@ -18,6 +29,7 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
     e2eExtension("harness-codex"),
     e2eExtension("harness-open-code"),
     e2eExtension("extension-lab"),
+    ...fdsLabExtension,
   ],
 });
 

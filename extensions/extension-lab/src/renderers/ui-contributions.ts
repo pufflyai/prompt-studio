@@ -17,6 +17,15 @@ export const labModes = {
       ],
     },
   },
+  source: {
+    id: "pstdio.extension-lab.source",
+    label: l10n("modes.source.label", "Source Lab"),
+    icon: "files",
+    layout: {
+      panels: ["main", "secondary", "side"],
+      open: [{ region: "main", panel: "labOverview" }],
+    },
+  },
 } satisfies NonNullable<ExtensionDefinition["modes"]>;
 
 export const createLabPanels = (baseUrl: string) =>
@@ -89,6 +98,15 @@ export const createLabPanels = (baseUrl: string) =>
       resourceKind: "glass-lab-artifact",
       webview: { entry: packageAsset("./src/views/lab-artifact.tsx", baseUrl) },
     },
+    labArtifactReport: {
+      title: l10n("panels.labArtifactReport.title", "Artifact report"),
+      icon: "file-chart-column",
+      region: "main",
+      closable: true,
+      resourceKind: "glass-lab-artifact",
+      eligibleLocations: { resourceKinds: ["extension-view"] },
+      webview: { entry: packageAsset("./src/views/lab-artifact.tsx", baseUrl) },
+    },
   }) satisfies NonNullable<ExtensionDefinition["panels"]>;
 
 export const createLabRoutes = (baseUrl: string) =>
@@ -146,6 +164,17 @@ export const labTreeItems = {
       params: { modeId: "pstdio.extension-lab.lab" },
     },
   },
+  sourceLab: {
+    target: "workbench.left.tree",
+    group: "Lab",
+    label: l10n("modes.source.label", "Source Lab"),
+    icon: "files",
+    action: {
+      kind: "command",
+      command: "workbench.action.switchMode",
+      params: { modeId: "pstdio.extension-lab.source" },
+    },
+  },
   faultyPage: {
     target: "workbench.left.tree",
     group: "Lab",
@@ -160,6 +189,7 @@ export const labDataTableRenderers = {
     title: "Artifacts",
     resourceKind: "glass-lab-artifact",
     queryCommand: commandRef("extension-lab.glass-lab-artifacts.query"),
+    rowOpenStrategy: "persistent",
     rowActions: [
       {
         id: "delete",

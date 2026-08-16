@@ -9,6 +9,7 @@ import type {
   WorkbenchModuleContext,
   WorkbenchModuleContribution,
 } from "@pstdio/workbench";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
@@ -310,6 +311,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       });
       ctx.renderers.registerRenderer({
         id: dashboardWidgetIds.extensionView,
+        render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
+      });
+      // Native renderer panels use the SDK bridge id for webview-backed panel menus.
+      // They still resolve through the Dashboard's project-aware extension frame.
+      ctx.renderers.registerRenderer({
+        id: BRIDGE_WEBVIEW_RENDERER_ID,
         render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
       });
       const activityRail = registerDashboardActivityRail(ctx, () => metadata);

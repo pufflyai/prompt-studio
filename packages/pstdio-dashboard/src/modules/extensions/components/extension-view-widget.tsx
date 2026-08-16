@@ -19,7 +19,10 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
   const metadata = getCachedDashboardExtensionMetadata(projectId);
   const view = metadata?.panels
     .flatMap((panel) => [panel, ...(panel.panelMenus ?? [])])
-    .find((candidate) => extensionViewWidgetId(candidate.id) === input.instance.panelId);
+    .find(
+      (candidate) =>
+        extensionViewWidgetId(candidate.id) === input.instance.panelId || candidate.id === input.instance.panelId,
+    );
   return view ? { projectId, view } : undefined;
 };
 

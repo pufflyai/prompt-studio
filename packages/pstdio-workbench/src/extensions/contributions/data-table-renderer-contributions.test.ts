@@ -15,6 +15,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       extensionId: "pstdio.lab",
       title: "Health",
       queryCommandId: "lab.queryHealth",
+      rowOpenStrategy: "persistent",
       columns: [{ id: "name", label: "Service" }],
       selectionMode: "multiple",
       selectionActions: [{ id: "restart-selected", label: "Restart selected", commandId: "lab.restartSelected" }],
@@ -65,6 +66,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       rendererId: "lab.health",
     });
     const renderer = workbench.renderers.getDataTableRenderer("lab.health");
+    expect(renderer?.rowOpenStrategy).toBe("persistent");
     const result = await renderer?.executeQuery({ modeId: "project" });
     expect(result?.columns?.[0]).toMatchObject({ id: "score", label: "Score" });
     expect(result?.rows[0]).toMatchObject({

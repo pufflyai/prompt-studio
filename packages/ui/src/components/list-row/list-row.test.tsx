@@ -32,8 +32,31 @@ const renderRow = () =>
     </ChakraProvider>,
   );
 
+const renderNavigableContainerRow = () =>
+  renderToString(
+    <ChakraProvider value={psTheme}>
+      <ListRow
+        id="fds-core"
+        label="Fashion Description System"
+        isContainer
+        isNavigable
+        showExpandToggle
+        onActivate={() => undefined}
+        onToggleExpand={() => undefined}
+      />
+    </ChakraProvider>,
+  );
+
 describe("ListRow", () => {
   it("renders inline actions without nesting buttons", () => {
     expect(hasNestedButtons(renderRow())).toBe(false);
+  });
+
+  it("gives navigable containers a separate expand control without nesting buttons", () => {
+    const html = renderNavigableContainerRow();
+
+    expect(hasNestedButtons(html)).toBe(false);
+    expect(html).toContain('aria-label="Expand"');
+    expect(html).toContain('role="option"');
   });
 });

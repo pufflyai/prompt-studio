@@ -390,6 +390,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             health: {
               title: "Health",
               queryCommand: "queryTable",
+              rowOpenStrategy: "persistent",
               columns: [{ id: "score", label: "Score" }],
               selectionMode: "multiple",
               selectionActions: [
@@ -413,6 +414,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.health",
       queryCommandId: "lab.queryTable",
+      rowOpenStrategy: "persistent",
       columns: [{ id: "score", label: "Score" }],
       selectionMode: "multiple",
       selectionActions: [

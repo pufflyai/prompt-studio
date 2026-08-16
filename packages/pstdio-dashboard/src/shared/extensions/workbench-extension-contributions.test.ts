@@ -195,6 +195,45 @@ describe("dashboard workbench extension tree contributions", () => {
     expect(new Set(sectionIds).size).toBe(sectionIds.length);
   });
 
+  test("keeps switch-mode rows visible without a mode filter and preserves their command target", () => {
+    const modeMetadata = {
+      ...metadata,
+      treeItems: [
+        {
+          id: "extension-lab.mode",
+          extensionId: "pstdio.extension-lab",
+          target: "workbench.left.tree",
+          label: "Lab mode",
+          action: {
+            kind: "command",
+            commandId: "workbench.action.switchMode",
+            args: { modeId: "pstdio.extension-lab.lab" },
+          },
+        },
+      ],
+    } satisfies DashboardExtensionMetadata;
+
+    const projectSections = buildDashboardExtensionTreeSections({
+      metadata: modeMetadata,
+      modeId: "project",
+      projectId: "project-1",
+      target: "workbench.left.tree",
+    });
+    const labSections = buildDashboardExtensionTreeSections({
+      metadata: modeMetadata,
+      modeId: "pstdio.extension-lab.lab",
+      projectId: "project-1",
+      target: "workbench.left.tree",
+    });
+
+    expect(projectSections[0]?.nodes[0]?.target).toEqual({
+      kind: "command",
+      commandId: "workbench.action.switchMode",
+      args: { modeId: "pstdio.extension-lab.lab" },
+    });
+    expect(labSections).toEqual(projectSections);
+  });
+
   test("lists extension route entries without legacy navigation grouping", () => {
     const entries = buildDashboardExtensionRouteEntries({ metadata, projectId: "project-1" });
 

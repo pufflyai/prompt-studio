@@ -263,6 +263,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
               title: "Services",
               queryCommand: "query",
               selectionMode: "multiple",
+              rowOpenStrategy: "persistent",
               selectionActions: [{ id: "restart", label: "Restart selected", command: "restart" }],
             },
           },
@@ -280,6 +281,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.services",
       selectionMode: "multiple",
+      rowOpenStrategy: "persistent",
       selectionActions: [{ id: "restart", label: "Restart selected", commandId: "lab.restart" }],
     });
   });

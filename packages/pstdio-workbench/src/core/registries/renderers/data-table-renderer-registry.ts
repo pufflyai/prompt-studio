@@ -70,6 +70,7 @@ export interface DataTableRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
+  rowOpenStrategy?: "replace-active" | "persistent";
   columns?: DataTableRendererColumn[];
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableRendererSelectionAction[];

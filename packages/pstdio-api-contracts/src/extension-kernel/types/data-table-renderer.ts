@@ -80,6 +80,7 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
 export interface DataTableRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
+  rowOpenStrategy?: "replace-active" | "persistent";
   columns?: DataTableRendererColumn[];
   queryCommand: CommandRef<DataTableRendererQueryParams, DataTableRendererQueryResult> | string;
   selectionMode?: "none" | "multiple";

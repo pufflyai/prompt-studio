@@ -107,7 +107,12 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     const row = model.rowByData.get(data);
     if (!row) return;
     if (contribution.onRowClick) return contribution.onRowClick(row);
-    if (row.resource) void workbench.resources.openResource(row.resource, { replaceActive: true });
+    if (row.resource) {
+      void workbench.resources.openResource(
+        row.resource,
+        contribution.rowOpenStrategy === "persistent" ? undefined : { replaceActive: true },
+      );
+    }
   };
 
   if (loading) {

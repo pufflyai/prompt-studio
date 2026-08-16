@@ -76,6 +76,7 @@ const registerRenderer = (
     id: record.id,
     title: localize(record.title, record.id),
     resourceKind: record.resourceKind,
+    rowOpenStrategy: record.rowOpenStrategy,
     columns: record.columns?.map(toColumn),
     initialPageSize: record.initialPageSize,
     pageSizeOptions: record.pageSizeOptions,

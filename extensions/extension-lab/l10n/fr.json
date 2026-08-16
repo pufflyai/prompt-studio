@@ -1,4 +1,5 @@
 {
+  "modes.source.label": "Laboratoire source",
   "activityItems.createArtifact.title": "Créer un artefact",
   "activityItems.projectHome.title": "Accueil du projet",
   "commands.artifactMenu.query.title": "Interroger le menu de création d'artefacts",
@@ -18,6 +19,7 @@
   "controls.labArtifactCreate.title": "Créer des artefacts",
   "modes.lab.label": "Laboratoire",
   "panels.labArtifactDetail.title": "Artefact",
+  "panels.labArtifactReport.title": "Rapport d’artefact",
   "panels.labArtifacts.menus.create": "Créer des artefacts",
   "panels.labArtifacts.title": "Artefacts Glass Lab",
   "panels.labCams.menus.cameras": "Caméras",

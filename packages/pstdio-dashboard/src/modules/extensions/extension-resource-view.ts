@@ -46,6 +46,14 @@ const panelMenuWidgetIdFor = (menu: NonNullable<ExtensionPanelRecord["panelMenus
 const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
   metadata.modes.find((mode) => mode.resourceKind === kind);
 
+const canReplaceInsideActiveExtensionMode = (
+  ctx: WorkbenchModuleContext,
+  panel: ExtensionPanelRecord,
+  metadata: DashboardExtensionMetadata,
+) =>
+  panel.eligibleLocations?.resourceKinds?.includes("extension-view") === true &&
+  metadata.modes.some((mode) => mode.modeId === ctx.modes.getActiveModeId());
+
 const resourceModeEntryForView = (panel: ExtensionPanelRecord, resourceMode: ExtensionModeRecord | undefined) => {
   if (!resourceMode || resourceMode.resourceKind !== panel.resourceKind) return undefined;
   return resourceMode.layout?.open?.find((entry) => entry.panel === panel.id);
@@ -245,17 +253,18 @@ export const registerExtensionResourceView = (
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
 
   for (const { kind, primary, companions } of groups) {
+    if (!ctx.resources.getKind(kind)) {
+      const representative = primary ?? companions.find((companion) => companion.region === "side");
+      disposables.push(
+        ctx.resources.registerKind({
+          kind,
+          label: representative ? resolveLocalizableString(representative.title, representative.extensionId) : kind,
+          icon: representative?.icon,
+        }),
+      );
+    }
+
     if (!primary) {
-      const inspector = companions.find((companion) => companion.region === "side");
-      if (!ctx.resources.getKind(kind)) {
-        disposables.push(
-          ctx.resources.registerKind({
-            kind,
-            label: inspector ? resolveLocalizableString(inspector.title, inspector.extensionId) : kind,
-            icon: inspector?.icon,
-          }),
-        );
-      }
       disposables.push(
         ctx.resources.registerPresenter({
           id: `dashboard.extensions.resource-inspector.${kind}`,
@@ -291,9 +300,14 @@ export const registerExtensionResourceView = (
             metadata: input.metadata,
             projectId: input.projectId,
           });
-          selectDashboardNavigationResource(ctx, selectedResource, {
-            modeId: resourceMode?.modeId ?? "project",
-          });
+          if (resourceMode) {
+            selectDashboardNavigationResource(ctx, selectedResource, { modeId: resourceMode.modeId });
+          } else if (openInput.replaceActive && !canReplaceInsideActiveExtensionMode(ctx, primary, input.metadata)) {
+            selectDashboardNavigationResource(ctx, selectedResource, { modeId: "project" });
+          }
+          // A persistent child resource without its own mode stays in the current
+          // navigation and persistence scope. Its editor becomes the active resource,
+          // while the mode's existing tabs, menus, and chrome remain mounted.
           setResourceBreadcrumb(ctx, selectedResource);
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {

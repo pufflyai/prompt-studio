@@ -21,6 +21,8 @@ const computePaddingLeft = (depth: number) => {
 const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
   variant === "compact" || variant === "full-width" || variant === "empty-state";
 
+const needsDivRoot = (hasActions: boolean, hasSeparateExpandControl: boolean) => hasActions || hasSeparateExpandControl;
+
 const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
   if (variant === "collection" && !hasDescription) {
     return { rowHeight: "collection-row", minHeight: undefined };
@@ -181,19 +183,16 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const hasActions = (item.actions?.length ?? 0) > 0 || (item.contextMenuItems?.length ?? 0) > 0;
   const showChevron = showExpandToggle && hasChildren;
   const isDisabled = item.disabled === true;
+  const hasSeparateExpandControl = showChevron && item.isNavigable === true;
 
   const handleActivate = () => {
     if (isDisabled) return;
     if (hasMenuItems) return;
-    if (showChevron) {
+    if (showChevron && !hasSeparateExpandControl) {
       onToggleExpand?.();
       return;
     }
-    if (onActivate) {
-      onActivate();
-      return;
-    }
-    item.onActivate?.();
+    onActivate?.();
   };
 
   const handleClick = (event: ReactMouseEvent<HTMLElement>) => {
@@ -268,6 +267,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       tone={tone}
       variant={variant}
       showContextMenuTrigger={showContextMenuTrigger}
+      onToggleExpand={hasSeparateExpandControl ? onToggleExpand : undefined}
     />
   );
 
@@ -307,7 +307,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     );
   }
 
-  if (hasActions) {
+  if (needsDivRoot(hasActions, hasSeparateExpandControl)) {
     return wrap(
       <chakra.div
         ref={ref}

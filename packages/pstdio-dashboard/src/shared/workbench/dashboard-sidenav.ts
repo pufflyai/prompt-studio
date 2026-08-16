@@ -1,4 +1,9 @@
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import {
+  getSwitchModeNavigationTargetModeId,
+  type TreeNode,
+  type TreeViewSection,
+  type WorkbenchModuleContext,
+} from "@pstdio/workbench";
 import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -33,6 +38,21 @@ const composeSidenavFooter = (ctx: WorkbenchModuleContext) => {
   return getSidenavContributionFooterNodes(ctx, mode);
 };
 
+const findModeNavigationNode = (nodes: TreeNode[], modeId: string): string | undefined => {
+  for (const node of nodes) {
+    if (node.target && getSwitchModeNavigationTargetModeId(node.target) === modeId) return node.id;
+    const child = node.children ? findModeNavigationNode(node.children, modeId) : undefined;
+    if (child) return child;
+  }
+};
+
+export const findModeNavigationNodeId = (sections: TreeViewSection[], modeId: string) => {
+  for (const section of sections) {
+    const nodeId = findModeNavigationNode(section.nodes, modeId);
+    if (nodeId) return nodeId;
+  }
+};
+
 // Opens the single sidenav widget and recomposes it. Project selection owns the Sidenav
 // itself, so the sidenav stays hidden there.
 export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { selectedNode?: string | null } = {}) => {
@@ -53,12 +73,6 @@ export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { sel
 export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId: string | undefined) => {
   if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
   ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
-};
-
-const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) return;
-  showDashboardSidenav(ctx);
 };
 
 const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
@@ -94,25 +108,84 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
 export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
 
+  let modeSelectionNodeId: string | undefined;
+  let modeSelectionRevision = 0;
+  let disposed = false;
+
   const refresh = () => {
     if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
       ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
     }
   };
 
-  const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidenavForActiveMode(ctx));
+  const clearModeSelection = () => {
+    const selectedNodeId = ctx.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId;
+    if (modeSelectionNodeId && selectedNodeId === modeSelectionNodeId) {
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, undefined);
+    }
+    modeSelectionNodeId = undefined;
+  };
+
+  const syncModeSelection = async () => {
+    const revision = ++modeSelectionRevision;
+    if (disposed) return;
+    const mode = ctx.modes.getActiveModeId();
+    if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) {
+      clearModeSelection();
+      return;
+    }
+
+    let sections: TreeViewSection[];
+    try {
+      sections = await composeSidenavBody(ctx);
+    } catch {
+      return;
+    }
+    if (disposed || revision !== modeSelectionRevision || ctx.modes.getActiveModeId() !== mode) return;
+
+    const nextNodeId = findModeNavigationNodeId(sections, mode);
+    if (nextNodeId) {
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nextNodeId);
+      modeSelectionNodeId = nextNodeId;
+      return;
+    }
+
+    clearModeSelection();
+  };
+
+  const refreshAndSyncModeSelection = () => {
+    refresh();
+    void syncModeSelection();
+  };
+
+  const syncSidenavForActiveMode = () => {
+    const mode = ctx.modes.getActiveModeId();
+    if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) {
+      modeSelectionRevision += 1;
+      clearModeSelection();
+      return;
+    }
+    showDashboardSidenav(ctx);
+    void syncModeSelection();
+  };
+
+  const modeSubscription = ctx.modes.onDidChangeActive(syncSidenavForActiveMode);
   // Mode-scoped contributions read the primary resource (e.g. the sessions list scopes to the
   // open workspace), but the tree only recomputes on refresh. A workspace→workspace switch
   // crosses no mode boundary and changes no data, so without this the list keeps the previous
   // primary's scope (or none, showing every session). The primary change fires after placement,
   // unlike the beforeOpen refresh that runs before it.
-  const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
+  const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refreshAndSyncModeSelection);
   const unsubscribeDashboardData = subscribeDashboardData(refresh);
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
-  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, refresh);
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshAndSyncModeSelection);
+  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, refreshAndSyncModeSelection);
+
+  syncSidenavForActiveMode();
 
   return {
     dispose: () => {
+      disposed = true;
+      modeSelectionRevision += 1;
       modeSubscription.dispose();
       primaryResourceSubscription.dispose();
       unsubscribeDashboardData();

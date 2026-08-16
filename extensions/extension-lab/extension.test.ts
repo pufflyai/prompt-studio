@@ -23,6 +23,7 @@ describe("extension-lab workbench attachments", () => {
       title: "Artifacts",
       resourceKind: "glass-lab-artifact",
       queryCommand: { id: "extension-lab.glass-lab-artifacts.query" },
+      rowOpenStrategy: "persistent",
       rowActions: [
         {
           id: "delete",
@@ -41,10 +42,18 @@ describe("extension-lab workbench attachments", () => {
         params: { modeId: "pstdio.extension-lab.lab" },
       },
     });
+    expect(extension.treeItems?.sourceLab).toMatchObject({
+      target: "workbench.left.tree",
+      action: {
+        kind: "command",
+        command: "workbench.action.switchMode",
+        params: { modeId: "pstdio.extension-lab.source" },
+      },
+    });
   });
 
-  test("stages a single Lab mode with native activity items and status chrome", () => {
-    expect(Object.keys(extension.modes ?? {})).toEqual(["lab"]);
+  test("stages activity-owned and sidenav-owned Lab modes", () => {
+    expect(Object.keys(extension.modes ?? {})).toEqual(["lab", "source"]);
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
       layout: {
@@ -56,6 +65,13 @@ describe("extension-lab workbench attachments", () => {
           { region: "main", panel: "labCams" },
           { region: "main", panel: "labArtifacts" },
         ],
+      },
+    });
+    expect(extension.modes?.source).toMatchObject({
+      id: "pstdio.extension-lab.source",
+      layout: {
+        panels: ["main", "secondary", "side"],
+        open: [{ region: "main", panel: "labOverview" }],
       },
     });
     // The Lab owns navigation through native activity items; no sidenav or
@@ -118,18 +134,24 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.controlsRenderers).not.toHaveProperty("labReviewChecklist");
   });
 
-  test("opens artifacts as a side inspector bound to the resource kind", () => {
+  test("opens artifacts as persistent main reports with a bound side inspector", () => {
+    expect(extension.panels?.labArtifactReport).toMatchObject({
+      region: "main",
+      closable: true,
+      resourceKind: "glass-lab-artifact",
+      webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
+    });
     expect(extension.panels?.labArtifactDetail).toMatchObject({
       region: "side",
       closable: true,
       resourceKind: "glass-lab-artifact",
       webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
     });
-    // Side-only kinds open in place; a main editor panel must not exist for the kind.
+    // The main report keeps the originating table tab available; the side view remains a companion inspector.
     const mainEditors = Object.values(extension.panels ?? {}).filter(
       (panel) => panel.resourceKind === "glass-lab-artifact" && panel.region === "main",
     );
-    expect(mainEditors).toEqual([]);
+    expect(mainEditors).toHaveLength(1);
   });
 
   test("keeps the remaining lab surfaces", () => {

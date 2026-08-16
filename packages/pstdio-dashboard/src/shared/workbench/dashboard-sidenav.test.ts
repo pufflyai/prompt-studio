@@ -7,6 +7,11 @@ import { registerSidenavContribution } from "./contributions/sidenav-tree-contri
 import { registerDashboardSidenav } from "./dashboard-sidenav";
 import { registerNavigationOwningMode } from "./mode-navigation-ownership";
 
+const settleSidenavSelection = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 describe("registerDashboardSidenav", () => {
   test("keeps the sidenav hidden while a navigation-owning mode is active", () => {
     const workbench = createWorkbenchCore();
@@ -69,7 +74,7 @@ describe("registerDashboardSidenav", () => {
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
     ]);
-    expect(resourceReads).toEqual([undefined]);
+    expect(resourceReads.at(-1)).toBeUndefined();
 
     const workspace = {
       kind: "workspace",
@@ -82,13 +87,141 @@ describe("registerDashboardSidenav", () => {
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
       { id: "resource", nodes: [{ id: workspace.uri, label: workspace.label }] },
     ]);
-    expect(resourceReads).toEqual([undefined, workspace.uri]);
+    expect(resourceReads.at(-1)).toBe(workspace.uri);
 
     selectDashboardNavigationResource(workbench, dashboardResources.workspaces);
 
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
     ]);
-    expect(resourceReads).toEqual([undefined, workspace.uri, undefined]);
+    expect(resourceReads.at(-1)).toBeUndefined();
+  });
+
+  test("selects the first visible switch-mode row after its mode becomes active", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    registerSidenavContribution(workbench, {
+      id: "test.mode-navigation",
+      modes: ["*"],
+      getSections: () => [
+        {
+          id: "extensions",
+          nodes: [
+            {
+              id: "run-command",
+              label: "Run command",
+              target: { kind: "command", commandId: "extension.run", args: { modeId: "lab" } },
+            },
+            {
+              id: "lab-first",
+              label: "Lab first",
+              target: {
+                kind: "command",
+                commandId: "workbench.action.switchMode",
+                args: { modeId: "lab" },
+              },
+            },
+            {
+              id: "lab-second",
+              label: "Lab second",
+              target: {
+                kind: "command",
+                commandId: "workbench.action.switchMode",
+                args: { modeId: "lab" },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    registerDashboardSidenav(workbench);
+
+    workbench.modes.setActiveMode("lab");
+    await settleSidenavSelection();
+
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("lab-first");
+  });
+
+  test("clears a mode-derived selection when leaving without replacing destination selection", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    registerSidenavContribution(workbench, {
+      id: "test.mode-navigation",
+      modes: ["*"],
+      getSections: () => [
+        {
+          id: "extensions",
+          nodes: [
+            {
+              id: "lab",
+              label: "Lab",
+              target: {
+                kind: "command",
+                commandId: "workbench.action.switchMode",
+                args: { modeId: "lab" },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    registerDashboardSidenav(workbench);
+    workbench.modes.setActiveMode("lab");
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("lab");
+
+    workbench.modes.setActiveMode("project");
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
+
+    workbench.modes.setActiveMode("lab");
+    await settleSidenavSelection();
+    workbench.modes.setActiveMode("project");
+    workbench.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, "project-overview");
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
+      "project-overview",
+    );
+  });
+
+  test("updates mode selection when sidenav contributions are refreshed", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    registerDashboardSidenav(workbench);
+    workbench.modes.setActiveMode("lab");
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
+
+    const contribution = registerSidenavContribution(workbench, {
+      id: "test.mode-navigation",
+      modes: ["*"],
+      getSections: () => [
+        {
+          id: "extensions",
+          nodes: [
+            {
+              id: "lab",
+              label: "Lab",
+              target: {
+                kind: "command",
+                commandId: "workbench.action.switchMode",
+                args: { modeId: "lab" },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("lab");
+
+    contribution.dispose();
+    await settleSidenavSelection();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
   });
 });

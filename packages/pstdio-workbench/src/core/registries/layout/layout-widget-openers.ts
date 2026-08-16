@@ -85,7 +85,11 @@ const findReplacementIndex = (
   }
   if (!openInput.replaceActive) return -1;
   const replacementWidgetId =
-    regionId === "main" && openInput.resource && layout.activeLocationWidgetId
+    regionId === "main" &&
+    openInput.resource &&
+    widget.role !== "sub-panel" &&
+    widget.role !== "panel-menu" &&
+    layout.activeLocationWidgetId
       ? layout.activeLocationWidgetId
       : activeWidgetId;
   return region.widgets.findIndex((placement) => placement.widgetId === replacementWidgetId && !placement.pinned);

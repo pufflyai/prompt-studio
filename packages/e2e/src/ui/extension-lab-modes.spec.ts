@@ -41,6 +41,25 @@ const openLabMode = async (page: import("@playwright/test").Page) => {
   await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };
 
+test("a switch-mode project sidenav row stays active while its mode is active", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${project.id}`);
+
+  const sourceLab = page.getByRole("option", { name: "Source Lab", exact: true });
+  await sourceLab.click({ timeout: 30_000 });
+
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toBeVisible({ timeout: 30_000 });
+  await expect(sourceLab).toHaveAttribute("aria-selected", "true");
+
+  const faultyLab = page.getByRole("option", { name: "Lab (faulty)", exact: true });
+  await faultyLab.click();
+  await expect(faultyLab).toHaveAttribute("aria-selected", "true");
+  await expect(sourceLab).toHaveAttribute("aria-selected", "false");
+});
+
 test("the Lab mode swaps the sidenav for activity and status chrome without a terminal", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
@@ -99,7 +118,7 @@ test("the Cameras tree menu drives the cams player", async ({ page, request }) =
   await expect(camsFrame.getByText(/Corridor B/)).toBeVisible({ timeout: 15_000 });
 });
 
-test("artifacts are created from the panel menu and inspected in the Side Panel", async ({ page, request }) => {
+test("persistent table rows open resource tabs without losing the table menu", async ({ page, request }, testInfo) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
@@ -122,14 +141,22 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
 
   const dataTable = page.locator("table.data-table");
   await expect(dataTable.locator("tbody tr")).toHaveCount(1, { timeout: 15_000 });
-  const artifactTitle = await dataTable.locator("td[data-column-id='artifact']").first().textContent();
+  const artifactTitle = (await dataTable.locator("td[data-column-id='artifact']").first().textContent())?.trim();
 
-  // Selecting a row opens the Side Panel inspector without leaving the Lab.
+  // Selecting a row opens a persistent main resource tab and its companion inspector.
   await dataTable.locator("td[data-column-id='artifact']").first().click();
-  const detailFrame = labFrame(page, "Artifact");
+  const detailFrame = page.locator('[data-workbench-region="main"] iframe').last().contentFrame();
   await expect(detailFrame.getByRole("heading", { name: artifactTitle! })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab").filter({ hasText: artifactTitle! })).toBeVisible();
+  const artifactsTab = page.getByRole("tab", { name: "Artifacts", exact: true });
+  await expect(artifactsTab).toBeVisible();
   await expect(page.locator('[data-workbench-region="activity"]')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("persistent-resource-tab.png"), fullPage: true });
+
+  // Returning to the table restores the same panel and its right-side menu.
+  await artifactsTab.click();
+  await expect(dataTable.locator("tbody tr")).toHaveCount(1);
+  await expect(createMenu.getByText("Catalog intake")).toBeVisible();
 
   // Row actions still delete artifacts.
   await dataTable.locator("tbody tr").first().locator('button[aria-label="Row actions"]').click();

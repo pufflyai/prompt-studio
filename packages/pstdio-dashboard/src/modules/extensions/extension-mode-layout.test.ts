@@ -215,6 +215,67 @@ describe("extension-mode-layout registration", () => {
     }
   });
 
+  test("resolves webview menus attached to native renderer panels by their native panel id", () => {
+    const projectId = "project-1";
+    const metadata = {
+      ...emptyDashboardExtensionMetadata,
+      panels: [
+        {
+          id: "pstdio-lab.history",
+          extensionId: "pstdio.pstdio-lab",
+          title: "History",
+          region: "main" as const,
+          closable: false,
+          dataTableRendererId: "pstdio-lab.history",
+          panelMenus: [
+            {
+              id: "pstdio-lab.history.newExperiment",
+              extensionId: "pstdio.pstdio-lab",
+              ownerPanelId: "pstdio-lab.history",
+              title: "New experiment",
+              side: "right" as const,
+              webview: {
+                entry: {
+                  kind: "package-asset" as const,
+                  path: "./new-experiment.tsx",
+                  baseUrl: "file:///extension/extension.ts",
+                },
+                runtimeUrl: "/runtime.html",
+                moduleUrl: "/new-experiment.js",
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const workbench = createWorkbenchCore();
+    const panel = {
+      id: "pstdio-lab.history.newExperiment",
+      title: "New experiment",
+      region: "main-right-menu" as const,
+      rendererId: "webview:bridge",
+      closable: false,
+    };
+
+    setCachedDashboardExtensionMetadata(projectId, metadata);
+    try {
+      workbench.layout.registerPanel(panel);
+      const instance = workbench.layout.openPanel(panel.id, {
+        resource: {
+          kind: "extension-view",
+          uri: "pstdio://extension-view/history",
+          metadata: { projectId },
+        },
+      });
+      expect(resolveExtensionView({ panel, instance })).toMatchObject({
+        projectId,
+        view: { id: "pstdio-lab.history.newExperiment" },
+      });
+    } finally {
+      clearCachedDashboardExtensionMetadata(projectId);
+    }
+  });
+
   test("registers extension resource kinds declared by resource-bound modes", () => {
     const workbench = createWorkbenchCore();
     const metadata = {

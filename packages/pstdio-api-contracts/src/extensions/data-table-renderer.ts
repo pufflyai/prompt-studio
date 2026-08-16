@@ -58,6 +58,7 @@ export const extensionDataTableRendererRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   resourceKind: z.string().optional(),
+  rowOpenStrategy: z.enum(["replace-active", "persistent"]).optional(),
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryCommandId: z.string(),
   selectionMode: z.enum(["none", "multiple"]).optional(),

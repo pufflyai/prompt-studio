@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
@@ -92,8 +92,46 @@ const RowDescription = (props: {
   );
 };
 
-const RowContent = (props: RowContentProps) => {
-  const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
+const RowChevron = (props: { isExpanded: boolean; onToggleExpand?: () => void }) => {
+  const { isExpanded, onToggleExpand } = props;
+  const icon = (
+    <Icon
+      as={ChevronRight}
+      boxSize="12px"
+      transform={isExpanded ? "rotate(90deg)" : "rotate(0deg)"}
+      transition="transform 120ms ease"
+    />
+  );
+
+  if (!onToggleExpand) {
+    return (
+      <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
+        {icon}
+      </Box>
+    );
+  }
+
+  return (
+    <chakra.button
+      type="button"
+      aria-label={isExpanded ? "Collapse" : "Expand"}
+      color="fg.muted"
+      flexShrink={0}
+      display="flex"
+      alignItems="center"
+      borderRadius="xs"
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggleExpand();
+      }}
+    >
+      {icon}
+    </chakra.button>
+  );
+};
+
+const RowContent = (props: RowContentProps & { onToggleExpand?: () => void }) => {
+  const { item, isExpanded, showChevron, isDisabled, variant, tone, onToggleExpand } = props;
   const isEmptyStateVariant = variant === "empty-state";
   const isDenseVariant =
     variant === "compact" ||
@@ -117,16 +155,7 @@ const RowContent = (props: RowContentProps) => {
 
   return (
     <HStack gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
-      {showChevron ? (
-        <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
-          <Icon
-            as={ChevronRight}
-            boxSize="12px"
-            transform={isExpanded ? "rotate(90deg)" : "rotate(0deg)"}
-            transition="transform 120ms ease"
-          />
-        </Box>
-      ) : null}
+      {showChevron ? <RowChevron isExpanded={isExpanded} onToggleExpand={onToggleExpand} /> : null}
       <Stack gap="0" minW="0" flex="1">
         <HStack gap={iconLabelGap} minW="0" alignItems="center">
           {item.icon ? (
@@ -172,6 +201,7 @@ export const ListRowContent = (props: {
   tone: ListRowProps["tone"];
   variant: ListRowProps["variant"];
   showContextMenuTrigger: boolean;
+  onToggleExpand?: () => void;
 }) => {
   const {
     item,
@@ -181,6 +211,7 @@ export const ListRowContent = (props: {
     tone = "default",
     variant = "default",
     showContextMenuTrigger,
+    onToggleExpand,
   } = props;
   const actions = createResourceRowActions(item, showContextMenuTrigger);
 
@@ -193,6 +224,7 @@ export const ListRowContent = (props: {
         isDisabled={isDisabled}
         tone={tone}
         variant={variant}
+        onToggleExpand={onToggleExpand}
       />
       {item.endContent ? (
         <Box flexShrink={0} color="fg.muted" display="flex" alignItems="center">
