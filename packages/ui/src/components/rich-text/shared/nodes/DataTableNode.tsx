@@ -20,6 +20,7 @@ import type { DataTableEditModeColumn, RowData } from "@/components/data-table/t
 import { MarkdownEditor } from "../../markdown-editor/markdown-editor";
 import { MarkdownInline } from "../markdown-inline";
 import type { MarkdownTableValue } from "../markdown-table";
+import { MARKDOWN_USER_EDIT_TAG } from "../markdown-update-tags";
 
 interface MarkdownDataTableProps {
   editor: LexicalEditor;
@@ -46,7 +47,7 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
         const node = $getNodeByKey(nodeKey);
         if ($isDataTableNode(node)) node.setTable(change(node.getTable()));
       },
-      { tag: HISTORY_PUSH_TAG },
+      { tag: [HISTORY_PUSH_TAG, MARKDOWN_USER_EDIT_TAG] },
     );
     focusTable();
   };
@@ -81,7 +82,7 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
           paragraph.select();
         }
       },
-      { tag: HISTORY_PUSH_TAG },
+      { tag: [HISTORY_PUSH_TAG, MARKDOWN_USER_EDIT_TAG] },
     );
     setTimeout(() => editor.focus(), 0);
   };

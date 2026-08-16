@@ -1,5 +1,6 @@
 ---
 "@pstdio/workbench": patch
+"@pstdio/ui": patch
 "extension-lab": patch
 "pstdio": patch
 ---

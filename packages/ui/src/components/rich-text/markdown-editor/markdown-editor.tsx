@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme, editorTransformers } from "../shared/editor-config";
 import { exportLexicalToMarkdown, importMarkdownToLexical } from "../shared/markdown-codec";
+import { MARKDOWN_USER_EDIT_TAG } from "../shared/markdown-update-tags";
 import type { MarkdownUrlResolver } from "../shared/markdown-url";
 import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { CodeBlockActionsPlugin } from "../shared/plugins/CodePlugin/CodeBlockActionsPlugin";
@@ -65,10 +66,23 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  // Auto-focused editors are transient editing surfaces (for example, the
+  // data-table cell popover). They must emit their draft immediately so the
+  // owning control can commit it, while ordinary file editors remain quiet
+  // until the user interacts with them.
+  const hasUserEditIntentRef = useRef(autoFocus);
   const [floatingToolbarAnchorElem, setFloatingToolbarAnchorElem] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    setFloatingToolbarAnchorElem(editorContainerRef.current);
+    const container = editorContainerRef.current;
+    setFloatingToolbarAnchorElem(container);
+    if (!container) return;
+
+    const markUserEditIntent = () => {
+      hasUserEditIntentRef.current = true;
+    };
+    container.addEventListener("beforeinput", markUserEditIntent, true);
+    return () => container.removeEventListener("beforeinput", markUserEditIntent, true);
   }, []);
 
   const initialConfig = {
@@ -93,6 +107,21 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       position="relative"
       direction="column"
       overflow="visible"
+      onInputCapture={() => {
+        hasUserEditIntentRef.current = true;
+      }}
+      onKeyDownCapture={() => {
+        hasUserEditIntentRef.current = true;
+      }}
+      onPasteCapture={() => {
+        hasUserEditIntentRef.current = true;
+      }}
+      onDropCapture={() => {
+        hasUserEditIntentRef.current = true;
+      }}
+      onPointerDownCapture={() => {
+        hasUserEditIntentRef.current = true;
+      }}
     >
       <MarkdownUrlProvider resolver={resolveMarkdownUrl}>
         <LexicalComposer initialConfig={initialConfig}>
@@ -148,7 +177,14 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             <OnChangePlugin
               ignoreSelectionChange
               ignoreHistoryMergeTagChange={false}
-              onChange={(editorState) => {
+              onChange={(editorState, _editor, tags) => {
+                // Lexical plugins may normalize the imported Markdown during mount.
+                // Do not persist that normalization as a user edit: authoring files
+                // must remain byte-stable until an interaction expresses edit intent.
+                if (tags.has(MARKDOWN_USER_EDIT_TAG)) {
+                  hasUserEditIntentRef.current = true;
+                }
+                if (!hasUserEditIntentRef.current) return;
                 editorState.read(() => {
                   const root = $getRoot();
                   const markdownBody = exportLexicalToMarkdown(root);
