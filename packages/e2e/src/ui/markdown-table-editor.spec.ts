@@ -6,6 +6,7 @@ const largeTableStoryId = "patterns-editors-markdown-editor-tables--editable-lar
 const difficultTableStoryId = "patterns-editors-markdown-editor-tables--difficult-table-syntax";
 const commentsStoryId = "patterns-editors-markdown-editor-tables--hidden-preserved-comments";
 const slashCommandsStoryId = "patterns-editors-markdown-editor-tables--slash-commands";
+const tallImageStoryId = "patterns-editors-markdown-editor-tables--tall-image-editing";
 const editModeDataTableStoryId = "components-data-display-data-table--edit-mode";
 const richTextEditModeDataTableStoryId = "components-data-display-data-table--rich-text-edit-mode";
 const modeToggleDataTableStoryId = "components-data-display-data-table--mode-toggle";
@@ -145,6 +146,8 @@ test.describe("markdown table editor storybook", () => {
     await expect(commandMenu.getByRole("option", { name: /Image/ })).toBeVisible();
     await expect(commandMenu.getByRole("option", { name: /Code block/ })).toBeVisible();
     await expect(commandMenu.getByRole("option", { name: /Divider/ })).toBeVisible();
+    await expect(commandMenu.getByText("Insert an editable table")).toHaveCount(0);
+    await expect(commandMenu.getByText("Insert an image from a URL")).toHaveCount(0);
 
     await page.keyboard.type("table");
     await page.keyboard.press("Enter");
@@ -165,6 +168,51 @@ test.describe("markdown table editor storybook", () => {
     await expect(emittedMarkdown).toHaveValue(/!\[Diagram\]\(https:\/\/example\.com\/diagram\.png\)/);
     await page.keyboard.press("Control+z");
     await expect(emittedMarkdown).not.toHaveValue(/Diagram/);
+  });
+
+  test("keeps the editor scroll position stable while typing below a tall inserted image", async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, tallImageStoryId));
+
+    const editor = page.locator("[contenteditable='true']");
+    const editorViewport = page.locator("[data-scope='scroll-area'][data-part='viewport']").first();
+    await editor.click();
+    await page.keyboard.type("/");
+    const commandMenu = page.getByRole("listbox", { name: "Insert content" });
+    await expect(commandMenu).toBeVisible();
+    await page.keyboard.type("image");
+    const imageOption = commandMenu.getByRole("option", { name: "Image" });
+    await expect(imageOption).toBeVisible();
+    await imageOption.click();
+    const imageDialog = page.getByRole("dialog", { name: "Insert image" });
+    await imageDialog.getByRole("textbox", { name: "Image URL" }).fill("https://example.com/tall-image.png");
+    await imageDialog.getByRole("textbox", { name: "Alt text" }).fill("Tall image");
+    await imageDialog.getByRole("button", { name: "Insert image" }).click();
+    const tallImage = page.locator("img[alt='Tall image']");
+    await expect(tallImage).toBeAttached();
+    await tallImage.evaluate((image) => {
+      image.style.width = "320px";
+      image.style.height = "1200px";
+      image.dispatchEvent(new Event("load"));
+    });
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+
+    const scrollTopBeforeTyping = await editorViewport.evaluate((element) => element.scrollTop);
+    await page.keyboard.type("Text below the image");
+    const scrollTopAfterTyping = await editorViewport.evaluate((element) => element.scrollTop);
+
+    expect(scrollTopAfterTyping).toBe(scrollTopBeforeTyping);
+  });
+
+  test("keeps block insertion out of the text selection toolbar", async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, slashCommandsStoryId));
+
+    const editor = page.locator("[contenteditable='true']");
+    await editor.click();
+    await page.keyboard.type("Format this text");
+    await page.keyboard.press("Control+a");
+
+    await expect(page.getByRole("button", { name: "Bold" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Code Block" })).toHaveCount(0);
   });
 });
 
@@ -311,7 +359,7 @@ test.describe("rich data table edit mode storybook", () => {
     await expect(textToolbar.getByRole("button", { name: "Heading 6" })).toHaveCount(0);
     await expect(textToolbar.getByRole("button", { name: "Strikethrough" })).toHaveCount(0);
     await expect(textToolbar.getByRole("button", { name: "Inline Code" }).locator(".lucide-code")).toBeVisible();
-    await expect(textToolbar.getByRole("button", { name: "Code Block" }).locator(".lucide-square-code")).toBeVisible();
+    await expect(textToolbar.getByRole("button", { name: "Code Block" })).toHaveCount(0);
     await expect(textToolbar.getByRole("button", { name: "Quote" }).locator(".lucide-text-quote")).toBeVisible();
 
     await nestedEditor.click();

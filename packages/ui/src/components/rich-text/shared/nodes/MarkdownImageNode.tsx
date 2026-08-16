@@ -1,6 +1,9 @@
 import { Box, Image, Text } from "@chakra-ui/react";
 import {
   $applyNodeReplacement,
+  $getNodeByKey,
+  $getSelection,
+  $isRangeSelection,
   DecoratorNode,
   type LexicalEditor,
   type LexicalNode,
@@ -21,10 +24,11 @@ interface MarkdownImageProps {
   source: string;
   alt: string;
   title: string | null;
+  onLoad?: () => void;
 }
 
 export const MarkdownImage = (props: MarkdownImageProps) => {
-  const { source, alt, title } = props;
+  const { source, alt, title, onLoad } = props;
   const resolver = useMarkdownUrlResolver();
   const resolved = resolveMarkdownUrl(source, "image", resolver);
 
@@ -38,7 +42,16 @@ export const MarkdownImage = (props: MarkdownImageProps) => {
     );
   }
 
-  return <Image src={resolved} alt={alt} title={title ?? undefined} loading="lazy" referrerPolicy="no-referrer" />;
+  return (
+    <Image
+      src={resolved}
+      alt={alt}
+      title={title ?? undefined}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onLoad={onLoad}
+    />
+  );
 };
 
 export class MarkdownImageNode extends DecoratorNode<ReactNode> {
@@ -103,8 +116,40 @@ export class MarkdownImageNode extends DecoratorNode<ReactNode> {
     return $createMarkdownImageNode(node.source, node.alt, node.title);
   }
 
-  decorate(_editor: LexicalEditor) {
-    return <MarkdownImage source={this.__source} alt={this.__alt} title={this.__title} />;
+  decorate(editor: LexicalEditor) {
+    const keepFollowingSelectionVisible = () => {
+      if (!editor.isEditable()) return;
+
+      let selectedBlockKey: NodeKey | null = null;
+      editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        const imageNode = $getNodeByKey(this.getKey());
+        if (!$isRangeSelection(selection) || !selection.isCollapsed() || !imageNode) return;
+
+        const imageBlock = imageNode.getTopLevelElement();
+        const followingBlock = imageBlock?.getNextSibling();
+        const followingBlockKey = followingBlock?.getKey();
+        const selectionBlock = selection.anchor.getNode().getTopLevelElement();
+        if (followingBlockKey && followingBlockKey === selectionBlock?.getKey()) {
+          selectedBlockKey = followingBlockKey;
+        }
+      });
+
+      const blockKey = selectedBlockKey;
+      if (!blockKey) return;
+      requestAnimationFrame(() => {
+        editor.getElementByKey(blockKey)?.scrollIntoView({ block: "end" });
+      });
+    };
+
+    return (
+      <MarkdownImage
+        source={this.__source}
+        alt={this.__alt}
+        title={this.__title}
+        onLoad={keepFollowingSelectionVisible}
+      />
+    );
   }
 }
 

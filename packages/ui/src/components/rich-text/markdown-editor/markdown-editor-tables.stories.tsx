@@ -63,6 +63,14 @@ export const SlashCommands: Story = {
   render: () => <EditableTableDemo initialValue="" />,
 };
 
+export const TallImageEditing: Story = {
+  render: () => (
+    <Box height="calc(100vh - var(--chakra-spacing-lg))" borderWidth="1px" borderColor="border.subtle">
+      <MarkdownEditor defaultState="" isEditable />
+    </Box>
+  ),
+};
+
 export const DifficultTableSyntax: Story = {
   render: () => <EditableTableDemo initialValue={difficultMarkdownTableFixture} />,
 };

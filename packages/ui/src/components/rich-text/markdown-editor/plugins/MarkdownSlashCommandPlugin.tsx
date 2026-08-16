@@ -24,16 +24,15 @@ interface SlashCommandOption {
   id: "table" | "image" | "code" | "divider";
   key: string;
   label: string;
-  description: string;
   icon: ElementType;
   setRefElement: (element: HTMLElement | null) => void;
 }
 
 const commandDefinitions: Array<Omit<SlashCommandOption, "key" | "setRefElement">> = [
-  { id: "table", label: "Table", description: "Insert an editable table", icon: Table2 },
-  { id: "image", label: "Image", description: "Insert an image from a URL", icon: ImageIcon },
-  { id: "code", label: "Code block", description: "Insert a fenced code block", icon: Code2 },
-  { id: "divider", label: "Divider", description: "Insert a horizontal divider", icon: Minus },
+  { id: "table", label: "Table", icon: Table2 },
+  { id: "image", label: "Image", icon: ImageIcon },
+  { id: "code", label: "Code block", icon: Code2 },
+  { id: "divider", label: "Divider", icon: Minus },
 ];
 
 const slashTrigger = (text: string): MenuTextMatch | null => {
@@ -83,7 +82,7 @@ const SlashCommandMenu = (props: SlashCommandMenuProps) => {
       position="absolute"
       zIndex="popover"
       layerStyle="modal"
-      minWidth="17rem"
+      minWidth="13rem"
       overflow="hidden"
       paddingY="2xs"
     >
@@ -116,12 +115,9 @@ const SlashCommandMenu = (props: SlashCommandMenuProps) => {
             onClick={() => onSelect(option, index)}
           >
             <Icon as={option.icon} boxSize="16px" flexShrink={0} />
-            <Box minWidth="0">
-              <Text textStyle="label/M/medium">{option.label}</Text>
-              <Text color="fg.muted" textStyle="label/S/regular">
-                {option.description}
-              </Text>
-            </Box>
+            <Text minWidth="0" truncate textStyle="label/M/medium">
+              {option.label}
+            </Text>
           </Flex>
         );
       })}
@@ -136,7 +132,7 @@ export const MarkdownSlashCommandPlugin = () => {
   const [imageUrl, setImageUrl] = useState("");
   const [imageAlt, setImageAlt] = useState("Image");
   const options = commandDefinitions
-    .filter((option) => !query || `${option.label} ${option.description}`.toLowerCase().includes(query.toLowerCase()))
+    .filter((option) => !query || option.label.toLowerCase().includes(query.toLowerCase()))
     .map((option) => ({ ...option, key: option.id, setRefElement: () => {} }));
 
   const closeImageDialog = () => {
@@ -167,8 +163,13 @@ export const MarkdownSlashCommandPlugin = () => {
         const queryNode = $getNodeByKey(imageQueryNodeKey);
         if ($isTextNode(queryNode)) {
           const imageNode = $createMarkdownImageNode(imageUrl.trim(), imageAlt.trim() || "Image");
+          const parent = queryNode.getParent();
           queryNode.replace(imageNode);
-          imageNode.selectNext();
+          if ($isParagraphNode(parent)) {
+            const nextParagraph = $createParagraphNode();
+            parent.insertAfter(nextParagraph);
+            nextParagraph.select();
+          }
         }
       },
       { tag: HISTORY_MERGE_TAG },

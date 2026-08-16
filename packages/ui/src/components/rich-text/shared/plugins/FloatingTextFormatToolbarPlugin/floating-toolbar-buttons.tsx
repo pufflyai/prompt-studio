@@ -1,7 +1,7 @@
 import { IconButton, Stack, Text } from "@chakra-ui/react";
 import type { HeadingTagType } from "@lexical/rich-text";
 import { FORMAT_TEXT_COMMAND, type LexicalEditor } from "lexical";
-import { Code, Link as LinkIcon, List, ListOrdered, ListTodo, SquareCode, TextQuote } from "lucide-react";
+import { Code, Link as LinkIcon, List, ListOrdered, ListTodo, TextQuote } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { BlockType } from "./resolve-block-type";
 
@@ -16,7 +16,6 @@ interface FloatingToolbarButtonsProps {
   formatHeading: (headingSize: HeadingTagType) => void;
   formatList: (type: "bullet" | "number" | "check") => void;
   formatQuote: () => void;
-  formatCodeBlock: () => void;
   insertLink: () => void;
 }
 
@@ -45,7 +44,6 @@ export function FloatingToolbarButtons(props: FloatingToolbarButtonsProps) {
     formatHeading,
     formatList,
     formatQuote,
-    formatCodeBlock,
     insertLink,
   } = props;
 
@@ -153,17 +151,6 @@ export function FloatingToolbarButtons(props: FloatingToolbarButtonsProps) {
           onClick={insertLink}
         >
           <LinkIcon size={14} />
-        </IconButton>
-      </Tooltip>
-      <Tooltip content="Code Block">
-        <IconButton
-          data-active={blockType === "code" || undefined}
-          variant="ghost"
-          aria-label="Code Block"
-          size="xs"
-          onClick={formatCodeBlock}
-        >
-          <SquareCode size={14} />
         </IconButton>
       </Tooltip>
       <Tooltip content="Quote">

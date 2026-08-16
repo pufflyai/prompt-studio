@@ -25,7 +25,6 @@ import {
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { $createCodeNode } from "../../lexical-code";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "../LinkEditorPlugin/commands";
 import { getSelectedNode } from "../LinkEditorPlugin/utils/getSelectedNode";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
@@ -81,20 +80,6 @@ function FloatingTextToolbar({
       check: INSERT_CHECK_LIST_COMMAND,
     }[type];
     editor.dispatchCommand(command, undefined);
-  };
-
-  const formatCodeBlock = () => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if (!$isRangeSelection(selection)) return;
-
-      if (blockType === "code") {
-        $setBlocksType(selection, $createParagraphNode);
-        return;
-      }
-
-      $setBlocksType(selection, () => $createCodeNode());
-    });
   };
 
   const formatQuote = () => {
@@ -251,7 +236,6 @@ function FloatingTextToolbar({
         formatHeading={formatHeading}
         formatList={formatList}
         formatQuote={formatQuote}
-        formatCodeBlock={formatCodeBlock}
         insertLink={insertLink}
       />
     </Box>
