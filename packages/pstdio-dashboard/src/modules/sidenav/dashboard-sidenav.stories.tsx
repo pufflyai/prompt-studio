@@ -186,6 +186,7 @@ const createExtensionNavigationModule = () => ({
         {
           id: "story-extensions",
           label: "Extensions",
+          collapsible: false,
           nodes: [
             {
               id: "story.extension-lab.mode",
@@ -412,7 +413,7 @@ export const ExtensionModeSelected: Story = {
   tags: ["review"],
   render: () => <SidenavStory open={(workbench) => workbench.modes.setActiveMode(STORY_LAB_MODE_ID)} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("option", { name: "Extension Lab" })).toHaveAttribute(
+    await expect(await within(canvasElement).findByRole("option", { name: "Extension Lab" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -431,7 +432,10 @@ export const ExtensionResourceSelected: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("option", { name: "Artifacts" })).toHaveAttribute("aria-selected", "true");
-    await expect(canvas.getByRole("option", { name: "Extension Lab" })).toHaveAttribute("aria-selected", "false");
+    await expect(await canvas.findByRole("option", { name: "Artifacts" })).toHaveAttribute("aria-selected", "true");
+    await expect(await canvas.findByRole("option", { name: "Extension Lab" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
   },
 };
