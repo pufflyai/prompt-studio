@@ -134,6 +134,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
       clearModeSelection();
       return;
     }
+    const selectedNodeIdBeforeLoad = ctx.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId;
 
     let sections: TreeViewSection[];
     try {
@@ -142,6 +143,8 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
       return;
     }
     if (disposed || revision !== modeSelectionRevision || ctx.modes.getActiveModeId() !== mode) return;
+    const selectedNodeId = ctx.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId;
+    if (selectedNodeId !== selectedNodeIdBeforeLoad) return;
 
     const nextNodeId = findModeNavigationNodeId(sections, mode);
     if (nextNodeId) {

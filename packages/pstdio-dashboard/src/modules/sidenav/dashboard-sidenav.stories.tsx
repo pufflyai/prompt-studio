@@ -11,6 +11,7 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createCommandPaletteModule } from "../command-palette/module";
@@ -28,6 +29,8 @@ import { createSidenavModule } from "./module";
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
 const STORY_TICKET_WIDGET_ID = "story.ticket-location";
+const STORY_LAB_MODE_ID = "story.extension-lab";
+const STORY_LAB_RESOURCE_NODE_ID = "story.extension-lab.artifacts";
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -172,6 +175,41 @@ const createTicketsNavigationModule = () => ({
   },
 });
 
+const createExtensionNavigationModule = () => ({
+  id: "story.extension-navigation",
+  activate(ctx: WorkbenchModuleContext) {
+    ctx.modes.registerMode({ id: STORY_LAB_MODE_ID, label: "Extension Lab", activate: () => undefined });
+    registerSidenavContribution(ctx, {
+      id: "story.extension-navigation",
+      modes: ["*"],
+      getSections: () => [
+        {
+          id: "story-extensions",
+          label: "Extensions",
+          nodes: [
+            {
+              id: "story.extension-lab.mode",
+              label: "Extension Lab",
+              icon: "flask-conical",
+              target: {
+                kind: "command",
+                commandId: "workbench.action.switchMode",
+                args: { modeId: STORY_LAB_MODE_ID },
+              },
+            },
+            {
+              id: STORY_LAB_RESOURCE_NODE_ID,
+              label: "Artifacts",
+              icon: "archive",
+            },
+          ],
+        },
+      ],
+    });
+    return [];
+  },
+});
+
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
     sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
@@ -265,6 +303,7 @@ const bootstrapWorkbench = () => {
     createSettingsModule(),
     createStartModule(),
     createTicketsNavigationModule(),
+    createExtensionNavigationModule(),
   ]) {
     workbench.registerModule(module);
   }
@@ -367,4 +406,32 @@ export const WorkspaceMode: Story = {
       }}
     />
   ),
+};
+
+export const ExtensionModeSelected: Story = {
+  tags: ["review"],
+  render: () => <SidenavStory open={(workbench) => workbench.modes.setActiveMode(STORY_LAB_MODE_ID)} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("option", { name: "Extension Lab" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  },
+};
+
+export const ExtensionResourceSelected: Story = {
+  tags: ["review"],
+  render: () => (
+    <SidenavStory
+      open={(workbench) => {
+        workbench.modes.setActiveMode(STORY_LAB_MODE_ID);
+        setDashboardSidenavSelection(workbench, STORY_LAB_RESOURCE_NODE_ID);
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("option", { name: "Artifacts" })).toHaveAttribute("aria-selected", "true");
+    await expect(canvas.getByRole("option", { name: "Extension Lab" })).toHaveAttribute("aria-selected", "false");
+  },
 };

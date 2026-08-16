@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbenchCore, type TreeViewSection } from "@pstdio/workbench";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -144,6 +144,60 @@ describe("registerDashboardSidenav", () => {
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("lab-first");
   });
 
+  test("does not replace a resource selection while mode selection is loading", async () => {
+    const workbench = createWorkbenchCore();
+    const selectedNodeIds: Array<string | undefined> = [];
+    workbench.renderers.treeStore.subscribeSelector(
+      (state) => state.statesByTreeId[dashboardWidgetIds.dashboardSidenav]?.selectedNodeId,
+      (selectedNodeId) => selectedNodeIds.push(selectedNodeId),
+    );
+    let resolveSections: (sections: TreeViewSection[]) => void = () => undefined;
+    let markSectionsRequested: () => void = () => undefined;
+    const sectionsPromise = new Promise<TreeViewSection[]>((resolve) => {
+      resolveSections = resolve;
+    });
+    const sectionsRequested = new Promise<void>((resolve) => {
+      markSectionsRequested = resolve;
+    });
+
+    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
+    registerSidenavContribution(workbench, {
+      id: "test.delayed-mode-navigation",
+      modes: ["*"],
+      getSections: () => {
+        markSectionsRequested();
+        return sectionsPromise;
+      },
+    });
+    registerDashboardSidenav(workbench);
+
+    workbench.modes.setActiveMode("lab");
+    await sectionsRequested;
+    workbench.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, "resource-row");
+    resolveSections([
+      {
+        id: "extensions",
+        nodes: [
+          {
+            id: "lab",
+            label: "Lab",
+            target: {
+              kind: "command",
+              commandId: "workbench.action.switchMode",
+              args: { modeId: "lab" },
+            },
+          },
+        ],
+      },
+    ]);
+    await settleSidenavSelection();
+
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe("resource-row");
+    expect(selectedNodeIds).toEqual(["resource-row"]);
+  });
+});
+
+describe("registerDashboardSidenav refresh", () => {
   test("clears a mode-derived selection when leaving without replacing destination selection", async () => {
     const workbench = createWorkbenchCore();
 

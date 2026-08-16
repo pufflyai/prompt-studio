@@ -1,6 +1,5 @@
 ---
-"pstdio-api-contracts": patch
-"pstdio-extensions": patch
+"pstdio": patch
 "@pstdio/workbench": patch
 ---
 
