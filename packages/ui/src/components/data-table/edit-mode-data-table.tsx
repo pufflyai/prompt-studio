@@ -18,10 +18,6 @@ import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableEditModeColumn, DataTableProps, RowData } from "./types";
 
-const ROW_NUMBER_COLUMN_WIDTH = 36;
-const ROW_SELECTION_COLUMN_WIDTH = 36;
-const EDIT_CONTROL_COLUMN_WIDTH = 40;
-
 const createId = (kind: "column" | "row") => {
   const unique = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${kind}-${unique}`;
@@ -74,7 +70,8 @@ export const EditModeDataTable = (props: DataTableProps) => {
   const cappedPageSizeOptions = [...new Set(pageSizeOptions.filter((option) => option > 0 && option <= 50))];
   const pageCount = Math.max(Math.ceil(filteredData.length / pageSize), 1);
   const pageRows = filteredData.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
-  const tableWidth = fullWidth ? (isReadOnly ? "100%" : `calc(100% + ${EDIT_CONTROL_COLUMN_WIDTH}px)`) : "fit-content";
+  let tableWidth = "fit-content";
+  if (fullWidth) tableWidth = isReadOnly ? "100%" : "calc(100% + var(--chakra-spacing-10))";
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
 
@@ -186,12 +183,12 @@ export const EditModeDataTable = (props: DataTableProps) => {
             borderColor="border.subtle"
           >
             <colgroup>
-              <col style={{ width: ROW_NUMBER_COLUMN_WIDTH }} />
-              {enableSelection ? <col style={{ width: ROW_SELECTION_COLUMN_WIDTH }} /> : null}
+              <Box as="col" width="9" />
+              {enableSelection ? <Box as="col" width="9" /> : null}
               {columns.map((column) => (
                 <col key={column.id} />
               ))}
-              {!isReadOnly ? <col style={{ width: EDIT_CONTROL_COLUMN_WIDTH }} /> : null}
+              {!isReadOnly ? <Box as="col" width="10" /> : null}
             </colgroup>
             <EditModeDataTableHeader
               activeHeader={activeHeader}
