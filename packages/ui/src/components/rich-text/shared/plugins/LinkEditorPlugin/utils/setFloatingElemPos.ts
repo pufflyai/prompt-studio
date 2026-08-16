@@ -8,6 +8,7 @@ export function setFloatingElemPos(
   verticalGap: number = VERTICAL_GAP,
   horizontalOffset: number = HORIZONTAL_OFFSET,
   placement: "above" | "legacy" = "legacy",
+  coordinateSpace: "anchor" | "viewport" = "anchor",
 ): void {
   const scrollerElem = anchorElem.parentElement;
 
@@ -19,7 +20,10 @@ export function setFloatingElemPos(
 
   const floatingElemRect = floatingElem.getBoundingClientRect();
   const anchorElementRect = anchorElem.getBoundingClientRect();
-  const editorScrollerRect = scrollerElem.getBoundingClientRect();
+  const editorScrollerRect =
+    coordinateSpace === "viewport"
+      ? new DOMRect(0, 0, document.documentElement.clientWidth, document.documentElement.clientHeight)
+      : scrollerElem.getBoundingClientRect();
 
   let top =
     placement === "above" ? targetRect.top - floatingElemRect.height - verticalGap : targetRect.top - verticalGap;
@@ -36,8 +40,14 @@ export function setFloatingElemPos(
     left = editorScrollerRect.right - floatingElemRect.width - horizontalOffset;
   }
 
-  top -= anchorElementRect.top;
-  left -= anchorElementRect.left;
+  if (top + floatingElemRect.height > editorScrollerRect.bottom) {
+    top = targetRect.top - floatingElemRect.height - Math.abs(verticalGap);
+  }
+
+  if (coordinateSpace === "anchor") {
+    top -= anchorElementRect.top;
+    left -= anchorElementRect.left;
+  }
 
   floatingElem.style.opacity = "1";
   floatingElem.style.transform = `translate(${left}px, ${top}px)`;

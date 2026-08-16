@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { KanbanRendererSavedView } from "../kanban-renderer/types";
 
 export type ColumnType = "boolean" | "date" | "number" | "string" | "unknown";
 
@@ -65,8 +66,33 @@ export interface DataTableCellContextAction {
   onSelect: (context: DataTableCellContext) => void;
 }
 
+export type DataTableEditModeAlignment = "left" | "center" | "right" | null;
+
+export interface DataTableEditModeColumn {
+  id: string;
+  label: string;
+  alignment: DataTableEditModeAlignment;
+}
+
+export interface DataTableEditModeCellEditorProps {
+  context: DataTableCellContext;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export interface DataTableEditModeConfig {
+  columns: DataTableEditModeColumn[];
+  onDataChange: (data: RowData[]) => void;
+  onColumnsChange: (columns: DataTableEditModeColumn[]) => void;
+  isCellEditable?: (context: DataTableCellContext) => boolean;
+  renderHeader?: (column: DataTableEditModeColumn) => ReactNode;
+  renderCell?: (context: DataTableCellContext) => ReactNode;
+  renderCellEditor?: (props: DataTableEditModeCellEditorProps) => ReactNode;
+}
+
 export interface DataTableProps {
   data: RowData[];
+  editMode?: DataTableEditModeConfig;
   isReadOnly?: boolean;
   noBorder?: boolean;
   fullWidth?: boolean;
@@ -78,6 +104,8 @@ export interface DataTableProps {
   compactHeaders?: Partial<Record<string, string>>;
   getRowId?: (row: RowData, index: number) => string;
   toolbarStorageKey?: string;
+  defaultViews?: KanbanRendererSavedView[];
+  defaultActiveViewId?: string;
   enableRowActivation?: boolean;
   getCellContextMenuActions?: (context: DataTableCellContext) => DataTableCellContextAction[];
   onCSVUpload?: (csv: string) => Promise<void>;

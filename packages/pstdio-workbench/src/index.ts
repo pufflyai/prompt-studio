@@ -205,6 +205,7 @@ export {
   createWorkbenchResourceContextValues,
   createWorkbenchSelectionResourceMetadata,
   getKeybindingSteps,
+  getSwitchModeNavigationTargetModeId,
   getWorkbenchModePanelForRegion,
   getWorkbenchSelectionResourceUris,
   headerLeadingMenuPath,
@@ -221,6 +222,7 @@ export {
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
   workbenchSelectionResourceUriMetadataKey,
+  workbenchSwitchModeCommandId,
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,
 } from "./core";

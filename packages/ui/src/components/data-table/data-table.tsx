@@ -32,11 +32,34 @@ import {
 } from "./data-table-state";
 import { DataTableStatsRow } from "./data-table-stats-row";
 import { DataTableBodyRow, DataTableColumnHeader } from "./data-table-table-parts";
+import { EditModeDataTable } from "./edit-mode-data-table";
 import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";
-import type { DataTableProps } from "./types";
+import type { DataTableProps, RowData } from "./types";
 
-export const DataTable = (props: DataTableProps) => {
+interface DatasetPaginationProps {
+  table: ReturnType<typeof useReactTable<RowData>>;
+  pagination: PaginationState;
+  pageSizeOptions: number[];
+}
+
+const DatasetPagination = (props: DatasetPaginationProps) => {
+  const { table, pagination, pageSizeOptions } = props;
+
+  return (
+    <PaginationFooter
+      pageCount={table.getPageCount()}
+      pageIndex={pagination.pageIndex}
+      pageSize={pagination.pageSize}
+      pageSizeOptions={pageSizeOptions}
+      totalRows={table.getCoreRowModel().rows.length}
+      onPageChange={table.setPageIndex}
+      onPageSizeChange={table.setPageSize}
+    />
+  );
+};
+
+const DatasetDataTable = (props: DataTableProps) => {
   const {
     data,
     noBorder,
@@ -85,6 +108,8 @@ export const DataTable = (props: DataTableProps) => {
   });
   const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, {
     settings: { viewMode: "list" },
+    views: props.defaultViews,
+    activeViewId: props.defaultActiveViewId,
   });
   const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);
@@ -177,6 +202,8 @@ export const DataTable = (props: DataTableProps) => {
         storageKey={resolvedToolbarStorageKey}
         attributes={rendererAttributes}
         columnControl={columnControl}
+        defaultViews={props.defaultViews}
+        defaultActiveViewId={props.defaultActiveViewId}
       />
       <Box position="relative" flex="1" minHeight="0">
         <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
@@ -249,13 +276,13 @@ export const DataTable = (props: DataTableProps) => {
         ) : null}
       </Box>
       {table.getPageCount() > 1 && (
-        <PaginationFooter
-          table={table}
-          pageIndex={pagination.pageIndex}
-          pageSize={pagination.pageSize}
-          pageSizeOptions={pageSizeOptions}
-        />
+        <DatasetPagination table={table} pagination={pagination} pageSizeOptions={pageSizeOptions} />
       )}
     </Flex>
   );
+};
+
+export const DataTable = (props: DataTableProps) => {
+  if (props.editMode) return <EditModeDataTable {...props} />;
+  return <DatasetDataTable {...props} />;
 };

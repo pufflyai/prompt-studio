@@ -7,6 +7,9 @@ import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "../markdown-edito
 import theme from "../theme/rich-text-theme";
 import { CodeHighlightNode, CodeNode } from "./lexical-code";
 import { DataTableNode } from "./nodes/DataTableNode";
+import { MarkdownImageNode } from "./nodes/MarkdownImageNode";
+import { MarkdownLinkNode } from "./nodes/MarkdownLinkNode";
+import { RawHtmlNode } from "./nodes/RawHtmlNode";
 import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "./plugins/HorizontalRulePlugin/HorizontalRuleNode";
@@ -17,6 +20,9 @@ export const editorNodes: Array<Klass<LexicalNode>> = [
   QuoteNode,
   LinkNode,
   AutoLinkNode,
+  MarkdownLinkNode,
+  MarkdownImageNode,
+  RawHtmlNode,
   DataTableNode,
   HeadingNode,
   ListNode,

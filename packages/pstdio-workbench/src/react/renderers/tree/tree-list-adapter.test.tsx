@@ -3,7 +3,51 @@ import { Box } from "@chakra-ui/react";
 import { PaletteShortcut } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../../core";
-import { toTreeListSection } from "./tree-list-adapter";
+import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+
+describe("resolveTreeListSelection", () => {
+  test("selects one nested section instead of every node with the same resource", () => {
+    const resource = { kind: "markdown", uri: "pstdio://file/guide", id: "guide" } satisfies ResourceRef;
+    const sections = [
+      {
+        id: "files",
+        nodes: [
+          {
+            id: "guide",
+            label: "guide.md",
+            resource,
+            children: [
+              { id: "intro", label: "Intro", target: { kind: "resource" as const, resource } },
+              { id: "details", label: "Details", target: { kind: "resource" as const, resource } },
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(
+      resolveTreeListSelection({
+        sections,
+        childrenByNodeId: {},
+        activeResource: resource,
+        selectedNodeId: "details",
+      }),
+    ).toBe("details");
+  });
+
+  test("keeps an explicit selected row when it has no resource identity", () => {
+    const activeResource = { kind: "ticket", uri: "pstdio://ticket/ticket-1", id: "ticket-1" } satisfies ResourceRef;
+
+    expect(
+      resolveTreeListSelection({
+        sections: [{ id: "ticket", nodes: [{ id: "__ticket__", label: "PS-1 Ticket" }] }],
+        childrenByNodeId: {},
+        activeResource,
+        selectedNodeId: "__ticket__",
+      }),
+    ).toBe("__ticket__");
+  });
+});
 
 describe("toTreeListSection", () => {
   test("maps navigation targets and resources onto navigable tree rows", () => {

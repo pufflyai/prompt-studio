@@ -1,9 +1,8 @@
 .floating-text-format-toolbar {
   display: flex;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000;
   opacity: 0;
   pointer-events: none;
   background-color: var(--chakra-colors-bg);

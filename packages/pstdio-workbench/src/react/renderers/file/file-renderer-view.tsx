@@ -8,6 +8,11 @@ import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
+import {
+  getFileSectionNavigation,
+  resolveFileSectionTargetId,
+  shouldClearFileSectionSelection,
+} from "../../../core/registries/renderers/file-section-navigation";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 
@@ -30,13 +35,82 @@ const SAVE_DEBOUNCE_MS = 600;
 
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
 
+const syncActiveFileSection = (input: {
+  workbench: WorkbenchCore;
+  navigation: ReturnType<typeof getFileSectionNavigation>;
+  sectionId: string | null;
+}) => {
+  const { workbench, navigation, sectionId } = input;
+  if (!navigation || !workbench.renderers.getTreeRenderer(navigation.treeId)) return;
+
+  if (sectionId && navigation.anchors.some((anchor) => anchor.id === sectionId)) {
+    workbench.renderers.setSelectedNode(navigation.treeId, sectionId);
+    return;
+  }
+
+  const selectedNodeId = workbench.renderers.getTreeState(navigation.treeId).selectedNodeId;
+  if (selectedNodeId && navigation.anchors.some((anchor) => anchor.id === selectedNodeId)) {
+    workbench.renderers.setSelectedNode(navigation.treeId, undefined);
+  }
+};
+
+const getEditorSectionNavigation = (
+  workbench: WorkbenchCore,
+  navigation: ReturnType<typeof getFileSectionNavigation>,
+) => {
+  if (!navigation) return undefined;
+  const selectedNodeId = workbench.renderers.getTreeRenderer(navigation.treeId)
+    ? workbench.renderers.getTreeState(navigation.treeId).selectedNodeId
+    : undefined;
+
+  return {
+    anchors: navigation.anchors,
+    targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
+  };
+};
+
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const sectionNavigation = getFileSectionNavigation(resource);
+  const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resourceUri: resource?.uri });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
   const rendererRef = useRef<HTMLDivElement>(null);
+  const previousSectionNavigationRef = useRef<{
+    resourceUri?: string;
+    treeId: string;
+    anchorIds: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    const previous = previousSectionNavigationRef.current;
+    const selectedNodeId =
+      previous && workbench.renderers.getTreeRenderer(previous.treeId)
+        ? workbench.renderers.getTreeState(previous.treeId).selectedNodeId
+        : undefined;
+
+    if (
+      shouldClearFileSectionSelection({
+        previous,
+        current: sectionNavigation,
+        currentResourceUri: resource?.uri,
+        selectedNodeId,
+      }) &&
+      previous
+    ) {
+      workbench.renderers.setSelectedNode(previous.treeId, undefined);
+    }
+
+    previousSectionNavigationRef.current = sectionNavigation
+      ? {
+          resourceUri: resource?.uri,
+          treeId: sectionNavigation.treeId,
+          anchorIds: sectionNavigation.anchors.map((anchor) => anchor.id),
+        }
+      : null;
+  }, [resource?.uri, sectionNavigation, workbench]);
 
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
@@ -114,7 +188,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.revision}` : "";
 
   useLayoutEffect(() => {
-    if (!scrollResetKey) return;
+    if (!scrollResetKey || sectionNavigation) return;
     const node = rendererRef.current;
     if (!node) return;
 
@@ -128,7 +202,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         current = current.parentElement;
       }
     });
-  }, [scrollResetKey]);
+  }, [scrollResetKey, sectionNavigation]);
 
   if (error?.loadKey === loadKey) {
     return (
@@ -149,6 +223,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
   const isEditable = Boolean(save) && kind !== "image";
   const editorKey = `${contribution.id}:${currentLoaded.revision}`;
+
+  const handleActiveSectionChange = (sectionId: string | null) => {
+    syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });
+  };
 
   if (kind === "image") {
     if (!currentLoaded.dataUrl) {
@@ -193,7 +271,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           key={editorKey}
           defaultState={currentLoaded.content ?? ""}
           isEditable={isEditable}
+          sectionNavigation={editorSectionNavigation}
           placeholder={isEditable ? (currentLoaded.placeholder ?? "Write…") : undefined}
+          onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
           onChange={isEditable ? handleChange : undefined}
         />
       </Box>

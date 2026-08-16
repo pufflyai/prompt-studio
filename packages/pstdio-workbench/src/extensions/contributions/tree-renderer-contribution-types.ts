@@ -20,6 +20,9 @@ export interface ExtensionTreeTarget {
   args?: Record<string, unknown>;
   resource?: ExtensionTreeResource;
   panelId?: string;
+  section?: {
+    anchors: Array<{ id: string; heading: string; occurrence?: number }>;
+  };
 }
 
 export interface ExtensionTreeAction {

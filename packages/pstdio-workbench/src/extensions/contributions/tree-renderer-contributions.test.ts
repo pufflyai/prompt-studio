@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "../../core";
-import { registerWorkbenchExtensionTreeRenderers } from "./tree-renderer-contributions";
+import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
+import { registerWorkbenchExtensionTreeRenderers, selectedNodeIdFromSections } from "./tree-renderer-contributions";
 
 const metadata = {
   extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
@@ -49,6 +50,25 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
   commandId,
   extensionId: "pstdio.lab",
   outcome: { ok: true, status: "success", value },
+});
+
+describe("selectedNodeIdFromSections", () => {
+  test("finds extension-selected nodes recursively", () => {
+    expect(
+      selectedNodeIdFromSections([
+        {
+          id: "files",
+          nodes: [
+            {
+              id: "guide",
+              label: "guide.md",
+              children: [{ id: "details", label: "Details", selected: true }],
+            },
+          ],
+        },
+      ]),
+    ).toBe("details");
+  });
 });
 
 describe("registerWorkbenchExtensionTreeRenderers", () => {
@@ -268,7 +288,9 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       { id: "new", label: "New file" },
     ]);
   });
+});
 
+describe("extension tree resource targets", () => {
   test("maps resource targets to replace the active resource tab", async () => {
     const workbench = createWorkbenchCore();
     registerWorkbenchExtensionTreeRenderers({
@@ -280,9 +302,18 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
               label: "Workspaces",
               nodes: [
                 {
-                  id: "workspace-ws-1",
-                  label: "WS-1",
-                  target: { kind: "resource", resource: { type: "workspace", id: "ws-1", label: "WS-1" } },
+                  id: "details",
+                  label: "Details",
+                  target: {
+                    kind: "resource",
+                    resource: { type: "workspace", id: "ws-1", label: "WS-1" },
+                    section: {
+                      anchors: [
+                        { id: "intro", heading: "Intro" },
+                        { id: "details", heading: "Details" },
+                      ],
+                    },
+                  },
                 },
               ],
             },
@@ -300,6 +331,18 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(body[0]?.nodes[0]?.target).toMatchObject({
       kind: "resource",
       input: { replaceActive: true },
+      resource: {
+        metadata: {
+          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+            treeId: "lab.files",
+            targetNodeId: "details",
+            anchors: [
+              { id: "intro", heading: "Intro" },
+              { id: "details", heading: "Details" },
+            ],
+          },
+        },
+      },
     });
   });
 });

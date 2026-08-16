@@ -11,6 +11,20 @@ export interface FileRendererResourceRef {
   metadata?: JsonObject;
 }
 
+export interface FileRendererSectionAnchor {
+  /** Stable extension-owned tree node id. */
+  id: string;
+  /** Plain heading text as it appears in the Markdown document. */
+  heading: string;
+  /** Zero-based occurrence when the document repeats the same heading text. */
+  occurrence?: number;
+}
+
+export interface FileRendererSectionTarget {
+  /** The document outline used for deep-linking and active-heading sync. */
+  anchors: FileRendererSectionAnchor[];
+}
+
 export interface FileRendererLoadParams {
   projectId?: string;
   resource?: FileRendererResourceRef;

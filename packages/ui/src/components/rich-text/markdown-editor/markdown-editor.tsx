@@ -1,12 +1,10 @@
 import "../theme/rich-text-theme.css";
 
 import { Box, Flex } from "@chakra-ui/react";
-import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
 import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
@@ -17,6 +15,9 @@ import { $getRoot } from "lexical";
 import { useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme, editorTransformers } from "../shared/editor-config";
+import { exportLexicalToMarkdown, importMarkdownToLexical } from "../shared/markdown-codec";
+import type { MarkdownUrlResolver } from "../shared/markdown-url";
+import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { CodeBlockActionsPlugin } from "../shared/plugins/CodePlugin/CodeBlockActionsPlugin";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
@@ -25,15 +26,24 @@ import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextF
 import { LinkEditorPlugin, LinkPlugin } from "../shared/plugins/LinkEditorPlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { normalizeMarkdownListIndentation, splitFrontmatter } from "../utils/markdown";
+import { splitFrontmatter } from "../utils/markdown";
+import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
+import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
+import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
+import type { MarkdownSectionNavigation } from "./plugins/markdown-section-navigation";
 
 export interface MarkdownEditorProps {
   autoFocus?: boolean;
   debug?: boolean;
   defaultState: string;
+  fullWidth?: boolean;
   isEditable?: boolean;
+  padding?: string;
   placeholder?: string;
   scrollable?: boolean;
+  sectionNavigation?: MarkdownSectionNavigation;
+  resolveMarkdownUrl?: MarkdownUrlResolver;
+  onActiveSectionChange?: (sectionId: string | null) => void;
   onChange?: (value: string) => void;
 }
 
@@ -42,9 +52,14 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     autoFocus = false,
     debug = false,
     defaultState = "",
+    fullWidth = false,
     isEditable = false,
+    padding = "sm",
     placeholder,
     scrollable = true,
+    sectionNavigation,
+    resolveMarkdownUrl,
+    onActiveSectionChange,
     onChange,
   } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
@@ -60,7 +75,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     namespace: "MARKDOWN_EDITOR",
     nodes: editorNodes,
     editorState: () => {
-      return $convertFromMarkdownString(normalizeMarkdownListIndentation(body), editorTransformers, undefined, false);
+      importMarkdownToLexical(body, resolveMarkdownUrl);
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -79,63 +94,73 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       direction="column"
       overflow="visible"
     >
-      <LexicalComposer initialConfig={initialConfig}>
-        {autoFocus ? <AutoFocusPlugin /> : null}
-        <HistoryPlugin />
-        <LinkPlugin />
-        <ListPlugin />
-        {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
-        <CheckListPlugin />
-        {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
-        <HorizontalRulePlugin />
-        <CodeHighlightingPlugin />
-        <ImportCodeBlocksPlugin />
-        <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
-        <EquationPlugin />
-        <RichTextPlugin
-          contentEditable={<ContentEditable fullWidth={false} padding="sm" scrollable={scrollable} />}
-          placeholder={
-            placeholder ? (
-              <Flex
-                position="absolute"
-                padding="sm"
-                top="0"
-                left="0"
-                right="0"
-                pointerEvents="none"
-                userSelect="none"
-                justifyContent="center"
-              >
-                <Box width="100%" maxWidth="45rem" color="fg.muted" textStyle="paragraph/M/regular">
-                  {placeholder}
-                </Box>
-              </Flex>
-            ) : null
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        {isEditable && floatingToolbarAnchorElem ? (
-          <>
-            <FloatingTextFormatToolbarPlugin anchorElem={floatingToolbarAnchorElem} />
-            <LinkEditorPlugin anchorElem={floatingToolbarAnchorElem} />
-          </>
-        ) : null}
-        {shouldTrackChanges ? (
-          <OnChangePlugin
-            ignoreSelectionChange
-            ignoreHistoryMergeTagChange={false}
-            onChange={(editorState) => {
-              editorState.read(() => {
-                const root = $getRoot();
-                const markdownBody = $convertToMarkdownString(editorTransformers, root);
-                onChange?.(frontmatter + markdownBody);
-              });
-            }}
+      <MarkdownUrlProvider resolver={resolveMarkdownUrl}>
+        <LexicalComposer initialConfig={initialConfig}>
+          {isEditable ? <MarkdownSlashCommandPlugin /> : null}
+          {sectionNavigation ? (
+            <MarkdownSectionNavigationPlugin
+              anchors={sectionNavigation.anchors}
+              targetId={sectionNavigation.targetId}
+              onActiveSectionChange={onActiveSectionChange}
+            />
+          ) : null}
+          {autoFocus ? <AutoFocusPlugin /> : null}
+          <MarkdownHistoryPlugin />
+          <LinkPlugin />
+          <ListPlugin />
+          {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
+          <CheckListPlugin />
+          {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
+          <HorizontalRulePlugin />
+          <CodeHighlightingPlugin />
+          <ImportCodeBlocksPlugin />
+          <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
+          <EquationPlugin />
+          <RichTextPlugin
+            contentEditable={<ContentEditable fullWidth={fullWidth} padding={padding} scrollable={scrollable} />}
+            placeholder={
+              placeholder ? (
+                <Flex
+                  position="absolute"
+                  padding="sm"
+                  top="0"
+                  left="0"
+                  right="0"
+                  pointerEvents="none"
+                  userSelect="none"
+                  justifyContent="center"
+                >
+                  <Box width="100%" maxWidth="45rem" color="fg.muted" textStyle="paragraph/M/regular">
+                    {placeholder}
+                  </Box>
+                </Flex>
+              ) : null
+            }
+            ErrorBoundary={LexicalErrorBoundary}
           />
-        ) : null}
-        <ToggleEditablePlugin isEditable={isEditable} />
-        {debug && <TreeViewPlugin />}
-      </LexicalComposer>
+          {isEditable && floatingToolbarAnchorElem ? (
+            <>
+              <FloatingTextFormatToolbarPlugin anchorElem={floatingToolbarAnchorElem} />
+              <LinkEditorPlugin anchorElem={floatingToolbarAnchorElem} />
+            </>
+          ) : null}
+          {shouldTrackChanges ? (
+            <OnChangePlugin
+              ignoreSelectionChange
+              ignoreHistoryMergeTagChange={false}
+              onChange={(editorState) => {
+                editorState.read(() => {
+                  const root = $getRoot();
+                  const markdownBody = exportLexicalToMarkdown(root);
+                  onChange?.(frontmatter + markdownBody);
+                });
+              }}
+            />
+          ) : null}
+          <ToggleEditablePlugin isEditable={isEditable} />
+          {debug && <TreeViewPlugin />}
+        </LexicalComposer>
+      </MarkdownUrlProvider>
     </Flex>
   );
 }

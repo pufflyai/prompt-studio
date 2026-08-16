@@ -1,6 +1,7 @@
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
+import type { NavigationTarget } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core";
 
 const SIDENAV_PANEL_ID = "sidenav";
@@ -79,6 +80,16 @@ interface WorkbenchSwitchModeCommandArgs {
   modeId: string;
 }
 
+export const workbenchSwitchModeCommandId = "workbench.action.switchMode";
+
+export const getSwitchModeNavigationTargetModeId = (target: NavigationTarget) => {
+  if (target.kind !== "command" || target.commandId !== workbenchSwitchModeCommandId) return;
+  if (!target.args || typeof target.args !== "object") return;
+
+  const modeId = "modeId" in target.args ? target.args.modeId : undefined;
+  return typeof modeId === "string" && modeId.trim().length > 0 ? modeId : undefined;
+};
+
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   for (const command of builtinCommands) {
     workbench.commands.registerCommand(
@@ -104,7 +115,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
 
   workbench.commands.registerCommand(
     {
-      id: "workbench.action.switchMode",
+      id: workbenchSwitchModeCommandId,
       label: "Switch Mode",
       category: "Workbench",
       icon: "PanelTop",
@@ -129,7 +140,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
     },
   );
   workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
-    commandId: "workbench.action.switchMode",
+    commandId: workbenchSwitchModeCommandId,
     group: "Workbench",
   });
 };

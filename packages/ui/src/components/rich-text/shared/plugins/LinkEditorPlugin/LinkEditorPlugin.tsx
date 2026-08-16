@@ -87,11 +87,11 @@ function LinkEditor({
     ) {
       const rangeRect = nativeSelection.getRangeAt(0).getBoundingClientRect();
       const topRect = new DOMRect(rangeRect.left, rangeRect.top, 0, rangeRect.height);
-      setFloatingElemPos(topRect, editorElem, anchorElem, GAP, undefined, "above");
+      setFloatingElemPos(topRect, editorElem, anchorElem, GAP, undefined, "above", "viewport");
       setLastSelection(selection);
     } else if (!editorElem.contains(activeElement)) {
       if (rootElement !== null) {
-        setFloatingElemPos(null, editorElem, anchorElem);
+        setFloatingElemPos(null, editorElem, anchorElem, undefined, undefined, "legacy", "viewport");
       }
       setLastSelection(null);
       setIsLinkEditMode(false);
@@ -217,7 +217,7 @@ function LinkEditor({
   };
 
   return (
-    <Box ref={editorRef} className={`link-editor ${isActive ? "active" : ""}`}>
+    <Box ref={editorRef} zIndex="tooltip" className={`link-editor ${isActive ? "active" : ""}`}>
       <LinkEditorContent
         isActive={isActive}
         isLinkEditMode={isLinkEditMode}
@@ -334,7 +334,7 @@ function useLinkEditorToolbar(
       isLinkEditMode={isLinkEditMode}
       setIsLinkEditMode={setIsLinkEditMode}
     />,
-    anchorElem,
+    document.body,
   );
 }
 

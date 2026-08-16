@@ -420,6 +420,10 @@ export type {
   WorkbenchStoreSelectorListener,
 } from "./shared/store/workbench-store";
 export { createWorkbenchStore } from "./shared/store/workbench-store";
+export {
+  getSwitchModeNavigationTargetModeId,
+  workbenchSwitchModeCommandId,
+} from "./workbench-built-ins";
 export type {
   CreateWorkbenchCoreInput,
   WorkbenchCore,

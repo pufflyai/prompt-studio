@@ -79,14 +79,17 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   if (activeNodeId) return activeNodeId;
 
   const activeResourceUris = getWorkbenchSelectionResourceUris(activeResource);
+  let selectedResourceUri: string | undefined;
+  if (selectedNodeId) {
+    const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
+    selectedResourceUri = selectedNode ? resolveTreeNodeResourceUri(selectedNode) : undefined;
+    if (selectedResourceUri && activeResourceUris.includes(selectedResourceUri)) return selectedNodeId;
+  }
+
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceUris);
   if (activeResourceNodeId) return activeResourceNodeId;
-
   if (!selectedNodeId) return undefined;
-  const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
-  const selectedResourceUri = selectedNode ? resolveTreeNodeResourceUri(selectedNode) : undefined;
   if (activeResourceUris.length > 0 && selectedResourceUri) return undefined;
-
   return selectedNodeId;
 };
 

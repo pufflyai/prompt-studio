@@ -1,5 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
+import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject, JsonValue } from "./json";
 import type { ParamObjectSchema } from "./params";
 
@@ -45,6 +46,7 @@ export type TreeNodeTarget =
   | {
       kind: "resource";
       resource: TreeRendererResourceRef;
+      section?: FileRendererSectionTarget;
     }
   | {
       kind: "panel";

@@ -94,6 +94,13 @@ export const buttonRecipe = defineRecipe({
           _hover: { bg: "transparent" },
         },
       },
+      "ghost-static": {
+        color: "fg",
+        bg: "transparent",
+        border: "none",
+        _hover: { bg: "transparent" },
+        _active: { bg: "transparent" },
+      },
       subtle: {
         color: "fg",
         bg: "bg.muted",

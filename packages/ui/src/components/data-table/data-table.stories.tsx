@@ -19,7 +19,13 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
-import { EditableCellsStory } from "./editable-cells-story";
+import {
+  EditableSelectableRowsStory,
+  EditableWithViewsStory,
+  EditModeStory,
+  ModeToggleStory,
+  RichTextEditModeStory,
+} from "./edit-mode-story";
 
 type StoryFn = () => ReactNode;
 
@@ -318,16 +324,24 @@ export const RowActivation = {
   },
 };
 
-export const EditableCells = {
-  args: {
-    data: generateTableRows(18),
-    initialPageSize: 10,
-    compactHeaders,
-    toolbarStorageKey: "storybook-data-table-editable-cells",
-  },
-  render: (args: DataTableProps) => {
-    return <EditableCellsStory args={args} maxWidth="1080px" height="580px" marginX="auto" />;
-  },
+export const EditMode = {
+  render: () => <EditModeStory />,
+};
+
+export const RichTextEditMode = {
+  render: () => <RichTextEditModeStory />,
+};
+
+export const ModeToggle = {
+  render: () => <ModeToggleStory />,
+};
+
+export const EditableSelectableRows = {
+  render: () => <EditableSelectableRowsStory />,
+};
+
+export const EditableWithViews = {
+  render: () => <EditableWithViewsStory />,
 };
 
 export const TagRichRows = {

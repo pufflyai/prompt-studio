@@ -28,3 +28,35 @@ The renderer contribution provides:
 
 Markdown and text files open in the prose editor, recognized code files open in
 Monaco, and images render as read-only previews.
+
+## Link a Tree Outline to Markdown Headings
+
+A tree resource target can include a typed `section` outline. Each anchor uses
+the stable tree node id and the plain heading text. Use `occurrence` when the
+same heading text appears more than once.
+
+```ts
+const anchors = [
+  { id: "guide-intro", heading: "Introduction" },
+  { id: "guide-details-1", heading: "Details", occurrence: 0 },
+  { id: "guide-details-2", heading: "Details", occurrence: 1 },
+];
+
+const detailsNode = {
+  id: "guide-details-2",
+  label: "Details",
+  target: {
+    kind: "resource",
+    resource: { type: "guide", id: "guide.md" },
+    section: { anchors },
+  },
+};
+```
+
+Opening the node scrolls the native Markdown renderer to that heading. Manual
+scrolling updates the tree so only the visible section is selected. A renderer
+refresh keeps the same section selected. If the target id or heading is stale,
+the document stays open, section selection clears, and the host logs a warning.
+
+Do not encode section ids in resource URL fragments. The file resource id stays
+stable for load, save, tab reuse, and navigation history.

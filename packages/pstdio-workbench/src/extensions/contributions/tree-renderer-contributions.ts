@@ -10,6 +10,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { unwrapCommandValue } from "../host/command-response";
 import { panelMenuDeclarationOffsets } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
@@ -49,12 +50,21 @@ const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeRe
   };
 };
 
-const toWorkbenchResource = (resource: ExtensionTreeResource): ResourceRef => ({
+const toWorkbenchResource = (
+  resource: ExtensionTreeResource,
+  sectionNavigation?: {
+    treeId: string;
+    targetNodeId: string;
+    anchors: Array<{ id: string; heading: string; occurrence?: number }>;
+  },
+): ResourceRef => ({
   kind: resource.type,
   uri: `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
   id: resource.id,
   label: resource.label,
-  metadata: resource.metadata,
+  metadata: sectionNavigation
+    ? { ...resource.metadata, [FILE_SECTION_NAVIGATION_METADATA_KEY]: sectionNavigation }
+    : resource.metadata,
 });
 
 const slotContext = (input: {
@@ -156,7 +166,14 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
     if (target.kind === "resource" && target.resource) {
-      return { kind: "resource", resource: toWorkbenchResource(target.resource), input: { replaceActive: true } };
+      const sectionNavigation = target.section
+        ? { treeId: record.id, targetNodeId: node.id, anchors: target.section.anchors }
+        : undefined;
+      return {
+        kind: "resource",
+        resource: toWorkbenchResource(target.resource, sectionNavigation),
+        input: { replaceActive: true },
+      };
     }
     if (target.kind === "panel" && target.panelId) return { kind: "panel", panelId: target.panelId };
     if (target.kind !== "command" || !target.commandId) return undefined;
@@ -255,11 +272,19 @@ const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
 
 // The node a command marks with `selected: true` (e.g. the open document in a
 // files tree) becomes the tree's highlighted selection.
-const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
+const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined => {
+  for (const node of nodes) {
+    if (node.selected) return node.id;
+    const selectedChild = selectedNodeIdFromNodes(node.children ?? []);
+    if (selectedChild) return selectedChild;
+  }
+  return undefined;
+};
+
+export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
   for (const section of sections) {
-    for (const node of section.nodes) {
-      if (node.selected) return node.id;
-    }
+    const selectedNodeId = selectedNodeIdFromNodes(section.nodes);
+    if (selectedNodeId) return selectedNodeId;
   }
   return undefined;
 };

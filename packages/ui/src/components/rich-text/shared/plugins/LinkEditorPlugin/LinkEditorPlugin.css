@@ -1,8 +1,7 @@
 .link-editor {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  z-index: 1001;
   width: 320px;
   opacity: 0;
   pointer-events: none;
