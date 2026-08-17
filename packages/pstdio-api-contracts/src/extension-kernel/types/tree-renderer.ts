@@ -1,7 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
-import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject, JsonValue, Struct } from "./json";
+import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContext, ResourceRef } from "./resources";
 
@@ -28,21 +28,7 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
   node?: TreeNode;
 }
 
-export type TreeNodeTarget =
-  | {
-      kind: "command";
-      command: CommandRef<Struct, unknown> | string;
-      params?: Struct;
-    }
-  | {
-      kind: "resource";
-      resource: TreeRendererResourceRef;
-      section?: FileRendererSectionTarget;
-    }
-  | {
-      kind: "panel";
-      widgetId: string;
-    };
+export type TreeNodeTarget = ExtensionNavigationTarget;
 
 export interface TreeAction {
   id: string;

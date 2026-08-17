@@ -311,8 +311,55 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
   });
 });
 
+describe("extension tree compound targets", () => {
+  test("maps compound tree node targets through the shared navigation contract", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: { commandId: string; body: CommandExecuteRequest }[] = [];
+
+    registerWorkbenchExtensionTreeRenderers({
+      executeCommand: async (commandId, body) => {
+        calls.push({ commandId, body });
+        if (commandId === "lab.files.body") {
+          return success(commandId, [
+            {
+              id: "files",
+              label: "Files",
+              nodes: [
+                {
+                  id: "ticket",
+                  label: "ticket.md",
+                  target: {
+                    kind: "compound",
+                    targets: [
+                      { kind: "command", command: "lab.files.open", params: { ticketId: "ticket-1" } },
+                      { kind: "panel", panel: "lab.ticketFiles" },
+                    ],
+                  },
+                },
+              ],
+            },
+          ]);
+        }
+        return success(commandId, { ok: true });
+      },
+      metadata,
+      projectId: "project-1",
+      workbench,
+    });
+
+    const body = await workbench.renderers.getBody("lab.files", {});
+    await workbench.navigation.openTarget(body[0]!.nodes[0]!.target!);
+
+    expect(calls.at(-1)).toMatchObject({
+      commandId: "lab.files.open",
+      body: { params: { ticketId: "ticket-1" } },
+    });
+    expect(workbench.layout.getActivePanel("main")?.panelId).toBe("lab.ticketFiles");
+  });
+});
+
 describe("extension tree resource targets", () => {
-  test("maps resource targets to replace the active resource tab", async () => {
+  test("maps resource targets with section navigation metadata", async () => {
     const workbench = createWorkbenchCore();
     registerWorkbenchExtensionTreeRenderers({
       executeCommand: async (commandId) => {
@@ -336,6 +383,20 @@ describe("extension tree resource targets", () => {
                     },
                   },
                 },
+                {
+                  id: "compound-details",
+                  label: "Compound details",
+                  target: {
+                    kind: "compound",
+                    targets: [
+                      {
+                        kind: "resource",
+                        resource: { type: "workspace", id: "ws-2", label: "WS-2" },
+                        section: { anchors: [{ id: "notes", heading: "Notes" }] },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           ]);
@@ -351,7 +412,7 @@ describe("extension tree resource targets", () => {
 
     expect(body[0]?.nodes[0]?.target).toMatchObject({
       kind: "resource",
-      input: { replaceActive: true },
+      input: {},
       resource: {
         metadata: {
           [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
@@ -364,6 +425,23 @@ describe("extension tree resource targets", () => {
           },
         },
       },
+    });
+    expect(body[0]?.nodes[1]?.target).toMatchObject({
+      kind: "compound",
+      targets: [
+        {
+          kind: "resource",
+          resource: {
+            metadata: {
+              [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+                treeId: "lab.files",
+                targetNodeId: "compound-details",
+                anchors: [{ id: "notes", heading: "Notes" }],
+              },
+            },
+          },
+        },
+      ],
     });
   });
 });

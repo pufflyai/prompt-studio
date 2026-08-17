@@ -51,7 +51,7 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
     });
     await expect(
       capabilities["resource.open"]?.({
-        input: { replaceActive: true },
+        input: { strategy: "replace-active" },
         resource: { kind: "ticket", uri: "pstdio://ticket/PS-276" },
       }),
     ).resolves.toMatchObject({
