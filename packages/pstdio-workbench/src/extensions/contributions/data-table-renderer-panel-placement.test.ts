@@ -13,7 +13,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
       id: "lab.table",
       extensionId: "pstdio.lab",
       title: "Table",
-      queryCommandId: "lab.query",
+      queryHandlerId: "lab.health.query",
     } satisfies WorkbenchExtensionDataTableRendererRecord;
     const panels = [
       {
@@ -113,7 +113,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
       id: "lab.table",
       extensionId: "pstdio.lab",
       title: "Table",
-      queryCommandId: "lab.query",
+      queryHandlerId: "lab.health.query",
     } satisfies WorkbenchExtensionDataTableRendererRecord;
     const panels = [
       {

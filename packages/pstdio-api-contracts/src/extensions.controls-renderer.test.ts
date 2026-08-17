@@ -7,16 +7,16 @@ describe("extension controls renderer contracts", () => {
       id: "image-tools.imageInspector",
       extensionId: "acme.image-tools",
       title: "Image controls",
-      queryCommandId: "image-tools.loadImageControls",
-      updateValueCommandId: "image-tools.updateImageControl",
-      resetCommandId: "image-tools.resetImageControls",
+      queryHandlerId: "image-tools.controls.query",
+      valueChangeHandlerId: "image-tools.controls.onValueChange",
+      resetHandlerId: "image-tools.controls.onReset",
       defaultValues: { anchor: "center" },
     });
 
     expect(record).toMatchObject({
       id: "image-tools.imageInspector",
-      queryCommandId: "image-tools.loadImageControls",
-      updateValueCommandId: "image-tools.updateImageControl",
+      queryHandlerId: "image-tools.controls.query",
+      valueChangeHandlerId: "image-tools.controls.onValueChange",
     });
   });
 

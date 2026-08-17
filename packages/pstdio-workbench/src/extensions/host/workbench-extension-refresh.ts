@@ -2,18 +2,18 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchModuleContext, WorkbenchPanelInstance } from "../../core";
 
-const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
+const treeQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set(
     (metadata.treeRenderers ?? []).flatMap((renderer) =>
-      [renderer.bodyCommandId, renderer.childrenCommandId, renderer.footerCommandId].filter((commandId) => commandId),
+      [renderer.bodyHandlerId, renderer.childrenHandlerId, renderer.footerHandlerId].filter((handlerId) => handlerId),
     ),
   );
 
-const kanbanRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set((metadata.kanbanRenderers ?? []).map((renderer) => renderer.queryCommandId));
+const kanbanRendererQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
+  new Set((metadata.kanbanRenderers ?? []).map((renderer) => renderer.queryHandlerId));
 
-const dataTableRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryCommandId));
+const dataTableRendererQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
+  new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryHandlerId));
 
 const findOpenPlacement = (workbench: WorkbenchModuleContext, panelId: string): WorkbenchPanelInstance | undefined => {
   return workbench.layout.listPanelInstances().find((candidate) => candidate.panelId === panelId);
@@ -29,17 +29,17 @@ const restoreActiveWidget = (workbench: WorkbenchModuleContext, panelId: string 
 };
 
 export const shouldRefreshWorkbenchExtensionTrees = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
-  !treeQueryCommandIds(metadata).has(commandId);
+  !treeQueryHandlerIds(metadata).has(commandId);
 
 export const shouldRefreshWorkbenchExtensionKanbanRenderers = (
   metadata: WorkbenchExtensionMetadata,
   commandId: string,
-) => !kanbanRendererQueryCommandIds(metadata).has(commandId);
+) => !kanbanRendererQueryHandlerIds(metadata).has(commandId);
 
 export const shouldRefreshWorkbenchExtensionDataTableRenderers = (
   metadata: WorkbenchExtensionMetadata,
   commandId: string,
-) => !dataTableRendererQueryCommandIds(metadata).has(commandId);
+) => !dataTableRendererQueryHandlerIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchModuleContext,

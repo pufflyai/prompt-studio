@@ -108,8 +108,8 @@ const metadata = {
       title: "Rows",
       resourceKind: "ticket",
       attributes: [{ id: "status", label: "Status", type: { kind: "string" }, editable: true }],
-      queryCommandId: "lab.queryRows",
-      updateAttributeCommandId: "lab.updateRow",
+      queryHandlerId: "lab.rows.query",
+      attributeChangeHandlerId: "lab.rows.onAttributeChange",
     },
   ],
   panels: [
@@ -143,7 +143,7 @@ describe("registerWorkbenchExtensionContributions", () => {
     registerWorkbenchExtensionContributions({
       executeCommand: async (commandId, request) => {
         calls.push({ commandId, request });
-        if (commandId === "lab.queryRows") {
+        if (commandId === "lab.rows.query") {
           return success(commandId, {
             rows: [{ id: "row-1", title: "Row 1", attributes: { status: "open" } }],
           });
@@ -203,7 +203,7 @@ describe("registerWorkbenchExtensionContributions", () => {
     ).resolves.toEqual([{ id: "row-1", title: "Row 1", attributes: { status: "open" } }]);
     renderer?.onAttributeChange?.("row-1", "status", "done");
     expect(calls.at(-1)).toMatchObject({
-      commandId: "lab.updateRow",
+      commandId: "lab.rows.onAttributeChange",
       request: { params: { rowId: "row-1", attributeId: "status", value: "done" } },
     });
 

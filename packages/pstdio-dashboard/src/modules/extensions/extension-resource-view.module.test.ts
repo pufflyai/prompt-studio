@@ -195,8 +195,8 @@ describe("createExtensionsModule resource views", () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const responses: Record<string, CommandExecuteResponse> = {
-      "pstdio-core-tickets.ticket-files.tree.body": {
-        commandId: "pstdio-core-tickets.ticket-files.tree.body",
+      "pstdio-core-tickets.ticketFiles.body": {
+        commandId: "pstdio-core-tickets.ticketFiles.body",
         extensionId: "pstdio.pstdio-core-tickets",
         outcome: {
           ok: true,

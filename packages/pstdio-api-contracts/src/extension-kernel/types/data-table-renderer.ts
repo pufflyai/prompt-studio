@@ -79,7 +79,7 @@ export interface DataTableRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
   columns?: DataTableRendererColumn[];
-  queryCommand: CommandRef<DataTableRendererQueryParams, DataTableRendererQueryResult> | string;
+  query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];

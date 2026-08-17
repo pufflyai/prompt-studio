@@ -336,7 +336,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     getHeader: (ctx) =>
       resolveHostTreeHeaderNodes({ ctx, getHostTreeHeaderNodes: input.getHostTreeHeaderNodes, record, treeViews }),
     getBody: async (ctx) => {
-      const result = await executeCallback(input, record, record.bodyCommandId, createQueryParams(input, record, ctx));
+      const result = await executeCallback(input, record, record.bodyHandlerId, createQueryParams(input, record, ctx));
       if (!isTreeSectionArray(result)) return [];
       const selectedNodeId = selectedNodeIdFromSections(result);
       if (selectedNodeId) input.workbench.renderers.setSelectedNode(record.id, selectedNodeId);
@@ -349,23 +349,23 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         record,
         treeViews,
       });
-      if (!record.footerCommandId) return hostFooter;
+      if (!record.footerHandlerId) return hostFooter;
       const result = await executeCallback(
         input,
         record,
-        record.footerCommandId,
+        record.footerHandlerId,
         createQueryParams(input, record, ctx),
       );
       const extensionFooter = isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
       return [...extensionFooter, ...hostFooter];
     },
     getChildren: async (node, ctx) => {
-      if (!record.childrenCommandId) return node.children ?? [];
+      if (!record.childrenHandlerId) return node.children ?? [];
       const originalNode = mapper.originalNodes.get(node) ?? (node as unknown as ExtensionTreeNode);
       const result = await executeCallback(
         input,
         record,
-        record.childrenCommandId,
+        record.childrenHandlerId,
         createQueryParams(input, record, ctx, originalNode),
       );
       return isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];

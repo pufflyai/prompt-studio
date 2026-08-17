@@ -16,6 +16,56 @@ export interface ToWorkbenchNavigationTargetInput {
   sourcePlacement?: ExtensionNavigationSourcePlacement;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+const isCommand = (value: unknown) => typeof value === "string" || (isRecord(value) && typeof value.id === "string");
+
+const isResource = (value: unknown) =>
+  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
+
+const isResourceTarget = (target: Record<string, unknown>) => {
+  if (!isResource(target.resource)) return false;
+  if (target.input === undefined) return true;
+  if (!isRecord(target.input)) return false;
+  const strategy = target.input.strategy;
+  return strategy === undefined || strategy === "persistent" || strategy === "replace-active";
+};
+
+const isPanelTarget = (target: Record<string, unknown>) => {
+  if (typeof target.panel !== "string") return false;
+  if (target.input === undefined) return true;
+  if (!isRecord(target.input)) return false;
+  const strategy = target.input.strategy;
+  const region = target.input.region;
+  return (
+    (region === undefined || typeof region === "string") &&
+    (strategy === undefined ||
+      strategy === "persistent" ||
+      strategy === "preview" ||
+      strategy === "replace-active" ||
+      strategy === "replace-invoking")
+  );
+};
+
+const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarget, { kind: "compound" }> => {
+  if (!isRecord(value)) return false;
+  if (value.kind === "resource") return isResourceTarget(value);
+  if (value.kind === "panel") return isPanelTarget(value);
+  return value.kind === "command" && isCommand(value.command) && (value.params === undefined || isRecord(value.params));
+};
+
+export const isExtensionNavigationTarget = (value: unknown): value is ExtensionNavigationTarget => {
+  if (isItemTarget(value)) return true;
+  return (
+    isRecord(value) &&
+    value.kind === "compound" &&
+    Array.isArray(value.targets) &&
+    value.targets.length > 0 &&
+    value.targets.every(isItemTarget)
+  );
+};
+
 const toResourceInput = (
   strategy: "persistent" | "replace-active" | undefined,
   _sourcePlacement: ExtensionNavigationSourcePlacement | undefined,
@@ -78,4 +128,13 @@ export const toWorkbenchNavigationTarget = (
       (item) => toWorkbenchNavigationTarget(item, input) as Exclude<NavigationTarget, { kind: "compound" }>,
     ),
   };
+};
+
+export const toWorkbenchNavigationTargetResult = (
+  value: unknown,
+  input: ToWorkbenchNavigationTargetInput = {},
+): NavigationTarget | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isExtensionNavigationTarget(value)) throw new Error("Renderer callback returned an invalid navigation target.");
+  return toWorkbenchNavigationTarget(value, input);
 };

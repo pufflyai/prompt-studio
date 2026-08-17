@@ -358,7 +358,7 @@ export type RendererCallback<
   TInput extends Struct = Struct,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
-> = (ctx: ExtensionContextBase<TSettings> & { renderer: RendererContext }, input: TInput) => MaybePromise<TResult>;
+> = (ctx: ExtensionContextBase<TSettings>, input: TInput & { renderer: RendererContext }) => MaybePromise<TResult>;
 
 export interface EventContext extends ExtensionContextBase {
   eventId: string;

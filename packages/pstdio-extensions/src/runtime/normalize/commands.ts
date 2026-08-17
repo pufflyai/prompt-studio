@@ -110,7 +110,7 @@ const normalizeCommandCli = (
 };
 
 export const registerCommandRecord = (record: RuntimeCommandRecord, runtime: Accumulator, index: RegistryIndex) => {
-  const existing = index.commandIds.get(record.id);
+  const existing = index.commandIds.get(record.id) ?? index.privateHandlerIds.get(record.id);
   if (existing) {
     runtime.diagnostics.push(
       createDiagnostic({

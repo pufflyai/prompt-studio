@@ -9,7 +9,7 @@ import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
 const ticketTreeResponse = {
-  commandId: "pstdio-core-tickets.ticket-files.tree.body",
+  commandId: "pstdio-core-tickets.ticketFiles.body",
   extensionId: "pstdio.pstdio-core-tickets",
   outcome: {
     ok: true,

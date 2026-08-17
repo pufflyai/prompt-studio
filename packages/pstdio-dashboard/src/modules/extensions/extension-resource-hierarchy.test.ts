@@ -11,7 +11,7 @@ const metadataFor = (extensionId: string, rendererId: string, resourceKind: stri
       extensionId,
       title: rendererId,
       resourceKind,
-      queryCommandId: `${rendererId}.query`,
+      queryHandlerId: `${rendererId}.query`,
     },
   ],
 });

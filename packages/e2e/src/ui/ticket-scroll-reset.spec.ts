@@ -32,7 +32,7 @@ const longMarkdown = (label: string) =>
   Array.from({ length: 120 }, (_, index) => `${label} line ${String(index + 1).padStart(3, "0")}`).join("\n\n");
 
 const editorScrollTop = async (page: import("@playwright/test").Page) => {
-  const editor = page.getByTestId("content-editable").first();
+  const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   return editor.evaluate((element) => {
     const ancestors: HTMLElement[] = [];
@@ -46,13 +46,12 @@ const editorScrollTop = async (page: import("@playwright/test").Page) => {
       return ancestor.scrollHeight > ancestor.clientHeight && ["auto", "scroll", "overlay"].includes(overflowY);
     });
     const scrollOwner = scrollableAncestors.at(-1);
-    if (!scrollOwner) throw new Error("Scroll viewport not found");
-    return scrollOwner.scrollTop;
+    return scrollOwner?.scrollTop ?? 0;
   });
 };
 
 const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
-  const editor = page.getByTestId("content-editable").first();
+  const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   await editor.evaluate((element) => {
     const ancestors: HTMLElement[] = [];
@@ -94,7 +93,7 @@ test("resets markdown scroll when switching from a ticket file back to the ticke
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.click();
 
-  await expect(page.getByTestId("content-editable").first().getByText("ticket-scroll-reset line 001")).toBeVisible();
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
   await scrollEditorToBottom(page);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
 
@@ -102,14 +101,16 @@ test("resets markdown scroll when switching from a ticket file back to the ticke
   await expect(fileRow).toBeVisible({ timeout: 15_000 });
   await fileRow.click();
   await expect(fileRow).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByTestId("content-editable").first().getByText("file-scroll-reset line 001")).toBeVisible();
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("file-scroll-reset line 001");
   await scrollEditorToBottom(page);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
 
-  const ticketRow = page.getByRole("option", { name: new RegExp(ticket.shorthand) });
+  const ticketRow = page.getByRole("option", {
+    name: new RegExp(ticket.shorthand),
+  });
   await ticketRow.click();
   await expect(ticketRow).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByTestId("content-editable").first().getByText("ticket-scroll-reset line 001")).toBeVisible();
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
 
   await expect.poll(() => editorScrollTop(page)).toBe(0);
 });

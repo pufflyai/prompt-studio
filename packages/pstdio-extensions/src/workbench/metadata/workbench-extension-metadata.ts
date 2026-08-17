@@ -228,15 +228,15 @@ const toPanelRecord = (
 const toDataTableRendererRecord = (
   renderer: ExtensionRuntime["dataTableRenderers"][number],
 ): WorkbenchExtensionDataTableRendererRecord | null => {
-  const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
-  if (!queryCommandId) return null;
+  const handlers = renderer.contribution as { queryHandlerId?: string; rowActivationHandlerId?: string };
+  if (!handlers.queryHandlerId) return null;
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     resourceKind: renderer.contribution.resourceKind,
     columns: renderer.contribution.columns,
-    queryCommandId,
+    queryHandlerId: handlers.queryHandlerId,
     selectionMode: renderer.contribution.selectionMode,
     selectionActions: compact(
       (renderer.contribution.selectionActions ?? []).map((action) => {
@@ -266,7 +266,7 @@ const toDataTableRendererRecord = (
           : null;
       }),
     ),
-    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__dataTableRowActivate` : undefined,
+    rowActivationHandlerId: handlers.rowActivationHandlerId,
     initialPageSize: renderer.contribution.initialPageSize,
     pageSizeOptions: renderer.contribution.pageSizeOptions,
     emptyTitle: renderer.contribution.emptyTitle,
@@ -320,24 +320,25 @@ const toKanbanRendererCreateRow = (
 const toKanbanRendererRecord = (
   renderer: ExtensionRuntime["kanbanRenderers"][number],
 ): WorkbenchExtensionKanbanRendererRecord | null => {
-  const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
-  if (!queryCommandId) return null;
+  const handlers = renderer.contribution as {
+    queryHandlerId?: string;
+    attributeChangeHandlerId?: string;
+    reorderHandlerId?: string;
+    columnActionHandlerId?: string;
+    rowActivationHandlerId?: string;
+  };
+  if (!handlers.queryHandlerId) return null;
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     resourceKind: renderer.contribution.resourceKind,
     attributes: renderer.contribution.attributes,
-    queryCommandId,
-    updateAttributeCommandId: resolveOptionalContributionId(
-      renderer.name,
-      refIdOf(renderer.contribution.updateAttributeCommand),
-    ),
-    reorderCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.reorderCommand)),
-    columnActionCommandId: resolveOptionalContributionId(
-      renderer.name,
-      refIdOf(renderer.contribution.columnActionCommand),
-    ),
+    queryHandlerId: handlers.queryHandlerId,
+    attributeChangeHandlerId: handlers.attributeChangeHandlerId,
+    reorderHandlerId: handlers.reorderHandlerId,
+    columnActionHandlerId: handlers.columnActionHandlerId,
+    rowActivationHandlerId: handlers.rowActivationHandlerId,
     createRow: toKanbanRendererCreateRow(renderer.name, renderer.contribution.createRow),
     rowActions: compact(
       (renderer.contribution.rowActions ?? []).map((action) => {
@@ -346,7 +347,6 @@ const toKanbanRendererRecord = (
         return { id: action.id, label: action.label, icon: action.icon, commandId, destructive: action.destructive };
       }),
     ),
-    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__kanbanRowActivate` : undefined,
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
     defaultViews: renderer.contribution.defaultViews,
@@ -376,16 +376,20 @@ const toCommandPaletteResourceRecord = (
 const toTreeRendererRecord = (
   renderer: ExtensionRuntime["treeRenderers"][number],
 ): NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number] | null => {
-  const bodyCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.bodyCommand));
-  if (!bodyCommandId) return null;
+  const handlers = renderer.contribution as {
+    bodyHandlerId?: string;
+    childrenHandlerId?: string;
+    footerHandlerId?: string;
+  };
+  if (!handlers.bodyHandlerId) return null;
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     icon: renderer.contribution.icon,
-    bodyCommandId,
-    childrenCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.childrenCommand)),
-    footerCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.footerCommand)),
+    bodyHandlerId: handlers.bodyHandlerId,
+    childrenHandlerId: handlers.childrenHandlerId,
+    footerHandlerId: handlers.footerHandlerId,
     defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
     defaultExpandedNodeIds: renderer.contribution.defaultExpandedNodeIds,
   };
@@ -394,36 +398,38 @@ const toTreeRendererRecord = (
 const toFileRendererRecord = (
   renderer: ExtensionRuntime["fileRenderers"][number],
 ): NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number] | null => {
-  const loadCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.loadCommand));
-  if (!loadCommandId) return null;
+  const handlers = renderer.contribution as { loadHandlerId?: string; saveHandlerId?: string };
+  if (!handlers.loadHandlerId) return null;
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     icon: renderer.contribution.icon,
     resourceKind: renderer.contribution.resourceKind,
-    loadCommandId,
-    saveCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.saveCommand)),
+    loadHandlerId: handlers.loadHandlerId,
+    saveHandlerId: handlers.saveHandlerId,
   };
 };
 
 const toControlsRendererRecord = (
   renderer: ExtensionRuntime["controlsRenderers"][number],
 ): NonNullable<WorkbenchExtensionMetadata["controlsRenderers"]>[number] | null => {
-  const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
-  if (!queryCommandId) return null;
+  const handlers = renderer.contribution as {
+    queryHandlerId?: string;
+    valueChangeHandlerId?: string;
+    applyHandlerId?: string;
+    resetHandlerId?: string;
+  };
+  if (!handlers.queryHandlerId) return null;
   const refreshEventIds = compact((renderer.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
-    queryCommandId,
-    updateValueCommandId: resolveOptionalContributionId(
-      renderer.name,
-      refIdOf(renderer.contribution.updateValueCommand),
-    ),
-    applyCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.applyCommand)),
-    resetCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.resetCommand)),
+    queryHandlerId: handlers.queryHandlerId,
+    valueChangeHandlerId: handlers.valueChangeHandlerId,
+    applyHandlerId: handlers.applyHandlerId,
+    resetHandlerId: handlers.resetHandlerId,
     refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
     defaultValues: renderer.contribution.defaultValues,
     emptyTitle: renderer.contribution.emptyTitle,

@@ -15,7 +15,7 @@ const ticketsRecord = {
   extensionId: "pstdio.pstdio-core-tickets",
   title: "Tickets",
   resourceKind: "ticket",
-  queryCommandId: "pstdio-core-tickets.query-tickets",
+  queryHandlerId: "pstdio-core-tickets.tickets.query",
   attributes: [
     {
       id: "status",
@@ -52,7 +52,7 @@ const sampleRows = [
 ];
 
 const queryResponse: CommandExecuteResponse = {
-  commandId: ticketsRecord.queryCommandId,
+  commandId: ticketsRecord.queryHandlerId,
   extensionId: ticketsRecord.extensionId,
   outcome: {
     ok: true,
@@ -91,7 +91,7 @@ const stubExecuteCommand = async (
   commandId: string,
   _body: unknown,
 ): Promise<CommandExecuteResponse> => {
-  if (commandId === ticketsRecord.queryCommandId) return queryResponse;
+  if (commandId === ticketsRecord.queryHandlerId) return queryResponse;
   return {
     commandId,
     extensionId: ticketsRecord.extensionId,

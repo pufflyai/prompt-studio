@@ -6,9 +6,9 @@ export const extensionTreeRendererRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  bodyCommandId: z.string(),
-  childrenCommandId: z.string().optional(),
-  footerCommandId: z.string().optional(),
+  bodyHandlerId: z.string(),
+  childrenHandlerId: z.string().optional(),
+  footerHandlerId: z.string().optional(),
   defaultExpandedSectionIds: z.array(z.string()).optional(),
   defaultExpandedNodeIds: z.array(z.string()).optional(),
 });
@@ -19,8 +19,8 @@ export const extensionFileRendererRecordSchema = z.object({
   title: localizableStringSchema,
   icon: z.string().optional(),
   resourceKind: z.string().optional(),
-  loadCommandId: z.string(),
-  saveCommandId: z.string().optional(),
+  loadHandlerId: z.string(),
+  saveHandlerId: z.string().optional(),
 });
 
 export type ExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;

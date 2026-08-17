@@ -78,12 +78,12 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
     title: text(record.title, record.id),
     resourceKind: record.resourceKind,
     load: async (resource) => {
-      const result = await executeFileCommand(input, record.id, record.loadCommandId, resource);
+      const result = await executeFileCommand(input, record.id, record.loadHandlerId, resource);
       return (result ?? {}) as FileRendererContent;
     },
-    save: record.saveCommandId
+    save: record.saveHandlerId
       ? async (resource, content) => {
-          await executeFileCommand(input, record.id, record.saveCommandId as string, resource, { content });
+          await executeFileCommand(input, record.id, record.saveHandlerId as string, resource, { content });
         }
       : undefined,
   });

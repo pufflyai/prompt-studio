@@ -1,6 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import { getSelectedDocument, TICKET_BODY_DOCUMENT } from "../data/document-selection";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { updateTicketFile } from "../data/file-operations";
 import { findTicket } from "../data/resolve";
 import { deriveTitle } from "../utils/derive-title";
@@ -16,7 +16,7 @@ export const saveTicketContentCommand = defineCommand({
     const existing = await findTicket(ctx.storage, ticketId);
     if (!existing) return null;
 
-    const documentId = getSelectedDocument(existing.id);
+    const documentId = selectedDocumentFromResource(ctx.resource);
     if (documentId !== TICKET_BODY_DOCUMENT && existing.files?.some((file) => file.id === documentId)) {
       return updateTicketFile({
         storage: ctx.storage,

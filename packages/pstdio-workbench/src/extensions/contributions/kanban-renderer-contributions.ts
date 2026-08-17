@@ -11,8 +11,8 @@ import type {
   ResourceRef,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
+import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import {
   createMutableAttributeSource,
   defaultResolveRowActionResource,
@@ -147,19 +147,21 @@ const toRowClick = (
   ) => ResourceRef | undefined,
   toActivatedRow: (row: KanbanRendererRow) => KanbanRendererRow,
 ) => {
-  if (record.rowActivationCommandId) {
+  if (record.rowActivationHandlerId) {
     return async (row: KanbanRendererRow) => {
       const resource = resolveRowResource(record, row);
       const result = await executeKanbanRendererCommand(
         context,
         record,
-        record.rowActivationCommandId!,
-        { rendererId: record.id, row: toActivatedRow(row) },
+        record.rowActivationHandlerId!,
+        { row: toActivatedRow(row) },
         resource,
       );
-      const target = adapter.resolveNavigationResource
-        ? toWorkbenchNavigationTarget(result, (resource) => adapter.resolveNavigationResource!(record, resource))
-        : toWorkbenchNavigationTarget(result);
+      const target = toWorkbenchNavigationTargetResult(result, {
+        resourceOf: adapter.resolveNavigationResource
+          ? (resource) => adapter.resolveNavigationResource!(record, resource)
+          : undefined,
+      });
       if (target) await context.workbench.navigation.openTarget(target);
     };
   }
@@ -269,7 +271,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
         onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
         executeQuery: async (state: KanbanRendererQueryState) => {
-          const value = await executeKanbanRendererCommand(context, record, record.queryCommandId, {
+          const value = await executeKanbanRendererCommand(context, record, record.queryHandlerId, {
             settings: state.settings,
             filters: state.filters,
           });
@@ -289,22 +291,22 @@ export const registerWorkbenchExtensionKanbanRenderers = (
             return mapped;
           });
         },
-        onAttributeChange: record.updateAttributeCommandId
+        onAttributeChange: record.attributeChangeHandlerId
           ? (rowId, attributeId, value) =>
-              runMutation(record, record.updateAttributeCommandId!, {
+              runMutation(record, record.attributeChangeHandlerId!, {
                 rowId,
                 attributeId,
                 value,
               }).then(() => undefined)
           : undefined,
-        onReorder: record.reorderCommandId
+        onReorder: record.reorderHandlerId
           ? (rowId, beforeRowId) =>
-              runMutation(record, record.reorderCommandId!, { rowId, beforeRowId }).then(() => undefined)
+              runMutation(record, record.reorderHandlerId!, { rowId, beforeRowId }).then(() => undefined)
           : undefined,
         onCreateRow: toCreateRowHandler(record, adapter, runMutation),
-        onColumnAction: record.columnActionCommandId
+        onColumnAction: record.columnActionHandlerId
           ? async (columnId, actionId) => {
-              await runMutation(record, record.columnActionCommandId!, { columnId, actionId });
+              await runMutation(record, record.columnActionHandlerId!, { columnId, actionId });
             }
           : undefined,
         getRowContextMenuActions: toRowContextMenuActions(context, record, adapter, localize, resolveRowActionResource),

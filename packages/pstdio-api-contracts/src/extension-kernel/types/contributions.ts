@@ -9,7 +9,7 @@ import type {
   WorkbenchTreeTarget,
 } from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
-import type { ExtensionContextBase } from "./context";
+import type { RendererCallback } from "./context";
 import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
@@ -342,19 +342,19 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   destructive?: boolean;
 }
 
-export type KanbanRendererRowActivationHandler = (
-  ctx: ExtensionContextBase,
-  input: { row: KanbanRendererRow },
-) => Promise<undefined | ExtensionNavigationTarget> | undefined | ExtensionNavigationTarget;
+export type KanbanRendererRowActivationHandler = RendererCallback<
+  { row: KanbanRendererRow },
+  undefined | ExtensionNavigationTarget
+>;
 
 export interface KanbanRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
   attributes?: KanbanRendererAttributeDescriptor[];
-  queryCommand: CommandRef<KanbanRendererQueryParams, KanbanRendererQueryResult> | string;
-  updateAttributeCommand?: CommandRef<{ rowId: string; attributeId: string; value: unknown }, unknown> | string;
-  reorderCommand?: CommandRef<{ rowId: string; beforeRowId?: string }, unknown> | string;
-  columnActionCommand?: CommandRef<{ columnId: string; actionId: string }, unknown> | string;
+  query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
+  onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
+  onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
+  onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
   createRow?: KanbanRendererCreateRowContribution;
   rowActions?: KanbanRendererRowAction[];
   onRowActivate?: KanbanRendererRowActivationHandler;

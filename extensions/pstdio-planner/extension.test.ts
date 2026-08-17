@@ -47,7 +47,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.treeRenderers?.ticketFiles).toMatchObject({
       title: { $l10n: "treeRenderers.ticketFiles.title", default: "Files" },
       icon: "Files",
-      bodyCommand: { id: "pstdio-planner.ticket-files.tree.body" },
+      body: expect.any(Function),
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     });
     expect(extension.panels?.ticketFiles).toMatchObject({
@@ -207,9 +207,7 @@ describe("pstdio planner extension contributions", () => {
       ordering: { attributeId: "created", direction: "desc" },
       displayProperties: ["id", "workspace", "type", "priority"],
     });
-    expect(extension.kanbanRenderers?.tickets?.columnActionCommand).toEqual({
-      id: "pstdio-planner.ticket-column-action",
-    });
+    expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
     expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
   });
 

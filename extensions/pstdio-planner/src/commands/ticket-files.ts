@@ -8,10 +8,14 @@ import {
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
 import { statusesCollection, ticketsCollection } from "../data/collections";
-import { getSelectedDocument } from "../data/document-selection";
+import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { linkedResourceParentMetadata, type TicketResourceReference } from "../data/ticket-resource-hierarchy";
+import {
+  linkedResourceParentMetadata,
+  type TicketResourceReference,
+  ticketResourceReference,
+} from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
@@ -24,6 +28,7 @@ type TicketTreeResource = {
   type?: string;
   id?: string;
   label?: string;
+  metadata?: Record<string, unknown>;
 };
 
 const fileEnding = (name: string) => {
@@ -240,20 +245,23 @@ export const listTicketFilesTreeCommand = defineCommand({
     const ticket = await ticketsCollection(ctx.storage).get(ticketId);
     if (!ticket) return [emptyFilesSection()];
 
-    const selectedDocument = getSelectedDocument(ticket.id);
+    const selectedDocument = selectedDocumentFromResource(resource);
     const tickets = await ticketsCollection(ctx.storage).list();
 
     const parentLookup = createTicketParentLookup(tickets);
     const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
 
-    // The ticket body is its own header-less entry above Files; it is the default
-    // document. Selecting a node runs select-ticket-document, which swaps the single
-    // editor pane in place (the editor stays bound to the one ticket resource).
+    // The selected document travels with the ticket resource. This keeps the UI state
+    // in the workbench and lets every renderer callback receive the same selection.
+    const ticketResource = ticketResourceReference(ticket, parentLookup);
     const selectTarget = (documentId: string) =>
       ({
-        kind: "command" as const,
-        command: "pstdio-planner.select-ticket-document",
-        params: { ticketId, documentId },
+        kind: "resource" as const,
+        resource: {
+          ...ticketResource,
+          metadata: { ...ticketResource.metadata, documentId },
+        },
+        input: { strategy: "replace-active" as const },
       }) satisfies TreeNode["target"];
 
     const ticketSection: TreeViewSection = {

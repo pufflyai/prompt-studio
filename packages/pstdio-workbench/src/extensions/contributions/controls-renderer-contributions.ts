@@ -63,18 +63,18 @@ const registerControlsRenderer = (
     emptyDescription: localize(record.emptyDescription, ""),
     defaultValues: record.defaultValues,
     executeQuery: async (resource) => {
-      const value = await run(record.queryCommandId, {}, resource ?? adapter.resolveResource?.(record));
+      const value = await run(record.queryHandlerId, {}, resource ?? adapter.resolveResource?.(record));
       return isQueryResult(value) ? value : {};
     },
-    updateValue: record.updateValueCommandId
+    updateValue: record.valueChangeHandlerId
       ? ({ controlId, value, values, resource }) =>
-          run(record.updateValueCommandId, { controlId, value, values }, resource).then(() => undefined)
+          run(record.valueChangeHandlerId, { controlId, value, values }, resource).then(() => undefined)
       : undefined,
-    apply: record.applyCommandId
-      ? ({ values, resource }) => run(record.applyCommandId, { values }, resource).then(() => undefined)
+    apply: record.applyHandlerId
+      ? ({ values, resource }) => run(record.applyHandlerId, { values }, resource).then(() => undefined)
       : undefined,
-    reset: record.resetCommandId
-      ? ({ controlIds, resource }) => run(record.resetCommandId, { controlIds }, resource).then(() => undefined)
+    reset: record.resetHandlerId
+      ? ({ controlIds, resource }) => run(record.resetHandlerId, { controlIds }, resource).then(() => undefined)
       : undefined,
   });
 };

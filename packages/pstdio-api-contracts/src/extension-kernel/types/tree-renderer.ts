@@ -1,5 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
+import type { RendererCallback } from "./context";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
@@ -92,9 +93,9 @@ export interface TreeViewSection {
 export interface TreeRendererContribution {
   title: Localizable<string>;
   icon?: string;
-  bodyCommand: CommandRef<TreeRendererQueryParams, TreeViewSection[]> | string;
-  childrenCommand?: CommandRef<TreeRendererChildrenParams, TreeNode[]> | string;
-  footerCommand?: CommandRef<TreeRendererQueryParams, TreeNode[]> | string;
+  body: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
+  children?: RendererCallback<TreeRendererChildrenParams, TreeNode[]>;
+  footer?: RendererCallback<TreeRendererQueryParams, TreeNode[]>;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
 }

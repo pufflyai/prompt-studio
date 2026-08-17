@@ -163,10 +163,10 @@ const registerSingleExtensionContributions = (
     );
     disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
     if (metadata.dataTableRenderers?.length) {
-      const dataTableQueryCommandIds = new Set(metadata.dataTableRenderers.map((renderer) => renderer.queryCommandId));
+      const dataTableQueryHandlerIds = new Set(metadata.dataTableRenderers.map((renderer) => renderer.queryHandlerId));
       disposables.push({
         dispose: subscribeToExtensionCommandFeed((event) => {
-          if (!event.outcome.ok || dataTableQueryCommandIds.has(event.commandId)) return;
+          if (!event.outcome.ok || dataTableQueryHandlerIds.has(event.commandId)) return;
           for (const renderer of metadata.dataTableRenderers ?? []) {
             if (renderer.extensionId === event.extensionId) ctx.renderers.refreshDataTableRenderer(renderer.id);
           }

@@ -1,28 +1,15 @@
 import type { NormalizedExtension, RuntimeFileRendererRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { isLocalizableString } from "./localizable";
+import { registerPrivateHandler } from "./private-handlers";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
-const isLocalCommandRef = (ext: NormalizedExtension, commandId: string) => commandId.startsWith(`${ext.name}.`);
-
-const fileCommandId = (value: unknown) => refId(value as Parameters<typeof refId>[0]);
-
-const hasKnownLocalCommand = (ext: NormalizedExtension, commandId: string | null, index: RegistryIndex) => {
-  if (!commandId) return false;
-  if (!isLocalCommandRef(ext, commandId)) return true;
-  return index.commandIds.has(commandId);
-};
-
-const isValidFileRenderer = (ext: NormalizedExtension, contribution: unknown, index: RegistryIndex) => {
+const isValidFileRenderer = (contribution: unknown) => {
   if (!isRecord(contribution) || !isLocalizableString(contribution.title)) return false;
-  if (!hasKnownLocalCommand(ext, fileCommandId(contribution.loadCommand), index)) return false;
-  if (contribution.saveCommand && !hasKnownLocalCommand(ext, fileCommandId(contribution.saveCommand), index)) {
-    return false;
-  }
-  return true;
+  return typeof contribution.load === "function";
 };
 
 export const registerFileRenderers = (
@@ -34,11 +21,11 @@ export const registerFileRenderers = (
   for (const [localId, contribution] of Object.entries(source.definition.fileRenderers ?? {})) {
     const id = contributionId(ext, localId);
 
-    if (!isValidFileRenderer(ext, contribution, index)) {
+    if (!isValidFileRenderer(contribution)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_file_renderer",
-          message: `File renderer "${id}" must define title and a valid loadCommand`,
+          message: `File renderer "${id}" must define title and load`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -46,15 +33,6 @@ export const registerFileRenderers = (
       );
       continue;
     }
-
-    const record: RuntimeFileRendererRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: contribution as RuntimeFileRendererRecord["contribution"],
-    };
 
     const existing = index.fileRendererIds.get(id);
     if (existing) {
@@ -69,6 +47,39 @@ export const registerFileRenderers = (
       );
       continue;
     }
+
+    const loadHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "file",
+      rendererLocalId: localId,
+      operation: "load",
+      handler: contribution.load,
+    });
+    if (!loadHandlerId) continue;
+    const saveHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "file",
+      rendererLocalId: localId,
+      operation: "save",
+      handler: contribution.save,
+    });
+
+    const record: RuntimeFileRendererRecord = {
+      id,
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: { ...contribution, loadHandlerId, saveHandlerId } as RuntimeFileRendererRecord["contribution"],
+    };
 
     index.fileRendererIds.set(id, record);
     runtime.fileRenderers.push(record);

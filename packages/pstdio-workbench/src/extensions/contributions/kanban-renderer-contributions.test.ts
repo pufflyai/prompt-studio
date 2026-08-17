@@ -29,7 +29,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
       defaultViews: [
         {
           id: "all",
@@ -66,7 +66,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
 
     registerWorkbenchExtensionKanbanRenderers(
@@ -101,7 +101,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
       rowActions: [
         {
           id: "run-attempt",
@@ -134,7 +134,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
       resourceKind: "ticket",
-      queryCommandId: "pstdio-planner.query-tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
       rowActions: [
         {
           id: "refine-ticket",
@@ -199,9 +199,9 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
-      updateAttributeCommandId: "pstdio-planner.update-ticket-attribute",
-      reorderCommandId: "pstdio-planner.reorder-ticket",
+      queryHandlerId: "pstdio-planner.tickets.query",
+      attributeChangeHandlerId: "pstdio-planner.tickets.onAttributeChange",
+      reorderHandlerId: "pstdio-planner.tickets.onReorder",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
 
     workbench.renderers.onDidRefreshKanbanRenderer((event) => {
@@ -213,8 +213,8 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
         workbench,
         executeCommand: async (commandId) => {
           calls.push(commandId);
-          if (commandId === record.updateAttributeCommandId) await updateDeferred.promise;
-          if (commandId === record.reorderCommandId) await reorderDeferred.promise;
+          if (commandId === record.attributeChangeHandlerId) await updateDeferred.promise;
+          if (commandId === record.reorderHandlerId) await reorderDeferred.promise;
           return undefined;
         },
       },
@@ -228,7 +228,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     await Promise.resolve();
 
     expect(attributeChange).toBeInstanceOf(Promise);
-    expect(calls).toEqual([record.updateAttributeCommandId]);
+    expect(calls).toEqual([record.attributeChangeHandlerId]);
     expect(refreshes).toEqual([]);
 
     updateDeferred.resolve();
@@ -241,7 +241,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     await Promise.resolve();
 
     expect(reorder).toBeInstanceOf(Promise);
-    expect(calls).toEqual([record.updateAttributeCommandId, record.reorderCommandId]);
+    expect(calls).toEqual([record.attributeChangeHandlerId, record.reorderHandlerId]);
     expect(refreshes).toEqual(["tickets"]);
 
     reorderDeferred.resolve();
@@ -259,14 +259,14 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
-      rowActivationCommandId: "pstdio-planner.activate-ticket",
+      queryHandlerId: "pstdio-planner.tickets.query",
+      rowActivationHandlerId: "pstdio-planner.tickets.onRowActivate",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
     const inertRecord = {
       id: "inertTickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Inert tickets",
-      queryCommandId: "pstdio-planner.query-inert-tickets",
+      queryHandlerId: "pstdio-planner.inertTickets.query",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
 
     registerWorkbenchExtensionKanbanRenderers(
@@ -276,7 +276,7 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
         executeCommand: async (commandId, request) => {
           const row = request.params?.row as { id?: unknown; resource?: { type?: unknown } } | undefined;
           calls.push({ commandId, resourceType: row?.resource?.type, rowId: row?.id });
-          if (commandId === "pstdio-planner.query-tickets") {
+          if (commandId === "pstdio-planner.tickets.query") {
             return { rows: [{ id: "ticket-1", title: "Ticket 1", resource: { type: "ticket", id: "ticket-1" } }] };
           }
           return undefined;
@@ -289,7 +289,7 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
     await workbench.renderers.getKanbanRenderer("tickets")?.onRowActivate?.(rows![0]!);
 
     expect(calls.at(-1)).toEqual({
-      commandId: "pstdio-planner.activate-ticket",
+      commandId: "pstdio-planner.tickets.onRowActivate",
       resourceType: "ticket",
       rowId: "ticket-1",
     });
@@ -306,7 +306,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
       title: "Tickets",
-      queryCommandId: "pstdio-planner.query-tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
       createRow: {
         commandId: "pstdio-planner.create-ticket",
         title: "New ticket",

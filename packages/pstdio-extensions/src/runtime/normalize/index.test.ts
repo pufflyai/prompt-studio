@@ -225,7 +225,7 @@ describe("normalizeExtensionSources runtime records", () => {
         tickets: {
           title: "Tickets",
           resourceKind: "ticket",
-          queryCommand: "planner.ticketBoard.read",
+          query: async () => ({ rows: [] }),
           defaultSettings: {
             viewMode: "board",
             columnGrouping: "status",
@@ -244,21 +244,48 @@ describe("normalizeExtensionSources runtime records", () => {
         contribution: expect.objectContaining({
           title: "Tickets",
           resourceKind: "ticket",
-          queryCommand: "planner.ticketBoard.read",
+          queryHandlerId: "planner.tickets.kanban.query",
         }),
       }),
     ]);
   });
 
+  test("registers renderer callbacks as private handlers instead of public commands", () => {
+    const planner = defineExtension({
+      kanbanRenderers: {
+        tickets: {
+          title: "Tickets",
+          resourceKind: "ticket",
+          query: async () => ({ rows: [] }),
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.commands).toEqual([]);
+    expect(runtime.privateHandlers).toEqual([
+      expect.objectContaining({
+        id: "planner.tickets.kanban.query",
+        localId: "tickets.query",
+        extensionId: "pstdio.planner",
+        rendererId: "planner.tickets",
+        rendererKind: "kanban",
+        operation: "query",
+      }),
+    ]);
+    expect(runtime.kanbanRenderers[0]?.contribution).toMatchObject({
+      queryHandlerId: "planner.tickets.kanban.query",
+    });
+  });
+
   test("registers data table renderers before resolving table-backed panels", () => {
     const lab = defineExtension({
-      commands: {
-        queryHealth: { title: "Query health", run: async () => ({ rows: [] }) },
-      },
       dataTableRenderers: {
         health: {
           title: "Health",
-          queryCommand: "lab.queryHealth",
+          query: async () => ({ rows: [] }),
           columns: [{ id: "score", label: "Score", stat: { type: "histogram" } }],
         },
       },
@@ -274,23 +301,19 @@ describe("normalizeExtensionSources runtime records", () => {
     expect(runtime.panels[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
   });
 
-  test("registers row activation callbacks as private renderer commands", () => {
+  test("registers row activation callbacks as private renderer handlers", () => {
     const lab = defineExtension({
-      commands: {
-        queryHealth: { title: "Query health", run: async () => ({ rows: [] }) },
-        queryTickets: { title: "Query tickets", run: async () => ({ rows: [] }) },
-      },
       dataTableRenderers: {
         health: {
           title: "Health",
-          queryCommand: "lab.queryHealth",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
       kanbanRenderers: {
         tickets: {
           title: "Tickets",
-          queryCommand: "lab.queryTickets",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
@@ -298,32 +321,27 @@ describe("normalizeExtensionSources runtime records", () => {
 
     const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
-    expect(
-      runtime.commands.find((command) => command.id === "lab.health.__dataTableRowActivate")?.params,
-    ).toMatchObject({
-      row: { type: "json", required: true },
-    });
-    expect(runtime.commands.find((command) => command.id === "lab.tickets.__kanbanRowActivate")?.params).toMatchObject({
-      row: { type: "json", required: true },
-    });
+    expect(runtime.privateHandlers.map((handler) => handler.id)).toEqual([
+      "lab.health.dataTable.query",
+      "lab.health.dataTable.onRowActivate",
+      "lab.tickets.kanban.query",
+      "lab.tickets.kanban.onRowActivate",
+    ]);
   });
 
-  test("keeps data table and kanban row activation commands distinct when renderer ids match", () => {
+  test("namespaces private handlers when renderer kinds share an id", () => {
     const lab = defineExtension({
-      commands: {
-        queryItems: { title: "Query items", run: async () => ({ rows: [] }) },
-      },
       dataTableRenderers: {
         items: {
           title: "Items table",
-          queryCommand: "lab.queryItems",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
       kanbanRenderers: {
         items: {
           title: "Items board",
-          queryCommand: "lab.queryItems",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
@@ -331,28 +349,32 @@ describe("normalizeExtensionSources runtime records", () => {
 
     const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
-    expect(runtime.commands.map((command) => command.id)).toContain("lab.items.__dataTableRowActivate");
-    expect(runtime.commands.map((command) => command.id)).toContain("lab.items.__kanbanRowActivate");
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.privateHandlers.map((handler) => handler.id)).toEqual([
+      "lab.items.dataTable.query",
+      "lab.items.dataTable.onRowActivate",
+      "lab.items.kanban.query",
+      "lab.items.kanban.onRowActivate",
+    ]);
   });
 
-  test("rejects row activation callbacks that collide with declared commands", () => {
+  test("rejects private renderer handlers that collide with declared commands", () => {
     const lab = defineExtension({
       commands: {
-        queryItems: { title: "Query items", run: async () => ({ rows: [] }) },
-        "items.__dataTableRowActivate": { title: "Table collision", run: async () => undefined },
-        "items.__kanbanRowActivate": { title: "Kanban collision", run: async () => undefined },
+        "items.dataTable.onRowActivate": { title: "Table collision", run: async () => undefined },
+        "items.kanban.onRowActivate": { title: "Kanban collision", run: async () => undefined },
       },
       dataTableRenderers: {
         items: {
           title: "Items table",
-          queryCommand: "lab.queryItems",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
       kanbanRenderers: {
         items: {
           title: "Items board",
-          queryCommand: "lab.queryItems",
+          query: async () => ({ rows: [] }),
           onRowActivate: async () => undefined,
         },
       },
@@ -360,18 +382,22 @@ describe("normalizeExtensionSources runtime records", () => {
 
     const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
-    expect(runtime.commands.filter((command) => command.id === "lab.items.__dataTableRowActivate")).toHaveLength(1);
-    expect(runtime.commands.filter((command) => command.id === "lab.items.__kanbanRowActivate")).toHaveLength(1);
-    expect(runtime.dataTableRenderers[0]?.contribution.onRowActivate).toBeUndefined();
-    expect(runtime.kanbanRenderers[0]?.contribution.onRowActivate).toBeUndefined();
+    expect(runtime.commands.filter((command) => command.id === "lab.items.dataTable.onRowActivate")).toHaveLength(1);
+    expect(runtime.commands.filter((command) => command.id === "lab.items.kanban.onRowActivate")).toHaveLength(1);
+    expect(runtime.privateHandlers.map((handler) => handler.id)).toEqual([
+      "lab.items.dataTable.query",
+      "lab.items.kanban.query",
+    ]);
+    expect(runtime.dataTableRenderers[0]?.contribution).toMatchObject({ rowActivationHandlerId: undefined });
+    expect(runtime.kanbanRenderers[0]?.contribution).toMatchObject({ rowActivationHandlerId: undefined });
     expect(runtime.diagnostics).toEqual([
       expect.objectContaining({
-        code: "duplicate_command_id",
-        commandId: "lab.items.__dataTableRowActivate",
+        code: "duplicate_private_handler_id",
+        metadata: expect.objectContaining({ operation: "onRowActivate", rendererKind: "dataTable" }),
       }),
       expect.objectContaining({
-        code: "duplicate_command_id",
-        commandId: "lab.items.__kanbanRowActivate",
+        code: "duplicate_private_handler_id",
+        metadata: expect.objectContaining({ operation: "onRowActivate", rendererKind: "kanban" }),
       }),
     ]);
   });
@@ -380,14 +406,11 @@ describe("normalizeExtensionSources runtime records", () => {
 describe("normalizeExtensionSources tree and panel runtime records", () => {
   test("registers tree renderer contributions and tree-backed panels", () => {
     const planner = defineExtension({
-      commands: {
-        listFiles: { title: "List files", run: async () => [] },
-      },
       treeRenderers: {
         files: {
           title: "Files",
           icon: "Files",
-          bodyCommand: "planner.listFiles",
+          body: async () => [],
           defaultExpandedSectionIds: ["files"],
         },
       },
@@ -413,7 +436,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
         contribution: expect.objectContaining({
           title: "Files",
           icon: "Files",
-          bodyCommand: "planner.listFiles",
+          bodyHandlerId: "planner.files.tree.body",
           defaultExpandedSectionIds: ["files"],
         }),
       }),
@@ -456,12 +479,9 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
 
   test("rejects invalid tree renderer contributions and invalid tree-backed panels", () => {
     const planner = defineExtension({
-      commands: {
-        listFiles: { title: "List files", run: async () => [] },
-      },
       treeRenderers: {
         missingBody: { title: "Missing body" },
-        missingCommand: { title: "Missing command", bodyCommand: "planner.nope" },
+        missingCallback: { title: "Missing callback", body: "planner.nope" },
       },
       panels: {
         both: {
@@ -488,7 +508,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       expect.objectContaining({ code: "invalid_tree_renderer", metadata: { contributionId: "planner.missingBody" } }),
       expect.objectContaining({
         code: "invalid_tree_renderer",
-        metadata: { contributionId: "planner.missingCommand" },
+        metadata: { contributionId: "planner.missingCallback" },
       }),
       expect.objectContaining({ code: "extension_view_body_invalid", metadata: { contributionId: "planner.both" } }),
       expect.objectContaining({
@@ -514,17 +534,13 @@ describe("normalizeExtensionSources artifact runtime records", () => {
 });
 
 describe("normalizeExtensionSources controls renderers", () => {
-  test("registers controls renderer contributions and resolves command refs", () => {
+  test("registers controls renderer contributions and private handlers", () => {
     const planner = defineExtension({
-      commands: {
-        loadControls: { title: "Load controls", run: async () => ({}) },
-        updateControl: { title: "Update control", run: async () => undefined },
-      },
       controlsRenderers: {
         inspector: {
           title: "Inspector",
-          queryCommand: "planner.loadControls",
-          updateValueCommand: "planner.updateControl",
+          query: async () => ({}),
+          onValueChange: async () => undefined,
         },
       },
     });
@@ -539,17 +555,18 @@ describe("normalizeExtensionSources controls renderers", () => {
         extensionId: "pstdio.planner",
         contribution: expect.objectContaining({
           title: "Inspector",
-          queryCommand: "planner.loadControls",
+          queryHandlerId: "planner.inspector.controls.query",
+          valueChangeHandlerId: "planner.inspector.controls.onValueChange",
         }),
       }),
     ]);
   });
 
-  test("rejects controls renderers without a valid query command", () => {
+  test("rejects controls renderers without a valid query callback", () => {
     const planner = defineExtension({
       controlsRenderers: {
         missingQuery: { title: "Missing query" },
-        unknownQuery: { title: "Unknown query", queryCommand: "planner.nope" },
+        unknownQuery: { title: "Unknown query", query: "planner.nope" },
       },
     } as never);
 

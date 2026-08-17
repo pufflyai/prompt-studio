@@ -10,7 +10,7 @@ import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/
 import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
-import { findCommand, middlewaresFor, serializeError } from "./internals";
+import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
 import { validateCommandParams } from "./validate-params";
@@ -47,6 +47,9 @@ export const executeExtensionCommand = async (
 
   const record = findCommand(state.runtime, input.commandId);
   if (!record) {
+    const handler = findPrivateHandler(state.runtime, input.commandId);
+    if (handler) return executePrivateHandler(state, input, handler);
+
     return {
       ok: false,
       status: "error",
@@ -178,6 +181,76 @@ export const executeExtensionCommand = async (
     const message = err instanceof Error ? err.message : String(err);
     await state.dispatcher.dispatch(lifecycleEventId("failed", record.id), {
       ...startedPayload,
+      reason: message,
+      error: serializeError(err),
+      elapsedMs,
+    });
+    return withNotices(
+      { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
+      notices,
+    );
+  }
+};
+
+const executePrivateHandler = async (
+  state: RunnerState,
+  input: InternalExecuteInput,
+  handler: NonNullable<ReturnType<typeof findPrivateHandler>>,
+): Promise<CommandOutcome> => {
+  const notices: CommandNotice[] = [];
+  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+    workspaceDir: input.workspaceDir,
+    workspaceId: input.workspaceId,
+  });
+
+  let env: CommandRunnerEnvironment;
+  try {
+    env = await envFor(handler);
+  } catch (err) {
+    return environmentFailedOutcome(err);
+  }
+
+  const invocationId = state.generateId();
+  const params = (input.params ?? {}) as JsonObject;
+  const requestPayload = {
+    commandId: handler.id,
+    invocationId,
+    source: input.source,
+    params,
+    resource: input.resource,
+    repo: input.repo,
+    projectId: input.projectId,
+  };
+
+  await state.dispatcher.dispatch(lifecycleEventId("requested", handler.id), requestPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("started", handler.id), requestPayload);
+
+  const start = Date.now();
+  try {
+    const ctx = state.factory.buildExtensionContext(
+      env,
+      {
+        projectId: input.projectId,
+        extensionId: handler.extensionId,
+        name: handler.name,
+        workspaceDir: input.workspaceDir,
+        workspaceId: input.workspaceId,
+      },
+      input.depth,
+    );
+    const value = await handler.handler(ctx, params);
+    const elapsedMs = Date.now() - start;
+    await state.dispatcher.dispatch(lifecycleEventId("completed", handler.id), {
+      ...requestPayload,
+      result: value,
+      elapsedMs,
+    });
+    return withNotices({ ok: true, status: "success", value }, notices);
+  } catch (err) {
+    const elapsedMs = Date.now() - start;
+    const message = err instanceof Error ? err.message : String(err);
+    await state.dispatcher.dispatch(lifecycleEventId("failed", handler.id), {
+      ...requestPayload,
       reason: message,
       error: serializeError(err),
       elapsedMs,

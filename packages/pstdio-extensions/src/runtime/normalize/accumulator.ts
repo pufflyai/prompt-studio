@@ -12,6 +12,7 @@ import type {
   RuntimeFileRendererRecord,
   RuntimeKanbanRendererRecord,
   RuntimeKeybindingRecord,
+  RuntimePrivateHandlerRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
   RuntimeTreeRendererRecord,
@@ -21,6 +22,7 @@ export type Accumulator = ExtensionRuntime;
 
 export type RegistryIndex = {
   commandIds: Map<string, RuntimeCommandRecord>;
+  privateHandlerIds: Map<string, RuntimePrivateHandlerRecord>;
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
   kanbanRendererIds: Map<string, RuntimeKanbanRendererRecord>;
@@ -38,6 +40,7 @@ export type RegistryIndex = {
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
   extensions: [],
   commands: [],
+  privateHandlers: [],
   middlewares: [],
   hooks: [],
   cli: [],
@@ -72,6 +75,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
 
 export const createRegistryIndex = (): RegistryIndex => ({
   commandIds: new Map(),
+  privateHandlerIds: new Map(),
   cliKeys: new Map(),
   mountKeys: new Map(),
   kanbanRendererIds: new Map(),

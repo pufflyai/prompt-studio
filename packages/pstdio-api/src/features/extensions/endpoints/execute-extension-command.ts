@@ -65,8 +65,10 @@ export const executeExtensionCommandHandler = (
 
     try {
       const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
-      const command = runtime.commands.find((candidate) => candidate.id === commandId);
-      if (!command) {
+      const handler =
+        runtime.commands.find((candidate) => candidate.id === commandId) ??
+        runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+      if (!handler) {
         return c.json({ error: `Command "${commandId}" is not registered`, code: "command_not_found", commandId }, 404);
       }
 
@@ -119,7 +121,7 @@ export const executeExtensionCommandHandler = (
         metadata: body.metadata as JsonObject | undefined,
       });
 
-      return c.json({ commandId, extensionId: command.extensionId, outcome }, 200);
+      return c.json({ commandId, extensionId: handler.extensionId, outcome }, 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

@@ -66,9 +66,9 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.lab",
           title: "Files",
           icon: "Files",
-          bodyCommandId: "lab.files.body",
-          childrenCommandId: "lab.files.children",
-          footerCommandId: "lab.files.footer",
+          bodyHandlerId: "lab.files.body",
+          childrenHandlerId: "lab.files.children",
+          footerHandlerId: "lab.files.footer",
           defaultExpandedSectionIds: ["files"],
           defaultExpandedNodeIds: ["ticket"],
         },
@@ -113,9 +113,9 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.panels[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({
       id: "lab.files",
-      bodyCommandId: "lab.files.body",
-      childrenCommandId: "lab.files.children",
-      footerCommandId: "lab.files.footer",
+      bodyHandlerId: "lab.files.body",
+      childrenHandlerId: "lab.files.children",
+      footerHandlerId: "lab.files.footer",
     });
     expect(parsed.settingsPanels[0]).toMatchObject({
       target: "workbench.settings",

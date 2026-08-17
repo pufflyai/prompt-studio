@@ -21,8 +21,8 @@ const ticketsRecord = {
   extensionId: "pstdio.pstdio-core-tickets",
   title: "Tickets",
   resourceKind: "ticket",
-  queryCommandId: "pstdio-core-tickets.query-tickets",
-  rowActivationCommandId: "pstdio-core-tickets.activate-ticket",
+  queryHandlerId: "pstdio-core-tickets.tickets.query",
+  rowActivationHandlerId: "pstdio-core-tickets.tickets.onRowActivate",
 };
 
 const metadata: DashboardExtensionMetadata = {
@@ -200,7 +200,7 @@ describe("registerExtensionKanbanRenderers row activation", () => {
           metadata,
           projectId: "proj-1",
           executeCommand: async () => ({
-            ...successResponse("pstdio-core-tickets.activate-ticket"),
+            ...successResponse("pstdio-core-tickets.tickets.onRowActivate"),
             outcome: {
               ok: true,
               status: "success",
@@ -257,7 +257,7 @@ describe("registerExtensionKanbanRenderers row activation", () => {
           metadata,
           projectId: "proj-1",
           executeCommand: async () => ({
-            ...successResponse("pstdio-core-tickets.activate-ticket"),
+            ...successResponse("pstdio-core-tickets.tickets.onRowActivate"),
             outcome: {
               ok: true,
               status: "success",

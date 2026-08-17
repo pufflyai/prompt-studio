@@ -1,6 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { attachmentDataUrl } from "../data/attachment-data-url";
-import { getSelectedDocument, TICKET_BODY_DOCUMENT } from "../data/document-selection";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { findTicket } from "../data/resolve";
 
 const BODY_PLACEHOLDER = "Write the ticket description…";
@@ -18,7 +18,7 @@ export const getTicketContentCommand = defineCommand({
     const ticket = await findTicket(ctx.storage, ticketId);
     if (!ticket) return { content: "", placeholder: BODY_PLACEHOLDER };
 
-    const documentId = getSelectedDocument(ticket.id);
+    const documentId = selectedDocumentFromResource(ctx.resource);
     if (documentId !== TICKET_BODY_DOCUMENT) {
       const file = ticket.files?.find((entry) => entry.id === documentId);
       if (file) return { fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER };
