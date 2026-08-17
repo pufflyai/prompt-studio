@@ -13,7 +13,7 @@ const ticketsRecord = {
   extensionInstanceId: "planner-instance",
   title: "Tickets",
   resourceKind: "ticket",
-  queryCommandId: "pstdio-planner.query-tickets",
+  queryHandlerId: "pstdio-planner.tickets.query",
   createRow: {
     commandId: "pstdio-planner.create-ticket",
     columnParam: "statusId",

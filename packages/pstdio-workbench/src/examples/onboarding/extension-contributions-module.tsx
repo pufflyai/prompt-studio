@@ -97,7 +97,7 @@ const metadata = {
       extensionId: EXTENSION_ID,
       title: "Lab tree",
       icon: "FlaskConical",
-      bodyCommandId: TREE_BODY_COMMAND_ID,
+      bodyHandlerId: TREE_BODY_COMMAND_ID,
       defaultExpandedSectionIds: ["workflows"],
     },
   ],

@@ -12,7 +12,6 @@ const metadata = {
   extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "" }],
   commands: [
     { id: "lab.focus", extensionId: "pstdio.lab", title: "Focus lab" },
-    { id: "lab.treeBody", extensionId: "pstdio.lab", title: "List lab tree" },
     { id: "lab.search", extensionId: "pstdio.lab", title: "Search lab resources" },
   ],
   menuContributions: [
@@ -38,7 +37,7 @@ const metadata = {
       id: "lab.tree",
       extensionId: "pstdio.lab",
       title: "Lab tree",
-      bodyCommandId: "lab.treeBody",
+      bodyHandlerId: "lab.treeBody",
       defaultExpandedSectionIds: ["workflows"],
     },
   ],

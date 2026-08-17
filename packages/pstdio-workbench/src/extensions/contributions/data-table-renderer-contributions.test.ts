@@ -14,7 +14,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       id: "lab.health",
       extensionId: "pstdio.lab",
       title: "Health",
-      queryCommandId: "lab.queryHealth",
+      queryHandlerId: "lab.health.query",
       columns: [{ id: "name", label: "Service" }],
       selectionMode: "multiple",
       selectionActions: [{ id: "restart-selected", label: "Restart selected", commandId: "lab.restartSelected" }],
@@ -37,7 +37,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
         workbench,
         executeCommand: async (commandId, body) => {
           calls.push({ commandId, body });
-          if (commandId === "lab.queryHealth") {
+          if (commandId === "lab.health.query") {
             return {
               rows: [
                 {
@@ -76,7 +76,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     await renderer?.rowActions?.[0]?.run(result!.rows[0]!);
     await renderer?.selectionActions?.[0]?.run(result!.rows);
     expect(calls[0]).toMatchObject({
-      commandId: "lab.queryHealth",
+      commandId: "lab.health.query",
       body: {
         projectId: "project-1",
         params: {
@@ -125,8 +125,8 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       id: "lab.health",
       extensionId: "pstdio.lab",
       title: "Health",
-      queryCommandId: "lab.queryHealth",
-      rowActivationCommandId: "lab.health.__dataTableRowActivate",
+      queryHandlerId: "lab.health.query",
+      rowActivationHandlerId: "lab.health.onRowActivate",
     } satisfies WorkbenchExtensionDataTableRendererRecord;
 
     registerWorkbenchExtensionDataTableRenderers(
@@ -136,7 +136,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
         executeCommand: async (commandId, body) => {
           const row = body.params?.row as { id?: unknown; resource?: { type?: unknown } } | undefined;
           calls.push({ commandId, resourceType: row?.resource?.type, rowId: row?.id });
-          if (commandId === "lab.queryHealth") {
+          if (commandId === "lab.health.query") {
             return { rows: [{ id: "api", values: {}, resource: { type: "ticket", id: "PS-1", label: "PS-1" } }] };
           }
           return {
@@ -154,7 +154,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     await workbench.renderers.getDataTableRenderer("lab.health")?.onRowActivate?.(result!.rows[0]!);
 
     expect(calls.at(-1)).toEqual({
-      commandId: "lab.health.__dataTableRowActivate",
+      commandId: "lab.health.onRowActivate",
       resourceType: "ticket",
       rowId: "api",
     });

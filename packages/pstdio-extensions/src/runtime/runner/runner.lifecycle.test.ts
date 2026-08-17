@@ -91,6 +91,30 @@ describe("createCommandRunner: lifecycle", () => {
     }
   });
 
+  test("executes a private renderer handler without registering a public command", async () => {
+    const runner = makeRunner({
+      kanbanRenderers: {
+        rows: {
+          title: "Rows",
+          query: async (_ctx, params) => ({
+            rows: [{ id: String(params.renderer.rendererId), title: "Rows", attributes: {} }],
+          }),
+        },
+      },
+    });
+
+    const outcome = await runner.execute({
+      commandId: "lab.rows.kanban.query",
+      projectId: "p1",
+      params: { renderer: { rendererId: "lab.rows" } },
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.value).toEqual({ rows: [{ id: "lab.rows", title: "Rows", attributes: {} }] });
+    }
+  });
+
   test("collects command toast notices in the outcome", async () => {
     const runner = makeRunner({
       commands: {

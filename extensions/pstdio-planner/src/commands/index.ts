@@ -18,7 +18,6 @@ import { reorderTicketCommand } from "./reorder-ticket";
 import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
-import { selectTicketDocumentCommand } from "./select-ticket-document";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
 import {
   approveProposalCommand,
@@ -86,7 +85,6 @@ export const plannerCommands = {
   "link-review": linkReviewCommand,
   "get-ticket-content": getTicketContentCommand,
   "save-ticket-content": saveTicketContentCommand,
-  "select-ticket-document": selectTicketDocumentCommand,
   "create-ticket-file": createTicketFileCommand,
   "update-ticket-file": updateTicketFileCommand,
   "rename-ticket-file": renameTicketFileCommand,

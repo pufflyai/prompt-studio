@@ -261,8 +261,13 @@ export const toCheckControlsRenderers = (
 ): ExtensionControlsRendererRecord[] =>
   compact(
     renderers.map((renderer) => {
-      const queryCommandId = refIdOf(renderer.contribution.queryCommand);
-      if (!queryCommandId) return null;
+      const handlers = renderer.contribution as {
+        queryHandlerId?: string;
+        valueChangeHandlerId?: string;
+        applyHandlerId?: string;
+        resetHandlerId?: string;
+      };
+      if (!handlers.queryHandlerId) return null;
 
       const refreshEventIds = compact(renderer.contribution.refreshEvents?.map(refIdOf) ?? []);
 
@@ -270,10 +275,10 @@ export const toCheckControlsRenderers = (
         id: renderer.id,
         extensionId: renderer.extensionId,
         title: renderer.contribution.title,
-        queryCommandId,
-        updateValueCommandId: refIdOf(renderer.contribution.updateValueCommand),
-        applyCommandId: refIdOf(renderer.contribution.applyCommand),
-        resetCommandId: refIdOf(renderer.contribution.resetCommand),
+        queryHandlerId: handlers.queryHandlerId,
+        valueChangeHandlerId: handlers.valueChangeHandlerId,
+        applyHandlerId: handlers.applyHandlerId,
+        resetHandlerId: handlers.resetHandlerId,
         ...(refreshEventIds.length > 0 ? { refreshEventIds } : {}),
         defaultValues: renderer.contribution.defaultValues,
         emptyTitle: renderer.contribution.emptyTitle,
@@ -285,16 +290,20 @@ export const toCheckControlsRenderers = (
 export const toCheckTreeRenderers = (renderers: ExtensionRuntime["treeRenderers"]) =>
   compact(
     renderers.map((renderer) => {
-      const bodyCommandId = refIdOf(renderer.contribution.bodyCommand);
-      if (!bodyCommandId) return null;
+      const handlers = renderer.contribution as {
+        bodyHandlerId?: string;
+        childrenHandlerId?: string;
+        footerHandlerId?: string;
+      };
+      if (!handlers.bodyHandlerId) return null;
       return {
         id: renderer.id,
         extensionId: renderer.extensionId,
         title: renderer.contribution.title,
         icon: renderer.contribution.icon,
-        bodyCommandId,
-        childrenCommandId: refIdOf(renderer.contribution.childrenCommand),
-        footerCommandId: refIdOf(renderer.contribution.footerCommand),
+        bodyHandlerId: handlers.bodyHandlerId,
+        childrenHandlerId: handlers.childrenHandlerId,
+        footerHandlerId: handlers.footerHandlerId,
         defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
         defaultExpandedNodeIds: renderer.contribution.defaultExpandedNodeIds,
       };
@@ -304,16 +313,16 @@ export const toCheckTreeRenderers = (renderers: ExtensionRuntime["treeRenderers"
 export const toCheckFileRenderers = (renderers: ExtensionRuntime["fileRenderers"]) =>
   compact(
     renderers.map((renderer) => {
-      const loadCommandId = refIdOf(renderer.contribution.loadCommand);
-      if (!loadCommandId) return null;
+      const handlers = renderer.contribution as { loadHandlerId?: string; saveHandlerId?: string };
+      if (!handlers.loadHandlerId) return null;
       return {
         id: renderer.id,
         extensionId: renderer.extensionId,
         title: renderer.contribution.title,
         icon: renderer.contribution.icon,
         resourceKind: renderer.contribution.resourceKind,
-        loadCommandId,
-        saveCommandId: refIdOf(renderer.contribution.saveCommand),
+        loadHandlerId: handlers.loadHandlerId,
+        saveHandlerId: handlers.saveHandlerId,
       };
     }),
   );

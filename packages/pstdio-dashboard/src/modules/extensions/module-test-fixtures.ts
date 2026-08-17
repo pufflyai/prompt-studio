@@ -134,7 +134,7 @@ export const metadataWithTickets = {
       extensionId: "pstdio.pstdio-core-tickets",
       title: "Tickets",
       resourceKind: "ticket",
-      queryCommandId: "pstdio-core-tickets.query-tickets",
+      queryHandlerId: "pstdio-core-tickets.tickets.query",
     },
   ],
   modes: [
@@ -203,7 +203,7 @@ export const metadataWithTickets = {
       extensionId: "pstdio.pstdio-core-tickets",
       title: "Files",
       icon: "Files",
-      bodyCommandId: "pstdio-core-tickets.ticket-files.tree.body",
+      bodyHandlerId: "pstdio-core-tickets.ticketFiles.body",
       defaultExpandedSectionIds: ["files"],
     },
   ],

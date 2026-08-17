@@ -1,4 +1,9 @@
 import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { labCommands } from "../commands";
+
+const runLabCommand =
+  (command: { run: (ctx: unknown) => unknown }, params: Record<string, unknown>) => (ctx: unknown) =>
+    command.run({ ...(ctx as Record<string, unknown>), params, resource: params.resource });
 
 export const labModes = {
   lab: {
@@ -159,7 +164,7 @@ export const labDataTableRenderers = {
   glassLabArtifacts: {
     title: "Artifacts",
     resourceKind: "glass-lab-artifact",
-    queryCommand: commandRef("extension-lab.glass-lab-artifacts.query"),
+    query: (ctx, input) => runLabCommand(labCommands["glass-lab-artifacts.query"], input)(ctx),
     onRowActivate: (_ctx, { row }) =>
       row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
     rowActions: [
@@ -180,7 +185,7 @@ export const labTreeRenderers = {
   labCams: {
     title: l10n("treeRenderers.labCams.title", "Cameras"),
     icon: "cctv",
-    bodyCommand: commandRef("extension-lab.cams.tree"),
+    body: (ctx, input) => runLabCommand(labCommands["cams.tree"], input)(ctx),
     defaultExpandedSectionIds: ["cameras"],
   },
 } satisfies NonNullable<ExtensionDefinition["treeRenderers"]>;
@@ -188,8 +193,8 @@ export const labTreeRenderers = {
 export const labControlsRenderers = {
   labArtifactCreate: {
     title: l10n("controls.labArtifactCreate.title", "Create artifacts"),
-    queryCommand: commandRef("extension-lab.artifact-menu.query"),
-    updateValueCommand: commandRef("extension-lab.artifact-menu.update"),
+    query: (ctx, input) => runLabCommand(labCommands["artifact-menu.query"], input)(ctx),
+    onValueChange: (ctx, input) => runLabCommand(labCommands["artifact-menu.update"], input)(ctx),
     defaultValues: {},
   },
 } satisfies NonNullable<ExtensionDefinition["controlsRenderers"]>;

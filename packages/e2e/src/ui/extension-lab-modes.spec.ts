@@ -114,8 +114,9 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   await expect(createMenu.getByText("Catalog intake")).toBeVisible({ timeout: 30_000 });
   const createResponse = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname.endsWith("/extensions/commands/extension-lab.artifact-menu.update/execute") &&
-      response.request().method() === "POST",
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/extension-lab.labArtifactCreate.controls.onValueChange/execute",
+      ) && response.request().method() === "POST",
   );
   await createMenu.getByRole("button", { name: "Random artifact" }).click();
   expect((await createResponse).ok()).toBe(true);

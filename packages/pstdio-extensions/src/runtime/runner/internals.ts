@@ -15,5 +15,8 @@ export const serializeError = (err: unknown): SerializedError => {
 
 export const findCommand = (runtime: ExtensionRuntime, id: string) => runtime.commands.find((cmd) => cmd.id === id);
 
+export const findPrivateHandler = (runtime: ExtensionRuntime, id: string) =>
+  runtime.privateHandlers.find((handler) => handler.id === id);
+
 export const middlewaresFor = (runtime: ExtensionRuntime, commandId: string) =>
   runtime.middlewares.filter((middleware) => middleware.commandId === commandId);

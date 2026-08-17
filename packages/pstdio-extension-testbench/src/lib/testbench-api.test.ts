@@ -20,6 +20,37 @@ const jsonRequest = (url: string, body: unknown) =>
   });
 
 describe("createExtensionTestbenchApi", () => {
+  test("passes renderer context while collecting testbench resources", async () => {
+    const previousHome = process.env.PSTDIO_HOME;
+    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+
+    try {
+      const bench = await readJson<ExtensionBenchLoadResponse>(
+        await api.handleRequest(
+          new Request(
+            `http://bench${apiPrefix}/load?source=./packages/pstdio-extension-testbench/src/lib/fixtures/renderer-context`,
+          ),
+        ),
+      );
+
+      expect(bench.resources).toContainEqual({
+        resource: {
+          kind: "fixture-item",
+          uri: "pstdio://extension-resource/fixture-item/renderer-context-fixture.items",
+          id: "renderer-context-fixture.items",
+          label: "extension-testbench",
+        },
+        group: "Items",
+        searchText:
+          "extension-testbench renderer-context-fixture.items pstdio://extension-resource/fixture-item/renderer-context-fixture.items",
+      });
+    } finally {
+      api.cleanup();
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+    }
+  });
+
   test("loads planner ticket rows as testbench resources", async () => {
     const previousHome = process.env.PSTDIO_HOME;
     const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });

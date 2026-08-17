@@ -22,7 +22,7 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.dataTableRenderers?.glassLabArtifacts).toMatchObject({
       title: "Artifacts",
       resourceKind: "glass-lab-artifact",
-      queryCommand: { id: "extension-lab.glass-lab-artifacts.query" },
+      query: expect.any(Function),
       rowActions: [
         {
           id: "delete",
@@ -107,11 +107,11 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.treeRenderers?.labCams).toMatchObject({
       icon: "cctv",
-      bodyCommand: { id: "extension-lab.cams.tree" },
+      body: expect.any(Function),
     });
     expect(extension.controlsRenderers?.labArtifactCreate).toMatchObject({
-      queryCommand: { id: "extension-lab.artifact-menu.query" },
-      updateValueCommand: { id: "extension-lab.artifact-menu.update" },
+      query: expect.any(Function),
+      onValueChange: expect.any(Function),
     });
     expect(extension.controlsRenderers).not.toHaveProperty("labActionTray");
     expect(extension.controlsRenderers).not.toHaveProperty("labParameters");

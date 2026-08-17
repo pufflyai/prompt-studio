@@ -202,11 +202,8 @@ describe("checkExtensionSource host compatibility", () => {
       join(root, "extension.ts"),
       `const run = async () => ({ rows: [] });
       export default {
-        commands: {
-          query: { title: "Query rows", run },
-        },
         dataTableRenderers: {
-          rows: { title: "Rows", queryCommand: "query" },
+          rows: { title: "Rows", query: run },
         },
         panels: {
           rows: {

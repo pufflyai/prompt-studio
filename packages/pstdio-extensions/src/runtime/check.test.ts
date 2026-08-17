@@ -255,6 +255,7 @@ describe("checkExtensionHostCompatibility", () => {
     const runtime = {
       extensions: [],
       commands: [],
+      privateHandlers: [],
       middlewares: [],
       hooks: [],
       cli: [],
@@ -300,7 +301,7 @@ describe("checkExtensionHostCompatibility", () => {
           extensionId: "pstdio.lab",
           name: "lab",
           sourcePath: "/extension/extension.ts",
-          contribution: { title: "Rows", queryCommand: "query" },
+          contribution: { title: "Rows", query: async () => ({ rows: [] }), queryHandlerId: "lab.rows.query" } as never,
         },
       ],
       commandPaletteResources: [],

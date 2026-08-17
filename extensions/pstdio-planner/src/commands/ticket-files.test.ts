@@ -5,7 +5,6 @@ import type { StoredTicketAttachment } from "../data/types";
 import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { selectTicketDocumentCommand } from "./select-ticket-document";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
 
@@ -14,11 +13,27 @@ const createWorkspaceTreeActionParams = {
   mode: createWorkspaceCommand.params!.mode,
 };
 
-const ticketRendererParams = (ticket: { id: string; shorthand: string }) => ({
+const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
     rendererId: "pstdio-planner.ticketFiles",
-    resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+    resource: {
+      type: "ticket",
+      id: ticket.id,
+      label: ticket.shorthand,
+      ...(documentId ? { metadata: { documentId } } : {}),
+    },
   },
+});
+
+const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
+  kind: "resource",
+  resource: {
+    type: "ticket",
+    id: ticket.id,
+    label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
+    metadata: { shorthand: ticket.shorthand, documentId },
+  },
+  input: { strategy: "replace-active" },
 });
 
 describe("ticket files tree commands", () => {
@@ -49,17 +64,13 @@ describe("ticket files tree commands", () => {
           id: "__ticket__",
           label: `${ticket.shorthand} Write a haiku`,
           icon: "component",
-          target: {
-            kind: "command",
-            command: "pstdio-planner.select-ticket-document",
-            params: { ticketId: ticket.id, documentId: "__ticket__" },
-          },
+          target: ticketDocumentTarget(ticket, "__ticket__"),
           selected: true,
         },
       ],
     });
 
-    // The file lives in the Files section; selecting it runs select-ticket-document.
+    // The file lives in the Files section and rebinds the editor to the selected document.
     expect(body[1]).toMatchObject({ id: "files", label: "Files" });
     expect(body[1]).not.toHaveProperty("canHide");
     expect(body[1]?.nodes).toEqual([
@@ -67,11 +78,7 @@ describe("ticket files tree commands", () => {
         id: file.id,
         label: "notes.md",
         icon: "FileText",
-        target: {
-          kind: "command",
-          command: "pstdio-planner.select-ticket-document",
-          params: { ticketId: ticket.id, documentId: file.id },
-        },
+        target: ticketDocumentTarget(ticket, file.id),
         selected: false,
         contextMenuActions: [
           {
@@ -117,14 +124,10 @@ describe("ticket files tree commands", () => {
       makeCommandContext({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
 
-    await selectTicketDocumentCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, documentId: file.id } }),
-    );
-
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: ticketRendererParams(ticket),
+        params: ticketRendererParams(ticket, file.id),
       }),
     );
 
@@ -167,11 +170,7 @@ describe("ticket files tree commands", () => {
         id: "att-diagram.png",
         label: "diagram.png",
         icon: "Image",
-        target: {
-          kind: "command",
-          command: "pstdio-planner.select-ticket-document",
-          params: { ticketId: ticket.id, documentId: "att-diagram.png" },
-        },
+        target: ticketDocumentTarget(ticket, "att-diagram.png"),
         selected: false,
       },
     ]);

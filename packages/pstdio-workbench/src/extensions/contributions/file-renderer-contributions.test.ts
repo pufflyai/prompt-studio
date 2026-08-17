@@ -39,7 +39,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           extensionId: "pstdio.lab",
           title: "Ticket",
           resourceKind: "ticket",
-          loadCommandId: "lab.ticket.load",
+          loadHandlerId: "lab.ticket.load",
         },
       ],
       panels: [
@@ -104,8 +104,8 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           extensionId: "pstdio.lab",
           title: "Ticket",
           resourceKind: "ticket",
-          loadCommandId: "lab.ticket.load",
-          saveCommandId: "lab.ticket.save",
+          loadHandlerId: "lab.ticket.load",
+          saveHandlerId: "lab.ticket.save",
         },
       ],
       panels: [
@@ -191,12 +191,12 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
     });
   });
 
-  test("omits save for a read-only file renderer (no saveCommandId)", async () => {
+  test("omits save for a read-only file renderer (no saveHandlerId)", async () => {
     const workbench = createWorkbenchCore();
     const metadata = {
       ...baseMetadata,
       fileRenderers: [
-        { id: "lab.readonly", extensionId: "pstdio.lab", title: "Read only", loadCommandId: "lab.ticket.load" },
+        { id: "lab.readonly", extensionId: "pstdio.lab", title: "Read only", loadHandlerId: "lab.ticket.load" },
       ],
       panels: [],
     } satisfies WorkbenchExtensionMetadata;

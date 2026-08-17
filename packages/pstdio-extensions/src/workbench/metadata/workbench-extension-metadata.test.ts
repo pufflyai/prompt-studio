@@ -33,7 +33,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             treeBody: { title: "Tree body", run: async () => [] },
           },
           kanbanRenderers: {
-            rows: { title: "Rows", queryCommand: "queryRows" },
+            rows: { title: "Rows", query: async () => ({ rows: [] }) },
           },
           modes: {
             review: {
@@ -68,7 +68,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             },
           },
           treeRenderers: {
-            files: { title: "Files", bodyCommand: "treeBody" },
+            files: { title: "Files", body: async () => [] },
           },
           panels: {
             files: {
@@ -133,7 +133,10 @@ describe("createWorkbenchExtensionMetadata", () => {
       icon: "flask-conical",
       webview: { runtimeUrl: "/runtime/lab.project.html" },
     });
-    expect(metadata.kanbanRenderers?.[0]).toMatchObject({ id: "lab.rows", queryCommandId: "lab.queryRows" });
+    expect(metadata.kanbanRenderers?.[0]).toMatchObject({
+      id: "lab.rows",
+      queryHandlerId: "lab.rows.kanban.query",
+    });
     expect(metadata.treeItems?.[0]).toMatchObject({
       id: "lab.rows",
       action: { kind: "kanbanRenderer", kanbanRendererId: "lab.rows" },
@@ -145,7 +148,9 @@ describe("createWorkbenchExtensionMetadata", () => {
       layout: { panels: ["main"], open: [{ region: "main", panel: "lab.ticketPanel" }] },
     });
   });
+});
 
+describe("createWorkbenchExtensionMetadata command records", () => {
   test("maps command palette resource providers with resolved query command and refresh events", () => {
     const runtime = normalizeExtensionSources([
       {
@@ -187,6 +192,38 @@ describe("createWorkbenchExtensionMetadata", () => {
         refreshEventIds: ["lab.ticket.changed"],
       },
     ]);
+  });
+
+  test("keeps renderer callback handlers out of public command metadata", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          kanbanRenderers: {
+            rows: { title: "Rows", query: async () => ({ rows: [] }) },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.commands).toEqual([]);
+    expect(metadata.kanbanRenderers?.[0]).toMatchObject({
+      id: "lab.rows",
+      queryHandlerId: "lab.rows.kanban.query",
+    });
   });
 
   test("emits keybinding records with canonical chord, platform overrides, and when predicate", () => {
@@ -254,7 +291,7 @@ describe("createWorkbenchExtensionMetadata kanban renderers", () => {
           kanbanRenderers: {
             rows: {
               title: "Rows",
-              queryCommand: "queryRows",
+              query: async () => ({ rows: [] }),
               onRowActivate: async () => undefined,
               defaultViews: [
                 {
@@ -282,7 +319,7 @@ describe("createWorkbenchExtensionMetadata kanban renderers", () => {
 
     expect(metadata.kanbanRenderers?.[0]).toMatchObject({
       id: "lab.rows",
-      rowActivationCommandId: "lab.rows.__kanbanRowActivate",
+      rowActivationHandlerId: "lab.rows.kanban.onRowActivate",
       defaultViews: [
         {
           id: "all",
@@ -385,13 +422,12 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
         },
         definition: {
           commands: {
-            queryTable: { title: "Query table", run: async () => ({ rows: [] }) },
             restartRows: { title: "Restart rows", run: async () => undefined },
           },
           dataTableRenderers: {
             health: {
               title: "Health",
-              queryCommand: "queryTable",
+              query: async () => ({ rows: [] }),
               onRowActivate: async () => undefined,
               columns: [{ id: "score", label: "Score" }],
               selectionMode: "multiple",
@@ -415,8 +451,8 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
 
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.health",
-      queryCommandId: "lab.queryTable",
-      rowActivationCommandId: "lab.health.__dataTableRowActivate",
+      queryHandlerId: "lab.health.dataTable.query",
+      rowActivationHandlerId: "lab.health.dataTable.onRowActivate",
       columns: [{ id: "score", label: "Score" }],
       selectionMode: "multiple",
       selectionActions: [

@@ -1,35 +1,11 @@
-import type { NormalizedExtension, RuntimeCommandRecord, RuntimeKanbanRendererRecord } from "../../types/runtime";
+import type { NormalizedExtension, RuntimeKanbanRendererRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
-import { registerCommandRecord } from "./commands";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { isLocalizableString } from "./localizable";
+import { registerPrivateHandler } from "./private-handlers";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
-
-const rowActivationCommandId = (id: string) => `${id}.__kanbanRowActivate`;
-
-const createRowActivationCommand = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  localId: string,
-  record: RuntimeKanbanRendererRecord,
-): RuntimeCommandRecord | undefined => {
-  const handler = record.contribution.onRowActivate;
-  if (typeof handler !== "function") return undefined;
-  return {
-    id: rowActivationCommandId(record.id),
-    localId: `${localId}.__kanbanRowActivate`,
-    extensionId: ext.id,
-    name: ext.name,
-    sourcePath: source.sourcePath,
-    title: `${record.contribution.title} row activation`,
-    params: { rendererId: { type: "text" }, row: { type: "json", required: true } },
-    menus: [],
-    palette: [],
-    run: (ctx) => handler(ctx, { row: ctx.params.row as never }),
-  };
-};
 
 export const registerKanbanRenderers = (
   ext: NormalizedExtension,
@@ -40,11 +16,15 @@ export const registerKanbanRenderers = (
   for (const [localId, contribution] of Object.entries(source.definition.kanbanRenderers ?? {})) {
     const id = contributionId(ext, localId);
 
-    if (!isRecord(contribution) || !isLocalizableString(contribution.title) || !refId(contribution.queryCommand)) {
+    if (
+      !isRecord(contribution) ||
+      !isLocalizableString(contribution.title) ||
+      typeof contribution.query !== "function"
+    ) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_data_renderer",
-          message: `Kanban renderer "${id}" must define title and queryCommand`,
+          message: `Kanban renderer "${id}" must define title and query`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -52,15 +32,6 @@ export const registerKanbanRenderers = (
       );
       continue;
     }
-
-    const record: RuntimeKanbanRendererRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: contribution as RuntimeKanbanRendererRecord["contribution"],
-    };
 
     const existing = index.kanbanRendererIds.get(id);
     if (existing) {
@@ -76,11 +47,80 @@ export const registerKanbanRenderers = (
       continue;
     }
 
+    const queryHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "kanban",
+      rendererLocalId: localId,
+      operation: "query",
+      handler: contribution.query,
+    });
+    if (!queryHandlerId) continue;
+    const attributeChangeHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "kanban",
+      rendererLocalId: localId,
+      operation: "onAttributeChange",
+      handler: contribution.onAttributeChange,
+    });
+    const reorderHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "kanban",
+      rendererLocalId: localId,
+      operation: "onReorder",
+      handler: contribution.onReorder,
+    });
+    const columnActionHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "kanban",
+      rendererLocalId: localId,
+      operation: "onColumnAction",
+      handler: contribution.onColumnAction,
+    });
+    const rowActivationHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "kanban",
+      rendererLocalId: localId,
+      operation: "onRowActivate",
+      handler: contribution.onRowActivate,
+    });
+
+    const record: RuntimeKanbanRendererRecord = {
+      id,
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: {
+        ...contribution,
+        queryHandlerId,
+        attributeChangeHandlerId,
+        reorderHandlerId,
+        columnActionHandlerId,
+        rowActivationHandlerId,
+      } as RuntimeKanbanRendererRecord["contribution"],
+    };
+
     index.kanbanRendererIds.set(id, record);
     runtime.kanbanRenderers.push(record);
-    const command = createRowActivationCommand(ext, source, localId, record);
-    if (command && !registerCommandRecord(command, runtime, index)) {
-      record.contribution = { ...record.contribution, onRowActivate: undefined };
-    }
   }
 };

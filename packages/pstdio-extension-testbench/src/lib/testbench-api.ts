@@ -121,16 +121,24 @@ const collectBenchResources = async (input: {
     if (!renderer.resourceKind) continue;
 
     const outcome = await input.runner.execute({
-      commandId: renderer.queryCommandId,
+      commandId: renderer.queryHandlerId,
       projectId: input.projectId,
-      params: { filters: {}, settings: renderer.defaultSettings ?? {} },
+      params: {
+        renderer: {
+          rendererId: renderer.id,
+          projectId: input.projectId,
+          invocation: { placement: "background" },
+        },
+        filters: {},
+        settings: renderer.defaultSettings ?? {},
+      },
       source: "dashboard",
     });
 
     // Surface query failures: silently dropping them makes a valid contribution look like it has
     // no resources, which is the hardest testbench symptom to diagnose.
     if (!outcome.ok) {
-      console.warn(`[extension-testbench] resource query "${renderer.queryCommandId}" failed: ${outcome.reason}`);
+      console.warn(`[extension-testbench] resource query "${renderer.queryHandlerId}" failed: ${outcome.reason}`);
       continue;
     }
 

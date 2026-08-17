@@ -68,7 +68,7 @@ const dataTableMetadata = {
       id: "data-table-demo.services",
       extensionId: "pstdio.data-table-demo",
       title: "Services",
-      queryCommandId: "data-table-demo.services.query",
+      queryHandlerId: "data-table-demo.services.query",
       selectionMode: "multiple",
       selectionActions: [
         {
@@ -131,7 +131,7 @@ describe("registerExtensionContributions", () => {
           id: "extension-lab.artifacts",
           extensionId: "pstdio.extension-lab",
           title: "Artifacts",
-          queryCommandId: "extension-lab.artifacts.query",
+          queryHandlerId: "extension-lab.artifacts.query",
         },
       ],
     } satisfies DashboardExtensionMetadata;

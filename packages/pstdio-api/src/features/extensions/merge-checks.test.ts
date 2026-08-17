@@ -50,7 +50,7 @@ describe("mergeCheck", () => {
           id: "planner.ticketInspector",
           extensionId: "pstdio.planner",
           title: "Ticket inspector",
-          queryCommandId: "planner.readTicketControls",
+          queryHandlerId: "planner.ticketInspector.query",
         },
       ],
     });

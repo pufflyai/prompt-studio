@@ -12,7 +12,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       id: "inspector",
       extensionId: "acme.image-tools",
       title: "Inspector",
-      queryCommandId: "image-tools.load",
+      queryHandlerId: "image-tools.controls.query",
     } satisfies WorkbenchExtensionControlsRendererRecord;
     const panels = [
       {
@@ -73,9 +73,9 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       id: "inspector",
       extensionId: "acme.image-tools",
       title: "Inspector",
-      queryCommandId: "image-tools.load",
-      updateValueCommandId: "image-tools.update",
-      resetCommandId: "image-tools.reset",
+      queryHandlerId: "image-tools.controls.query",
+      valueChangeHandlerId: "image-tools.controls.onValueChange",
+      resetHandlerId: "image-tools.controls.onReset",
     } satisfies WorkbenchExtensionControlsRendererRecord;
 
     const panel = {
@@ -94,7 +94,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         workbench,
         executeCommand: async (commandId) => {
           executed.push(commandId);
-          if (commandId === "image-tools.load") {
+          if (commandId === "image-tools.controls.query") {
             return { params: [{ id: "a", name: "A", type: "number", defaultValue: 1 }] };
           }
           return undefined;
@@ -120,7 +120,11 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     await renderer?.updateValue?.({ controlId: "a", value: 5, values: { a: 5 } });
     await renderer?.reset?.({});
 
-    expect(executed).toEqual(["image-tools.load", "image-tools.update", "image-tools.reset"]);
+    expect(executed).toEqual([
+      "image-tools.controls.query",
+      "image-tools.controls.onValueChange",
+      "image-tools.controls.onReset",
+    ]);
   });
 
   test("leaves the renderer read-only when no update/apply/reset commands are provided", () => {
@@ -129,7 +133,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       id: "readonly",
       extensionId: "acme.image-tools",
       title: "Read only",
-      queryCommandId: "image-tools.load",
+      queryHandlerId: "image-tools.controls.query",
     } satisfies WorkbenchExtensionControlsRendererRecord;
 
     registerWorkbenchExtensionControlsRenderers(

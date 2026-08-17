@@ -1,31 +1,15 @@
 import type { NormalizedExtension, RuntimeTreeRendererRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { isLocalizableString } from "./localizable";
+import { registerPrivateHandler } from "./private-handlers";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
-const isLocalCommandRef = (ext: NormalizedExtension, commandId: string) => commandId.startsWith(`${ext.name}.`);
-
-const treeCommandId = (value: unknown) => refId(value as Parameters<typeof refId>[0]);
-
-const hasKnownLocalCommand = (ext: NormalizedExtension, commandId: string | null, index: RegistryIndex) => {
-  if (!commandId) return false;
-  if (!isLocalCommandRef(ext, commandId)) return true;
-  return index.commandIds.has(commandId);
-};
-
-const isValidTreeRenderer = (ext: NormalizedExtension, contribution: unknown, index: RegistryIndex) => {
+const isValidTreeRenderer = (contribution: unknown) => {
   if (!isRecord(contribution) || !isLocalizableString(contribution.title)) return false;
-  if (!hasKnownLocalCommand(ext, treeCommandId(contribution.bodyCommand), index)) return false;
-  if (contribution.childrenCommand && !hasKnownLocalCommand(ext, treeCommandId(contribution.childrenCommand), index)) {
-    return false;
-  }
-  if (contribution.footerCommand && !hasKnownLocalCommand(ext, treeCommandId(contribution.footerCommand), index)) {
-    return false;
-  }
-  return true;
+  return typeof contribution.body === "function";
 };
 
 export const registerTreeRenderers = (
@@ -37,11 +21,11 @@ export const registerTreeRenderers = (
   for (const [localId, contribution] of Object.entries(source.definition.treeRenderers ?? {})) {
     const id = contributionId(ext, localId);
 
-    if (!isValidTreeRenderer(ext, contribution, index)) {
+    if (!isValidTreeRenderer(contribution)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_tree_renderer",
-          message: `Tree renderer "${id}" must define title and a valid bodyCommand`,
+          message: `Tree renderer "${id}" must define title and body`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -49,15 +33,6 @@ export const registerTreeRenderers = (
       );
       continue;
     }
-
-    const record: RuntimeTreeRendererRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: contribution as RuntimeTreeRendererRecord["contribution"],
-    };
 
     const existing = index.treeRendererIds.get(id);
     if (existing) {
@@ -72,6 +47,55 @@ export const registerTreeRenderers = (
       );
       continue;
     }
+
+    const bodyHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "tree",
+      rendererLocalId: localId,
+      operation: "body",
+      handler: contribution.body,
+    });
+    if (!bodyHandlerId) continue;
+    const childrenHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "tree",
+      rendererLocalId: localId,
+      operation: "children",
+      handler: contribution.children,
+    });
+    const footerHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "tree",
+      rendererLocalId: localId,
+      operation: "footer",
+      handler: contribution.footer,
+    });
+
+    const record: RuntimeTreeRendererRecord = {
+      id,
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: {
+        ...contribution,
+        bodyHandlerId,
+        childrenHandlerId,
+        footerHandlerId,
+      } as RuntimeTreeRendererRecord["contribution"],
+    };
 
     index.treeRendererIds.set(id, record);
     runtime.treeRenderers.push(record);

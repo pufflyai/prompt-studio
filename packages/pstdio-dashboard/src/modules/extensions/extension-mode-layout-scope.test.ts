@@ -98,7 +98,7 @@ test("keeps a native Main Sub Panel attached to the extension mode Location", as
         id: "extension-lab.artifacts",
         extensionId: "pstdio.extension-lab",
         title: "Artifacts",
-        queryCommandId: "extension-lab.artifacts.query",
+        queryHandlerId: "extension-lab.artifacts.query",
       },
     ],
   };

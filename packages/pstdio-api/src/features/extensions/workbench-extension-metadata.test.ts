@@ -255,13 +255,12 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
         },
         definition: {
           commands: {
-            query: { title: "Query rows", run: async () => ({ rows: [] }) },
             restart: { title: "Restart rows", run: async () => undefined },
           },
           dataTableRenderers: {
             services: {
               title: "Services",
-              queryCommand: "query",
+              query: async () => ({ rows: [] }),
               onRowActivate: async () => undefined,
               selectionMode: "multiple",
               selectionActions: [{ id: "restart", label: "Restart selected", command: "restart" }],
@@ -280,7 +279,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
     expect(metadata.dataTableRenderers).toHaveLength(1);
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.services",
-      rowActivationCommandId: "lab.services.__dataTableRowActivate",
+      rowActivationHandlerId: "lab.services.dataTable.onRowActivate",
       selectionMode: "multiple",
       selectionActions: [{ id: "restart", label: "Restart selected", commandId: "lab.restart" }],
     });
@@ -308,7 +307,7 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
             tickets: {
               title: "Tickets",
               resourceKind: "ticket",
-              queryCommand: "planner.ticketBoard.read",
+              query: async () => ({ rows: [] }),
               onRowActivate: async () => undefined,
               createRow: {
                 command: "planner.tickets.create",
@@ -345,8 +344,8 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
         extensionInstanceId: "planner-instance",
         title: "Tickets",
         resourceKind: "ticket",
-        queryCommandId: "planner.ticketBoard.read",
-        rowActivationCommandId: "planner.tickets.__kanbanRowActivate",
+        queryHandlerId: "planner.tickets.kanban.query",
+        rowActivationHandlerId: "planner.tickets.kanban.onRowActivate",
         createRow: expect.objectContaining({
           commandId: "planner.tickets.create",
           columnParam: "status",
@@ -429,14 +428,11 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
           enginesPstdio: "^1.0.0",
         },
         definition: {
-          commands: {
-            listFiles: { title: "List files", run: async () => [] },
-          },
           treeRenderers: {
             files: {
               title: "Files",
               icon: "Files",
-              bodyCommand: "planner.listFiles",
+              body: async () => [],
               defaultExpandedSectionIds: ["files"],
             },
           },
@@ -465,7 +461,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
         extensionId: "pstdio.planner",
         title: "Files",
         icon: "Files",
-        bodyCommandId: "planner.listFiles",
+        bodyHandlerId: "planner.files.tree.body",
         defaultExpandedSectionIds: ["files"],
       }),
     ]);

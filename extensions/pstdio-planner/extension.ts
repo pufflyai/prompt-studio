@@ -8,6 +8,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
+import { runRendererCommand } from "./src/renderers/run-renderer-command";
 
 export default defineExtension({
   settings: {
@@ -96,8 +97,8 @@ export default defineExtension({
   controlsRenderers: {
     ticketProperties: {
       title: l10n("controls.ticketProperties.title", "Properties"),
-      queryCommand: commandRef("pstdio-planner.ticket-properties.query"),
-      updateValueCommand: commandRef("pstdio-planner.ticket-properties.update"),
+      query: (ctx, input) => runRendererCommand(plannerCommands["ticket-properties.query"], input)(ctx),
+      onValueChange: (ctx, input) => runRendererCommand(plannerCommands["ticket-properties.update"], input)(ctx),
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   },
@@ -106,12 +107,12 @@ export default defineExtension({
       title: l10n("kanbanRenderers.tickets.title", "Tickets"),
       resourceKind: "ticket",
       attributes: buildTicketAttributes([]),
-      queryCommand: commandRef("pstdio-planner.query-tickets"),
+      query: (ctx, input) => runRendererCommand(plannerCommands["query-tickets"], input)(ctx),
       onRowActivate: (_ctx, { row }) =>
         row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
-      updateAttributeCommand: commandRef("pstdio-planner.set-ticket-attribute"),
-      reorderCommand: commandRef("pstdio-planner.reorder-ticket"),
-      columnActionCommand: commandRef("pstdio-planner.ticket-column-action"),
+      onAttributeChange: (ctx, input) => runRendererCommand(plannerCommands["set-ticket-attribute"], input)(ctx),
+      onReorder: (ctx, input) => runRendererCommand(plannerCommands["reorder-ticket"], input)(ctx),
+      onColumnAction: (ctx, input) => runRendererCommand(plannerCommands["ticket-column-action"], input)(ctx),
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
         columnParam: "statusId",
@@ -219,8 +220,8 @@ export default defineExtension({
     ticketContent: {
       title: l10n("fileRenderers.ticketContent.title", "Ticket"),
       resourceKind: "ticket",
-      loadCommand: commandRef("pstdio-planner.get-ticket-content"),
-      saveCommand: commandRef("pstdio-planner.save-ticket-content"),
+      load: (ctx, input) => runRendererCommand(plannerCommands["get-ticket-content"], input)(ctx),
+      save: (ctx, input) => runRendererCommand(plannerCommands["save-ticket-content"], input)(ctx),
     },
   },
 
@@ -240,7 +241,7 @@ export default defineExtension({
       },
     },
     // Files tree in the selected ticket's Sidenav resource section. Selecting a node
-    // swaps the editor's document in place (it runs select-ticket-document).
+    // rebinds the editor to the ticket resource with the chosen document metadata.
     ticketFiles: {
       title: l10n("panels.ticketFiles.title", "Files"),
       region: "sidenav",
@@ -254,7 +255,7 @@ export default defineExtension({
     ticketFiles: {
       title: l10n("treeRenderers.ticketFiles.title", "Files"),
       icon: "Files",
-      bodyCommand: commandRef("pstdio-planner.ticket-files.tree.body"),
+      body: (ctx, input) => runRendererCommand(plannerCommands["ticket-files.tree.body"], input)(ctx),
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     },
   },

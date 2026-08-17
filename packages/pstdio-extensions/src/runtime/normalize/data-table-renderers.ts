@@ -1,35 +1,11 @@
-import type { NormalizedExtension, RuntimeCommandRecord, RuntimeDataTableRendererRecord } from "../../types/runtime";
+import type { NormalizedExtension, RuntimeDataTableRendererRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
-import { registerCommandRecord } from "./commands";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { isLocalizableString } from "./localizable";
+import { registerPrivateHandler } from "./private-handlers";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
-
-const rowActivationCommandId = (id: string) => `${id}.__dataTableRowActivate`;
-
-const createRowActivationCommand = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  localId: string,
-  record: RuntimeDataTableRendererRecord,
-): RuntimeCommandRecord | undefined => {
-  const handler = record.contribution.onRowActivate;
-  if (typeof handler !== "function") return undefined;
-  return {
-    id: rowActivationCommandId(record.id),
-    localId: `${localId}.__dataTableRowActivate`,
-    extensionId: ext.id,
-    name: ext.name,
-    sourcePath: source.sourcePath,
-    title: `${record.contribution.title} row activation`,
-    params: { rendererId: { type: "text" }, row: { type: "json", required: true } },
-    menus: [],
-    palette: [],
-    run: (ctx) => handler({ ...ctx, renderer: ctx.params.renderer as never }, { row: ctx.params.row as never }),
-  };
-};
 
 export const registerDataTableRenderers = (
   ext: NormalizedExtension,
@@ -39,11 +15,15 @@ export const registerDataTableRenderers = (
 ) => {
   for (const [localId, contribution] of Object.entries(source.definition.dataTableRenderers ?? {})) {
     const id = contributionId(ext, localId);
-    if (!isRecord(contribution) || !isLocalizableString(contribution.title) || !refId(contribution.queryCommand)) {
+    if (
+      !isRecord(contribution) ||
+      !isLocalizableString(contribution.title) ||
+      typeof contribution.query !== "function"
+    ) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_data_table_renderer",
-          message: `Data table renderer "${id}" must define title and queryCommand`,
+          message: `Data table renderer "${id}" must define title and query`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -52,14 +32,6 @@ export const registerDataTableRenderers = (
       continue;
     }
 
-    const record: RuntimeDataTableRendererRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: contribution as RuntimeDataTableRendererRecord["contribution"],
-    };
     const existing = index.dataTableRendererIds.get(id);
     if (existing) {
       runtime.diagnostics.push(
@@ -73,11 +45,43 @@ export const registerDataTableRenderers = (
       );
       continue;
     }
+    const queryHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "dataTable",
+      rendererLocalId: localId,
+      operation: "query",
+      handler: contribution.query,
+    });
+    if (!queryHandlerId) continue;
+    const rowActivationHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "dataTable",
+      rendererLocalId: localId,
+      operation: "onRowActivate",
+      handler: contribution.onRowActivate,
+    });
+
+    const record: RuntimeDataTableRendererRecord = {
+      id,
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: {
+        ...contribution,
+        queryHandlerId,
+        rowActivationHandlerId,
+      } as RuntimeDataTableRendererRecord["contribution"],
+    };
     index.dataTableRendererIds.set(id, record);
     runtime.dataTableRenderers.push(record);
-    const command = createRowActivationCommand(ext, source, localId, record);
-    if (command && !registerCommandRecord(command, runtime, index)) {
-      record.contribution = { ...record.contribution, onRowActivate: undefined };
-    }
   }
 };

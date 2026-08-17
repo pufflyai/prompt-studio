@@ -10,6 +10,7 @@ import type {
   ResourceRef,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
+import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createExtensionSlot,
@@ -17,7 +18,6 @@ import {
   toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
-import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import {
   panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
@@ -102,7 +102,7 @@ const registerRenderer = (
     emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
     emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
     executeQuery: async ({ resource, modeId }) => {
-      const value = await run(record.queryCommandId, {}, resource, modeId);
+      const value = await run(record.queryHandlerId, {}, resource, modeId);
       if (!isQueryResult(value)) return { rows: [] };
       const rows = value.rows.map((row) => {
         const mapped = toRow(row);
@@ -124,14 +124,10 @@ const registerRenderer = (
         context.workbench.renderers.refreshDataTableRenderer(record.id);
       },
     })),
-    onRowActivate: record.rowActivationCommandId
+    onRowActivate: record.rowActivationHandlerId
       ? async (row) => {
-          const result = await run(
-            record.rowActivationCommandId!,
-            { rendererId: record.id, row: originalRows.get(row) ?? row },
-            row.resource,
-          );
-          const target = toWorkbenchNavigationTarget(result);
+          const result = await run(record.rowActivationHandlerId!, { row: originalRows.get(row) ?? row }, row.resource);
+          const target = toWorkbenchNavigationTargetResult(result);
           if (target) await context.workbench.navigation.openTarget(target);
         }
       : undefined,

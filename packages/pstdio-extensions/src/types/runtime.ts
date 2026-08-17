@@ -21,6 +21,7 @@ import type {
   ModeContribution,
   PanelContribution,
   ParamObjectSchema,
+  RendererCallback,
   RouteContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -96,6 +97,19 @@ export interface RuntimeCommandRecord {
   cli?: RuntimeCliContribution;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;
+}
+
+export interface RuntimePrivateHandlerRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  rendererId: string;
+  rendererKind: "controls" | "dataTable" | "file" | "kanban" | "tree";
+  operation: string;
+  // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
+  handler: RendererCallback<any, any>;
 }
 
 export interface RuntimeMiddlewareRecord {
@@ -408,6 +422,7 @@ export interface ExtensionDiagnostic {
 export interface ExtensionRuntime {
   extensions: NormalizedExtension[];
   commands: RuntimeCommandRecord[];
+  privateHandlers: RuntimePrivateHandlerRecord[];
   middlewares: RuntimeMiddlewareRecord[];
   hooks: RuntimeHookRecord[];
   cli: RuntimeCliContribution[];

@@ -33,7 +33,7 @@ const metadata = {
       extensionId: "tickets",
       title: "Tickets",
       resourceKind: "ticket",
-      queryCommandId: "tickets.query",
+      queryHandlerId: "tickets.query",
     },
   ],
   treeRenderers: [],

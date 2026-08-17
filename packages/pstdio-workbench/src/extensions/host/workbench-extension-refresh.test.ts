@@ -42,10 +42,10 @@ const metadata = {
   treeItems: [],
   treeRenderers: [
     {
-      bodyCommandId: "ticket-files.tree.body",
-      childrenCommandId: "ticket-files.tree.children",
+      bodyHandlerId: "ticket-files.tree.body",
+      childrenHandlerId: "ticket-files.tree.children",
       extensionId: "pstdio.pstdio-planner",
-      footerCommandId: "ticket-files.tree.footer",
+      footerHandlerId: "ticket-files.tree.footer",
       id: "ticket-files",
       title: "Files",
     },
@@ -72,7 +72,7 @@ const kanbanRendererMetadata = {
       title: "Tickets",
       resourceKind: "ticket",
       attributes: [],
-      queryCommandId: "planner.query-tickets",
+      queryHandlerId: "planner.tickets.query",
     },
   ],
 } satisfies WorkbenchExtensionMetadata;
@@ -194,7 +194,7 @@ describe("refreshWorkbenchExtensionContributions", () => {
     });
     workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(event.kanbanRendererId));
 
-    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.query-tickets");
+    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.tickets.query");
 
     expect(refreshed).toEqual([]);
   });

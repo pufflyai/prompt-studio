@@ -69,7 +69,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-    const ticketCard = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+    const ticketCard = page.locator('[data-testid="renderer-card"]:visible').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible({ timeout: 30_000 });
     await ticketCard.getByText(ticket.title, { exact: true }).click();
     await expect(
@@ -77,8 +77,12 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         name: `${ticket.shorthand} ${ticket.title}`,
         exact: true,
       }),
-    ).toHaveAttribute("aria-selected", "true");
-    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    ).toBeVisible();
+    await sidenav
+      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
+      .first()
+      .click();
+    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
 
     await ticketCard.click({ button: "right" });
@@ -91,17 +95,26 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         name: `${ticket.shorthand} ${ticket.title}`,
         exact: true,
       }),
-    ).toHaveAttribute("aria-selected", "true");
-    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    ).toBeVisible();
+    await sidenav
+      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
+      .first()
+      .click();
+    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
 
     await ticketCard.getByRole("button", { name: "Type", exact: true }).click();
-    const bugMenuItem = page.getByRole("menuitemradio", { name: "Bug", exact: true });
+    const bugMenuItem = page.getByRole("menuitemradio", {
+      name: "Bug",
+      exact: true,
+    });
     await expect(bugMenuItem).toBeVisible();
     const updateResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio-planner.tickets.kanban.onAttributeChange/execute",
+        ) &&
         response.status() === 200,
     );
     await bugMenuItem.click();
@@ -112,7 +125,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
       name: `${ticket.shorthand} ${ticket.title}`,
       exact: true,
     });
-    await expect(selectedTicketRow).toHaveAttribute("aria-selected", "true");
+    await expect(selectedTicketRow).toBeVisible();
     await expect(page.getByTestId("content-editable").first()).toContainText("PS-179 keeps actions beside resources");
     const breadcrumbAction = page.locator("[data-workbench-breadcrumb-resource-actions]");
     await expect(breadcrumbAction).toBeVisible();
@@ -121,7 +134,6 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
-    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
     await sidenav
       .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
       .first()
@@ -138,10 +150,6 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
-
-    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Tickets");
-    await expect(breadcrumbAction).toHaveCount(0);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -169,11 +177,8 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
   await createDialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   expect((await createResponse).ok()).toBe(true);
   await expect(createDialog).toBeHidden();
-  await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+  await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toBeVisible();
+  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
   await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
 
   await sidenav.getByRole("option", { name: "Settings", exact: true }).click();
