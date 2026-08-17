@@ -56,7 +56,15 @@ const executeFileCommand = async (
   const ext = toExtensionResource(resource);
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
-    params: { projectId: input.projectId, resource: ext, ...extra },
+    params: {
+      renderer: {
+        rendererId,
+        projectId: input.projectId,
+        ...(ext ? { resource: ext } : {}),
+        invocation: { placement: "visible" },
+      },
+      ...extra,
+    },
     resource: ext,
     slot: slotContext({ projectId: input.projectId, rendererId, resource: ext }),
     source: "dashboard",

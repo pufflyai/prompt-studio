@@ -13,7 +13,7 @@ import type {
 } from "./commands";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
-import type { RepoContext, ResourceAnchor, ResourceRef } from "./resources";
+import type { RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
@@ -348,6 +348,12 @@ export type CommandRunHandler<
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
 > = (ctx: CommandContext<TParams, TSettings>) => MaybePromise<TResult>;
+
+export type RendererCallback<
+  TInput extends Struct = Struct,
+  TResult = unknown,
+  TSettings extends Record<string, unknown> = Record<string, unknown>,
+> = (ctx: ExtensionContextBase<TSettings> & { renderer: RendererContext }, input: TInput) => MaybePromise<TResult>;
 
 export interface EventContext extends ExtensionContextBase {
   eventId: string;

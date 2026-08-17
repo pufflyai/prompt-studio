@@ -1,15 +1,8 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
-import type { JsonObject } from "./json";
+import type { RendererContext, ResourceRef } from "./resources";
 
-export interface FileRendererResourceRef {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: JsonObject;
-}
+export type FileRendererResourceRef = ResourceRef;
 
 export interface FileRendererSectionAnchor {
   /** Stable extension-owned tree node id. */
@@ -26,8 +19,7 @@ export interface FileRendererSectionTarget {
 }
 
 export interface FileRendererLoadParams {
-  projectId?: string;
-  resource?: FileRendererResourceRef;
+  renderer: RendererContext;
 }
 
 // The host dispatches to a markdown editor, a code editor, or an image preview
@@ -43,8 +35,7 @@ export interface FileRendererLoadResult {
 }
 
 export interface FileRendererSaveParams {
-  projectId?: string;
-  resource?: FileRendererResourceRef;
+  renderer: RendererContext;
   content: string;
 }
 

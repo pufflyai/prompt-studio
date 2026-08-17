@@ -33,6 +33,14 @@ export const extensionAttachmentInvocationSchema = z.object({
   resource: extensionResourceRefSchema.optional(),
 });
 
+export const extensionRendererContextSchema = z.object({
+  rendererId: z.string(),
+  projectId: z.string().optional(),
+  modeId: z.string().optional(),
+  resource: extensionResourceRefSchema.optional(),
+  invocation: z.object({ placement: z.enum(["visible", "background"]) }).optional(),
+});
+
 export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),
   workspaceId: z.string().optional(),
@@ -106,6 +114,7 @@ export const commandExecuteResponseSchema = z.object({
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
 export type CommandExecuteBody = z.infer<typeof commandExecuteBodySchema>;
 export type CommandExecuteResponse = z.infer<typeof commandExecuteResponseSchema>;
+export type ExtensionRendererContext = z.infer<typeof extensionRendererContextSchema>;
 export type DispatchExtensionEventInput = {
   eventId: string;
   payload: Struct;

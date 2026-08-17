@@ -14,6 +14,13 @@ const createWorkspaceTreeActionParams = {
   mode: createWorkspaceCommand.params!.mode,
 };
 
+const ticketRendererParams = (ticket: { id: string; shorthand: string }) => ({
+  renderer: {
+    rendererId: "pstdio-planner.ticketFiles",
+    resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+  },
+});
+
 describe("ticket files tree commands", () => {
   test("returns a native tree section for the ticket body and editable files", async () => {
     const storage = createMemoryStorage();
@@ -27,10 +34,7 @@ describe("ticket files tree commands", () => {
     const body = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
       }),
     );
 
@@ -47,8 +51,8 @@ describe("ticket files tree commands", () => {
           icon: "component",
           target: {
             kind: "command",
-            commandId: "pstdio-planner.select-ticket-document",
-            args: { ticketId: ticket.id, documentId: "__ticket__" },
+            command: "pstdio-planner.select-ticket-document",
+            params: { ticketId: ticket.id, documentId: "__ticket__" },
           },
           selected: true,
         },
@@ -65,8 +69,8 @@ describe("ticket files tree commands", () => {
         icon: "FileText",
         target: {
           kind: "command",
-          commandId: "pstdio-planner.select-ticket-document",
-          args: { ticketId: ticket.id, documentId: file.id },
+          command: "pstdio-planner.select-ticket-document",
+          params: { ticketId: ticket.id, documentId: file.id },
         },
         selected: false,
         contextMenuActions: [
@@ -74,10 +78,10 @@ describe("ticket files tree commands", () => {
             id: "rename",
             label: "Rename",
             icon: "Pencil",
-            commandId: "pstdio-planner.rename-ticket-file",
-            args: { ticketId: ticket.id, fileId: file.id, name: "notes.md" },
+            command: "pstdio-planner.rename-ticket-file",
+            params: { ticketId: ticket.id, fileId: file.id, name: "notes.md" },
             submitLabel: "Save",
-            params: {
+            input: {
               name: { type: "text", label: "File name", required: true, defaultValue: "notes.md" },
             },
           },
@@ -85,8 +89,8 @@ describe("ticket files tree commands", () => {
             id: "delete",
             label: "Delete",
             icon: "Trash",
-            commandId: "pstdio-planner.delete-ticket-file",
-            args: { ticketId: ticket.id, fileId: file.id },
+            command: "pstdio-planner.delete-ticket-file",
+            params: { ticketId: ticket.id, fileId: file.id },
           },
         ],
       },
@@ -120,10 +124,7 @@ describe("ticket files tree commands", () => {
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
       }),
     );
 
@@ -156,10 +157,7 @@ describe("ticket files tree commands", () => {
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
       }),
     );
     const filesSection = sections.find((section) => section.id === "files");
@@ -171,8 +169,8 @@ describe("ticket files tree commands", () => {
         icon: "Image",
         target: {
           kind: "command",
-          commandId: "pstdio-planner.select-ticket-document",
-          args: { ticketId: ticket.id, documentId: "att-diagram.png" },
+          command: "pstdio-planner.select-ticket-document",
+          params: { ticketId: ticket.id, documentId: "att-diagram.png" },
         },
         selected: false,
       },
@@ -207,10 +205,7 @@ describe("ticket files tree workspace commands", () => {
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
         overrides: { workspaces: { list: async () => [linked, unrelated] } },
       }),
     );
@@ -225,9 +220,9 @@ describe("ticket files tree workspace commands", () => {
           id: "create-workspace",
           label: "Create workspace",
           icon: "Plus",
-          commandId: "pstdio-planner.create-workspace",
-          args: { ticket: ticket.id },
-          params: createWorkspaceTreeActionParams,
+          command: "pstdio-planner.create-workspace",
+          params: { ticket: ticket.id },
+          input: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [
@@ -267,10 +262,7 @@ describe("ticket files tree workspace commands", () => {
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
         overrides: {
           workspaces: {
             list: async () => [
@@ -306,10 +298,7 @@ describe("ticket files tree workspace commands", () => {
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
         storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
-        },
+        params: ticketRendererParams(ticket),
         overrides: {
           workspaces: {
             list: async () => [
@@ -333,9 +322,9 @@ describe("ticket files tree workspace commands", () => {
           id: "create-workspace",
           label: "Create workspace",
           icon: "Plus",
-          commandId: "pstdio-planner.create-workspace",
-          args: { ticket: ticket.id },
-          params: createWorkspaceTreeActionParams,
+          command: "pstdio-planner.create-workspace",
+          params: { ticket: ticket.id },
+          input: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [

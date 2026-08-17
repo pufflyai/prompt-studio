@@ -5,8 +5,10 @@ import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const treeParams = (ticket: { id: string; shorthand: string }) => ({
-  treeId: "pstdio-planner.ticketFiles",
-  resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+  renderer: {
+    rendererId: "pstdio-planner.ticketFiles",
+    resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+  },
 });
 
 describe("ticket files tree empty sections", () => {

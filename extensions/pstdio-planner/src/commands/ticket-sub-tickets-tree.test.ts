@@ -17,8 +17,10 @@ describe("ticket files tree sub-ticket section", () => {
       makeCommandContext({
         storage,
         params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: parent.id, label: parent.shorthand },
+          renderer: {
+            rendererId: "pstdio-planner.ticketFiles",
+            resource: { type: "ticket", id: parent.id, label: parent.shorthand },
+          },
         },
       }),
     );

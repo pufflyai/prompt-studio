@@ -256,8 +256,10 @@ describe("planner automations", () => {
       const tree = await executePlannerCommand(projectId, "pstdio-planner.ticket-files.tree.body", {
         source: "api",
         params: {
-          treeId: "pstdio-planner.ticketFiles",
-          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+          renderer: {
+            rendererId: "pstdio-planner.ticketFiles",
+            resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+          },
         },
       });
       expect(tree.outcome.ok).toBe(true);

@@ -11,6 +11,7 @@ import type { WorkbenchExtensionCommandContext } from "../host/workbench-extensi
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
+  toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
 
@@ -195,13 +196,23 @@ export const executeKanbanRendererCommand = (
   commandId: string,
   params: Record<string, unknown>,
   resource?: ResourceRef,
-) =>
-  executeWorkbenchExtensionCommand(context, commandId, {
-    params,
-    resource: resource ?? context.workbench.getPrimaryResource(),
+) => {
+  const commandResource = resource ?? context.workbench.getPrimaryResource();
+  return executeWorkbenchExtensionCommand(context, commandId, {
+    params: {
+      renderer: {
+        rendererId: record.id,
+        projectId: context.projectId,
+        ...(commandResource ? { resource: toExtensionCommandResource(commandResource) } : {}),
+        invocation: { placement: "visible" },
+      },
+      ...params,
+    },
+    resource: commandResource,
     slot: createKanbanRendererSlot(context, record),
     metadata: { kanbanRendererId: record.id },
   });
+};
 
 const kanbanRendererRowActionCommandId = (record: WorkbenchExtensionKanbanRendererRecord, action: RowAction) =>
   `workbench.extension.kanbanRenderer.${record.id}.rowAction.${action.id}`;

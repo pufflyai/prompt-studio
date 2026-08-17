@@ -1,17 +1,11 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { FileRendererSectionTarget } from "./file-renderer";
-import type { JsonObject, JsonValue } from "./json";
+import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ParamObjectSchema } from "./params";
+import type { RendererContext, ResourceRef } from "./resources";
 
-export interface TreeRendererResourceRef {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: JsonObject;
-}
+export type TreeRendererResourceRef = ResourceRef;
 
 export interface TreeRendererState {
   expandedNodeIds: string[];
@@ -20,10 +14,7 @@ export interface TreeRendererState {
 }
 
 export interface TreeRendererQueryParams {
-  projectId?: string;
-  modeId?: string;
-  resource?: TreeRendererResourceRef;
-  treeId: string;
+  renderer: RendererContext;
   state?: TreeRendererState;
   filter?: string;
 }
@@ -40,8 +31,8 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
 export type TreeNodeTarget =
   | {
       kind: "command";
-      commandId: string;
-      args?: JsonObject;
+      command: CommandRef<Struct, unknown> | string;
+      params?: Struct;
     }
   | {
       kind: "resource";
@@ -57,9 +48,9 @@ export interface TreeAction {
   id: string;
   label?: Localizable<string>;
   icon?: string;
-  commandId?: string;
-  args?: JsonObject;
-  params?: ParamObjectSchema;
+  command?: CommandRef<Struct, unknown> | string;
+  params?: Struct;
+  input?: ParamObjectSchema;
   // Confirm-button label for the action's params dialog (defaults to "Run").
   submitLabel?: string;
   when?: string;

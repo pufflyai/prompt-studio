@@ -100,11 +100,16 @@ describe("registerExtensionKanbanRenderers create form", () => {
       {
         commandId: "pstdio-planner.create-ticket",
         body: expect.objectContaining({
-          params: {
+          params: expect.objectContaining({
+            renderer: {
+              rendererId: "pstdio-planner.tickets",
+              projectId: "proj-1",
+              invocation: { placement: "visible" },
+            },
             content: "Created ticket",
             statusId: "ready",
             attributes: { status: "ready", type: "default-type-bug" },
-          },
+          }),
         }),
       },
       {

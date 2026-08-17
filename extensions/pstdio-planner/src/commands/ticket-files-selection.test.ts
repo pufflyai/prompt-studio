@@ -43,7 +43,7 @@ describe("ticket files tree selection commands", () => {
       makeCommandContext({
         storage,
         params: {
-          treeId: "pstdio-planner.ticketFiles",
+          renderer: { rendererId: "pstdio-planner.ticketFiles" },
         },
       }),
     );

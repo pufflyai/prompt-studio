@@ -79,7 +79,14 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       commandId: "lab.queryHealth",
       body: {
         projectId: "project-1",
-        params: { rendererId: "lab.health", projectId: "project-1", modeId: "project" },
+        params: {
+          renderer: {
+            rendererId: "lab.health",
+            projectId: "project-1",
+            modeId: "project",
+            invocation: { placement: "visible" },
+          },
+        },
         slot: { kind: "dataTableRenderer", id: "lab.health" },
       },
     });

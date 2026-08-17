@@ -2,7 +2,11 @@ import type { WorkbenchExtensionControlsRendererRecord, WorkbenchExtensionMetada
 import { text } from "pstdio-extensions/workbench";
 import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
+import {
+  createExtensionSlot,
+  executeWorkbenchExtensionCommand,
+  toExtensionCommandResource,
+} from "../host/workbench-extension-command";
 import {
   panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
@@ -28,8 +32,29 @@ const registerControlsRenderer = (
   record: WorkbenchExtensionControlsRendererRecord,
   adapter: WorkbenchExtensionControlsAdapter,
 ) => {
+  const slot = createExtensionSlot({
+    id: record.id,
+    kind: "renderer",
+    projectId: context.projectId,
+    context: { controlsRendererId: record.id },
+  });
   const run = (commandId: string | undefined, params: Record<string, unknown>, resource?: ResourceRef) =>
-    commandId ? executeWorkbenchExtensionCommand(context, commandId, { params, resource }) : Promise.resolve(undefined);
+    commandId
+      ? executeWorkbenchExtensionCommand(context, commandId, {
+          params: {
+            renderer: {
+              rendererId: record.id,
+              projectId: context.projectId,
+              ...(resource ? { resource: toExtensionCommandResource(resource) } : {}),
+              invocation: { placement: "visible" },
+            },
+            ...params,
+          },
+          resource,
+          slot,
+          metadata: { controlsRendererId: record.id },
+        })
+      : Promise.resolve(undefined);
 
   return context.workbench.renderers.registerControlsRenderer({
     id: record.id,

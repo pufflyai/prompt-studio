@@ -1,3 +1,11 @@
+import type {
+  ControlsQueryParams,
+  DataTableRendererQueryParams,
+  FileRendererLoadParams,
+  KanbanRendererQueryParams,
+  ResourceRef,
+  TreeRendererQueryParams,
+} from "./index";
 import { defineExtension, packageAsset, params, projectSlots, workspaceSlots } from "./index";
 
 const extension = defineExtension({
@@ -169,3 +177,35 @@ void projectSlots.commandPanel;
 
 // @ts-expect-error legacy navigation slots are no longer exposed
 void workspaceSlots.tabs;
+
+const sharedRendererResource: ResourceRef = { type: "ticket", id: "PS-1", projectId: "project-1" };
+
+const dataTableQueryParams: DataTableRendererQueryParams = {
+  renderer: {
+    rendererId: "lab.table",
+    projectId: "project-1",
+    modeId: "pstdio.lab.review",
+    resource: sharedRendererResource,
+    invocation: { placement: "visible" },
+  },
+};
+const kanbanQueryParams: KanbanRendererQueryParams = {
+  renderer: dataTableQueryParams.renderer,
+  settings: {
+    viewMode: "board",
+    columnGrouping: "status",
+    rowGrouping: "none",
+    ordering: { attributeId: "status", direction: "asc" },
+    displayProperties: [],
+  },
+  filters: {},
+};
+const treeQueryParams: TreeRendererQueryParams = { renderer: dataTableQueryParams.renderer };
+const fileLoadParams: FileRendererLoadParams = { renderer: dataTableQueryParams.renderer };
+const controlsQueryParams: ControlsQueryParams = { renderer: dataTableQueryParams.renderer };
+
+void dataTableQueryParams;
+void kanbanQueryParams;
+void treeQueryParams;
+void fileLoadParams;
+void controlsQueryParams;

@@ -160,7 +160,7 @@ describe("extension-lab commands", () => {
     expect(sections?.[0]?.nodes.length).toBeGreaterThan(1);
     expect(sections?.[0]?.nodes[0]).toMatchObject({
       selected: true,
-      target: { kind: "command", commandId: "extension-lab.cams.select" },
+      target: { kind: "command", command: "extension-lab.cams.select" },
     });
 
     const secondCamId = sections?.[0]?.nodes[1]?.id as string;

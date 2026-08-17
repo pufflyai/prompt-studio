@@ -12,7 +12,7 @@ import type { CommandRef, CommandSource } from "./commands";
 import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ParamObjectSchema } from "./params";
-import type { PackageAssetDescriptor, ResourceRef } from "./resources";
+import type { PackageAssetDescriptor, RendererContext, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
 import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
 
@@ -271,18 +271,12 @@ export interface KanbanRendererSavedView {
 }
 
 export interface KanbanRendererQueryParams {
+  renderer: RendererContext;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
 }
 
-export interface KanbanRendererResourceRef {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: JsonObject;
-}
+export type KanbanRendererResourceRef = ResourceRef;
 
 export interface KanbanRendererRow {
   id: string;

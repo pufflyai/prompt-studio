@@ -14,6 +14,7 @@ import type { WorkbenchExtensionCommandContext } from "../host/workbench-extensi
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
+  toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
 import {
@@ -64,9 +65,18 @@ const registerRenderer = (
     projectId: context.projectId,
     context: { dataTableRendererId: record.id },
   });
-  const run = (commandId: string, params: Record<string, unknown>, resource?: ResourceRef) =>
+  const run = (commandId: string, params: Record<string, unknown>, resource?: ResourceRef, modeId?: string) =>
     executeWorkbenchExtensionCommand(context, commandId, {
-      params,
+      params: {
+        renderer: {
+          rendererId: record.id,
+          projectId: context.projectId,
+          ...(modeId ? { modeId } : {}),
+          ...(resource ? { resource: toExtensionCommandResource(resource) } : {}),
+          invocation: { placement: "visible" },
+        },
+        ...params,
+      },
       resource,
       slot,
       metadata: { dataTableRendererId: record.id },
@@ -90,23 +100,7 @@ const registerRenderer = (
     emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
     emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
     executeQuery: async ({ resource, modeId }) => {
-      const value = await run(
-        record.queryCommandId,
-        {
-          rendererId: record.id,
-          projectId: context.projectId,
-          modeId,
-          resource: resource
-            ? {
-                type: resource.kind,
-                id: resource.id ?? resource.uri,
-                label: resource.label,
-                metadata: resource.metadata,
-              }
-            : undefined,
-        },
-        resource,
-      );
+      const value = await run(record.queryCommandId, {}, resource, modeId);
       if (!isQueryResult(value)) return { rows: [] };
       return {
         rows: value.rows.map(toRow),

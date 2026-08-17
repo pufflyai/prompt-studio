@@ -210,8 +210,8 @@ describe("createExtensionsModule resource views", () => {
                   label: "notes.md",
                   target: {
                     kind: "command",
-                    commandId: "pstdio-core-tickets.select-ticket-file",
-                    args: { ticketId: "PS-10", fileId: "file-1" },
+                    command: "pstdio-core-tickets.select-ticket-file",
+                    params: { ticketId: "PS-10", fileId: "file-1" },
                   },
                 },
               ],

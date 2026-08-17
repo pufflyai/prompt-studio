@@ -328,6 +328,11 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
       {
         commandId: "pstdio-planner.create-ticket",
         params: {
+          renderer: {
+            rendererId: "tickets",
+            projectId: "project-1",
+            invocation: { placement: "visible" },
+          },
           content: "Fix ticket navigation",
           statusId: "ready",
           attributes: {

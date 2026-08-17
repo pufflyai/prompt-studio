@@ -11,6 +11,18 @@ export interface ResourceRef {
   metadata?: JsonObject;
 }
 
+export interface RendererInvocationContext {
+  placement: "visible" | "background";
+}
+
+export interface RendererContext {
+  rendererId: string;
+  projectId?: string;
+  modeId?: string;
+  resource?: ResourceRef;
+  invocation?: RendererInvocationContext;
+}
+
 export interface ResourceAnchor extends ResourceRef {
   role?: ResourceRole;
 }

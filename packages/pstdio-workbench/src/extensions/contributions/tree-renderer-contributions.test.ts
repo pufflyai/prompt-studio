@@ -97,15 +97,15 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
                   disabled: true,
                   target: {
                     kind: "command",
-                    commandId: "lab.files.open",
-                    args: { ticketId: "ticket-1" },
+                    command: "lab.files.open",
+                    params: { renderer: { rendererId: "spoofed" }, ticketId: "ticket-1" },
                   },
                   actions: [
                     {
                       id: "delete",
                       label: "Delete",
-                      commandId: "lab.files.delete",
-                      args: { ticketId: "ticket-1", fileId: "file-1" },
+                      command: "lab.files.delete",
+                      params: { ticketId: "ticket-1", fileId: "file-1" },
                     },
                   ],
                 },
@@ -159,8 +159,12 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       body: {
         projectId: "project-1",
         params: {
-          treeId: "lab.files",
-          resource: { type: "ticket", id: "ticket-1", label: "PS-1" },
+          renderer: {
+            rendererId: "lab.files",
+            projectId: "project-1",
+            resource: { type: "ticket", id: "ticket-1", label: "PS-1" },
+            invocation: { placement: "visible" },
+          },
           state: { expandedSectionIds: ["files"], expandedNodeIds: [] },
         },
       },
@@ -171,7 +175,15 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(calls.at(-1)).toMatchObject({
       commandId: "lab.files.open",
       body: {
-        params: { ticketId: "ticket-1" },
+        params: {
+          renderer: {
+            rendererId: "lab.files",
+            projectId: "project-1",
+            resource: { type: "ticket", id: "ticket-1", label: "PS-1" },
+            invocation: { placement: "visible" },
+          },
+          ticketId: "ticket-1",
+        },
         resource: { type: "ticket", id: "ticket-1", label: "PS-1" },
       },
     });
@@ -180,7 +192,16 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(calls.at(-1)).toMatchObject({
       commandId: "lab.files.delete",
       body: {
-        params: { ticketId: "ticket-1", fileId: "file-1" },
+        params: {
+          renderer: {
+            rendererId: "lab.files",
+            projectId: "project-1",
+            resource: { type: "ticket", id: "ticket-1", label: "PS-1" },
+            invocation: { placement: "visible" },
+          },
+          ticketId: "ticket-1",
+          fileId: "file-1",
+        },
         slot: { id: "lab.files", kind: "renderer" },
       },
     });
@@ -206,8 +227,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
                 {
                   id: "ticket",
                   label: "ticket.md",
-                  target: { kind: "command", commandId: "lab.files.open", args: { ticketId: "ticket-1" } },
-                  actions: [{ id: "delete", label: "Delete", commandId: "lab.files.delete", args: {} }],
+                  target: { kind: "command", command: "lab.files.open", params: { ticketId: "ticket-1" } },
+                  actions: [{ id: "delete", label: "Delete", command: "lab.files.delete", params: {} }],
                 },
               ],
             },

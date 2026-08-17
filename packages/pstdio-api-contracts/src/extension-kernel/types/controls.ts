@@ -1,20 +1,13 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { EventRef } from "./events";
-import type { JsonObject, JsonValue } from "./json";
+import type { JsonValue } from "./json";
+import type { RendererContext, ResourceRef } from "./resources";
 
-export interface ControlsResourceRef {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: JsonObject;
-}
+export type ControlsResourceRef = ResourceRef;
 
 export interface ControlsQueryParams {
-  projectId?: string;
-  resource?: ControlsResourceRef;
+  renderer: RendererContext;
 }
 
 // Serializable control declarations returned by the query command. `params` and
@@ -27,20 +20,20 @@ export interface ControlsQueryResult {
 }
 
 export interface ControlsUpdateValueInput {
+  renderer: RendererContext;
   controlId: string;
   value: JsonValue;
   values: Record<string, JsonValue>;
-  resource?: ControlsResourceRef;
 }
 
 export interface ControlsApplyInput {
+  renderer: RendererContext;
   values: Record<string, JsonValue>;
-  resource?: ControlsResourceRef;
 }
 
 export interface ControlsResetInput {
+  renderer: RendererContext;
   controlIds?: string[];
-  resource?: ControlsResourceRef;
 }
 
 /**

@@ -50,6 +50,8 @@ const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeRe
   };
 };
 
+const refId = (value: { id?: string } | string | undefined) => (typeof value === "string" ? value : value?.id);
+
 const toWorkbenchResource = (
   resource: ExtensionTreeResource,
   sectionNavigation?: {
@@ -90,11 +92,15 @@ const createQueryParams = (
   node?: ExtensionTreeNode,
 ) => {
   const resource = toExtensionResource(ctx.resource);
+  const modeId = input.workbench.modes.getActiveModeId();
   return {
-    projectId: input.projectId,
-    modeId: input.workbench.modes.getActiveModeId(),
-    resource,
-    treeId: record.id,
+    renderer: {
+      rendererId: record.id,
+      projectId: input.projectId,
+      ...(modeId ? { modeId } : {}),
+      ...(resource ? { resource } : {}),
+      invocation: { placement: "visible" },
+    },
     state: input.workbench.renderers.getTreeState(record.id),
     ...(ctx.filter ? { filter: ctx.filter } : {}),
     ...(node ? { node } : {}),
@@ -103,19 +109,21 @@ const createQueryParams = (
 
 const executeCallback = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
+  record: ExtensionTreeRendererRecord,
   commandId: string,
   params: Record<string, unknown>,
 ) => {
-  const resource = params.resource as ExtensionTreeResource | undefined;
+  const renderer = params.renderer as { modeId?: string; resource?: ExtensionTreeResource } | undefined;
+  const resource = renderer?.resource;
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
     params,
     resource,
     slot: slotContext({
-      modeId: params.modeId as string | undefined,
+      modeId: renderer?.modeId,
       projectId: input.projectId,
       resource,
-      treeId: params.treeId as string,
+      treeId: record.id,
     }),
     source: "dashboard",
   });
@@ -130,9 +138,19 @@ const executeTreeActionCommand = async (
   resource: ExtensionTreeResource | undefined,
 ) => {
   const modeId = input.workbench.modes.getActiveModeId();
+  const rendererParams = {
+    ...(params ?? {}),
+    renderer: {
+      rendererId: record.id,
+      projectId: input.projectId,
+      ...(modeId ? { modeId } : {}),
+      ...(resource ? { resource } : {}),
+      invocation: { placement: "visible" },
+    },
+  };
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
-    ...(params ? { params } : {}),
+    params: rendererParams,
     resource,
     slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
     source: "dashboard",
@@ -145,6 +163,9 @@ const toActionParams = (params: unknown, fallback: Record<string, unknown> | und
   if (params && typeof params === "object" && !Array.isArray(params)) return params as Record<string, unknown>;
   return fallback;
 };
+
+const toRecordParams = (params: object | undefined) =>
+  params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
 
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
@@ -176,14 +197,15 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       };
     }
     if (target.kind === "panel" && target.panelId) return { kind: "panel", panelId: target.panelId };
-    if (target.kind !== "command" || !target.commandId) return undefined;
+    const commandId = refId(target.command);
+    if (target.kind !== "command" || !commandId) return undefined;
     return {
       kind: "command",
       commandId: runnerCommandId,
       args: {
-        commandId: target.commandId,
+        commandId,
         nodeId: node.id,
-        params: target.args,
+        params: toRecordParams(target.params),
         resource: node.resource ?? toExtensionResource(ctx.resource),
         treeId: record.id,
       } satisfies TargetCommandArgs,
@@ -195,13 +217,13 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     node: ExtensionTreeNode | undefined,
     ctx: TreeContext,
   ): TreeAction => {
-    const commandId = action.commandId;
+    const commandId = refId(action.command);
     return {
       id: action.id,
       label: text(action.label),
       icon: action.icon,
-      args: action.args,
-      params: localizeParamSchema(action.params, text),
+      args: toRecordParams(action.params),
+      params: localizeParamSchema(action.input, text),
       submitLabel: action.submitLabel,
       when: action.when,
       disabled: action.disabled,
@@ -213,7 +235,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               input,
               record,
               commandId,
-              toActionParams(params, action.args),
+              toActionParams(params, toRecordParams(action.params)),
               node?.resource ?? toExtensionResource(ctx.resource),
             );
             input.workbench.renderers.refresh(record.id);
@@ -316,7 +338,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     getHeader: (ctx) =>
       resolveHostTreeHeaderNodes({ ctx, getHostTreeHeaderNodes: input.getHostTreeHeaderNodes, record, treeViews }),
     getBody: async (ctx) => {
-      const result = await executeCallback(input, record.bodyCommandId, createQueryParams(input, record, ctx));
+      const result = await executeCallback(input, record, record.bodyCommandId, createQueryParams(input, record, ctx));
       if (!isTreeSectionArray(result)) return [];
       const selectedNodeId = selectedNodeIdFromSections(result);
       if (selectedNodeId) input.workbench.renderers.setSelectedNode(record.id, selectedNodeId);
@@ -330,7 +352,12 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         treeViews,
       });
       if (!record.footerCommandId) return hostFooter;
-      const result = await executeCallback(input, record.footerCommandId, createQueryParams(input, record, ctx));
+      const result = await executeCallback(
+        input,
+        record,
+        record.footerCommandId,
+        createQueryParams(input, record, ctx),
+      );
       const extensionFooter = isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
       return [...extensionFooter, ...hostFooter];
     },
@@ -339,6 +366,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       const originalNode = mapper.originalNodes.get(node) ?? (node as unknown as ExtensionTreeNode);
       const result = await executeCallback(
         input,
+        record,
         record.childrenCommandId,
         createQueryParams(input, record, ctx, originalNode),
       );

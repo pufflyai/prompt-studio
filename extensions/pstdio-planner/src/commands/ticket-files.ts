@@ -2,6 +2,7 @@ import {
   defineCommand,
   type ExtensionWorkspace,
   params,
+  type RendererContext,
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
@@ -98,9 +99,9 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
     id: "create-workspace",
     label: "Create workspace",
     icon: "Plus",
-    commandId: "pstdio-planner.create-workspace",
-    args: { ticket: ticketId },
-    params: createWorkspaceTreeActionParams,
+    command: "pstdio-planner.create-workspace",
+    params: { ticket: ticketId },
+    input: createWorkspaceTreeActionParams,
   },
 ];
 
@@ -141,10 +142,10 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "rename",
       label: "Rename",
       icon: "Pencil",
-      commandId: "pstdio-planner.rename-ticket-file",
-      args: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
+      command: "pstdio-planner.rename-ticket-file",
+      params: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
       submitLabel: "Save",
-      params: {
+      input: {
         name: params.text({ label: "File name", required: true, defaultValue: input.fileName }),
       },
     },
@@ -152,8 +153,8 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "delete",
       label: "Delete",
       icon: "Trash",
-      commandId: "pstdio-planner.delete-ticket-file",
-      args: { ticketId: input.ticketId, fileId: input.fileId },
+      command: "pstdio-planner.delete-ticket-file",
+      params: { ticketId: input.ticketId, fileId: input.fileId },
     },
   ];
   return actions;
@@ -228,11 +229,12 @@ export const deleteTicketFileCommand = defineCommand({
 export const listTicketFilesTreeCommand = defineCommand({
   title: "List ticket files tree",
   params: {
-    treeId: params.text(),
-    resource: params.json<TicketTreeResource>(),
+    renderer: params.json<RendererContext>(),
   },
   async run(ctx) {
-    const ticketId = ctx.params.resource?.type === "ticket" ? ctx.params.resource.id : undefined;
+    const renderer = ctx.params.renderer ?? { rendererId: "pstdio-planner.ticketFiles" };
+    const resource = renderer.resource as TicketTreeResource | undefined;
+    const ticketId = resource?.type === "ticket" ? resource.id : undefined;
     if (!ticketId) return [emptyFilesSection()];
 
     const ticket = await ticketsCollection(ctx.storage).get(ticketId);
@@ -250,8 +252,8 @@ export const listTicketFilesTreeCommand = defineCommand({
     const selectTarget = (documentId: string) =>
       ({
         kind: "command" as const,
-        commandId: "pstdio-planner.select-ticket-document",
-        args: { ticketId, documentId },
+        command: "pstdio-planner.select-ticket-document",
+        params: { ticketId, documentId },
       }) satisfies TreeNode["target"];
 
     const ticketSection: TreeViewSection = {
@@ -294,8 +296,8 @@ export const listTicketFilesTreeCommand = defineCommand({
           id: "create",
           label: "New file",
           icon: "Plus",
-          commandId: "pstdio-planner.create-ticket-file",
-          args: { ticketId },
+          command: "pstdio-planner.create-ticket-file",
+          params: { ticketId },
         },
       ],
       nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,

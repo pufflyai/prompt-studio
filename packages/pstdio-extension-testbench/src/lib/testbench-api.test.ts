@@ -74,8 +74,10 @@ describe("createExtensionTestbenchApi", () => {
             commandId: "pstdio-planner.ticket-files.tree.body",
             request: {
               params: {
-                treeId: "pstdio-planner.ticketFiles",
-                resource: { type: "ticket", id: "PS-16", label: "PS-16" },
+                renderer: {
+                  rendererId: "pstdio-planner.ticketFiles",
+                  resource: { type: "ticket", id: "PS-16", label: "PS-16" },
+                },
               },
               projectId: bench.projectId,
               source: "dashboard",

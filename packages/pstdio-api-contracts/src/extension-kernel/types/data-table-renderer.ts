@@ -1,21 +1,12 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
-import type { JsonObject, JsonValue, Struct } from "./json";
+import type { JsonValue, Struct } from "./json";
+import type { RendererContext, ResourceRef } from "./resources";
 
-export interface DataTableRendererResourceRef {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: JsonObject;
-}
+export type DataTableRendererResourceRef = ResourceRef;
 
 export interface DataTableRendererQueryParams {
-  rendererId: string;
-  projectId?: string;
-  modeId?: string;
-  resource?: DataTableRendererResourceRef;
+  renderer: RendererContext;
 }
 
 export interface DataTableRendererThemeColor {

@@ -160,6 +160,14 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
       commandId: "lab.ticket.load",
       body: {
         projectId: "project-1",
+        params: {
+          renderer: {
+            rendererId: "lab.ticketContent",
+            projectId: "project-1",
+            resource: { type: "ticket", id: "ticket-1" },
+            invocation: { placement: "visible" },
+          },
+        },
         resource: { type: "ticket", id: "ticket-1" },
         slot: { id: "lab.ticketContent", kind: "renderer" },
       },
@@ -168,7 +176,18 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
     await contribution!.save!(resource, "new content");
     expect(calls.at(-1)).toMatchObject({
       commandId: "lab.ticket.save",
-      body: { params: { content: "new content" }, resource: { type: "ticket", id: "ticket-1" } },
+      body: {
+        params: {
+          renderer: {
+            rendererId: "lab.ticketContent",
+            projectId: "project-1",
+            resource: { type: "ticket", id: "ticket-1" },
+            invocation: { placement: "visible" },
+          },
+          content: "new content",
+        },
+        resource: { type: "ticket", id: "ticket-1" },
+      },
     });
   });
 
