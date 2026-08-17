@@ -11,6 +11,7 @@ import type {
 import type { CommandRef, CommandSource } from "./commands";
 import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
+import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { PackageAssetDescriptor, RendererContext, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
@@ -374,9 +375,7 @@ export interface CommandPaletteResourceQueryParams {
   limit: number;
 }
 
-export type CommandPaletteResourceTarget =
-  | { kind: "command"; command: CommandRef<Struct, unknown> | string; params?: Struct }
-  | { kind: "resource"; resource: ResourceRef };
+export type CommandPaletteResourceTarget = ExtensionNavigationTarget;
 
 export interface CommandPaletteResourceItem {
   id: string;

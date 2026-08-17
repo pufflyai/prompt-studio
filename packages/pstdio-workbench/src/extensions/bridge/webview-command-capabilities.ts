@@ -1,13 +1,13 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { ExtensionResourceOpenIntent } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
-import type { OpenResourceInput } from "../../core";
 import {
   createExtensionSlot,
   toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostCapabilities } from "./bridge-webview-renderer";
-import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
+import { createWorkbenchWebviewHostCapabilities, toOpenResourceInput } from "./webview-host-capabilities";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
 
@@ -32,7 +32,7 @@ type WebviewCommandExecuteParams = {
 
 type WebviewResourceOpenParams = {
   resource?: CommandExecuteRequest["resource"];
-  input?: OpenResourceInput;
+  input?: ExtensionResourceOpenIntent;
 };
 
 export const createExtensionWebviewHostCapabilities =
@@ -51,7 +51,10 @@ export const createExtensionWebviewHostCapabilities =
       "resource.open": (params) => {
         const request = params as WebviewResourceOpenParams;
         if (!request.resource) throw new Error("resource.open requires a resource.");
-        return context.workbench.resources.openResource(toWorkbenchResource(request.resource), request.input);
+        return context.workbench.resources.openResource(
+          toWorkbenchResource(request.resource),
+          toOpenResourceInput(request.input),
+        );
       },
       "commands.execute": async (params) => {
         const request = params as WebviewCommandExecuteParams;

@@ -8,6 +8,7 @@ export type * from "./extension";
 export type * from "./file-renderer";
 export type * from "./harness";
 export type * from "./json";
+export type * from "./navigation-target";
 export type * from "./params";
 export type * from "./resources";
 export type * from "./slots";

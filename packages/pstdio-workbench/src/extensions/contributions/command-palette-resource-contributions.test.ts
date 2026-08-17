@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "../../core";
+import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { registerWorkbenchExtensionCommandPaletteResources } from "./command-palette-resource-contributions";
 
 const record: WorkbenchExtensionCommandPaletteResourceRecord = {
@@ -65,15 +66,34 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     expect(activateCall?.body).toMatchObject({ params: { slideId: "intro" } });
   });
 
-  test("opens resource targets by replacing the active resource tab", async () => {
+  test("opens resource targets with the requested placement strategy", async () => {
     const workbench = createWorkbenchCore();
-    const opens: Array<{ replaceActive?: boolean }> = [];
+    const opens: Array<{ input: { replaceActive?: boolean }; metadata?: Record<string, unknown> }> = [];
     const executeCommand = () => ({
       items: [
         {
           id: "PS-1",
           label: "PS-1",
-          target: { kind: "resource", resource: { type: "ticket", id: "PS-1", label: "PS-1" } },
+          target: {
+            kind: "resource",
+            resource: { type: "ticket", id: "PS-1", label: "PS-1" },
+            input: { strategy: "persistent" },
+            section: { anchors: [{ id: "acceptance-criteria", heading: "Acceptance Criteria" }] },
+          },
+        },
+        {
+          id: "PS-2",
+          label: "PS-2",
+          target: {
+            kind: "compound",
+            targets: [
+              {
+                kind: "resource",
+                resource: { type: "ticket", id: "PS-2", label: "PS-2" },
+                section: { anchors: [{ id: "notes", heading: "Notes" }] },
+              },
+            ],
+          },
         },
       ],
     });
@@ -89,16 +109,88 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     workbench.resources.registerPresenter({
       id: "ticket",
       canOpen: (resource) => resource.kind === "ticket",
-      open: (_resource, input) => {
-        opens.push(input);
+      open: (resource, input) => {
+        opens.push({ input, metadata: resource.metadata });
         return workbench.layout.openPanel("ticket");
       },
     });
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
 
-    const results = await workbench.commandPaletteResources.queryProviders({ query: "PS-1", limit: 10 });
+    const results = await workbench.commandPaletteResources.queryProviders({ query: "PS", limit: 10 });
     await results[0]?.results[0]?.activate();
+    await results[0]?.results[1]?.activate();
 
-    expect(opens).toEqual([{ replaceActive: true }]);
+    expect(opens).toEqual([
+      {
+        input: {},
+        metadata: {
+          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+            treeId: "lab.slides",
+            targetNodeId: "PS-1",
+            anchors: [{ id: "acceptance-criteria", heading: "Acceptance Criteria" }],
+          },
+        },
+      },
+      {
+        input: {},
+        metadata: {
+          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+            treeId: "lab.slides",
+            targetNodeId: "PS-2",
+            anchors: [{ id: "notes", heading: "Notes" }],
+          },
+        },
+      },
+    ]);
+  });
+
+  test("opens compound targets only after every item validates", async () => {
+    const workbench = createWorkbenchCore();
+    const opened: string[] = [];
+    const executeCommand = () => ({
+      items: [
+        {
+          id: "compound",
+          label: "Compound",
+          target: {
+            kind: "compound",
+            targets: [
+              { kind: "panel", panel: "ticket" },
+              { kind: "panel", panel: "missing" },
+            ],
+          },
+        },
+      ],
+    });
+
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.layout.registerPanel({
+      id: "notes",
+      title: "Notes",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.commands.registerCommand(
+      { id: "workbench.extensionNavigation.openPanel", label: "Open panel" },
+      {
+        execute: (panelId) => {
+          opened.push(String(panelId));
+          workbench.layout.openPanel(String(panelId));
+        },
+      },
+    );
+    registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
+
+    const results = await workbench.commandPaletteResources.queryProviders({ query: "compound", limit: 10 });
+    await expect(results[0]?.results[0]?.activate()).rejects.toThrow("Cannot open navigation Panel target: missing");
+
+    expect(opened).toEqual([]);
   });
 });

@@ -12,6 +12,7 @@ import type {
 } from "../../core";
 import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { unwrapCommandValue } from "../host/command-response";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import { panelMenuDeclarationOffsets } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
 import type {
@@ -186,30 +187,27 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     ctx: TreeContext,
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
-    if (target.kind === "resource" && target.resource) {
-      const sectionNavigation = target.section
-        ? { treeId: record.id, targetNodeId: node.id, anchors: target.section.anchors }
-        : undefined;
-      return {
-        kind: "resource",
-        resource: toWorkbenchResource(target.resource, sectionNavigation),
-        input: { replaceActive: true },
-      };
-    }
-    if (target.kind === "panel" && target.panelId) return { kind: "panel", panelId: target.panelId };
-    const commandId = refId(target.command);
-    if (target.kind !== "command" || !commandId) return undefined;
-    return {
-      kind: "command",
+    const commandTargetOf = (commandTarget: Extract<ExtensionTreeTarget, { kind: "command" }>) => ({
+      kind: "command" as const,
       commandId: runnerCommandId,
       args: {
-        commandId,
+        commandId: typeof commandTarget.command === "string" ? commandTarget.command : commandTarget.command.id,
         nodeId: node.id,
-        params: toRecordParams(target.params),
+        params: commandTarget.params,
         resource: node.resource ?? toExtensionResource(ctx.resource),
         treeId: record.id,
       } satisfies TargetCommandArgs,
-    };
+    });
+    return toWorkbenchNavigationTarget(target, {
+      commandTargetOf,
+      resourceOf: (resource, resourceTarget) =>
+        toWorkbenchResource(
+          resource,
+          resourceTarget.section
+            ? { treeId: record.id, targetNodeId: node.id, anchors: resourceTarget.section.anchors }
+            : undefined,
+        ),
+    });
   };
 
   const mapAction = (
