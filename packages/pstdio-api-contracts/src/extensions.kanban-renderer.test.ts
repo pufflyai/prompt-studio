@@ -8,6 +8,7 @@ describe("extension kanban renderer contracts", () => {
       extensionId: "pstdio.planner",
       title: "Tickets",
       queryCommandId: "planner.query-tickets",
+      rowActivationCommandId: "planner.tickets.__kanbanRowActivate",
       defaultViews: [
         {
           id: "all",
@@ -42,6 +43,7 @@ describe("extension kanban renderer contracts", () => {
       },
     ]);
     expect(record.defaultActiveViewId).toBe("all");
+    expect(record.rowActivationCommandId).toBe("planner.tickets.__kanbanRowActivate");
   });
 
   test("accepts workspace badge display metadata on attributes", () => {

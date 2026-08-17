@@ -98,6 +98,7 @@ export const extensionKanbanRendererRecordSchema = z.object({
   columnActionCommandId: z.string().optional(),
   createRow: extensionKanbanRendererCreateRowSchema.optional(),
   rowActions: z.array(extensionKanbanRendererRowActionSchema).optional(),
+  rowActivationCommandId: z.string().optional(),
   defaultSettings: kanbanRendererSettingsSchema.partial().optional(),
   defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
   defaultViews: z.array(kanbanRendererSavedViewSchema).optional(),

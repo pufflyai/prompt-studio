@@ -210,6 +210,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.kanbanRenderers?.tickets?.columnActionCommand).toEqual({
       id: "pstdio-planner.ticket-column-action",
     });
+    expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
   });
 
   test("exposes ticket workspace creation as an extension-owned row action", () => {

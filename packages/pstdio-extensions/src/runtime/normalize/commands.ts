@@ -109,6 +109,26 @@ const normalizeCommandCli = (
   return contribution;
 };
 
+export const registerCommandRecord = (record: RuntimeCommandRecord, runtime: Accumulator, index: RegistryIndex) => {
+  const existing = index.commandIds.get(record.id);
+  if (existing) {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "duplicate_command_id",
+        message: `Command id "${record.id}" is already provided by ${existing.sourcePath}`,
+        extensionId: record.extensionId,
+        commandId: record.id,
+        sourcePath: record.sourcePath,
+      }),
+    );
+    return false;
+  }
+
+  index.commandIds.set(record.id, record);
+  runtime.commands.push(record);
+  return true;
+};
+
 export const registerCommands = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -169,21 +189,6 @@ export const registerCommands = (
       run: command.run as RuntimeCommandRecord["run"],
     };
 
-    const existing = index.commandIds.get(commandId);
-    if (existing) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "duplicate_command_id",
-          message: `Command id "${commandId}" is already provided by ${existing.sourcePath}`,
-          extensionId: ext.id,
-          commandId,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-
-    index.commandIds.set(commandId, record);
-    runtime.commands.push(record);
+    registerCommandRecord(record, runtime, index);
   }
 };

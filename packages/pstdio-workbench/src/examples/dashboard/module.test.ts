@@ -108,7 +108,7 @@ describe("dashboard workbench navigation", () => {
     );
 
     expect(ticketRow).toBeDefined();
-    ticketRenderer?.onRowClick?.(ticketRow);
+    ticketRenderer?.onRowActivate?.(ticketRow);
 
     expect(resolveRegionPlacementIds(workbench, "sidenav")).toEqual([dashboardWidgetIds.ticketSidenav]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidenav]);

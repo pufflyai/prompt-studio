@@ -100,4 +100,66 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
     });
     expect(refreshes).toEqual(["lab.health"]);
   });
+
+  test("runs row activation callbacks and dispatches returned navigation targets", async () => {
+    const workbench = createWorkbenchCore();
+    const opened: unknown[] = [];
+    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.resources.registerPresenter({
+      id: "ticket.presenter",
+      canOpen: (resource) => resource.kind === "ticket",
+      open: (resource, input) => {
+        opened.push({ resource, input });
+        return workbench.layout.openPanel("ticket.panel", { resource });
+      },
+    });
+    workbench.layout.registerPanel({
+      id: "ticket.panel",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    const calls: Array<{ commandId: string; resourceType: unknown; rowId: unknown }> = [];
+    const record = {
+      id: "lab.health",
+      extensionId: "pstdio.lab",
+      title: "Health",
+      queryCommandId: "lab.queryHealth",
+      rowActivationCommandId: "lab.health.__dataTableRowActivate",
+    } satisfies WorkbenchExtensionDataTableRendererRecord;
+
+    registerWorkbenchExtensionDataTableRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (commandId, body) => {
+          const row = body.params?.row as { id?: unknown; resource?: { type?: unknown } } | undefined;
+          calls.push({ commandId, resourceType: row?.resource?.type, rowId: row?.id });
+          if (commandId === "lab.queryHealth") {
+            return { rows: [{ id: "api", values: {}, resource: { type: "ticket", id: "PS-1", label: "PS-1" } }] };
+          }
+          return {
+            kind: "resource",
+            resource: { type: "ticket", id: "PS-1", label: "PS-1" },
+            input: { strategy: "replace-active" },
+          };
+        },
+      },
+      [record],
+      [],
+    );
+
+    const result = await workbench.renderers.getDataTableRenderer("lab.health")?.executeQuery({});
+    await workbench.renderers.getDataTableRenderer("lab.health")?.onRowActivate?.(result!.rows[0]!);
+
+    expect(calls.at(-1)).toEqual({
+      commandId: "lab.health.__dataTableRowActivate",
+      resourceType: "ticket",
+      rowId: "api",
+    });
+    expect(opened).toEqual([
+      expect.objectContaining({ resource: expect.objectContaining({ kind: "ticket", id: "PS-1" }) }),
+    ]);
+  });
 });

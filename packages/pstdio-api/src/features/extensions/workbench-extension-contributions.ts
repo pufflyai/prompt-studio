@@ -78,6 +78,7 @@ export const toKanbanRendererRecord = (
     columnActionCommandId: refIdOf(renderer.contribution.columnActionCommand),
     createRow: toKanbanRendererCreateRow(renderer.contribution.createRow),
     rowActions: toKanbanRendererRowActions(renderer.contribution.rowActions),
+    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__kanbanRowActivate` : undefined,
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
     emptyTitle: renderer.contribution.emptyTitle,
@@ -127,6 +128,7 @@ export const toDataTableRendererRecord = (
           : null;
       }),
     ),
+    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__dataTableRowActivate` : undefined,
     initialPageSize: renderer.contribution.initialPageSize,
     pageSizeOptions: renderer.contribution.pageSizeOptions,
     emptyTitle: renderer.contribution.emptyTitle,

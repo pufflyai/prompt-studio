@@ -109,7 +109,7 @@ export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContext) => 
       displayProperties: ["id", "status", "assignee", "ticket", "type"],
     },
     executeQuery: () => dashboardTickets.map(toWorkspaceRow),
-    onRowClick: (row) => {
+    onRowActivate: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });

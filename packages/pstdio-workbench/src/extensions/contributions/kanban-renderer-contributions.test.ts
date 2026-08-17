@@ -251,6 +251,52 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
   });
 });
 
+describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
+  test("runs row activation callbacks and leaves resource rows inert without them", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: Array<{ commandId: string; resourceType: unknown; rowId: unknown }> = [];
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      queryCommandId: "pstdio-planner.query-tickets",
+      rowActivationCommandId: "pstdio-planner.activate-ticket",
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    const inertRecord = {
+      id: "inertTickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Inert tickets",
+      queryCommandId: "pstdio-planner.query-inert-tickets",
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (commandId, request) => {
+          const row = request.params?.row as { id?: unknown; resource?: { type?: unknown } } | undefined;
+          calls.push({ commandId, resourceType: row?.resource?.type, rowId: row?.id });
+          if (commandId === "pstdio-planner.query-tickets") {
+            return { rows: [{ id: "ticket-1", title: "Ticket 1", resource: { type: "ticket", id: "ticket-1" } }] };
+          }
+          return undefined;
+        },
+      },
+      [record, inertRecord],
+    );
+
+    const rows = await workbench.renderers.getKanbanRenderer("tickets")?.executeQuery(queryState);
+    await workbench.renderers.getKanbanRenderer("tickets")?.onRowActivate?.(rows![0]!);
+
+    expect(calls.at(-1)).toEqual({
+      commandId: "pstdio-planner.activate-ticket",
+      resourceType: "ticket",
+      rowId: "ticket-1",
+    });
+    expect(workbench.renderers.getKanbanRenderer("inertTickets")?.onRowActivate).toBeUndefined();
+  });
+});
+
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
   test("runs renderer-owned create forms with declarative fields, editable attributes, and attachments", async () => {
     const workbench = createWorkbenchCore();

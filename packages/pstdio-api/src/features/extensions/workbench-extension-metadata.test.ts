@@ -262,6 +262,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
             services: {
               title: "Services",
               queryCommand: "query",
+              onRowActivate: async () => undefined,
               selectionMode: "multiple",
               selectionActions: [{ id: "restart", label: "Restart selected", command: "restart" }],
             },
@@ -279,6 +280,7 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
     expect(metadata.dataTableRenderers).toHaveLength(1);
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.services",
+      rowActivationCommandId: "lab.services.__dataTableRowActivate",
       selectionMode: "multiple",
       selectionActions: [{ id: "restart", label: "Restart selected", commandId: "lab.restart" }],
     });
@@ -307,6 +309,7 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
               title: "Tickets",
               resourceKind: "ticket",
               queryCommand: "planner.ticketBoard.read",
+              onRowActivate: async () => undefined,
               createRow: {
                 command: "planner.tickets.create",
                 title: "Create ticket",
@@ -343,6 +346,7 @@ describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
         title: "Tickets",
         resourceKind: "ticket",
         queryCommandId: "planner.ticketBoard.read",
+        rowActivationCommandId: "planner.tickets.__kanbanRowActivate",
         createRow: expect.objectContaining({
           commandId: "planner.tickets.create",
           columnParam: "status",

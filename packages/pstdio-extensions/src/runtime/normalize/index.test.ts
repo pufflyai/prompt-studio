@@ -273,6 +273,108 @@ describe("normalizeExtensionSources runtime records", () => {
     expect(runtime.dataTableRenderers[0]).toMatchObject({ id: "lab.health", localId: "health" });
     expect(runtime.panels[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
   });
+
+  test("registers row activation callbacks as private renderer commands", () => {
+    const lab = defineExtension({
+      commands: {
+        queryHealth: { title: "Query health", run: async () => ({ rows: [] }) },
+        queryTickets: { title: "Query tickets", run: async () => ({ rows: [] }) },
+      },
+      dataTableRenderers: {
+        health: {
+          title: "Health",
+          queryCommand: "lab.queryHealth",
+          onRowActivate: async () => undefined,
+        },
+      },
+      kanbanRenderers: {
+        tickets: {
+          title: "Tickets",
+          queryCommand: "lab.queryTickets",
+          onRowActivate: async () => undefined,
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(
+      runtime.commands.find((command) => command.id === "lab.health.__dataTableRowActivate")?.params,
+    ).toMatchObject({
+      row: { type: "json", required: true },
+    });
+    expect(runtime.commands.find((command) => command.id === "lab.tickets.__kanbanRowActivate")?.params).toMatchObject({
+      row: { type: "json", required: true },
+    });
+  });
+
+  test("keeps data table and kanban row activation commands distinct when renderer ids match", () => {
+    const lab = defineExtension({
+      commands: {
+        queryItems: { title: "Query items", run: async () => ({ rows: [] }) },
+      },
+      dataTableRenderers: {
+        items: {
+          title: "Items table",
+          queryCommand: "lab.queryItems",
+          onRowActivate: async () => undefined,
+        },
+      },
+      kanbanRenderers: {
+        items: {
+          title: "Items board",
+          queryCommand: "lab.queryItems",
+          onRowActivate: async () => undefined,
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(runtime.commands.map((command) => command.id)).toContain("lab.items.__dataTableRowActivate");
+    expect(runtime.commands.map((command) => command.id)).toContain("lab.items.__kanbanRowActivate");
+  });
+
+  test("rejects row activation callbacks that collide with declared commands", () => {
+    const lab = defineExtension({
+      commands: {
+        queryItems: { title: "Query items", run: async () => ({ rows: [] }) },
+        "items.__dataTableRowActivate": { title: "Table collision", run: async () => undefined },
+        "items.__kanbanRowActivate": { title: "Kanban collision", run: async () => undefined },
+      },
+      dataTableRenderers: {
+        items: {
+          title: "Items table",
+          queryCommand: "lab.queryItems",
+          onRowActivate: async () => undefined,
+        },
+      },
+      kanbanRenderers: {
+        items: {
+          title: "Items board",
+          queryCommand: "lab.queryItems",
+          onRowActivate: async () => undefined,
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(runtime.commands.filter((command) => command.id === "lab.items.__dataTableRowActivate")).toHaveLength(1);
+    expect(runtime.commands.filter((command) => command.id === "lab.items.__kanbanRowActivate")).toHaveLength(1);
+    expect(runtime.dataTableRenderers[0]?.contribution.onRowActivate).toBeUndefined();
+    expect(runtime.kanbanRenderers[0]?.contribution.onRowActivate).toBeUndefined();
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "duplicate_command_id",
+        commandId: "lab.items.__dataTableRowActivate",
+      }),
+      expect.objectContaining({
+        code: "duplicate_command_id",
+        commandId: "lab.items.__kanbanRowActivate",
+      }),
+    ]);
+  });
 });
 
 describe("normalizeExtensionSources tree and panel runtime records", () => {

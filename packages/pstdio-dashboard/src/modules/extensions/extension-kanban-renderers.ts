@@ -275,7 +275,7 @@ export const registerExtensionKanbanRenderers = (
     decorateAttribute: (_, attribute) => decorateAttribute({ attribute, openResource, projectId }),
     resolveRowResource: (_, row) => toWorkbenchResource(row.resource, projectId),
     resolveRowActionResource: (record, row) => synthesizeRowResource(record, row, projectId),
-    onRowClick: ({ resource }) => openResource(resource),
+    resolveNavigationResource: (_, resource) => toWorkbenchResource(resource, projectId)!,
     executeRowAction: ({ record, action, row, resource, runDefault }) => {
       const registration = findRowActionMenuRegistration(menuRegistrations, record, action.commandId);
       if (!registration) return runDefault();

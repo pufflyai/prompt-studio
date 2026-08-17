@@ -82,7 +82,7 @@ export interface DataTableRendererContribution {
     context: DataTableRendererQueryContext,
   ): Promise<DataTableRendererQueryResult> | DataTableRendererQueryResult;
   subscribe?: (listener: () => void) => Disposable | (() => void);
-  onRowClick?: (row: DataTableRendererRow) => void;
+  onRowActivate?: (row: DataTableRendererRow) => Promise<void> | void;
 }
 
 export interface RegisteredDataTableRendererContribution

@@ -160,6 +160,8 @@ export const labDataTableRenderers = {
     title: "Artifacts",
     resourceKind: "glass-lab-artifact",
     queryCommand: commandRef("extension-lab.glass-lab-artifacts.query"),
+    onRowActivate: (_ctx, { row }) =>
+      row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
     rowActions: [
       {
         id: "delete",

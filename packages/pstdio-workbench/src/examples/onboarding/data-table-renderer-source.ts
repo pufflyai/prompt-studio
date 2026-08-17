@@ -26,7 +26,7 @@ export const healthModule: WorkbenchModuleContribution = {
           { id: "queue", values: { service: "Queue", status: "healthy", details: { region: "eu" } } },
         ],
       }),
-      onRowClick: (row) => console.log(row.id),
+      onRowActivate: (row) => console.log(row.id),
     });
     ctx.layout.registerPanel({
       id: "docs.health.view",
