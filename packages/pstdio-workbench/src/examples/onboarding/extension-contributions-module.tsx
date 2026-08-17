@@ -88,7 +88,7 @@ const metadata = {
       region: "main",
       closable: false,
       title: "Lab tree",
-      treeRendererId: TREE_ID,
+      renderer: { kind: "tree", id: TREE_ID },
     },
   ],
   treeRenderers: [

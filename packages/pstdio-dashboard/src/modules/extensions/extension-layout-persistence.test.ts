@@ -21,7 +21,7 @@ const metadata = {
       region: "main",
       closable: false,
       title: "Overview",
-      treeRendererId: panelId,
+      renderer: { kind: "tree", id: panelId },
     },
   ],
   routes: [],

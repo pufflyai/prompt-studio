@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Locator, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -54,12 +54,6 @@ const openTicketCard = async (page: Page, ticketContent: string) => {
   await card.click();
 };
 
-const openTabMenu = async (tab: Locator) => {
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
-  await expect(tab).toHaveAttribute("aria-selected", "true");
-  await tab.click();
-};
-
 test("PS-8 reuses a dashboard session tab selected again from a planner ticket", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "PS-8 Session Tab Reuse");
@@ -87,27 +81,19 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
 
   await bypassOnboarding(page, project.id);
   await openTicketBoard(page);
-  await page.getByRole("button", { name: "Show Side Panel" }).click();
-
-  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
-  await sideHeader.getByRole("button", { name: "Add panel" }).click();
-  const sessionTabs = sideHeader.getByRole("tab");
-  const newSessionTab = sessionTabs.filter({ hasText: "New session" });
-  await openTabMenu(newSessionTab);
-  await page
-    .getByRole("menu", { name: "New session menu" })
-    .getByRole("menuitem", { name: `Refine ticket: ${ticket.shorthand}` })
-    .click();
-
-  const sessionTab = sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
-  await expect(sessionTab).toBeVisible();
-  await newSessionTab.click();
-  await newSessionTab.getByRole("button", { name: "Close New session" }).click();
-  await expect(sessionTabs).toHaveCount(1);
-
   await openTicketCard(page, "Reuse session A across resource surfaces");
   const sessionRow = page.getByRole("complementary").getByText(`Refine ticket: ${ticket.shorthand}`);
   await expect(sessionRow).toBeVisible();
+  await sessionRow.click();
+
+  const floatingPanel = page.getByRole("dialog", { name: "Side Panel" });
+  const sessionTabs = floatingPanel.getByRole("tab");
+  const sessionTab = floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
+  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await openTicketCard(page, "Reuse session A across resource surfaces");
   await sessionRow.click();
 
   await expect(sessionTabs).toHaveCount(1);

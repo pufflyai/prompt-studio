@@ -7,7 +7,7 @@ describe("cleanupLegacyWorkspaceStatus", () => {
       ["workspace-status-definitions-initialized", true],
       ["unrelated", "keep"],
     ]);
-    const collections = new Map([
+    const collections = new Map<string, Map<string, unknown>>([
       ["workspace-status-definitions", new Map([["wip", { id: "wip" }]])],
       ["workspace-status-values", new Map([["workspace-1", { workspaceId: "workspace-1" }]])],
       ["tickets", new Map([["ticket-1", { id: "ticket-1" }]])],

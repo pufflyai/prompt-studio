@@ -233,8 +233,7 @@ const registerExtensionViews = (
           panelMenus: panel.panelMenus?.map((menu, menuIndex) => {
             // Native-bodied menus render through their own renderer; only webview
             // menus mount in the generic extension-view widget.
-            const nativeRendererId =
-              menu.treeRendererId ?? menu.fileRendererId ?? menu.controlsRendererId ?? menu.dataTableRendererId;
+            const nativeRendererId = menu.renderer?.id;
             return {
               id: nativeRendererId ? menu.id : extensionViewWidgetId(menu.id),
               title: resolveLocalizableString(menu.title, menu.extensionId),

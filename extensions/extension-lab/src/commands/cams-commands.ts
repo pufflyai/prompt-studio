@@ -28,7 +28,7 @@ export const camsTreeCommand = defineCommand({
           icon: "video",
           selected: entry.id === selected,
           target: {
-            kind: "command",
+            kind: "command" as const,
             command: "extension-lab.cams.select",
             params: { camId: entry.id },
           },

@@ -114,6 +114,15 @@ const metadata = {
   ],
   panels: [
     {
+      id: "lab.rows",
+      extensionId: "pstdio.lab",
+      region: "main",
+      title: "Rows",
+      closable: false,
+      resourceKind: "ticket",
+      renderer: { kind: "kanban", id: "lab.rows" },
+    },
+    {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
       region: "main",

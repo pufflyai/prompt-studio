@@ -76,8 +76,8 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
 };
 
 const findTreeView = (bench: ExtensionBenchLoadResponse, resource: ResourceRef) =>
-  bench.metadata.panels.find((view) => view.treeRendererId && view.resourceKind === resource.kind) ??
-  bench.metadata.panels.find((view) => view.treeRendererId);
+  bench.metadata.panels.find((view) => view.renderer?.kind === "tree" && view.resourceKind === resource.kind) ??
+  bench.metadata.panels.find((view) => view.renderer?.kind === "tree");
 
 export const registerResourceKinds = (
   workbench: WorkbenchCore,

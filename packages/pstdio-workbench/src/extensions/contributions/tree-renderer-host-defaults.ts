@@ -27,7 +27,7 @@ interface ResolveHostTreeFooterInput extends ResolveHostTreeDefaultInput {
 export const treeViewsFor = (metadata: WorkbenchExtensionMetadata, record: ExtensionTreeRendererRecord) =>
   metadata.panels
     .flatMap((panel) => [panel, ...(panel.panelMenus ?? [])])
-    .filter((panel) => panel.treeRendererId === record.id);
+    .filter((panel) => panel.renderer?.kind === "tree" && panel.renderer.id === record.id);
 
 const resolveTreeView = (panels: ExtensionTreeViewRecord[], ctx: TreeContext) => {
   if (ctx.viewId) return panels.find((panel) => panel.id === ctx.viewId);

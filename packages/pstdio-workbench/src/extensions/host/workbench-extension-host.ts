@@ -392,7 +392,14 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
   disposables.push(registerWorkbenchExtensionFileRenderers(input));
   disposables.push(...registerWebviewPanels(input));
-  disposables.push(registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? []));
+  disposables.push(
+    registerWorkbenchExtensionKanbanRenderers(
+      context,
+      input.metadata.kanbanRenderers ?? [],
+      undefined,
+      input.metadata.panels,
+    ),
+  );
   disposables.push(
     registerWorkbenchExtensionDataTableRenderers(
       context,

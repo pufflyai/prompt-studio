@@ -52,10 +52,11 @@ import { disposeExtensionContributions, registerExtensionContributions } from ".
 import { reconcileStoredExtensionLayouts, registerExtensionLayoutResetCommands } from "./extension-layout-persistence";
 import { reconcileExtensionLayout } from "./extension-layout-reconciliation";
 import { refreshExtensionRenderers, registerExtensionResourceKinds } from "./extension-module-setup";
+import { openExtensionPanelResource } from "./extension-panel-resource-navigation";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
-import { dashboardExtensionViewKind, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { dashboardExtensionViewKind } from "./extension-view-placement";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -113,21 +114,7 @@ const registerExtensionResourcePresenters = (ctx: WorkbenchModuleContext, getPro
     id: "dashboard.extensions.panel-presenter",
     priority: 1000,
     canOpen: (resource) => resource.kind === dashboardExtensionViewKind,
-    open: (resource, openInput) => {
-      const viewProjectId =
-        typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : getProjectId();
-      const view = getCachedDashboardExtensionMetadata(viewProjectId)?.panels.find(
-        (candidate) => candidate.id === resource.id,
-      );
-      if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
-      selectDashboardNavigationResource(ctx, resource);
-      return ctx.layout.openPanel(extensionViewWidgetIdFor(view), {
-        strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-        resource,
-        region: extensionViewRegion(view.region),
-        title: resource.label,
-      });
-    },
+    open: (resource, openInput) => openExtensionPanelResource(ctx, resource, openInput, getProjectId()),
   });
   ctx.resources.registerPresenter({
     id: "dashboard.extensions.route-presenter",

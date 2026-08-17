@@ -1,4 +1,8 @@
-import type { CommandExecuteRequest, WorkbenchExtensionKanbanRendererRecord } from "@pstdio/sdk/api";
+import type {
+  CommandExecuteRequest,
+  WorkbenchExtensionKanbanRendererRecord,
+  WorkbenchExtensionMetadata,
+} from "@pstdio/sdk/api";
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
@@ -28,6 +32,14 @@ import {
   toCreateFields,
   toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
+import {
+  panelMenuDeclarationOffsets,
+  panelRendererId,
+  registerWorkbenchExtensionPanel,
+  toWorkbenchExtensionPlacementMetadata,
+  toWorkbenchPanelEligibility,
+  toWorkbenchPanelMenus,
+} from "./panel-contributions";
 
 type BoardColumnConfig = ReturnType<NonNullable<KanbanRendererContribution["getBoardColumnConfig"]>>;
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
@@ -224,6 +236,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: readonly WorkbenchExtensionKanbanRendererRecord[],
   adapter: WorkbenchExtensionKanbanRendererAdapter = {},
+  panels: WorkbenchExtensionMetadata["panels"] = [],
 ) => {
   const disposables: Disposable[] = [];
   const localize: Localizer =
@@ -256,6 +269,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         id: record.id,
         title: localize(record.title, record.id),
         resourceKind: record.resourceKind,
+        storageScope: context.projectId,
         attributes: attributes.source,
         defaultSettings: record.defaultSettings,
         defaultFilters: record.defaultFilters,
@@ -312,19 +326,31 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         getRowContextMenuActions: toRowContextMenuActions(context, record, adapter, localize, resolveRowActionResource),
       }),
     );
+  }
 
+  const menuOffsets = panelMenuDeclarationOffsets(panels);
+  panels.forEach((panel, index) => {
+    const rendererId = panelRendererId(panel, "kanban");
+    if (!rendererId) return;
     disposables.push(
-      context.workbench.layout.registerPanel({
-        closable: false,
-        id: record.id,
-        title: localize(record.title, record.id),
-        region: "main",
-        rendererId: record.id,
-        singleton: true,
-        resourceKinds: record.resourceKind ? [record.resourceKind] : undefined,
+      registerWorkbenchExtensionPanel({
+        workbench: context.workbench,
+        contribution: {
+          id: panel.id,
+          title: text(panel.title, panel.id),
+          icon: panel.icon,
+          region: panel.region,
+          closable: panel.closable,
+          rendererId,
+          singleton: true,
+          resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
+          eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
+          panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuOffsets[index]!),
+          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
+        },
       }),
     );
-  }
+  });
 
   return {
     dispose() {

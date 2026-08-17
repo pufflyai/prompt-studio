@@ -210,7 +210,9 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
   return (bench.metadata.treeRenderers ?? []).map((renderer) => {
-    const view = bench.metadata.panels.find((candidate) => candidate.treeRendererId === renderer.id);
+    const view = bench.metadata.panels.find(
+      (candidate) => candidate.renderer?.kind === "tree" && candidate.renderer.id === renderer.id,
+    );
     const widgetId = view?.id ?? `extension-testbench.tree.${renderer.id}`;
     const title = text(view?.title ?? renderer.title, renderer.id);
 

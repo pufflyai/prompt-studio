@@ -6,7 +6,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionContributions } from "./extension-contribution-registration";
-import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 
 const PROJECT_ID = "demo-project";
 
@@ -81,6 +80,16 @@ const metadata: DashboardExtensionMetadata = {
     },
   ],
   kanbanRenderers: [ticketsRecord],
+  panels: [
+    {
+      id: "story.tickets",
+      extensionId: ticketsRecord.extensionId,
+      title: "Tickets",
+      region: "main",
+      closable: false,
+      renderer: { kind: "kanban", id: ticketsRecord.id },
+    },
+  ],
 };
 
 // The story drives the shared dashboard registration path: this stub returns the
@@ -101,7 +110,6 @@ const stubExecuteCommand = async (
 
 const workbench = createWorkbenchCore();
 workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
 
 workbench.registerModule({
   id: "story.extension-board",
@@ -113,7 +121,7 @@ workbench.registerModule({
       projectId: PROJECT_ID,
     });
 
-    void ctx.resources.openResource(createExtensionKanbanRendererResource(ticketsRecord, PROJECT_ID));
+    ctx.layout.openPanel("story.tickets");
     return disposables;
   },
 });

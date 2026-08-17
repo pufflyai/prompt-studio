@@ -90,7 +90,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
-  const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement);
+  const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
   const initialState = {
     settings: contribution.defaultSettings,
     filters: contribution.defaultFilters,

@@ -189,7 +189,7 @@ describe("extension-mode-layout native menus", () => {
               ownerPanelId: "pstdio-lab.cams",
               title: "Cameras",
               side: "left" as const,
-              treeRendererId: "pstdio-lab.camsTree",
+              renderer: { kind: "tree" as const, id: "pstdio-lab.camsTree" },
             },
           ],
         },

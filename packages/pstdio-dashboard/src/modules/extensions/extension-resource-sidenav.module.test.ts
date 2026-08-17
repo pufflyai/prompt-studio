@@ -9,7 +9,7 @@ import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
 const ticketTreeResponse = {
-  commandId: "pstdio-core-tickets.ticket-files.tree.body",
+  commandId: "pstdio-core-tickets.ticketFiles.body",
   extensionId: "pstdio.pstdio-core-tickets",
   outcome: {
     ok: true,
@@ -66,6 +66,7 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidenav
       "ticket",
       "files",
       "extension-tree-group:workbench.left.tree:default:Lab",
+      "extension-tree-group:workbench.left.tree:default:Extensions",
     ]);
     expect(workbench.layout.getLayout().regions.sidenav.widgets.map((placement) => placement.contributionId)).toEqual([
       dashboardWidgetIds.dashboardSidenav,

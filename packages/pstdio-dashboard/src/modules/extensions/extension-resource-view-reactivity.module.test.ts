@@ -137,7 +137,7 @@ describe("createExtensionsModule ticket reactivity", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
 
-      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Ticket"]);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["PS-10 Ticket"]);
 
       publishExtensionCommandEvent({
         commandId: "pstdio-core-tickets.update-ticket",
@@ -145,7 +145,7 @@ describe("createExtensionsModule ticket reactivity", () => {
         outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
       });
 
-      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Write a haiku"]);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["PS-10 Write a haiku"]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

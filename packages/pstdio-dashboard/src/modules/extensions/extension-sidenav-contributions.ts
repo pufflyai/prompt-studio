@@ -6,7 +6,6 @@ import {
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { buildExtensionKanbanRendererSidenavHeaderNodes } from "./extension-kanban-renderers";
 
 interface ExtensionSidenavContributionState {
   metadata: DashboardExtensionMetadata | undefined;
@@ -60,18 +59,6 @@ export const registerExtensionSidenavContributions = (
   });
 };
 
-export const registerExtensionKanbanRendererSidenavContribution = (
-  ctx: WorkbenchModuleContext,
-  input: { metadata: DashboardExtensionMetadata; projectId: string },
-) =>
-  registerSidenavContribution(ctx, {
-    id: "dashboard.extensions.kanban-renderers",
-    modes: ["*"],
-    region: "header",
-    order: 40,
-    getHeaderNodes: () => buildExtensionKanbanRendererSidenavHeaderNodes(input),
-  });
-
 const resourceSidenavModeId = (
   metadata: DashboardExtensionMetadata,
   panel: DashboardExtensionMetadata["panels"][number],
@@ -84,7 +71,7 @@ const resourceSidenavModeId = (
 export const isExtensionResourceSidenavView = (
   metadata: DashboardExtensionMetadata,
   panel: DashboardExtensionMetadata["panels"][number],
-) => Boolean(panel.resourceKind && panel.treeRendererId && resourceSidenavModeId(metadata, panel));
+) => Boolean(panel.resourceKind && panel.renderer?.kind === "tree" && resourceSidenavModeId(metadata, panel));
 
 const mirrorResourceTreeSelection = (
   ctx: WorkbenchModuleContext,
@@ -110,8 +97,9 @@ export const registerExtensionResourceSidenavContributions = (
   const sidenavTreeIds = new Set<string>();
 
   for (const [index, view] of metadata.panels.entries()) {
-    if (!isExtensionResourceSidenavView(metadata, view) || !view.resourceKind || !view.treeRendererId) continue;
-    const treeRendererId = view.treeRendererId;
+    if (!isExtensionResourceSidenavView(metadata, view) || !view.resourceKind || view.renderer?.kind !== "tree")
+      continue;
+    const treeRendererId = view.renderer.id;
     const modeId = resourceSidenavModeId(metadata, view);
     if (!modeId) continue;
 

@@ -22,7 +22,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         closable: false,
         region: "main",
         placement: "last",
-        controlsRendererId: "inspector",
+        renderer: { kind: "controls", id: "inspector" },
       },
       {
         id: "inspector-default",
@@ -30,7 +30,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         title: "Default",
         closable: false,
         region: "main",
-        controlsRendererId: "inspector",
+        renderer: { kind: "controls", id: "inspector" },
       },
       {
         id: "inspector-first",
@@ -39,7 +39,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         closable: false,
         region: "main",
         placement: "first",
-        controlsRendererId: "inspector",
+        renderer: { kind: "controls", id: "inspector" },
       },
     ] satisfies ControlsViewRecord[];
 
@@ -85,7 +85,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       closable: false,
       resourceKind: "image",
       region: "main",
-      controlsRendererId: "inspector",
+      renderer: { kind: "controls", id: "inspector" },
     } satisfies ControlsViewRecord;
 
     registerWorkbenchExtensionControlsRenderers(

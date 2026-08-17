@@ -40,7 +40,7 @@ export interface ControlsResetInput {
  * A reusable native control renderer backed by private callbacks, rendered through the host's
  * ParamEditor. The query callback loads the control declarations + current values; the
  * optional update/apply/reset callbacks persist edits (omitting both makes it read-only).
- * A `panel` places the renderer into a panel via `controlsRenderer: "<id>"`, mirroring
+ * A `panel` places the renderer with `renderer: { kind: "controls", id: "<id>" }`, mirroring
  * `treeRenderer`/`fileRenderer` — the panel owns placement (resourceKind, surface, target).
  */
 export interface ControlsRendererContribution {

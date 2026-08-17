@@ -149,31 +149,15 @@ const toPanelBody = (
   contribution: PanelContribution | PanelMenuContribution,
   webviewId = panel.id,
 ) => {
-  const treeRendererId =
-    typeof contribution.treeRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.treeRenderer)
-      : undefined;
-  const fileRendererId =
-    typeof contribution.fileRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.fileRenderer)
-      : undefined;
-  const controlsRendererId =
-    typeof contribution.controlsRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.controlsRenderer)
-      : undefined;
-  const dataTableRendererId =
-    typeof contribution.dataTableRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.dataTableRenderer)
-      : undefined;
+  const renderer = contribution.renderer
+    ? { kind: contribution.renderer.kind, id: resolveContributionId(panel.name, contribution.renderer.id) }
+    : undefined;
   const webview = resolveWebview(input, { ...panel, id: webviewId }, contribution.webview) ?? undefined;
-  if (!treeRendererId && !fileRendererId && !controlsRendererId && !dataTableRendererId && !webview) return null;
+  if (!renderer && !webview) return null;
 
   return {
     ...(webview ? { webview } : {}),
-    ...(treeRendererId ? { treeRendererId } : {}),
-    ...(fileRendererId ? { fileRendererId } : {}),
-    ...(controlsRendererId ? { controlsRendererId } : {}),
-    ...(dataTableRendererId ? { dataTableRendererId } : {}),
+    ...(renderer ? { renderer } : {}),
   };
 };
 
@@ -467,8 +451,8 @@ const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): Extensio
             commandId: resolveOptionalContributionId(item.name, refIdOf(action.command)) ?? "unknown",
             args: action.params as Record<string, unknown> | undefined,
           }
-        : action.kind === "kanbanRenderer"
-          ? { kind: "kanbanRenderer", kanbanRendererId: resolveContributionId(item.name, action.kanbanRenderer) }
+        : action.kind === "panel"
+          ? { kind: "panel", panelId: resolveContributionId(item.name, action.panel) }
           : action,
     when: item.contribution.when as ExtensionTreeItemContribution["when"],
   };

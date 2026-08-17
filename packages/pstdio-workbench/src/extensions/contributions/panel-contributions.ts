@@ -55,12 +55,7 @@ export const panelMenuDeclarationOffsets = <T extends { panelMenus?: readonly un
 };
 
 const panelMenuRendererId = (menu: ExtensionPanelMenu) => {
-  const rendererId =
-    menu.treeRendererId ??
-    menu.fileRendererId ??
-    menu.controlsRendererId ??
-    menu.dataTableRendererId ??
-    (menu.webview ? BRIDGE_WEBVIEW_RENDERER_ID : undefined);
+  const rendererId = menu.renderer?.id ?? (menu.webview ? BRIDGE_WEBVIEW_RENDERER_ID : undefined);
   if (!rendererId) throw new Error(`Panel Menu has no renderer: ${menu.id}`);
   return rendererId;
 };
@@ -83,3 +78,8 @@ export const toWorkbenchPanelMenus = (
 
 export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable =>
   input.workbench.layout.registerPanel(input.contribution);
+
+export const panelRendererId = (
+  panel: WorkbenchExtensionMetadata["panels"][number],
+  kind: NonNullable<WorkbenchExtensionMetadata["panels"][number]["renderer"]>["kind"],
+) => (panel.renderer?.kind === kind ? panel.renderer.id : undefined);

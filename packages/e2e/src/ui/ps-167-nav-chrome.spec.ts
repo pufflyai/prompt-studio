@@ -72,7 +72,6 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   const back = nav.getByRole("button", { name: "Navigate back" });
   const forward = nav.getByRole("button", { name: "Navigate forward" });
   const showSecondary = nav.getByRole("button", { name: "Show Secondary Panel" });
-  const side = nav.getByRole("button", { name: "Show Side Panel" });
 
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
@@ -84,10 +83,9 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   const secondary = nav.getByRole("button", { name: "Hide Secondary Panel" });
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(secondary)).not.toBe(closedPanelBackground);
-  await expect(side).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
-  await orderedCenters([back, forward, secondary, side]);
+  await expect(page.getByRole("button", { name: /(?:Open|Show) Side Panel/ })).toHaveCount(0);
+  await orderedCenters([back, forward, secondary]);
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(0);
@@ -106,7 +104,7 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(back).toBeEnabled();
   await expect(forward).toBeDisabled();
   await back.click();
-  await expect(page.getByText("Own navigation chrome", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
   await expect(forward).toBeEnabled();
   await expect(closedSidenav).toBeVisible();
 
@@ -119,6 +117,7 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await forward.click();
   await expect(page.getByRole("link", { name: `${ticket.shorthand} Own navigation chrome` })).toBeVisible();
   await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
+  const side = nav.getByRole("button", { name: "Show Side Panel" });
   await expect(side).toHaveAttribute("aria-pressed", "false");
   expect(await backgroundColor(side)).toBe(closedPanelBackground);
 

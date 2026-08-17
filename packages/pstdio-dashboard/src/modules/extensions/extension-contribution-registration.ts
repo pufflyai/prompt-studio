@@ -29,7 +29,6 @@ import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 import {
   isExtensionResourceSidenavView,
-  registerExtensionKanbanRendererSidenavContribution,
   registerExtensionResourceSidenavContributions,
 } from "./extension-sidenav-contributions";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
@@ -161,7 +160,6 @@ const registerSingleExtensionContributions = (
         metadata.panels,
       ),
     );
-    disposables.push(registerExtensionKanbanRendererSidenavContribution(ctx, { metadata, projectId }));
     if (metadata.dataTableRenderers?.length) {
       const dataTableQueryHandlerIds = new Set(metadata.dataTableRenderers.map((renderer) => renderer.queryHandlerId));
       disposables.push({
@@ -218,9 +216,7 @@ const registerSingleExtensionContributions = (
       ),
     );
     disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
-    if (metadata.kanbanRenderers?.some((renderer) => renderer.resourceKind)) {
-      disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
-    }
+    disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
     return disposables;

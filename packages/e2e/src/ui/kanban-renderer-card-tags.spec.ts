@@ -8,9 +8,6 @@ import {
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const ticketsRendererStorageKey = (projectId: string) =>
-  `pstdio/ui/kanban-renderer/pstdio:workbench:kanbanRenderer:pstdio-planner.tickets:pstdio-planner.tickets:project:${projectId}`;
-
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   const projects = (await res.json()) as { id: string }[];
@@ -27,10 +24,15 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
 
 const selectProjectAndDisplayTicketProperties = async (
   page: import("@playwright/test").Page,
-  input: { projectId: string; displayProperties: string[]; viewMode?: "board" | "list" },
+  input: {
+    projectId: string;
+    showProperties: string[];
+    hideProperties: string[];
+    viewMode?: "board" | "list";
+  },
 ) => {
   await page.addInitScript(
-    ({ projectId, displayProperties, storageKey, viewMode }) => {
+    ({ projectId }) => {
       window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
       window.localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
@@ -46,31 +48,27 @@ const selectProjectAndDisplayTicketProperties = async (
           version: 0,
         }),
       );
-      window.localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          state: {
-            settings: {
-              viewMode,
-              columnGrouping: "status",
-              rowGrouping: "none",
-              ordering: { attributeId: "updated", direction: "desc" },
-              displayProperties,
-            },
-            filters: {},
-            expandedGroups: {},
-          },
-          version: 2,
-        }),
-      );
     },
-    {
-      projectId: input.projectId,
-      displayProperties: input.displayProperties,
-      storageKey: ticketsRendererStorageKey(input.projectId),
-      viewMode: input.viewMode ?? "board",
-    },
+    { projectId: input.projectId },
   );
+
+  await page.goto("/");
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await page.getByRole("button", { name: "Display settings" }).click();
+  const displayDialog = page.getByRole("dialog").filter({ hasText: "PROPERTIES" });
+  await expect(displayDialog).toBeVisible();
+
+  for (const label of input.showProperties) {
+    const button = displayDialog.getByRole("button", { name: label, exact: true });
+    if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
+  }
+  for (const label of input.hideProperties) {
+    const button = displayDialog.getByRole("button", { name: label, exact: true });
+    if ((await button.getAttribute("aria-pressed")) === "true") await button.click();
+  }
+  if (input.viewMode === "list") await displayDialog.getByRole("button", { name: "List", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(displayDialog).toBeHidden();
 };
 
 const closeFloatingSessionBubble = async (page: import("@playwright/test").Page) => {
@@ -100,10 +98,9 @@ test("ticket card tag badges update selected values without opening the card", a
 
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
-    displayProperties: ["id", tag.id],
+    showProperties: ["ID", "surface"],
+    hideProperties: ["Workspace", "Type", "Priority"],
   });
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
 
   const card = page.getByTestId("renderer-card").filter({ hasText: "Card tag dropdown regression" }).first();
   await expect(card).toBeVisible({ timeout: 15_000 });
@@ -151,10 +148,9 @@ test("ticket card single-select tag badges update and clear selected values", as
 
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
-    displayProperties: ["id", "type", "complexity"],
+    showProperties: ["ID", "Type", "Complexity"],
+    hideProperties: ["Workspace", "Priority"],
   });
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
 
   const card = page.getByTestId("renderer-card").filter({ hasText: "Default tag dropdown regression" }).first();
   await expect(card).toBeVisible({ timeout: 15_000 });
@@ -239,11 +235,10 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
 
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
-    displayProperties: ["id", "type", "priority"],
+    showProperties: ["ID", "Type", "Priority"],
+    hideProperties: ["Workspace"],
     viewMode: "list",
   });
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
 
   const row = page.getByRole("option").filter({ hasText: "List tag dropdown regression" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });

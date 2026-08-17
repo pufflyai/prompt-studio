@@ -110,10 +110,9 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
     localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
-
-  await page.getByRole("button", { name: "Show Side Panel" }).click();
+  await page.goto(`/projects/${project.id}/`);
+  await page.getByRole("button", { name: "Open Side Panel" }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
@@ -182,10 +181,9 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
     localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
-
-  await page.getByRole("button", { name: "Show Side Panel" }).click();
+  await page.goto(`/projects/${project.id}/`);
+  await page.getByRole("button", { name: "Open Side Panel" }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
@@ -198,7 +196,7 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
 
   await expect(sessionTabs).toHaveCount(1);
   await expect(sessionTabs.first()).toContainText(prompt);
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/tickets$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
 });
 
 test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
