@@ -19,6 +19,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
+import { createDashboardExtensionPanelResource } from "./extension-panel-resource";
 
 export const dashboardExtensionRouteKind = "extension-route";
 export const projectHeaderPrimarySlotId = "project.headerPrimary";
@@ -268,9 +269,27 @@ const createTreeNode = (input: {
     };
   }
 
-  if (action.kind === "kanbanRenderer") return null;
-
   if (action.kind === "href") return null;
+
+  if (action.kind === "panel") {
+    const panel = metadata.panels.find((candidate) => candidate.id === action.panelId);
+    if (!panel) return null;
+    const label = resolveLocalizableString(item.label, item.extensionId);
+    const resource = createDashboardExtensionPanelResource({
+      extensionId: panel.extensionId,
+      icon: item.icon ?? panel.icon,
+      label,
+      panelId: panel.id,
+      projectId,
+    });
+    return {
+      id: resource.uri,
+      label,
+      icon: item.icon,
+      canHide: true,
+      resource,
+    };
+  }
 
   const route = metadata.routes.find((candidate) => candidate.path === action.route);
   if (!route) return null;

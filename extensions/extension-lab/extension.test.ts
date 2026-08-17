@@ -92,9 +92,9 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.panels?.labArtifacts).toMatchObject({
       icon: "package-search",
       region: "main",
-      dataTableRenderer: "glassLabArtifacts",
+      renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
-        create: expect.objectContaining({ side: "right", controlsRenderer: "labArtifactCreate" }),
+        create: expect.objectContaining({ side: "right", renderer: { kind: "controls", id: "labArtifactCreate" } }),
       },
     });
     expect(extension.panels?.labCams).toMatchObject({
@@ -102,7 +102,7 @@ describe("extension-lab workbench attachments", () => {
       region: "main",
       webview: { entry: { path: "./src/views/lab-cams.tsx" } },
       panelMenus: {
-        cameras: expect.objectContaining({ side: "left", treeRenderer: "labCams" }),
+        cameras: expect.objectContaining({ side: "left", renderer: { kind: "tree", id: "labCams" } }),
       },
     });
     expect(extension.treeRenderers?.labCams).toMatchObject({

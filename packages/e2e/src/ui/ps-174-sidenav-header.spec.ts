@@ -141,9 +141,8 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
 
   await row(sidenav, "Tickets").click();
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
-  ).toBeVisible();
+  await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
   await expectGlobalHeader(sidenav);
 
   for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);

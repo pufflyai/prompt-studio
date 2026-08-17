@@ -10,7 +10,7 @@ const nativePanel = {
   region: "main",
   closable: false,
   title: "Overview",
-  treeRendererId: "extension-lab.overview",
+  renderer: { kind: "tree", id: "extension-lab.overview" },
 } satisfies DashboardExtensionMetadata["panels"][number];
 
 const webviewPanel = {
@@ -20,7 +20,7 @@ const webviewPanel = {
     runtimeUrl: "/runtime",
     moduleUrl: "/module.js",
   },
-  treeRendererId: undefined,
+  renderer: undefined,
 } satisfies DashboardExtensionMetadata["panels"][number];
 
 const createMetadata = (panels: DashboardExtensionMetadata["panels"]): DashboardExtensionMetadata => ({

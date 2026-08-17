@@ -1,6 +1,7 @@
 import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchModuleContext } from "../../core";
 import {
+  panelRendererId,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -18,7 +19,8 @@ export const registerTreeViewWidget = (
   index: number,
   menuDeclarationOffset: number,
 ) => {
-  if (!panel.treeRendererId) return undefined;
+  const rendererId = panelRendererId(panel, "tree");
+  if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
     contribution: {
@@ -27,7 +29,7 @@ export const registerTreeViewWidget = (
       icon: panel.icon,
       region: panel.region,
       closable: panel.closable,
-      rendererId: panel.treeRendererId,
+      rendererId,
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),

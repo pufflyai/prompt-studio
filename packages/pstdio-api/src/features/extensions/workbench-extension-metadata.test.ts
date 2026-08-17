@@ -442,7 +442,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
               resourceKind: "ticket",
               region: "sidenav",
               closable: false,
-              treeRenderer: "files",
+              renderer: { kind: "tree", id: "files" },
             },
           },
         },
@@ -471,7 +471,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
         region: "sidenav",
         closable: false,
         resourceKind: "ticket",
-        treeRendererId: "planner.files",
+        renderer: { kind: "tree", id: "planner.files" },
       }),
     ]);
     expect(metadata.panels[0]).not.toHaveProperty("webview");

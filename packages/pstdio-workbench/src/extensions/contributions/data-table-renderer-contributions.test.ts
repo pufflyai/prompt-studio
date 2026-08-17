@@ -26,7 +26,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       title: "Health",
       closable: false,
       region: "main",
-      dataTableRendererId: "lab.health",
+      renderer: { kind: "dataTable", id: "lab.health" },
     } satisfies ViewRecord;
     const refreshes: string[] = [];
     workbench.renderers.onDidRefreshDataTableRenderer((event) => refreshes.push(event.dataTableRendererId));

@@ -50,7 +50,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           title: "Last",
           closable: false,
           placement: "last",
-          fileRendererId: "lab.ticketContent",
+          renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
           id: "lab.default",
@@ -58,7 +58,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           region: "main",
           title: "Default",
           closable: false,
-          fileRendererId: "lab.ticketContent",
+          renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
           id: "lab.first",
@@ -67,7 +67,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           title: "First",
           closable: false,
           placement: "first",
-          fileRendererId: "lab.ticketContent",
+          renderer: { kind: "file", id: "lab.ticketContent" },
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
@@ -116,7 +116,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           title: "Ticket",
           closable: false,
           resourceKind: "ticket",
-          fileRendererId: "lab.ticketContent",
+          renderer: { kind: "file", id: "lab.ticketContent" },
           panelMenus: [
             {
               id: "lab.ticketProperties",
@@ -124,7 +124,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
               ownerPanelId: "lab.ticketEditor",
               title: "Properties",
               side: "right",
-              controlsRendererId: "lab.ticketProperties",
+              renderer: { kind: "controls", id: "lab.ticketProperties" },
             },
           ],
         },

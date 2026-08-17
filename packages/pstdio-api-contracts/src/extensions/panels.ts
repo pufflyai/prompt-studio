@@ -10,31 +10,20 @@ import {
 } from "./common";
 import { workbenchRegionSchema, workbenchTreeTargetSchema } from "./targets";
 
-const hasSinglePanelBody = (value: {
-  webview?: unknown;
-  treeRendererId?: unknown;
-  fileRendererId?: unknown;
-  controlsRendererId?: unknown;
-  dataTableRendererId?: unknown;
-}) =>
-  [
-    value.webview,
-    value.treeRendererId,
-    value.fileRendererId,
-    value.controlsRendererId,
-    value.dataTableRendererId,
-  ].filter(Boolean).length === 1;
+const hasSinglePanelBody = (value: { webview?: unknown; renderer?: unknown }) =>
+  [value.webview, value.renderer].filter(Boolean).length === 1;
 
-const singlePanelBodyMessage =
-  "Extension panels must declare exactly one body: webview, treeRendererId, fileRendererId, controlsRendererId, or dataTableRendererId";
+const singlePanelBodyMessage = "Extension panels must declare exactly one body: webview or renderer";
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
 const panelBodySchema = {
   webview: extensionWebviewContributionSchema.optional(),
-  treeRendererId: z.string().optional(),
-  fileRendererId: z.string().optional(),
-  controlsRendererId: z.string().optional(),
-  dataTableRendererId: z.string().optional(),
+  renderer: z
+    .object({
+      kind: z.enum(["tree", "file", "controls", "dataTable", "kanban"]),
+      id: z.string(),
+    })
+    .optional(),
 };
 const extensionPanelMenuRecordSchema = z
   .object({
@@ -102,7 +91,7 @@ const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
     commandId: z.string(),
     args: jsonObjectSchema.optional(),
   }),
-  z.object({ kind: z.literal("kanbanRenderer"), kanbanRendererId: z.string() }),
+  z.object({ kind: z.literal("panel"), panelId: z.string() }),
   z.object({ kind: z.literal("route"), route: z.string() }),
   z.object({ kind: z.literal("href"), href: z.string() }),
 ]);

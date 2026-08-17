@@ -166,22 +166,9 @@ const toPanelBody = (
   contribution: RuntimePanelContribution | RuntimePanelMenuContribution,
 ) => ({
   webview: contribution.webview,
-  treeRendererId:
-    typeof contribution.treeRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.treeRenderer)
-      : undefined,
-  fileRendererId:
-    typeof contribution.fileRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.fileRenderer)
-      : undefined,
-  controlsRendererId:
-    typeof contribution.controlsRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.controlsRenderer)
-      : undefined,
-  dataTableRendererId:
-    typeof contribution.dataTableRenderer === "string"
-      ? resolveContributionId(panel.name, contribution.dataTableRenderer)
-      : undefined,
+  renderer: contribution.renderer
+    ? { kind: contribution.renderer.kind, id: resolveContributionId(panel.name, contribution.renderer.id) }
+    : undefined,
 });
 
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>

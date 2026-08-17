@@ -9,10 +9,7 @@ import {
   emptyDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionContributions } from "./extension-contribution-registration";
-import {
-  buildExtensionKanbanRendererSidenavHeaderNodes,
-  registerExtensionKanbanRenderers,
-} from "./extension-kanban-renderers";
+import { registerExtensionKanbanRenderers } from "./extension-kanban-renderers";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks } from "./module-test-fixtures";
 
@@ -28,6 +25,16 @@ const ticketsRecord = {
 const metadata: DashboardExtensionMetadata = {
   ...emptyDashboardExtensionMetadata,
   kanbanRenderers: [ticketsRecord],
+  panels: [
+    {
+      id: "pstdio-core-tickets.tickets",
+      extensionId: ticketsRecord.extensionId,
+      title: "Tickets",
+      region: "main",
+      closable: false,
+      renderer: { kind: "kanban", id: ticketsRecord.id },
+    },
+  ],
 };
 
 const successResponse = (commandId: string): CommandExecuteResponse => ({
@@ -37,7 +44,7 @@ const successResponse = (commandId: string): CommandExecuteResponse => ({
 });
 
 describe("registerExtensionKanbanRenderers", () => {
-  test("registers the resource kind and widget for each kanban renderer", () => {
+  test("registers the resource kind and explicitly declared panel", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule({
@@ -158,17 +165,13 @@ describe("registerExtensionKanbanRenderers", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
 
     try {
       await flushMicrotasks();
 
-      const ticketsResource = buildExtensionKanbanRendererSidenavHeaderNodes({ metadata, projectId: "project-1" })[0]
-        ?.resource;
-
-      await workbench.resources.openResource(ticketsResource!);
+      workbench.layout.openPanel(ticketsRecord.id);
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         ticketsRecord.id,
       ]);
@@ -179,7 +182,6 @@ describe("registerExtensionKanbanRenderers", () => {
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
         ticketsRecord.id,
       ]);
-      expect(workbench.getPrimaryResource()?.uri).toBe(ticketsResource?.uri);
     } finally {
       disposable.dispose();
       getWriter("installed_extension_sources")?.truncateAndWrite([]);
@@ -364,36 +366,5 @@ describe("registerExtensionKanbanRenderers adapter hooks", () => {
     disposable.dispose();
     getWriter("sessions")?.upsert({ id: "session-1", status: "completed" });
     expect(refreshes).toBe(2);
-  });
-});
-
-describe("buildExtensionKanbanRendererSidenavHeaderNodes", () => {
-  test("lists a nav node per kanban renderer", () => {
-    const nodes = buildExtensionKanbanRendererSidenavHeaderNodes({ metadata, projectId: "proj-1" });
-
-    expect(nodes).toHaveLength(1);
-    expect(nodes[0]).toMatchObject({ label: "Tickets" });
-    expect(nodes[0]?.resource).toMatchObject({
-      kind: "dashboard-view",
-      id: "pstdio-core-tickets.tickets",
-      metadata: { collectionId: "tickets" },
-    });
-  });
-
-  test("uses the ticket board icon for ticket kanban renderers", () => {
-    const node = buildExtensionKanbanRendererSidenavHeaderNodes({ metadata, projectId: "proj-1" })[0];
-
-    expect(node?.icon).toBe("square-kanban");
-    expect(node?.resource?.icon).toBe("square-kanban");
-  });
-
-  test("returns nothing without a project or kanban renderers", () => {
-    expect(buildExtensionKanbanRendererSidenavHeaderNodes({ metadata, projectId: undefined })).toEqual([]);
-    expect(
-      buildExtensionKanbanRendererSidenavHeaderNodes({
-        metadata: emptyDashboardExtensionMetadata,
-        projectId: "proj-1",
-      }),
-    ).toEqual([]);
   });
 });

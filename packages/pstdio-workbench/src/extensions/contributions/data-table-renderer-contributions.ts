@@ -20,6 +20,7 @@ import {
 } from "../host/workbench-extension-command";
 import {
   panelMenuDeclarationOffsets,
+  panelRendererId,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -140,7 +141,8 @@ const registerView = (
   index: number,
   menuDeclarationOffset: number,
 ) => {
-  if (!panel.dataTableRendererId) return undefined;
+  const rendererId = panelRendererId(panel, "dataTable");
+  if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     contribution: {
@@ -149,7 +151,7 @@ const registerView = (
       icon: panel.icon,
       region: panel.region,
       closable: panel.closable,
-      rendererId: panel.dataTableRendererId,
+      rendererId,
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),

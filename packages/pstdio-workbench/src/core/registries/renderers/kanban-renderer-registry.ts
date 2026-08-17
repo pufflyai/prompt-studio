@@ -25,6 +25,8 @@ export interface KanbanRendererContribution<TRow extends KanbanRendererRow = Kan
   id: string;
   title: string;
   resourceKind?: string;
+  /** Host-owned scope for persisted display settings. */
+  storageScope?: string;
 
   /**
    * Declarative attribute schema. The renderer dispatches filter / group /

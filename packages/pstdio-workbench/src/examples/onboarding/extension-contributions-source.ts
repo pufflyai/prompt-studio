@@ -48,7 +48,7 @@ const metadata = {
       title: "Lab tree",
       region: "sidenav",
       closable: false,
-      treeRendererId: "lab.tree",
+      renderer: { kind: "tree", id: "lab.tree" },
     },
   ],
   commandPaletteContributions: [],

@@ -7,7 +7,6 @@ import {
   type ResourceRef,
   resourceContextMenuPath,
   standardResourceIcons,
-  type TreeNode,
   type WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import {
@@ -17,7 +16,6 @@ import {
 } from "@pstdio/workbench/extensions";
 import { apiRequest } from "@/lib/api";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
@@ -25,16 +23,13 @@ import {
   buildDashboardExtensionMenuRegistrations,
   type DashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import {
-  createExtensionKanbanRendererResource,
-  kanbanRendererResourceKindIcon,
-} from "./extension-kanban-renderer-resource";
 import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 type ExtensionKanbanRendererRecord = WorkbenchExtensionKanbanRendererRecord;
+
+const resourceKindIcon = (record: ExtensionKanbanRendererRecord) =>
+  record.resourceKind === "ticket" ? "component" : standardResourceIcons.kanbanRenderer;
 
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
@@ -226,7 +221,7 @@ export const registerExtensionKanbanRenderers = (
         ctx.resources.registerKind({
           kind: record.resourceKind,
           label: resolveLocalizableString(record.title, record.extensionId),
-          icon: kanbanRendererResourceKindIcon(record),
+          icon: resourceKindIcon(record),
         }),
       );
     }
@@ -235,28 +230,6 @@ export const registerExtensionKanbanRenderers = (
     if (rowActionCommandIds.size > 0) {
       disposables.push(createRowActionRefreshSubscription(rowActionCommandIds, () => refreshRecord(record)));
     }
-
-    disposables.push(
-      registerResourceRoute(ctx, {
-        id: `dashboard.extensions.kanban-renderer.${record.id}`,
-        match: (resource) => resource.kind === "dashboard-view" && resource.id === record.id,
-        mode: "project",
-        panelId: record.id,
-        // Boards predate the project-selection guard; opening one without a project keeps
-        // the prior behavior (an empty board in project mode) rather than redirecting.
-        requiresProject: false,
-        beforeOpen: ({ resource }) => {
-          setResourceBreadcrumb(ctx, resource);
-          // A board fills the main region and owns no side companions, so drop any
-          // panel a resource editor (e.g. the ticket properties sidepanel) left in
-          // main-right — the framework only auto-hides it when main is empty.
-          ctx.layout.clearRegion("main-right-menu");
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, resource.uri);
-          }
-        },
-      }),
-    );
   }
 
   disposables.push(
@@ -312,26 +285,9 @@ export const registerExtensionKanbanRenderers = (
     onAfterMutation: (record) => refreshRecord(record),
   };
 
-  disposables.push(registerWorkbenchExtensionKanbanRenderers(commandContext, metadata.kanbanRenderers ?? [], adapter));
+  disposables.push(
+    registerWorkbenchExtensionKanbanRenderers(commandContext, metadata.kanbanRenderers ?? [], adapter, metadata.panels),
+  );
 
   return disposables;
-};
-
-export const buildExtensionKanbanRendererSidenavHeaderNodes = (input: {
-  metadata?: DashboardExtensionMetadata;
-  projectId?: string;
-}): TreeNode[] => {
-  const { metadata, projectId } = input;
-  if (!projectId || !metadata?.kanbanRenderers?.length) return [];
-
-  return metadata.kanbanRenderers.map((record) => {
-    const resource = createExtensionKanbanRendererResource(record, projectId);
-    return {
-      id: resource.uri,
-      label: resolveLocalizableString(record.title, record.extensionId),
-      icon: resource.icon,
-      canHide: true,
-      resource,
-    };
-  });
 };

@@ -2,13 +2,10 @@ import { expect, mock, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidenavContributionHeaderNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { registerResourceRoute } from "@/shared/workbench/route-helper";
-import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
+import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata, metadataWithTickets } from "./module-test-fixtures";
+import { flushMicrotasks, metadata, metadataWithTickets } from "./module-test-fixtures";
 
 test("coalesces same-project metadata churn without starving the first contribution set", async () => {
   const resolvers: Array<(value: typeof metadataWithTickets) => void> = [];
@@ -36,7 +33,11 @@ test("coalesces same-project metadata churn without starving the first contribut
     resolvers[0]?.(metadataWithTickets);
     await flushMicrotasks();
 
-    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(
+      (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
+        section.nodes.map((node) => node.label),
+      ),
+    ).toContain("Tickets");
     expect(loadMetadata).toHaveBeenCalledTimes(2);
 
     resolvers[1]?.(metadataWithTickets);
@@ -67,7 +68,11 @@ test("preserves extension contributions when a same-project metadata refresh fai
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
     expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
-    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(
+      (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
+        section.nodes.map((node) => node.label),
+      ),
+    ).toContain("Tickets");
 
     shouldFail = true;
     getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
@@ -75,7 +80,11 @@ test("preserves extension contributions when a same-project metadata refresh fai
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
     expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
-    expect(getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.label)).toContain("Tickets");
+    expect(
+      (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
+        section.nodes.map((node) => node.label),
+      ),
+    ).toContain("Tickets");
   } finally {
     disposable.dispose();
     getWriter("installed_extension_sources")?.truncateAndWrite([]);
@@ -124,66 +133,6 @@ test("refreshes an open extension route when metadata changes", async () => {
   } finally {
     disposable.dispose();
     getWriter("installed_extension_sources")?.truncateAndWrite([]);
-    clearCachedDashboardExtensionMetadata("project-1");
-  }
-});
-
-test("keeps restored Forward navigation stable when appearance resolves after metadata", async () => {
-  let resolveAppearance: ((value: typeof emptyAppearance) => void) | undefined;
-  const loadAppearance = mock(
-    () =>
-      new Promise<typeof emptyAppearance>((resolve) => {
-        resolveAppearance = resolve;
-      }),
-  );
-  const workbench = createWorkbenchCore();
-
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  workbench.registerModule({
-    id: "test.sessions",
-    activate(ctx) {
-      ctx.modes.registerMode({ id: "sessions", label: "Sessions", activate: () => undefined });
-      ctx.layout.registerPanel({
-        closable: false,
-        id: "test.sessions.widget",
-        title: "Sessions",
-        region: "main",
-        singleton: true,
-        rendererId: "test.sessions.widget",
-      });
-      registerResourceRoute(ctx, {
-        id: "test.sessions.presenter",
-        match: (resource) => resource.uri === dashboardResources.sessions.uri,
-        mode: "sessions",
-        panelId: "test.sessions.widget",
-        beforeOpen: () => ctx.breadcrumbs.setItems([{ title: "Sessions", resource: dashboardResources.sessions }]),
-      });
-      return undefined;
-    },
-  });
-  const disposable = workbench.registerModule(
-    createExtensionsModule({ loadAppearance, loadMetadata: mock(async () => metadataWithTickets) }),
-  );
-
-  try {
-    await flushMicrotasks();
-    const tickets = createExtensionKanbanRendererResource(metadataWithTickets.kanbanRenderers[0], "project-1");
-    await workbench.resources.openResource(tickets);
-    await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
-    workbench.history.goBack();
-
-    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets"]);
-
-    resolveAppearance?.(emptyAppearance);
-    await flushMicrotasks();
-    workbench.history.goForward();
-    await flushMicrotasks();
-
-    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions"]);
-  } finally {
-    disposable.dispose();
     clearCachedDashboardExtensionMetadata("project-1");
   }
 });

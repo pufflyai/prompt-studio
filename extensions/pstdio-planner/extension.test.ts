@@ -55,7 +55,7 @@ describe("pstdio planner extension contributions", () => {
       region: "sidenav",
       closable: false,
       resourceKind: "ticket",
-      treeRenderer: "ticketFiles",
+      renderer: { kind: "tree", id: "ticketFiles" },
     });
     expect(extension.panels?.ticketFiles).not.toHaveProperty("target");
     expect(extension.panels?.ticketFiles).not.toHaveProperty("webview");
@@ -200,7 +200,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.commands?.runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
 
-  test("opens the tickets datatable as a board with core properties displayed", () => {
+  test("places the tickets kanban in a panel with core properties displayed", () => {
     expect(extension.kanbanRenderers?.tickets?.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
@@ -209,6 +209,10 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
     expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
+    expect(extension.panels?.tickets).toMatchObject({
+      region: "main",
+      renderer: { kind: "kanban", id: "tickets" },
+    });
   });
 
   test("exposes ticket workspace creation as an extension-owned row action", () => {

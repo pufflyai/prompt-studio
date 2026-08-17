@@ -64,18 +64,24 @@ describe("createWorkbenchExtensionMetadata", () => {
             rows: {
               target: "workbench.left.tree",
               label: "Rows",
-              action: { kind: "kanbanRenderer", kanbanRenderer: "rows" },
+              action: { kind: "panel", panel: "rows" },
             },
           },
           treeRenderers: {
             files: { title: "Files", body: async () => [] },
           },
           panels: {
+            rows: {
+              title: "Rows",
+              region: "main",
+              closable: false,
+              renderer: { kind: "kanban", id: "rows" },
+            },
             files: {
               title: "Files",
               region: "main",
               closable: false,
-              treeRenderer: "files",
+              renderer: { kind: "tree", id: "files" },
             },
             ticketPanel: {
               title: "Ticket",
@@ -119,7 +125,7 @@ describe("createWorkbenchExtensionMetadata", () => {
         }),
         expect.objectContaining({
           id: "lab.files",
-          treeRendererId: "lab.files",
+          renderer: { kind: "tree", id: "lab.files" },
         }),
       ]),
     );
@@ -139,7 +145,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     });
     expect(metadata.treeItems?.[0]).toMatchObject({
       id: "lab.rows",
-      action: { kind: "kanbanRenderer", kanbanRendererId: "lab.rows" },
+      action: { kind: "panel", panelId: "lab.rows" },
     });
     expect(metadata.settingsDefinitions?.[0]).toMatchObject({ key: "enabled", default: true });
     expect(metadata.modes[0]).toMatchObject({
@@ -441,7 +447,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             },
           },
           panels: {
-            health: { title: "Health", region: "main", closable: false, dataTableRenderer: "health" },
+            health: { title: "Health", region: "main", closable: false, renderer: { kind: "dataTable", id: "health" } },
           },
         },
       },
@@ -463,7 +469,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
         },
       ],
     });
-    expect(metadata.panels[0]).toMatchObject({ id: "lab.health", dataTableRendererId: "lab.health" });
+    expect(metadata.panels[0]).toMatchObject({ id: "lab.health", renderer: { kind: "dataTable", id: "lab.health" } });
   });
 });
 

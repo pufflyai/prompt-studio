@@ -9,6 +9,7 @@ import {
 } from "../host/workbench-extension-command";
 import {
   panelMenuDeclarationOffsets,
+  panelRendererId,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -88,7 +89,8 @@ const registerControlsViewWidget = (
   index: number,
   menuDeclarationOffset: number,
 ) => {
-  if (!panel.controlsRendererId) return undefined;
+  const rendererId = panelRendererId(panel, "controls");
+  if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     contribution: {
@@ -97,7 +99,7 @@ const registerControlsViewWidget = (
       icon: panel.icon,
       region: panel.region,
       closable: panel.closable,
-      rendererId: panel.controlsRendererId,
+      rendererId,
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),

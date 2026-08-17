@@ -86,7 +86,7 @@ const dataTableMetadata = {
       title: "Services",
       region: "main",
       closable: false,
-      dataTableRendererId: "data-table-demo.services",
+      renderer: { kind: "dataTable", id: "data-table-demo.services" },
     },
   ],
 } satisfies DashboardExtensionMetadata;

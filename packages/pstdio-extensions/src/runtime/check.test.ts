@@ -273,7 +273,7 @@ describe("checkExtensionHostCompatibility", () => {
             title: "Rows",
             region: "main",
             closable: true,
-            dataTableRenderer: "rows",
+            renderer: { kind: "dataTable", id: "rows" },
             resourceKind: "ticket",
           },
         },
@@ -338,7 +338,6 @@ describe("checkExtensionHostCompatibility", () => {
 
     expect(result.status).toBe("verified");
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
-      "panel.data-table-renderer.v1",
       "settings.section.v1",
       "renderer.data-table.v1",
       "resource-view.v1",

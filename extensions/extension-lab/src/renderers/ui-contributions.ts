@@ -2,8 +2,13 @@ import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdi
 import { labCommands } from "../commands";
 
 const runLabCommand =
-  (command: { run: (ctx: unknown) => unknown }, params: Record<string, unknown>) => (ctx: unknown) =>
-    command.run({ ...(ctx as Record<string, unknown>), params, resource: params.resource });
+  <TContext, TResult, TParams extends object>(command: { run: (ctx: TContext) => TResult }, params: TParams) =>
+  (ctx: unknown) =>
+    command.run({
+      ...(ctx as Record<string, unknown>),
+      params,
+      resource: (params as { resource?: unknown }).resource,
+    } as TContext);
 
 export const labModes = {
   lab: {
@@ -48,13 +53,13 @@ export const createLabPanels = (baseUrl: string) =>
       icon: "package-search",
       region: "main",
       closable: false,
-      dataTableRenderer: "glassLabArtifacts",
+      renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       eligibleLocations: { resourceKinds: ["extension-view"] },
       panelMenus: {
         create: {
           title: l10n("panels.labArtifacts.menus.create", "Create artifacts"),
           side: "right",
-          controlsRenderer: "labArtifactCreate",
+          renderer: { kind: "controls", id: "labArtifactCreate" },
         },
       },
     },
@@ -73,7 +78,7 @@ export const createLabPanels = (baseUrl: string) =>
         cameras: {
           title: l10n("panels.labCams.menus.cameras", "Cameras"),
           side: "left",
-          treeRenderer: "labCams",
+          renderer: { kind: "tree", id: "labCams" },
         },
       },
     },

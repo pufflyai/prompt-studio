@@ -195,7 +195,7 @@ describe("checkExtensionSource keybindings", () => {
 });
 
 describe("checkExtensionSource host compatibility", () => {
-  test("fails a valid data table panel when the dashboard lacks the required bridge", async () => {
+  test("fails a valid data table renderer when the dashboard lacks the required bridge", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-host-capability-"));
     writePackage(root, "host-capability-check");
     writeFileSync(
@@ -210,7 +210,7 @@ describe("checkExtensionSource host compatibility", () => {
             title: "Rows",
             region: "main",
             closable: true,
-            dataTableRenderer: "rows",
+            renderer: { kind: "dataTable", id: "rows" },
           },
         },
       };`,
@@ -220,7 +220,7 @@ describe("checkExtensionSource host compatibility", () => {
       hostVersion: "0.25.1",
       capabilities: Object.fromEntries(
         Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
-          ([name]) => name !== "renderer.data-table.v1" && name !== "panel.data-table-renderer.v1",
+          ([name]) => name !== "renderer.data-table.v1",
         ),
       ),
     };
@@ -228,7 +228,7 @@ describe("checkExtensionSource host compatibility", () => {
     try {
       const result = await checkExtensionSource(root, resolve(root, ".."), { hostCapabilities });
 
-      expect(result.check.errorCount).toBe(2);
+      expect(result.check.errorCount).toBe(1);
       expect(result.check.hostCompatibility).toMatchObject({
         status: "verified",
         host: { host: "dashboard", hostVersion: "0.25.1" },
@@ -240,14 +240,6 @@ describe("checkExtensionSource host compatibility", () => {
             metadata: expect.objectContaining({
               contributionId: "host-capability-check.rows",
               missingCapability: "renderer.data-table.v1",
-              requiredSince: "0.25.2",
-            }),
-          }),
-          expect.objectContaining({
-            code: "extension_host_capability_missing",
-            metadata: expect.objectContaining({
-              contributionId: "host-capability-check.rows",
-              missingCapability: "panel.data-table-renderer.v1",
               requiredSince: "0.25.2",
             }),
           }),

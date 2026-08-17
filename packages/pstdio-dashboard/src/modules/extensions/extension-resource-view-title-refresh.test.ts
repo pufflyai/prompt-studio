@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
-import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 
 const metadata = {
@@ -45,7 +44,7 @@ const metadata = {
       closable: false,
       title: "Ticket",
       resourceKind: "ticket",
-      fileRendererId: "tickets.content",
+      renderer: { kind: "file", id: "tickets.content" },
       panelMenus: [
         {
           id: "tickets.files",
@@ -53,7 +52,7 @@ const metadata = {
           ownerPanelId: "tickets.editor",
           title: "Files",
           side: "left",
-          treeRendererId: "tickets.files",
+          renderer: { kind: "tree", id: "tickets.files" },
         },
       ],
     },
@@ -100,10 +99,7 @@ describe("registerExtensionResourceView title refresh", () => {
     });
     const disposable = workbench.registerModule({
       id: "test.extension-resource-view",
-      activate: (ctx) => [
-        registerExtensionResourceHierarchy(ctx, { metadata, projectId: "project-1" }),
-        ...registerExtensionResourceView(ctx, { metadata, projectId: "project-1" }),
-      ],
+      activate: (ctx) => registerExtensionResourceView(ctx, { metadata, projectId: "project-1" }),
     });
 
     try {
@@ -113,7 +109,7 @@ describe("registerExtensionResourceView title refresh", () => {
       const companionBeforeSave = workbench.layout.getLayout().regions["main-left-menu"].widgets[0];
       expect(beforeSave?.resource?.id).toBe("ticket-1");
       expect(companionBeforeSave?.resource?.id).toBe("ticket-1");
-      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["T-1 Old title"]);
       const scratch = workbench.layout.openPanel("left.scratch", { title: "Scratch" });
 
       publishExtensionCommandEvent({
@@ -123,7 +119,7 @@ describe("registerExtensionResourceView title refresh", () => {
       });
 
       expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("T-1 Old title");
-      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["T-1 Old title"]);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.instanceId);
 
       publishExtensionCommandEvent({
@@ -147,7 +143,7 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.resource?.label).toBe("T-1 New title");
       expect(workbench.layout.getLayout().regions.sidenav.widgets[0]?.widgetId).toBe(scratch.instanceId);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.instanceId);
-      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["T-1 New title"]);
     } finally {
       disposable.dispose();
     }

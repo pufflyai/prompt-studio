@@ -156,7 +156,7 @@ describe("archive ticket", () => {
 
     let commandResolved = false;
     const command = Promise.resolve(
-      archiveTicketColumnActionCommand.run!({
+      archiveTicketColumnActionCommand.run({
         storage,
         params: { columnId: "default-done", actionId: "archive_all" },
         workspaces: {

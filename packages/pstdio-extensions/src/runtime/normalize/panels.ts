@@ -26,52 +26,19 @@ const hasEmptyEligibleLocations = (panel: Record<string, unknown>) => {
   return isRecord(eligibleLocations) && Object.keys(eligibleLocations).length === 0;
 };
 
-const resolveTreeRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
+const resolveRendererId = (ext: NormalizedExtension, localOrFullId: string) => {
   const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
-  return runtime.treeRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+  return id;
 };
 
-const resolveFileRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
-  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
-  return runtime.fileRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+const rendererRecords = (runtime: Accumulator, kind: string) => {
+  if (kind === "tree") return runtime.treeRenderers;
+  if (kind === "file") return runtime.fileRenderers;
+  if (kind === "controls") return runtime.controlsRenderers;
+  if (kind === "dataTable") return runtime.dataTableRenderers;
+  if (kind === "kanban") return runtime.kanbanRenderers;
+  return [];
 };
-
-const resolveControlsRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
-  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
-  return runtime.controlsRenderers.some((renderer) => renderer.id === id) ? id : undefined;
-};
-
-const resolveDataTableRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
-  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
-  return runtime.dataTableRenderers.some((renderer) => renderer.id === id) ? id : undefined;
-};
-
-const rendererBodyChecks = [
-  {
-    key: "treeRenderer",
-    code: "extension_view_tree_renderer_missing",
-    label: "tree renderer",
-    resolve: resolveTreeRendererId,
-  },
-  {
-    key: "fileRenderer",
-    code: "extension_view_file_renderer_missing",
-    label: "file renderer",
-    resolve: resolveFileRendererId,
-  },
-  {
-    key: "controlsRenderer",
-    code: "extension_view_controls_renderer_missing",
-    label: "controls renderer",
-    resolve: resolveControlsRendererId,
-  },
-  {
-    key: "dataTableRenderer",
-    code: "extension_view_data_table_renderer_missing",
-    label: "data table renderer",
-    resolve: resolveDataTableRendererId,
-  },
-] as const;
 
 // Each renderer-backed panel references a renderer by local/full id; fail loudly when it
 // points at one that was not registered (mirrors the tree/file/controls renderer passes).
@@ -82,21 +49,22 @@ const rendererBodyResolves = (
   panel: Record<string, unknown>,
   id: string,
 ) => {
-  for (const check of rendererBodyChecks) {
-    const ref = panel[check.key];
-    if (typeof ref !== "string" || check.resolve(ext, ref, runtime)) continue;
-    runtime.diagnostics.push(
-      createDiagnostic({
-        code: check.code,
-        message: `Panel "${id}" references unknown ${check.label} "${ref}"`,
-        extensionId: ext.id,
-        sourcePath: source.sourcePath,
-        metadata: { contributionId: id, [check.key]: ref },
-      }),
-    );
-    return false;
-  }
-  return true;
+  if (!isRecord(panel.renderer)) return true;
+  const kind = panel.renderer.kind;
+  const localId = panel.renderer.id;
+  if (typeof kind !== "string" || typeof localId !== "string") return false;
+  const rendererId = resolveRendererId(ext, localId);
+  if (rendererRecords(runtime, kind).some((renderer) => renderer.id === rendererId)) return true;
+  runtime.diagnostics.push(
+    createDiagnostic({
+      code: "extension_panel_renderer_missing",
+      message: `Panel "${id}" references unknown ${kind} renderer "${localId}"`,
+      extensionId: ext.id,
+      sourcePath: source.sourcePath,
+      metadata: { contributionId: id, renderer: { kind, id: localId } },
+    }),
+  );
+  return false;
 };
 
 const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
@@ -104,19 +72,13 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
     if (!isRecord(panel) || !isLocalizableString(panel.title)) continue;
     const id = contributionId(ext, localId);
     const hasWebview = isRecord(panel.webview);
-    const hasTreeRenderer = typeof panel.treeRenderer === "string";
-    const hasFileRenderer = typeof panel.fileRenderer === "string";
-    const hasControlsRenderer = typeof panel.controlsRenderer === "string";
-    const hasDataTableRenderer = typeof panel.dataTableRenderer === "string";
+    const hasRenderer = isRecord(panel.renderer);
 
-    if (
-      [hasWebview, hasTreeRenderer, hasFileRenderer, hasControlsRenderer, hasDataTableRenderer].filter(Boolean)
-        .length !== 1
-    ) {
+    if ([hasWebview, hasRenderer].filter(Boolean).length !== 1) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_body_invalid",
-          message: `Panel "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, controlsRenderer, or dataTableRenderer`,
+          message: `Panel "${id}" must declare exactly one of webview or renderer`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },

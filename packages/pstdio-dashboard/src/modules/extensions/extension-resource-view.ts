@@ -1,15 +1,9 @@
-import {
-  createWorkbenchSelectionResourceMetadata,
-  type Disposable,
-  type ResourceRef,
-  type WorkbenchModuleContext,
-} from "@pstdio/workbench";
+import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { createExtensionKanbanRendererResource } from "./extension-kanban-renderer-resource";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 import { extensionModeLayoutRegion, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
@@ -60,7 +54,8 @@ const companionViewRegion = (panel: ExtensionPanelRecord, modeEntry: ModeLayoutO
 
 const isResourceSidenavCompanion = (panel: ExtensionPanelRecord, resourceMode: ExtensionModeRecord | undefined) =>
   Boolean(
-    panel.treeRendererId && companionViewRegion(panel, resourceModeEntryForView(panel, resourceMode)) === "sidenav",
+    panel.renderer?.kind === "tree" &&
+      companionViewRegion(panel, resourceModeEntryForView(panel, resourceMode)) === "sidenav",
   );
 
 const updatePlacementForResource = (
@@ -84,23 +79,12 @@ const updatePlacementForResource = (
   return false;
 };
 
-const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
-  const parentRenderer = input.metadata.kanbanRenderers?.find((record) => record.resourceKind === input.kind);
-  return parentRenderer ? createExtensionKanbanRendererResource(parentRenderer, input.projectId) : undefined;
-};
-
-const withExtensionResourceContext = (
-  resource: ResourceRef,
-  input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
-) => {
-  const parentResource = parentResourceFor(input);
-
+const withExtensionResourceContext = (resource: ResourceRef, input: { projectId: string }) => {
   return {
     ...resource,
     metadata: {
       projectId: input.projectId,
       ...resource.metadata,
-      ...(parentResource ? createWorkbenchSelectionResourceMetadata(parentResource) : {}),
     },
   };
 };
@@ -263,11 +247,7 @@ export const registerExtensionResourceView = (
           canOpen: (resource) => resource.kind === kind,
           open: (resource) => {
             const resourceMode = resourceModeFor(input.metadata, kind);
-            const selectedResource = withExtensionResourceContext(resource, {
-              kind,
-              metadata: input.metadata,
-              projectId: input.projectId,
-            });
+            const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
             removeManagedCompanions(ctx, managedCompanionWidgetIds, new Set(companions.map(widgetIdFor)));
             return openResourceInspectorGroup(ctx, { companions, resource: selectedResource, resourceMode });
           },
@@ -286,11 +266,7 @@ export const registerExtensionResourceView = (
           const expectedCompanionWidgetIds = new Set(
             companions.filter((companion) => !isResourceSidenavCompanion(companion, resourceMode)).map(widgetIdFor),
           );
-          const selectedResource = withExtensionResourceContext(resource, {
-            kind,
-            metadata: input.metadata,
-            projectId: input.projectId,
-          });
+          const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
           selectDashboardNavigationResource(ctx, selectedResource, {
             modeId: resourceMode?.modeId ?? "project",
           });

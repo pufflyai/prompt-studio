@@ -1,37 +1,28 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 
-const metadataFor = (extensionId: string, rendererId: string, resourceKind: string) => ({
-  ...emptyDashboardExtensionMetadata,
-  kanbanRenderers: [
-    {
-      id: rendererId,
-      extensionId,
-      title: rendererId,
-      resourceKind,
-      queryHandlerId: `${rendererId}.query`,
-    },
-  ],
-});
-
 describe("registerExtensionResourceHierarchy", () => {
-  test("registers hierarchy roots from multiple extensions in one project", () => {
+  test("resolves explicit resource parent metadata without creating a renderer root", async () => {
     const workbench = createWorkbenchCore();
-
+    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     registerExtensionResourceHierarchy(workbench, {
-      metadata: metadataFor("pstdio.planner", "planner.tickets", "ticket"),
+      metadata: {
+        ...emptyDashboardExtensionMetadata,
+        extensions: [{ id: "pstdio.planner", name: "planner", displayName: "Planner", sourcePath: "" }],
+      },
       projectId: "project-1",
     });
-    registerExtensionResourceHierarchy(workbench, {
-      metadata: metadataFor("pstdio.docs", "docs.pages", "document"),
-      projectId: "project-1",
-    });
+    const child = {
+      kind: "ticket",
+      uri: "dashboard-workbench://ticket/child",
+      id: "child",
+      metadata: { resourceParent: { type: "ticket", id: "parent", label: "Parent" } },
+    } satisfies ResourceRef;
 
-    expect(workbench.resources.listHierarchyProviders().map((provider) => provider.id)).toEqual([
-      "dashboard.extensions.resource-hierarchy.project-1.pstdio.docs",
-      "dashboard.extensions.resource-hierarchy.project-1.pstdio.planner",
-    ]);
+    const parent = workbench.resources.walkHierarchy(child)[0];
+
+    expect(parent).toMatchObject({ kind: "ticket", id: "parent", label: "Parent" });
   });
 });

@@ -89,7 +89,7 @@ test("keeps a native Main Sub Panel attached to the extension mode Location", as
         title: "Artifacts",
         region: "main" as const,
         closable: false,
-        dataTableRendererId: "extension-lab.artifacts",
+        renderer: { kind: "dataTable" as const, id: "extension-lab.artifacts" },
         eligibleLocations: { resourceKinds: ["extension-view"] },
       },
     ],

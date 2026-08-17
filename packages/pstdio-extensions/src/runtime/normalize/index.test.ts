@@ -290,7 +290,7 @@ describe("normalizeExtensionSources runtime records", () => {
         },
       },
       panels: {
-        health: { title: "Health", region: "main", closable: false, dataTableRenderer: "health" },
+        health: { title: "Health", region: "main", closable: false, renderer: { kind: "dataTable", id: "health" } },
       },
     });
 
@@ -298,7 +298,7 @@ describe("normalizeExtensionSources runtime records", () => {
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.dataTableRenderers[0]).toMatchObject({ id: "lab.health", localId: "health" });
-    expect(runtime.panels[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
+    expect(runtime.panels[0]?.contribution).toMatchObject({ renderer: { kind: "dataTable", id: "health" } });
   });
 
   test("registers row activation callbacks as private renderer handlers", () => {
@@ -420,7 +420,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
           region: "main",
           closable: false,
           resourceKind: "ticket",
-          treeRenderer: "files",
+          renderer: { kind: "tree", id: "files" },
         },
       },
     });
@@ -448,7 +448,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
         resourceKind: "ticket",
         region: "main",
         closable: false,
-        treeRenderer: "files",
+        renderer: { kind: "tree", id: "files" },
       },
     });
   });
@@ -488,14 +488,14 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
           title: "Both",
           region: "main",
           closable: false,
-          treeRenderer: "files",
+          renderer: { kind: "tree", id: "files" },
           webview: { entry: packageAsset("./both.tsx", "file:///fake/planner/extension.ts") },
         },
         missing: {
           title: "Missing",
           region: "main",
           closable: false,
-          treeRenderer: "missing",
+          renderer: { kind: "tree", id: "missing" },
         },
       },
     } as never);
@@ -512,8 +512,8 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       }),
       expect.objectContaining({ code: "extension_view_body_invalid", metadata: { contributionId: "planner.both" } }),
       expect.objectContaining({
-        code: "extension_view_tree_renderer_missing",
-        metadata: { contributionId: "planner.missing", treeRenderer: "missing" },
+        code: "extension_panel_renderer_missing",
+        metadata: { contributionId: "planner.missing", renderer: { kind: "tree", id: "missing" } },
       }),
     ]);
   });

@@ -98,8 +98,8 @@ export const normalizeExtensionSources = (
     registerFileRenderers(ext, source, runtime, index);
     registerControlsRenderers(ext, source, runtime, index);
     registerDataTableRenderers(ext, source, runtime, index);
-    registerPanelContributions(ext, source, runtime);
     registerKanbanRenderers(ext, source, runtime, index);
+    registerPanelContributions(ext, source, runtime);
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);

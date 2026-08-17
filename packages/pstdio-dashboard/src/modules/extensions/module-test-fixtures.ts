@@ -137,6 +137,17 @@ export const metadataWithTickets = {
       queryHandlerId: "pstdio-core-tickets.tickets.query",
     },
   ],
+  treeItems: [
+    ...metadata.treeItems,
+    {
+      id: "pstdio-core-tickets.tickets",
+      extensionId: "pstdio.pstdio-core-tickets",
+      target: "workbench.left.tree",
+      label: "Tickets",
+      icon: "square-kanban",
+      action: { kind: "panel", panelId: "pstdio-core-tickets.tickets" },
+    },
+  ],
   modes: [
     {
       id: "pstdio-core-tickets.ticket",
@@ -152,6 +163,14 @@ export const metadataWithTickets = {
     },
   ],
   panels: [
+    {
+      id: "pstdio-core-tickets.tickets",
+      extensionId: "pstdio.pstdio-core-tickets",
+      region: "main",
+      closable: false,
+      title: "Tickets",
+      renderer: { kind: "kanban", id: "pstdio-core-tickets.tickets" },
+    },
     {
       id: "pstdio-core-tickets.ticketEditor",
       extensionId: "pstdio.pstdio-core-tickets",
@@ -194,7 +213,7 @@ export const metadataWithTickets = {
       region: "sidenav",
       closable: false,
       resourceKind: "ticket",
-      treeRendererId: "pstdio-core-tickets.ticketFiles",
+      renderer: { kind: "tree", id: "pstdio-core-tickets.ticketFiles" },
     },
   ],
   treeRenderers: [

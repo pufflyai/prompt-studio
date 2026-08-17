@@ -28,7 +28,7 @@ const metadata = {
       title: "Files",
       closable: false,
       resourceKind: "ticket",
-      treeRendererId: "lab.files",
+      renderer: { kind: "tree", id: "lab.files" },
     },
   ],
   treeRenderers: [
@@ -64,7 +64,7 @@ describe("registerWorkbenchExtensionTreeRenderers placement", () => {
           closable: false,
           region: "main",
           placement: "last",
-          treeRendererId: "lab.files",
+          renderer: { kind: "tree", id: "lab.files" },
         },
         {
           id: "lab.default",
@@ -72,7 +72,7 @@ describe("registerWorkbenchExtensionTreeRenderers placement", () => {
           title: "Default",
           closable: false,
           region: "main",
-          treeRendererId: "lab.files",
+          renderer: { kind: "tree", id: "lab.files" },
         },
         {
           id: "lab.first",
@@ -81,7 +81,7 @@ describe("registerWorkbenchExtensionTreeRenderers placement", () => {
           closable: false,
           region: "main",
           placement: "first",
-          treeRendererId: "lab.files",
+          renderer: { kind: "tree", id: "lab.files" },
         },
       ],
     } satisfies WorkbenchExtensionMetadata;

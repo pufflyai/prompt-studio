@@ -23,7 +23,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         closable: false,
         region: "main",
         placement: "last",
-        dataTableRendererId: "lab.table",
+        renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
         id: "lab.default",
@@ -31,7 +31,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         title: "Default",
         closable: false,
         region: "main",
-        dataTableRendererId: "lab.table",
+        renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
         id: "lab.first",
@@ -40,7 +40,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         closable: false,
         region: "main",
         placement: "first",
-        dataTableRendererId: "lab.table",
+        renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
             id: "lab.first.menu-last",
@@ -49,7 +49,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
             title: "Menu Last",
             side: "right",
             placement: "last",
-            dataTableRendererId: "lab.table",
+            renderer: { kind: "dataTable", id: "lab.table" },
           },
           {
             id: "lab.first.menu-default",
@@ -57,7 +57,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
             ownerPanelId: "lab.first",
             title: "Menu Default",
             side: "right",
-            dataTableRendererId: "lab.table",
+            renderer: { kind: "dataTable", id: "lab.table" },
           },
           {
             id: "lab.first.menu-first",
@@ -66,7 +66,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
             title: "Menu First",
             side: "right",
             placement: "first",
-            dataTableRendererId: "lab.table",
+            renderer: { kind: "dataTable", id: "lab.table" },
           },
         ],
       },
@@ -122,7 +122,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         title: "Panel A",
         closable: false,
         region: "main",
-        dataTableRendererId: "lab.table",
+        renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
             id: "lab.a.menu",
@@ -130,7 +130,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
             ownerPanelId: "lab.a",
             title: "Menu A",
             side: "right",
-            dataTableRendererId: "lab.table",
+            renderer: { kind: "dataTable", id: "lab.table" },
           },
         ],
       },
@@ -140,7 +140,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         title: "Panel B",
         closable: false,
         region: "main",
-        dataTableRendererId: "lab.table",
+        renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
             id: "lab.b.menu",
@@ -148,7 +148,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
             ownerPanelId: "lab.b",
             title: "Menu B",
             side: "right",
-            dataTableRendererId: "lab.table",
+            renderer: { kind: "dataTable", id: "lab.table" },
           },
         ],
       },

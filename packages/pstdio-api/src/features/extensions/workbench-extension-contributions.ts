@@ -199,10 +199,10 @@ const toTreeItemAction = (item: ExtensionRuntime["treeItems"][number]): Extensio
       args: action.params as Record<string, unknown> | undefined,
     };
   }
-  if (action.kind === "kanbanRenderer") {
+  if (action.kind === "panel") {
     return {
-      kind: "kanbanRenderer",
-      kanbanRendererId: resolveExtensionContributionId(item.name, action.kanbanRenderer),
+      kind: "panel",
+      panelId: resolveExtensionContributionId(item.name, action.panel),
     };
   }
   return action;

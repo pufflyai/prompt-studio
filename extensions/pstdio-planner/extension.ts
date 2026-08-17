@@ -91,6 +91,16 @@ export default defineExtension({
     },
   },
 
+  treeItems: {
+    tickets: {
+      target: "workbench.left.tree",
+      label: l10n("kanbanRenderers.tickets.title", "Tickets"),
+      icon: "square-kanban",
+      placement: "first",
+      action: { kind: "panel", panel: "tickets" },
+    },
+  },
+
   // Reusable properties renderer: serializable params rendered natively through the host
   // ParamEditor; status/tags edit live and references render as resource tags. A panel
   // (below) places it into the right panel for the open ticket.
@@ -226,17 +236,23 @@ export default defineExtension({
   },
 
   panels: {
+    tickets: {
+      title: l10n("kanbanRenderers.tickets.title", "Tickets"),
+      region: "main",
+      closable: false,
+      renderer: { kind: "kanban", id: "tickets" },
+    },
     ticketEditor: {
       title: l10n("panels.ticketEditor.title", "Ticket"),
       region: "main",
       closable: false,
       resourceKind: "ticket",
-      fileRenderer: "ticketContent",
+      renderer: { kind: "file", id: "ticketContent" },
       panelMenus: {
         properties: {
           title: l10n("panels.ticketProperties.title", "Properties"),
           side: "right",
-          controlsRenderer: "ticketProperties",
+          renderer: { kind: "controls", id: "ticketProperties" },
         },
       },
     },
@@ -247,7 +263,7 @@ export default defineExtension({
       region: "sidenav",
       closable: false,
       resourceKind: "ticket",
-      treeRenderer: "ticketFiles",
+      renderer: { kind: "tree", id: "ticketFiles" },
     },
   },
 

@@ -275,31 +275,23 @@ describe("createExtensionsModule command results and refresh", () => {
       });
     });
     const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 
-    const ticketsBoardResource = {
-      kind: "dashboard-view",
-      uri: "dashboard-workbench://project/project-1/views/pstdio-core-tickets.tickets",
-      id: "pstdio-core-tickets.tickets",
-      label: "Tickets",
-    };
-
     try {
       await flushMicrotasks();
-      await workbench.resources.openResource(ticketsBoardResource);
+      workbench.layout.openPanel("pstdio-core-tickets.tickets");
 
       getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
       await flushMicrotasks();
 
-      // The refresh fetch has not resolved yet — the tickets presenter must still exist.
-      await workbench.resources.openResource(ticketsBoardResource);
+      // The refresh fetch has not resolved yet — the tickets panel must still exist.
+      expect(workbench.layout.getPanel("pstdio-core-tickets.tickets")).toBeDefined();
 
       resolveRefresh?.(metadataWithTickets);
       await flushMicrotasks();
-      await workbench.resources.openResource(ticketsBoardResource);
+      expect(workbench.layout.getPanel("pstdio-core-tickets.tickets")).toBeDefined();
     } finally {
       disposable.dispose();
       getWriter("installed_extension_sources")?.truncateAndWrite([]);

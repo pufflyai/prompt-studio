@@ -4,6 +4,7 @@ import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleConte
 import { unwrapCommandValue } from "../host/command-response";
 import {
   panelMenuDeclarationOffsets,
+  panelRendererId,
   registerWorkbenchExtensionPanel,
   toWorkbenchExtensionPlacementMetadata,
   toWorkbenchPanelEligibility,
@@ -94,7 +95,8 @@ const registerFileViewWidget = (
   index: number,
   menuDeclarationOffset: number,
 ) => {
-  if (!panel.fileRendererId) return undefined;
+  const rendererId = panelRendererId(panel, "file");
+  if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
     contribution: {
@@ -103,7 +105,7 @@ const registerFileViewWidget = (
       icon: panel.icon,
       region: panel.region,
       closable: panel.closable,
-      rendererId: panel.fileRendererId,
+      rendererId,
       singleton: true,
       resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
       eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
