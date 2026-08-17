@@ -9,7 +9,6 @@ const baseMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   routes: [],
   settingsDefinitions: [],
   settingsPanels: [],

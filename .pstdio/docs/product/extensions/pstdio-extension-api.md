@@ -119,11 +119,15 @@ export default defineExtension({
   schedules: {},
   treeItems: {},
   modes: {},
-  views: {},
   routes: {},
+  panels: {},
+  treeRenderers: {},
+  fileRenderers: {},
+  controlsRenderers: {},
+  dataTableRenderers: {},
+  kanbanRenderers: {},
   settingsPanels: {},
-  activityRenderers: {},
-  sessionAnchorRenderers: {},
+  activityItems: {},
   artifactMounts: {},
   templateTypes: {},
   templates: {},
@@ -151,11 +155,13 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
 | `routes`                                          | Dashboard pages backed by extension webviews.                                                     |
 | `treeItems`                                       | Sidenav or area-tree navigation entries attached to host targets.                                 |
-| `treeRenderers`                                   | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
-| `views`                                           | Workbench panels backed by extension webviews or tree renderers.                                  |
+| `treeRenderers`, `fileRenderers`                  | Callback-backed native Workbench trees and file content.                                          |
+| `controlsRenderers`, `dataTableRenderers`         | Callback-backed native controls and tabular data.                                                  |
+| `kanbanRenderers`                                 | Callback-backed native boards and lists.                                                           |
+| `panels`                                          | Workbench panels backed by webviews or native renderer references.                                 |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
 | `modes`                                           | Workbench mode metadata with optional layout reset/open behavior and resource-kind ownership.      |
-| `activityRenderers`, `sessionAnchorRenderers`     | Webview-backed renderers for supported dashboard records.                                         |
+| `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
 | `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
@@ -313,44 +319,27 @@ Dashboard UI contributions are declarative:
 
 - menus attach commands to targets such as `workbench.top.actions` or `workbench.commandPalette`
 - tree items attach routes, commands, or links to area-tree targets such as `workbench.left.tree`
-- tree renderers register native workbench trees whose data comes from extension commands
+- native renderers register Workbench trees, files, controls, tables, boards, and lists backed by callbacks
 - panels attach webviews or native renderers to workbench regions
 - settings panels use webview package assets
 - modes declare workbench mode metadata and optional layout/resource ownership
 
-Tree renderers are reusable renderer contributions. Place one in the dashboard by declaring a panel with `treeRenderer`; that field is mutually exclusive with `webview`.
+Native renderers are reusable contributions. Place one in the dashboard by declaring a Panel with `renderer`; that
+field is mutually exclusive with `webview`.
 
 ```ts
 export default defineExtension({
-  commands: {
-    "files.body": {
-      title: "List files",
-      async run(ctx) {
-        return [
-          {
-            id: "files",
-            label: "Files",
-            nodes: [
-              {
-                id: "readme",
-                label: "README.md",
-                target: {
-                  kind: "command",
-                  commandId: "planner.openFile",
-                  args: { fileId: "readme" },
-                },
-              },
-            ],
-          },
-        ];
-      },
-    },
-  },
   treeRenderers: {
     files: {
       title: "Files",
       icon: "Files",
-      bodyCommand: "planner.files.body",
+      body: async () => [
+        {
+          id: "files",
+          label: "Files",
+          nodes: [{ id: "readme", label: "README.md" }],
+        },
+      ],
       defaultExpandedSectionIds: ["files"],
     },
   },
@@ -361,8 +350,8 @@ export default defineExtension({
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
-        open: [{ target: "workbench.left", view: "files", pinned: true }],
+        panels: ["main", "secondary", "side"],
+        open: [{ region: "sidenav", panel: "files", pinned: true }],
       },
     },
   },
@@ -372,13 +361,15 @@ export default defineExtension({
       region: "sidenav",
       closable: false,
       resourceKind: "ticket",
-      treeRenderer: "files",
+      renderer: { kind: "tree", id: "files" },
     },
   },
 });
 ```
 
-`bodyCommand` returns tree sections. Optional `childrenCommand` and `footerCommand` return nodes for lazy children and footer content. The command invocation includes the active project, resource, tree id, tree state, filter text, and selected node context.
+`body` returns tree sections. Optional `children` and `footer` callbacks return nodes for lazy children and footer
+content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
+node context.
 
 Panel role is currently selected by `eligibleLocations`:
 

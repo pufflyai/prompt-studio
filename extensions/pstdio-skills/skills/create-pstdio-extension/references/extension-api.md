@@ -102,13 +102,13 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `panels`, `treeItems`                   | Custom webview pages, Workbench Panels, and route or command navigation entries.  |
-| `kanbanRenderers`                                 | Native dashboard data surfaces; each renderer gets a project-sidenav entry.       |
+| `routes`, `panels`, `treeItems`                   | Custom webview pages, Workbench Panels, and navigation entries.                    |
+| `kanbanRenderers`, `dataTableRenderers`           | Native dashboard data surfaces placed through Panels.                             |
 | `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
 | `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
-| `controlsRenderers`                               | Reusable inspector/property renderers (ParamEditor, command-backed), placed by a view. |
+| `controlsRenderers`                               | Reusable callback-backed inspector/property renderers, placed by a Panel.          |
 | `settingsPanels`                                  | Dashboard configuration UI.                                                       |
-| `activityRenderers`, `sessionAnchorRenderers`     | Custom dashboard renderers.                                                       |
+| `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
 | `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                     |
@@ -217,16 +217,16 @@ resource detail screen usually has:
 - A `treeRenderers` contribution for side-panel navigation or file lists.
 - `panels` that bind the mode/resource to those renderers.
 
-Each view must declare exactly one of `webview`, `treeRenderer`, or `fileRenderer`. A view needs a `target`, `slot`,
-`resourceKind`, or a reference from a mode layout so the host can reach it. For resource detail screens, set
-`resourceKind` on the editor and auxiliary Panels, then let `modes.<mode>.layout.open` pin Panels such as the tree.
+Each Panel must declare exactly one of `webview` or `renderer`. A native renderer reference has a `kind` (`tree`,
+`file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. For resource detail screens,
+set `resourceKind` on the editor and auxiliary Panels, then let `modes.<mode>.layout.open` pin Panels such as the tree.
 
-`fileRenderers` need `title` and a valid `loadCommand`; `saveCommand` is optional and makes text content editable.
-Load commands return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
+`fileRenderers` need `title` and a `load` callback; an optional `save` callback makes text content editable.
+Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
 `mimeType`, and `placeholder`. Images are always read-only.
 
-`treeRenderers` need `title` and a valid `bodyCommand`; `childrenCommand` and `footerCommand` are optional. Body
-commands return `TreeViewSection[]`. Children and footer commands return `TreeNode[]`.
+`treeRenderers` need `title` and a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
+return `TreeViewSection[]`. Children and footer callbacks return `TreeNode[]`.
 
 ### Refresh native renderers with events
 
@@ -259,22 +259,22 @@ export default defineExtension({
 
 ## Project Sidenav UI
 
-For a Planner-style native list or board, define a `kanbanRenderers` contribution with a query command. The dashboard
-creates the project-sidenav entry from the kanban renderer; do not add a `treeItems` contribution with
-`action.kind === "kanbanRenderer"` because the resource-first dashboard ignores those tree-item actions.
+For a Planner-style native list or board, define a `kanbanRenderers` contribution with a `query` callback. Add a
+Panel with `renderer: { kind: "kanban", id: "<renderer-id>" }`. To show it in the project sidenav, add a `treeItems`
+contribution whose action opens that Panel.
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
 `action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
 Use this for custom webview pages only; native resource screens should use `modes`, `panels`, `fileRenderers`, and
 `treeRenderers`.
 
-For an editable inspector/property Panel, define a `controlsRenderers` renderer with a `queryCommand` (returns
-`{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `updateValueCommand`, `applyCommand`,
-and `resetCommand`. Nest the menu under its owning Panel:
-`panelMenus: { properties: { title: "Properties", side: "right", controlsRenderer: "<id>" } }`.
+For an editable inspector/property Panel, define a `controlsRenderers` renderer with a `query` callback (returns
+`{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `onValueChange`, `onApply`, and `onReset`
+callbacks. Nest the menu under its owning Panel:
+`panelMenus: { properties: { title: "Properties", side: "right", renderer: { kind: "controls", id: "<id>" } } }`.
 The active owner instance determines when the menu is available, and it retains its attached or collapsed state.
 The Panel companions its `resourceKind`; omitting both
-`updateValueCommand` and `applyCommand` makes it read-only. Command payloads must be JSON — commit file metadata or
+`onValueChange` and `onApply` makes it read-only. Callback payloads must be JSON — commit file metadata or
 data URLs, never live `File` objects.
 
 ## Harnesses

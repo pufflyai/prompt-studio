@@ -19,7 +19,6 @@ const metadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   routes: [
     {
       id: "extension-lab.labPage",

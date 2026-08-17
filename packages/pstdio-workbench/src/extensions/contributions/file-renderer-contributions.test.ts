@@ -12,7 +12,6 @@ const baseMetadata = {
   diagnostics: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   routes: [],
   settingsPanels: [],
   treeItems: [],

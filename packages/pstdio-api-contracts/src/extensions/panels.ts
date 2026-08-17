@@ -70,21 +70,6 @@ export const extensionRouteRecordSchema = z.object({
   webview: extensionWebviewContributionSchema,
 });
 
-export const extensionNavigationRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  slotId: z.string(),
-  label: localizableStringSchema,
-  group: z.string().optional(),
-  placement: extensionPlacementSchema.optional(),
-  route: z.string().optional(),
-  href: z.string().optional(),
-  commandId: z.string().optional(),
-  params: jsonObjectSchema.optional(),
-  icon: z.string().optional(),
-  when: extensionWhenExpressionSchema.optional(),
-});
-
 const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("command"),
@@ -172,7 +157,6 @@ export const extensionViewLikeSchema = z.object({
 
 export type ExtensionPanelRecord = z.infer<typeof extensionPanelRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
-export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
 export type ExtensionTreeItemContribution = z.infer<typeof extensionTreeItemContributionSchema>;
 export type ExtensionActivityItemRecord = z.infer<typeof extensionActivityItemRecordSchema>;
 export type ModeLayoutContributionRecord = z.infer<typeof modeLayoutContributionRecordSchema>;

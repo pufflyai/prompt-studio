@@ -626,33 +626,36 @@ describe("checkExtensionSource settings panels", () => {
   });
 });
 
-describe("checkExtensionSource legacy navigation", () => {
-  test("reports legacy navigation contributions as unsupported", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-legacy-navigation-"));
-    writePackage(root, "legacy-navigation");
+describe("checkExtensionSource unknown contributions", () => {
+  test("reports removed renderer contributions as unknown", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-removed-renderers-"));
+    writePackage(root, "removed-renderers");
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        navigation: {
-          lab: {
-            slot: "project.sidenavNav",
-            label: "Lab",
-            route: "lab",
-          },
-        },
+        activityRenderers: {},
+        sessionAnchorRenderers: {},
       };`,
     );
 
     try {
       const result = await checkExtensionSource(root, resolve(root, ".."));
 
-      expect(result.check.errorCount).toBe(1);
-      expect(result.check.navigation).toEqual([]);
-      expect(result.check.diagnostics[0]).toMatchObject({
-        code: "extension_navigation_unsupported",
-        extensionId: "pstdio.legacy-navigation",
-        metadata: { contributionId: "legacy-navigation.lab" },
-      });
+      expect(result.check.errorCount).toBe(2);
+      expect(result.check.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "unknown_extension_contribution",
+            extensionId: "pstdio.removed-renderers",
+            metadata: { key: "activityRenderers" },
+          }),
+          expect.objectContaining({
+            code: "unknown_extension_contribution",
+            extensionId: "pstdio.removed-renderers",
+            metadata: { key: "sessionAnchorRenderers" },
+          }),
+        ]),
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -76,7 +76,6 @@ const emptyRuntime = {
   keybindings: [],
   middlewares: [],
   modes: [],
-  navigation: [],
   panels: [],
   routes: [],
   schedules: [],

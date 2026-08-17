@@ -540,7 +540,6 @@ export const createWorkbenchExtensionMetadata = (
     modes: modes.modes,
     panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
-    navigation: [],
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
     activityItems: input.runtime.activityItems.map(toActivityItemRecord),
     settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),

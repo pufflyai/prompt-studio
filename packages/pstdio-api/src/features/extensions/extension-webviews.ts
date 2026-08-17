@@ -27,7 +27,7 @@ export const classifyWebviewEntry = (asset: PackageAssetDescriptor): WebviewEntr
   return { extension, kind: "unsupported" };
 };
 
-const contributionMaps = ["activityRenderers", "panels", "routes", "sessionAnchorRenderers", "settingsPanels"] as const;
+const contributionMaps = ["panels", "routes", "settingsPanels"] as const;
 
 const collectWebview = (webviews: WebviewContributionRecord[], id: string, contribution: Record<string, unknown>) => {
   if (!isRecord(contribution.webview) || !isPackageAssetDescriptor(contribution.webview.entry)) return;

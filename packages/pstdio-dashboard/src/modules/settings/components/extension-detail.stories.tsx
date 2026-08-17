@@ -77,7 +77,6 @@ const metadata = {
   modes: [],
   panels: [],
   routes: [],
-  navigation: [],
   settingsPanels: [],
   diagnostics: [],
 } as never;

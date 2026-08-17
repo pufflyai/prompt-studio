@@ -54,7 +54,6 @@ const metadata = {
   commandPaletteContributions: [],
   diagnostics: [],
   modes: [],
-  navigation: [],
   routes: [],
   settingsPanels: [],
 } satisfies WorkbenchExtensionMetadata;

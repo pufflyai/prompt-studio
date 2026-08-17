@@ -13,7 +13,6 @@ const metadata = {
   diagnostics: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   panels: [
     {
       id: panelId,

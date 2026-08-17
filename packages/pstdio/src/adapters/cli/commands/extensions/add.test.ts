@@ -44,7 +44,6 @@ const installed = {
     fileRenderers: [],
     controlsRenderers: [],
     keybindings: [],
-    navigation: [],
     treeItems: [],
     settingsPanels: [],
     templates: [],

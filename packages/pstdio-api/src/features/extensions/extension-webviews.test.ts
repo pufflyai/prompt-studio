@@ -24,7 +24,7 @@ describe("classifyWebviewEntry", () => {
 });
 
 describe("collectExtensionWebviews", () => {
-  test("collects route, Panel, nested Panel Menu, settings, and renderer webviews by package name id", () => {
+  test("collects route, Panel, nested Panel Menu, and settings webviews by package name id", () => {
     const webviews = collectExtensionWebviews({
       metadata: {
         id: "pstdio.test",
@@ -44,14 +44,10 @@ describe("collectExtensionWebviews", () => {
           },
         },
         settingsPanels: { prefs: { webview: { entry: asset("./settings.tsx") } } },
-        activityRenderers: { activity: { webview: { entry: asset("./activity.tsx") } } },
-        sessionAnchorRenderers: { anchor: { webview: { entry: asset("./anchor.tsx") } } },
       },
     });
 
     expect(webviews.map((webview) => webview.id).sort()).toEqual([
-      "test.activity",
-      "test.anchor",
       "test.page",
       "test.panel",
       "test.panel.inspector",

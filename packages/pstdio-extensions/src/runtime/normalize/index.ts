@@ -8,6 +8,7 @@ import { registerCommands } from "./commands";
 import { registerContent } from "./content";
 import { registerControlsRenderers } from "./controls-renderers";
 import { registerDataTableRenderers } from "./data-table-renderers";
+import { validateExtensionDefinition } from "./definition";
 import { registerFileRenderers } from "./file-renderers";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
@@ -85,6 +86,7 @@ export const normalizeExtensionSources = (
 
   for (const source of resolveSources(sources, runtime, options)) {
     const ext = registerExtension(source, runtime, extensionsById);
+    validateExtensionDefinition(ext, source, runtime);
 
     registerCommands(ext, source, runtime, index);
     registerKeybindings(ext, source, runtime, index);

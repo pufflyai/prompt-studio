@@ -22,7 +22,6 @@ const metadata = {
       },
     },
   ],
-  navigation: [],
   routes: [],
   settingsPanels: [],
   treeItems: [],

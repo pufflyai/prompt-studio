@@ -181,25 +181,6 @@ const registerRoutes = (ext: NormalizedExtension, source: LoadedExtensionSource,
   }
 };
 
-const reportUnsupportedNavigation = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const navigation = (source.definition as Record<string, unknown>).navigation;
-  if (!isRecord(navigation)) return;
-
-  for (const [localId, nav] of Object.entries(navigation)) {
-    if (!isRecord(nav)) continue;
-    const id = contributionId(ext, localId);
-    runtime.diagnostics.push(
-      createDiagnostic({
-        code: "extension_navigation_unsupported",
-        message: `Navigation contribution "${id}" uses legacy slots; use treeItems with workbench targets instead`,
-        extensionId: ext.id,
-        sourcePath: source.sourcePath,
-        metadata: { contributionId: id },
-      }),
-    );
-  }
-};
-
 const registerSettingsSections = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, section] of Object.entries(source.definition.settingsSections ?? {})) {
     if (!isRecord(section) || !isLocalizableString(section.title)) continue;
@@ -269,7 +250,6 @@ export const registerPanelContributions = (
   registerRoutes(ext, source, runtime);
   registerTreeItems(ext, source, runtime);
   registerActivityItems(ext, source, runtime);
-  reportUnsupportedNavigation(ext, source, runtime);
   registerSettingsSections(ext, source, runtime);
   registerSettingsPanels(ext, source, runtime);
 };

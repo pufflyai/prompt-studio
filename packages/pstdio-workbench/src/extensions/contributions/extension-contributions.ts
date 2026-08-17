@@ -51,7 +51,6 @@ export const emptyWorkbenchExtensionMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   routes: [],
   kanbanRenderers: [],
   dataTableRenderers: [],

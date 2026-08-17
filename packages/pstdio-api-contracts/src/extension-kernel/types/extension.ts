@@ -21,7 +21,6 @@ import type {
   MenuContribution,
   ModeContribution,
   PanelContribution,
-  RendererContribution,
   RouteContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -161,8 +160,6 @@ export interface UiContributions {
   commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous keybinding shapes
   keybindings?: Record<string, KeybindingContribution<any>>;
-  activityRenderers?: Record<string, RendererContribution>;
-  sessionAnchorRenderers?: Record<string, RendererContribution>;
 }
 
 /** Behavioural surface: commands, middleware, hooks, schedules. */

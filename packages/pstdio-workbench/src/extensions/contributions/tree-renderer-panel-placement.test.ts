@@ -15,7 +15,6 @@ const metadata = {
   diagnostics: [],
   menuContributions: [],
   modes: [],
-  navigation: [],
   routes: [],
   settingsPanels: [],
   treeItems: [],

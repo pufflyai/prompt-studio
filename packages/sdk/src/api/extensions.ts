@@ -12,7 +12,6 @@ export type {
   ExtensionKeybindingRecord,
   ExtensionMenuContribution,
   ExtensionModeRecord,
-  ExtensionNavigationRecord,
   ExtensionPanelRecord,
   ExtensionRecord,
   ExtensionRouteRecord,

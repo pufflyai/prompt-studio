@@ -32,7 +32,6 @@ const metadata = {
   ],
   commandPaletteContributions: [],
   modes: [],
-  navigation: [],
   routes: [],
   settingsDefinitions: [],
   settingsPanels: [],

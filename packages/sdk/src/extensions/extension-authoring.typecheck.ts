@@ -133,19 +133,6 @@ const extension = defineExtension({
 
 void extension;
 
-const unsupportedNavigation = defineExtension({
-  // @ts-expect-error legacy navigation contributions are no longer supported
-  navigation: {
-    lab: {
-      slot: "project.sidenavNav",
-      label: "Lab",
-      route: "lab",
-    },
-  },
-});
-
-void unsupportedNavigation;
-
 const invalidBooleanEnum = [true, "false"];
 
 const invalidSettingDeclarations = defineExtension({

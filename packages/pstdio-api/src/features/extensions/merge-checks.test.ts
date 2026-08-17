@@ -20,7 +20,6 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   modes: [],
   panels: [],
   routes: [],
-  navigation: [],
   treeItems: [],
   treeRenderers: [],
   fileRenderers: [],

@@ -279,7 +279,6 @@ describe("checkExtensionHostCompatibility", () => {
         },
       ],
       routes: [],
-      navigation: [],
       treeItems: [],
       activityItems: [],
       settingsSections: [

@@ -74,7 +74,6 @@ describe("workbench extension metadata targets", () => {
         },
       ],
       routes: [],
-      navigation: [],
       settingsPanels: [
         {
           id: "lab.settings",
@@ -142,7 +141,6 @@ describe("workbench extension metadata targets", () => {
       modes: [],
       panels: [],
       routes: [],
-      navigation: [],
       settingsPanels: [],
       kanbanRenderers: [],
       diagnostics: [],
@@ -171,7 +169,6 @@ describe("workbench extension metadata targets", () => {
       ],
       panels: [],
       routes: [],
-      navigation: [],
       settingsPanels: [],
       kanbanRenderers: [],
       diagnostics: [],
@@ -198,7 +195,6 @@ describe("workbench extension metadata targets", () => {
       ],
       panels: [],
       routes: [],
-      navigation: [],
       settingsPanels: [],
       kanbanRenderers: [],
       diagnostics: [],

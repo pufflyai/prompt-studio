@@ -93,7 +93,6 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
         args: { modeId: "pstdio.lab.lab" },
       },
     });
-    expect(metadata.navigation).toEqual([]);
     expect(metadata.settingsPanels[0]).toMatchObject({
       target: "workbench.settings",
       scope: "project",

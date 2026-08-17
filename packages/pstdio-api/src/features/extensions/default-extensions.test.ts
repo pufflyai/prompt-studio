@@ -42,7 +42,6 @@ const installed = {
     modes: [],
     panels: [],
     routes: [],
-    navigation: [],
     treeItems: [],
     treeRenderers: [],
     fileRenderers: [],

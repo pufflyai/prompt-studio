@@ -988,7 +988,7 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
     expect(runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_slot_kind"]);
   });
 
-  test("reports legacy navigation contributions as unsupported", () => {
+  test("rejects removed and unknown contribution maps", () => {
     const lab = defineExtension({
       navigation: {
         lab: {
@@ -997,15 +997,16 @@ describe("normalizeExtensionSources contribution diagnostics", () => {
           route: "lab",
         },
       },
+      activityRenderers: {},
+      sessionAnchorRenderers: {},
     } as never);
 
     const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
-    expect(runtime.navigation).toEqual([]);
-    expect(runtime.diagnostics[0]).toMatchObject({
-      code: "extension_navigation_unsupported",
-      extensionId: "pstdio.lab",
-      metadata: { contributionId: "lab.lab" },
-    });
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({ code: "unknown_extension_contribution", metadata: { key: "activityRenderers" } }),
+      expect.objectContaining({ code: "unknown_extension_contribution", metadata: { key: "navigation" } }),
+      expect.objectContaining({ code: "unknown_extension_contribution", metadata: { key: "sessionAnchorRenderers" } }),
+    ]);
   });
 });

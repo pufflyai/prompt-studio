@@ -49,7 +49,6 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   modes: [],
   panels: [],
   routes: [],
-  navigation: [],
   treeItems: [],
   activityItems: [],
   settingsSections: [],

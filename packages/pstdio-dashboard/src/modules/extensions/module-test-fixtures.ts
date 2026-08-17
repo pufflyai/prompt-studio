@@ -37,7 +37,6 @@ export const metadata = {
     },
   ],
   modes: [],
-  navigation: [],
   routes: [
     {
       id: "extension-lab.labPage",

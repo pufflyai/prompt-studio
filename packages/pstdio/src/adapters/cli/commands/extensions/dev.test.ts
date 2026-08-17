@@ -47,7 +47,6 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
       webview: { entry: { kind: "package-asset", path: "./src/overview.tsx", baseUrl: "file:///repo/" } },
     },
   ],
-  navigation: [],
   treeItems: [],
   settingsPanels: [],
   kanbanRenderers: [],

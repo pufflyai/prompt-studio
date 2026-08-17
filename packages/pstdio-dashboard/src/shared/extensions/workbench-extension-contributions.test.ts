@@ -56,24 +56,6 @@ const metadata = {
       label: "Run review",
     },
   ],
-  navigation: [
-    {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
-      slotId: "legacy.projectSidenavNav",
-      group: "Lab",
-      label: "Lab",
-      route: "lab",
-      icon: "flask-conical",
-    },
-    {
-      id: "extension-lab.outsideProject",
-      extensionId: "pstdio.extension-lab",
-      slotId: "legacy.workspaceTabs",
-      label: "Workspace lab",
-      route: "workspace-lab",
-    },
-  ],
   treeItems: [
     {
       id: "extension-lab.labPage",

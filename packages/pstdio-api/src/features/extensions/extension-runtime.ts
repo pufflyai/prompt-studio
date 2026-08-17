@@ -76,7 +76,6 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   modes: [],
   panels: [],
   routes: [],
-  navigation: [],
   treeItems: [],
   treeRenderers: [],
   fileRenderers: [],

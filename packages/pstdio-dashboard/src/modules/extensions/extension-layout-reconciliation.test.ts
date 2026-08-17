@@ -37,7 +37,6 @@ const createMetadata = (panels: DashboardExtensionMetadata["panels"]): Dashboard
       layout: { panels: ["main"], open: [{ region: "main", panel: "extension-lab.overview" }] },
     },
   ],
-  navigation: [],
   panels,
   routes: [],
   settingsPanels: [],

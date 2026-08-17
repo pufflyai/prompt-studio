@@ -431,7 +431,6 @@ export interface ExtensionRuntime {
   modes: RuntimeModeRecord[];
   panels: RuntimePanelRecord[];
   routes: RuntimeRouteRecord[];
-  navigation: never[];
   treeItems: RuntimeTreeItemRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

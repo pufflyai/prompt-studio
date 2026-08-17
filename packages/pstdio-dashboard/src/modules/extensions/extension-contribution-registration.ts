@@ -63,7 +63,6 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     diagnostics: metadata.diagnostics.filter((diagnostic) => diagnostic.extensionId === extensionId),
     menuContributions: scoped(metadata.menuContributions) ?? [],
     modes: scoped(metadata.modes) ?? [],
-    navigation: scoped(metadata.navigation) ?? [],
     routes: scoped(metadata.routes) ?? [],
     kanbanRenderers: scoped(metadata.kanbanRenderers),
     dataTableRenderers: scoped(metadata.dataTableRenderers),

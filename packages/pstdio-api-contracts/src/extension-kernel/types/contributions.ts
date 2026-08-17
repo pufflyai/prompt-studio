@@ -416,12 +416,6 @@ export interface ExtensionSettingsContribution<
   properties: TProperties;
 }
 
-export interface RendererContribution<TSlotContext extends Struct = Struct> {
-  slot: SlotRef<TSlotContext, "renderer"> | string;
-  for: string;
-  webview: WebviewContribution;
-}
-
 export interface ArtifactMountContribution {
   /** Relative path under .pstdio/<extension.name>/. */
   path: string;

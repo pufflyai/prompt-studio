@@ -199,32 +199,17 @@ export default defineExtension({
 ## Dashboard Kanban Renderer
 
 ```ts
-import {
-  commandRef,
-  defineExtension,
-} from "@pstdio/sdk/extensions";
+import { defineExtension } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  commands: {
-    "tasks.query": {
-      title: "Query tasks",
-      async run() {
-        return {
-          attributes: [
-            { id: "status", label: "Status", type: { kind: "string" } },
-          ],
-          rows: [
-            { id: "task-1", title: "Draft plan", attributes: { status: "Backlog" } },
-          ],
-        };
-      },
-    },
-  },
   kanbanRenderers: {
     tasks: {
       title: "Tasks",
       resourceKind: "task",
-      queryCommand: commandRef("planner.tasks.query"),
+      query: async () => ({
+        attributes: [{ id: "status", label: "Status", type: { kind: "string" } }],
+        rows: [{ id: "task-1", title: "Draft plan", attributes: { status: "Backlog" } }],
+      }),
       defaultSettings: {
         viewMode: "list",
         columnGrouping: "none",
@@ -235,11 +220,25 @@ export default defineExtension({
       emptyDescription: "Create a task to start planning.",
     },
   },
+  panels: {
+    tasks: {
+      title: "Tasks",
+      region: "main",
+      closable: false,
+      renderer: { kind: "kanban", id: "tasks" },
+    },
+  },
+  treeItems: {
+    tasks: {
+      target: "workbench.left.tree",
+      label: "Tasks",
+      action: { kind: "panel", panel: "tasks" },
+    },
+  },
 });
 ```
 
-`kanbanRenderers` are automatically listed in the project sidenav. Do not add a `treeItems` entry with
-`action.kind === "kanbanRenderer"`.
+The Panel places the renderer. The `treeItems` panel action makes it reachable from the project sidenav.
 
 ## Workbench Panels
 
@@ -285,7 +284,7 @@ Use this pattern for host-rendered resource screens: the file renderer owns docu
 side-panel navigation, and the mode layout pins the tree.
 
 ```ts
-import { commandRef, defineExtension, l10n } from "@pstdio/sdk/extensions";
+import { defineExtension, l10n } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   modes: {
@@ -304,15 +303,20 @@ export default defineExtension({
     noteContent: {
       title: l10n("fileRenderers.noteContent.title", "Note"),
       resourceKind: "note",
-      loadCommand: commandRef("notes.load-note"),
-      saveCommand: commandRef("notes.save-note"),
+      load: async (_ctx, input) => ({
+        fileName: "note.md",
+        content: `# ${input.renderer.resource.label}`,
+      }),
+      save: async (_ctx, input) => {
+        await saveNote(input.renderer.resource, input.content);
+      },
     },
   },
   treeRenderers: {
     noteTree: {
       title: l10n("treeRenderers.noteTree.title", "Files"),
       icon: "Files",
-      bodyCommand: commandRef("notes.note-tree.body"),
+      body: async () => [{ id: "files", label: "Files", nodes: [] }],
       defaultExpandedSectionIds: ["files"],
     },
   },
@@ -322,15 +326,14 @@ export default defineExtension({
       region: "main",
       closable: false,
       resourceKind: "note",
-      fileRenderer: "noteContent",
+      renderer: { kind: "file", id: "noteContent" },
     },
     noteTree: {
       title: l10n("panels.noteTree.title", "Files"),
       region: "sidenav",
       closable: false,
       resourceKind: "note",
-      treeRenderer: "noteTree",
-      hostTreeHeader: "default",
+      renderer: { kind: "tree", id: "noteTree" },
     },
   },
 });

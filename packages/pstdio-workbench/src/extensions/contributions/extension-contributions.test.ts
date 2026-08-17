@@ -20,17 +20,6 @@ const metadata = {
       when: { resourceType: ["extension-route"] },
     },
   ],
-  navigation: [
-    {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
-      slotId: "workbench.navigation",
-      group: "Lab",
-      label: "Lab",
-      route: "lab",
-      icon: "flask-conical",
-    },
-  ],
   routes: [
     {
       id: "extension-lab.labPage",

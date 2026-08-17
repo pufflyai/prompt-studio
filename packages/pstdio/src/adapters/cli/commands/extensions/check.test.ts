@@ -21,7 +21,6 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   modes: [],
   panels: [],
   routes: [],
-  navigation: [],
   treeItems: [],
   settingsPanels: [],
   kanbanRenderers: [],

@@ -78,7 +78,6 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   }
   target.panels.push(...source.panels);
   target.routes.push(...source.routes);
-  target.navigation.push(...source.navigation);
   target.treeItems.push(...source.treeItems);
   target.treeRenderers.push(...source.treeRenderers);
   target.fileRenderers.push(...source.fileRenderers);

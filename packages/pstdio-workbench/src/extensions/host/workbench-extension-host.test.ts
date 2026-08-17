@@ -69,7 +69,6 @@ const metadata = {
       },
     },
   ],
-  navigation: [],
   routes: [
     {
       id: "lab.details",

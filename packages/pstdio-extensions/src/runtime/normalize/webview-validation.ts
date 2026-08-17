@@ -6,13 +6,7 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 
-const webviewContributionMaps = [
-  "activityRenderers",
-  "routes",
-  "sessionAnchorRenderers",
-  "settingsPanels",
-  "panels",
-] as const;
+const webviewContributionMaps = ["routes", "settingsPanels", "panels"] as const;
 
 type WebviewMapKey = (typeof webviewContributionMaps)[number];
 

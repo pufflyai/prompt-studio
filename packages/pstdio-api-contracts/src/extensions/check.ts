@@ -23,7 +23,6 @@ import { extensionKeybindingRecordSchema } from "./keybindings";
 import {
   extensionActivityItemRecordSchema,
   extensionModeRecordSchema,
-  extensionNavigationRecordSchema,
   extensionPanelRecordSchema,
   extensionRouteRecordSchema,
   extensionTreeItemContributionSchema,
@@ -57,7 +56,6 @@ export const extensionsCheckResponseSchema = z.object({
   modes: z.array(extensionModeRecordSchema),
   panels: z.array(extensionPanelRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
-  navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema),
   activityItems: z.array(extensionActivityItemRecordSchema).optional(),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
@@ -97,7 +95,6 @@ export const workbenchExtensionMetadataSchema = z.object({
   modes: z.array(extensionModeRecordSchema),
   panels: z.array(workbenchExtensionPanelRecordSchema),
   routes: z.array(workbenchExtensionRouteRecordSchema),
-  navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   activityItems: z.array(extensionActivityItemRecordSchema).optional(),
   settingsSections: z.array(extensionSettingsSectionRecordSchema).optional(),
