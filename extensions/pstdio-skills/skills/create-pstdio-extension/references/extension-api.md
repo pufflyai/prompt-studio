@@ -228,6 +228,35 @@ Load commands return `{ content }` for markdown/code text, `{ dataUrl }` for ima
 `treeRenderers` need `title` and a valid `bodyCommand`; `childrenCommand` and `footerCommand` are optional. Body
 commands return `TreeViewSection[]`. Children and footer commands return `TreeNode[]`.
 
+### Refresh native renderers with events
+
+Every native renderer can declare `refreshEvents`. Use a typed `eventRef()` for events owned by the extension, or a
+string id for an event owned by another extension. Emit the event only after the mutation succeeds. The host reruns
+only renderer callbacks that declared that event; it does not refresh renderers after unrelated commands.
+
+```ts
+const ticketsChanged = eventRef<{ ticketId: string }>("example.tickets.changed");
+
+export default defineExtension({
+  dataTableRenderers: {
+    tickets: {
+      title: "Tickets",
+      query: async () => ({ rows: [] }),
+      refreshEvents: [ticketsChanged],
+    },
+  },
+  commands: {
+    updateTicket: {
+      title: "Update ticket",
+      async run(ctx) {
+        // Persist the update first.
+        await ctx.events.emit(ticketsChanged, { ticketId: "ticket-1" });
+      },
+    },
+  },
+});
+```
+
 ## Project Sidenav UI
 
 For a Planner-style native list or board, define a `kanbanRenderers` contribution with a query command. The dashboard

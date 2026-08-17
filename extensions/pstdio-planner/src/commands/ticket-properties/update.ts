@@ -1,4 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { plannerTicketsChanged } from "../../events";
 import { applyTicketAttribute } from "../set-ticket-attribute";
 
 // Persists an edit from the ticket properties panel. The control id doubles as the
@@ -14,11 +15,13 @@ export const ticketPropertiesUpdateCommand = defineCommand({
     const rowId = ctx.resource?.type === "ticket" ? ctx.resource.id : undefined;
     if (!rowId) return null;
 
-    return applyTicketAttribute({
+    const ticket = await applyTicketAttribute({
       storage: ctx.storage,
       rowId,
       attributeId: ctx.params.controlId,
       value: ctx.params.value,
     });
+    if (ticket) await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    return ticket;
   },
 });

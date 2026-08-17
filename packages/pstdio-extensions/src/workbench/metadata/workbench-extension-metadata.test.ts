@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { packageAsset } from "@pstdio/sdk/extensions";
+import { eventRef, packageAsset } from "@pstdio/sdk/extensions";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
@@ -153,6 +153,51 @@ describe("createWorkbenchExtensionMetadata", () => {
       resourceKind: "ticket",
       layout: { panels: ["main"], open: [{ region: "main", panel: "lab.ticketPanel" }] },
     });
+  });
+});
+
+describe("createWorkbenchExtensionMetadata renderer refresh events", () => {
+  test("normalizes typed and string event references once for every native renderer", () => {
+    const changed = eventRef("lab.changed");
+    const refreshEvents = [changed, "external.changed", changed, ""] as const;
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          treeRenderers: { tree: { title: "Tree", body: async () => [], refreshEvents } },
+          fileRenderers: { file: { title: "File", load: async () => ({ content: "" }), refreshEvents } },
+          controlsRenderers: {
+            controls: { title: "Controls", query: async () => ({ values: {} }), refreshEvents },
+          },
+          dataTableRenderers: {
+            table: { title: "Table", query: async () => ({ rows: [] }), refreshEvents },
+          },
+          kanbanRenderers: {
+            board: { title: "Board", query: async () => ({ rows: [] }), refreshEvents },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+    const expected = ["lab.changed", "external.changed"];
+
+    expect(metadata.treeRenderers?.[0]?.refreshEventIds).toEqual(expected);
+    expect(metadata.fileRenderers?.[0]?.refreshEventIds).toEqual(expected);
+    expect(metadata.controlsRenderers?.[0]?.refreshEventIds).toEqual(expected);
+    expect(metadata.dataTableRenderers?.[0]?.refreshEventIds).toEqual(expected);
+    expect(metadata.kanbanRenderers?.[0]?.refreshEventIds).toEqual(expected);
   });
 });
 

@@ -3,6 +3,7 @@ import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/co
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import type { StoredTicketAttachment } from "../data/types";
+import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
@@ -62,7 +63,7 @@ export const createTicketCommand = defineCommand({
         ? await resolveTicketId(ctx.storage, ctx.params.parent)
         : (ctx.params.parentId ?? null);
 
-    return putTicket(ctx.storage, {
+    const ticket = await putTicket(ctx.storage, {
       id: crypto.randomUUID(),
       shorthand,
       title: ctx.params.content ? deriveTitle(ctx.params.content) : (ctx.params.title ?? "Untitled"),
@@ -81,5 +82,7 @@ export const createTicketCommand = defineCommand({
       createdAt: now,
       updatedAt: now,
     });
+    await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    return ticket;
   },
 });

@@ -93,6 +93,7 @@ export const extensionKanbanRendererRecordSchema = z.object({
   resourceKind: z.string().optional(),
   attributes: z.array(kanbanRendererAttributeSchema).optional(),
   queryHandlerId: z.string(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
   attributeChangeHandlerId: z.string().optional(),
   reorderHandlerId: z.string().optional(),
   columnActionHandlerId: z.string().optional(),
@@ -114,7 +115,7 @@ export const extensionCommandPaletteResourceRecordSchema = z.object({
   title: localizableStringSchema,
   resourceKind: z.string().optional(),
   queryCommandId: z.string(),
-  refreshEventIds: z.array(z.string()).optional(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
 });
 
 export type ExtensionKanbanRendererRecord = z.infer<typeof extensionKanbanRendererRecordSchema>;

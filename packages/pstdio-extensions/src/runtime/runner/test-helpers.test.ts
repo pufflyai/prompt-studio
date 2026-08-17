@@ -103,11 +103,15 @@ export const buildRuntime = (definition: ExtensionDefinition): ExtensionRuntime 
     },
   ]);
 
-export const makeRunner = (definition: ExtensionDefinition, opts: { maxDepth?: number } = {}) => {
+export const makeRunner = (
+  definition: ExtensionDefinition,
+  opts: { maxDepth?: number; onDidDispatchEvent?: (eventId: string) => void } = {},
+) => {
   const runtime = buildRuntime(definition);
   const { api: storage } = makeStorage();
   return createCommandRunner(runtime, {
     buildEnvironment: () => stubEnvironment(storage),
     maxDepth: opts.maxDepth,
+    onDidDispatchEvent: opts.onDidDispatchEvent,
   });
 };

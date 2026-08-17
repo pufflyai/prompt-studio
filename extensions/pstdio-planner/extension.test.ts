@@ -61,6 +61,15 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.panels?.ticketFiles).not.toHaveProperty("webview");
   });
 
+  test("refreshes native ticket renderers from the shared ticket event", () => {
+    const event = { id: "pstdio-planner.tickets.changed" };
+
+    expect(extension.treeRenderers?.ticketFiles?.refreshEvents).toEqual([event]);
+    expect(extension.fileRenderers?.ticketContent?.refreshEvents).toEqual([event]);
+    expect(extension.controlsRenderers?.ticketProperties?.refreshEvents).toEqual([event]);
+    expect(extension.kanbanRenderers?.tickets?.refreshEvents).toEqual([event]);
+  });
+
   test("contributes shared document templates and planner skills", () => {
     expect(extension.templateTypes?.document).toMatchObject({ label: "Document" });
     expect(extension.templates?.prd).toMatchObject({ title: "PRD", type: "document" });

@@ -42,6 +42,7 @@ const writeCommandExtension = (root: string) => {
             const amount = ctx.params.amount ?? 1;
             const next = current + amount;
             await ctx.storage.set("counter", next);
+            await ctx.events.emit("lab.counter.changed", { counter: next });
             return {
               counter: next,
               projectId: ctx.projectId,
@@ -187,6 +188,12 @@ describe("extension command execution routes", () => {
     expect(bump).toMatchObject({
       commandId: "lab.counter.bump",
       extensionId: "pstdio.lab",
+      eventIds: [
+        "command.requested:lab.counter.bump",
+        "command.started:lab.counter.bump",
+        "lab.counter.changed",
+        "command.completed:lab.counter.bump",
+      ],
       outcome: {
         ok: true,
         status: "success",

@@ -9,7 +9,7 @@ export const extensionControlsRendererRecordSchema = z.object({
   valueChangeHandlerId: z.string().optional(),
   applyHandlerId: z.string().optional(),
   resetHandlerId: z.string().optional(),
-  refreshEventIds: z.array(z.string()).optional(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
   defaultValues: z.record(z.string(), z.unknown()).optional(),
   emptyTitle: localizableStringSchema.optional(),
   emptyDescription: localizableStringSchema.optional(),

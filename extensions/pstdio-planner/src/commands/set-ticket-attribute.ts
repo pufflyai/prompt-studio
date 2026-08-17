@@ -1,6 +1,7 @@
 import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
+import { plannerTicketsChanged } from "../events";
 
 const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
@@ -56,11 +57,13 @@ export const setTicketAttributeCommand = defineCommand({
     value: params.json<string | string[]>(),
   },
   async run(ctx) {
-    return applyTicketAttribute({
+    const ticket = await applyTicketAttribute({
       storage: ctx.storage,
       rowId: ctx.params.rowId,
       attributeId: ctx.params.attributeId,
       value: ctx.params.value,
     });
+    if (ticket) await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    return ticket;
   },
 });

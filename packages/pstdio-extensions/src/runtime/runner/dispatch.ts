@@ -69,6 +69,8 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
       }
     }
 
+    input.deps.onDidDispatchEvent?.(eventId);
+
     return diagnostics.length > 0 ? { delivered, diagnostics } : { delivered };
   };
 

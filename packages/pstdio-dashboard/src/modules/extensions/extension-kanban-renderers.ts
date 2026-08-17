@@ -18,7 +18,7 @@ import { apiRequest } from "@/lib/api";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
-import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
+import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
   buildDashboardExtensionMenuRegistrations,
   type DashboardExtensionMetadata,
@@ -103,13 +103,6 @@ const findRowActionMenuRegistration = (
       registration.menuItems.some((item) => sameMenuPath(item.menuPath, path)),
   );
 };
-
-const createRowActionRefreshSubscription = (commandIds: Set<string>, refresh: () => void) => ({
-  dispose: subscribeToExtensionCommandFeed((event) => {
-    if (!event.outcome.ok || !commandIds.has(event.commandId)) return;
-    refresh();
-  }),
-});
 
 const sessionSyncTables = new Set<CollectionChange["table"]>(["sessions", "workspace_sessions"]);
 
@@ -225,11 +218,6 @@ export const registerExtensionKanbanRenderers = (
         }),
       );
     }
-
-    const rowActionCommandIds = new Set((record.rowActions ?? []).map((action) => action.commandId));
-    if (rowActionCommandIds.size > 0) {
-      disposables.push(createRowActionRefreshSubscription(rowActionCommandIds, () => refreshRecord(record)));
-    }
   }
 
   disposables.push(
@@ -239,7 +227,11 @@ export const registerExtensionKanbanRenderers = (
   );
 
   const commandContext: WorkbenchExtensionCommandContext = {
-    executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
+    executeCommand: async (commandId, body) => {
+      const response = await executeCommand(projectId, commandId, body);
+      publishExtensionCommandEvent(response);
+      return response;
+    },
     projectId,
     workbench: ctx,
   };
@@ -282,7 +274,6 @@ export const registerExtensionKanbanRenderers = (
       }
       openResource(synthesizeCreatedResource(record, created, projectId));
     },
-    onAfterMutation: (record) => refreshRecord(record),
   };
 
   disposables.push(

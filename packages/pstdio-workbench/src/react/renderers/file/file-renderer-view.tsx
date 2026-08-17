@@ -77,6 +77,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resourceUri: resource?.uri });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
+  const pending = useRef<string | null>(null);
   const rendererRef = useRef<HTMLDivElement>(null);
   const previousSectionNavigationRef = useRef<{
     resourceUri?: string;
@@ -133,7 +134,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     };
     load();
     const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
-      if (event.fileRendererId === contribution.id) load();
+      if (event.fileRendererId === contribution.id && pending.current === null) load();
     });
     return () => {
       cancelled = true;
@@ -144,7 +145,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // Debounced autosave shared by the markdown + code editors. Flushed on unmount
   // and when the tab is hidden so the last keystrokes are never dropped.
   const save = contribution.save;
-  const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

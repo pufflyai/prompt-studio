@@ -1,5 +1,6 @@
 import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { labCommands } from "../commands";
+import { labArtifactsChanged } from "../events";
 
 const runLabCommand =
   <TContext, TResult, TParams extends object>(command: { run: (ctx: TContext) => TResult }, params: TParams) =>
@@ -170,6 +171,7 @@ export const labDataTableRenderers = {
     title: "Artifacts",
     resourceKind: "glass-lab-artifact",
     query: (ctx, input) => runLabCommand(labCommands["glass-lab-artifacts.query"], input)(ctx),
+    refreshEvents: [labArtifactsChanged],
     onRowActivate: (_ctx, { row }) =>
       row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
     rowActions: [
@@ -200,6 +202,7 @@ export const labControlsRenderers = {
     title: l10n("controls.labArtifactCreate.title", "Create artifacts"),
     query: (ctx, input) => runLabCommand(labCommands["artifact-menu.query"], input)(ctx),
     onValueChange: (ctx, input) => runLabCommand(labCommands["artifact-menu.update"], input)(ctx),
+    refreshEvents: [labArtifactsChanged],
     defaultValues: {},
   },
 } satisfies NonNullable<ExtensionDefinition["controlsRenderers"]>;

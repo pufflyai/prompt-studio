@@ -3,6 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
+import { plannerTicketsChanged } from "../events";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
@@ -95,6 +96,7 @@ export const archiveTicketCommand = defineCommand({
     // the ticket is durably archived, so a cleanup failure should not be reported
     // as a failed archive. The failure surfaces via a persistent notification instead.
     await archiveLinkedWorkspacesSafely(ctx, [next]);
+    await ctx.events?.emit(plannerTicketsChanged, { ticketId: next.id });
 
     return next;
   },
@@ -118,6 +120,7 @@ export const archiveTicketColumnActionCommand = defineCommand({
     // fires immediately. Linked workspaces are sync'd to the dashboard, so their UI
     // updates as the cascade completes; failures surface via a persistent notification.
     void archiveLinkedWorkspacesSafely(ctx, archived);
+    await ctx.events?.emit(plannerTicketsChanged, {});
 
     return { archived };
   },

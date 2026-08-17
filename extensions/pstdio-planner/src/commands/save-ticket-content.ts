@@ -3,6 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { updateTicketFile } from "../data/file-operations";
 import { findTicket } from "../data/resolve";
+import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Save command for the ticket editor. Writes to whichever document the files tree
@@ -18,12 +19,14 @@ export const saveTicketContentCommand = defineCommand({
 
     const documentId = selectedDocumentFromResource(ctx.resource);
     if (documentId !== TICKET_BODY_DOCUMENT && existing.files?.some((file) => file.id === documentId)) {
-      return updateTicketFile({
+      const ticket = await updateTicketFile({
         storage: ctx.storage,
         ticketId: existing.id,
         fileId: documentId,
         content: ctx.params.content,
       });
+      await ctx.events?.emit(plannerTicketsChanged, { ticketId: existing.id });
+      return ticket;
     }
 
     const next = {
@@ -33,6 +36,7 @@ export const saveTicketContentCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await ticketsCollection(ctx.storage).put(existing.id, next);
+    await ctx.events?.emit(plannerTicketsChanged, { ticketId: existing.id });
     return next;
   },
 });

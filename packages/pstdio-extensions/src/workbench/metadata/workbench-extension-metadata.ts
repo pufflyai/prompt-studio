@@ -55,6 +55,12 @@ const slotIdOf = (slot: unknown) => {
 
 const compact = <T>(items: Array<T | null>) => items.filter((item): item is T => item !== null);
 
+const refreshEventIdsOf = (events: readonly unknown[] | undefined) => {
+  const ids = compact((events ?? []).map((event) => refIdOf(event) ?? null)).filter((id) => id.trim().length > 0);
+  const uniqueIds = [...new Set(ids)];
+  return uniqueIds.length > 0 ? uniqueIds : undefined;
+};
+
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) || localOrFullId.startsWith("workbench.")
     ? localOrFullId
@@ -221,6 +227,7 @@ const toDataTableRendererRecord = (
     resourceKind: renderer.contribution.resourceKind,
     columns: renderer.contribution.columns,
     queryHandlerId: handlers.queryHandlerId,
+    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     selectionMode: renderer.contribution.selectionMode,
     selectionActions: compact(
       (renderer.contribution.selectionActions ?? []).map((action) => {
@@ -319,6 +326,7 @@ const toKanbanRendererRecord = (
     resourceKind: renderer.contribution.resourceKind,
     attributes: renderer.contribution.attributes,
     queryHandlerId: handlers.queryHandlerId,
+    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     attributeChangeHandlerId: handlers.attributeChangeHandlerId,
     reorderHandlerId: handlers.reorderHandlerId,
     columnActionHandlerId: handlers.columnActionHandlerId,
@@ -346,14 +354,13 @@ const toCommandPaletteResourceRecord = (
 ): WorkbenchExtensionCommandPaletteResourceRecord | null => {
   const queryCommandId = resolveOptionalContributionId(provider.name, refIdOf(provider.contribution.queryCommand));
   if (!queryCommandId) return null;
-  const refreshEventIds = compact((provider.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
   return {
     id: provider.id,
     extensionId: provider.extensionId,
     title: provider.contribution.title,
     resourceKind: provider.contribution.resourceKind,
     queryCommandId,
-    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
+    refreshEventIds: refreshEventIdsOf(provider.contribution.refreshEvents),
   };
 };
 
@@ -372,6 +379,7 @@ const toTreeRendererRecord = (
     title: renderer.contribution.title,
     icon: renderer.contribution.icon,
     bodyHandlerId: handlers.bodyHandlerId,
+    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     childrenHandlerId: handlers.childrenHandlerId,
     footerHandlerId: handlers.footerHandlerId,
     defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
@@ -391,6 +399,7 @@ const toFileRendererRecord = (
     icon: renderer.contribution.icon,
     resourceKind: renderer.contribution.resourceKind,
     loadHandlerId: handlers.loadHandlerId,
+    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     saveHandlerId: handlers.saveHandlerId,
   };
 };
@@ -405,7 +414,6 @@ const toControlsRendererRecord = (
     resetHandlerId?: string;
   };
   if (!handlers.queryHandlerId) return null;
-  const refreshEventIds = compact((renderer.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
   return {
     id: renderer.id,
     extensionId: renderer.extensionId,
@@ -414,7 +422,7 @@ const toControlsRendererRecord = (
     valueChangeHandlerId: handlers.valueChangeHandlerId,
     applyHandlerId: handlers.applyHandlerId,
     resetHandlerId: handlers.resetHandlerId,
-    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
+    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     defaultValues: renderer.contribution.defaultValues,
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
