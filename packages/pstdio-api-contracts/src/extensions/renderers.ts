@@ -7,6 +7,7 @@ export const extensionTreeRendererRecordSchema = z.object({
   title: localizableStringSchema,
   icon: z.string().optional(),
   bodyHandlerId: z.string(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
   childrenHandlerId: z.string().optional(),
   footerHandlerId: z.string().optional(),
   defaultExpandedSectionIds: z.array(z.string()).optional(),
@@ -20,6 +21,7 @@ export const extensionFileRendererRecordSchema = z.object({
   icon: z.string().optional(),
   resourceKind: z.string().optional(),
   loadHandlerId: z.string(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
   saveHandlerId: z.string().optional(),
 });
 

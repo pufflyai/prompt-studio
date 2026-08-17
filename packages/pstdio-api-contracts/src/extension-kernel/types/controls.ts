@@ -49,7 +49,7 @@ export interface ControlsRendererContribution {
   onValueChange?: RendererCallback<ControlsUpdateValueInput, unknown>;
   onApply?: RendererCallback<ControlsApplyInput, unknown>;
   onReset?: RendererCallback<ControlsResetInput, unknown>;
-  refreshEvents?: EventRef[];
+  refreshEvents?: readonly (EventRef | string)[];
   defaultValues?: Record<string, JsonValue>;
   emptyTitle?: Localizable<string>;
   emptyDescription?: Localizable<string>;

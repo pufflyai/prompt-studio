@@ -332,6 +332,7 @@ export interface KanbanRendererContribution {
   resourceKind?: string;
   attributes?: KanbanRendererAttributeDescriptor[];
   query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
+  refreshEvents?: readonly (EventRef | string)[];
   onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
   onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
   onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
@@ -381,7 +382,7 @@ export interface CommandPaletteResourceContribution {
   title: Localizable<string>;
   resourceKind?: string;
   queryCommand: CommandRef<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult> | string;
-  refreshEvents?: (EventRef | string)[];
+  refreshEvents?: readonly (EventRef | string)[];
 }
 
 export type ExtensionSettingScope = "global" | "project";

@@ -1,5 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
+import { plannerTicketsChanged } from "../events";
 import { sortedBySortOrder } from "../utils/sort";
 
 const moveBefore = <T extends { id: string }>(items: T[], rowId: string, beforeRowId?: string) => {
@@ -35,6 +36,8 @@ export const reorderTicketCommand = defineCommand({
         }),
       ),
     );
+
+    await ctx.events?.emit(plannerTicketsChanged, { ticketId: rowId });
 
     return reordered.map((ticket, sortOrder) => ({ ...ticket, sortOrder }));
   },

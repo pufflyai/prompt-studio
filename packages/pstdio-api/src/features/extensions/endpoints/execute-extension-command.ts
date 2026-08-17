@@ -93,7 +93,9 @@ export const executeExtensionCommandHandler = (
         });
       }
 
+      const eventIds = new Set<string>();
       const runner = createCommandRunner(runtime, {
+        onDidDispatchEvent: (eventId) => eventIds.add(eventId),
         buildEnvironment: (input) =>
           createCommandEnvironment(deps, enabledSources, {
             extensionId: input.extensionId,
@@ -121,7 +123,7 @@ export const executeExtensionCommandHandler = (
         metadata: body.metadata as JsonObject | undefined,
       });
 
-      return c.json({ commandId, extensionId: handler.extensionId, outcome }, 200);
+      return c.json({ commandId, extensionId: handler.extensionId, eventIds: [...eventIds], outcome }, 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

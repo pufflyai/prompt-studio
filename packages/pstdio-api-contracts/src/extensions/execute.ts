@@ -108,6 +108,7 @@ export const commandOutcomeSchema = z.object({
 export const commandExecuteResponseSchema = z.object({
   commandId: z.string(),
   extensionId: z.string(),
+  eventIds: z.array(z.string()).optional(),
   outcome: commandOutcomeSchema,
 });
 

@@ -3,13 +3,14 @@ import {
   registerWorkbenchExtensionCommandPaletteResources,
   registerWorkbenchExtensionDataTableRenderers,
   registerWorkbenchExtensionFileRenderers,
+  registerWorkbenchExtensionRendererRefreshEvents,
   registerWorkbenchExtensionTreeRenderers,
 } from "@pstdio/workbench/extensions";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import {
   publishExtensionCommandEvent,
-  subscribeToExtensionCommandFeed,
+  subscribeToExtensionEventFeed,
 } from "@/shared/extensions/extension-webview-broadcast";
 import {
   buildDashboardExtensionCommandPaletteRegistrations,
@@ -151,6 +152,7 @@ const registerSingleExtensionContributions = (
                 metadata: notification.metadata,
               });
             }
+            publishExtensionCommandEvent(response);
             return response;
           },
           projectId,
@@ -160,17 +162,6 @@ const registerSingleExtensionContributions = (
         metadata.panels,
       ),
     );
-    if (metadata.dataTableRenderers?.length) {
-      const dataTableQueryHandlerIds = new Set(metadata.dataTableRenderers.map((renderer) => renderer.queryHandlerId));
-      disposables.push({
-        dispose: subscribeToExtensionCommandFeed((event) => {
-          if (!event.outcome.ok || dataTableQueryHandlerIds.has(event.commandId)) return;
-          for (const renderer of metadata.dataTableRenderers ?? []) {
-            if (renderer.extensionId === event.extensionId) ctx.renderers.refreshDataTableRenderer(renderer.id);
-          }
-        }),
-      });
-    }
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
     disposables.push(
       registerWorkbenchExtensionFileRenderers({
@@ -219,6 +210,13 @@ const registerSingleExtensionContributions = (
     disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
+    disposables.push(
+      registerWorkbenchExtensionRendererRefreshEvents({
+        metadata,
+        subscribe: (listener) => ({ dispose: subscribeToExtensionEventFeed(listener) }),
+        workbench: ctx,
+      }),
+    );
     return disposables;
   } catch (error) {
     disposeExtensionContributions(disposables);

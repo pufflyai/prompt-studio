@@ -5,6 +5,13 @@ const commandMenus = () => Object.values(extension.commands ?? {}).flatMap((comm
 const commandPalettes = () => Object.values(extension.commands ?? {}).flatMap((command) => command.palette ?? []);
 
 describe("extension-lab workbench attachments", () => {
+  test("refreshes artifact renderers from the shared artifact event", () => {
+    const event = { id: "extension-lab.artifacts.changed" };
+
+    expect(extension.dataTableRenderers?.glassLabArtifacts?.refreshEvents).toEqual([event]);
+    expect(extension.controlsRenderers?.labArtifactCreate?.refreshEvents).toEqual([event]);
+  });
+
   test("exercises PS-313 attachment targets", () => {
     expect(commandMenus()).toEqual(
       expect.arrayContaining([

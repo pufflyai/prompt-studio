@@ -6,8 +6,8 @@ import { createWorkbenchCore } from "@pstdio/workbench";
 import {
   createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,
-  refreshWorkbenchExtensionContributions,
   registerWorkbenchExtensionContributions,
+  registerWorkbenchExtensionRendererRefreshEvents,
 } from "@pstdio/workbench/extensions";
 import { createWorkbenchSettingsModule, createWorkbenchTerminalModule, Workbench } from "@pstdio/workbench/react";
 import { text } from "pstdio-extensions/workbench";
@@ -79,6 +79,16 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   const workbench = createWorkbenchCore();
   const resource = createPreviewResource(bench.metadata);
   const webviewFiles = createPreviewWebviewFileHost();
+  let publishExtensionEvent: ((eventId: string) => void) | undefined;
+
+  registerWorkbenchExtensionRendererRefreshEvents({
+    metadata: bench.metadata,
+    subscribe: (listener) => {
+      publishExtensionEvent = listener;
+      return { dispose: () => (publishExtensionEvent = undefined) };
+    },
+    workbench,
+  });
 
   workbench.themes.register(extensionThemePreferences(bench));
 
@@ -108,7 +118,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
         surfaceCommandOutcome(workbench, response);
         const event = publishLastCommand(commandId, response);
         workbench.context.set("extensionTestbench.lastCommandTick", event.tick);
-        refreshWorkbenchExtensionContributions(workbench, bench.metadata, commandId);
+        for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent?.(eventId);
         onCommandCall({ commandId, id, request, response, status: "success" });
         return response;
       } catch (error) {

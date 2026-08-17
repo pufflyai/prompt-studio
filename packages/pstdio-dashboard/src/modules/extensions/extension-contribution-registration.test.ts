@@ -121,7 +121,7 @@ describe("registerExtensionContributions", () => {
     expect(workbench.settings.getPanel("pstdio-planner.ticketStatuses")?.title).toBe("Ticket statuses");
   });
 
-  test("refreshes extension data tables after successful non-query commands", () => {
+  test("refreshes only data tables whose declared event was delivered", () => {
     const workbench = createWorkbenchCore();
     const refreshes: string[] = [];
     const artifactDataTableMetadata = {
@@ -132,6 +132,7 @@ describe("registerExtensionContributions", () => {
           extensionId: "pstdio.extension-lab",
           title: "Artifacts",
           queryHandlerId: "extension-lab.artifacts.query",
+          refreshEventIds: ["extension-lab.artifacts.changed"],
         },
       ],
     } satisfies DashboardExtensionMetadata;
@@ -150,18 +151,15 @@ describe("registerExtensionContributions", () => {
 
     try {
       publishExtensionCommandEvent({
-        commandId: "extension-lab.artifacts.query",
-        extensionId: "pstdio.extension-lab",
-        outcome: { ok: true, status: "success" },
-      });
-      publishExtensionCommandEvent({
         commandId: "extension-lab.artifacts.create",
-        extensionId: "other.extension",
+        extensionId: "pstdio.extension-lab",
+        eventIds: ["unrelated.changed"],
         outcome: { ok: true, status: "success" },
       });
       publishExtensionCommandEvent({
         commandId: "extension-lab.artifacts.create",
         extensionId: "pstdio.extension-lab",
+        eventIds: ["extension-lab.artifacts.changed"],
         outcome: { ok: true, status: "success" },
       });
 

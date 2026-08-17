@@ -60,6 +60,7 @@ export const extensionDataTableRendererRecordSchema = z.object({
   resourceKind: z.string().optional(),
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryHandlerId: z.string(),
+  refreshEventIds: z.array(z.string().min(1)).optional(),
   selectionMode: z.enum(["none", "multiple"]).optional(),
   selectionActions: z.array(selectionActionSchema).optional(),
   rowActions: z.array(rowActionSchema).optional(),

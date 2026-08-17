@@ -8,6 +8,7 @@ export interface ExtensionCommandEvent {
 }
 
 const subscribers = new Set<(event: ExtensionCommandEvent) => void>();
+const eventSubscribers = new Set<(eventId: string) => void>();
 let tick = 0;
 
 export const subscribeToExtensionCommandFeed = (listener: (event: ExtensionCommandEvent) => void) => {
@@ -15,6 +16,17 @@ export const subscribeToExtensionCommandFeed = (listener: (event: ExtensionComma
   return () => {
     subscribers.delete(listener);
   };
+};
+
+export const subscribeToExtensionEventFeed = (listener: (eventId: string) => void) => {
+  eventSubscribers.add(listener);
+  return () => {
+    eventSubscribers.delete(listener);
+  };
+};
+
+export const publishExtensionEvent = (eventId: string) => {
+  for (const listener of eventSubscribers) listener(eventId);
 };
 
 export const publishExtensionCommandEvent = (response: CommandExecuteResponse) => {
@@ -26,4 +38,5 @@ export const publishExtensionCommandEvent = (response: CommandExecuteResponse) =
     tick,
   };
   for (const listener of subscribers) listener(event);
+  for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent(eventId);
 };

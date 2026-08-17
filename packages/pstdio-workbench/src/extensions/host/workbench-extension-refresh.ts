@@ -1,19 +1,56 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { WorkbenchModuleContext, WorkbenchPanelInstance } from "../../core";
+import type { Disposable, WorkbenchModuleContext, WorkbenchPanelInstance } from "../../core";
 
-const treeQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set(
-    (metadata.treeRenderers ?? []).flatMap((renderer) =>
-      [renderer.bodyHandlerId, renderer.childrenHandlerId, renderer.footerHandlerId].filter((handlerId) => handlerId),
-    ),
-  );
+export type WorkbenchExtensionRendererKind = "tree" | "file" | "controls" | "dataTable" | "kanban";
 
-const kanbanRendererQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set((metadata.kanbanRenderers ?? []).map((renderer) => renderer.queryHandlerId));
+interface RendererRefreshTarget {
+  id: string;
+  kind: WorkbenchExtensionRendererKind;
+}
 
-const dataTableRendererQueryHandlerIds = (metadata: WorkbenchExtensionMetadata) =>
-  new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryHandlerId));
+export interface RegisterWorkbenchExtensionRendererRefreshEventsInput {
+  metadata: WorkbenchExtensionMetadata;
+  subscribe: (listener: (eventId: string) => void) => Disposable;
+  workbench: WorkbenchModuleContext;
+}
+
+export const refreshWorkbenchExtensionRenderer = (workbench: WorkbenchModuleContext, target: RendererRefreshTarget) => {
+  if (target.kind === "tree") workbench.renderers.refresh(target.id);
+  if (target.kind === "file") workbench.renderers.refreshFileRenderer(target.id);
+  if (target.kind === "controls") workbench.renderers.refreshControlsRenderer(target.id);
+  if (target.kind === "dataTable") workbench.renderers.refreshDataTableRenderer(target.id);
+  if (target.kind === "kanban") workbench.renderers.refreshKanbanRenderer(target.id);
+};
+
+const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
+  const targets = new Map<string, RendererRefreshTarget[]>();
+  const add = (kind: WorkbenchExtensionRendererKind, renderer: { id: string; refreshEventIds?: string[] }) => {
+    for (const eventId of new Set(renderer.refreshEventIds ?? [])) {
+      const eventTargets = targets.get(eventId) ?? [];
+      if (!eventTargets.some((target) => target.kind === kind && target.id === renderer.id)) {
+        eventTargets.push({ id: renderer.id, kind });
+      }
+      targets.set(eventId, eventTargets);
+    }
+  };
+
+  for (const renderer of metadata.treeRenderers ?? []) add("tree", renderer);
+  for (const renderer of metadata.fileRenderers ?? []) add("file", renderer);
+  for (const renderer of metadata.controlsRenderers ?? []) add("controls", renderer);
+  for (const renderer of metadata.dataTableRenderers ?? []) add("dataTable", renderer);
+  for (const renderer of metadata.kanbanRenderers ?? []) add("kanban", renderer);
+  return targets;
+};
+
+export const registerWorkbenchExtensionRendererRefreshEvents = (
+  input: RegisterWorkbenchExtensionRendererRefreshEventsInput,
+) => {
+  const targets = rendererRefreshTargets(input.metadata);
+  return input.subscribe((eventId) => {
+    for (const target of targets.get(eventId) ?? []) refreshWorkbenchExtensionRenderer(input.workbench, target);
+  });
+};
 
 const findOpenPlacement = (workbench: WorkbenchModuleContext, panelId: string): WorkbenchPanelInstance | undefined => {
   return workbench.layout.listPanelInstances().find((candidate) => candidate.panelId === panelId);
@@ -27,19 +64,6 @@ const restoreActiveWidget = (workbench: WorkbenchModuleContext, panelId: string 
     // The refreshed widget may have been closed by the command.
   }
 };
-
-export const shouldRefreshWorkbenchExtensionTrees = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
-  !treeQueryHandlerIds(metadata).has(commandId);
-
-export const shouldRefreshWorkbenchExtensionKanbanRenderers = (
-  metadata: WorkbenchExtensionMetadata,
-  commandId: string,
-) => !kanbanRendererQueryHandlerIds(metadata).has(commandId);
-
-export const shouldRefreshWorkbenchExtensionDataTableRenderers = (
-  metadata: WorkbenchExtensionMetadata,
-  commandId: string,
-) => !dataTableRendererQueryHandlerIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchModuleContext,
@@ -70,26 +94,4 @@ export const refreshOpenWorkbenchExtensionWebviews = (
   }
 
   restoreActiveWidget(workbench, activeWidgetId);
-};
-
-export const refreshWorkbenchExtensionContributions = (
-  workbench: WorkbenchModuleContext,
-  metadata: WorkbenchExtensionMetadata,
-  commandId: string,
-) => {
-  refreshOpenWorkbenchExtensionWebviews(workbench, metadata);
-
-  if (shouldRefreshWorkbenchExtensionTrees(metadata, commandId)) {
-    for (const renderer of metadata.treeRenderers ?? []) workbench.renderers.refresh(renderer.id);
-  }
-
-  if (shouldRefreshWorkbenchExtensionKanbanRenderers(metadata, commandId)) {
-    for (const renderer of metadata.kanbanRenderers ?? []) workbench.renderers.refreshKanbanRenderer(renderer.id);
-  }
-
-  if (shouldRefreshWorkbenchExtensionDataTableRenderers(metadata, commandId)) {
-    for (const renderer of metadata.dataTableRenderers ?? []) {
-      workbench.renderers.refreshDataTableRenderer(renderer.id);
-    }
-  }
 };

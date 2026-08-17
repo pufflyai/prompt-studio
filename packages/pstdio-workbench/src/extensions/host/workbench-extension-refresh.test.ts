@@ -3,8 +3,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "../../core";
 import {
   refreshOpenWorkbenchExtensionWebviews,
-  refreshWorkbenchExtensionContributions,
-  shouldRefreshWorkbenchExtensionTrees,
+  registerWorkbenchExtensionRendererRefreshEvents,
 } from "./workbench-extension-refresh";
 
 const webview = {
@@ -62,33 +61,6 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 
-const kanbanRendererMetadata = {
-  ...metadata,
-  treeRenderers: [],
-  kanbanRenderers: [
-    {
-      id: "planner.tickets",
-      extensionId: "pstdio.pstdio-planner",
-      title: "Tickets",
-      resourceKind: "ticket",
-      attributes: [],
-      queryHandlerId: "planner.tickets.query",
-    },
-  ],
-} satisfies WorkbenchExtensionMetadata;
-
-describe("shouldRefreshWorkbenchExtensionTrees", () => {
-  test("does not refresh tree renderers after tree query commands", () => {
-    expect(shouldRefreshWorkbenchExtensionTrees(metadata, "ticket-files.tree.body")).toBe(false);
-    expect(shouldRefreshWorkbenchExtensionTrees(metadata, "ticket-files.tree.children")).toBe(false);
-    expect(shouldRefreshWorkbenchExtensionTrees(metadata, "ticket-files.tree.footer")).toBe(false);
-  });
-
-  test("refreshes tree renderers after extension mutation commands", () => {
-    expect(shouldRefreshWorkbenchExtensionTrees(metadata, "tickets.file.rename")).toBe(true);
-  });
-});
-
 describe("refreshOpenWorkbenchExtensionWebviews", () => {
   test("refreshes only already-open webview routes and panels while preserving the active widget", () => {
     const workbench = createWorkbenchCore();
@@ -134,8 +106,8 @@ describe("refreshOpenWorkbenchExtensionWebviews", () => {
   });
 });
 
-describe("refreshWorkbenchExtensionContributions", () => {
-  test("refreshes tree renderers after non-query extension commands", () => {
+describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
+  test("refreshes only renderers subscribed to a delivered event and disposes the subscription", () => {
     const workbench = createWorkbenchCore();
     const refreshed: string[] = [];
     workbench.renderers.registerTreeRenderer({
@@ -144,58 +116,95 @@ describe("refreshWorkbenchExtensionContributions", () => {
       getBody: () => [],
       getChildren: () => [],
     });
-    workbench.renderers.onDidRefresh((event) => refreshed.push(event.treeId));
-
-    refreshWorkbenchExtensionContributions(workbench, metadata, "tickets.file.rename");
-
-    expect(refreshed).toEqual(["ticket-files"]);
-  });
-
-  test("skips tree renderer refresh after tree query commands", () => {
-    const workbench = createWorkbenchCore();
-    const refreshed: string[] = [];
-    workbench.renderers.registerTreeRenderer({
-      id: "ticket-files",
-      title: "Files",
-      getBody: () => [],
-      getChildren: () => [],
+    workbench.renderers.registerFileRenderer({
+      id: "ticket-content",
+      title: "Content",
+      load: () => ({ content: "" }),
     });
-    workbench.renderers.onDidRefresh((event) => refreshed.push(event.treeId));
-
-    refreshWorkbenchExtensionContributions(workbench, metadata, "ticket-files.tree.body");
-
-    expect(refreshed).toEqual([]);
-  });
-
-  test("refreshes kanban renderers after extension mutation commands", () => {
-    const workbench = createWorkbenchCore();
-    const refreshed: string[] = [];
+    workbench.renderers.registerControlsRenderer({
+      id: "ticket-properties",
+      title: "Properties",
+      executeQuery: () => ({ groups: [], values: {} }),
+    });
+    workbench.renderers.registerDataTableRenderer({
+      id: "ticket-table",
+      title: "Table",
+      executeQuery: () => ({ rows: [] }),
+    });
     workbench.renderers.registerKanbanRenderer({
       id: "planner.tickets",
       title: "Tickets",
       attributes: [],
       executeQuery: () => [],
     });
-    workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(event.kanbanRendererId));
-
-    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.create-ticket");
-
-    expect(refreshed).toEqual(["planner.tickets"]);
-  });
-
-  test("skips kanban renderer refresh after data query commands", () => {
-    const workbench = createWorkbenchCore();
-    const refreshed: string[] = [];
-    workbench.renderers.registerKanbanRenderer({
-      id: "planner.tickets",
-      title: "Tickets",
-      attributes: [],
-      executeQuery: () => [],
+    workbench.renderers.onDidRefresh((event) => refreshed.push(`tree:${event.treeId}`));
+    workbench.renderers.onDidRefreshFileRenderer((event) => refreshed.push(`file:${event.fileRendererId}`));
+    workbench.renderers.onDidRefreshControlsRenderer((event) => refreshed.push(`controls:${event.controlsRendererId}`));
+    workbench.renderers.onDidRefreshDataTableRenderer((event) =>
+      refreshed.push(`dataTable:${event.dataTableRendererId}`),
+    );
+    workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(`kanban:${event.kanbanRendererId}`));
+    let listener: ((eventId: string) => void) | undefined;
+    const disposable = registerWorkbenchExtensionRendererRefreshEvents({
+      workbench,
+      metadata: {
+        ...metadata,
+        treeRenderers: [{ ...metadata.treeRenderers![0]!, refreshEventIds: ["tickets.changed", "tickets.changed"] }],
+        fileRenderers: [
+          {
+            id: "ticket-content",
+            extensionId: "pstdio.planner",
+            title: "Content",
+            loadHandlerId: "ticket-content.load",
+            refreshEventIds: ["ticket-content.changed"],
+          },
+        ],
+        controlsRenderers: [
+          {
+            id: "ticket-properties",
+            extensionId: "pstdio.planner",
+            title: "Properties",
+            queryHandlerId: "ticket-properties.query",
+            refreshEventIds: ["tickets.changed"],
+          },
+        ],
+        dataTableRenderers: [
+          {
+            id: "ticket-table",
+            extensionId: "pstdio.planner",
+            title: "Table",
+            queryHandlerId: "ticket-table.query",
+            refreshEventIds: ["tickets.changed"],
+          },
+        ],
+        kanbanRenderers: [
+          {
+            id: "planner.tickets",
+            extensionId: "pstdio.planner",
+            title: "Tickets",
+            queryHandlerId: "planner.tickets.query",
+            refreshEventIds: ["tickets.changed"],
+          },
+        ],
+      },
+      subscribe: (nextListener) => {
+        listener = nextListener;
+        return { dispose: () => (listener = undefined) };
+      },
     });
-    workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(event.kanbanRendererId));
 
-    refreshWorkbenchExtensionContributions(workbench, kanbanRendererMetadata, "planner.tickets.query");
+    listener?.("tickets.changed");
+    listener?.("unrelated.changed");
 
-    expect(refreshed).toEqual([]);
+    expect(refreshed).toEqual([
+      "tree:ticket-files",
+      "controls:ticket-properties",
+      "dataTable:ticket-table",
+      "kanban:planner.tickets",
+    ]);
+
+    disposable.dispose();
+    listener?.("ticket-content.changed");
+    expect(refreshed).toHaveLength(4);
   });
 });

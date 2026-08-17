@@ -92,6 +92,7 @@ describe("registerExtensionKanbanRenderers", () => {
         {
           ...ticketsRecord,
           extensionId: "pstdio.pstdio-planner",
+          refreshEventIds: ["tickets.changed"],
           rowActions: [
             {
               id: "refine-ticket",
@@ -111,7 +112,7 @@ describe("registerExtensionKanbanRenderers", () => {
           ctx,
           executeCommand: async (_projectId, commandId, body) => {
             calls.push({ commandId, body });
-            return successResponse(commandId);
+            return { ...successResponse(commandId), eventIds: ["tickets.changed"] };
           },
           metadata: plannerMetadata,
           projectId: "proj-1",

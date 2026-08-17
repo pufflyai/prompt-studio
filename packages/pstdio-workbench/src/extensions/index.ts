@@ -54,8 +54,9 @@ export {
   registerWorkbenchExtensionContributions,
 } from "./host/workbench-extension-host";
 export {
+  type RegisterWorkbenchExtensionRendererRefreshEventsInput,
   refreshOpenWorkbenchExtensionWebviews,
-  refreshWorkbenchExtensionContributions,
-  shouldRefreshWorkbenchExtensionDataTableRenderers,
-  shouldRefreshWorkbenchExtensionTrees,
+  refreshWorkbenchExtensionRenderer,
+  registerWorkbenchExtensionRendererRefreshEvents,
+  type WorkbenchExtensionRendererKind,
 } from "./host/workbench-extension-refresh";

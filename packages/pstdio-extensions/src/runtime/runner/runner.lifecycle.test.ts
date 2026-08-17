@@ -51,6 +51,32 @@ describe("createCommandRunner: lifecycle", () => {
     expect(events).toEqual(["requested", "started", "completed"]);
   });
 
+  test("reports explicitly emitted events to the host", async () => {
+    const events: string[] = [];
+    const runner = makeRunner(
+      {
+        commands: {
+          update: {
+            title: "Update",
+            async run(ctx) {
+              await ctx.events.emit("tickets.changed", { ticketId: "PS-1" });
+            },
+          },
+        },
+      },
+      { onDidDispatchEvent: (eventId) => events.push(eventId) },
+    );
+
+    await runner.execute({ commandId: "lab.update", projectId: "p1" });
+
+    expect(events).toEqual([
+      "command.requested:lab.update",
+      "command.started:lab.update",
+      "tickets.changed",
+      "command.completed:lab.update",
+    ]);
+  });
+
   test("handler exception emits failed event and returns error outcome", async () => {
     const events: string[] = [];
 

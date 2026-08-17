@@ -36,6 +36,13 @@ describe("extension-lab commands", () => {
 
   test("creates, queries, and deletes Glass Lab artifacts", async () => {
     const artifacts = new Map<string, unknown>();
+    const emitted: string[] = [];
+    const events = {
+      emit: async (event: string | { id: string }) => {
+        emitted.push(typeof event === "string" ? event : event.id);
+        return { delivered: 0 };
+      },
+    };
     const storage = {
       collection: () => ({
         get: async (id: string) => artifacts.get(id),
@@ -53,8 +60,8 @@ describe("extension-lab commands", () => {
     const remove = extension.commands?.["glass-lab-artifacts.delete"];
 
     const [first, second] = await Promise.all([
-      create?.run({ params: {}, storage } as never),
-      create?.run({ params: {}, storage } as never),
+      create?.run({ events, params: {}, storage } as never),
+      create?.run({ events, params: {}, storage } as never),
     ]);
     const firstId = first?.id;
     const secondId = second?.id;
@@ -98,9 +105,14 @@ describe("extension-lab commands", () => {
       expect.arrayContaining([expect.objectContaining({ id: "role" }), expect.objectContaining({ id: "trustSignal" })]),
     );
 
-    await remove?.run({ params: { rowId: firstId }, storage } as never);
+    await remove?.run({ events, params: { rowId: firstId }, storage } as never);
 
     expect((await query?.run({ params: {}, storage } as never))?.rows.map((row) => row.id)).toEqual([secondId]);
+    expect(emitted).toEqual([
+      "extension-lab.artifacts.changed",
+      "extension-lab.artifacts.changed",
+      "extension-lab.artifacts.changed",
+    ]);
   });
 
   test("creates artifacts from the Create artifacts menu", async () => {
@@ -119,6 +131,7 @@ describe("extension-lab commands", () => {
     };
     const query = extension.commands?.["artifact-menu.query"];
     const update = extension.commands?.["artifact-menu.update"];
+    const events = { emit: async () => ({ delivered: 0 }) };
 
     const menu = await query?.run({ params: {} } as never);
     expect(menu?.groups?.[0]?.params).toEqual([
@@ -129,12 +142,12 @@ describe("extension-lab commands", () => {
       }),
     ]);
 
-    const created = await update?.run({ params: { controlId: "create", value: "locked" }, storage } as never);
+    const created = await update?.run({ events, params: { controlId: "create", value: "locked" }, storage } as never);
     expect(created).toMatchObject({ status: "locked" });
     expect(collections.get("glass-lab-artifacts")?.size).toBe(1);
 
     // ParamEditor value-sync calls carry other values and must not create artifacts.
-    await update?.run({ params: { controlId: "create", value: null }, storage } as never);
+    await update?.run({ events, params: { controlId: "create", value: null }, storage } as never);
     expect(collections.get("glass-lab-artifacts")?.size).toBe(1);
   });
 

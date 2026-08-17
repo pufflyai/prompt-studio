@@ -1,6 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
+import type { EventRef } from "./events";
 import type { JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -80,6 +81,7 @@ export interface DataTableRendererContribution {
   resourceKind?: string;
   columns?: DataTableRendererColumn[];
   query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;
+  refreshEvents?: readonly (EventRef | string)[];
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];
