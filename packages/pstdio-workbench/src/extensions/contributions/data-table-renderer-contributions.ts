@@ -17,6 +17,7 @@ import {
   toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import {
   panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
@@ -59,6 +60,7 @@ const registerRenderer = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionDataTableRendererRecord,
 ) => {
+  const originalRows = new WeakMap<DataTableRendererRow, Parameters<typeof toRow>[0]>();
   const slot = createExtensionSlot({
     id: record.id,
     kind: "dataTableRenderer",
@@ -102,8 +104,13 @@ const registerRenderer = (
     executeQuery: async ({ resource, modeId }) => {
       const value = await run(record.queryCommandId, {}, resource, modeId);
       if (!isQueryResult(value)) return { rows: [] };
+      const rows = value.rows.map((row) => {
+        const mapped = toRow(row);
+        originalRows.set(mapped, row);
+        return mapped;
+      });
       return {
-        rows: value.rows.map(toRow),
+        rows,
         columns: value.columns?.map(toColumn),
       } satisfies DataTableRendererQueryResult;
     },
@@ -117,6 +124,17 @@ const registerRenderer = (
         context.workbench.renderers.refreshDataTableRenderer(record.id);
       },
     })),
+    onRowActivate: record.rowActivationCommandId
+      ? async (row) => {
+          const result = await run(
+            record.rowActivationCommandId!,
+            { rendererId: record.id, row: originalRows.get(row) ?? row },
+            row.resource,
+          );
+          const target = toWorkbenchNavigationTarget(result);
+          if (target) await context.workbench.navigation.openTarget(target);
+        }
+      : undefined,
   });
 };
 

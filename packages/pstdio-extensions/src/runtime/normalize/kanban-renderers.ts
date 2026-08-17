@@ -1,10 +1,35 @@
-import type { NormalizedExtension, RuntimeKanbanRendererRecord } from "../../types/runtime";
+import type { NormalizedExtension, RuntimeCommandRecord, RuntimeKanbanRendererRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { registerCommandRecord } from "./commands";
 import { isLocalizableString } from "./localizable";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
+
+const rowActivationCommandId = (id: string) => `${id}.__kanbanRowActivate`;
+
+const createRowActivationCommand = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  localId: string,
+  record: RuntimeKanbanRendererRecord,
+): RuntimeCommandRecord | undefined => {
+  const handler = record.contribution.onRowActivate;
+  if (typeof handler !== "function") return undefined;
+  return {
+    id: rowActivationCommandId(record.id),
+    localId: `${localId}.__kanbanRowActivate`,
+    extensionId: ext.id,
+    name: ext.name,
+    sourcePath: source.sourcePath,
+    title: `${record.contribution.title} row activation`,
+    params: { rendererId: { type: "text" }, row: { type: "json", required: true } },
+    menus: [],
+    palette: [],
+    run: (ctx) => handler(ctx, { row: ctx.params.row as never }),
+  };
+};
 
 export const registerKanbanRenderers = (
   ext: NormalizedExtension,
@@ -53,5 +78,9 @@ export const registerKanbanRenderers = (
 
     index.kanbanRendererIds.set(id, record);
     runtime.kanbanRenderers.push(record);
+    const command = createRowActivationCommand(ext, source, localId, record);
+    if (command && !registerCommandRecord(command, runtime, index)) {
+      record.contribution = { ...record.contribution, onRowActivate: undefined };
+    }
   }
 };

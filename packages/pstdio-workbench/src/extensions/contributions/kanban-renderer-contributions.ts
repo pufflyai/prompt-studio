@@ -1,4 +1,4 @@
-import type { WorkbenchExtensionKanbanRendererRecord } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, WorkbenchExtensionKanbanRendererRecord } from "@pstdio/sdk/api";
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
@@ -12,6 +12,7 @@ import type {
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import {
   createMutableAttributeSource,
   defaultResolveRowActionResource,
@@ -79,6 +80,11 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
     row: KanbanRendererRow;
     resource: ResourceRef | undefined;
   }) => void;
+  /** Translate extension navigation resource targets into host resources. */
+  resolveNavigationResource?: (
+    record: WorkbenchExtensionKanbanRendererRecord,
+    resource: NonNullable<CommandExecuteRequest["resource"]>,
+  ) => ResourceRef;
   /** Called after a successful renderer-owned create form submission. */
   onAfterCreate?: (input: {
     record: WorkbenchExtensionKanbanRendererRecord;
@@ -132,13 +138,31 @@ const toCreateRowConfig = (record: WorkbenchExtensionKanbanRendererRecord, local
 };
 
 const toRowClick = (
+  context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionKanbanRendererRecord,
   adapter: WorkbenchExtensionKanbanRendererAdapter,
   resolveRowResource: (
     record: WorkbenchExtensionKanbanRendererRecord,
     row: KanbanRendererRow,
   ) => ResourceRef | undefined,
+  toActivatedRow: (row: KanbanRendererRow) => KanbanRendererRow,
 ) => {
+  if (record.rowActivationCommandId) {
+    return async (row: KanbanRendererRow) => {
+      const resource = resolveRowResource(record, row);
+      const result = await executeKanbanRendererCommand(
+        context,
+        record,
+        record.rowActivationCommandId!,
+        { rendererId: record.id, row: toActivatedRow(row) },
+        resource,
+      );
+      const target = adapter.resolveNavigationResource
+        ? toWorkbenchNavigationTarget(result, (resource) => adapter.resolveNavigationResource!(record, resource))
+        : toWorkbenchNavigationTarget(result);
+      if (target) await context.workbench.navigation.openTarget(target);
+    };
+  }
   if (!adapter.onRowClick) return undefined;
   return (row: KanbanRendererRow) => adapter.onRowClick?.({ record, row, resource: resolveRowResource(record, row) });
 };
@@ -219,8 +243,10 @@ export const registerWorkbenchExtensionKanbanRenderers = (
 
   for (const record of records) {
     const attributes = createMutableAttributeSource(record, record.attributes, localize, decorate);
+    const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
+    const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
 
     disposables.push(...registerRowActionCommands(context, record, localize));
     disposables.push(
@@ -241,17 +267,27 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         hideToolbar: record.hideToolbar,
         createRow: toCreateRowConfig(record, localize),
         getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
-        onRowClick: toRowClick(record, adapter, resolveRowResource),
+        onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
         executeQuery: async (state: KanbanRendererQueryState) => {
           const value = await executeKanbanRendererCommand(context, record, record.queryCommandId, {
             settings: state.settings,
             filters: state.filters,
           });
-          if (Array.isArray(value)) return value.map((row) => toWorkbenchRow(row, rowResource));
+          if (Array.isArray(value)) {
+            return value.map((row) => {
+              const mapped = toWorkbenchRow(row, rowResource);
+              originalRows.set(mapped, row as KanbanRendererRow);
+              return mapped;
+            });
+          }
           if (!isQueryResult(value)) return [];
           attributes.set(value.attributes);
           columnConfigs = value.boardColumnConfigs;
-          return (value.rows ?? []).map((row) => toWorkbenchRow(row, rowResource));
+          return (value.rows ?? []).map((row) => {
+            const mapped = toWorkbenchRow(row, rowResource);
+            originalRows.set(mapped, row as KanbanRendererRow);
+            return mapped;
+          });
         },
         onAttributeChange: record.updateAttributeCommandId
           ? (rowId, attributeId, value) =>

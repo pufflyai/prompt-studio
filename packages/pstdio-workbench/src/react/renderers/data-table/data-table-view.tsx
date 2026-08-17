@@ -106,8 +106,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const openRow = (data: RowData) => {
     const row = model.rowByData.get(data);
     if (!row) return;
-    if (contribution.onRowClick) return contribution.onRowClick(row);
-    if (row.resource) void workbench.resources.openResource(row.resource, { replaceActive: true });
+    if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
   };
 
   if (loading) {
@@ -149,7 +148,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         onRowClick={openRow}
         isRowInteractive={(data) => {
           const row = model.rowByData.get(data);
-          return Boolean(row && (row.resource || contribution.onRowClick));
+          return Boolean(row && contribution.onRowActivate);
         }}
         fullWidth
       />

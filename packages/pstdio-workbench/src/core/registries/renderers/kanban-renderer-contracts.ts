@@ -73,7 +73,7 @@ export interface KanbanRendererRow {
   title: string;
   /**
    * Optional navigation handle. When set, the renderer's default click handler
-   * routes through the contribution's onRowClick (which typically opens the
+   * routes through the contribution's onRowActivate (which typically opens the
    * resource via the workbench).
    */
   resource?: unknown;

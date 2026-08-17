@@ -25,13 +25,18 @@ export const toExtensionCommandResource = (resource: ResourceRef | undefined): C
   };
 };
 
-export const toWorkbenchResource = (resource: NonNullable<CommandExecuteRequest["resource"]>): ResourceRef => ({
-  kind: resource.type,
-  uri: `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
-  id: resource.id,
-  label: resource.label,
-  metadata: resource.metadata,
-});
+export const toWorkbenchResource = (resource: NonNullable<CommandExecuteRequest["resource"]>): ResourceRef => {
+  const icon = (resource as { icon?: unknown }).icon;
+  const metadata = resource.projectId ? { ...resource.metadata, projectId: resource.projectId } : resource.metadata;
+  return {
+    kind: resource.type,
+    uri: `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
+    id: resource.id,
+    label: resource.label,
+    icon: typeof icon === "string" ? icon : undefined,
+    metadata,
+  };
+};
 
 export const createExtensionSlot = (input: {
   context?: Record<string, unknown>;

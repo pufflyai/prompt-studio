@@ -22,6 +22,7 @@ const ticketsRecord = {
   title: "Tickets",
   resourceKind: "ticket",
   queryCommandId: "pstdio-core-tickets.query-tickets",
+  rowActivationCommandId: "pstdio-core-tickets.activate-ticket",
 };
 
 const metadata: DashboardExtensionMetadata = {
@@ -51,93 +52,6 @@ describe("registerExtensionKanbanRenderers", () => {
       rendererId: "pstdio-core-tickets.tickets",
       singleton: true,
     });
-  });
-
-  test("opens ticket rows with the extension-provided resource icon", async () => {
-    const workbench = createWorkbenchCore();
-    const openedResources: Array<{ icon?: string; id?: string; kind: string }> = [];
-
-    workbench.registerModule({
-      id: "test.extensions",
-      activate: (ctx) => [
-        ...registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
-        ctx.layout.registerPanel({
-          id: "test.ticket",
-          title: "Ticket",
-          region: "main",
-          rendererId: "test",
-          closable: false,
-        }),
-        ctx.resources.registerPresenter({
-          id: "test.ticket-presenter",
-          canOpen: (resource) => resource.kind === "ticket",
-          open: (resource) => {
-            openedResources.push(resource);
-            return ctx.layout.openPanel("test.ticket", { resource });
-          },
-        }),
-      ],
-    });
-
-    workbench.renderers.getKanbanRenderer("pstdio-core-tickets.tickets")?.onRowClick?.({
-      id: "t1",
-      title: "T-1",
-      resource: { type: "ticket", id: "t1", label: "T-1", icon: "component" },
-      attributes: {},
-    });
-
-    await Promise.resolve();
-
-    expect(openedResources).toHaveLength(1);
-    expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1", icon: "component" });
-  });
-
-  test("opens ticket rows after the query has lifted the row resource", async () => {
-    const workbench = createWorkbenchCore();
-    const openedResources: Array<{ id?: string; kind: string }> = [];
-
-    workbench.registerModule({
-      id: "test.extensions",
-      activate: (ctx) => [
-        ...registerExtensionKanbanRenderers(ctx, { metadata, projectId: "proj-1" }),
-        ctx.layout.registerPanel({
-          id: "test.ticket",
-          title: "Ticket",
-          region: "main",
-          rendererId: "test",
-          closable: false,
-        }),
-        ctx.resources.registerPresenter({
-          id: "test.ticket-presenter",
-          canOpen: (resource) => resource.kind === "ticket",
-          open: (resource) => {
-            openedResources.push(resource);
-            return ctx.layout.openPanel("test.ticket", { resource });
-          },
-        }),
-      ],
-    });
-
-    // The kanban view re-resolves the row's resource on click, but by then the query
-    // has already lifted it into a workbench ResourceRef. The click must not re-lift
-    // an already-lifted resource (which would drop its kind and match no presenter).
-    workbench.renderers.getKanbanRenderer("pstdio-core-tickets.tickets")?.onRowClick?.({
-      id: "t1",
-      title: "T-1",
-      resource: {
-        kind: "ticket",
-        uri: "dashboard-workbench://ticket/t1",
-        id: "t1",
-        label: "T-1",
-        metadata: { projectId: "proj-1" },
-      },
-      attributes: {},
-    });
-
-    await Promise.resolve();
-
-    expect(openedResources).toHaveLength(1);
-    expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1" });
   });
 
   test("routes row actions with user-facing params through the shared params dialog", async () => {
@@ -271,6 +185,123 @@ describe("registerExtensionKanbanRenderers", () => {
       getWriter("installed_extension_sources")?.truncateAndWrite([]);
       clearCachedDashboardExtensionMetadata("project-1");
     }
+  });
+});
+
+describe("registerExtensionKanbanRenderers row activation", () => {
+  test("opens ticket rows with the extension-provided resource icon", async () => {
+    const workbench = createWorkbenchCore();
+    const openedResources: Array<{ icon?: string; id?: string; kind: string; uri: string }> = [];
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => [
+        ...registerExtensionKanbanRenderers(ctx, {
+          metadata,
+          projectId: "proj-1",
+          executeCommand: async () => ({
+            ...successResponse("pstdio-core-tickets.activate-ticket"),
+            outcome: {
+              ok: true,
+              status: "success",
+              value: {
+                kind: "resource",
+                resource: { type: "ticket", id: "t1", label: "T-1", icon: "component" },
+                input: { strategy: "replace-active" },
+              },
+            },
+          }),
+        }),
+        ctx.layout.registerPanel({
+          id: "test.ticket",
+          title: "Ticket",
+          region: "main",
+          rendererId: "test",
+          closable: false,
+        }),
+        ctx.resources.registerPresenter({
+          id: "test.ticket-presenter",
+          canOpen: (resource) => resource.kind === "ticket",
+          open: (resource) => {
+            openedResources.push(resource);
+            return ctx.layout.openPanel("test.ticket", { resource });
+          },
+        }),
+      ],
+    });
+
+    await workbench.renderers.getKanbanRenderer("pstdio-core-tickets.tickets")?.onRowActivate?.({
+      id: "t1",
+      title: "T-1",
+      resource: { type: "ticket", id: "t1", label: "T-1", icon: "component" },
+      attributes: {},
+    });
+
+    expect(openedResources).toHaveLength(1);
+    expect(openedResources[0]).toMatchObject({
+      kind: "ticket",
+      id: "t1",
+      icon: "component",
+      uri: "dashboard-workbench://ticket/t1",
+    });
+  });
+
+  test("opens ticket rows after the query has lifted the row resource", async () => {
+    const workbench = createWorkbenchCore();
+    const openedResources: Array<{ id?: string; kind: string }> = [];
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => [
+        ...registerExtensionKanbanRenderers(ctx, {
+          metadata,
+          projectId: "proj-1",
+          executeCommand: async () => ({
+            ...successResponse("pstdio-core-tickets.activate-ticket"),
+            outcome: {
+              ok: true,
+              status: "success",
+              value: {
+                kind: "resource",
+                resource: { type: "ticket", id: "t1", label: "T-1", metadata: { projectId: "proj-1" } },
+                input: { strategy: "replace-active" },
+              },
+            },
+          }),
+        }),
+        ctx.layout.registerPanel({
+          id: "test.ticket",
+          title: "Ticket",
+          region: "main",
+          rendererId: "test",
+          closable: false,
+        }),
+        ctx.resources.registerPresenter({
+          id: "test.ticket-presenter",
+          canOpen: (resource) => resource.kind === "ticket",
+          open: (resource) => {
+            openedResources.push(resource);
+            return ctx.layout.openPanel("test.ticket", { resource });
+          },
+        }),
+      ],
+    });
+
+    await workbench.renderers.getKanbanRenderer("pstdio-core-tickets.tickets")?.onRowActivate?.({
+      id: "t1",
+      title: "T-1",
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/t1",
+        id: "t1",
+        label: "T-1",
+        metadata: { projectId: "proj-1" },
+      },
+      attributes: {},
+    });
+
+    expect(openedResources).toHaveLength(1);
+    expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1" });
   });
 });
 

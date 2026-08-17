@@ -255,6 +255,7 @@ describe("createWorkbenchExtensionMetadata kanban renderers", () => {
             rows: {
               title: "Rows",
               queryCommand: "queryRows",
+              onRowActivate: async () => undefined,
               defaultViews: [
                 {
                   id: "all",
@@ -281,6 +282,7 @@ describe("createWorkbenchExtensionMetadata kanban renderers", () => {
 
     expect(metadata.kanbanRenderers?.[0]).toMatchObject({
       id: "lab.rows",
+      rowActivationCommandId: "lab.rows.__kanbanRowActivate",
       defaultViews: [
         {
           id: "all",
@@ -390,6 +392,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             health: {
               title: "Health",
               queryCommand: "queryTable",
+              onRowActivate: async () => undefined,
               columns: [{ id: "score", label: "Score" }],
               selectionMode: "multiple",
               selectionActions: [
@@ -413,6 +416,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
     expect(metadata.dataTableRenderers?.[0]).toMatchObject({
       id: "lab.health",
       queryCommandId: "lab.queryTable",
+      rowActivationCommandId: "lab.health.__dataTableRowActivate",
       columns: [{ id: "score", label: "Score" }],
       selectionMode: "multiple",
       selectionActions: [

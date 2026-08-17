@@ -133,14 +133,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   }, [contribution, filters, settings, workbench]);
 
   const handleOpenRow = (row: KanbanRendererRow) => {
-    if (contribution.onRowClick) {
-      contribution.onRowClick(row);
-      return;
-    }
-    const resource = row.resource as Parameters<typeof workbench.resources.openResource>[0] | undefined;
-    if (resource && typeof resource === "object" && "kind" in resource && "uri" in resource) {
-      void workbench.resources.openResource(resource, { replaceActive: true });
-    }
+    if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
   };
 
   const getRowContextMenuActions = (row: KanbanRendererRow) => {
@@ -163,7 +156,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         emptyDescription={contribution.emptyDescription}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
-        onRowClick={handleOpenRow}
+        onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
         onAttributeChange={contribution.onAttributeChange}
         onReorder={contribution.onReorder}
         createRow={contribution.createRow}

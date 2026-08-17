@@ -62,7 +62,9 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
         { id: "details", label: "Details", renderer: { type: "json" } },
       ],
       executeQuery: () => ({ rows }),
-      onRowClick: (row) => ctx.notifications.show({ title: `Opened ${row.values.service}`, level: "info" }),
+      onRowActivate: (row) => {
+        ctx.notifications.show({ title: `Opened ${row.values.service}`, level: "info" });
+      },
       selectionActions: [
         {
           id: "restart",

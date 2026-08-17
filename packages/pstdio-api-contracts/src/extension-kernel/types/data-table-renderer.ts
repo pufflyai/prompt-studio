@@ -1,6 +1,8 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
+import type { RendererCallback } from "./context";
 import type { JsonValue, Struct } from "./json";
+import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { RendererContext, ResourceRef } from "./resources";
 
 export type DataTableRendererResourceRef = ResourceRef;
@@ -68,6 +70,11 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
   command: CommandRef<TParams, unknown> | string;
 }
 
+export type DataTableRendererRowActivationHandler = RendererCallback<
+  { row: DataTableRendererRow },
+  undefined | ExtensionNavigationTarget
+>;
+
 export interface DataTableRendererContribution {
   title: Localizable<string>;
   resourceKind?: string;
@@ -76,6 +83,7 @@ export interface DataTableRendererContribution {
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];
+  onRowActivate?: DataTableRendererRowActivationHandler;
   initialPageSize?: number;
   pageSizeOptions?: number[];
   emptyTitle?: Localizable<string>;

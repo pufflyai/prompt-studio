@@ -91,7 +91,7 @@ export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContext) => 
     defaultSettings: workspaceDefaultSettings,
     subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
     executeQuery: () => executeWorkspaceQuery(ctx),
-    onRowClick: (row) => {
+    onRowActivate: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });

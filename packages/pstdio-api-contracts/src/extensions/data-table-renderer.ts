@@ -63,6 +63,7 @@ export const extensionDataTableRendererRecordSchema = z.object({
   selectionMode: z.enum(["none", "multiple"]).optional(),
   selectionActions: z.array(selectionActionSchema).optional(),
   rowActions: z.array(rowActionSchema).optional(),
+  rowActivationCommandId: z.string().optional(),
   initialPageSize: z.number().int().positive().optional(),
   pageSizeOptions: z.array(z.number().int().positive()).optional(),
   emptyTitle: localizableStringSchema.optional(),

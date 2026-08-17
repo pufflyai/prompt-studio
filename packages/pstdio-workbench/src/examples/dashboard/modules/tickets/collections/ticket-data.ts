@@ -89,7 +89,7 @@ export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContext) => {
     getBoardColumnConfig: (groupKey) =>
       columnConfigById.get(groupKey) ?? { color: "gray", canDragIn: true, canDragOut: true, canCreate: true },
     executeQuery: () => dashboardTickets.map(toTicketRow),
-    onRowClick: (row) => {
+    onRowActivate: (row) => {
       if (row.resource) void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
     createRow: {

@@ -266,6 +266,7 @@ const toDataTableRendererRecord = (
           : null;
       }),
     ),
+    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__dataTableRowActivate` : undefined,
     initialPageSize: renderer.contribution.initialPageSize,
     pageSizeOptions: renderer.contribution.pageSizeOptions,
     emptyTitle: renderer.contribution.emptyTitle,
@@ -345,6 +346,7 @@ const toKanbanRendererRecord = (
         return { id: action.id, label: action.label, icon: action.icon, commandId, destructive: action.destructive };
       }),
     ),
+    rowActivationCommandId: renderer.contribution.onRowActivate ? `${renderer.id}.__kanbanRowActivate` : undefined,
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
     defaultViews: renderer.contribution.defaultViews,

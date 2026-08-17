@@ -57,8 +57,8 @@ export interface KanbanRendererContribution<TRow extends KanbanRendererRow = Kan
   executeQuery(state: KanbanRendererQueryState): Promise<TRow[]> | TRow[];
   subscribe?: (listener: () => void) => Disposable | (() => void);
 
-  /** Row interactions surfaced by the renderer (mirrored from <KanbanRenderer>). */
-  onRowClick?: (row: TRow) => void;
+  /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */
+  onRowActivate?: (row: TRow) => Promise<void> | void;
   /** Per-row right-click context menu actions (mirrored from <KanbanRenderer>). */
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
   /**

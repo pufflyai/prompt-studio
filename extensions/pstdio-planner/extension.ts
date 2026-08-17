@@ -107,6 +107,8 @@ export default defineExtension({
       resourceKind: "ticket",
       attributes: buildTicketAttributes([]),
       queryCommand: commandRef("pstdio-planner.query-tickets"),
+      onRowActivate: (_ctx, { row }) =>
+        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
       updateAttributeCommand: commandRef("pstdio-planner.set-ticket-attribute"),
       reorderCommand: commandRef("pstdio-planner.reorder-ticket"),
       columnActionCommand: commandRef("pstdio-planner.ticket-column-action"),
