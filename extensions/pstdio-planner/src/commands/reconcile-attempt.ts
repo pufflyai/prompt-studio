@@ -203,6 +203,16 @@ const reconcileImplementation = async (ctx: CommandContext, attempt: AttemptReco
   return { decision: "awaiting-change-request" as const, attempt };
 };
 
+const reviewBelongsToClaim = (reviews: readonly AttemptReview[], review: AttemptReview, claimReviewId: string) => {
+  const reviewsById = new Map(reviews.map((candidate) => [candidate.id, candidate]));
+  let candidate: AttemptReview | undefined = review;
+  while (candidate) {
+    if (candidate.id === claimReviewId) return true;
+    candidate = candidate.supersedesReviewId ? reviewsById.get(candidate.supersedesReviewId) : undefined;
+  }
+  return false;
+};
+
 const markReviewFailed = async (ctx: CommandContext, attempt: AttemptRecord, review: AttemptReview) => {
   const failedReview = { ...review, state: "failed" as const, completedAt: new Date().toISOString() };
   const revision = attempt.revisions.at(-1)!;
@@ -216,7 +226,9 @@ const markReviewFailed = async (ctx: CommandContext, attempt: AttemptRecord, rev
   const claims = reviewLaunchClaimsCollection(ctx.storage);
   const claimId = `${attempt.workspaceId}:${revision.revision}`;
   const claim = await claims.get(claimId);
-  if (claim?.reviewId === review.id) await claims.deleteIfValue(claimId, claim);
+  if (claim && reviewBelongsToClaim(revision.reviews, review, claim.reviewId)) {
+    await claims.deleteIfValue(claimId, claim);
+  }
   return putAttempt(ctx.storage, {
     ...attempt,
     state: "review_ready",
