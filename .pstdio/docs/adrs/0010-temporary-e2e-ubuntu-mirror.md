@@ -10,15 +10,15 @@ The end-to-end job should use the Ubuntu package source supplied by its GitHub-h
 
 ## External limitation
 
-The `ubuntu-latest` runner currently points Ubuntu packages at `azure.archive.ubuntu.com`. Two consecutive PS-254 runs spent most or all of the fixed 18-minute job limit downloading Playwright dependencies from that mirror.
+The `ubuntu-latest` runner currently points Ubuntu packages at `azure.archive.ubuntu.com` through `/etc/apt/apt-mirrors.txt`. Three PS-254 runs spent most or all of the fixed 18-minute job limit downloading Playwright dependencies from that mirror.
 
-The first run never completed the package download. The second took 10 minutes and 14 seconds to install browsers and dependencies, which left only five minutes for the end-to-end suite. Local Playwright passed, and the remote product tests did not report a failure before the job limit canceled them.
+The first run never completed the package download. The second took 10 minutes and 14 seconds to install browsers and dependencies, which left only five minutes for the end-to-end suite. A first override edited `ubuntu.sources`, but the runner's mirror-list indirection meant APT still tried the Azure mirror first. That run spent 15 minutes and 20 seconds in the install before the job limit canceled it. Local Playwright passed, and the remote product tests did not report a failure before either cancellation.
 
 Prompt Studio does not own the runner image, its selected mirror, or the mirror's download speed. Raising the job limit would hide the slowdown and would break the repository's fixed performance rule.
 
 ## Decision
 
-Before Playwright installs its dependencies, replace the runner's Azure Ubuntu archive URL with Ubuntu's canonical archive URL. Keep the existing Playwright command and the existing 18-minute job limit unchanged.
+Before Playwright installs its dependencies, replace the Azure URL in the runner's active APT mirror list with Ubuntu's canonical archive URL. Keep the existing Playwright command and the existing 18-minute job limit unchanged.
 
 ## Trade-offs
 
