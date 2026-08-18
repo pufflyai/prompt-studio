@@ -74,6 +74,10 @@ jobs:
       - name: Build monorepo
         run: bun run build
 
+      # Temporary workaround documented in ADR 0010.
+      - name: Use canonical Ubuntu package mirror
+        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+
       - name: Install Playwright browsers
         run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 
