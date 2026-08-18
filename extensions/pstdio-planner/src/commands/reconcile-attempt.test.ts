@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { putAttempt, readAttempt } from "../data/attempt-storage";
+import { putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
+import { runReviewCommand } from "./run-review";
 
 const baseAttempt = (state: AttemptRecord["state"]): AttemptRecord => ({
   schemaVersion: 1,
@@ -129,5 +130,46 @@ describe("reconcileAttemptCommand", () => {
       expect.objectContaining({ sessionId: "review-retry-1", state: "started", supersedesReviewId: "review-1" }),
     ]);
     expect(fixture.sessions).toEqual([expect.objectContaining({ originalSessionId: "review-session-1" })]);
+  });
+
+  test("releases a failed review claim so the revision can be reviewed again", async () => {
+    const attempt = baseAttempt("reviewing");
+    attempt.revisions = [
+      {
+        revision: 1,
+        baseSha: "base-sha",
+        headSha: "head-sha",
+        changeRequestReportId: "change-report-1",
+        submittedAt: "2026-08-18T10:00:00.000Z",
+        submittedBy: { type: "agent", id: "agent-1", displayName: "Agent" },
+        reviews: [
+          {
+            id: "review-1",
+            sessionId: "review-session-1",
+            reportId: null,
+            reviewedHeadSha: "head-sha",
+            reviewer: { type: "agent", id: "reviewer-1", displayName: "Reviewer" },
+            state: "started",
+            verdict: null,
+            startedAt: "2026-08-18T11:00:00.000Z",
+            completedAt: null,
+            supersedesReviewId: null,
+          },
+        ],
+      },
+    ];
+    const fixture = await setup(attempt, { "review-session-1": "completed" });
+    await reviewLaunchClaimsCollection(fixture.storage).put("workspace-1:1", {
+      workspaceId: "workspace-1",
+      revision: 1,
+      reviewId: "review-1",
+      createdAt: "2026-08-18T11:00:00.000Z",
+    });
+
+    const reconciled = await reconcileAttemptCommand.run(fixture.ctx);
+    const restarted = await runReviewCommand.run(fixture.ctx);
+
+    expect(reconciled.decision).toBe("review-missing-verdict");
+    expect(restarted.review.state).toBe("started");
   });
 });

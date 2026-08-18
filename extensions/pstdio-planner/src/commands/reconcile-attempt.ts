@@ -1,7 +1,13 @@
 import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
-import { appendAttemptEvent, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
+import {
+  appendAttemptEvent,
+  listAttempts,
+  putAttempt,
+  readAttempt,
+  reviewLaunchClaimsCollection,
+} from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { requestHuman } from "./human-requests";
@@ -207,6 +213,10 @@ const markReviewFailed = async (ctx: CommandContext, attempt: AttemptRecord, rev
   const revisions = attempt.revisions.map((candidate) =>
     candidate.revision === revision.revision ? nextRevision : candidate,
   );
+  const claims = reviewLaunchClaimsCollection(ctx.storage);
+  const claimId = `${attempt.workspaceId}:${revision.revision}`;
+  const claim = await claims.get(claimId);
+  if (claim?.reviewId === review.id) await claims.deleteIfValue(claimId, claim);
   return putAttempt(ctx.storage, {
     ...attempt,
     state: "review_ready",
