@@ -36,7 +36,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
     localId: "implement-tickets",
     extensionId: "pstdio.planner",
     extensionInstanceId: "planner-instance",
-    title: "Implement ready tickets",
+    title: "Implement Todo tickets",
     cron: "0 7 * * *",
     commandId: "pstdio-planner.implement",
     enabled: false,
