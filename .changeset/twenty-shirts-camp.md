@@ -1,8 +1,5 @@
 ---
 "pstdio-planner": minor
-"pstdio-reports": minor
-"pstdio": minor
-"@pstdio/sdk": minor
 ---
 
-Add attempt-aware Planner workflows with stable report and review history
+Add attempt-aware implementation and review workflows with immutable revision history and recovery.
