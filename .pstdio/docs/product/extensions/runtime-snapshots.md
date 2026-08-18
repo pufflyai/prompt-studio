@@ -151,3 +151,7 @@ The exact fingerprint remains internal. Public callers depend only on snapshot i
 4. Migrate UI metadata, settings, skills, and templates.
 5. Remove loadProjectExtensionRuntime and other direct enabled-project loaders.
 6. Add an isolated command soak to packaged validation.
+
+## Related Architecture
+
+- [Project Extension Runtime Snapshots](../../architecture/project-extension-runtime-snapshots.md)

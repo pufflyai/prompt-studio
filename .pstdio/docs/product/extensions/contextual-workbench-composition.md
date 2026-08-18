@@ -35,7 +35,7 @@ This prevents several valid products:
 - Arbitrary CSS layouts supplied by extensions.
 - Resource instances storing UI configuration.
 - External extensions replacing a resource's primary panel.
-- Preserving the v1 panel composition schema at runtime.
+- Preserving the current alpha panel composition schema at runtime.
 - Collaborative editing or shared live layout state.
 
 ## Concepts
@@ -184,7 +184,7 @@ modes: {
 - A mode layout cannot expand a panel's supported regions.
 - Required placement reconciliation cannot reset user tab order.
 - No stored resource or history record contains renderer definitions.
-- The v2 schema replaces v1 fields rather than maintaining two composition systems.
+- The replacement schema removes the current alpha fields rather than maintaining two composition systems.
 
 ## Errors
 
@@ -207,9 +207,13 @@ modes: {
 
 ## Rollout Plan
 
-1. Add v2 contracts and diagnostics without using them in the dashboard.
+1. Add the replacement contracts and diagnostics without using them in the dashboard.
 2. Add workbench composition and relative menu primitives.
 3. Migrate host resources and modes.
 4. Migrate Planner and Extension Lab.
 5. Update the extension authoring skill, reference docs, and testbench.
-6. Bump the extension API major version and remove v1 composition fields.
+6. Remove the old composition fields in the current alpha API. Do not introduce a major version boundary or compatibility engine.
+
+## Related Architecture
+
+- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)

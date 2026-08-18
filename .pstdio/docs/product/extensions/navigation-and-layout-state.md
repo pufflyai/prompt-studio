@@ -203,3 +203,8 @@ treeItems: {
 4. Add browse-root resources and group null.
 5. Migrate Project, Planner, and Extension Lab.
 6. Remove direct dashboard calls that pair setActiveMode with selectDashboardNavigationResource.
+
+## Related Architecture
+
+- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
+- [Extension Navigation](../../architecture/extension-navigation.md)

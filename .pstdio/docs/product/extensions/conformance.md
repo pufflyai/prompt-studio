@@ -141,3 +141,9 @@ CI artifacts should include:
 4. Add catalog load-count and invalidation tests.
 5. Add the isolated packaged soak.
 6. Map every proposal acceptance criterion to at least one test.
+
+## Related Architecture
+
+- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
+- [Extension Navigation](../../architecture/extension-navigation.md)
+- [Project Extension Runtime Snapshots](../../architecture/project-extension-runtime-snapshots.md)

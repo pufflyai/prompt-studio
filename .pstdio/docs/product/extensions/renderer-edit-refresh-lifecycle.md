@@ -165,3 +165,7 @@ The host may add correlation metadata when dispatching a save command. Extension
 4. Add optional resource and origin metadata to refresh dispatch.
 5. Add dirty external-invalidation behavior.
 6. Validate ticket focus and selection with Playwright.
+
+## Related Architecture
+
+- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
