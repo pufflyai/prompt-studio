@@ -6,7 +6,7 @@ import { automatable, byPriorityThenCreatedAt, statusIdByNames } from "../select
 const AUTOMATION = "implement-tickets";
 
 export const implementTicketsCommand = defineCommand({
-  title: "Implement ready tickets",
+  title: "Implement Todo tickets",
   cli: true,
   async run(ctx) {
     const [{ statuses }, { tags }, tickets] = await Promise.all([

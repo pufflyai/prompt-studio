@@ -5,7 +5,7 @@ import { implementTicketsCommand } from "./implement-tickets";
 const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx);
 
 describe("implement-tickets automation", () => {
-  test("asks Planner to start ready tickets by priority until live attempt capacity is full", async () => {
+  test("asks Planner to start Todo tickets by priority until live attempt capacity is full", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [
         makeTicket({ id: "t1", shorthand: "T1", statusId: "ready", tagIds: ["priority-low"] }),

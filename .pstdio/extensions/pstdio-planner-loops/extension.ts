@@ -21,7 +21,7 @@ export default defineExtension({
       command: commandRef("pstdio-planner-loops.refine-tickets"),
     },
     implementTickets: {
-      title: "Implement ready tickets",
+      title: "Implement Todo tickets",
       cron: "*/5 * * * *",
       command: commandRef("pstdio-planner-loops.implement-tickets"),
     },
