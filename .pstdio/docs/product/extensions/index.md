@@ -70,3 +70,7 @@ Targets describe the dashboard surface. Optional `when` expressions restrict vis
 - [Dashboard UI attachments](./workbench-attachments.md)
 - [Extension modes](./modes-and-layout.md)
 - [Cookbook](./cookbook.md)
+
+## Proposals
+
+- [Contextual extension architecture](./proposals/contextual-extension-architecture.md)
