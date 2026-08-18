@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
+import { ATTEMPTS_COLLECTION, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
@@ -130,6 +130,79 @@ describe("reconcileAttemptCommand", () => {
       expect.objectContaining({ sessionId: "review-retry-1", state: "started", supersedesReviewId: "review-1" }),
     ]);
     expect(fixture.sessions).toEqual([expect.objectContaining({ originalSessionId: "review-session-1" })]);
+  });
+
+  test("reattaches one retry session when persistence fails after launch", async () => {
+    const attempt = baseAttempt("reviewing");
+    attempt.revisions = [
+      {
+        revision: 1,
+        baseSha: "base-sha",
+        headSha: "head-sha",
+        changeRequestReportId: "change-report-1",
+        submittedAt: "2026-08-18T10:00:00.000Z",
+        submittedBy: { type: "agent", id: "agent-1", displayName: "Agent" },
+        reviews: [
+          {
+            id: "review-1",
+            sessionId: "review-session-1",
+            reportId: null,
+            reviewedHeadSha: "head-sha",
+            reviewer: { type: "agent", id: "reviewer-1", displayName: "Reviewer" },
+            state: "started",
+            verdict: null,
+            startedAt: "2026-08-18T11:00:00.000Z",
+            completedAt: null,
+            supersedesReviewId: null,
+          },
+        ],
+      },
+    ];
+    const fixture = await setup(attempt, { "review-session-1": "disconnected" });
+    const originalCollection = fixture.storage.collection.bind(fixture.storage);
+    let failNextAttemptPut = false;
+    fixture.storage.collection = ((name: string) => {
+      const collection = originalCollection(name);
+      if (name !== ATTEMPTS_COLLECTION) return collection;
+      return {
+        ...collection,
+        put: async (id: string, value: unknown) => {
+          if (failNextAttemptPut) {
+            failNextAttemptPut = false;
+            throw new Error("transient attempt persistence failure");
+          }
+          await collection.put(id, value);
+        },
+      };
+    }) as typeof fixture.storage.collection;
+    const create = fixture.ctx.sessions.create.bind(fixture.ctx.sessions);
+    fixture.ctx.sessions.create = async (input) => {
+      const session = await create(input);
+      failNextAttemptPut = true;
+      return session;
+    };
+    fixture.ctx.sessions.listByWorkspace = async () =>
+      fixture.sessions.map((input, index) => ({
+        id: `review-retry-${index + 1}`,
+        title: "Retry",
+        status: "in_progress" as const,
+        anchors_json: (input as { anchors?: [] }).anchors ?? [],
+      }));
+
+    await expect(reconcileAttemptCommand.run(fixture.ctx)).rejects.toThrow("transient attempt persistence failure");
+    expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews.at(-1)).toMatchObject({
+      sessionId: null,
+      state: "started",
+      supersedesReviewId: "review-1",
+    });
+
+    const reconciled = await reconcileAttemptCommand.run(fixture.ctx);
+
+    expect(reconciled.decision).toBe("review-reattached");
+    expect(fixture.sessions).toHaveLength(1);
+    expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews.at(-1)?.sessionId).toBe(
+      "review-retry-1",
+    );
   });
 
   test("releases a failed review claim so the revision can be reviewed again", async () => {

@@ -88,6 +88,64 @@ const retryImplementation = async (ctx: CommandContext, attempt: AttemptRecord) 
   return { decision: "implementation-retried" as const, attempt: next };
 };
 
+const appendReviewRetryEvents = async (
+  ctx: CommandContext,
+  attempt: AttemptRecord,
+  disconnected: AttemptReview,
+  retry: AttemptReview,
+  sessionId: string,
+) => {
+  const revision = attempt.revisions.at(-1)!;
+  await appendAttemptEvent(ctx.storage, {
+    id: `review-disconnected:${disconnected.id}`,
+    workspaceId: attempt.workspaceId,
+    revision: revision.revision,
+    type: "review_disconnected",
+    actor: actorFromSource(ctx.source, ctx.invocationId),
+    sessionId: disconnected.sessionId,
+    reportId: null,
+    reviewId: disconnected.id,
+    threadId: null,
+    commitSha: revision.headSha,
+    metadata: { retryCount: attempt.reviewDisconnectRetries - 1 },
+  });
+  await appendAttemptEvent(ctx.storage, {
+    id: `review-retried:${retry.id}`,
+    workspaceId: attempt.workspaceId,
+    revision: revision.revision,
+    type: "review_retried",
+    actor: retry.reviewer,
+    sessionId,
+    reportId: null,
+    reviewId: retry.id,
+    threadId: null,
+    commitSha: revision.headSha,
+    metadata: { supersedesReviewId: disconnected.id, retryCount: attempt.reviewDisconnectRetries },
+  });
+};
+
+const attachReviewSession = async (
+  ctx: CommandContext,
+  attempt: AttemptRecord,
+  review: AttemptReview,
+  sessionId: string,
+) => {
+  const revision = attempt.revisions.at(-1)!;
+  const attached = { ...review, sessionId };
+  const nextRevision = {
+    ...revision,
+    reviews: revision.reviews.map((candidate) => (candidate.id === review.id ? attached : candidate)),
+  };
+  const next = await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: attempt.revisions.map((candidate) =>
+      candidate.revision === revision.revision ? nextRevision : candidate,
+    ),
+    updatedAt: new Date().toISOString(),
+  });
+  return { next, attached };
+};
+
 const retryReview = async (ctx: CommandContext, attempt: AttemptRecord, review: AttemptReview) => {
   const revision = attempt.revisions.at(-1)!;
   const disconnected = { ...review, state: "disconnected" as const, completedAt: new Date().toISOString() };
@@ -130,6 +188,18 @@ const retryReview = async (ctx: CommandContext, attempt: AttemptRecord, review: 
       },
     },
   ];
+  const nextRevision = {
+    ...revision,
+    reviews: [...revision.reviews.map((candidate) => (candidate.id === review.id ? disconnected : candidate)), retry],
+  };
+  const pending = await putAttempt(ctx.storage, {
+    ...attempt,
+    revisions: attempt.revisions.map((candidate) =>
+      candidate.revision === revision.revision ? nextRevision : candidate,
+    ),
+    reviewDisconnectRetries: attempt.reviewDisconnectRetries + 1,
+    updatedAt: retry.startedAt,
+  });
   const session = await ctx.sessions.create({
     workspaceId: attempt.workspaceId,
     originalSessionId: review.sessionId ?? undefined,
@@ -144,45 +214,9 @@ const retryReview = async (ctx: CommandContext, attempt: AttemptRecord, review: 
       headSha: revision.headSha,
     },
   });
-  retry.sessionId = session.id;
-  const nextRevision = {
-    ...revision,
-    reviews: [...revision.reviews.map((candidate) => (candidate.id === review.id ? disconnected : candidate)), retry],
-  };
-  const revisions = attempt.revisions.map((candidate) =>
-    candidate.revision === revision.revision ? nextRevision : candidate,
-  );
-  const next = await putAttempt(ctx.storage, {
-    ...attempt,
-    revisions,
-    reviewDisconnectRetries: attempt.reviewDisconnectRetries + 1,
-    updatedAt: retry.startedAt,
-  });
-  await appendAttemptEvent(ctx.storage, {
-    workspaceId: attempt.workspaceId,
-    revision: revision.revision,
-    type: "review_disconnected",
-    actor: actorFromSource(ctx.source, ctx.invocationId),
-    sessionId: review.sessionId,
-    reportId: null,
-    reviewId: review.id,
-    threadId: null,
-    commitSha: revision.headSha,
-    metadata: { retryCount: attempt.reviewDisconnectRetries },
-  });
-  await appendAttemptEvent(ctx.storage, {
-    workspaceId: attempt.workspaceId,
-    revision: revision.revision,
-    type: "review_retried",
-    actor: retry.reviewer,
-    sessionId: session.id,
-    reportId: null,
-    reviewId: retry.id,
-    threadId: null,
-    commitSha: revision.headSha,
-    metadata: { supersedesReviewId: review.id, retryCount: next.reviewDisconnectRetries },
-  });
-  return { decision: "review-retried" as const, attempt: next, review: retry };
+  await appendReviewRetryEvents(ctx, pending, disconnected, retry, session.id);
+  const { next, attached } = await attachReviewSession(ctx, pending, retry, session.id);
+  return { decision: "review-retried" as const, attempt: next, review: attached };
 };
 
 const reconcileImplementation = async (ctx: CommandContext, attempt: AttemptRecord) => {
@@ -239,7 +273,22 @@ const markReviewFailed = async (ctx: CommandContext, attempt: AttemptRecord, rev
 
 const reconcileReview = async (ctx: CommandContext, attempt: AttemptRecord) => {
   const review = attempt.revisions.at(-1)?.reviews.at(-1);
-  if (!review?.sessionId) return { decision: "review-missing-session" as const, attempt };
+  if (!review) return { decision: "review-missing-session" as const, attempt };
+  if (!review.sessionId) {
+    const session = (await ctx.sessions.listByWorkspace(attempt.workspaceId)).find((candidate) =>
+      candidate.anchors_json?.some((anchor) => anchor.type === "planner-review" && anchor.id === review.id),
+    );
+    if (!session) {
+      const next = await markReviewFailed(ctx, attempt, review);
+      return { decision: "review-missing-session" as const, attempt: next };
+    }
+    const disconnected = attempt.revisions
+      .at(-1)
+      ?.reviews.find((candidate) => candidate.id === review.supersedesReviewId);
+    if (disconnected) await appendReviewRetryEvents(ctx, attempt, disconnected, review, session.id);
+    const { next, attached } = await attachReviewSession(ctx, attempt, review, session.id);
+    return { decision: "review-reattached" as const, attempt: next, review: attached };
+  }
   const session = await ctx.sessions.get(review.sessionId);
   if (liveStatuses.has(session?.status ?? "")) return { decision: "active" as const, attempt };
   if (session?.status === "disconnected" && attempt.reviewDisconnectRetries === 0) {
