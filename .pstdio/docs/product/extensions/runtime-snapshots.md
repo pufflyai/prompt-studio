@@ -18,7 +18,7 @@ In controlled testing, repeated public and private renderer commands grew API me
 ## Goals
 
 - Import each installed extension source once per source version.
-- Give commands, events, schedules, settings, UI metadata, skills, templates, and the harness registry the same normalized snapshot.
+- Give commands, events, schedules, settings, UI metadata, skills, and templates the same normalized snapshot.
 - Share one in-flight load across concurrent readers.
 - Invalidate snapshots on every real source or project-enablement change.
 - Let active work finish against the snapshot on which it started.
@@ -68,17 +68,8 @@ In controlled testing, repeated public and private renderer commands grew API me
 1. The application runtime owns one catalog and disposes its watchers on close.
 2. Route dependency types receive the catalog, not loader functions.
 3. The extension scheduler uses the catalog and does not maintain a competing runtime cache.
-4. UI metadata, settings, skill, template, and harness registry services observe the same invalidation generation.
+4. UI metadata, settings, skill, and template services observe the same invalidation generation.
 5. Test-only loaders may be injected behind the catalog interface.
-
-### Failure Handling (Decided)
-
-1. A source that fails to import or validate stays in the new snapshot with its identity, empty contributions, and a diagnostic. This matches the current loader, which keeps a broken source's manifest identity and records `extension_import_failed`.
-2. One broken source does not block a new generation. Working sources publish; the broken source contributes nothing.
-3. After a source change, the catalog never serves that source's old handlers. Broken code surfaces as a diagnostic, not as stale behavior.
-4. A whole load that cannot produce a consistent snapshot, such as a failed enabled-source read or a normalization crash, replaces nothing. The catalog keeps the last healthy snapshot, marks it stale with a diagnostic, and retries on the next read.
-5. A cold read with no healthy snapshot fails with `extension_runtime_load_failed`.
-6. A snapshot never mixes records from two loads.
 
 ### Observability
 
@@ -149,7 +140,7 @@ The exact fingerprint remains internal. Public callers depend only on snapshot i
 
 - Bun still retains imports for genuine source versions. Long development sessions with frequent edits can grow, but growth becomes tied to edits instead of commands.
 - Source-to-project reverse lookup must stay current as enablement changes.
-- The failed reload policy is decided (see Failure Handling): per-source failures degrade only that source; whole-load failures keep the last healthy snapshot marked stale.
+- A failed reload policy must clearly choose between keeping the last healthy snapshot and publishing a diagnostic-only snapshot.
 - Scheduler startup must not build a separate cache before the application catalog is ready.
 
 ## Rollout Plan

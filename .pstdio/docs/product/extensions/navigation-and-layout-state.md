@@ -106,14 +106,12 @@ await workbench.navigation.open({
 });
 ~~~
 
-Mode metadata supplies a static default resource reference, or the id of a command that resolves one. Extension UI metadata is serialized to the dashboard, so a function resolver is not supported.
+Mode metadata supplies a default resource reference or resolver:
 
 ~~~ts
 modes: {
   lab: {
     defaultResource: { kind: "lab-root", id: "current-project" },
-    // Or resolve at runtime through a command:
-    // defaultResource: { commandId: "lab.default-resource" },
     resources: {
       "lab-root": { /* layout */ },
       "glass-lab-artifact": { /* layout */ },
@@ -194,7 +192,7 @@ treeItems: {
 
 - Navigation observers must receive one committed result rather than current mode and resource events in arbitrary order.
 - Last-resource state must be cleared when a resource is deleted.
-- A default-resource command may depend on selected project and extension readiness.
+- A mode default resolver may depend on selected project and extension readiness.
 - Existing route helpers must delegate to the transaction or be removed to avoid two navigation paths.
 
 ## Rollout Plan

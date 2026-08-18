@@ -61,18 +61,6 @@ This prevents several valid products:
 | Resource author | Control which parts of a resource may be extended. | Accept every eligible panel or keep the resource closed. |
 | End user | Customize optional panels without losing required structure. | Reopen tabs manually or reset the entire layout. |
 
-## Ownership
-
-Each concern has exactly one owner:
-
-| Concern | Owner |
-| ------- | ----- |
-| Panel capability | The panel definition. |
-| Resource slots | The resource kind definition. |
-| Mode placement | The active mode's placement recipe. |
-| Resource identity | The resource instance. |
-| Persisted user layout | The workbench layout store, scoped by project, mode, and resource URI. |
-
 ## Requirements
 
 ### Panel Definitions
@@ -83,18 +71,6 @@ Each concern has exactly one owner:
 4. A panel does not declare required or default-open behavior.
 5. A panel menu is owned by a panel instance and follows that instance's region.
 6. An overlay-only or chrome-only body cannot be placed into a docked panel region unless it explicitly supports it.
-
-### Placement Typing (Decided)
-
-Docked regions and chrome surfaces use separate contribution types. They do not share one placement union.
-
-1. Docked regions are `sidenav`, `main`, `secondary`, and `side`. Only docked regions appear in mode recipes, user moves, and persisted layout.
-2. Chrome surfaces such as nav actions, the activity bar, the status bar, and overlays stay typed item contributions on host workbench targets, as menus and activity items are today.
-3. Chrome contributions may show or hide by active mode through `when` expressions. A mode recipe never assigns a chrome position.
-4. Chrome contributions are not persisted user layout and take no part in required-placement reconciliation.
-5. Overlay presentation is an explicit panel capability. An overlay opens from an action and is never a resolved layout placement.
-
-This matches the current kernel, where mode layout targets already cover only docked areas and menus, trees, and settings already attach to typed targets. The replacement contract removes the single region union that let a panel declare a chrome region.
 
 ### Resource Kinds and Slots
 
@@ -112,14 +88,13 @@ This matches the current kernel, where mode layout targets already cover only do
 1. A mode declares the resource kinds it accepts.
 2. A mode may declare mode-wide panels that do not consume the active resource.
 3. For each accepted resource kind, the mode maps supported slots to default regions.
-4. A mode places a specific known panel through a `panels` map keyed by panel id. A panel entry wins over its slot placement and must satisfy the panel's supported regions and its slot's rules.
+4. A mode may override the region for a known panel inside the panel and slot constraints.
 5. A mode marks placements as required or default.
-6. `required` on a slot placement is valid only when the slot's cardinality is one. In a cardinality-many slot, `required` must name a specific panel in the `panels` map.
-7. External resource panels are optional unless the mode explicitly names them.
-8. A mode may allow users to move a placement within a declared region set.
-9. A required placement is non-closable. A default placement is closable unless its placement says otherwise.
-10. Exactly one main-region placement establishes the location for a primary resource.
-11. Attached resources may open inspectors without replacing the primary location.
+6. External resource panels are optional unless the mode explicitly names them.
+7. A mode may allow users to move a placement within a declared region set.
+8. A required placement is non-closable. A default placement is closable unless its placement says otherwise.
+9. Exactly one main-region placement establishes the location for a primary resource.
+10. Attached resources may open inspectors without replacing the primary location.
 
 ### Composition Resolution
 
@@ -146,9 +121,7 @@ defineExtension({
 
   resourcePanels: {
     ticketInsights: {
-      // A bare id resolves inside the declaring extension.
-      // Another extension's contribution uses the namespaced form.
-      resourceKind: "planner.ticket",
+      resourceKind: "ticket",
       panel: "insights",
       slot: "inspector",
     },
@@ -187,10 +160,6 @@ modes: {
             allowedRegions: ["side", "secondary"],
           },
         },
-        // Places one known panel; wins over its slot placement.
-        panels: {
-          "acme.insights": { region: "secondary" },
-        },
       },
     },
   },
@@ -210,7 +179,6 @@ modes: {
 ## Rules and Constraints
 
 - Resource and panel ids are stable, namespaced contribution ids.
-- A bare id in a contribution resolves inside the declaring extension. A reference to another extension's resource kind, panel, or slot uses the namespaced form `<extension>.<id>`.
 - A slot name is local to its resource kind.
 - External extensions cannot claim a closed slot or primary location.
 - A mode layout cannot expand a panel's supported regions.
@@ -228,12 +196,11 @@ modes: {
 | extension_panel_missing | A resource-panel or mode references an unknown panel. |
 | extension_panel_region_unsupported | A mode places a panel outside its supported regions. |
 | extension_mode_resource_unsupported | A layout references a resource kind the mode does not accept. |
-| extension_placement_required_invalid | `required` is set on a cardinality-many slot placement without naming a panel. |
 | extension_resource_primary_invalid | A primary resource has zero or several primary location placements. |
 
 ## Risks and Open Questions
 
-- Placement typing is decided: chrome and docked placements are separate contribution types (see Placement Typing). Remaining risk: existing panels that declare chrome regions must migrate to chrome contribution types during the cutover.
+- Chrome targets such as activity, status, overlay, and sidenav are not interchangeable with docked panel regions. The SDK review must decide whether they use the same placement union or separate contribution types.
 - Cross-extension ordering must remain stable when extensions are enabled in different orders.
 - A missing optional extension panel should not invalidate the owning resource layout.
 - A missing required panel should produce a visible diagnostic and safe fallback location.

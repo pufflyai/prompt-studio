@@ -57,20 +57,6 @@ Extension Lab must include:
 | Editable file renderer | Focus, selection, save, and refresh lifecycle. |
 | No-op public and private commands | Runtime snapshot reuse and soak. |
 
-## Regression Coverage Map
-
-Every reproduced PS-246 regression has a test owner and a validation layer:
-
-| Regression | Owning PRD | Fixture | Validation layer |
-| ---------- | ---------- | ------- | ---------------- |
-| Editor saves unchanged content, remounts, and loses focus and selection | Renderer Edit and Refresh Lifecycle | Editable file renderer | Renderer lifecycle unit tests plus Playwright focus and selection checks |
-| Ticket breadcrumbs lose the Tickets browse root | Extension Navigation and Layout State | Nested resource tree | Workbench hierarchy contract test plus Playwright breadcrumb assertions |
-| Resource presenters infer and change mode from resource kind | Extension Navigation and Layout State | Shared workbench suite | Contract test: a resource-only open preserves the active mode |
-| Lab retains a ticket resource and places Lab panels under the ticket location | Extension Navigation and Layout State | Lab root resource | Navigation state transition unit test plus Playwright mode switch |
-| Closed required Lab panels have no recovery path | Contextual Workbench Composition | Required panel | Mode re-entry reconciliation test plus Playwright |
-| Root tree items cannot opt out of the Extensions group | Contextual Workbench Composition | Root tree item | Sidenav story plus Playwright |
-| Repeated commands import fresh module identities until OOM | Project Extension Runtime Snapshots | No-op public and private commands | Loader-count integration test plus isolated container soak |
-
 ## Requirements
 
 ### Static and Normalization Tests
