@@ -232,6 +232,7 @@ test.describe("data table edit mode storybook", () => {
 
   test("uses one bordered edit mode with configurable editable cells", async ({ page }) => {
     await page.goto(storyUrl(baseUrl, editModeDataTableStoryId));
+    await waitForStoryPlayback(page);
 
     const rows = page.locator("table:visible tbody tr[data-document-row]");
     await expect(rows).toHaveCount(3);
