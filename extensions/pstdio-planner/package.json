@@ -2,7 +2,7 @@
   "name": "pstdio-planner",
   "version": "0.10.0",
   "displayName": "Prompt Studio Planner",
-  "description": "Built-in Prompt Studio planner: tickets, workspace statuses, and templates.",
+  "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

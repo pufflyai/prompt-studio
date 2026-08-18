@@ -42,11 +42,14 @@ The commands execute planner extension commands such as
 
 ## Automation
 
-Planner workspace automation can update ticket statuses:
+Planner derives ticket statuses from managed attempts:
 
-1. Starting a ticket attempt moves the ticket to `In Progress`.
-2. When all linked active workspaces are marked `reviewed`, the ticket moves to
-   `In Review`.
+1. Active implementation or requested changes move the ticket to `In Progress`.
+2. A submitted revision, active review, or approved unmerged revision moves it
+   to `In Review` when no implementation is active.
+3. The ticket moves to `Blocked` only when every viable managed attempt is
+   blocked.
+4. `Human Requested` pauses automation and leaves the current rollup unchanged.
 
 Implementation automation is extension-owned. The core API does not expose a
 status transition endpoint for planner tickets.

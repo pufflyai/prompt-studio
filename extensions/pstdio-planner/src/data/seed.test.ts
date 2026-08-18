@@ -130,14 +130,14 @@ describe("seedDefaultTags", () => {
     expect(seeded.map((tag) => tag.id)).not.toContain("default-priority");
   });
 
-  test("does not recreate a deleted human_requested tag", async () => {
+  test("restores the required Human Requested workflow tag after deletion", async () => {
     const storage = createMemoryStorage();
     await seedDefaultTags(storage);
 
     await tagsCollection(storage).delete("default-human-requested");
     const seeded = await seedDefaultTags(storage);
 
-    expect(seeded.map((tag) => tag.id)).not.toContain("default-human-requested");
+    expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
   });
 
   test("completes a partial default seed before the seeded marker is written", async () => {

@@ -95,6 +95,15 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
         async put(id, value) {
           store.set(id, value);
         },
+        async createIfAbsent(id, value) {
+          if (store.has(id)) return false;
+          store.set(id, value);
+          return true;
+        },
+        async deleteIfValue(id, value) {
+          if (store.get(id) !== value && JSON.stringify(store.get(id)) !== JSON.stringify(value)) return false;
+          return store.delete(id);
+        },
         async create(value) {
           const id = crypto.randomUUID();
           store.set(id, value);

@@ -6,6 +6,7 @@ import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
+import { readReportCommand } from "./read-report";
 import { createMemoryRepoFiles } from "./repo-files.fixture";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
@@ -68,6 +69,7 @@ describe("report workflow", () => {
     );
 
     expect(result).toEqual({
+      reportId: expect.any(String),
       workspace: "PS-116_A1",
       name: "review",
       path: reportMarkdownPath("review"),
@@ -94,6 +96,7 @@ describe("report workflow", () => {
     expect(stripFrontmatter(markdown)).toContain("## Confidence Score");
     expect(events).toHaveLength(1);
     expect(events[0]?.event).toBe("pstdio-reports.report.created");
+    expect(events[0]?.payload).toMatchObject({ reportId: report.id, workspaceId: "ws-1" });
   });
 
   test("write uses a selected registered report template", async () => {
@@ -343,7 +346,7 @@ describe("saved report workflow", () => {
       }),
     );
 
-    expect(result).toEqual({ workspace: "PS-116_A1", name: "review", files: 1 });
+    expect(result).toEqual({ reportId: expect.any(String), workspace: "PS-116_A1", name: "review", files: 1 });
 
     const [saved] = await reportsCollection(storage).list();
     expect(saved).toMatchObject({
@@ -366,6 +369,27 @@ describe("saved report workflow", () => {
       new Uint8Array([137, 80, 78, 71]),
     );
     expect(events[0]?.event).toBe("pstdio-reports.report.saved");
+    expect(events[0]?.payload).toMatchObject({ reportId: saved.id, workspaceId: saved.workspaceId });
+  });
+});
+
+describe("saved report identity and failures", () => {
+  test("reads a saved report by its stable id", async () => {
+    const { storage, repoFiles } = setup();
+    const written = await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { repoFiles },
+      }),
+    );
+    await saveReportCommand.run(
+      makeCommandContext({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { repoFiles } }),
+    );
+
+    const report = await readReportCommand.run(makeCommandContext({ storage, params: { id: written.reportId } }));
+
+    expect(report).toMatchObject({ id: written.reportId, workspaceShorthand: "PS-116_A1", draft: false });
   });
 
   test("save succeeds when old attachment cleanup fails after storage update", async () => {
@@ -392,7 +416,7 @@ describe("saved report workflow", () => {
           overrides: { repoFiles },
         }),
       ),
-    ).resolves.toEqual({ workspace: "PS-116_A1", name: "review", files: 1 });
+    ).resolves.toMatchObject({ workspace: "PS-116_A1", name: "review", files: 1 });
 
     const [saved] = await reportsCollection(storage).list();
     expect(saved.files[0]?.hash).toBe(await hashText("second"));

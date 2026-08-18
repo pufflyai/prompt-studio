@@ -1,6 +1,13 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { AutomationContext } from "./automation-run";
-import type { PlannerStatus, PlannerTag, PlannerTicket, TicketWorkspaceRow, WorkspaceActivity } from "./planner-client";
+import type {
+  PlannerAttempt,
+  PlannerStatus,
+  PlannerTag,
+  PlannerTicket,
+  TicketWorkspaceRow,
+  WorkspaceActivity,
+} from "./planner-client";
 
 export const DEFAULT_STATUSES: PlannerStatus[] = [
   { id: "backlog", name: "Backlog", sortOrder: 0 },
@@ -25,9 +32,9 @@ export const DEFAULT_TAGS: PlannerTag[] = [
   },
   {
     id: "default-human-requested",
-    name: "human_requested",
+    name: "Flags",
     sortOrder: 3,
-    options: [{ id: "human-requested-true", name: "True", sortOrder: 0 }],
+    options: [{ id: "default-human-requested-true", name: "Human Requested", sortOrder: 0 }],
   },
 ];
 
@@ -36,6 +43,19 @@ export const makeTicket = (overrides: Partial<PlannerTicket> & { id: string }): 
   title: `Ticket ${overrides.id}`,
   statusId: "backlog",
   tagIds: [],
+  createdAt: "2026-06-01T00:00:00.000Z",
+  updatedAt: "2026-06-01T00:00:00.000Z",
+  ...overrides,
+});
+
+export const makeAttempt = (
+  overrides: Partial<PlannerAttempt> & { workspaceId: string; ticketId: string },
+): PlannerAttempt => ({
+  workspaceShorthand: `${overrides.ticketId}_A1`,
+  ticketShorthand: overrides.ticketId.toUpperCase(),
+  implementationSessionId: `implementation-${overrides.workspaceId}`,
+  state: "implementing",
+  revisions: [],
   createdAt: "2026-06-01T00:00:00.000Z",
   updatedAt: "2026-06-01T00:00:00.000Z",
   ...overrides,
@@ -78,6 +98,8 @@ export interface PlannerFixtureState {
   activityByWorkspace?: Record<string, WorkspaceActivity>;
   sessionsById?: Record<string, { id: string; status: string }>;
   maxInProgress?: number;
+  attempts?: PlannerAttempt[];
+  reconcileDecisions?: Record<string, string>;
 }
 
 // A stand-in for the planner's public command surface: the same command ids the
@@ -88,6 +110,7 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
   const statuses = state.statuses ?? DEFAULT_STATUSES;
   const tags = state.tags ?? DEFAULT_TAGS;
   let createdSessions = 0;
+  const attempts = state.attempts ?? [];
 
   const findTicket = (ref: string) =>
     state.tickets.find((ticket) => ticket.id === ref || ticket.shorthand === ref) ?? null;
@@ -106,6 +129,46 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
     return ticket;
   };
 
+  const runAttempt = (params: Record<string, unknown>) => {
+    const ticket = findTicket(params.ticket as string);
+    const active = attempts.filter(
+      (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
+    );
+    if (active.length >= (state.maxInProgress ?? 2)) {
+      return { decision: "wait", reason: "capacity-full", dependencyIds: [] };
+    }
+    if (ticket) ticket.statusId = "in-progress";
+    const sessionId = `implement-session-${++createdSessions}`;
+    const attempt: PlannerAttempt = {
+      workspaceId: `workspace-${ticket?.id ?? createdSessions}`,
+      workspaceShorthand: `${ticket?.shorthand ?? params.ticket}_A1`,
+      ticketId: ticket?.id ?? String(params.ticket),
+      ticketShorthand: ticket?.shorthand ?? String(params.ticket),
+      implementationSessionId: sessionId,
+      state: "implementing",
+      revisions: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    attempts.push(attempt);
+    return { decision: "started", session: { id: sessionId }, attempt };
+  };
+
+  const runReview = (params: Record<string, unknown>) => {
+    const attempt = attempts.find((candidate) => candidate.workspaceId === params.workspaceId);
+    if (attempt) attempt.state = "reviewing";
+    return {
+      review: { id: `review-${++createdSessions}` },
+      session: { id: `review-session-${createdSessions}` },
+    };
+  };
+
+  const reconcileAttempt = (params: Record<string, unknown>) => {
+    const attempt = attempts.find((candidate) => candidate.workspaceId === params.workspaceId);
+    if (!attempt) throw new Error(`Unknown attempt: ${params.workspaceId}`);
+    return { decision: state.reconcileDecisions?.[attempt.workspaceId] ?? "active", attempt };
+  };
+
   const run = (commandId: string, params: Record<string, unknown>): unknown => {
     switch (commandId) {
       case "pstdio-planner.automation-policy":
@@ -122,13 +185,14 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
         return setAttribute(params as { rowId: string; attributeId: string; value: string });
       case "pstdio-planner.refine-ticket":
         return { id: `refine-session-${++createdSessions}` };
-      case "pstdio-planner.run-attempt": {
-        const ticket = findTicket(params.ticket as string);
-        if (ticket) ticket.statusId = "in-progress";
-        return { session: { id: `implement-session-${++createdSessions}` } };
-      }
+      case "pstdio-planner.run-attempt":
+        return runAttempt(params);
       case "pstdio-planner.runReview":
-        return { id: `review-session-${++createdSessions}` };
+        return runReview(params);
+      case "pstdio-planner.list-attempts":
+        return attempts;
+      case "pstdio-planner.reconcile-attempt":
+        return reconcileAttempt(params);
       case "pstdio-planner.ticket-workspaces": {
         const ticket = findTicket(params.id as string);
         return state.workspacesByTicket?.[ticket?.shorthand ?? ""] ?? [];

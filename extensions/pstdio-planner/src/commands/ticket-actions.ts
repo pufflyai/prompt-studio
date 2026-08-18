@@ -1,12 +1,11 @@
 import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 
-const ticketActionParams = {
+export const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
   rowId: params.text({ label: "Ticket row" }),
   agent: params.harness({ label: "Model" }),
@@ -17,7 +16,7 @@ const selectedTicketParams = {
   agent: ticketActionParams.agent,
 };
 
-const workspaceModeParam = params.select({
+export const workspaceModeParam = params.select({
   label: "Mode",
   required: false,
   defaultValue: "worktree",
@@ -32,7 +31,7 @@ const nonEmptyText = (value: string | undefined) => {
   return trimmed ? trimmed : undefined;
 };
 
-const resolveTicket = (
+export const resolveTicket = (
   ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "attachment" | "params" | "resource">,
 ) => {
   const ticket = nonEmptyText(ctx.params.ticket) ?? nonEmptyText(ctx.params.rowId);
@@ -44,7 +43,7 @@ const resolveTicket = (
   throw new Error("Ticket is required.");
 };
 
-const resolveTicketIdentity = async (
+export const resolveTicketIdentity = async (
   ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
   ticketRef: string,
 ) => {
@@ -93,9 +92,10 @@ const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
   ...(template ? { templateName: template } : {}),
 });
 
-const harnessInput = (agent: { harnessId: string; model?: string } | undefined) => (agent ? { harness: agent } : {});
+export const harnessInput = (agent: { harnessId: string; model?: string } | undefined) =>
+  agent ? { harness: agent } : {};
 
-const createAnchoredWorkspace = async (
+export const createAnchoredWorkspace = async (
   ctx: Pick<
     CommandContext<{
       ticket?: string;
@@ -105,6 +105,7 @@ const createAnchoredWorkspace = async (
     }>,
     "extensionId" | "params" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
+  base?: string,
 ) => {
   const { mode, repo } = ctx.params;
   const ticketRef = resolveTicket(ctx);
@@ -115,7 +116,8 @@ const createAnchoredWorkspace = async (
     shorthand_base: shorthand,
     anchors: [anchor],
     mode: attemptMode,
-    ...(repo ? { repo_id: repo.repoId, base: repo.branch } : {}),
+    ...(repo ? { repo_id: repo.repoId } : {}),
+    ...((base ?? repo?.branch) ? { base: base ?? repo?.branch } : {}),
   });
 
   return { anchor, mode: attemptMode, ticket, workspace };
@@ -145,41 +147,6 @@ export const createWorkspaceCommand = defineCommand({
       ticket,
       workspace,
       session: null,
-    };
-  },
-});
-
-export const runAttemptCommand = defineCommand({
-  title: "Run attempt",
-  menus: [
-    {
-      slot: "ticket.headerOverflow",
-      label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
-      icon: "play",
-    },
-  ],
-  params: {
-    ...ticketActionParams,
-    repo: params.repo({ label: "Workspace" }),
-    mode: workspaceModeParam,
-  },
-  async run(ctx) {
-    const { agent } = ctx.params;
-    const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx);
-    const session = await ctx.sessions.create({
-      title: `Implement ticket: ${anchor.label}`,
-      prompt: `Implement ticket: ${anchor.label}`,
-      workspaceId: workspace.id,
-      anchors: [anchor],
-      ...harnessInput(agent),
-    });
-    await moveTicketToInProgress(ctx.storage, ticket.id);
-
-    return {
-      mode,
-      ticket,
-      workspace,
-      session: { ...session, workspace_id: workspace.id },
     };
   },
 });

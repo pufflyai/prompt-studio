@@ -86,6 +86,7 @@ export const writeReportCommand = defineCommand({
     await repoFiles.writeText(path, reportToMarkdown(report));
     await ctx.events.emit("pstdio-reports.report.created", {
       projectId: ctx.projectId,
+      reportId: report.id,
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
@@ -94,6 +95,6 @@ export const writeReportCommand = defineCommand({
       path,
     });
 
-    return { workspace: workspaceShorthand, name, path, filesPath };
+    return { reportId: report.id, workspace: workspaceShorthand, name, path, filesPath };
   },
 });

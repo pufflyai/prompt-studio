@@ -92,6 +92,31 @@ describe("normalizeExtensionSources", () => {
     expect(runtime.cli[0]?.path).toEqual(["tickets", "new"]);
   });
 
+  test("reports CLI examples that do not address the command path or an alias", () => {
+    const planner = defineExtension({
+      commands: {
+        "tickets.create": {
+          title: "Create ticket",
+          cli: {
+            globalAliases: [["tickets", "create"]],
+            examples: ["pstdio tickets create --title Example", "pst tickets delete --id PS-1"],
+          },
+          run: async () => undefined,
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "invalid_cli_example",
+        commandId: "planner.tickets.create",
+        metadata: { example: "pst tickets delete --id PS-1" },
+      }),
+    ]);
+  });
+
   test("flags duplicate command ids and CLI collisions", () => {
     const a = defineExtension({
       commands: {

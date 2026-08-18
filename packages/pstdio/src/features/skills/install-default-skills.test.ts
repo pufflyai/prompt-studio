@@ -177,7 +177,7 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
-  test("skips skills that already exist locally", async () => {
+  test("replaces same-name installed skills with the managed catalog version", async () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("skip-existing");
 
@@ -188,7 +188,7 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
 
     const content = readFileSync(join(existingSkillDir, "SKILL.md"), "utf8");
-    expect(content).toBe("custom content");
+    expect(content).toBe(SKILL_FIXTURES[0].files[0].content);
   });
 
   test("is idempotent", async () => {
@@ -202,7 +202,7 @@ describe("installDefaultSkills", () => {
     expect(existsSync(skillFile)).toBe(true);
   });
 
-  test("skips local install when skill already exists globally", async () => {
+  test("updates an existing global copy instead of creating a shadowing local copy", async () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("skip-global");
     const fakeHome = setup("fake-home-global");
@@ -215,6 +215,7 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, fakeHome);
 
     expect(existsSync(join(root, ".claude", "skills", globalSkillName))).toBe(false);
+    expect(readFileSync(join(globalSkillDir, "SKILL.md"), "utf8")).toBe(SKILL_FIXTURES[0].files[0].content);
 
     const otherSkill = SKILL_NAMES.find((s) => s !== globalSkillName)!;
     expect(existsSync(join(root, ".claude", "skills", otherSkill, "SKILL.md"))).toBe(true);

@@ -30,6 +30,16 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     params,
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [] },
-    sessions: { list: async () => [], listByWorkspace: async () => [] },
+    sessions: { list: async () => [], listByWorkspace: async () => [], addAnchors: async () => {} },
+    repos: {
+      list: async () => [{ projectId, repoId: "repo-1", path: "/repo", role: "default" }],
+      get: async () => ({ projectId, repoId: "repo-1", path: "/repo", role: "default" }),
+      getDefault: async () => ({ projectId, repoId: "repo-1", path: "/repo", role: "default" }),
+    },
+    process: {
+      run: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
+      runOrThrow: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
+    },
+    settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
     ...overrides,
   }) as unknown as CommandContext<TParams>;

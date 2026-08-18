@@ -5,11 +5,15 @@ import { refineTicketsCommand } from "./refine-tickets";
 const run = (ctx: Parameters<typeof refineTicketsCommand.run>[0]) => refineTicketsCommand.run(ctx);
 
 describe("refine-tickets automation", () => {
-  test("refines the oldest-updated Backlog ticket without human_requested", async () => {
+  test("refines the oldest-updated Backlog ticket without Human Requested", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [
         makeTicket({ id: "t1", updatedAt: "2026-06-03T00:00:00.000Z" }),
-        makeTicket({ id: "t2", updatedAt: "2026-06-01T00:00:00.000Z", tagIds: ["human-requested-true"] }),
+        makeTicket({
+          id: "t2",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+          tagIds: ["default-human-requested-true"],
+        }),
         makeTicket({ id: "t3", updatedAt: "2026-06-02T00:00:00.000Z" }),
         makeTicket({ id: "t4", statusId: "ready", updatedAt: "2026-05-01T00:00:00.000Z" }),
       ],
@@ -25,7 +29,10 @@ describe("refine-tickets automation", () => {
 
   test("skips drafts and reports a no-op when nothing is eligible", async () => {
     const { ctx, calls, activities } = makeAutomationContext({
-      tickets: [makeTicket({ id: "t1", draft: true }), makeTicket({ id: "t2", tagIds: ["human-requested-true"] })],
+      tickets: [
+        makeTicket({ id: "t1", draft: true }),
+        makeTicket({ id: "t2", tagIds: ["default-human-requested-true"] }),
+      ],
     });
 
     const result = await run(ctx as never);
@@ -49,7 +56,7 @@ describe("refine-tickets automation", () => {
     expect(callsTo(calls, "pstdio-planner.refine-ticket")).toHaveLength(1);
   });
 
-  test("moves the ticket to TODO and adds human_requested when refinement completes", async () => {
+  test("moves the ticket to TODO and adds Human Requested when refinement completes", async () => {
     const state = {
       tickets: [makeTicket({ id: "t1" })],
       sessionsById: { "refine-session-1": { id: "refine-session-1", status: "completed" } },
@@ -59,7 +66,7 @@ describe("refine-tickets automation", () => {
     await run(ctx as never); // starts the refinement
     await run(ctx as never); // reconciles the completed session
 
-    expect(state.tickets[0]).toMatchObject({ statusId: "ready", tagIds: ["human-requested-true"] });
+    expect(state.tickets[0]).toMatchObject({ statusId: "ready", tagIds: ["default-human-requested-true"] });
   });
 
   test("leaves a failed refinement in Backlog and re-picks it on a later tick", async () => {

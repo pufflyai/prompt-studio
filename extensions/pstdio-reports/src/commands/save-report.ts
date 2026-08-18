@@ -120,6 +120,7 @@ export const saveReportCommand = defineCommand({
 
     await ctx.events.emit("pstdio-reports.report.saved", {
       projectId: ctx.projectId,
+      reportId: report.id,
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
@@ -127,6 +128,6 @@ export const saveReportCommand = defineCommand({
       files: nextFiles.length,
     });
 
-    return { workspace: workspaceShorthand, name, files: nextFiles.length };
+    return { reportId: report.id, workspace: workspaceShorthand, name, files: nextFiles.length };
   },
 });

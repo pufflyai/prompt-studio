@@ -115,4 +115,15 @@ export const createSessionsApi = (
       attachmentRefs: followupInput.attachments,
     });
   },
+  addAnchors: async (sessionId, anchors) => {
+    const session = await deps.sessionService.get(sessionId);
+    if (!session) throw new Error(`Session not found: ${sessionId}`);
+    const merged = [...(session.anchors_json ?? [])];
+    for (const anchor of anchors) {
+      const index = merged.findIndex((candidate) => candidate.type === anchor.type && candidate.id === anchor.id);
+      if (index >= 0) merged[index] = anchor;
+      else merged.push(anchor);
+    }
+    await deps.sessionService.update(sessionId, { anchors_json: merged });
+  },
 });

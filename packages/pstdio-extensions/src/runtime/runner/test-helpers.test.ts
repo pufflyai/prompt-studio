@@ -48,6 +48,7 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
     listByWorkspace: async () => [],
     create: async () => createSessionResource(),
     followup: async () => {},
+    addAnchors: async () => {},
   },
   workspaces: {
     list: async () => [],

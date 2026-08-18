@@ -158,6 +158,28 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     return stored;
   };
 
+  const createCollectionItemIfAbsent = async (input: SetCollectionItemInput) => {
+    const timestamp = nowTimestamp();
+    const inserted = await db
+      .insert(extension_collection_items)
+      .values({
+        project_id: input.project_id ?? null,
+        extension_instance_id: input.extension_instance_id,
+        scope_type: input.scope_type,
+        scope_id: input.scope_id,
+        collection: input.collection,
+        item_id: input.item_id,
+        sort_order: input.sort_order ?? null,
+        value_json: input.value_json,
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+      .onConflictDoNothing()
+      .returning({ itemId: extension_collection_items.item_id });
+
+    return inserted.length === 1;
+  };
+
   const deleteCollectionItem = async (scope: CollectionScope, itemId: string) => {
     const deleted = await db
       .delete(extension_collection_items)
@@ -174,5 +196,33 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     return deleted.length > 0;
   };
 
-  return { getKv, listKv, setKv, deleteKv, listCollection, getCollectionItem, setCollectionItem, deleteCollectionItem };
+  const deleteCollectionItemIfValue = async (scope: CollectionScope, itemId: string, value: unknown) => {
+    const deleted = await db
+      .delete(extension_collection_items)
+      .where(
+        and(
+          eq(extension_collection_items.extension_instance_id, scope.extension_instance_id),
+          eq(extension_collection_items.scope_type, scope.scope_type),
+          eq(extension_collection_items.scope_id, scope.scope_id),
+          eq(extension_collection_items.collection, scope.collection),
+          eq(extension_collection_items.item_id, itemId),
+          eq(extension_collection_items.value_json, value),
+        ),
+      )
+      .returning({ item_id: extension_collection_items.item_id });
+    return deleted.length > 0;
+  };
+
+  return {
+    getKv,
+    listKv,
+    setKv,
+    deleteKv,
+    listCollection,
+    getCollectionItem,
+    setCollectionItem,
+    createCollectionItemIfAbsent,
+    deleteCollectionItem,
+    deleteCollectionItemIfValue,
+  };
 };

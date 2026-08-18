@@ -12,7 +12,7 @@ Prompt Studio ships default automation through first-party extensions:
 
 | Extension | Purpose |
 | --------- | ------- |
-| `pstdio-planner` | Ticket workflow commands, workspace statuses, templates, skills, and ticket-aware workspace provisioning. |
+| `pstdio-planner` | Managed ticket attempts, dependency readiness, review history, templates, skills, and ticket-aware workspace provisioning. |
 
 ## Extension Surfaces
 
@@ -22,7 +22,6 @@ Common lifecycle events include:
 
 - ticket created, updated, archived, and deleted
 - worktree created
-- attempt status changed
 - session started, resumed, completed, failed, or awaiting input
 
 See the SDK extension types for the current event and middleware contracts.

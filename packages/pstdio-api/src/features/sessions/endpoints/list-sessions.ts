@@ -17,6 +17,7 @@ export const listSessionsRoute = createRoute({
           .optional()
           .openapi({ description: "Filter by status" }),
         agent: z.string().optional().openapi({ description: "Filter by agent" }),
+        workspace_id: z.string().optional().openapi({ description: "Filter by linked workspace" }),
         archived: z.string().optional().openapi({ description: "Include archived" }),
       })
       .strict(),
@@ -33,11 +34,19 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
   return async (c) => {
     const query = c.req.valid("query");
 
-    const sessions = await deps.sessionService.list(query.project_id, {
-      status: query.status,
-      agent: query.agent,
-      includeArchived: query.archived === "true",
-    });
+    const sessions = query.workspace_id
+      ? (await deps.workspaceSessionService.listByWorkspace(query.workspace_id)).filter(
+          (session) =>
+            session.project_id === query.project_id &&
+            (!query.status || session.status === query.status) &&
+            (!query.agent || session.agent === query.agent) &&
+            (query.archived === "true" || !session.archived),
+        )
+      : await deps.sessionService.list(query.project_id, {
+          status: query.status,
+          agent: query.agent,
+          includeArchived: query.archived === "true",
+        });
 
     return c.json(sessions, 200);
   };

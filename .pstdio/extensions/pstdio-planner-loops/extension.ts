@@ -3,7 +3,6 @@ import { implementTicketsCommand } from "./src/automations/implement-tickets";
 import { refineTicketsCommand } from "./src/automations/refine-tickets";
 import { reviewTicketsCommand } from "./src/automations/review-tickets";
 import { stuckWorkSweepCommand } from "./src/automations/stuck-work-sweep";
-import { sessionStartedHook } from "./src/hooks/session-started";
 
 // Repository-owned automation policy. Planner remains the data and command
 // provider; this extension calls only its public command surface.
@@ -13,10 +12,6 @@ export default defineExtension({
     "implement-tickets": implementTicketsCommand,
     "stuck-work-sweep": stuckWorkSweepCommand,
     "review-tickets": reviewTicketsCommand,
-  },
-
-  hooks: {
-    sessionStarted: sessionStartedHook,
   },
 
   schedules: {

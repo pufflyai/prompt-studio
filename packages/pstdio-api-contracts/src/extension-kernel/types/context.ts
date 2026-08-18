@@ -20,6 +20,8 @@ export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
   put(id: string, value: TItem): Promise<void>;
+  createIfAbsent(id: string, value: TItem): Promise<boolean>;
+  deleteIfValue(id: string, value: TItem): Promise<boolean>;
   create(value: TItem): Promise<TItem & { id: string }>;
   delete(id: string): Promise<void>;
   attachments(itemId: string): ExtensionBlobsApi;
@@ -133,6 +135,7 @@ export interface ExtensionSessionsApi {
     status?: string;
     original_session_id?: string | null;
     cwd?: string | null;
+    updated_at?: string | null;
     anchors_json?: ResourceAnchor[];
   } | null>;
 
@@ -180,6 +183,8 @@ export interface ExtensionSessionsApi {
     vars?: JsonObject;
     attachments?: SessionAttachmentRef[];
   }): Promise<void>;
+
+  addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
 }
 
 export interface ExtensionHarnessInput {

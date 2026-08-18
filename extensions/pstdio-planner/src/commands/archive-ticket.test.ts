@@ -84,8 +84,8 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     let commandResolved = false;
-    const command = archiveTicketCommand
-      .run({
+    const command = Promise.resolve(
+      archiveTicketCommand.run!({
         storage,
         params: { id: "T-1" },
         workspaces: {
@@ -96,11 +96,11 @@ describe("archive ticket", () => {
             archived.push(id);
           },
         },
-      } as never)
-      .then((result) => {
-        commandResolved = true;
-        return result as StoredTicket | null;
-      });
+      } as never),
+    ).then((result) => {
+      commandResolved = true;
+      return result as StoredTicket | null;
+    });
 
     await archiveStarted.promise;
     await Promise.resolve();
@@ -155,8 +155,8 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     let commandResolved = false;
-    const command = archiveTicketColumnActionCommand
-      .run({
+    const command = Promise.resolve(
+      archiveTicketColumnActionCommand.run!({
         storage,
         params: { columnId: "default-done", actionId: "archive_all" },
         workspaces: {
@@ -166,11 +166,11 @@ describe("archive ticket", () => {
             await cascadeSettled.promise;
           },
         },
-      } as never)
-      .then((result) => {
-        commandResolved = true;
-        return result as { archived: StoredTicket[] };
-      });
+      } as never),
+    ).then((result) => {
+      commandResolved = true;
+      return result as { archived: StoredTicket[] };
+    });
 
     await archiveStarted.promise;
     await Promise.resolve();

@@ -40,6 +40,7 @@ const environment: CommandRunnerEnvironment = {
     listByWorkspace: async () => [],
     create: async () => createSessionResource(),
     followup: async () => {},
+    addAnchors: async () => {},
   },
   workspaces: {
     list: async () => [],

@@ -1,10 +1,21 @@
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
+import {
+  addReviewCommentCommand,
+  dismissReviewCommand,
+  readAttemptHistoryCommand,
+  readReviewThreadCommand,
+  resolveReviewThreadCommand,
+  selectAttemptCommand,
+} from "./attempt-history";
+import { attemptReadinessCommand } from "./attempt-readiness";
 import { automationPolicyCommand } from "./automation-policy";
+import { submitChangeRequestCommand } from "./change-requests";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
+import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 import { implementTicketCommand } from "./implement-ticket";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
@@ -14,19 +25,21 @@ import { queryTicketResourcesCommand } from "./query-ticket-resources";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
+import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { runAttemptCommand } from "./run-attempt";
 import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { selectTicketDocumentCommand } from "./select-ticket-document";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
+import { submitReviewCommand } from "./submit-review";
 import {
   approveProposalCommand,
   breakIntoSubTicketsCommand,
   createWorkspaceCommand,
   proposalRefinedCommand,
   refineTicketCommand,
-  runAttemptCommand,
 } from "./ticket-actions";
 import {
   createTicketFileCommand,
@@ -67,6 +80,19 @@ import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = {
   "automation-policy": automationPolicyCommand,
+  "attempt-readiness": attemptReadinessCommand,
+  "submit-change-request": submitChangeRequestCommand,
+  "submit-review": submitReviewCommand,
+  "add-review-comment": addReviewCommentCommand,
+  "resolve-review-thread": resolveReviewThreadCommand,
+  "dismiss-review": dismissReviewCommand,
+  "read-review-thread": readReviewThreadCommand,
+  "read-attempt-history": readAttemptHistoryCommand,
+  "select-attempt": selectAttemptCommand,
+  "request-human": requestHumanCommand,
+  "resolve-human-request": resolveHumanRequestCommand,
+  "list-attempts": listAttemptsCommand,
+  "reconcile-attempt": reconcileAttemptCommand,
   "run-attempt": runAttemptCommand,
   "create-workspace": createWorkspaceCommand,
   "refine-ticket": refineTicketCommand,

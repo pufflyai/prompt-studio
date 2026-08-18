@@ -24,6 +24,7 @@ import { readSseStream, type SseEvent } from "./sse";
 export type ListSessionsInput = {
   status?: string;
   agent?: string;
+  workspaceId?: string;
   archived?: boolean;
 };
 
@@ -67,6 +68,7 @@ const buildSessionsQuery = (projectId: string, input: ListSessionsInput = {}) =>
   const params = new URLSearchParams({ project_id: projectId });
   if (input.status) params.append("status", input.status);
   if (input.agent) params.append("agent", input.agent);
+  if (input.workspaceId) params.append("workspace_id", input.workspaceId);
   if (input.archived) params.append("archived", "true");
   return params.toString();
 };

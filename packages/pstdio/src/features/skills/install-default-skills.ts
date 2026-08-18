@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
@@ -78,6 +78,7 @@ const writeSkillTree = (targetDir: string, files: SkillFile[]) => {
     resolvedPath: resolveSafeSkillFilePath(targetDir, file.path),
   }));
 
+  rmSync(targetDir, { recursive: true, force: true });
   mkdirSync(targetDir, { recursive: true });
 
   for (const file of resolvedFiles) {
@@ -110,10 +111,9 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
 
   for (const skill of skills) {
     const dest = resolveSafeSkillDir(targetDir, skill.name);
-    if (existsSync(dest)) continue;
-
+    const isNew = !existsSync(dest);
     writeSkillTree(dest, skill.files);
-    installed.push(skill.name);
+    if (isNew) installed.push(skill.name);
   }
 
   return installed;
@@ -138,10 +138,9 @@ export const installDefaultSkills = async (
 
     for (const skill of skills) {
       const localDest = resolveSafeSkillDir(localDir, skill.name);
-      if (existsSync(localDest)) continue;
-      if (existsSync(resolveSafeSkillDir(globalDir, skill.name))) continue;
-
-      writeSkillTree(localDest, skill.files);
+      const globalDest = resolveSafeSkillDir(globalDir, skill.name);
+      const destination = !existsSync(localDest) && existsSync(globalDest) ? globalDest : localDest;
+      writeSkillTree(destination, skill.files);
     }
   }
 };

@@ -1,35 +1,39 @@
 import { describe, expect, test } from "bun:test";
-import { callsTo, makeAutomationContext, makeTicket } from "../automation-context.fixture";
+import { callsTo, makeAttempt, makeAutomationContext, makeTicket } from "../automation-context.fixture";
 import { implementTicketsCommand } from "./implement-tickets";
 
 const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx);
 
 describe("implement-tickets automation", () => {
-  test("implements TODO tickets by priority, then oldest created", async () => {
-    const { ctx } = makeAutomationContext({
+  test("asks Planner to start ready tickets by priority until live attempt capacity is full", async () => {
+    const { ctx, calls } = makeAutomationContext({
       tickets: [
-        makeTicket({ id: "t1", statusId: "ready", createdAt: "2026-06-01T00:00:00.000Z" }),
-        makeTicket({
-          id: "t2",
-          statusId: "ready",
-          createdAt: "2026-06-03T00:00:00.000Z",
-          tagIds: ["priority-urgent"],
-        }),
-        makeTicket({ id: "t3", statusId: "ready", createdAt: "2026-06-02T00:00:00.000Z", tagIds: ["priority-low"] }),
+        makeTicket({ id: "t1", shorthand: "T1", statusId: "ready", tagIds: ["priority-low"] }),
+        makeTicket({ id: "t2", shorthand: "T2", statusId: "ready", tagIds: ["priority-urgent"] }),
+        makeTicket({ id: "t3", shorthand: "T3", statusId: "ready", tagIds: ["priority-high"] }),
       ],
       maxInProgress: 2,
     });
 
     const result = await run(ctx as never);
 
-    expect(result).toMatchObject({ implemented: ["T2", "T3"] });
+    expect(result).toMatchObject({
+      implemented: ["T2", "T3"],
+      waits: [{ ticket: "T1", reason: "capacity-full" }],
+    });
+    expect(callsTo(calls, "pstdio-planner.run-attempt").map((call) => call.params.ticket)).toEqual(["T2", "T3", "T1"]);
   });
 
-  test("skips tickets carrying human_requested", async () => {
+  test("skips tickets carrying the stable Human Requested flag", async () => {
     const { ctx } = makeAutomationContext({
       tickets: [
-        makeTicket({ id: "t1", statusId: "ready", tagIds: ["human-requested-true"] }),
-        makeTicket({ id: "t2", statusId: "ready" }),
+        makeTicket({
+          id: "t1",
+          shorthand: "T1",
+          statusId: "ready",
+          tagIds: ["default-human-requested-true"],
+        }),
+        makeTicket({ id: "t2", shorthand: "T2", statusId: "ready" }),
       ],
     });
 
@@ -38,41 +42,25 @@ describe("implement-tickets automation", () => {
     expect(result).toMatchObject({ implemented: ["T2"] });
   });
 
-  test("stops selecting at the planner automation policy", async () => {
-    const { ctx, calls } = makeAutomationContext({
+  test("uses live attempts rather than In Progress ticket count for capacity", async () => {
+    const { ctx } = makeAutomationContext({
       tickets: [
-        makeTicket({ id: "t1", statusId: "in-progress" }),
-        makeTicket({ id: "t2", statusId: "ready" }),
-        makeTicket({ id: "t3", statusId: "ready" }),
+        makeTicket({ id: "t1", shorthand: "T1", statusId: "in-progress" }),
+        makeTicket({ id: "t2", shorthand: "T2", statusId: "ready" }),
       ],
-      maxInProgress: 2,
+      attempts: [makeAttempt({ workspaceId: "workspace-1", ticketId: "t1", state: "approved" })],
+      maxInProgress: 1,
     });
 
     const result = await run(ctx as never);
 
-    expect(result).toMatchObject({ implemented: ["T2"], inProgressCount: 1 });
-    expect(callsTo(calls, "pstdio-planner.run-attempt")).toHaveLength(1);
-  });
-
-  test("no-ops when already at capacity", async () => {
-    const { ctx, calls, activities } = makeAutomationContext({
-      tickets: [
-        makeTicket({ id: "t1", statusId: "in-progress" }),
-        makeTicket({ id: "t2", statusId: "in-progress" }),
-        makeTicket({ id: "t3", statusId: "ready" }),
-      ],
-      maxInProgress: 2,
-    });
-
-    const result = await run(ctx as never);
-
-    expect(result).toMatchObject({ implemented: [], inProgressCount: 2 });
-    expect(callsTo(calls, "pstdio-planner.run-attempt")).toEqual([]);
-    expect(activities.at(-1)?.message).toContain("at capacity");
+    expect(result).toMatchObject({ implemented: ["T2"], waits: [] });
   });
 
   test("no-ops when nothing is eligible", async () => {
-    const { ctx, activities } = makeAutomationContext({ tickets: [makeTicket({ id: "t1" })] });
+    const { ctx, activities } = makeAutomationContext({
+      tickets: [makeTicket({ id: "t1", statusId: "backlog" })],
+    });
 
     const result = await run(ctx as never);
 

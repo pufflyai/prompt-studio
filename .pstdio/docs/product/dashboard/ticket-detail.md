@@ -83,11 +83,12 @@ navigation, and synced core host rows. It does not own ticket data.
 
 1. `pstdio-planner.create-workspace` creates a ticket-linked workspace without
    starting a session.
-2. `pstdio-planner.run-attempt` creates the same ticket-linked workspace and
-   starts the implementation session unless `startSession` is false.
+2. `pstdio-planner.run-attempt` checks dependency readiness, creates a managed
+   attempt at the chosen commit, and starts its implementation session.
 3. Both commands pass the planner ticket shorthand as `shorthand_base` so the
    host workspace shorthand is allocated from the ticket.
-4. Session start moves the planner ticket to `In Progress`.
+4. Planner stores the attempt and rolls the ticket to `In Progress`; generic
+   session-start hooks do not change ticket workflow state.
 
 ## Interface
 

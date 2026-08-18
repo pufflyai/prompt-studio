@@ -97,8 +97,18 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
           items.set(id, next);
           return next as never;
         },
+        async createIfAbsent(id, value) {
+          if (items.has(id)) return false;
+          items.set(id, value);
+          return true;
+        },
         async delete(id) {
           items.delete(id);
+        },
+        async deleteIfValue(id, value) {
+          if (items.get(id) !== value && JSON.stringify(items.get(id)) !== JSON.stringify(value)) return false;
+          items.delete(id);
+          return true;
         },
         async get(id) {
           return items.get(id) as never;
@@ -128,6 +138,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
   },
   templates: { get: async () => null },
   sessions: {
+    addAnchors: async () => {},
     get: async () => null,
     list: async () => [],
     listByWorkspace: async () => [],

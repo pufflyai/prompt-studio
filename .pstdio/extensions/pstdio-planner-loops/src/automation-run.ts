@@ -59,11 +59,11 @@ export const moveTicketIfStillIn = async (
   return true;
 };
 
-// Automation adds human_requested to hand work back to a human; it never clears it.
+// Automation adds the stable Human Requested flag to hand work back to a human; it never clears it.
 export const addHumanRequested = async (ctx: AutomationContext, ticketId: string) => {
   const { tags } = await executePlanner(ctx, planner.readTags, {});
-  const tag = tags.find((candidate) => candidate.name.trim().toLowerCase() === "human_requested");
-  const option = tag?.options[0];
+  const tag = tags.find((candidate) => candidate.id === "default-human-requested");
+  const option = tag?.options.find((candidate) => candidate.id === "default-human-requested-true");
   if (!tag || !option) return false;
 
   await executePlanner(ctx, planner.setTicketAttribute, {

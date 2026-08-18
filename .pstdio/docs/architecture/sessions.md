@@ -218,8 +218,8 @@ Rules:
 
 ### 2) Planner ticket attempt — `pstdio-planner.run-attempt`
 
-Creates a host workspace + session for a planner ticket and starts the agent.
-This is an extension command, not a core `/v1/tickets` endpoint.
+Creates one Planner-managed attempt with a host workspace and implementation
+session. This is an extension command, not a core `/v1/tickets` endpoint.
 
 Modes:
 
@@ -233,18 +233,16 @@ Modes:
 
 Set `PSTDIO_HOME` to isolate or move the whole Prompt Studio state tree, including workspaces.
 
-Prompt resolution order:
+Before workspace creation, Planner resolves dependency readiness and the exact
+base SHA. The implementation prompt comes from the authoritative
+`implement-ticket` template and includes the ticket and workspace identity. The
+session carries both ticket and `planner-attempt` anchors.
 
-1. explicit request `prompt`
-2. planner ticket content
-3. planner ticket title/shorthand fallback
-
-The command creates a generic host workspace anchored to the planner ticket,
-stores the ticket-workspace relationship in planner storage, and creates a
-linked session. Workspace setup must succeed before any session is created or
-queued. When a session is accepted, the API emits core `sessions` and
-`workspaces` sync updates and either starts the agent in the resolved cwd or
-returns `queued` for later scheduler dispatch.
+The implementation agent commits its work, saves a stable change request report,
+and submits the revision through `pstdio-planner.submit-change-request`. Review
+sessions are separate and carry `planner-review` anchors. Their explicit verdict
+is stored against that exact revision and HEAD. Generic session completion never
+implies implementation or review success.
 
 ## Follow-up messages
 

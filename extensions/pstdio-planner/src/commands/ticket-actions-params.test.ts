@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { implementTicketCommand } from "./implement-ticket";
-import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./ticket-actions";
+import { runAttemptCommand } from "./run-attempt";
+import { breakIntoSubTicketsCommand, refineTicketCommand } from "./ticket-actions";
 
 describe("ticket action command params", () => {
   test("labels harness selectors as model selectors", () => {

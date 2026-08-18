@@ -3,7 +3,12 @@ import extension from "./extension";
 
 describe("pstdio-reports extension", () => {
   test("registers reports commands, template, and skill", () => {
-    expect(Object.keys(extension.commands ?? {}).sort()).toEqual(["reports.delete", "reports.save", "reports.write"]);
+    expect(Object.keys(extension.commands ?? {}).sort()).toEqual([
+      "reports.delete",
+      "reports.read",
+      "reports.save",
+      "reports.write",
+    ]);
     expect(extension.templateTypes?.report).toMatchObject({ label: "Report" });
     expect(extension.templates?.review).toMatchObject({ type: "report", title: "Review" });
     expect(extension.templates?.change_request).toMatchObject({ type: "report", title: "Change request" });

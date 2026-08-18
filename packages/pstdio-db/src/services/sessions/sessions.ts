@@ -67,6 +67,7 @@ type UpdateInput = Partial<
     | "session_file_id"
     | "cwd"
     | "params_json"
+    | "anchors_json"
   >
 >;
 

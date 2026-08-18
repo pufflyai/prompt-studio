@@ -3,13 +3,13 @@ import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
+import { runAttemptCommand } from "./run-attempt";
 import {
   approveProposalCommand,
   breakIntoSubTicketsCommand,
   createWorkspaceCommand,
   proposalRefinedCommand,
   refineTicketCommand,
-  runAttemptCommand,
 } from "./ticket-actions";
 
 const createSessionResource = () => ({
@@ -60,11 +60,19 @@ describe("runAttemptCommand", () => {
       }),
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
+      decision: "started",
       mode: "worktree",
       ticket,
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: { ...createSessionResource(), workspace_id: "workspace-1" },
+      attempt: {
+        workspaceId: "workspace-1",
+        ticketId: ticket.id,
+        implementationSessionId: "session-1",
+        state: "implementing",
+        base: { workspaceId: null, headSha: "main-sha" },
+      },
     });
     expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("in-progress");
     expect(workspaces).toEqual([
@@ -82,14 +90,15 @@ describe("runAttemptCommand", () => {
             },
           },
         ],
+        base: "main-sha",
         mode: "worktree",
         project_id: "proj-1",
         shorthand_base: "T-1",
       },
     ]);
     expect(sessions).toEqual([
-      {
-        anchors: [
+      expect.objectContaining({
+        anchors: expect.arrayContaining([
           {
             type: "ticket",
             id: ticket.id,
@@ -101,11 +110,13 @@ describe("runAttemptCommand", () => {
               shorthand: "T-1",
             },
           },
-        ],
-        prompt: "Implement ticket: T-1",
+          expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
+        ]),
+        template: "implement-ticket",
         title: "Implement ticket: T-1",
+        vars: { ticket: "T-1", workspaceId: "workspace-1" },
         workspaceId: "workspace-1",
-      },
+      }),
     ]);
   });
 
@@ -152,7 +163,7 @@ describe("runAttemptCommand", () => {
             metadata: { shorthand: "PS-304" },
           },
         ],
-        base: "main",
+        base: "main-sha",
         mode: "current_branch",
         project_id: "proj-1",
         repo_id: "repo-1",
@@ -160,8 +171,8 @@ describe("runAttemptCommand", () => {
       },
     ]);
     expect(sessions).toEqual([
-      {
-        anchors: [
+      expect.objectContaining({
+        anchors: expect.arrayContaining([
           {
             type: "ticket",
             id: "PS-304",
@@ -171,15 +182,19 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: { shorthand: "PS-304" },
           },
-        ],
+          expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
+        ]),
         harness: { harnessId: "codex", model: "gpt-5" },
-        prompt: "Implement ticket: PS-304",
+        template: "implement-ticket",
         title: "Implement ticket: PS-304",
+        vars: { ticket: "PS-304", workspaceId: "workspace-1" },
         workspaceId: "workspace-1",
-      },
+      }),
     ]);
   });
+});
 
+describe("runAttemptCommand guarded launches", () => {
   test("falls back to the row id when the ticket param is empty", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
@@ -218,11 +233,50 @@ describe("runAttemptCommand", () => {
             },
           },
         ],
+        base: "main-sha",
         mode: "worktree",
         project_id: "proj-1",
         shorthand_base: "T-1",
       },
     ]);
+  });
+
+  test("creates at most one attempt for concurrent launch decisions", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    let releaseWorkspace!: () => void;
+    const workspaceGate = new Promise<void>((resolve) => {
+      releaseWorkspace = resolve;
+    });
+    let creates = 0;
+    const context = () =>
+      makeCommandContext({
+        storage,
+        params: { ticket: ticket.shorthand },
+        overrides: {
+          workspaces: {
+            create: async () => {
+              creates += 1;
+              await workspaceGate;
+              return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
+            },
+          } as never,
+          sessions: { create: async () => createSessionResource() } as never,
+        },
+      });
+
+    const pending = Promise.all([runAttemptCommand.run(context()), runAttemptCommand.run(context())]);
+    await Promise.resolve();
+    releaseWorkspace();
+    const results = await pending;
+
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ decision: "wait", reason: "launch-claimed" }),
+        expect.objectContaining({ decision: "started" }),
+      ]),
+    );
+    expect(creates).toBe(1);
   });
 });
 

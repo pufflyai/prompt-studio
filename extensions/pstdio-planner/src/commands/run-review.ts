@@ -1,9 +1,7 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-
-const stringMetadata = (metadata: Record<string, unknown> | undefined, key: string) => {
-  const value = metadata?.[key];
-  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
-};
+import { defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { actorFromSource } from "../data/attempt-actors";
+import { appendAttemptEvent, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
+import type { AttemptReview } from "../data/attempt-types";
 
 const workspaceIdFrom = (ctx: {
   params: { workspaceId?: string };
@@ -12,18 +10,10 @@ const workspaceIdFrom = (ctx: {
   const workspaceId = ctx.params.workspaceId?.trim();
   if (workspaceId) return workspaceId;
   if (ctx.resource?.type !== "workspace") throw new Error("Workspace is required.");
-  return stringMetadata(ctx.resource.metadata, "workspaceId") ?? ctx.resource.id;
+  const metadataId = ctx.resource.metadata?.workspaceId;
+  return typeof metadataId === "string" ? metadataId : ctx.resource.id;
 };
 
-const ticketRefFrom = (ctx: {
-  params: { ticket?: string };
-  resource?: { type: string; label?: string; metadata?: Record<string, unknown> };
-}) => {
-  return ctx.params.ticket?.trim() ?? stringMetadata(ctx.resource?.metadata, "ticket") ?? ctx.resource?.label?.trim();
-};
-
-// Starts a review session for a workspace. Returns the created session so callers
-// (e.g. the repo-local review loop) can track the review's outcome.
 export const runReviewCommand = defineCommand({
   title: l10n("commands.runReview.title", "Run review"),
   cli: true,
@@ -37,20 +27,123 @@ export const runReviewCommand = defineCommand({
   ],
   params: {
     workspaceId: params.text({ label: "Workspace", required: false }),
-    ticket: params.text({ label: "Ticket", required: false }),
+    expectedRevision: params.number({ label: "Expected revision", required: false }),
+    manual: params.boolean({ label: "Manual review", required: false }),
     harness: params.harness({ label: "Harness", required: false }),
   },
   async run(ctx) {
-    const { harness } = ctx.params;
     const workspaceId = workspaceIdFrom(ctx);
-    const ticket = ticketRefFrom(ctx);
-    return ctx.sessions.create({
-      workspaceId,
-      title: `Code review: ${ticket || "ticket"}`,
-      anchors: ticket ? [{ type: "planner-review", id: ticket, label: ticket }] : [],
-      harness,
-      template: "review-code",
-      vars: ticket ? { ticket } : {},
-    });
+    const attempt = await readAttempt(ctx.storage, workspaceId);
+    if (!attempt) throw new Error(`Unknown managed attempt "${workspaceId}"`);
+    const revision = attempt.revisions.at(-1);
+    if (!revision) throw new Error("The attempt has no submitted revision.");
+    if (ctx.params.expectedRevision !== undefined && ctx.params.expectedRevision !== revision.revision) {
+      throw new Error("Attempt revision changed before review started.");
+    }
+    if (attempt.state !== "review_ready" && !(ctx.params.manual && attempt.state === "approved")) {
+      throw new Error("The attempt revision is not ready for review.");
+    }
+
+    const reviewId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const claimId = `${workspaceId}:${revision.revision}`;
+    const claims = reviewLaunchClaimsCollection(ctx.storage);
+    if (
+      !ctx.params.manual &&
+      !(await claims.createIfAbsent(claimId, {
+        workspaceId,
+        revision: revision.revision,
+        reviewId,
+        createdAt: timestamp,
+      }))
+    ) {
+      throw new Error("A review is already running or completed for this revision.");
+    }
+    const review: AttemptReview = {
+      id: reviewId,
+      sessionId: null,
+      reportId: null,
+      reviewedHeadSha: revision.headSha,
+      reviewer: actorFromSource(ctx.source, ctx.invocationId),
+      state: "started",
+      verdict: null,
+      startedAt: timestamp,
+      completedAt: null,
+      supersedesReviewId: null,
+    };
+    const anchors: ResourceAnchor[] = [
+      {
+        type: "planner-review",
+        id: reviewId,
+        label: `${attempt.ticketShorthand} review ${revision.revision}`,
+        metadata: {
+          workspaceId,
+          ticketId: attempt.ticketId,
+          revision: revision.revision,
+          headSha: revision.headSha,
+          phase: "review",
+        },
+      },
+      {
+        type: "planner-attempt",
+        id: workspaceId,
+        label: attempt.workspaceShorthand,
+        metadata: {
+          workspaceId,
+          ticketId: attempt.ticketId,
+          revision: revision.revision,
+          headSha: revision.headSha,
+          phase: "review",
+        },
+      },
+    ];
+
+    try {
+      const session = await ctx.sessions.create({
+        workspaceId,
+        title: `Code review: ${attempt.ticketShorthand} revision ${revision.revision}`,
+        anchors,
+        harness: ctx.params.harness,
+        template: "review-code",
+        vars: {
+          ticket: attempt.ticketShorthand,
+          workspaceId,
+          reviewId,
+          revision: String(revision.revision),
+          headSha: revision.headSha,
+        },
+      });
+      review.sessionId = session.id;
+      const revisions = attempt.revisions.map((candidate) =>
+        candidate.revision === revision.revision
+          ? { ...candidate, reviews: [...candidate.reviews, review] }
+          : candidate,
+      );
+      await putAttempt(ctx.storage, { ...attempt, state: "reviewing", revisions, updatedAt: timestamp });
+      await appendAttemptEvent(ctx.storage, {
+        workspaceId,
+        revision: revision.revision,
+        type: "review_started",
+        actor: review.reviewer,
+        sessionId: session.id,
+        reportId: null,
+        reviewId,
+        threadId: null,
+        commitSha: revision.headSha,
+        metadata: { manual: Boolean(ctx.params.manual) },
+      });
+      return { review, session };
+    } catch (error) {
+      review.state = "failed";
+      review.completedAt = new Date().toISOString();
+      const revisions = attempt.revisions.map((candidate) =>
+        candidate.revision === revision.revision
+          ? { ...candidate, reviews: [...candidate.reviews, review] }
+          : candidate,
+      );
+      await putAttempt(ctx.storage, { ...attempt, revisions, updatedAt: review.completedAt });
+      if (!ctx.params.manual) await claims.delete(claimId);
+      throw error;
+    }
   },
 });

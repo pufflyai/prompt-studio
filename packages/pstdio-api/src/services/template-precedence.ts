@@ -1,4 +1,12 @@
-type MergeableTemplate = { name: string; template_type: string; title?: string; is_default?: boolean };
+type MergeableTemplate = {
+  name: string;
+  template_type: string;
+  title?: string;
+  is_default?: boolean;
+  extension_id?: string | null;
+};
+
+const authoritativeExtensionIds = new Set(["pstdio.pstdio-planner", "pstdio.pstdio-reports", "pstdio.pstdio-skills"]);
 
 // Project templates override same-named extension contributions. The shadowed
 // extension entry is dropped (not just out-sorted) so by-name resolution stays
@@ -10,13 +18,19 @@ export const mergeProjectAndExtensionTemplates = <T extends MergeableTemplate>(
   projectTemplates: T[],
   extensionTemplates: T[],
 ) => {
-  const projectNames = new Set(projectTemplates.map((template) => template.name));
+  const authoritativeNames = new Set(
+    extensionTemplates
+      .filter((template) => authoritativeExtensionIds.has(template.extension_id ?? ""))
+      .map((template) => template.name),
+  );
+  const effectiveProjectTemplates = projectTemplates.filter((template) => !authoritativeNames.has(template.name));
+  const projectNames = new Set(effectiveProjectTemplates.map((template) => template.name));
   const shadowedByName = new Map(
     extensionTemplates
       .filter((template) => projectNames.has(template.name))
       .map((template) => [template.name, template]),
   );
-  const resolvedProjectTemplates = projectTemplates.map((template) => {
+  const resolvedProjectTemplates = effectiveProjectTemplates.map((template) => {
     const shadowed = shadowedByName.get(template.name);
     if (!shadowed) return template;
 

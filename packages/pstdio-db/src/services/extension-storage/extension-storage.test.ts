@@ -172,4 +172,39 @@ describe("extensionStorageService", () => {
     expect(listed).toHaveLength(1);
     expect([1, 2]).toContain((listed[0].value_json as { count: number }).count);
   });
+
+  test("collection item create-if-absent keeps the first owner", async () => {
+    const scope = {
+      project_id: projectAId,
+      extension_instance_id: instanceAId,
+      scope_type: "project",
+      scope_id: projectAId,
+      collection: "claims",
+      item_id: "ticket-1",
+    };
+
+    const results = await Promise.all([
+      svc.createCollectionItemIfAbsent({ ...scope, value_json: { owner: "run-1" } }),
+      svc.createCollectionItemIfAbsent({ ...scope, value_json: { owner: "run-2" } }),
+    ]);
+
+    expect(results.filter(Boolean)).toHaveLength(1);
+    const stored = await svc.getCollectionItem(scope, "ticket-1");
+    expect([{ owner: "run-1" }, { owner: "run-2" }]).toContainEqual(stored?.value_json as { owner: string });
+  });
+
+  test("collection item conditional delete preserves a changed owner", async () => {
+    const input = {
+      project_id: projectAId,
+      extension_instance_id: instanceAId,
+      scope_type: "project",
+      scope_id: projectAId,
+      collection: "claims",
+      item_id: "ticket-1",
+    };
+    await svc.setCollectionItem({ ...input, value_json: { owner: "new" } });
+
+    expect(await svc.deleteCollectionItemIfValue(input, "ticket-1", { owner: "stale" })).toBe(false);
+    expect(await svc.deleteCollectionItemIfValue(input, "ticket-1", { owner: "new" })).toBe(true);
+  });
 });

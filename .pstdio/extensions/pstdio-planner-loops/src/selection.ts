@@ -11,16 +11,18 @@ export const statusIdByNames = (statuses: PlannerStatus[], names: string[]) => {
   return null;
 };
 
-export const HUMAN_REQUESTED_TAG_NAME = "human_requested";
+export const HUMAN_REQUESTED_TAG_ID = "default-human-requested";
+export const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
 
-export const humanRequestedTag = (tags: PlannerTag[]) =>
-  tags.find((tag) => sameName(tag.name, HUMAN_REQUESTED_TAG_NAME)) ?? null;
+export const humanRequestedTag = (tags: PlannerTag[]) => tags.find((tag) => tag.id === HUMAN_REQUESTED_TAG_ID) ?? null;
 
 export const hasHumanRequested = (ticket: PlannerTicket, tags: PlannerTag[]) => {
   const tag = humanRequestedTag(tags);
   if (!tag) return false;
-  const optionIds = new Set(tag.options.map((option) => option.id));
-  return (ticket.tagIds ?? []).some((id) => optionIds.has(id));
+  return (
+    tag.options.some((option) => option.id === HUMAN_REQUESTED_OPTION_ID) &&
+    (ticket.tagIds ?? []).includes(HUMAN_REQUESTED_OPTION_ID)
+  );
 };
 
 // Automation only touches real board tickets; drafts are still being authored.

@@ -16,6 +16,39 @@ const normalizeCommandPalette = (palette: unknown): RuntimeCommandRecord["palett
   return isRecord(palette) ? ([palette] as RuntimeCommandRecord["palette"]) : [];
 };
 
+const exampleUsesCommandPath = (example: string, routes: string[][]) => {
+  const tokens = example.trim().split(/\s+/);
+  if (tokens[0] !== "pstdio" && tokens[0] !== "pst") return false;
+  const commandTokens = tokens.slice(1);
+  return routes.some(
+    (route) =>
+      route.length <= commandTokens.length && route.every((segment, index) => commandTokens[index] === segment),
+  );
+};
+
+const validateCliExamples = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  commandId: string,
+  contribution: RuntimeCliContribution,
+  runtime: Accumulator,
+) => {
+  const routes = [[ext.name, ...contribution.path], ...(contribution.globalAliases ?? [])];
+  for (const example of contribution.examples ?? []) {
+    if (exampleUsesCommandPath(example, routes)) continue;
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_cli_example",
+        message: `CLI example for "${commandId}" does not use its command path or an alias`,
+        extensionId: ext.id,
+        commandId,
+        sourcePath: source.sourcePath,
+        metadata: { example },
+      }),
+    );
+  }
+};
+
 const normalizeCommandCli = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -50,6 +83,7 @@ const normalizeCommandCli = (
         ? (cli.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
         : undefined,
   };
+  validateCliExamples(ext, source, commandId, contribution, runtime);
 
   const existing = cliKeys.get(pathKey);
   if (existing) {

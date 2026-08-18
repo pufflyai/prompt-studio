@@ -77,6 +77,18 @@ export const createStorageApi = (
             project_id: input.projectId,
           });
         },
+        async createIfAbsent(id, value) {
+          return deps.extensionStorageService.createCollectionItemIfAbsent({
+            ...scope,
+            collection: name,
+            item_id: id,
+            value_json: value,
+            project_id: input.projectId,
+          });
+        },
+        async deleteIfValue(id, value) {
+          return deps.extensionStorageService.deleteCollectionItemIfValue({ ...scope, collection: name }, id, value);
+        },
         async create(value) {
           const id = crypto.randomUUID();
           await this.put(id, value);

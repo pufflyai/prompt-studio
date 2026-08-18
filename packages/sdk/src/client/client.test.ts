@@ -72,11 +72,16 @@ describe("createClient", () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
-    await client.sessions.list("proj-1", { status: "queued", agent: "opencode", archived: true });
+    await client.sessions.list("proj-1", {
+      status: "queued",
+      agent: "opencode",
+      workspaceId: "workspace-1",
+      archived: true,
+    });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(
-      "http://test:1234/v1/sessions?project_id=proj-1&status=queued&agent=opencode&archived=true",
+      "http://test:1234/v1/sessions?project_id=proj-1&status=queued&agent=opencode&workspace_id=workspace-1&archived=true",
     );
   });
 

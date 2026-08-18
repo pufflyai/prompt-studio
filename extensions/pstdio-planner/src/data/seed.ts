@@ -174,19 +174,17 @@ export const HUMAN_REQUESTED_TAG: TagSeed = () => ({
   options: [option("default-human-requested-true", "Human Requested", "purple", 0, "eye")],
 });
 
-const HUMAN_REQUESTED_MARKER = "__pstdio-planner:human-requested-tag-seeded";
-
-// Backfills the human_requested tag into projects seeded before it existed. The
-// marker keeps a user deletion permanent instead of resurrecting the tag.
+// The stable workflow identity is authoritative. Display names may be customized,
+// but deleting the tag or its required option would silently disable human handoffs.
 const ensureHumanRequestedTag = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
-  if (await storage.get(HUMAN_REQUESTED_MARKER)) return existing;
+  const required = HUMAN_REQUESTED_TAG();
+  const current = existing.find((candidate) => candidate.id === required.id);
+  if (!current) return [...existing, await putTag(storage, required)];
+  if (current.options.some((candidate) => candidate.id === "default-human-requested-true")) return existing;
 
-  const tag = HUMAN_REQUESTED_TAG();
-  const backfilled = existing.some((candidate) => candidate.id === tag.id)
-    ? existing
-    : [...existing, await putTag(storage, tag)];
-  await storage.set(HUMAN_REQUESTED_MARKER, true);
-  return backfilled;
+  const repaired = { ...current, options: [...current.options, required.options[0]!] };
+  await putTag(storage, repaired);
+  return existing.map((candidate) => (candidate.id === repaired.id ? repaired : candidate));
 };
 
 const defaultTagIds = new Set(DEFAULT_TAGS.map((seed) => seed().id));
@@ -206,7 +204,6 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
 
     await Promise.all(DEFAULT_TAGS.map((seed) => putTag(storage, seed())));
     await storage.set(TAG_SEED_MARKER, true);
-    await storage.set(HUMAN_REQUESTED_MARKER, true);
     return sortedBySortOrder(await tagsCollection(storage).list());
   })();
   tagSeedPromises.set(storage, promise);

@@ -7,6 +7,7 @@ type TestTemplate = {
   source_kind: "project" | "extension";
   title?: string;
   is_default: boolean;
+  extension_id?: string;
 };
 
 const tpl = (source_kind: "project" | "extension", name: string, extra: Partial<TestTemplate> = {}) => ({
@@ -31,6 +32,17 @@ describe("mergeProjectAndExtensionTemplates", () => {
     expect(reviewEntries).toHaveLength(1);
     expect(reviewEntries[0].source_kind).toBe("project");
     expect(result.map((template) => template.name)).toEqual(["implement", "review-code"]);
+  });
+
+  test("a built-in template remains authoritative over a same-name project override", () => {
+    const result = mergeProjectAndExtensionTemplates(
+      [project("review-code")],
+      [extension("review-code", { extension_id: "pstdio.pstdio-planner" })],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({ source_kind: "extension", extension_id: "pstdio.pstdio-planner" }),
+    ]);
   });
 
   test("non-colliding extension templates are preserved", () => {

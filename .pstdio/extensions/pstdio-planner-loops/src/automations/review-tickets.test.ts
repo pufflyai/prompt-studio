@@ -1,106 +1,99 @@
 import { describe, expect, test } from "bun:test";
-import { callsTo, makeAutomationContext, makeTicket } from "../automation-context.fixture";
+import { callsTo, makeAttempt, makeAutomationContext, makeTicket } from "../automation-context.fixture";
 import { reviewTicketsCommand } from "./review-tickets";
 
-const workspace = (id: string) => ({ id, workspace: `${id}-shorthand`, branch: "b", path: "/wt", active: false });
-
-const run = (ctx: Parameters<typeof reviewTicketsCommand.run>[0]) => reviewTicketsCommand.run(ctx);
+const revision = (number: number, headSha: string) => ({ revision: number, headSha, reviews: [] });
 
 describe("review-tickets automation", () => {
-  test("reviews the oldest-updated inactive In Review ticket", async () => {
+  test("reviews the oldest ready workspace revision instead of a ticket's first workspace", async () => {
     const { ctx, calls } = makeAutomationContext({
-      tickets: [
-        makeTicket({ id: "t1", statusId: "in-review", updatedAt: "2026-06-02T00:00:00.000Z" }),
-        makeTicket({ id: "t2", statusId: "in-review", updatedAt: "2026-06-01T00:00:00.000Z" }),
+      tickets: [makeTicket({ id: "t1", shorthand: "T1", statusId: "in-review" })],
+      attempts: [
+        makeAttempt({
+          workspaceId: "workspace-new",
+          workspaceShorthand: "T1_A2",
+          ticketId: "t1",
+          ticketShorthand: "T1",
+          state: "review_ready",
+          revisions: [revision(1, "new-head")],
+          updatedAt: "2026-06-02T00:00:00.000Z",
+        }),
+        makeAttempt({
+          workspaceId: "workspace-old",
+          workspaceShorthand: "T1_A1",
+          ticketId: "t1",
+          ticketShorthand: "T1",
+          state: "review_ready",
+          revisions: [revision(2, "old-head")],
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        }),
       ],
-      workspacesByTicket: { T1: [workspace("w1")], T2: [workspace("w2")] },
     });
 
-    const result = await run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never);
 
-    expect(result).toMatchObject({ ran: true, reviewed: "T2" });
+    expect(result).toMatchObject({ reviewed: "T1", workspaceId: "workspace-old" });
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([
-      { commandId: "pstdio-planner.runReview", params: { workspaceId: "w2", ticket: "T2" } },
+      {
+        commandId: "pstdio-planner.runReview",
+        params: { workspaceId: "workspace-old", expectedRevision: 2 },
+      },
     ]);
   });
 
-  test("skips tickets with an active workspace or human_requested", async () => {
+  test("does not re-review approved revisions or tickets waiting for a human", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [
-        makeTicket({ id: "t1", statusId: "in-review", updatedAt: "2026-06-01T00:00:00.000Z" }),
         makeTicket({
-          id: "t2",
+          id: "t1",
+          shorthand: "T1",
           statusId: "in-review",
-          updatedAt: "2026-06-02T00:00:00.000Z",
-          tagIds: ["human-requested-true"],
+          tagIds: ["default-human-requested-true"],
+        }),
+        makeTicket({ id: "t2", shorthand: "T2", statusId: "in-review" }),
+      ],
+      attempts: [
+        makeAttempt({
+          workspaceId: "workspace-1",
+          ticketId: "t1",
+          state: "review_ready",
+          revisions: [revision(1, "head-1")],
+        }),
+        makeAttempt({
+          workspaceId: "workspace-2",
+          ticketId: "t2",
+          state: "approved",
+          revisions: [revision(1, "head-2")],
         }),
       ],
-      workspacesByTicket: { T1: [workspace("w1")] },
-      activityByWorkspace: { w1: { active: true, sessions: [{ id: "s1", title: "s", status: "in_progress" }] } },
     });
 
-    const result = await run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never);
 
-    expect(result).toMatchObject({ ran: true, reviewed: null });
+    expect(result).toMatchObject({ reviewed: null });
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
   });
 
-  test("does not re-review a ticket while its review session runs", async () => {
+  test("reconciles a running review without starting another round", async () => {
     const { ctx, calls } = makeAutomationContext({
-      tickets: [makeTicket({ id: "t1", statusId: "in-review" })],
-      workspacesByTicket: { T1: [workspace("w1")] },
-      sessionsById: { "review-session-1": { id: "review-session-1", status: "in_progress" } },
+      tickets: [makeTicket({ id: "t1", shorthand: "T1", statusId: "in-review" })],
+      attempts: [
+        makeAttempt({
+          workspaceId: "workspace-1",
+          ticketId: "t1",
+          state: "reviewing",
+          revisions: [revision(1, "head-1")],
+        }),
+      ],
+      reconcileDecisions: { "workspace-1": "active" },
     });
 
-    await run(ctx as never);
-    const second = await run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never);
 
-    expect(second).toMatchObject({ reviewed: null });
-    expect(callsTo(calls, "pstdio-planner.runReview")).toHaveLength(1);
-  });
-
-  test("adds human_requested when a completed review leaves the ticket In Review", async () => {
-    const state = {
-      tickets: [makeTicket({ id: "t1", statusId: "in-review" })],
-      workspacesByTicket: { T1: [workspace("w1")] },
-      sessionsById: { "review-session-1": { id: "review-session-1", status: "completed" } },
-    };
-    const { ctx } = makeAutomationContext(state);
-
-    await run(ctx as never);
-    await run(ctx as never);
-
-    expect(state.tickets[0].tagIds).toEqual(["human-requested-true"]);
-    expect(state.tickets[0].statusId).toBe("in-review");
-  });
-
-  test("does not tag a ticket the reviewer moved out of In Review", async () => {
-    const state = {
-      tickets: [makeTicket({ id: "t1", statusId: "in-review" })],
-      workspacesByTicket: { T1: [workspace("w1")] },
-      sessionsById: { "review-session-1": { id: "review-session-1", status: "completed" } },
-    };
-    const { ctx } = makeAutomationContext(state);
-
-    await run(ctx as never);
-    state.tickets[0].statusId = "in-progress";
-    await run(ctx as never);
-
-    expect(state.tickets[0].tagIds).toEqual([]);
-  });
-
-  test("moves the ticket back to In Progress when the review session dies", async () => {
-    const state = {
-      tickets: [makeTicket({ id: "t1", statusId: "in-review" })],
-      workspacesByTicket: { T1: [workspace("w1")] },
-      sessionsById: { "review-session-1": { id: "review-session-1", status: "failed" } },
-    };
-    const { ctx } = makeAutomationContext(state);
-
-    await run(ctx as never);
-    await run(ctx as never);
-
-    expect(state.tickets[0].statusId).toBe("in-progress");
-    expect(state.tickets[0].tagIds).toEqual([]);
+    expect(result).toMatchObject({
+      reviewed: null,
+      reconciled: [{ workspaceId: "workspace-1", decision: "active" }],
+    });
+    expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
   });
 });

@@ -9,6 +9,8 @@ export interface PlannerTicket {
   draft?: boolean;
   createdAt: string;
   updatedAt: string;
+  dependsOn?: string | string[] | null;
+  parallelizable?: string | null;
 }
 
 export interface PlannerStatus {
@@ -38,6 +40,22 @@ export interface WorkspaceActivitySession {
   updatedAt?: string;
 }
 
+export interface PlannerAttempt {
+  workspaceId: string;
+  workspaceShorthand: string;
+  ticketId: string;
+  ticketShorthand: string;
+  implementationSessionId: string;
+  state: "implementing" | "review_ready" | "reviewing" | "approved" | "changes_requested" | "blocked" | "abandoned";
+  revisions: Array<{
+    revision: number;
+    headSha: string;
+    reviews: Array<{ id: string; sessionId: string | null; state: string }>;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkspaceActivity {
   active: boolean;
   sessions: WorkspaceActivitySession[];
@@ -63,8 +81,19 @@ export const planner = {
     "pstdio-planner.set-ticket-attribute",
   ),
   refineTicket: commandRef<{ ticket: string }, { id: string }>("pstdio-planner.refine-ticket"),
-  runAttempt: commandRef<{ ticket: string }, { session: { id: string } }>("pstdio-planner.run-attempt"),
-  runReview: commandRef<{ workspaceId: string; ticket?: string }, { id: string }>("pstdio-planner.runReview"),
+  runAttempt: commandRef<
+    { ticket: string },
+    | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
+    | { decision: "wait"; reason: string; dependencyIds: string[] }
+  >("pstdio-planner.run-attempt"),
+  runReview: commandRef<
+    { workspaceId: string; expectedRevision?: number },
+    { review: { id: string }; session: { id: string } }
+  >("pstdio-planner.runReview"),
+  listAttempts: commandRef<Record<string, never>, PlannerAttempt[]>("pstdio-planner.list-attempts"),
+  reconcileAttempt: commandRef<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
+    "pstdio-planner.reconcile-attempt",
+  ),
   ticketWorkspaces: commandRef<{ id: string }, TicketWorkspaceRow[]>("pstdio-planner.ticket-workspaces"),
   workspaceActivity: commandRef<{ workspaceId: string }, WorkspaceActivity>("pstdio-planner.workspace-activity"),
 };
