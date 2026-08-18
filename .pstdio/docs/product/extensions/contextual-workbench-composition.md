@@ -112,13 +112,14 @@ This matches the current kernel, where mode layout targets already cover only do
 1. A mode declares the resource kinds it accepts.
 2. A mode may declare mode-wide panels that do not consume the active resource.
 3. For each accepted resource kind, the mode maps supported slots to default regions.
-4. A mode may override the region for a known panel inside the panel and slot constraints.
+4. A mode places a specific known panel through a `panels` map keyed by panel id. A panel entry wins over its slot placement and must satisfy the panel's supported regions and its slot's rules.
 5. A mode marks placements as required or default.
-6. External resource panels are optional unless the mode explicitly names them.
-7. A mode may allow users to move a placement within a declared region set.
-8. A required placement is non-closable. A default placement is closable unless its placement says otherwise.
-9. Exactly one main-region placement establishes the location for a primary resource.
-10. Attached resources may open inspectors without replacing the primary location.
+6. `required` on a slot placement is valid only when the slot's cardinality is one. In a cardinality-many slot, `required` must name a specific panel in the `panels` map.
+7. External resource panels are optional unless the mode explicitly names them.
+8. A mode may allow users to move a placement within a declared region set.
+9. A required placement is non-closable. A default placement is closable unless its placement says otherwise.
+10. Exactly one main-region placement establishes the location for a primary resource.
+11. Attached resources may open inspectors without replacing the primary location.
 
 ### Composition Resolution
 
@@ -145,7 +146,9 @@ defineExtension({
 
   resourcePanels: {
     ticketInsights: {
-      resourceKind: "ticket",
+      // A bare id resolves inside the declaring extension.
+      // Another extension's contribution uses the namespaced form.
+      resourceKind: "planner.ticket",
       panel: "insights",
       slot: "inspector",
     },
@@ -184,6 +187,10 @@ modes: {
             allowedRegions: ["side", "secondary"],
           },
         },
+        // Places one known panel; wins over its slot placement.
+        panels: {
+          "acme.insights": { region: "secondary" },
+        },
       },
     },
   },
@@ -203,6 +210,7 @@ modes: {
 ## Rules and Constraints
 
 - Resource and panel ids are stable, namespaced contribution ids.
+- A bare id in a contribution resolves inside the declaring extension. A reference to another extension's resource kind, panel, or slot uses the namespaced form `<extension>.<id>`.
 - A slot name is local to its resource kind.
 - External extensions cannot claim a closed slot or primary location.
 - A mode layout cannot expand a panel's supported regions.
@@ -220,6 +228,7 @@ modes: {
 | extension_panel_missing | A resource-panel or mode references an unknown panel. |
 | extension_panel_region_unsupported | A mode places a panel outside its supported regions. |
 | extension_mode_resource_unsupported | A layout references a resource kind the mode does not accept. |
+| extension_placement_required_invalid | `required` is set on a cardinality-many slot placement without naming a panel. |
 | extension_resource_primary_invalid | A primary resource has zero or several primary location placements. |
 
 ## Risks and Open Questions
