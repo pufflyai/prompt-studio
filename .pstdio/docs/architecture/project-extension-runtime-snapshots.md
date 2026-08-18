@@ -80,7 +80,14 @@ No enabled-project consumer may call the package loader or `loadExtensionSources
 
 A new snapshot is published only after its source records, runtime, and diagnostics are internally consistent.
 
-The implementation PR must choose and document one failed-reload policy: retain the last healthy snapshot with a stale diagnostic, or publish a diagnostic-only unavailable state. Consumers must never receive a mixed generation.
+Failures resolve at two levels:
+
+- **One broken source degrades only itself.** The loader already returns a broken source with its identity, empty contributions, and an import diagnostic. The new generation publishes with that record. The author sees the error, and no stale handlers run after a source change.
+- **A whole load that cannot produce a consistent snapshot replaces nothing.** A failed enabled-source read or a normalization crash keeps the last healthy snapshot, marked stale with a diagnostic, and the catalog retries on the next read. A cold read with no healthy snapshot fails with a load error.
+
+Serving a source's old handlers after its code changed would be worse than serving none: writes would run old logic while the author believes new code is active. Keeping the last healthy snapshot is correct only when nothing about the sources changed, which is exactly the whole-load infrastructure case.
+
+Consumers never receive a mixed generation.
 
 ## Observability
 

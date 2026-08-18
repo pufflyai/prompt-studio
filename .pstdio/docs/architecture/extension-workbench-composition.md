@@ -73,6 +73,18 @@ Required and default are placement policies, not panel properties. A required pl
 
 Two modes may accept the same resource kind and arrange it differently. Animation and Sculpt can therefore retain one project resource while restoring distinct tools, timelines, inspectors, sizes, and tab state.
 
+## Chrome and Docked Placement
+
+Docked regions and chrome surfaces are different contracts.
+
+Docked regions hold panels: `sidenav`, `main`, `secondary`, and `side`. Mode recipes place panels into docked regions. Users move panels between allowed docked regions. Layout persistence stores docked placements.
+
+Chrome surfaces are host-owned fixed slots: nav actions, the activity bar, the status bar, and overlays. Extensions contribute typed items to chrome targets, as menus and activity items do today. A chrome item may show or hide by active mode through a `when` expression, but no mode recipe positions it, and no chrome state lives in persisted panel layout.
+
+This split already exists in the kernel: mode layout targets cover only docked areas, while menus, trees, and settings attach to typed workbench targets. The replacement contract removes the single region union that let a panel claim a chrome region.
+
+A panel body that also supports overlay presentation declares that capability explicitly. An overlay opens from an action; it is never a resolved layout placement.
+
 ## Effective Layout Resolution
 
 The workbench resolves one layout for the active project, mode, and resource:

@@ -61,6 +61,18 @@ This prevents several valid products:
 | Resource author | Control which parts of a resource may be extended. | Accept every eligible panel or keep the resource closed. |
 | End user | Customize optional panels without losing required structure. | Reopen tabs manually or reset the entire layout. |
 
+## Ownership
+
+Each concern has exactly one owner:
+
+| Concern | Owner |
+| ------- | ----- |
+| Panel capability | The panel definition. |
+| Resource slots | The resource kind definition. |
+| Mode placement | The active mode's placement recipe. |
+| Resource identity | The resource instance. |
+| Persisted user layout | The workbench layout store, scoped by project, mode, and resource URI. |
+
 ## Requirements
 
 ### Panel Definitions
@@ -71,6 +83,18 @@ This prevents several valid products:
 4. A panel does not declare required or default-open behavior.
 5. A panel menu is owned by a panel instance and follows that instance's region.
 6. An overlay-only or chrome-only body cannot be placed into a docked panel region unless it explicitly supports it.
+
+### Placement Typing (Decided)
+
+Docked regions and chrome surfaces use separate contribution types. They do not share one placement union.
+
+1. Docked regions are `sidenav`, `main`, `secondary`, and `side`. Only docked regions appear in mode recipes, user moves, and persisted layout.
+2. Chrome surfaces such as nav actions, the activity bar, the status bar, and overlays stay typed item contributions on host workbench targets, as menus and activity items are today.
+3. Chrome contributions may show or hide by active mode through `when` expressions. A mode recipe never assigns a chrome position.
+4. Chrome contributions are not persisted user layout and take no part in required-placement reconciliation.
+5. Overlay presentation is an explicit panel capability. An overlay opens from an action and is never a resolved layout placement.
+
+This matches the current kernel, where mode layout targets already cover only docked areas and menus, trees, and settings already attach to typed targets. The replacement contract removes the single region union that let a panel declare a chrome region.
 
 ### Resource Kinds and Slots
 
@@ -200,7 +224,7 @@ modes: {
 
 ## Risks and Open Questions
 
-- Chrome targets such as activity, status, overlay, and sidenav are not interchangeable with docked panel regions. The SDK review must decide whether they use the same placement union or separate contribution types.
+- Placement typing is decided: chrome and docked placements are separate contribution types (see Placement Typing). Remaining risk: existing panels that declare chrome regions must migrate to chrome contribution types during the cutover.
 - Cross-extension ordering must remain stable when extensions are enabled in different orders.
 - A missing optional extension panel should not invalidate the owning resource layout.
 - A missing required panel should produce a visible diagnostic and safe fallback location.
