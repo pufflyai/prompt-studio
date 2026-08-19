@@ -32,31 +32,19 @@ const createStore = (): WorkbenchStorageLike => {
 };
 
 describe("local storage workbench persistence", () => {
-  test("migrates version 1 layout and Panel state into one version 2 snapshot", () => {
+  test("discards layouts persisted by earlier schema versions so the scope seeds as new", () => {
     const storage = createStore();
     const scope = "project:one";
     const layoutKey = workbenchStoragePersistenceKey("demo", "layout", scope);
-    const panelsKey = workbenchStoragePersistenceKey("demo", "panels", scope);
     const layout = createDefaultWorkbenchLayout({ secondary: true, sidenav: false });
-    storage.setItem(layoutKey, JSON.stringify({ version: 1, layout }));
-    storage.setItem(
-      panelsKey,
-      JSON.stringify({ openByRegionId: { secondary: false, sidenav: true, unknown: true, status: "invalid" } }),
-    );
+    storage.setItem(layoutKey, JSON.stringify({ version: 2, layout }));
     const persistence = createLocalStorageWorkbenchPersistence({
       debounceMs: 60_000,
       namespace: "demo",
       storage,
     });
 
-    const snapshot = persistence.snapshotPersistence.getSnapshot(scope);
-
-    expect(snapshot?.layout.regions.secondary.visible).toBe(false);
-    expect(snapshot?.layout.regions.sidenav.visible).toBe(true);
-    expect(snapshot?.layout.regions.status.visible).toBe(true);
-    persistence.snapshotPersistence.flush?.();
-    expect(storage.getItem(layoutKey)).toBe(JSON.stringify({ version: 2, layout: snapshot?.layout }));
-    expect(storage.getItem(panelsKey)).toBeNull();
+    expect(persistence.snapshotPersistence.getSnapshot(scope)).toBeUndefined();
   });
 
   test("debounces layout writes while exposing pending state to the active workbench", async () => {
@@ -70,7 +58,7 @@ describe("local storage workbench persistence", () => {
     expect(persistence.getLayout("project:one")).toEqual(layout);
     await Bun.sleep(25);
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify({ version: 2, layout }),
+      JSON.stringify({ version: 3, layout }),
     );
     expect(persistence.getLayout("project:one")).toEqual(layout);
     expect(persistence.getLayout("project:two")).toBeUndefined();
@@ -156,7 +144,7 @@ describe("local storage workbench persistence", () => {
     persistence.historyPersistence.setHistory(history, "project:one");
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify({ version: 2, layout }),
+      JSON.stringify({ version: 3, layout }),
     );
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBeNull();
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
@@ -244,18 +232,18 @@ describe("local storage workbench persistence recovery", () => {
 
     persistence.setLayout(stale, scope);
     persistence.advanceWriteGeneration?.();
-    storage.setItem(key, JSON.stringify({ version: 2, layout: current }));
+    storage.setItem(key, JSON.stringify({ version: 3, layout: current }));
 
     for (const listener of listeners) listener();
     expect(persistence.getLayout(scope)).toEqual(current);
     await Bun.sleep(25);
-    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 2, layout: current });
+    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 3, layout: current });
 
     persistence.setLayout(stale, scope);
     persistence.advanceWriteGeneration?.();
-    storage.setItem(key, JSON.stringify({ version: 2, layout: current }));
+    storage.setItem(key, JSON.stringify({ version: 3, layout: current }));
     persistence.dispose?.();
-    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 2, layout: current });
+    expect(JSON.parse(storage.getItem(key)!)).toEqual({ version: 3, layout: current });
   });
 
   test("retains only the 50 most recent resource layouts per project", () => {
@@ -381,15 +369,15 @@ describe("local storage workbench persistence recovery", () => {
     const aggregateScope = "project/one/mode/project/aggregate/workspaces";
     storage.setItem(
       workbenchStoragePersistenceKey("demo", "layout", projectScope),
-      JSON.stringify({ version: 2, layout }),
+      JSON.stringify({ version: 3, layout }),
     );
     storage.setItem(
       workbenchStoragePersistenceKey("demo", "layout", aggregateScope),
-      JSON.stringify({ version: 2, layout }),
+      JSON.stringify({ version: 3, layout }),
     );
     storage.setItem(
       workbenchStoragePersistenceKey("demo", "layout", "project/two"),
-      JSON.stringify({ version: 2, layout }),
+      JSON.stringify({ version: 3, layout }),
     );
     const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
 
@@ -419,7 +407,7 @@ describe("unified local storage persistence options", () => {
     expect(listeners).toHaveLength(1);
     expect(storage.getItem(key)).toBeNull();
     await Bun.sleep(10);
-    expect(storage.getItem(key)).toBe(JSON.stringify({ version: 2, layout }));
+    expect(storage.getItem(key)).toBe(JSON.stringify({ version: 3, layout }));
 
     persistence.layoutPersistence.dispose?.();
     expect(listeners).toHaveLength(0);

@@ -19,10 +19,14 @@ export interface WorkbenchModeContribution {
   panels?: readonly WorkbenchPanelRegion[];
   // Registers the mode's contributions once for the lifetime of the mode.
   activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
-  // Seeds defaults once for each layout persistence scope.
+  // Seeds default placements only when the persistence scope has no layout yet.
   seed?(ctx: WorkbenchModeActivationContext): void;
   // Activates non-layout behavior while the mode is current.
   enter?(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
+  // Repairs required layout structure whenever the mode-scope context activates:
+  // first activation, reselecting the active mode, and persistence-scope changes.
+  // Reconciliation must not reset valid optional user state.
+  reconcile?(ctx: WorkbenchModeActivationContext): void;
 }
 
 export type WorkbenchModeChangeListener = () => void;
@@ -210,14 +214,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     initializedModes.set(mode.id, disposables);
   };
 
-  const seedScope = (mode: WorkbenchModeContribution) => {
-    const context = input.resolveContext();
-    const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
-    const currentLayout = context.layout.getLayout();
-    const availableLayout = applyModePanelAvailability(currentLayout, panelsForMode(mode));
-    restoreModeLayout(context, availableLayout);
-    if (seededScopes.has(scopeKey)) return;
-
+  const seedScope = (mode: WorkbenchModeContribution, context: WorkbenchModeActivationContext) => {
     let locationEstablished = false;
     let unsubscribeMainPanel: () => void = () => undefined;
     const establishSeededLocation = () => {
@@ -242,10 +239,33 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     try {
       mode.seed?.(context);
       establishSeededLocation();
-      seededScopes.add(scopeKey);
     } finally {
       unsubscribeMainPanel();
     }
+  };
+
+  // Applies panel availability and seeds default placements only when the scope is
+  // new: no persisted layout and not seeded earlier in this session.
+  const prepareScope = (mode: WorkbenchModeContribution) => {
+    const context = input.resolveContext();
+    const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
+    const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
+    restoreModeLayout(context, availableLayout);
+    context.layout.reconcilePanelMenus();
+    if (!seededScopes.has(scopeKey) && !context.layout.hasPersistedLayout()) {
+      seedScope(mode, context);
+    }
+    seededScopes.add(scopeKey);
+  };
+
+  // One reconciliation pass for every context activation: first activation,
+  // reselecting the active mode, and persistence-scope changes. Repair of required
+  // structure belongs to mode.reconcile and runs every time, so a user can recover
+  // required placements by reselecting the active mode. Reconciliation must not
+  // rerun activate or enter.
+  const reconcileScope = (mode: WorkbenchModeContribution) => {
+    prepareScope(mode);
+    mode.reconcile?.(input.resolveContext());
   };
 
   const disposeActive = () => {
@@ -267,8 +287,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     try {
       initializeMode(mode);
       store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
-      if (options.seed) seedScope(mode);
+      if (options.seed) prepareScope(mode);
       activeDisposables = toDisposables(mode.enter?.(context));
+      if (options.seed) mode.reconcile?.(input.resolveContext());
     } catch (error) {
       disposeActive();
       store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
@@ -280,7 +301,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const activeModeId = store.getState().activeModeId;
     if (activeModeId === deferredSeedModeId) return;
     const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
-    if (mode) seedScope(mode);
+    if (mode) reconcileScope(mode);
   });
   const registryDisposable = createDisposable(() => {
     scopeSubscription.dispose();
@@ -340,7 +361,13 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     setActiveMode(id, setActiveInput = {}) {
-      if (id === store.getState().activeModeId) return;
+      if (id === store.getState().activeModeId) {
+        // Reselecting the active mode reconciles its layout without disposing or
+        // rerunning enter, so a missing required placement can recover.
+        const mode = id ? store.getState().modes[id] : undefined;
+        if (mode && id !== deferredSeedModeId) reconcileScope(mode);
+        return;
+      }
       transitioning = true;
       deferredSeedModeId = setActiveInput.deferSeed ? id : undefined;
       try {
@@ -372,7 +399,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       const activeModeId = store.getState().activeModeId;
       const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
       deferredSeedModeId = undefined;
-      if (mode) seedScope(mode);
+      if (mode) reconcileScope(mode);
     },
 
     onDidChangeActive(listener) {

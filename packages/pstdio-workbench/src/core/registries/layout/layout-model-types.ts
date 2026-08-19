@@ -83,6 +83,10 @@ export interface LayoutModel {
   restoreLayout(layout: WorkbenchLayout): void;
   setPersistenceScope(scope: LayoutScope | undefined, input?: { carryRegionState?: readonly WorkbenchRegion[] }): void;
   getPersistenceScope(): LayoutScope | undefined;
+  /** True when the current persistence scope already stores a layout. A new scope returns false. */
+  hasPersistedLayout(): boolean;
+  /** Moves owned panel menus beside their owner's current region and removes orphan menus. */
+  reconcilePanelMenus(): void;
   onWillChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
   onDidChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
 }

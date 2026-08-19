@@ -13,6 +13,12 @@ export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
+  compositionRequiredNotificationId,
+  createWorkbenchCompositionRegistry,
+  reconcileCompositionLayout,
+  type WorkbenchCompositionRegistry,
+} from "./contributions/composition-contributions";
+export {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionControlsAdapter,
 } from "./contributions/controls-renderer-contributions";

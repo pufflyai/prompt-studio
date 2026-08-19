@@ -1,5 +1,4 @@
 import type { LayoutPersistenceAdapter, WorkbenchLayout } from "../core";
-import { workbenchRegions } from "../core";
 import {
   type CreateWorkbenchStoragePersistenceInput,
   readJson,
@@ -7,19 +6,17 @@ import {
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
-interface PersistedWorkbenchLayoutV1 {
-  version: 1;
+interface PersistedWorkbenchLayoutV3 {
+  version: 3;
   layout: WorkbenchLayout;
 }
 
-interface PersistedWorkbenchLayoutV2 {
-  version: 2;
-  layout: WorkbenchLayout;
-}
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV3;
 
-type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV1 | PersistedWorkbenchLayoutV2;
-
-const WORKBENCH_LAYOUT_VERSION = 2 as const;
+// Version 3 is the composition-resolver layout model (PS-267). Layouts persisted by
+// earlier versions carry replaced panel roles and bindings, so they are discarded
+// rather than interpreted.
+const WORKBENCH_LAYOUT_VERSION = 3 as const;
 const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -161,36 +158,10 @@ export const createLocalStorageLayoutPersistence = (
           ? (JSON.parse(pendingWrite.raw) as PersistedWorkbenchLayout)
           : readJson<PersistedWorkbenchLayout>(storage, key);
       if (persisted?.version === WORKBENCH_LAYOUT_VERSION) return persisted.layout;
-      if (persisted?.version !== 1) return undefined;
-
-      const legacyPanelsKey = workbenchStoragePersistenceKey(input.namespace, "panels", scope);
-      const panels = readJson<unknown>(storage, legacyPanelsKey);
-      const openByRegionId =
-        typeof panels === "object" &&
-        panels !== null &&
-        "openByRegionId" in panels &&
-        typeof panels.openByRegionId === "object" &&
-        panels.openByRegionId !== null
-          ? panels.openByRegionId
-          : {};
-      const regions = { ...persisted.layout.regions };
-      for (const region of workbenchRegions) {
-        const open = (openByRegionId as Record<string, unknown>)[region];
-        if (typeof open === "boolean" && regions[region]) regions[region] = { ...regions[region], visible: open };
-      }
-      const layout = { ...persisted.layout, regions };
-      const migrated: PersistedWorkbenchLayoutV2 = { version: WORKBENCH_LAYOUT_VERSION, layout };
-      pending.set(key, {
-        generation: getGeneration(),
-        legacyPanelsKey: storage.getItem(legacyPanelsKey) === null ? undefined : legacyPanelsKey,
-        raw: JSON.stringify(migrated),
-        scope,
-      });
-      scheduleFlush();
-      return layout;
+      return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV2 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV3 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
       const legacyPanelsKey = workbenchStoragePersistenceKey(input.namespace, "panels", scope);
       pending.delete(key);
@@ -226,7 +197,7 @@ export const createLocalStorageLayoutPersistence = (
         }
         storage.setItem(
           key,
-          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV2),
+          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV3),
         );
       }
     },

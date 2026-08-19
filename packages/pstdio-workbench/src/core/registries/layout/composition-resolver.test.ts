@@ -1,0 +1,270 @@
+import { describe, expect, test } from "bun:test";
+import { resolveComposition } from "./composition-resolver";
+import type { ResolveCompositionInput, WorkbenchComposition } from "./composition-resolver-types";
+
+const composition: WorkbenchComposition = {
+  resourceKinds: [
+    {
+      id: "planner.ticket",
+      extensionId: "pstdio.planner",
+      surface: "primary",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        navigation: { cardinality: "one", external: true },
+        inspector: { cardinality: "many", external: true },
+      },
+    },
+  ],
+  panels: [
+    { id: "planner.editor", extensionId: "pstdio.planner", title: "Editor", supportedRegions: ["main"] },
+    { id: "planner.tree", extensionId: "pstdio.planner", title: "Tree", supportedRegions: ["sidenav"] },
+    {
+      id: "planner.properties",
+      extensionId: "pstdio.planner",
+      title: "Properties",
+      supportedRegions: ["side", "secondary"],
+    },
+    { id: "acme.insights", extensionId: "acme.insights", title: "Insights", supportedRegions: ["side", "secondary"] },
+  ],
+  resourcePanels: [
+    {
+      id: "planner.editor",
+      extensionId: "pstdio.planner",
+      resourceKind: "planner.ticket",
+      panel: "planner.editor",
+      slot: "primary",
+    },
+    {
+      id: "planner.tree",
+      extensionId: "pstdio.planner",
+      resourceKind: "planner.ticket",
+      panel: "planner.tree",
+      slot: "navigation",
+    },
+    {
+      id: "planner.properties",
+      extensionId: "pstdio.planner",
+      resourceKind: "planner.ticket",
+      panel: "planner.properties",
+      slot: "inspector",
+    },
+    {
+      id: "acme.insights",
+      extensionId: "acme.insights",
+      resourceKind: "planner.ticket",
+      panel: "acme.insights",
+      slot: "inspector",
+    },
+  ],
+};
+
+const ticketMode = {
+  id: "planner.ticket-mode",
+  resources: {
+    "planner.ticket": {
+      slots: {
+        primary: { region: "main" as const, required: true },
+        navigation: { region: "sidenav" as const, required: true },
+        inspector: { region: "side" as const, allowedRegions: ["side", "secondary"] as const },
+      },
+    },
+  },
+};
+
+const resolve = (input: Partial<ResolveCompositionInput>) =>
+  resolveComposition({
+    context: { modeId: ticketMode.id, resourceKind: "planner.ticket" },
+    mode: ticketMode,
+    composition,
+    ...input,
+  });
+
+describe("composition resolver", () => {
+  test("seeds recipe placements in declaration order for a new scope", () => {
+    const result = resolve({});
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.regionOrder.main).toEqual(["planner.editor"]);
+    expect(result.regionOrder.sidenav).toEqual(["planner.tree"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+    expect(result.placements.find((placement) => placement.panelId === "planner.editor")).toMatchObject({
+      required: true,
+      closable: false,
+    });
+    expect(result.optionalPanels).toEqual([]);
+  });
+
+  test("rejects a context whose mode does not accept the resource kind without resolving placements", () => {
+    const result = resolve({ context: { modeId: ticketMode.id, resourceKind: "acme.blend" } });
+
+    expect(result.placements).toEqual([]);
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["extension_mode_resource_unsupported"]);
+  });
+
+  test("persisted tab order wins over declaration order", () => {
+    const result = resolve({
+      persisted: {
+        regions: {
+          main: { order: ["planner.editor"], activePanelId: "planner.editor" },
+          sidenav: { order: ["planner.tree"] },
+          side: { order: ["acme.insights", "planner.properties"], activePanelId: "acme.insights" },
+        },
+      },
+    });
+
+    expect(result.regionOrder.side).toEqual(["acme.insights", "planner.properties"]);
+    expect(result.activePanelIds.side).toBe("acme.insights");
+  });
+
+  test("keeps a valid persisted user move and drops a disallowed one", () => {
+    const result = resolve({
+      persisted: {
+        regions: {
+          main: { order: ["planner.editor"] },
+          sidenav: { order: ["planner.tree"] },
+          secondary: { order: ["planner.properties"] },
+          side: { order: ["acme.insights"] },
+        },
+      },
+    });
+
+    // side/secondary are both allowed for the inspector slot, so the move survives.
+    expect(result.regionOrder.secondary).toEqual(["planner.properties"]);
+    expect(result.regionOrder.side).toEqual(["acme.insights"]);
+  });
+
+  test("restores a missing required placement without reopening closed optional panels", () => {
+    const result = resolve({
+      persisted: {
+        regions: {
+          sidenav: { order: ["planner.tree"] },
+          side: { order: [] },
+        },
+      },
+    });
+
+    // The user closed both inspectors; only the required editor and tree survive.
+    expect(result.regionOrder.main).toEqual(["planner.editor"]);
+    expect(result.placements.find((placement) => placement.panelId === "planner.editor")?.origin).toBe("required");
+    expect(result.regionOrder.side ?? []).toEqual([]);
+    expect(result.optionalPanels).toEqual(["planner.properties", "acme.insights"]);
+  });
+
+  test("omits invalid optional contributions and reports them without blocking valid panels", () => {
+    const withInvalid: WorkbenchComposition = {
+      ...composition,
+      resourcePanels: [
+        ...composition.resourcePanels,
+        {
+          id: "acme.ghost",
+          extensionId: "acme.insights",
+          resourceKind: "planner.ticket",
+          panel: "acme.ghost",
+          slot: "inspector",
+        },
+        {
+          id: "acme.stow",
+          extensionId: "acme.insights",
+          resourceKind: "planner.ticket",
+          panel: "acme.insights",
+          slot: "missing",
+        },
+      ],
+    };
+    const result = resolve({ composition: withInvalid });
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code).sort()).toEqual([
+      "extension_panel_missing",
+      "extension_resource_slot_missing",
+    ]);
+    expect(result.regionOrder.main).toEqual(["planner.editor"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+  });
+
+  test("rejects an external contribution to a closed slot", () => {
+    const withClosed: WorkbenchComposition = {
+      ...composition,
+      resourcePanels: [
+        ...composition.resourcePanels,
+        {
+          id: "acme.takeover",
+          extensionId: "acme.insights",
+          resourceKind: "planner.ticket",
+          panel: "acme.insights",
+          slot: "primary",
+        },
+      ],
+    };
+    const result = resolve({ composition: withClosed });
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_resource_slot_closed");
+    expect(result.regionOrder.main).toEqual(["planner.editor"]);
+  });
+
+  test("a known-panel entry wins over its slot placement", () => {
+    const result = resolve({
+      mode: {
+        id: ticketMode.id,
+        resources: {
+          "planner.ticket": {
+            slots: ticketMode.resources["planner.ticket"].slots,
+            panels: { "acme.insights": { region: "secondary" as const } },
+          },
+        },
+      },
+    });
+
+    expect(result.regionOrder.secondary).toEqual(["acme.insights"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties"]);
+  });
+
+  test("reports an unsupported region and keeps a safe main fallback for required placements", () => {
+    const result = resolve({
+      mode: {
+        id: ticketMode.id,
+        resources: {
+          "planner.ticket": {
+            slots: {
+              primary: { region: "sidenav" as const, required: true },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_panel_region_unsupported");
+    expect(result.requiredFallback).toEqual({ panelId: "planner.editor" });
+  });
+
+  test("required on a cardinality-many slot is invalid and treated as optional", () => {
+    const result = resolve({
+      mode: {
+        id: ticketMode.id,
+        resources: {
+          "planner.ticket": {
+            slots: {
+              primary: { region: "main" as const, required: true },
+              inspector: { region: "side" as const, required: true },
+            },
+          },
+        },
+      },
+      persisted: { regions: { main: { order: ["planner.editor"] }, side: { order: [] } } },
+    });
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_placement_required_invalid");
+    // The invalid required flag does not force the closed inspectors back open.
+    expect(result.regionOrder.side ?? []).toEqual([]);
+  });
+
+  test("places mode-wide panels without a resource", () => {
+    const result = resolveComposition({
+      context: { modeId: "lab" },
+      mode: { id: "lab", modePanels: { "planner.tree": { region: "sidenav", required: true } } },
+      composition,
+    });
+
+    expect(result.regionOrder.sidenav).toEqual(["planner.tree"]);
+    expect(result.placements[0]).toMatchObject({ required: true, closable: false });
+  });
+});

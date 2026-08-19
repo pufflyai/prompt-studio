@@ -112,6 +112,25 @@ export type {
   RegisteredKeybinding,
 } from "./registries/keybindings/keybinding-registry";
 export { createKeybindingRegistry, getKeybindingSteps } from "./registries/keybindings/keybinding-registry";
+export { resolveComposition } from "./registries/layout/composition-resolver";
+export type {
+  CompositionDiagnostic,
+  CompositionModeDefinition,
+  CompositionModeRecipe,
+  CompositionPanelDefinition,
+  CompositionPlacementPolicy,
+  CompositionResolutionContext,
+  CompositionResourceKindDefinition,
+  CompositionResourcePanelEdge,
+  CompositionSlotDefinition,
+  DockedCompositionRegion,
+  PersistedCompositionLayout,
+  ResolveCompositionInput,
+  ResolvedComposition,
+  ResolvedCompositionPlacement,
+  WorkbenchComposition,
+} from "./registries/layout/composition-resolver-types";
+export { dockedCompositionRegions } from "./registries/layout/composition-resolver-types";
 export type {
   CreateLayoutModelInput,
   LayoutModel,

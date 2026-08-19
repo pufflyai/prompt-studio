@@ -137,7 +137,11 @@ export const activateExtensionModeLayout = (input: {
   }
 };
 
-const activateExtensionModePanels = (input: {
+// The reconciliation pass for extension modes: restores missing structural panels
+// declared by the mode recipe whenever its context activates, and refreshes the
+// existing non-main instances. Main placements are only restored when missing so a
+// resource-bound Location keeps its active binding and the remaining tab order.
+const reconcileExtensionModePanels = (input: {
   ctx: WorkbenchModuleContext;
   metadata: DashboardExtensionMetadata;
   mode: DashboardExtensionMode;
@@ -145,7 +149,8 @@ const activateExtensionModePanels = (input: {
 }) => {
   const panelById = new Map(input.metadata.panels.map((panel) => [panel.id, panel]));
   for (const entry of input.mode.layout?.open ?? []) {
-    if (!entry.panel || extensionModeLayoutRegion(entry.region) === "main") continue;
+    if (!entry.panel) continue;
+    if (isResourceBoundModeEntry(entry, input.mode, panelById)) continue;
     const panel = panelById.get(entry.panel);
     if (!panel) continue;
     const contributionId = extensionViewWidgetIdFor(panel);
@@ -154,6 +159,7 @@ const activateExtensionModePanels = (input: {
     const placement = (input.ctx.layout.getLayout().regions[region]?.widgets ?? [])
       .filter((candidate) => candidate.contributionId === contributionId)
       .at(-1);
+    if (region === "main" && placement) continue;
     seedModeEntry({
       ctx: input.ctx,
       entry,
@@ -284,8 +290,10 @@ const registerExtensionModes = (
           enter: (modeCtx) => {
             const chrome = activateModeChromeContributions(modeCtx, mode.modeId);
             if (ownsNavigation) modeCtx.layout.clearRegion("sidenav");
-            activateExtensionModePanels({ ctx: modeCtx, metadata, mode, projectId });
             return chrome;
+          },
+          reconcile(modeCtx) {
+            reconcileExtensionModePanels({ ctx: modeCtx, metadata, mode, projectId });
           },
         }),
       );

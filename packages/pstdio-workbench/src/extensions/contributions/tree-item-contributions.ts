@@ -29,6 +29,8 @@ const targetForTreeAction = (
   if (action.kind === "command") {
     return { kind: "command", commandId: action.commandId, args: action.args };
   }
+  // Browse-root resource actions are wired by the navigation rollout (PS-269).
+  if (action.kind !== "href") return undefined;
   return { kind: "command", commandId: `workbench.extension.href.${item.id}`, args: { href: action.href } };
 };
 

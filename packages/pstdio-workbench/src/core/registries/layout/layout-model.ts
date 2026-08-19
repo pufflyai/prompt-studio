@@ -34,6 +34,7 @@ import {
 } from "./layout-types";
 import { createWidgetOpeners } from "./layout-widget-openers";
 import { createPanelLayoutMethods } from "./panel-layout-methods";
+import { reconcilePanelMenuOwnership } from "./panel-menu-ownership";
 import { createPanelRegistrations } from "./panel-registration";
 
 export type {
@@ -280,11 +281,28 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
     ...panelMethods,
-    openWidget: widgetOpeners.openWidget,
+    // Panel menus are owned by their panel instance: after any open (including a
+    // region move) they follow the owner's region and orphans are removed.
+    openWidget(id, openInput) {
+      const placement = widgetOpeners.openWidget(id, openInput);
+      const next = reconcilePanelMenuOwnership(getLayout(), (widgetId) => getWidgets()[widgetId]);
+      if (next !== getLayout()) {
+        setLayout(next);
+        persistLayout();
+      }
+      return placement;
+    },
 
     ...placementMethods,
 
     establishLocation,
+
+    reconcilePanelMenus() {
+      const next = reconcilePanelMenuOwnership(getLayout(), (id) => getWidgets()[id]);
+      if (next === getLayout()) return;
+      setLayout(next);
+      persistLayout();
+    },
 
     setRegionActiveWidget(regionId, widgetId) {
       const layout = getLayout();
@@ -401,6 +419,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     },
 
     getPersistenceScope: () => currentScope,
+
+    hasPersistedLayout: () => input.persistence?.getLayout(currentScope) !== undefined,
 
     onWillChangePersistenceScope: willChangeScope.subscribe,
     onDidChangePersistenceScope: didChangeScope.subscribe,
