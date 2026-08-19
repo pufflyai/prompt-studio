@@ -25,7 +25,22 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
   workspace_shorthand: "T-1_A1",
   branch: "workspace/T-1_A1",
   worktree_path: "/worktrees/T-1_A1",
-  anchors_json: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } } }],
+  anchors_json: [
+    {
+      type: "ticket",
+      id: "ticket-1",
+      label: "T-1",
+      metadata: {
+        shorthand: "T-1",
+        resourceParent: {
+          type: "extension-view",
+          id: "pstdio-planner.tickets",
+          label: "Tickets",
+          icon: "square-kanban",
+        },
+      },
+    },
+  ],
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
   ...overrides,
@@ -151,7 +166,22 @@ describe("runTicketsQuery", () => {
           id: "workspace-other",
           name: "Other ticket",
           workspace_shorthand: "T-2_A1",
-          anchors_json: [{ type: "ticket", id: "ticket-2", label: "T-2", metadata: { shorthand: "T-2", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } } }],
+          anchors_json: [
+            {
+              type: "ticket",
+              id: "ticket-2",
+              label: "T-2",
+              metadata: {
+                shorthand: "T-2",
+                resourceParent: {
+                  type: "extension-view",
+                  id: "pstdio-planner.tickets",
+                  label: "Tickets",
+                  icon: "square-kanban",
+                },
+              },
+            },
+          ],
         }),
       ],
     });
@@ -174,7 +204,15 @@ describe("runTicketsQuery", () => {
           type: "ticket",
           id: "ticket-1",
           label: "T-1 Has workspaces",
-          metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+          metadata: {
+            shorthand: "T-1",
+            resourceParent: {
+              type: "extension-view",
+              id: "pstdio-planner.tickets",
+              label: "Tickets",
+              icon: "square-kanban",
+            },
+          },
         },
       },
       {
@@ -187,7 +225,15 @@ describe("runTicketsQuery", () => {
           type: "ticket",
           id: "ticket-1",
           label: "T-1 Has workspaces",
-          metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+          metadata: {
+            shorthand: "T-1",
+            resourceParent: {
+              type: "extension-view",
+              id: "pstdio-planner.tickets",
+              label: "Tickets",
+              icon: "square-kanban",
+            },
+          },
         },
       },
     ]);
@@ -235,7 +281,15 @@ describe("runTicketsQuery", () => {
               type: "ticket",
               id: parent.id,
               label: "T-1 Parent",
-              metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+              metadata: {
+                shorthand: "T-1",
+                resourceParent: {
+                  type: "extension-view",
+                  id: "pstdio-planner.tickets",
+                  label: "Tickets",
+                  icon: "square-kanban",
+                },
+              },
             },
           },
         },

@@ -26,7 +26,8 @@ const ticketsBrowseRootReference = (): JsonObject => ({
 const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {
   const ticket = lineage[index];
   const metadata: JsonObject = { shorthand: ticket.shorthand };
-  metadata.resourceParent = index > 0 ? createTicketResourceReference(lineage, index - 1) : ticketsBrowseRootReference();
+  metadata.resourceParent =
+    index > 0 ? createTicketResourceReference(lineage, index - 1) : ticketsBrowseRootReference();
 
   return {
     type: "ticket",

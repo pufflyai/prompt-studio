@@ -87,7 +87,20 @@ describe("queryTicketsCommand", () => {
         shorthand: "T-1_A1",
         type: "worktree",
         createdAt: "2026-01-02T00:00:00.000Z",
-        resourceParent: { type: "ticket", id: "ticket-1", label: "T-1 Ticket", metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } } },
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-1",
+          label: "T-1 Ticket",
+          metadata: {
+            shorthand: "T-1",
+            resourceParent: {
+              type: "extension-view",
+              id: "pstdio-planner.tickets",
+              label: "Tickets",
+              icon: "square-kanban",
+            },
+          },
+        },
       },
     ]);
   });

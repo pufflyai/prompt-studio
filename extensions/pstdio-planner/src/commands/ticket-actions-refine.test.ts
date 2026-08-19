@@ -90,7 +90,15 @@ describe("refineTicketCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+            metadata: {
+              shorthand: "T-1",
+              resourceParent: {
+                type: "extension-view",
+                id: "pstdio-planner.tickets",
+                label: "Tickets",
+                icon: "square-kanban",
+              },
+            },
           },
         ],
         harness: { harnessId: "codex", model: "gpt-5" },

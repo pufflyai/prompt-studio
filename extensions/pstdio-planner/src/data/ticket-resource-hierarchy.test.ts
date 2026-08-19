@@ -85,7 +85,15 @@ describe("ticket resource hierarchy", () => {
             type: "ticket",
             id: "root",
             label: "PS-1 Root",
-            metadata: { shorthand: "PS-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+            metadata: {
+              shorthand: "PS-1",
+              resourceParent: {
+                type: "extension-view",
+                id: "pstdio-planner.tickets",
+                label: "Tickets",
+                icon: "square-kanban",
+              },
+            },
           },
         },
       },
@@ -110,7 +118,15 @@ describe("ticket resource hierarchy", () => {
           type: "ticket",
           id: "parent",
           label: "PS-1 Ticket",
-          metadata: { shorthand: "PS-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+          metadata: {
+            shorthand: "PS-1",
+            resourceParent: {
+              type: "extension-view",
+              id: "pstdio-planner.tickets",
+              label: "Tickets",
+              icon: "square-kanban",
+            },
+          },
         },
       },
     });
@@ -126,7 +142,15 @@ describe("ticket resource hierarchy", () => {
         type: "ticket",
         id: "child",
         label: "PS-2 Child",
-        metadata: { shorthand: "PS-2", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+        metadata: {
+          shorthand: "PS-2",
+          resourceParent: {
+            type: "extension-view",
+            id: "pstdio-planner.tickets",
+            label: "Tickets",
+            icon: "square-kanban",
+          },
+        },
       },
     });
   });

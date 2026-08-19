@@ -47,7 +47,15 @@ describe("ticketToRow", () => {
       projectId: "proj-1",
       label: "T-1 Fix the thing",
       icon: "component",
-      metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+      metadata: {
+        shorthand: "T-1",
+        resourceParent: {
+          type: "extension-view",
+          id: "pstdio-planner.tickets",
+          label: "Tickets",
+          icon: "square-kanban",
+        },
+      },
     });
     expect(row.attributes).toEqual({
       status: "s-todo",
@@ -75,7 +83,15 @@ describe("ticketToRow", () => {
         type: "ticket",
         id: "t1",
         label: "T-1 Fix the thing",
-        metadata: { shorthand: "T-1", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
+        metadata: {
+          shorthand: "T-1",
+          resourceParent: {
+            type: "extension-view",
+            id: "pstdio-planner.tickets",
+            label: "Tickets",
+            icon: "square-kanban",
+          },
+        },
       },
     });
     expect(row.attributes).toMatchObject({
