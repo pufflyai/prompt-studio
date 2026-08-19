@@ -115,11 +115,15 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   }, [resource?.uri, sectionNavigation, workbench]);
 
   // Contribution refresh re-registers an identical contribution as a new
-  // object. The contribution id is the identity; callbacks read through this
-  // ref so a re-registration never resets an open editor.
+  // object, and a save that changes the document title produces a new resource
+  // object with a fresh label. Identity is the contribution id plus the
+  // resource URI (both inside loadKey); callbacks read the latest objects
+  // through refs so neither replacement resets an open editor.
   const contributionRef = useRef(contribution);
+  const resourceRef = useRef(resource);
   useEffect(() => {
     contributionRef.current = contribution;
+    resourceRef.current = resource;
   });
 
   const contributionId = contribution.id;
@@ -131,14 +135,18 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     setError(null);
     setLoaded(null);
     const load = () => {
-      Promise.resolve(contributionRef.current.load(resource))
+      Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
           if (cancelled) return;
           setError(null);
           // Compare against the editor's current value so a reload that returns
           // what is already shown (e.g. after a save) keeps the editor mounted.
           const editorValue = controllerRef.current?.getBaseline();
-          setLoaded((previous) => ({ ...next, revision: nextLoadedRevision(previous, next, loadKey, editorValue), loadKey }));
+          setLoaded((previous) => ({
+            ...next,
+            revision: nextLoadedRevision(previous, next, loadKey, editorValue),
+            loadKey,
+          }));
           controllerRef.current?.setBaseline(next.content);
         })
         .catch((loadError) => {
@@ -150,7 +158,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       ? createFileEditController({
           debounceMs: SAVE_DEBOUNCE_MS,
           load,
-          save: (value) => Promise.resolve(contributionRef.current.save?.(resource, value)),
+          save: (value) => Promise.resolve(contributionRef.current.save?.(resourceRef.current, value)),
         })
       : null;
     load();
@@ -168,7 +176,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       controllerRef.current?.flush();
       controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, resource, loadKey]);
+  }, [contributionId, hasSave, workbench, loadKey]);
 
   // The last keystrokes are also flushed when the tab is hidden or closed.
   useEffect(() => {
