@@ -81,7 +81,11 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const resource = props.placement?.resource;
   const sectionNavigation = getFileSectionNavigation(resource);
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
-  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resourceUri: resource?.uri });
+  const loadKey = createFileRendererLoadKey({
+    fileRendererId: contribution.id,
+    resourceUri: resource?.uri,
+    resourceMetadata: resource?.metadata,
+  });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
   const controllerRef = useRef<FileEditController | null>(null);
@@ -250,7 +254,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
   const isEditable = Boolean(contribution.save) && kind !== "image";
-  const editorKey = `${contribution.id}:${currentLoaded.revision}`;
+  // The key must carry the document identity, not just the contribution: two
+  // documents from the same renderer both start at revision 1, so keying on the
+  // contribution alone reuses the editor and keeps showing the previous file.
+  const editorKey = `${currentLoaded.loadKey}:${currentLoaded.revision}`;
 
   const handleActiveSectionChange = (sectionId: string | null) => {
     syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });

@@ -20,6 +20,36 @@ describe("file renderer loaded state", () => {
 
     expect(isCurrentLoadedFile({ loadKey: markdownLoadKey }, codeLoadKey)).toBe(false);
   });
+
+  test("treats two documents selected through resource metadata as different documents", () => {
+    const bodyLoadKey = createFileRendererLoadKey({
+      fileRendererId: "planner.ticketContent",
+      resourceUri: "dashboard-workbench://ticket/ticket-1",
+      resourceMetadata: { documentId: "ticket-body" },
+    });
+    const fileLoadKey = createFileRendererLoadKey({
+      fileRendererId: "planner.ticketContent",
+      resourceUri: "dashboard-workbench://ticket/ticket-1",
+      resourceMetadata: { documentId: "file-1" },
+    });
+
+    expect(isCurrentLoadedFile({ loadKey: bodyLoadKey }, fileLoadKey)).toBe(false);
+  });
+
+  test("keeps one document stable when unrelated metadata is reordered", () => {
+    const first = createFileRendererLoadKey({
+      fileRendererId: "planner.ticketContent",
+      resourceUri: "dashboard-workbench://ticket/ticket-1",
+      resourceMetadata: { documentId: "file-1", projectId: "proj-1" },
+    });
+    const second = createFileRendererLoadKey({
+      fileRendererId: "planner.ticketContent",
+      resourceUri: "dashboard-workbench://ticket/ticket-1",
+      resourceMetadata: { projectId: "proj-1", documentId: "file-1" },
+    });
+
+    expect(isCurrentLoadedFile({ loadKey: first }, second)).toBe(true);
+  });
 });
 
 describe("file renderer section navigation", () => {
