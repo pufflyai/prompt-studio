@@ -49,6 +49,8 @@ export type {
 
 export interface HistoryController {
   store: WorkbenchStore<HistoryStoreState>;
+  /** Snapshot the history for a compound navigation; the returned function restores it. */
+  createCheckpoint(): () => void;
   goBack(): HistoryEntry | undefined;
   goForward(): HistoryEntry | undefined;
   goPrevious(): HistoryEntry | undefined;
@@ -268,6 +270,11 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     clear() {
       finishRestore();
       setState(emptyHistoryState(), "history.clear");
+    },
+
+    createCheckpoint() {
+      const snapshot = store.getState();
+      return () => setState(snapshot, "history.rollback");
     },
   };
 };

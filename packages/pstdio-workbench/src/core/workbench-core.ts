@@ -466,8 +466,18 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     navigation: createNavigationRegistry({
       resolveDispatcher: () => ({
         createCheckpoint: () => {
+          // The checkpoint covers the navigation state the workbench owns:
+          // layout, history, and breadcrumbs. Side effects of commands that
+          // already executed belong to their extensions and cannot be undone.
           const layout = core.layout.getLayout();
-          return () => core.layout.restoreLayout(layout);
+          const restoreHistory = core.history.createCheckpoint();
+          const breadcrumbs = core.breadcrumbs.getItems();
+          return () => {
+            core.layout.restoreLayout(layout);
+            restoreHistory();
+            if (breadcrumbs) core.breadcrumbs.setItems(breadcrumbs);
+            else core.breadcrumbs.clearItems();
+          };
         },
         canOpenResource: (resource) => {
           const state = core.resources.store.getState();

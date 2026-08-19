@@ -15,6 +15,47 @@ describe("toWorkbenchNavigationTarget", () => {
     });
   });
 
+  test("rejects a sectioned resource target without a resourceOf translator", () => {
+    expect(() =>
+      toWorkbenchNavigationTarget({
+        kind: "resource",
+        resource: { type: "guide", id: "readme", label: "Readme" },
+        section: { anchors: [{ id: "intro", heading: "Intro" }] },
+      }),
+    ).toThrow("Resource targets with a section need a resourceOf translator");
+  });
+
+  test("passes the sectioned target through the resourceOf translator", () => {
+    const converted = toWorkbenchNavigationTarget(
+      {
+        kind: "resource",
+        resource: { type: "guide", id: "readme", label: "Readme" },
+        section: { anchors: [{ id: "intro", heading: "Intro" }] },
+      },
+      {
+        resourceOf: (resource, target) => ({
+          kind: resource.type,
+          uri: `test://${resource.id}`,
+          id: resource.id,
+          label: resource.label,
+          metadata: { anchors: target.section?.anchors.length },
+        }),
+      },
+    );
+
+    expect(converted).toEqual({
+      kind: "resource",
+      resource: {
+        kind: "guide",
+        uri: "test://readme",
+        id: "readme",
+        label: "Readme",
+        metadata: { anchors: 1 },
+      },
+      input: {},
+    });
+  });
+
   test("rejects replace-invoking without source placement", () => {
     expect(() =>
       toWorkbenchNavigationTarget({ kind: "panel", panel: "ticketInspector", input: { strategy: "replace-invoking" } }),

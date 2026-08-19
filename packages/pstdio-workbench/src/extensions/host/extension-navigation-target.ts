@@ -41,19 +41,27 @@ const toPanelInput = (
 const toCommandTarget = (
   target: Extract<ExtensionNavigationTarget, { kind: "command" }>,
   input: ToWorkbenchNavigationTargetInput,
-): NavigationTargetCommand => {
+) => {
   const override = input.commandTargetOf?.(target);
   if (override) return override;
   const commandId =
     input.commandIdOf?.(target.command) ?? (typeof target.command === "string" ? target.command : target.command.id);
-  return { kind: "command", commandId, args: target.params };
+  return { kind: "command", commandId, args: target.params } satisfies NavigationTargetCommand;
 };
 
+// The return type stays explicit: the compound branch recurses, and TypeScript
+// cannot infer the return type of a self-referencing function.
 export const toWorkbenchNavigationTarget = (
   target: ExtensionNavigationTarget,
   input: ToWorkbenchNavigationTargetInput = {},
 ): NavigationTarget => {
   if (target.kind === "resource") {
+    // A section only means something with the caller's container context
+    // (tree id, target node). Failing loudly beats silently dropping the
+    // requested section.
+    if (target.section && !input.resourceOf) {
+      throw new Error("Resource targets with a section need a resourceOf translator that encodes the section.");
+    }
     return {
       kind: "resource",
       resource: input.resourceOf ? input.resourceOf(target.resource, target) : toWorkbenchResource(target.resource),

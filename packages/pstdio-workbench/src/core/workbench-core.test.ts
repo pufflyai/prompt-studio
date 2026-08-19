@@ -178,3 +178,50 @@ describe("workbench modules", () => {
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(0);
   });
 });
+
+describe("compound navigation rollback", () => {
+  it("restores history and breadcrumbs when a later compound item throws", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "test",
+      closable: false,
+    });
+    workbench.resources.registerPresenter({
+      id: "ticket",
+      canOpen: (resource) => resource.kind === "ticket",
+      open: (resource) => workbench.layout.openPanel("ticket", { resource }),
+    });
+    workbench.commands.registerCommand(
+      { id: "boom", label: "Boom" },
+      {
+        execute: () => {
+          throw new Error("boom");
+        },
+      },
+    );
+    workbench.breadcrumbs.setItems([{ title: "Start" }]);
+
+    // Prove the harness records history for successful opens, so the rollback
+    // assertion below cannot pass vacuously.
+    await workbench.resources.openResource({ kind: "ticket", uri: "ticket://PS-0", id: "PS-0", label: "PS-0" });
+    const historyBefore = workbench.history.store.getState().entries.length;
+    expect(historyBefore).toBeGreaterThan(0);
+
+    await expect(
+      workbench.navigation.openTarget({
+        kind: "compound",
+        targets: [
+          { kind: "resource", resource: { kind: "ticket", uri: "ticket://PS-1", id: "PS-1", label: "PS-1" } },
+          { kind: "command", commandId: "boom" },
+        ],
+      }),
+    ).rejects.toThrow("boom");
+
+    expect(workbench.history.store.getState().entries.length).toBe(historyBefore);
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Start"]);
+  });
+});
