@@ -75,5 +75,6 @@ export {
 } from "./runtime";
 
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
+export { isLegacyPanelContribution } from "./runtime/panel-shape";
 
 export type * from "./types";
