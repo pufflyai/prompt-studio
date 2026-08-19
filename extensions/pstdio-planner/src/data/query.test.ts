@@ -138,7 +138,10 @@ describe("runTicketsQuery", () => {
       editable: true,
     });
   });
+});
 
+// Workspace badge payloads got long enough to need their own describe block.
+describe("runTicketsQuery workspace badges", () => {
   test("exposes linked workspaces as a displayable workspace badge payload", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", title: "Has workspaces" }));
