@@ -55,10 +55,13 @@ export const createFileEditController = (input: FileEditControllerInput) => {
           if (saved) schedule();
           return;
         }
-        if (refreshDeferred) {
-          refreshDeferred = false;
-          input.load();
-        }
+        if (!refreshDeferred) return;
+        refreshDeferred = false;
+        // Refresh events raised while our own save ran are self-invalidation:
+        // the save already acknowledged this state, and reloading here pulls
+        // server-normalized content that remounts the editor and drops focus.
+        // Only a failed save leaves the document unknown and worth reloading.
+        if (!saved) input.load();
       });
   };
 

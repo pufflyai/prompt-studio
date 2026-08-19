@@ -67,7 +67,7 @@ describe("file edit controller", () => {
     expect(loads()).toBe(1);
   });
 
-  test("refreshes during a draft or save coalesce into one reload after the save settles", async () => {
+  test("refreshes during a draft or save are dropped after the save succeeds", async () => {
     const { controller, saves, loads } = createHarness();
     controller.setBaseline("loaded");
 
@@ -79,7 +79,23 @@ describe("file edit controller", () => {
     await tick();
 
     expect(saves).toEqual(["edited"]);
-    expect(loads()).toBe(1);
+    expect(loads()).toBe(0);
+  });
+
+  test("a refresh deferred across a failed save is dropped once a retry succeeds", async () => {
+    const { controller, saves, loads } = createHarness({ failSaves: 1 });
+    controller.setBaseline("loaded");
+
+    controller.handleChange("edited");
+    controller.handleRefreshEvent();
+    await tick();
+    expect(saves).toEqual([]);
+
+    controller.flush();
+    await tick();
+
+    expect(saves).toEqual(["edited"]);
+    expect(loads()).toBe(0);
   });
 
   test("a newer draft made during a save is saved after the first save settles", async () => {

@@ -147,7 +147,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           {shouldTrackChanges ? (
             <OnChangePlugin
               ignoreSelectionChange
-              ignoreHistoryMergeTagChange={false}
+              // Lexical tags the initial content import with history-merge.
+              // Reporting it as a change makes every mount look like an edit
+              // and schedules a save of content the user never touched.
+              ignoreHistoryMergeTagChange
               onChange={(editorState) => {
                 editorState.read(() => {
                   const root = $getRoot();
