@@ -1,4 +1,5 @@
 export type * from "./commands";
+export * from "./composition";
 export type * from "./context";
 export type * from "./contributions";
 export type * from "./controls";
@@ -10,6 +11,7 @@ export type * from "./harness";
 export type * from "./json";
 export type * from "./navigation-target";
 export type * from "./params";
+export type * from "./renderer-base";
 export type * from "./resources";
 export type * from "./slots";
 export type * from "./tree-renderer";

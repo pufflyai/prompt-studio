@@ -25,6 +25,7 @@ export type {
 } from "pstdio-api-contracts/extension-kernel";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  dockedWorkbenchRegions,
   EXTENSION_API_VERSION,
   getWorkbenchModeLayoutTargetPanel,
   getWorkbenchTargetDefinition,
@@ -78,7 +79,7 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export { params } from "./params";
-export { commandEvent, commandRef, commandsOf, eventRef } from "./refs";
+export { commandEvent, commandRef, eventRef } from "./refs";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,

@@ -1,12 +1,16 @@
 import type {
+  CompositionPanelContribution,
   ControlsQueryParams,
   DataTableRendererQueryParams,
   FileRendererLoadParams,
   KanbanRendererQueryParams,
+  ModePlacementContribution,
+  RendererEventReference,
   ResourceRef,
   TreeRendererQueryParams,
+  WorkbenchNavigationTarget,
 } from "./index";
-import { defineExtension, packageAsset, params, projectSlots, workspaceSlots } from "./index";
+import { defineExtension, eventRef, packageAsset, params, projectSlots, workspaceSlots } from "./index";
 
 const extension = defineExtension({
   settings: {
@@ -196,3 +200,115 @@ void kanbanQueryParams;
 void treeQueryParams;
 void fileLoadParams;
 void controlsQueryParams;
+
+const compositionExtension = defineExtension({
+  resourceKinds: {
+    ticket: {
+      surface: "primary",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        navigation: { cardinality: "many", external: true },
+        inspector: { cardinality: "many", external: true },
+      },
+    },
+  },
+  panels: {
+    editor: {
+      title: "Ticket editor",
+      supportedRegions: ["main"],
+      webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
+    },
+    // A cross-extension contribution uses namespaced refresh events; local ones use typed refs.
+    insights: {
+      title: "Insights",
+      supportedRegions: ["side", "secondary"],
+      renderer: { kind: "controls", id: "insightControls" },
+    },
+  },
+  controlsRenderers: {
+    insightControls: {
+      title: "Insight controls",
+      refreshEvents: [eventRef("ticketChanged"), "planner.ticket-saved"],
+      query: async () => ({ values: {} }),
+    },
+  },
+  resourcePanels: {
+    // Bare ids resolve inside the declaring extension.
+    editor: { resourceKind: "ticket", panel: "editor", slot: "primary" },
+    // Cross-extension references use the namespaced form.
+    plannerInsights: { resourceKind: "planner.ticket", panel: "insights", slot: "inspector" },
+  },
+  modes: {
+    review: {
+      label: "Review",
+      defaultResource: { type: "ticket", id: "root" },
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
+          },
+          panels: {
+            "acme.insights": { region: "secondary" },
+          },
+        },
+      },
+      modePanels: {
+        editor: { region: "main" },
+      },
+    },
+    resolved: {
+      label: "Resolved",
+      defaultResource: { commandId: "review.default-resource" },
+    },
+  },
+  treeItems: {
+    ticketsRoot: {
+      target: "workbench.left.tree",
+      label: "Tickets",
+      // `null` means root placement without a heading; `undefined` keeps default grouping.
+      group: null,
+      action: { kind: "resource", resource: { type: "ticket", id: "root" } },
+    },
+    grouped: {
+      target: "workbench.left.tree",
+      label: "Grouped",
+      action: { kind: "route", route: "/lab" },
+    },
+  },
+  resourceHierarchyProviders: {
+    ticket: {
+      resourceKind: "ticket",
+      parent: (_ctx, resource) => (resource.id === "root" ? null : null),
+    },
+  },
+});
+
+void compositionExtension;
+
+const navigationTarget: WorkbenchNavigationTarget = {
+  modeId: "review",
+  resource: { type: "ticket", id: "PS-1" },
+  replaceActive: true,
+};
+void navigationTarget;
+
+const invalidCompositionPanel: CompositionPanelContribution = {
+  title: "Chrome",
+  supportedRegions: [
+    // @ts-expect-error composition panels accept only the four docked regions
+    "activity",
+  ],
+  webview: { entry: packageAsset("./chrome.tsx", import.meta.url) },
+};
+void invalidCompositionPanel;
+
+const invalidRecipePlacement: ModePlacementContribution = {
+  // @ts-expect-error mode recipes accept only the four docked regions
+  region: "overlay",
+};
+void invalidRecipePlacement;
+
+// @ts-expect-error local events use typed refs; raw strings must be namespaced
+const invalidLocalEventReference: RendererEventReference = "changed";
+void invalidLocalEventReference;

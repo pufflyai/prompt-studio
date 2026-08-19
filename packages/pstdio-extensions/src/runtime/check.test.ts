@@ -262,6 +262,9 @@ describe("checkExtensionHostCompatibility", () => {
       schedules: [],
       artifactMounts: [],
       modes: [],
+      resourceKinds: [],
+      resourcePanels: [],
+      resourceHierarchyProviders: [],
       panels: [
         {
           id: "lab.panel",

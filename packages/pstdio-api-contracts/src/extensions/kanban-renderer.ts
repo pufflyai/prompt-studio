@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
+import { extensionRendererRecordBaseSchema } from "./renderers";
 
 const kanbanRendererEnumOptionSchema = z.object({
   value: z.string(),
@@ -85,15 +86,10 @@ const extensionKanbanRendererRowActionSchema = z.object({
   destructive: z.boolean().optional(),
 });
 
-export const extensionKanbanRendererRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
+export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   extensionInstanceId: z.string().optional(),
-  title: localizableStringSchema,
-  resourceKind: z.string().optional(),
   attributes: z.array(kanbanRendererAttributeSchema).optional(),
   queryHandlerId: z.string(),
-  refreshEventIds: z.array(z.string().min(1)).optional(),
   attributeChangeHandlerId: z.string().optional(),
   reorderHandlerId: z.string().optional(),
   columnActionHandlerId: z.string().optional(),
@@ -104,8 +100,6 @@ export const extensionKanbanRendererRecordSchema = z.object({
   defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
   defaultViews: z.array(kanbanRendererSavedViewSchema).optional(),
   defaultActiveViewId: z.string().optional(),
-  emptyTitle: localizableStringSchema.optional(),
-  emptyDescription: localizableStringSchema.optional(),
   hideToolbar: z.boolean().optional(),
 });
 

@@ -1,6 +1,5 @@
-import type { Localizable } from "../l10n";
 import type { RendererCallback } from "./context";
-import type { EventRef } from "./events";
+import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
 export type FileRendererResourceRef = ResourceRef;
@@ -40,12 +39,8 @@ export interface FileRendererSaveParams {
   content: string;
 }
 
-export interface FileRendererContribution {
-  title: Localizable<string>;
-  icon?: string;
-  resourceKind?: string;
+export interface FileRendererContribution extends RendererContributionBase {
   load: RendererCallback<FileRendererLoadParams, FileRendererLoadResult>;
-  refreshEvents?: readonly (EventRef | string)[];
   // Omit to make the renderer read-only. Images are always read-only regardless.
   save?: RendererCallback<FileRendererSaveParams, unknown>;
 }

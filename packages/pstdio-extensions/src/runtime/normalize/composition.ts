@@ -1,0 +1,294 @@
+import type {
+  ModePlacementContribution,
+  ModeResourceRecipeContribution,
+  ResourceHierarchyProvider,
+  ResourceKindContribution,
+  ResourcePanelContribution,
+} from "@pstdio/sdk/extensions";
+import type { NormalizedExtension, RuntimePanelRecord } from "../../types/runtime";
+import { createDiagnostic } from "../diagnostics";
+import type { LoadedExtensionSource } from "../loader";
+import { type Accumulator, isRecord } from "./accumulator";
+import { contributionId, resolveContributionReference } from "./references";
+
+const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, localId: string) => ({
+  id: contributionId(ext, localId),
+  localId,
+  extensionId: ext.id,
+  name: ext.name,
+  sourcePath: source.sourcePath,
+});
+
+export const collectCompositionContributions = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  runtime: Accumulator,
+) => {
+  for (const [localId, contribution] of Object.entries(source.definition.resourceKinds ?? {})) {
+    if (!isRecord(contribution) || !isRecord(contribution.slots) || typeof contribution.surface !== "string") continue;
+    runtime.resourceKinds.push({
+      ...recordBase(ext, source, localId),
+      contribution: contribution as unknown as ResourceKindContribution,
+    });
+  }
+
+  for (const [localId, contribution] of Object.entries(source.definition.resourcePanels ?? {})) {
+    if (
+      !isRecord(contribution) ||
+      typeof contribution.resourceKind !== "string" ||
+      typeof contribution.panel !== "string" ||
+      typeof contribution.slot !== "string"
+    ) {
+      continue;
+    }
+    runtime.resourcePanels.push({
+      ...recordBase(ext, source, localId),
+      resourceKindId: resolveContributionReference(ext, contribution.resourceKind),
+      panelId: resolveContributionReference(ext, contribution.panel),
+      slotId: contribution.slot,
+      contribution: contribution as unknown as ResourcePanelContribution,
+    });
+  }
+
+  for (const [localId, provider] of Object.entries(source.definition.resourceHierarchyProviders ?? {})) {
+    if (!isRecord(provider) || typeof provider.resourceKind !== "string" || typeof provider.parent !== "function")
+      continue;
+    runtime.resourceHierarchyProviders.push({
+      ...recordBase(ext, source, localId),
+      resourceKindId: resolveContributionReference(ext, provider.resourceKind),
+      provider: provider as unknown as ResourceHierarchyProvider,
+    });
+  }
+};
+
+const addDiagnostic = (
+  runtime: Accumulator,
+  record: { extensionId: string; sourcePath: string; id: string },
+  code: string,
+  failedReference: string,
+  message: string,
+) => {
+  runtime.diagnostics.push(
+    createDiagnostic({
+      code,
+      message,
+      extensionId: record.extensionId,
+      sourcePath: record.sourcePath,
+      metadata: { contributionId: record.id, failedReference },
+    }),
+  );
+};
+
+const panelRegions = (panel: RuntimePanelRecord) => {
+  const contribution = panel.contribution;
+  return "supportedRegions" in contribution ? contribution.supportedRegions : [contribution.region];
+};
+
+const validatesPanelPlacement = (
+  runtime: Accumulator,
+  mode: { extensionId: string; sourcePath: string; id: string },
+  panelId: string,
+  placement: ModePlacementContribution,
+) => {
+  const panel = runtime.panels.find((candidate) => candidate.id === panelId);
+  if (!panel) {
+    addDiagnostic(
+      runtime,
+      mode,
+      "extension_panel_missing",
+      panelId,
+      `Mode "${mode.id}" references unknown panel "${panelId}"`,
+    );
+    return false;
+  }
+  const unsupported = [placement.region, ...(placement.allowedRegions ?? [])].find(
+    (region) => !panelRegions(panel).includes(region),
+  );
+  if (unsupported) {
+    addDiagnostic(
+      runtime,
+      mode,
+      "extension_panel_region_unsupported",
+      `${panelId}:${unsupported}`,
+      `Panel "${panelId}" does not support region "${unsupported}"`,
+    );
+    return false;
+  }
+  return true;
+};
+
+const validateResourcePanels = (runtime: Accumulator) => {
+  const valid = [] as typeof runtime.resourcePanels;
+  for (const edge of runtime.resourcePanels) {
+    const kind = runtime.resourceKinds.find((candidate) => candidate.id === edge.resourceKindId);
+    const panel = runtime.panels.find((candidate) => candidate.id === edge.panelId);
+    if (!kind) {
+      addDiagnostic(
+        runtime,
+        edge,
+        "extension_resource_kind_missing",
+        edge.resourceKindId,
+        `Unknown resource kind "${edge.resourceKindId}"`,
+      );
+      continue;
+    }
+    if (!panel) {
+      addDiagnostic(runtime, edge, "extension_panel_missing", edge.panelId, `Unknown panel "${edge.panelId}"`);
+      continue;
+    }
+    const slot = kind.contribution.slots[edge.slotId];
+    if (!slot) {
+      addDiagnostic(runtime, edge, "extension_resource_slot_missing", edge.slotId, `Unknown slot "${edge.slotId}"`);
+      continue;
+    }
+    if (edge.extensionId !== kind.extensionId && (!slot.external || edge.slotId === "primary")) {
+      addDiagnostic(
+        runtime,
+        edge,
+        "extension_resource_slot_closed",
+        edge.slotId,
+        `Slot "${edge.slotId}" is closed to external panels`,
+      );
+      continue;
+    }
+    valid.push(edge);
+  }
+  runtime.resourcePanels = valid;
+};
+
+const validateModeRecipe = (
+  runtime: Accumulator,
+  mode: (typeof runtime.modes)[number],
+  rawKindId: string,
+  recipe: ModeResourceRecipeContribution,
+) => {
+  const ext = runtime.extensions.find((candidate) => candidate.id === mode.extensionId);
+  if (!ext) return;
+  const kindId = resolveContributionReference(ext, rawKindId);
+  const kind = runtime.resourceKinds.find((candidate) => candidate.id === kindId);
+  if (!kind) {
+    addDiagnostic(
+      runtime,
+      mode,
+      "extension_mode_resource_unsupported",
+      kindId,
+      `Mode "${mode.id}" references unsupported resource kind "${kindId}"`,
+    );
+    return;
+  }
+
+  for (const [slotId, placement] of Object.entries(recipe.slots ?? {})) {
+    const slot = kind.contribution.slots[slotId];
+    if (!slot) {
+      addDiagnostic(
+        runtime,
+        mode,
+        "extension_resource_slot_missing",
+        slotId,
+        `Mode "${mode.id}" references unknown slot "${slotId}"`,
+      );
+      continue;
+    }
+    if (placement.required && slot.cardinality === "many") {
+      addDiagnostic(
+        runtime,
+        mode,
+        "extension_placement_required_invalid",
+        slotId,
+        `Required slot "${slotId}" has cardinality many`,
+      );
+    }
+    for (const edge of runtime.resourcePanels.filter(
+      (candidate) => candidate.resourceKindId === kindId && candidate.slotId === slotId,
+    )) {
+      validatesPanelPlacement(runtime, mode, edge.panelId, placement);
+    }
+  }
+
+  for (const [rawPanelId, placement] of Object.entries(recipe.panels ?? {})) {
+    const panelId = resolveContributionReference(ext, rawPanelId);
+    const edge = runtime.resourcePanels.find(
+      (candidate) => candidate.resourceKindId === kindId && candidate.panelId === panelId,
+    );
+    if (!edge) {
+      const panelExists = runtime.panels.some((candidate) => candidate.id === panelId);
+      addDiagnostic(
+        runtime,
+        mode,
+        panelExists ? "extension_mode_resource_unsupported" : "extension_panel_missing",
+        panelId,
+        `Panel "${panelId}" is not registered for resource kind "${kindId}"`,
+      );
+      continue;
+    }
+    validatesPanelPlacement(runtime, mode, panelId, placement);
+  }
+
+  if (kind.contribution.surface === "primary") {
+    const slotMain = Object.entries(recipe.slots ?? {}).filter(
+      ([slotId, placement]) => slotId === "primary" && placement.region === "main",
+    ).length;
+    const panelMain = Object.entries(recipe.panels ?? {}).filter(([rawPanelId, placement]) => {
+      const panelId = resolveContributionReference(ext, rawPanelId);
+      return (
+        placement.region === "main" &&
+        runtime.resourcePanels.some(
+          (candidate) =>
+            candidate.resourceKindId === kindId && candidate.panelId === panelId && candidate.slotId === "primary",
+        )
+      );
+    }).length;
+    if (slotMain + panelMain !== 1) {
+      addDiagnostic(
+        runtime,
+        mode,
+        "extension_resource_primary_invalid",
+        kindId,
+        `Primary resource "${kindId}" must have exactly one main placement`,
+      );
+    }
+  }
+};
+
+export const validateCompositionRelationships = (runtime: Accumulator) => {
+  for (const kind of runtime.resourceKinds) {
+    if (
+      kind.contribution.surface === "primary" &&
+      (kind.contribution.slots.primary?.cardinality !== "one" ||
+        Object.entries(kind.contribution.slots).filter(([slotId]) => slotId === "primary").length !== 1)
+    ) {
+      addDiagnostic(
+        runtime,
+        kind,
+        "extension_resource_primary_invalid",
+        kind.id,
+        `Primary resource "${kind.id}" must declare one primary slot with cardinality one`,
+      );
+    }
+  }
+
+  validateResourcePanels(runtime);
+
+  for (const mode of runtime.modes) {
+    const ext = runtime.extensions.find((candidate) => candidate.id === mode.extensionId);
+    if (!ext) continue;
+    for (const [resourceKind, recipe] of Object.entries(mode.contribution.resources ?? {})) {
+      validateModeRecipe(runtime, mode, resourceKind, recipe);
+    }
+    for (const [panelReference, placement] of Object.entries(mode.contribution.modePanels ?? {})) {
+      validatesPanelPlacement(runtime, mode, resolveContributionReference(ext, panelReference), placement);
+    }
+  }
+
+  for (const provider of runtime.resourceHierarchyProviders) {
+    if (!runtime.resourceKinds.some((kind) => kind.id === provider.resourceKindId)) {
+      addDiagnostic(
+        runtime,
+        provider,
+        "extension_resource_kind_missing",
+        provider.resourceKindId,
+        `Unknown resource kind "${provider.resourceKindId}"`,
+      );
+    }
+  }
+};

@@ -1,3 +1,4 @@
+import { dockedWorkbenchRegions } from "@pstdio/sdk/extensions";
 import type {
   NormalizedExtension,
   RuntimeActivityItemRecord,
@@ -11,10 +12,9 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { isLocalizableString } from "./localizable";
+import { contributionId, resolveContributionReference } from "./references";
 import { hasCompatibleSlotKind } from "./slot-kind";
 import { hasCompatibleWorkbenchTarget, hasRequiredWorkbenchTarget } from "./workbench-targets";
-
-const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
 const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => ({
   extensionId: ext.id,
@@ -24,11 +24,6 @@ const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => (
 const hasEmptyEligibleLocations = (panel: Record<string, unknown>) => {
   const eligibleLocations = panel.eligibleLocations;
   return isRecord(eligibleLocations) && Object.keys(eligibleLocations).length === 0;
-};
-
-const resolveRendererId = (ext: NormalizedExtension, localOrFullId: string) => {
-  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
-  return id;
 };
 
 const rendererRecords = (runtime: Accumulator, kind: string) => {
@@ -53,7 +48,7 @@ const rendererBodyResolves = (
   const kind = panel.renderer.kind;
   const localId = panel.renderer.id;
   if (typeof kind !== "string" || typeof localId !== "string") return false;
-  const rendererId = resolveRendererId(ext, localId);
+  const rendererId = resolveContributionReference(ext, localId);
   if (rendererRecords(runtime, kind).some((renderer) => renderer.id === rendererId)) return true;
   runtime.diagnostics.push(
     createDiagnostic({
@@ -89,11 +84,21 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
 
     if (!rendererBodyResolves(ext, source, runtime, panel, id)) continue;
 
-    if (typeof panel.region !== "string" || typeof panel.closable !== "boolean") {
+    // During the composition rollout both panel shapes are valid: the replacement
+    // capability shape (supportedRegions) and the legacy alpha shape (region + closable).
+    // PS-270 deletes the legacy shape.
+    const supportedRegions = Array.isArray(panel.supportedRegions) ? panel.supportedRegions : null;
+    const hasCapabilityContract =
+      supportedRegions !== null &&
+      supportedRegions.length > 0 &&
+      supportedRegions.every((region) => (dockedWorkbenchRegions as readonly string[]).includes(region as string));
+    const hasLegacyContract = typeof panel.region === "string" && typeof panel.closable === "boolean";
+
+    if (!hasCapabilityContract && !hasLegacyContract) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_panel_contract_invalid",
-          message: `Panel "${id}" must declare region and closable`,
+          message: `Panel "${id}" must declare docked supportedRegions, or the legacy region and closable fields`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },

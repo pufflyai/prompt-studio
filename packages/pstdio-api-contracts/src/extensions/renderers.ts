@@ -1,27 +1,27 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
 
-export const extensionTreeRendererRecordSchema = z.object({
+export const extensionRendererRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  bodyHandlerId: z.string(),
+  resourceKind: z.string().optional(),
   refreshEventIds: z.array(z.string().min(1)).optional(),
+  emptyTitle: localizableStringSchema.optional(),
+  emptyDescription: localizableStringSchema.optional(),
+});
+
+export const extensionTreeRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  bodyHandlerId: z.string(),
   childrenHandlerId: z.string().optional(),
   footerHandlerId: z.string().optional(),
   defaultExpandedSectionIds: z.array(z.string()).optional(),
   defaultExpandedNodeIds: z.array(z.string()).optional(),
 });
 
-export const extensionFileRendererRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  title: localizableStringSchema,
-  icon: z.string().optional(),
-  resourceKind: z.string().optional(),
+export const extensionFileRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   loadHandlerId: z.string(),
-  refreshEventIds: z.array(z.string().min(1)).optional(),
   saveHandlerId: z.string().optional(),
 });
 

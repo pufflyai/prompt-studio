@@ -64,4 +64,36 @@ describe("renderer-backed panels", () => {
     expect(runtime.panels).toEqual([]);
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_renderer_missing" }));
   });
+
+  test("accepts the composition capability shape and rejects a panel with neither shape", () => {
+    const runtime = normalizeExtensionSources([
+      wrap(
+        defineExtension({
+          kanbanRenderers: {
+            tickets: { title: "Tickets", query: async () => ({ rows: [] }) },
+          },
+          panels: {
+            capability: {
+              title: "Tickets",
+              supportedRegions: ["main", "side"],
+              renderer: { kind: "kanban", id: "tickets" },
+            },
+            legacy: {
+              title: "Tickets legacy",
+              region: "main",
+              closable: false,
+              renderer: { kind: "kanban", id: "tickets" },
+            },
+            invalid: {
+              title: "No placement contract",
+              renderer: { kind: "kanban", id: "tickets" },
+            } as never,
+          },
+        }),
+      ),
+    ]);
+
+    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["capability", "legacy"]);
+    expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_contract_invalid" }));
+  });
 });

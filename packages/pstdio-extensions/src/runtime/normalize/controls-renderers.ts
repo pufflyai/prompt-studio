@@ -4,8 +4,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { isLocalizableString } from "./localizable";
 import { registerPrivateHandler } from "./private-handlers";
-
-const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
+import { contributionId } from "./references";
 
 const isValidControlsRenderer = (contribution: unknown) => {
   if (!isRecord(contribution) || !isLocalizableString(contribution.title)) return false;

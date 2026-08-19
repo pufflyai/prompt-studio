@@ -15,6 +15,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
+import { isLegacyPanelContribution } from "../../runtime/panel-shape";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
@@ -171,6 +172,9 @@ const toPanelRecord = (
   input: CreateWorkbenchExtensionMetadataInput,
   panel: ExtensionRuntime["panels"][number],
 ): WorkbenchExtensionMetadata["panels"][number] | null => {
+  // Composition capability panels are serialized by the replacement metadata (PS-270).
+  // The legacy record shape requires region and closable.
+  if (!isLegacyPanelContribution(panel.contribution)) return null;
   const body = toPanelBody(input, panel, panel.contribution);
   if (!body) return null;
   const panelMenus = Object.entries(panel.contribution.panelMenus ?? {}).flatMap(([localId, menu]) => {

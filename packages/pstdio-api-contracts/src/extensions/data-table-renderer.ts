@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
+import { extensionRendererRecordBaseSchema } from "./renderers";
 
 const themeColorSchema = z.object({
   light: z.string(),
@@ -53,22 +54,15 @@ const selectionActionSchema = z.object({
   commandId: z.string(),
 });
 
-export const extensionDataTableRendererRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  title: localizableStringSchema,
-  resourceKind: z.string().optional(),
+export const extensionDataTableRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryHandlerId: z.string(),
-  refreshEventIds: z.array(z.string().min(1)).optional(),
   selectionMode: z.enum(["none", "multiple"]).optional(),
   selectionActions: z.array(selectionActionSchema).optional(),
   rowActions: z.array(rowActionSchema).optional(),
   rowActivationHandlerId: z.string().optional(),
   initialPageSize: z.number().int().positive().optional(),
   pageSizeOptions: z.array(z.number().int().positive()).optional(),
-  emptyTitle: localizableStringSchema.optional(),
-  emptyDescription: localizableStringSchema.optional(),
 });
 
 export type ExtensionDataTableRendererRecord = z.infer<typeof extensionDataTableRendererRecordSchema>;

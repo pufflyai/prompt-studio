@@ -67,8 +67,7 @@ type ExtensionAuthoringDefinition<
 
 /**
  * Identity helper that types the passed contributions. Authors get autocomplete on
- * contributions, and `commandsOf(packageName, ext)` can derive typed refs from the
- * returned definition. Extension identity (id, name, version, description, publisher,
+ * contributions. Extension identity (id, name, version, description, publisher,
  * engines.pstdio) lives in package.json.
  *
  * @example

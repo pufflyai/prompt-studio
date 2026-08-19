@@ -8,6 +8,8 @@ import {
   localizableStringSchema,
   workbenchExtensionWebviewSchema,
 } from "./common";
+import { extensionModeCompositionRecordSchema } from "./composition";
+import { extensionResourceRefSchema } from "./execute";
 import { workbenchRegionSchema, workbenchTreeTargetSchema } from "./targets";
 
 const hasSinglePanelBody = (value: { webview?: unknown; renderer?: unknown }) =>
@@ -79,6 +81,7 @@ const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("panel"), panelId: z.string() }),
   z.object({ kind: z.literal("route"), route: z.string() }),
   z.object({ kind: z.literal("href"), href: z.string() }),
+  z.object({ kind: z.literal("resource"), resource: extensionResourceRefSchema }),
 ]);
 
 export const extensionActivityItemRecordSchema = z.object({
@@ -121,15 +124,17 @@ export const modeLayoutContributionRecordSchema = z.object({
   open: z.array(modeTargetContributionRecordSchema).optional(),
 });
 
-export const extensionModeRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  modeId: z.string(),
-  label: localizableStringSchema,
-  icon: z.string().optional(),
-  resourceKind: z.string().optional(),
-  layout: modeLayoutContributionRecordSchema.optional(),
-});
+export const extensionModeRecordSchema = z
+  .object({
+    id: z.string(),
+    extensionId: z.string(),
+    modeId: z.string(),
+    label: localizableStringSchema,
+    icon: z.string().optional(),
+    resourceKind: z.string().optional(),
+    layout: modeLayoutContributionRecordSchema.optional(),
+  })
+  .extend(extensionModeCompositionRecordSchema.partial().shape);
 
 export const workbenchExtensionPanelRecordSchema = extensionPanelRecordBaseSchema
   .extend({

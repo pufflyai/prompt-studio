@@ -9,11 +9,17 @@ import type {
   WorkbenchTreeTarget,
 } from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
+import type {
+  DockedWorkbenchRegion,
+  ModeDefaultResource,
+  ModePlacementContribution,
+  ModeResourceRecipeContribution,
+} from "./composition";
 import type { RendererCallback } from "./context";
-import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
+import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { PackageAssetDescriptor, RendererContext, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
 import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
@@ -83,6 +89,7 @@ export interface TreeItemContribution<TParams extends Struct = Struct> {
       }
     | { kind: "panel"; panel: string }
     | { kind: "route"; route: string }
+    | { kind: "resource"; resource: ResourceRef }
     | { kind: "href"; href: string };
 }
 
@@ -115,6 +122,10 @@ export interface ModeContribution {
   icon?: string;
   resourceKind?: string;
   layout?: ModeLayoutContribution;
+  /** Replacement composition recipes. Keys are local or namespaced resource-kind ids. */
+  resources?: Record<string, ModeResourceRecipeContribution>;
+  modePanels?: Record<string, ModePlacementContribution>;
+  defaultResource?: ModeDefaultResource;
 }
 
 export interface WebviewContribution {
@@ -128,7 +139,7 @@ export interface WorkbenchLocationEligibility {
   resourceKinds?: readonly string[];
 }
 
-export interface PanelContributionBase {
+export interface LegacyPanelContributionBase {
   title: Localizable<string>;
   /** Icon shown on the panel's tab and on resources opened for the panel. */
   icon?: string;
@@ -172,8 +183,17 @@ type PanelBody =
       renderer: RendererRef;
     };
 
+export interface CompositionPanelContributionBase {
+  title: Localizable<string>;
+  icon?: string;
+  supportedRegions: readonly DockedWorkbenchRegion[];
+  panelMenus?: Record<string, PanelMenuContribution>;
+}
+
 export type PanelMenuContribution = PanelMenuContributionBase & PanelBody;
-export type PanelContribution = PanelContributionBase & PanelBody;
+export type LegacyPanelContribution = LegacyPanelContributionBase & PanelBody;
+export type CompositionPanelContribution = CompositionPanelContributionBase & PanelBody;
+export type PanelContribution = LegacyPanelContribution | CompositionPanelContribution;
 
 export interface RouteContribution {
   path: string;
@@ -328,12 +348,9 @@ export type KanbanRendererRowActivationHandler = RendererCallback<
   undefined | ExtensionNavigationTarget
 >;
 
-export interface KanbanRendererContribution {
-  title: Localizable<string>;
-  resourceKind?: string;
+export interface KanbanRendererContribution extends RendererContributionBase {
   attributes?: KanbanRendererAttributeDescriptor[];
   query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
-  refreshEvents?: readonly (EventRef | string)[];
   onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
   onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
   onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
@@ -344,8 +361,6 @@ export interface KanbanRendererContribution {
   defaultFilters?: KanbanRendererFilterState;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
-  emptyTitle?: Localizable<string>;
-  emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
 }
 
@@ -382,8 +397,10 @@ export interface CommandPaletteResourceQueryResult {
 export interface CommandPaletteResourceContribution {
   title: Localizable<string>;
   resourceKind?: string;
-  queryCommand: CommandRef<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult> | string;
-  refreshEvents?: readonly (EventRef | string)[];
+  queryCommand:
+    | CommandRef<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult>
+    | `${string}.${string}`;
+  refreshEvents?: readonly RendererEventReference[];
 }
 
 export type ExtensionSettingScope = "global" | "project";

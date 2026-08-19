@@ -5,6 +5,7 @@ import { registerAppearance } from "./appearance";
 import { registerArtifactMounts } from "./artifact-mounts";
 import { registerCommandPaletteResources } from "./command-palette-resources";
 import { registerCommands } from "./commands";
+import { collectCompositionContributions, validateCompositionRelationships } from "./composition";
 import { registerContent } from "./content";
 import { registerControlsRenderers } from "./controls-renderers";
 import { registerDataTableRenderers } from "./data-table-renderers";
@@ -89,6 +90,7 @@ export const normalizeExtensionSources = (
     validateExtensionDefinition(ext, source, runtime);
 
     registerCommands(ext, source, runtime, index);
+    collectCompositionContributions(ext, source, runtime);
     registerKeybindings(ext, source, runtime, index);
     registerMiddlewares(ext, source, runtime);
     registerHooks(ext, source, runtime);
@@ -109,6 +111,8 @@ export const normalizeExtensionSources = (
     registerProviders(ext, source, runtime);
     registerWebviewValidation(ext, source, runtime);
   }
+
+  validateCompositionRelationships(runtime);
 
   return runtime;
 };

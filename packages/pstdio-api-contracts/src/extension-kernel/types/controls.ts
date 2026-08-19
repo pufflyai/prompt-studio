@@ -1,7 +1,6 @@
-import type { Localizable } from "../l10n";
 import type { RendererCallback } from "./context";
-import type { EventRef } from "./events";
 import type { JsonValue } from "./json";
+import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
 export type ControlsResourceRef = ResourceRef;
@@ -43,14 +42,10 @@ export interface ControlsResetInput {
  * A `panel` places the renderer with `renderer: { kind: "controls", id: "<id>" }`, mirroring
  * `treeRenderer`/`fileRenderer` — the panel owns placement (resourceKind, surface, target).
  */
-export interface ControlsRendererContribution {
-  title: Localizable<string>;
+export interface ControlsRendererContribution extends RendererContributionBase {
   query: RendererCallback<ControlsQueryParams, ControlsQueryResult>;
   onValueChange?: RendererCallback<ControlsUpdateValueInput, unknown>;
   onApply?: RendererCallback<ControlsApplyInput, unknown>;
   onReset?: RendererCallback<ControlsResetInput, unknown>;
-  refreshEvents?: readonly (EventRef | string)[];
   defaultValues?: Record<string, JsonValue>;
-  emptyTitle?: Localizable<string>;
-  emptyDescription?: Localizable<string>;
 }

@@ -1,18 +1,12 @@
 import { z } from "zod";
-import { localizableStringSchema } from "./common";
+import { extensionRendererRecordBaseSchema } from "./renderers";
 
-export const extensionControlsRendererRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  title: localizableStringSchema,
+export const extensionControlsRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   queryHandlerId: z.string(),
   valueChangeHandlerId: z.string().optional(),
   applyHandlerId: z.string().optional(),
   resetHandlerId: z.string().optional(),
-  refreshEventIds: z.array(z.string().min(1)).optional(),
   defaultValues: z.record(z.string(), z.unknown()).optional(),
-  emptyTitle: localizableStringSchema.optional(),
-  emptyDescription: localizableStringSchema.optional(),
 });
 
 export type ExtensionControlsRendererRecord = z.infer<typeof extensionControlsRendererRecordSchema>;

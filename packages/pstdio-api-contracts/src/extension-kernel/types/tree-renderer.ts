@@ -1,10 +1,10 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
-import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
+import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
 export type TreeRendererResourceRef = ResourceRef;
@@ -91,11 +91,8 @@ export interface TreeViewSection {
   canHide?: boolean;
 }
 
-export interface TreeRendererContribution {
-  title: Localizable<string>;
-  icon?: string;
+export interface TreeRendererContribution extends RendererContributionBase {
   body: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
-  refreshEvents?: readonly (EventRef | string)[];
   children?: RendererCallback<TreeRendererChildrenParams, TreeNode[]>;
   footer?: RendererCallback<TreeRendererQueryParams, TreeNode[]>;
   defaultExpandedSectionIds?: string[];

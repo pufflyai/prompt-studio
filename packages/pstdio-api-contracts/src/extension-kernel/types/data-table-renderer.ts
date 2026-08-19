@@ -1,9 +1,9 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
-import type { EventRef } from "./events";
 import type { JsonValue, Struct } from "./json";
 import type { ExtensionNavigationTarget } from "./navigation-target";
+import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
 export type DataTableRendererResourceRef = ResourceRef;
@@ -76,18 +76,13 @@ export type DataTableRendererRowActivationHandler = RendererCallback<
   undefined | ExtensionNavigationTarget
 >;
 
-export interface DataTableRendererContribution {
-  title: Localizable<string>;
-  resourceKind?: string;
+export interface DataTableRendererContribution extends RendererContributionBase {
   columns?: DataTableRendererColumn[];
   query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;
-  refreshEvents?: readonly (EventRef | string)[];
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableRendererSelectionAction[];
   rowActions?: DataTableRendererRowAction[];
   onRowActivate?: DataTableRendererRowActivationHandler;
   initialPageSize?: number;
   pageSizeOptions?: number[];
-  emptyTitle?: Localizable<string>;
-  emptyDescription?: Localizable<string>;
 }

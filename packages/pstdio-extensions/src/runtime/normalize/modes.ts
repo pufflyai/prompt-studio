@@ -3,8 +3,7 @@ import type { NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { isLocalizableString } from "./localizable";
-
-const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
+import { contributionId } from "./references";
 
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, mode] of Object.entries(source.definition.modes ?? {})) {

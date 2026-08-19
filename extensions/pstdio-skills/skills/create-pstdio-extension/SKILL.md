@@ -34,7 +34,7 @@ metadata:
    - Export a single default `defineExtension({ ... })` value from `extension.ts`.
    - Use `packageAsset()` for every shipped file or directory asset.
    - Keep package asset paths relative and inside the extension package.
-   - Prefer typed refs from `commandRef`, `commandsOf`, `eventRef`, and kernel events over string ids when possible.
+   - Prefer typed refs from `commandRef`, `eventRef`, and kernel events over string ids when possible.
 4. Test the change following the repo's testing conventions.
    - For behavior changes, add or update the tests that cover the new behavior.
    - Put tests next to the behavior they cover.

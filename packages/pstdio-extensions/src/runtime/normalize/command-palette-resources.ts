@@ -3,8 +3,7 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
 import { isLocalizableString } from "./localizable";
-
-const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
+import { contributionId } from "./references";
 
 export const registerCommandPaletteResources = (
   ext: NormalizedExtension,

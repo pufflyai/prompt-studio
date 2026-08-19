@@ -291,6 +291,9 @@ const createTreeNode = (input: {
     };
   }
 
+  // Browse-root resource actions are wired by the navigation rollout (PS-269).
+  if (action.kind !== "route") return null;
+
   const route = metadata.routes.find((candidate) => candidate.path === action.route);
   if (!route) return null;
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { eventRef, packageAsset } from "@pstdio/sdk/extensions";
+import { commandRef, eventRef, packageAsset, type RendererEventReference } from "@pstdio/sdk/extensions";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
@@ -159,7 +159,7 @@ describe("createWorkbenchExtensionMetadata", () => {
 describe("createWorkbenchExtensionMetadata renderer refresh events", () => {
   test("normalizes typed and string event references once for every native renderer", () => {
     const changed = eventRef("lab.changed");
-    const refreshEvents = [changed, "external.changed", changed, ""] as const;
+    const refreshEvents = [changed, "external.changed", changed, ""] as unknown as RendererEventReference[];
     const runtime = normalizeExtensionSources([
       {
         sourcePath,
@@ -223,7 +223,7 @@ describe("createWorkbenchExtensionMetadata command records", () => {
             tickets: {
               title: "Tickets",
               resourceKind: "ticket",
-              queryCommand: "queryTickets",
+              queryCommand: commandRef("queryTickets"),
               refreshEvents: ["lab.ticket.changed"],
             },
           },
