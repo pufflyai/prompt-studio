@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createResourceRegistry } from "./resource-registry";
+import { createResourceRegistry, type ResourceHierarchyCycle } from "./resource-registry";
 
 const panelInstance = (id: string) => ({ instanceId: id, panelId: "test-panel", closable: false });
 
@@ -57,8 +57,11 @@ describe("createResourceRegistry hierarchy", () => {
       canResolve: (resource) => resource.kind === "ticket",
       getParent: (resource) => parents.get(resource.uri),
     });
+    const cycles: ResourceHierarchyCycle[] = [];
+    resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
 
     expect(resources.walkHierarchy(child)).toEqual([tickets, parent, child]);
+    expect(cycles).toEqual([]);
   });
 
   test("does not resolve hierarchy providers for a null selection", () => {
@@ -78,18 +81,44 @@ describe("createResourceRegistry hierarchy", () => {
     expect(reads).toBe(0);
   });
 
-  test("stops at a repeated resource edge", () => {
+  test("stops at a repeated resource edge with the acyclic prefix and reports the cycle", () => {
     const resources = createResourceRegistry();
     const parent = { kind: "ticket", uri: "pstdio://ticket/parent" };
     const child = { kind: "ticket", uri: "pstdio://ticket/child" };
+    const cycles: ResourceHierarchyCycle[] = [];
 
     resources.registerHierarchyProvider({
       id: "tickets",
       canResolve: () => true,
       getParent: (resource) => (resource.uri === child.uri ? parent : child),
     });
+    resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
 
     expect(resources.walkHierarchy(child)).toEqual([parent, child]);
+    expect(cycles).toEqual([
+      {
+        code: "resource_hierarchy_cycle",
+        path: [parent, child],
+        repeatedUri: child.uri,
+      },
+    ]);
+  });
+
+  test("stops listening for cycles after the subscription is disposed", () => {
+    const resources = createResourceRegistry();
+    const ticket = { kind: "ticket", uri: "pstdio://ticket/self" };
+    const cycles: ResourceHierarchyCycle[] = [];
+
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: () => true,
+      getParent: () => ticket,
+    });
+    const subscription = resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
+    subscription.dispose();
+
+    expect(resources.walkHierarchy(ticket)).toEqual([ticket]);
+    expect(cycles).toEqual([]);
   });
 
   test("uses the highest priority hierarchy provider that can resolve a resource", () => {

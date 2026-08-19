@@ -8,10 +8,10 @@ import {
 } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import {
-  buildDashboardExtensionTreeSections,
   clearCachedDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { buildDashboardExtensionTreeSections } from "@/shared/extensions/workbench-extension-tree-sections";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadata } from "./module-test-fixtures";

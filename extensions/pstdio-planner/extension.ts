@@ -100,7 +100,9 @@ export default defineExtension({
       // Tickets is a root item, not an entry under an "Extensions" heading.
       group: null,
       placement: "first",
-      action: { kind: "panel", panel: "tickets" },
+      // Opens the Tickets browse-root resource — the same resource ticket
+      // breadcrumbs resolve as the root of every ticket lineage.
+      action: { kind: "resource", resource: { type: "extension-view", id: "pstdio-planner.tickets" } },
     },
   },
 

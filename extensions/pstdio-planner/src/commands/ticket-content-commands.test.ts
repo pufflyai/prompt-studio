@@ -81,9 +81,10 @@ describe("ticket body file-renderer commands", () => {
     );
 
     const stored = await ticketsCollection(storage).get(ticket.id);
-    expect(stored?.content).toBe("# Renamed\nrest");
-    expect(stored?.title).toBe("Renamed");
-    expect(result).toEqual({ revision: stored?.updatedAt });
+    if (!stored) throw new Error("ticket was not stored");
+    expect(stored.content).toBe("# Renamed\nrest");
+    expect(stored.title).toBe("Renamed");
+    expect(result).toEqual({ revision: stored.updatedAt });
   });
 
   test("save-ticket-content updates the document selected on the bound ticket resource", async () => {

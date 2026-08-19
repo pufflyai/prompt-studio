@@ -224,8 +224,9 @@ describe("archive ticket", () => {
             action: async (input: unknown) => {
               notifications.push(input);
               notificationPosted.resolve();
+              return {};
             },
-          },
+          } as never,
         },
       }),
     )) as { archived: StoredTicket[] };
@@ -265,8 +266,9 @@ describe("archive ticket", () => {
           notify: {
             action: async (input: unknown) => {
               notifications.push(input);
+              return {};
             },
-          },
+          } as never,
         },
       }),
     )) as StoredTicket | null;

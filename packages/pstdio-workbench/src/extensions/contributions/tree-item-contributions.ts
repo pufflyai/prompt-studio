@@ -29,8 +29,22 @@ const targetForTreeAction = (
   if (action.kind === "command") {
     return { kind: "command", commandId: action.commandId, args: action.args };
   }
-  // Browse-root resource actions are wired by the navigation rollout (PS-269).
-  if (action.kind !== "href") return undefined;
+  if (action.kind === "resource") {
+    // Browse-root tree items open a resource directly. The URI matches the
+    // scheme extension tree renderer nodes use, so both surfaces share one
+    // identity for the same resource.
+    return {
+      kind: "resource",
+      resource: {
+        kind: action.resource.type,
+        uri: `pstdio://extension-resource/${encodeURIComponent(action.resource.type)}/${encodeURIComponent(action.resource.id)}`,
+        id: action.resource.id,
+        label: action.resource.label ?? text(item.label, item.id),
+        icon: item.icon,
+        metadata: action.resource.metadata,
+      },
+    };
+  }
   return { kind: "command", commandId: `workbench.extension.href.${item.id}`, args: { href: action.href } };
 };
 

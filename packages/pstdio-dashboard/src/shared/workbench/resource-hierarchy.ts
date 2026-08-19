@@ -34,10 +34,15 @@ export const normalizeExtensionResourceReference = (value: unknown): ExtensionRe
   };
 };
 
+export interface DashboardResourceReferenceInput {
+  projectId: string;
+  /** Icon used when the reference declares none (e.g. the registered kind's icon). */
+  fallbackIcon?: string;
+}
+
 export const dashboardResourceFromExtensionReference = (
-  ctx: WorkbenchModuleContext,
   reference: ExtensionResourceReference,
-  projectId: string,
+  input: DashboardResourceReferenceInput,
 ): ResourceRef => {
   // Extension panels are browse roots with a canonical URI; a generic
   // dashboard-workbench://extension-view/... URI would give the same view a
@@ -45,10 +50,10 @@ export const dashboardResourceFromExtensionReference = (
   if (reference.type === "extension-view") {
     return createDashboardExtensionPanelResource({
       extensionId: textValue(reference.metadata?.extensionId) ?? "",
-      icon: reference.icon,
+      icon: reference.icon ?? input.fallbackIcon,
       label: reference.label ?? reference.id,
       panelId: reference.id,
-      projectId,
+      projectId: input.projectId,
     });
   }
 
@@ -57,15 +62,19 @@ export const dashboardResourceFromExtensionReference = (
     uri: `dashboard-workbench://${reference.type}/${encodeURIComponent(reference.id)}`,
     id: reference.id,
     label: reference.label ?? reference.id,
-    icon: reference.icon ?? ctx.resources.getKind(reference.type)?.icon,
+    icon: reference.icon ?? input.fallbackIcon,
     metadata: {
       ...reference.metadata,
-      projectId,
+      projectId: input.projectId,
     },
   };
 };
 
 export const dashboardResourceParent = (ctx: WorkbenchModuleContext, resource: ResourceRef, projectId: string) => {
   const reference = normalizeExtensionResourceReference(resource.metadata?.resourceParent);
-  return reference ? dashboardResourceFromExtensionReference(ctx, reference, projectId) : undefined;
+  if (!reference) return undefined;
+  return dashboardResourceFromExtensionReference(reference, {
+    projectId,
+    fallbackIcon: ctx.resources.getKind(reference.type)?.icon,
+  });
 };

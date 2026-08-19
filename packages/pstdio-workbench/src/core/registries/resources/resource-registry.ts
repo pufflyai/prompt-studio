@@ -8,6 +8,20 @@ import {
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchPanelInstance } from "../layout/layout-types";
+import {
+  type ResolvedResourceHierarchyProvider,
+  type ResourceHierarchyCycle,
+  type ResourceHierarchyProvider,
+  sortHierarchyProviders,
+  walkResourceHierarchy,
+} from "./resource-hierarchy";
+
+export type {
+  ResolvedResourceHierarchyProvider,
+  ResourceHierarchyCycle,
+  ResourceHierarchyProvider,
+} from "./resource-hierarchy";
+export { resourceHierarchyCycleCode } from "./resource-hierarchy";
 
 export interface ResourceRef {
   kind: string;
@@ -103,15 +117,6 @@ export interface ResourceProvider {
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
 
-export interface ResourceHierarchyProvider {
-  id: string;
-  priority?: number;
-  canResolve(resource: ResourceRef): boolean;
-  getParent(resource: ResourceRef): ResourceRef | undefined;
-}
-
-export type ResolvedResourceHierarchyProvider = Required<ResourceHierarchyProvider>;
-
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
   presenters: Record<string, ResolvedResourcePresenter>;
@@ -134,6 +139,7 @@ export interface ResourceRegistry {
   registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
   listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
   walkHierarchy(resource: ResourceRef | undefined): ResourceRef[];
+  onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
   isOpeningResource(): boolean;
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<WorkbenchPanelInstance>;
   onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
@@ -141,9 +147,6 @@ export interface ResourceRegistry {
 
 const sortPresenters = (presenters: ResolvedResourcePresenter[]) =>
   [...presenters].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
-
-const sortHierarchyProviders = (providers: ResolvedResourceHierarchyProvider[]) =>
-  [...providers].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
 
 const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
   (typeof value === "object" || typeof value === "function") &&
@@ -159,6 +162,7 @@ export interface CreateResourceRegistryInput {
 
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const openListeners = new Set<(resource: ResourceRef) => void>();
+  const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const establishLocation = input.establishLocation;
   let openingResourceDepth = 0;
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
@@ -285,22 +289,16 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     walkHierarchy(resource) {
       if (!resource) return [];
 
-      const providers = sortHierarchyProviders(Object.values(store.getState().hierarchyProviders));
-      const path = [resource];
-      const visitedUris = new Set([resource.uri]);
-      let current = resource;
+      return walkResourceHierarchy(Object.values(store.getState().hierarchyProviders), resource, (cycle) => {
+        for (const listener of cycleListeners) listener(cycle);
+      });
+    },
 
-      while (true) {
-        const provider = providers.find((candidate) => candidate.canResolve(current));
-        const parent = provider?.getParent(current);
-        if (!parent || visitedUris.has(parent.uri)) break;
-
-        path.unshift(parent);
-        visitedUris.add(parent.uri);
-        current = parent;
-      }
-
-      return path;
+    onDidDetectHierarchyCycle(listener) {
+      cycleListeners.add(listener);
+      return createDisposable(() => {
+        cycleListeners.delete(listener);
+      });
     },
 
     isOpeningResource() {

@@ -1,10 +1,10 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
-  buildDashboardExtensionTreeSections,
   type DashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { buildDashboardExtensionTreeSections } from "@/shared/extensions/workbench-extension-tree-sections";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 
 interface ExtensionSidenavContributionState {
