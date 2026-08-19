@@ -195,6 +195,68 @@ describe("registerExtensionContributions", () => {
     });
   });
 
+  test("preserves file save correlation through the dashboard event feed", async () => {
+    const workbench = createWorkbenchCore();
+    const fileMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      extensions: [{ id: "pstdio.planner", name: "planner", displayName: "Planner", sourcePath: "" }],
+      fileRenderers: [
+        {
+          id: "planner.ticketContent",
+          extensionId: "pstdio.planner",
+          title: "Ticket",
+          loadHandlerId: "planner.ticket.load",
+          saveHandlerId: "planner.ticket.save",
+          refreshEventIds: ["tickets.changed"],
+        },
+      ],
+    } satisfies DashboardExtensionMetadata;
+    const refreshes: unknown[] = [];
+    workbench.renderers.onDidRefreshFileRenderer((event) => refreshes.push(event));
+    const disposable = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async (_projectId, commandId) => ({
+        commandId,
+        extensionId: "pstdio.planner",
+        eventIds: ["tickets.changed"],
+        outcome: { ok: true, status: "success", value: { revision: "3" } },
+      }),
+      metadata: fileMetadata,
+      projectId: "project-1",
+    });
+
+    try {
+      await workbench.renderers.getFileRenderer("planner.ticketContent")?.save?.(
+        {
+          kind: "ticket",
+          id: "ticket-1",
+          uri: "dashboard-workbench://ticket/ticket-1",
+        },
+        "edited",
+        {
+          rendererId: "planner.ticketContent",
+          instanceId: "planner.ticketEditor:1",
+          operationId: "save-1",
+        },
+      );
+
+      expect(refreshes).toEqual([
+        {
+          fileRendererId: "planner.ticketContent",
+          resourceUri: "dashboard-workbench://ticket/ticket-1",
+          origin: {
+            rendererId: "planner.ticketContent",
+            instanceId: "planner.ticketEditor:1",
+            operationId: "save-1",
+          },
+          revision: "3",
+        },
+      ]);
+    } finally {
+      disposeExtensionContributions(disposable);
+    }
+  });
+
   test("surfaces extension command notices from DataTable selection actions", async () => {
     const workbench = createWorkbenchCore();
     const response: CommandExecuteResponse = {

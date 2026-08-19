@@ -31,6 +31,7 @@ export {
   type WorkbenchExtensionRouteResourceInput,
 } from "./contributions/extension-contributions";
 export {
+  fileRendererRefreshEnvelopeFromCommand,
   type RegisterWorkbenchExtensionFileRenderersInput,
   registerWorkbenchExtensionFileRenderers,
 } from "./contributions/file-renderer-contributions";

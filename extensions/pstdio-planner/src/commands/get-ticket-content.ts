@@ -21,7 +21,9 @@ export const getTicketContentCommand = defineCommand({
     const documentId = selectedDocumentFromResource(ctx.resource);
     if (documentId !== TICKET_BODY_DOCUMENT) {
       const file = ticket.files?.find((entry) => entry.id === documentId);
-      if (file) return { fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER };
+      if (file) {
+        return { fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER, revision: file.updatedAt };
+      }
 
       const attachment = ticket.attachments?.find((entry) => entry.id === documentId);
       if (attachment) {
@@ -30,6 +32,6 @@ export const getTicketContentCommand = defineCommand({
       }
     }
 
-    return { content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER };
+    return { content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER, revision: ticket.updatedAt };
   },
 });

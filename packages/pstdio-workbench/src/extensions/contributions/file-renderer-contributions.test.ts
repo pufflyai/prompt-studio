@@ -172,7 +172,11 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
       },
     });
 
-    await contribution!.save!(resource, "new content");
+    await contribution!.save!(resource, "new content", {
+      rendererId: "lab.ticketContent",
+      instanceId: "lab.ticketEditor:1",
+      operationId: "save-1",
+    });
     expect(calls.at(-1)).toMatchObject({
       commandId: "lab.ticket.save",
       body: {
@@ -186,6 +190,14 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
           content: "new content",
         },
         resource: { type: "ticket", id: "ticket-1" },
+        metadata: {
+          fileRendererOrigin: {
+            rendererId: "lab.ticketContent",
+            instanceId: "lab.ticketEditor:1",
+            operationId: "save-1",
+          },
+          fileRendererResourceUri: "pstdio://ticket/ticket-1",
+        },
       },
     });
   });

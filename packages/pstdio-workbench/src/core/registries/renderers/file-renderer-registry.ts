@@ -15,6 +15,24 @@ export interface FileRendererContent {
   dataUrl?: string;
   // Shown by the editor when the content is empty (editable text only).
   placeholder?: string;
+  /** Ordered backing-store revision when one is available. */
+  revision?: string;
+}
+
+export interface FileRendererRefreshOrigin {
+  rendererId: string;
+  instanceId: string;
+  operationId: string;
+}
+
+export interface FileRendererRefreshEnvelope {
+  resourceUri?: string;
+  origin?: FileRendererRefreshOrigin;
+  revision?: string;
+}
+
+export interface FileRendererSaveResult {
+  revision?: string;
 }
 
 export interface FileRendererContribution {
@@ -25,7 +43,12 @@ export interface FileRendererContribution {
   /** Resolve the file's content (and identity) for the bound resource. */
   load(resource: ResourceRef | undefined): Promise<FileRendererContent> | FileRendererContent;
   /** Persist edited text. Absent ⇒ read-only. Never called for images. */
-  save?(resource: ResourceRef | undefined, content: string): Promise<void> | void;
+  save?(
+    resource: ResourceRef | undefined,
+    content: string,
+    origin?: FileRendererRefreshOrigin,
+    // biome-ignore lint/suspicious/noConfusingVoidType: Existing synchronous save callbacks return void.
+  ): Promise<FileRendererSaveResult | undefined> | FileRendererSaveResult | void;
 }
 
 export interface RegisteredFileRendererContribution extends FileRendererContribution, RegisteredContributionMetadata {}
@@ -34,7 +57,7 @@ export interface FileRendererStoreState {
   renderers: Record<string, RegisteredFileRendererContribution>;
 }
 
-export interface FileRendererRefreshEvent {
+export interface FileRendererRefreshEvent extends FileRendererRefreshEnvelope {
   fileRendererId: string;
 }
 
@@ -55,7 +78,7 @@ export interface FileRendererRegistry {
   setFileRendererImplementation(impl: FileRendererImplementation): void;
   getFileRenderer(id: string): RegisteredFileRendererContribution | undefined;
   listFileRenderers(): RegisteredFileRendererContribution[];
-  refreshFileRenderer(id: string): void;
+  refreshFileRenderer(id: string, event?: FileRendererRefreshEnvelope): void;
   onDidRefreshFileRenderer(listener: FileRendererRefreshListener): Disposable;
 }
 
@@ -123,9 +146,9 @@ export const createFileRendererRegistry = (input: CreateFileRendererRegistryInpu
       return Object.values(fileRendererStore.getState().renderers).sort(byContributionPriority);
     },
 
-    refreshFileRenderer(id) {
+    refreshFileRenderer(id, envelope = {}) {
       requireFileRenderer(id);
-      const event = { fileRendererId: id };
+      const event = { fileRendererId: id, ...envelope };
       for (const listener of refreshListeners) listener(event);
     },
 

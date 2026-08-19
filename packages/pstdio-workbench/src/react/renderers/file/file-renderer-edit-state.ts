@@ -9,20 +9,49 @@
 // - refresh events are deferred while a draft or save exists and coalesce
 //   into one reload after the last save settles
 
+import type {
+  FileRendererRefreshEnvelope,
+  FileRendererRefreshOrigin,
+  FileRendererSaveResult,
+} from "../../../core/registries/renderers/file-renderer-registry";
+
+export interface FileEditControllerState {
+  dirty: boolean;
+  saving: boolean;
+  saveError?: string;
+}
+
 export interface FileEditControllerInput {
+  binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceUri?: string };
   debounceMs: number;
-  load: () => void;
-  save: (value: string) => Promise<unknown>;
+  load: (event?: FileRendererRefreshEnvelope) => void;
+  save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
+  createOperationId?: () => string;
+  onStateChange?: (state: FileEditControllerState) => void;
 }
 
 export type FileEditController = ReturnType<typeof createFileEditController>;
 
 export const createFileEditController = (input: FileEditControllerInput) => {
   let baseline: string | undefined;
+  let baselineRevision: string | undefined;
   let draft: string | null = null;
-  let saving = false;
-  let refreshDeferred = false;
+  let activeSave: { value: string; origin: FileRendererRefreshOrigin } | null = null;
+  let saveError: string | undefined;
+  let deferredRevision: string | undefined;
+  let genericRefreshDeferred = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let operationSequence = 0;
+  const seenRefreshRevisions = new Set<string>();
+  const completedOperationIds = new Set<string>();
+
+  const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to save file.");
+  const getState = (): FileEditControllerState => ({
+    dirty: draft !== null || (activeSave !== null && activeSave.value !== baseline),
+    saving: activeSave !== null,
+    ...(saveError ? { saveError } : {}),
+  });
+  const notify = () => input.onStateChange?.(getState());
 
   const clearTimer = () => {
     if (timer === null) return;
@@ -30,38 +59,74 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     timer = null;
   };
 
+  const nextOperationId = () => input.createOperationId?.() ?? `file-save-${Date.now()}-${++operationSequence}`;
+
+  const hasPendingLocalState = () => draft !== null || activeSave !== null || timer !== null || Boolean(saveError);
+
+  const deferRefresh = (event: FileRendererRefreshEnvelope) => {
+    if (event.revision && (!deferredRevision || event.revision.localeCompare(deferredRevision) > 0)) {
+      deferredRevision = event.revision;
+    }
+    if (!event.revision) genericRefreshDeferred = true;
+  };
+
+  const isSelfRefresh = (event: FileRendererRefreshEnvelope) => {
+    const operationId = event.origin?.operationId;
+    if (!operationId) return false;
+    if (event.origin?.rendererId !== input.binding.rendererId) return false;
+    if (event.origin.instanceId !== input.binding.instanceId) return false;
+    return activeSave?.origin.operationId === operationId || completedOperationIds.has(operationId);
+  };
+
+  const takeDeferredRefresh = (savedRevision?: string) => {
+    if (draft !== null || activeSave) return;
+    const revision = deferredRevision;
+    const generic = genericRefreshDeferred;
+    deferredRevision = undefined;
+    genericRefreshDeferred = false;
+    if (revision && (!savedRevision || revision.localeCompare(savedRevision) > 0)) {
+      input.load({ resourceUri: input.binding.resourceUri, revision });
+      return;
+    }
+    if (generic) input.load({ resourceUri: input.binding.resourceUri });
+  };
+
   const runSave = () => {
-    if (draft === null || saving) return;
+    if (draft === null || activeSave || saveError) return;
     const value = draft;
     draft = null;
-    saving = true;
-    void Promise.resolve(input.save(value))
-      .then(
-        () => {
-          baseline = value;
-          return true;
-        },
-        () => {
-          // The file may not contain the draft; keep it unless newer edits exist.
-          if (draft === null && value !== baseline) draft = value;
-          return false;
-        },
-      )
-      .then((saved) => {
-        saving = false;
+    const origin = {
+      rendererId: input.binding.rendererId,
+      instanceId: input.binding.instanceId,
+      operationId: nextOperationId(),
+    };
+    activeSave = { value, origin };
+    notify();
+    void Promise.resolve(input.save(value, origin))
+      .then((result) => {
+        if (activeSave?.origin.operationId !== origin.operationId) return;
+        activeSave = null;
+        completedOperationIds.add(origin.operationId);
+        if (completedOperationIds.size > 20) completedOperationIds.delete(completedOperationIds.values().next().value!);
+        baseline = value;
+        baselineRevision = result?.revision ?? baselineRevision;
+        if (draft === baseline) {
+          draft = null;
+          clearTimer();
+        }
+        notify();
         if (draft !== null) {
-          // A held failed draft retries on the next edit or flush, never on its
-          // own timer, so a persistent failure cannot loop.
-          if (saved) schedule();
+          schedule();
           return;
         }
-        if (!refreshDeferred) return;
-        refreshDeferred = false;
-        // Refresh events raised while our own save ran are self-invalidation:
-        // the save already acknowledged this state, and reloading here pulls
-        // server-normalized content that remounts the editor and drops focus.
-        // Only a failed save leaves the document unknown and worth reloading.
-        if (!saved) input.load();
+        takeDeferredRefresh(result?.revision);
+      })
+      .catch((error) => {
+        if (activeSave?.origin.operationId !== origin.operationId) return;
+        activeSave = null;
+        if (draft === null) draft = value;
+        saveError = describeError(error);
+        notify();
       });
   };
 
@@ -77,24 +142,61 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     getBaseline() {
       return baseline;
     },
-    setBaseline(value: string | undefined) {
+    getState,
+    setBaseline(value: string | undefined, revision?: string) {
       baseline = value;
+      baselineRevision = revision;
+      notify();
+    },
+    acceptLoaded(value: string | undefined, revision?: string) {
+      if (hasPendingLocalState()) {
+        deferRefresh(revision ? { revision } : {});
+        return false;
+      }
+      baseline = value;
+      baselineRevision = revision;
+      notify();
+      return true;
     },
     handleChange(value: string) {
-      if (value === baseline && !saving) {
+      if (saveError && value === draft) return;
+      saveError = undefined;
+      if (value === baseline && !activeSave) {
         draft = null;
         clearTimer();
+        notify();
+        return;
+      }
+      if (activeSave?.value === value) {
+        draft = null;
+        clearTimer();
+        notify();
         return;
       }
       draft = value;
       schedule();
+      notify();
     },
-    handleRefreshEvent() {
-      if (draft !== null || saving || timer !== null) {
-        refreshDeferred = true;
+    handleRefreshEvent(event: FileRendererRefreshEnvelope = {}) {
+      if (event.resourceUri && event.resourceUri !== input.binding.resourceUri) return;
+      if (isSelfRefresh(event)) return;
+      if (event.revision && seenRefreshRevisions.has(event.revision)) return;
+      if (event.revision) seenRefreshRevisions.add(event.revision);
+      if (hasPendingLocalState()) {
+        deferRefresh(event);
         return;
       }
-      input.load();
+      if (event.revision && baselineRevision && event.revision.localeCompare(baselineRevision) <= 0) return;
+      input.load(event);
+    },
+    retry() {
+      if (!saveError || draft === null || activeSave) return;
+      saveError = undefined;
+      notify();
+      runSave();
+    },
+    retryLoad() {
+      input.load({ resourceUri: input.binding.resourceUri });
     },
     flush() {
       clearTimer();
@@ -109,15 +211,15 @@ export const createFileEditController = (input: FileEditControllerInput) => {
 // after a save, a reload returns the saved value, which matches the baseline
 // even though it differs from the previously loaded state.
 export const nextLoadedRevision = (
-  previous: { content?: string; dataUrl?: string; loadKey: string; revision: number } | null,
+  previous: { content?: string; dataUrl?: string; loadKey: string; editorRevision: number } | null,
   next: { content?: string; dataUrl?: string },
   loadKey: string,
   editorValue?: string,
 ) => {
   if (!previous || previous.loadKey !== loadKey) return 1;
   const shownContent = editorValue ?? previous.content;
-  if (shownContent === next.content && previous.dataUrl === next.dataUrl) return previous.revision;
-  return previous.revision + 1;
+  if (shownContent === next.content && previous.dataUrl === next.dataUrl) return previous.editorRevision;
+  return previous.editorRevision + 1;
 };
 
 // Last loaded document per binding, so reopening a recently viewed file mounts
@@ -126,7 +228,7 @@ export const nextLoadedRevision = (
 const FILE_CONTENT_CACHE_LIMIT = 30;
 const fileContentCache = new Map<
   string,
-  { content?: string; dataUrl?: string; fileName?: string; mimeType?: string; placeholder?: string }
+  { content?: string; dataUrl?: string; fileName?: string; mimeType?: string; placeholder?: string; revision?: string }
 >();
 
 export const readCachedFileContent = (loadKey: string) => fileContentCache.get(loadKey);

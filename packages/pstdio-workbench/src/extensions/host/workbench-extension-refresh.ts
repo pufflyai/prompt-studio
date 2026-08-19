@@ -1,6 +1,11 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, WorkbenchModuleContext, WorkbenchPanelInstance } from "../../core";
+import type {
+  Disposable,
+  FileRendererRefreshEnvelope,
+  WorkbenchModuleContext,
+  WorkbenchPanelInstance,
+} from "../../core";
 
 export type WorkbenchExtensionRendererKind = "tree" | "file" | "controls" | "dataTable" | "kanban";
 
@@ -9,15 +14,23 @@ interface RendererRefreshTarget {
   kind: WorkbenchExtensionRendererKind;
 }
 
+export interface WorkbenchExtensionRefreshEvent extends FileRendererRefreshEnvelope {
+  id: string;
+}
+
 export interface RegisterWorkbenchExtensionRendererRefreshEventsInput {
   metadata: WorkbenchExtensionMetadata;
-  subscribe: (listener: (eventId: string) => void) => Disposable;
+  subscribe: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
   workbench: WorkbenchModuleContext;
 }
 
-export const refreshWorkbenchExtensionRenderer = (workbench: WorkbenchModuleContext, target: RendererRefreshTarget) => {
+export const refreshWorkbenchExtensionRenderer = (
+  workbench: WorkbenchModuleContext,
+  target: RendererRefreshTarget,
+  envelope: FileRendererRefreshEnvelope = {},
+) => {
   if (target.kind === "tree") workbench.renderers.refresh(target.id);
-  if (target.kind === "file") workbench.renderers.refreshFileRenderer(target.id);
+  if (target.kind === "file") workbench.renderers.refreshFileRenderer(target.id, envelope);
   if (target.kind === "controls") workbench.renderers.refreshControlsRenderer(target.id);
   if (target.kind === "dataTable") workbench.renderers.refreshDataTableRenderer(target.id);
   if (target.kind === "kanban") workbench.renderers.refreshKanbanRenderer(target.id);
@@ -47,8 +60,9 @@ export const registerWorkbenchExtensionRendererRefreshEvents = (
   input: RegisterWorkbenchExtensionRendererRefreshEventsInput,
 ) => {
   const targets = rendererRefreshTargets(input.metadata);
-  return input.subscribe((eventId) => {
-    for (const target of targets.get(eventId) ?? []) refreshWorkbenchExtensionRenderer(input.workbench, target);
+  return input.subscribe((event) => {
+    const { id, ...envelope } = event;
+    for (const target of targets.get(id) ?? []) refreshWorkbenchExtensionRenderer(input.workbench, target, envelope);
   });
 };
 

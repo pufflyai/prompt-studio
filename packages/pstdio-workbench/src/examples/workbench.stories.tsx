@@ -4,7 +4,7 @@ import { createWorkbenchCore } from "../core";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
-import { createFileRendererStoryModule } from "./file-renderer/module";
+import { createFileRendererErrorStoryModule, createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
@@ -76,6 +76,9 @@ kanbanRendererWorkbench.registerModule(createKanbanRendererStoryModule());
 
 const fileRendererWorkbench = createWorkbenchCore();
 fileRendererWorkbench.registerModule(createFileRendererStoryModule());
+
+const fileRendererErrorWorkbench = createWorkbenchCore();
+fileRendererErrorWorkbench.registerModule(createFileRendererErrorStoryModule());
 
 const foundationWorkbench = createFoundationWorkbench();
 
@@ -172,6 +175,10 @@ export const KanbanRenderer: Story = {
 // MarkdownEditor, code (example.ts) via Monaco, and a read-only image (logo.svg).
 export const FileRenderer: Story = {
   render: () => <WorkbenchStory workbench={fileRendererWorkbench} />,
+};
+
+export const FileRendererLoadError: Story = {
+  render: () => <WorkbenchStory workbench={fileRendererErrorWorkbench} />,
 };
 
 export const FoundationConcepts: Story = {

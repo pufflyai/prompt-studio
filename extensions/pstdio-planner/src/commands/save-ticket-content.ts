@@ -26,7 +26,7 @@ export const saveTicketContentCommand = defineCommand({
         content: ctx.params.content,
       });
       await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
-      return ticket;
+      return ticket ? { revision: ticket.updatedAt } : null;
     }
 
     const next = {
@@ -37,6 +37,6 @@ export const saveTicketContentCommand = defineCommand({
     };
     await ticketsCollection(ctx.storage).put(existing.id, next);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
-    return next;
+    return { revision: next.updatedAt };
   },
 });

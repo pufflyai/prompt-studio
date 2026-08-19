@@ -79,7 +79,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   const workbench = createWorkbenchCore();
   const resource = createPreviewResource(bench.metadata);
   const webviewFiles = createPreviewWebviewFileHost();
-  let publishExtensionEvent: ((eventId: string) => void) | undefined;
+  let publishExtensionEvent: ((event: { id: string }) => void) | undefined;
 
   registerWorkbenchExtensionRendererRefreshEvents({
     metadata: bench.metadata,
@@ -118,7 +118,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
         surfaceCommandOutcome(workbench, response);
         const event = publishLastCommand(commandId, response);
         workbench.context.set("extensionTestbench.lastCommandTick", event.tick);
-        for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent?.(eventId);
+        for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent?.({ id: eventId });
         onCommandCall({ commandId, id, request, response, status: "success" });
         return response;
       } catch (error) {

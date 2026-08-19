@@ -1,6 +1,4 @@
-import { Box, Center, Flex, Image, Spinner, Text } from "@chakra-ui/react";
-import { CodeEditor } from "@pstdio/ui/diff";
-import { MarkdownEditor } from "@pstdio/ui/rich-text";
+import { Button, Center, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   FileRendererContent,
@@ -13,14 +11,16 @@ import {
   resolveFileSectionTargetId,
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
-import { codeLanguageFor, pickFileKind } from "./file-kind";
+import { FileRendererContentView } from "./file-renderer-content";
 import {
   createFileEditController,
   type FileEditController,
+  type FileEditControllerState,
   nextLoadedRevision,
   readCachedFileContent,
   storeCachedFileContent,
 } from "./file-renderer-edit-state";
+import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 
 interface WorkbenchFileRendererViewProps {
@@ -34,7 +34,7 @@ interface WorkbenchFileRendererViewProps {
 interface LoadedFile extends FileRendererContent {
   // Bumped on every (re)load so the uncontrolled editors remount with fresh
   // content on a refresh, but never mid-edit (load only runs on mount/refresh).
-  revision: number;
+  editorRevision: number;
   loadKey: string;
 }
 
@@ -88,6 +88,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
+  const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
   const controllerRef = useRef<FileEditController | null>(null);
   const rendererRef = useRef<HTMLDivElement>(null);
   const previousSectionNavigationRef = useRef<{
@@ -146,11 +147,12 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
     const cached = readCachedFileContent(loadKey);
-    setLoaded(cached ? { ...cached, revision: 1, loadKey } : null);
+    setLoaded(cached ? { ...cached, editorRevision: 1, loadKey } : null);
     const load = () => {
       Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
           if (cancelled) return;
+          if (controllerRef.current && !controllerRef.current.acceptLoaded(next.content, next.revision)) return;
           setError(null);
           storeCachedFileContent(loadKey, next);
           // Compare against the editor's current value so a reload that returns
@@ -158,10 +160,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           const editorValue = controllerRef.current?.getBaseline();
           setLoaded((previous) => ({
             ...next,
-            revision: nextLoadedRevision(previous, next, loadKey, editorValue),
+            editorRevision: nextLoadedRevision(previous, next, loadKey, editorValue),
             loadKey,
           }));
-          controllerRef.current?.setBaseline(next.content);
         })
         .catch((loadError) => {
           if (cancelled) return;
@@ -170,22 +171,31 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     };
     controllerRef.current = hasSave
       ? createFileEditController({
+          binding: {
+            rendererId: contributionId,
+            instanceId: props.placement?.instanceId ?? contributionId,
+            resourceUri: resourceRef.current?.uri,
+          },
           debounceMs: SAVE_DEBOUNCE_MS,
           load,
-          save: (value) =>
-            Promise.resolve(contributionRef.current.save?.(resourceRef.current, value)).then((result) => {
+          onStateChange: (state) => {
+            if (!cancelled) setEditState(state);
+          },
+          save: (value, origin) =>
+            Promise.resolve(contributionRef.current.save?.(resourceRef.current, value, origin)).then((result) => {
               const current = readCachedFileContent(loadKey);
               if (current) storeCachedFileContent(loadKey, { ...current, content: value });
-              return result;
+              return result ?? undefined;
             }),
         })
       : null;
-    if (cached) controllerRef.current?.setBaseline(cached.content);
+    if (cached) controllerRef.current?.setBaseline(cached.content, cached.revision);
+    setEditState({ dirty: false, saving: false });
     load();
     const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
       if (event.fileRendererId !== contributionId) return;
       const controller = controllerRef.current;
-      if (controller) controller.handleRefreshEvent();
+      if (controller) controller.handleRefreshEvent(event);
       else load();
     });
     return () => {
@@ -196,7 +206,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       controllerRef.current?.flush();
       controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, loadKey]);
+  }, [contributionId, hasSave, workbench, loadKey, props.placement?.instanceId]);
 
   // The last keystrokes are also flushed when the tab is hidden or closed.
   useEffect(() => {
@@ -217,7 +227,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   };
 
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
-  const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.revision}` : "";
+  const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
 
   useLayoutEffect(() => {
     if (!scrollResetKey || sectionNavigation) return;
@@ -236,10 +246,17 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     });
   }, [scrollResetKey, sectionNavigation]);
 
-  if (error?.loadKey === loadKey) {
+  const loadError = error?.loadKey === loadKey ? error.message : undefined;
+  const retryLoad = () => controllerRef.current?.retryLoad();
+  const retrySave = () => controllerRef.current?.retry();
+
+  if (loadError && !currentLoaded) {
     return (
-      <Center h="full" minH="0" bg="bg" p="md">
-        <Text color="fg.muted">{error.message}</Text>
+      <Center h="full" minH="0" bg="bg" p="md" flexDirection="column" gap="sm">
+        <Text color="fg.muted">{loadError}</Text>
+        <Button size="xs" variant="subtle" onClick={retryLoad}>
+          Retry
+        </Button>
       </Center>
     );
   }
@@ -252,66 +269,32 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     );
   }
 
-  const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
-  const isEditable = Boolean(contribution.save) && kind !== "image";
+  const isEditable = Boolean(contribution.save) && !currentLoaded.dataUrl;
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
-  const editorKey = `${currentLoaded.loadKey}:${currentLoaded.revision}`;
+  const editorKey = `${currentLoaded.loadKey}:${currentLoaded.editorRevision}`;
+  const errorNotice = loadError ? (
+    <FileRendererErrorNotice message={loadError} onRetry={retryLoad} />
+  ) : editState.saveError ? (
+    <FileRendererErrorNotice message={editState.saveError} onRetry={retrySave} />
+  ) : null;
 
   const handleActiveSectionChange = (sectionId: string | null) => {
     syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });
   };
 
-  if (kind === "image") {
-    if (!currentLoaded.dataUrl) {
-      return (
-        <Center h="full" minH="0" bg="bg" p="md">
-          <Text color="fg.muted">This image preview is unavailable.</Text>
-        </Center>
-      );
-    }
-    return (
-      <Center ref={rendererRef} h="full" minH="0" bg="bg" p="md" overflow="auto">
-        <Image
-          src={currentLoaded.dataUrl}
-          alt={currentLoaded.fileName ?? contribution.title}
-          maxW="100%"
-          maxH="100%"
-          objectFit="contain"
-        />
-      </Center>
-    );
-  }
-
-  if (kind === "code") {
-    return (
-      <Box h="full" minH="0" bg="bg">
-        <CodeEditor
-          key={editorKey}
-          language={codeLanguageFor(currentLoaded.fileName)}
-          defaultCode={currentLoaded.content ?? ""}
-          isEditable={isEditable}
-          showLineNumbers
-          onChange={isEditable ? handleChange : undefined}
-        />
-      </Box>
-    );
-  }
-
   return (
-    <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
-      <Box flex="1" minH="0" overflowY="auto">
-        <MarkdownEditor
-          key={editorKey}
-          defaultState={currentLoaded.content ?? ""}
-          isEditable={isEditable}
-          sectionNavigation={editorSectionNavigation}
-          placeholder={isEditable ? (currentLoaded.placeholder ?? "Write…") : undefined}
-          onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
-          onChange={isEditable ? handleChange : undefined}
-        />
-      </Box>
-    </Flex>
+    <FileRendererContentView
+      content={currentLoaded}
+      editorKey={editorKey}
+      errorNotice={errorNotice}
+      isEditable={isEditable}
+      onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
+      onChange={handleChange}
+      rendererRef={rendererRef}
+      sectionNavigation={editorSectionNavigation}
+      title={contribution.title}
+    />
   );
 };

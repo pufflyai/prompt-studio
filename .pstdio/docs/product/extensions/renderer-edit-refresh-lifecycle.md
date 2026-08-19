@@ -1,116 +1,71 @@
 ---
-status: "draft"
+status: "shipped"
 created: "2026-08-18T17:03:48.668Z"
+updated: "2026-08-19"
 ---
 
-# Product Requirements Document: Renderer Edit and Refresh Lifecycle
+# Renderer Edit and Refresh Lifecycle
 
 ## Summary
 
-Give editable native renderers a clear loaded, dirty, saving, and externally-invalidated lifecycle. Opening or saving an editor must not remount it, destroy selection, or trigger repeated unchanged saves.
-
-## Problem
-
-The ticket file renderer treats every editor onChange callback as a new edit, including the callback emitted when Lexical imports loaded Markdown. After its debounce, the save command emits the renderer's refresh event. The renderer clears its pending marker before the save finishes, handles its own event as an external refresh, reloads content, and changes the editor revision key.
-
-The editor remounts, loses focus and selection, emits another initial onChange, and repeats. The loop also runs tree and property commands and accelerates the extension runtime memory leak.
+Editable native file renderers have one owner for loaded content, the current draft, one active save, errors, and external invalidation. Opening or saving an editor does not remount it, destroy selection, or cause repeated unchanged saves.
 
 ## Goals
 
 - Opening unchanged content performs no save.
-- Editing preserves focus and selection before, during, and after save.
-- A save does not cause its editor instance to reload itself.
+- Editing keeps focus and selection before, during, and after save.
+- A save does not reload its own editor instance.
 - Clean editors reload real external changes.
-- Dirty editors are never overwritten by a refresh event.
-- Refresh work is scoped to affected resources when event data permits.
-- The lifecycle is reusable by file renderers beyond tickets.
-
-## Non-Goals
-
-- Collaborative text merging.
-- Conflict-free replicated data types.
-- Offline write queues.
-- Literal-copy assertions for bundled Markdown.
-- Changing Lexical's document model.
+- Dirty editors are never overwritten by refresh events or late load results.
+- Refresh work is scoped to one resource when the event provides that identity.
+- Load and save errors remain recoverable.
 
 ## Concepts
 
-| Term | Definition |
-| ---- | ---------- |
-| Loaded value | Last content accepted from the renderer load callback. |
-| Draft | Current editor content. |
-| Dirty | Draft differs from loaded or successfully saved value. |
-| In-flight save | One active save request with a captured value. |
-| Self invalidation | Refresh event caused by the current renderer's successful save. |
-| External invalidation | Refresh event caused by another action or renderer instance. |
+| Term | Meaning |
+| --- | --- |
+| Baseline | Last canonical content accepted from load or a successful save. |
+| Draft | Current editor content when it differs from the baseline. |
+| Active save | One request with a captured value and operation identity. |
+| Self invalidation | Refresh caused by the current renderer instance's save operation. |
+| External invalidation | Refresh caused by another operation or renderer instance. |
+| Revision | Optional ordered backing-store revision. |
 
-## Requirements
+## Ownership
 
-### Loading
+The file renderer edit controller owns the baseline, draft, timer, active save, save error, and deferred invalidation for one renderer and resource binding. The React view renders that state and recoverable error actions. Extension commands, resource records, and editor components do not duplicate it.
 
-1. The renderer stores the loaded value before mounting editable content.
-2. An initial editor callback equal to the loaded value is ignored.
-3. A clean reload with unchanged content does not change the editor revision or React key.
-4. A clean reload with changed content updates the editor once.
-5. A load failure keeps the current draft visible and reports a recoverable error.
+The binding uses:
 
-### Editing and Saving
+- the file renderer contribution id;
+- the panel `instanceId`;
+- the resource URI, including document-selection metadata in the renderer load key.
 
-1. A user edit marks the renderer dirty and starts or resets the debounce.
-2. One resource has at most one active save.
-3. A newer draft created during a save remains dirty and is saved after the active request finishes.
-4. Pending state remains owned until the save request settles.
-5. Successful save updates the saved baseline without remounting the editor.
-6. Failed save leaves the draft dirty and exposes retry.
-7. Unmount flush behavior is explicit; it cannot silently drop a known dirty draft.
+## Loading
 
-### Refresh Events
+1. The renderer stores canonical loaded text before mounting an editable editor.
+2. An editor callback equal to the baseline is ignored.
+3. A clean unchanged reload keeps the current editor revision and React key.
+4. A clean changed reload increments the editor revision once.
+5. A load that settles after a local edit is rejected by the controller and cannot replace the draft.
+6. A failed reload keeps the current content visible and shows Retry. An initial load failure shows the same recoverable action without an editor.
 
-1. A renderer can identify the resource and renderer instance that caused a save event.
-2. Self invalidation acknowledges saved state and does not call load.
-3. A clean external invalidation calls load.
-4. A dirty or saving renderer defers external reload.
-5. After the draft saves, a deferred external invalidation loads only if it is newer than the completed save.
-6. An event that names another resource does not reload the current renderer.
-7. Event payload support is optional for generic events, but absence may cause a broader clean reload only.
+## Editing and Saving
 
-### Focus and Selection
+1. A real edit marks the binding dirty and resets the 600 ms debounce.
+2. Reverting to the baseline cancels a pending save.
+3. Only one save runs for a binding at a time.
+4. A draft made during a save remains dirty and is saved after the active request settles.
+5. The baseline advances only after the matching operation succeeds.
+6. A failed save keeps the draft dirty and shows Retry. It does not retry on a timer.
+7. Visibility and unmount flushes start a save for a known pending draft. They do not clear ownership before the request settles.
 
-1. Saving does not replace the mounted editor.
-2. A clean unchanged refresh does not replace the mounted editor.
-3. Keyboard selection remains active across the save debounce and response.
-4. The renderer does not force focus after an external navigation action.
+## Refresh Envelope
 
-## Proposed State Model
-
-~~~text
-loading
-  → clean
-
-clean
-  → dirty                    user edit
-  → loading                  external invalidation
-
-dirty
-  → saving                   debounce expires
-  → dirty                    more edits
-
-saving
-  → clean                    saved value still current
-  → dirty                    a newer draft exists
-  → save-error               request fails
-
-save-error
-  → saving                   retry
-  → dirty                    more edits
-~~~
-
-The implementation may use refs rather than storing each name as React state. The observable transitions and invariants are required.
-
-## Event Contract Direction
+The in-process event feed and file renderer registry preserve this optional envelope:
 
 ~~~ts
-type RendererRefreshEvent = {
+interface RendererRefreshEvent {
   id: string;
   resourceUri?: string;
   origin?: {
@@ -119,53 +74,52 @@ type RendererRefreshEvent = {
     operationId: string;
   };
   revision?: string;
-};
+}
 ~~~
 
-The host may add correlation metadata when dispatching a save command. Extension events remain domain-owned; the host only uses optional correlation and resource targeting.
+Generic extension events remain valid with only `id`.
 
-## Success Metrics
+Each file save receives a host operation origin. The file renderer adapter places the origin and resource URI in command request metadata. They are not added to extension params or extension-owned event payloads. After the command returns, the dashboard attaches that host context to each published refresh event. A save result may return an optional revision.
 
-| Metric | Baseline | Target | Measurement |
-| ------ | -------- | ------ | ----------- |
-| Saves after unchanged open | Repeats after debounce | Zero | Fake-timer renderer test |
-| Focus after save | Lost | Preserved | Playwright active-element check |
-| Selection after save | Lost | Preserved | Playwright selection assertion |
-| Self-triggered reload | Repeats | Zero | Load/save/event counter |
-| External clean refresh | Unreliable | One reload | Renderer lifecycle test |
-| Dirty draft overwritten | Possible | Never | Deferred invalidation test |
+## Refresh Classification
 
-## Rules and Constraints
+- An event naming another resource is ignored.
+- An event matching the active or recently completed save operation is self invalidation. It never loads.
+- A clean external event loads once.
+- Duplicate events with the same revision do not load twice.
+- A dirty, saving, or save-error binding defers and coalesces external events.
+- After save, a deferred revision loads only when it is newer than the save result revision.
+- Without revisions, a deferred generic external event performs one broader reload after local save state settles.
+- A generic event cannot detect every concurrent write. It still never overwrites a known local draft.
 
-- Equality uses the renderer's canonical serialized value.
-- Save success cannot be inferred from receiving a refresh event.
-- Refresh event order cannot overwrite a newer local draft.
-- Tests use real renderer registration and event dispatch where practical.
-- UI validation uses Playwright, as required by repository rules.
+Revisions are compared as ordered strings. Current Planner revisions are ISO timestamps from the existing ticket or file `updatedAt` value.
+
+## Focus and Selection
+
+Debounce, save completion, self invalidation, and unchanged clean reloads keep the editor key stable. The renderer does not force focus after navigation or after a real external document change.
+
+The Planner browser regression holds a non-collapsed DOM selection, waits beyond the debounce, waits for stored content to confirm the save response, and checks both the active element and selection before and after completion.
 
 ## Errors
 
-| Error | Cause |
-| ----- | ----- |
-| Renderer load failed | The load callback rejected. |
-| Renderer save failed | The save callback rejected; the draft remains dirty. |
-| External changes pending | A newer external revision exists while a local draft is dirty. |
+| Error | Behavior |
+| --- | --- |
+| Load failed before content exists | Show the error and Retry. |
+| Reload failed after content exists | Keep content visible and show an inline Retry notice. |
+| Save failed | Keep the draft dirty, stop automatic retries, and show Retry. |
 
-## Risks and Open Questions
+## Limits
 
-- If the backing store cannot provide revisions, the host can prevent self-refresh and draft loss but cannot detect every concurrent write conflict.
-- Flush-on-unmount may block navigation or require an explicit leave warning.
-- Large documents need equality checks that do not cause input latency.
+- The lifecycle does not merge concurrent edits.
+- It does not add revisions to stores that do not already have them.
+- It does not provide an offline write queue.
+- A browser cannot wait for an asynchronous save during forced page termination. The renderer still starts the flush and retains ownership for every lifecycle where the page remains active.
 
-## Rollout Plan
+## Shipped Surfaces
 
-1. Add failing lifecycle tests around the current file renderer.
-2. Ignore initial and unchanged editor callbacks.
-3. Correct save ownership and self-invalidation.
-4. Add optional resource and origin metadata to refresh dispatch.
-5. Add dirty external-invalidation behavior.
-6. Validate ticket focus and selection with Playwright.
-
-## Related Architecture
-
-- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
+- Reusable controller: `packages/pstdio-workbench/src/react/renderers/file/file-renderer-edit-state.ts`
+- React integration: `packages/pstdio-workbench/src/react/renderers/file/file-renderer-view.tsx`
+- Registry envelope: `packages/pstdio-workbench/src/core/registries/renderers/file-renderer-registry.ts`
+- Extension adapter and host refresh: `packages/pstdio-workbench/src/extensions`
+- Dashboard event feed: `packages/pstdio-dashboard/src/shared/extensions/extension-webview-broadcast.ts`
+- Real consumer: Planner `fileRenderers.ticketContent`

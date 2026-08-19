@@ -143,7 +143,14 @@ describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
       refreshed.push(`dataTable:${event.dataTableRendererId}`),
     );
     workbench.renderers.onDidRefreshKanbanRenderer((event) => refreshed.push(`kanban:${event.kanbanRendererId}`));
-    let listener: ((eventId: string) => void) | undefined;
+    let listener:
+      | ((event: {
+          id: string;
+          resourceUri?: string;
+          origin?: { rendererId: string; instanceId: string; operationId: string };
+          revision?: string;
+        }) => void)
+      | undefined;
     const disposable = registerWorkbenchExtensionRendererRefreshEvents({
       workbench,
       metadata: {
@@ -192,8 +199,8 @@ describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
       },
     });
 
-    listener?.("tickets.changed");
-    listener?.("unrelated.changed");
+    listener?.({ id: "tickets.changed" });
+    listener?.({ id: "unrelated.changed" });
 
     expect(refreshed).toEqual([
       "tree:ticket-files",
@@ -203,7 +210,52 @@ describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
     ]);
 
     disposable.dispose();
-    listener?.("ticket-content.changed");
+    listener?.({ id: "ticket-content.changed" });
     expect(refreshed).toHaveLength(4);
+  });
+
+  test("preserves the refresh envelope for file renderers", () => {
+    const workbench = createWorkbenchCore();
+    workbench.renderers.registerFileRenderer({
+      id: "ticket-content",
+      title: "Content",
+      load: () => ({ content: "" }),
+    });
+    const received: unknown[] = [];
+    workbench.renderers.onDidRefreshFileRenderer((event) => received.push(event));
+    let listener: ((event: { id: string; resourceUri?: string; revision?: string }) => void) | undefined;
+    registerWorkbenchExtensionRendererRefreshEvents({
+      workbench,
+      metadata: {
+        ...metadata,
+        fileRenderers: [
+          {
+            id: "ticket-content",
+            extensionId: "pstdio.planner",
+            title: "Content",
+            loadHandlerId: "ticket-content.load",
+            refreshEventIds: ["tickets.changed"],
+          },
+        ],
+      },
+      subscribe: (nextListener) => {
+        listener = nextListener;
+        return { dispose: () => {} };
+      },
+    });
+
+    listener?.({
+      id: "tickets.changed",
+      resourceUri: "dashboard-workbench://ticket/ticket-1",
+      revision: "3",
+    });
+
+    expect(received).toEqual([
+      {
+        fileRendererId: "ticket-content",
+        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        revision: "3",
+      },
+    ]);
   });
 });

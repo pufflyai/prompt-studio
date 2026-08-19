@@ -278,7 +278,11 @@ export type {
   FileRendererContent,
   FileRendererContribution,
   FileRendererImplementation,
+  FileRendererRefreshEnvelope,
+  FileRendererRefreshEvent,
+  FileRendererRefreshOrigin,
   FileRendererRegistry,
+  FileRendererSaveResult,
   FileRendererStoreState,
   RegisteredFileRendererContribution,
 } from "./registries/renderers/file-renderer-registry";

@@ -1,5 +1,6 @@
 import { type Disposable, type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
+  fileRendererRefreshEnvelopeFromCommand,
   registerWorkbenchExtensionCommandPaletteResources,
   registerWorkbenchExtensionDataTableRenderers,
   registerWorkbenchExtensionFileRenderers,
@@ -168,7 +169,7 @@ const registerSingleExtensionContributions = (
         // command feed (the load response carries no id, so subscribers ignore it).
         executeCommand: async (commandId, body) => {
           const response = await executeCommand(projectId, commandId, body);
-          publishExtensionCommandEvent(response);
+          publishExtensionCommandEvent(response, fileRendererRefreshEnvelopeFromCommand(body, response));
           return response;
         },
         metadata,

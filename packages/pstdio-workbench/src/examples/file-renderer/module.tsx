@@ -89,3 +89,29 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
     }
   },
 });
+
+export const createFileRendererErrorStoryModule = (): WorkbenchModuleContribution => ({
+  id: "file-renderer.error-story",
+  activate(ctx) {
+    const rendererId = "file-renderer.story.load-error";
+    const panelId = "file-renderer.story.load-error.widget";
+    ctx.renderers.registerFileRenderer({
+      id: rendererId,
+      title: "unavailable.md",
+      load: async () => {
+        throw new Error("The document could not be loaded.");
+      },
+      save: () => {},
+    });
+    ctx.layout.registerPanel({
+      closable: false,
+      id: panelId,
+      title: "unavailable.md",
+      region: "main",
+      rendererId,
+      singleton: true,
+      eligibleLocations: {},
+    });
+    ctx.layout.openPanel(panelId, { strategy: { kind: "persistent" } });
+  },
+});
