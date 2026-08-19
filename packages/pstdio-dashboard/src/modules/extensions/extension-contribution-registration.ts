@@ -192,6 +192,16 @@ const registerSingleExtensionContributions = (
         },
         metadata: treeRendererMetadata,
         projectId,
+        // Tree node resources must share the dashboard's canonical URIs; the
+        // workbench default scheme would give the same resource a second
+        // identity (own layout scope, history entry, and hierarchy key).
+        resolveNodeResource: (resource) => ({
+          kind: resource.type,
+          uri: `dashboard-workbench://${resource.type}/${resource.id}`,
+          id: resource.id,
+          label: resource.label,
+          metadata: { ...resource.metadata, projectId },
+        }),
         workbench: ctx,
       }),
     );

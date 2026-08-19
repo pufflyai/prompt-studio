@@ -38,6 +38,13 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
+  /**
+   * Host canonicalization for node resources. A host that gives extension
+   * resources its own URIs (layout scopes, history, and hierarchy key on the
+   * URI) must convert tree node resources the same way, or the same resource
+   * gets a second identity when opened from a tree.
+   */
+  resolveNodeResource?: (resource: ExtensionTreeResource) => ResourceRef;
   workbench: WorkbenchModuleContext;
 }
 
@@ -172,6 +179,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
 
+  const resolveResource: typeof toWorkbenchResource = (resource, sectionNavigation) => {
+    const resolved = input.resolveNodeResource?.(resource);
+    if (!resolved) return toWorkbenchResource(resource, sectionNavigation);
+    if (!sectionNavigation) return resolved;
+    return {
+      ...resolved,
+      metadata: { ...resolved.metadata, [FILE_SECTION_NAVIGATION_METADATA_KEY]: sectionNavigation },
+    };
+  };
+
   const mapEmptyState = (section: ExtensionTreeSection): TreeViewSection["emptyState"] => {
     if (!section.emptyState) return undefined;
     return {
@@ -201,7 +218,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
       resourceOf: (resource, resourceTarget) =>
-        toWorkbenchResource(
+        resolveResource(
           resource,
           resourceTarget.section
             ? { treeId: record.id, targetNodeId: node.id, anchors: resourceTarget.section.anchors }
@@ -249,7 +266,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       icon: node.icon,
       iconColor: node.iconColor,
       iconTooltip: node.iconTooltip,
-      resource: node.resource ? toWorkbenchResource(node.resource) : undefined,
+      resource: node.resource ? resolveResource(node.resource) : undefined,
       target: mapTarget(node.target, node, ctx),
       rowVariant: node.rowVariant,
       actions: node.actions?.map((action) => mapAction(action, node, ctx)),

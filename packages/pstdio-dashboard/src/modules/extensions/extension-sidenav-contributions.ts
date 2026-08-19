@@ -116,7 +116,9 @@ export const registerExtensionResourceSidenavContributions = (
       registerSidenavContribution(ctx, {
         id: `dashboard.extensions.resource-sidenav.${view.id}`,
         modes: [modeId],
-        order: index,
+        // Navigation entries (extension tree items at 10/40) stay on top; the
+        // active resource's own tree renders below them.
+        order: 50 + index,
         getSections: async (_workbench, input) => {
           if (input.resource?.kind !== view.resourceKind) return [];
           const sections = await ctx.renderers.getBody(treeRendererId, {

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createFileEditController, nextLoadedRevision } from "./file-renderer-edit-state";
+import {
+  createFileEditController,
+  nextLoadedRevision,
+  readCachedFileContent,
+  storeCachedFileContent,
+} from "./file-renderer-edit-state";
 
 const DEBOUNCE_MS = 5;
 const tick = (ms = DEBOUNCE_MS * 3) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -165,5 +170,23 @@ describe("nextLoadedRevision", () => {
     const previous = { content: "loaded", loadKey: "a", revision: 3 };
 
     expect(nextLoadedRevision(previous, { content: "external change" }, "a", "saved draft")).toBe(4);
+  });
+});
+
+describe("file content cache", () => {
+  test("stores and reads the last loaded document per binding", () => {
+    storeCachedFileContent("cache-test:a", { content: "hello" });
+
+    expect(readCachedFileContent("cache-test:a")).toEqual({ content: "hello" });
+    expect(readCachedFileContent("cache-test:missing")).toBeUndefined();
+  });
+
+  test("evicts the oldest binding beyond the limit", () => {
+    for (let index = 0; index < 31; index += 1) {
+      storeCachedFileContent(`cache-evict:${index}`, { content: String(index) });
+    }
+
+    expect(readCachedFileContent("cache-evict:0")).toBeUndefined();
+    expect(readCachedFileContent("cache-evict:30")).toEqual({ content: "30" });
   });
 });

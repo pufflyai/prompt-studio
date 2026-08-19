@@ -1,4 +1,4 @@
-import { Button, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
+import { Button, Flex, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
@@ -171,31 +171,35 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
   return (
     <Menu.Root closeOnSelect={!multiSelect}>
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content>
-          {options.map((option) => {
-            const selected = selectedIds.includes(option.id);
-            return (
-              <Menu.Item key={option.id} value={option.id} disabled={option.disabled} asChild>
-                <ListRow
-                  asChild
-                  variant="full-width"
-                  role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
-                  aria-checked={selected}
-                  id={option.id}
-                  label={option.name}
-                  icon={selectionOptionIcon(option, "16px")}
-                  tooltip={option.description}
-                  disabled={option.disabled}
-                  isSelected={selected}
-                  endContent={selectionIndicator(multiSelect, selected)}
-                  onActivate={() => onToggle(option.id)}
-                />
-              </Menu.Item>
-            );
-          })}
-        </Menu.Content>
-      </Menu.Positioner>
+      {/* Portaled like every other menu: rendered inline it is clipped by the
+          panel's overflow and can extend past the viewport. */}
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content>
+            {options.map((option) => {
+              const selected = selectedIds.includes(option.id);
+              return (
+                <Menu.Item key={option.id} value={option.id} disabled={option.disabled} asChild>
+                  <ListRow
+                    asChild
+                    variant="full-width"
+                    role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
+                    aria-checked={selected}
+                    id={option.id}
+                    label={option.name}
+                    icon={selectionOptionIcon(option, "16px")}
+                    tooltip={option.description}
+                    disabled={option.disabled}
+                    isSelected={selected}
+                    endContent={selectionIndicator(multiSelect, selected)}
+                    onActivate={() => onToggle(option.id)}
+                  />
+                </Menu.Item>
+              );
+            })}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
     </Menu.Root>
   );
 };

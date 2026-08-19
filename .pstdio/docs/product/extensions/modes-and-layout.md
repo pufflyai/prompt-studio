@@ -34,6 +34,26 @@ export default defineExtension({
 - Mode-specific visibility belongs in `when.mode` on the UI contribution. If a `treeItems` contribution omits `when.mode`, it appears in every active mode where the host left tree exists.
 - Extension panel `placement` controls relative tab order inside each region. `layout.open` still controls which panels open, and open order can still choose the active panel until the future views presentation model replaces this behavior.
 
+## The Host Side Panel and Agents
+
+The Side Panel is host chrome. It carries the Prompt Studio agents: session
+previews and new session drafts open there.
+
+- A mode declares which host panel regions exist for it with `layout.panels`.
+  Include `"side"` so the agents stay reachable while your mode is active:
+
+```ts
+layout: {
+  panels: ["main", "secondary", "side"],
+  open: [{ region: "sidenav", panel: "ticketFiles", pinned: true }],
+}
+```
+
+- Omit `"side"` only when your mode replaces conversation UX entirely. Users
+  then lose the agents until they leave the mode.
+- Do not place your own panels in the `side` region to imitate the agents
+  panel; contribute domain panels to `main`, `secondary`, or `sidenav`.
+
 ## Resource-Owned Modes
 
 A resource-owned mode is for detail pages, not boards. The dashboard activates the matching mode before opening the primary resource view. Same-kind views still come from `views`, but mode layout declares where mode-owned detail chrome belongs:

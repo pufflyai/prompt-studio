@@ -14,7 +14,13 @@ import {
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
-import { createFileEditController, type FileEditController, nextLoadedRevision } from "./file-renderer-edit-state";
+import {
+  createFileEditController,
+  type FileEditController,
+  nextLoadedRevision,
+  readCachedFileContent,
+  storeCachedFileContent,
+} from "./file-renderer-edit-state";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 
 interface WorkbenchFileRendererViewProps {
@@ -133,12 +139,16 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    setLoaded(null);
+    // A recently viewed document mounts immediately from the cache; the load
+    // below reconciles it (unchanged content keeps the editor mounted).
+    const cached = readCachedFileContent(loadKey);
+    setLoaded(cached ? { ...cached, revision: 1, loadKey } : null);
     const load = () => {
       Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
           if (cancelled) return;
           setError(null);
+          storeCachedFileContent(loadKey, next);
           // Compare against the editor's current value so a reload that returns
           // what is already shown (e.g. after a save) keeps the editor mounted.
           const editorValue = controllerRef.current?.getBaseline();
@@ -158,9 +168,15 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       ? createFileEditController({
           debounceMs: SAVE_DEBOUNCE_MS,
           load,
-          save: (value) => Promise.resolve(contributionRef.current.save?.(resourceRef.current, value)),
+          save: (value) =>
+            Promise.resolve(contributionRef.current.save?.(resourceRef.current, value)).then((result) => {
+              const current = readCachedFileContent(loadKey);
+              if (current) storeCachedFileContent(loadKey, { ...current, content: value });
+              return result;
+            }),
         })
       : null;
+    if (cached) controllerRef.current?.setBaseline(cached.content);
     load();
     const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
       if (event.fileRendererId !== contributionId) return;

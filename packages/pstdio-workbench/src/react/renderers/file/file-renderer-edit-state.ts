@@ -119,3 +119,25 @@ export const nextLoadedRevision = (
   if (shownContent === next.content && previous.dataUrl === next.dataUrl) return previous.revision;
   return previous.revision + 1;
 };
+
+// Last loaded document per binding, so reopening a recently viewed file mounts
+// the editor immediately instead of a spinner. The follow-up load reconciles:
+// unchanged content keeps the revision (no remount), changed content remounts.
+const FILE_CONTENT_CACHE_LIMIT = 30;
+const fileContentCache = new Map<
+  string,
+  { content?: string; dataUrl?: string; fileName?: string; mimeType?: string; placeholder?: string }
+>();
+
+export const readCachedFileContent = (loadKey: string) => fileContentCache.get(loadKey);
+
+export const storeCachedFileContent = (
+  loadKey: string,
+  content: NonNullable<ReturnType<typeof readCachedFileContent>>,
+) => {
+  fileContentCache.delete(loadKey);
+  fileContentCache.set(loadKey, content);
+  if (fileContentCache.size <= FILE_CONTENT_CACHE_LIMIT) return;
+  const oldest = fileContentCache.keys().next().value;
+  if (oldest !== undefined) fileContentCache.delete(oldest);
+};

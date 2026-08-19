@@ -62,11 +62,12 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidenav
     await workbench.resources.openResource(ticket, { replaceActive: true });
     const sidenavSections = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav);
 
+    // Navigation groups stay on top; the active resource's own tree follows.
     expect(sidenavSections.map((section) => section.id)).toEqual([
-      "ticket",
-      "files",
       "extension-tree-group:workbench.left.tree:default:Lab",
       "extension-tree-group:workbench.left.tree:default:Extensions",
+      "ticket",
+      "files",
     ]);
     expect(workbench.layout.getLayout().regions.sidenav.widgets.map((placement) => placement.contributionId)).toEqual([
       dashboardWidgetIds.dashboardSidenav,
