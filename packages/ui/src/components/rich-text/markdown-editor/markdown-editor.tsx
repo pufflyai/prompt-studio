@@ -11,7 +11,7 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
-import { $getRoot } from "lexical";
+import { $addUpdateTag, $getRoot } from "lexical";
 import { useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme, editorTransformers } from "../shared/editor-config";
@@ -31,6 +31,8 @@ import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNaviga
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
 import type { MarkdownSectionNavigation } from "./plugins/markdown-section-navigation";
+
+const INITIAL_IMPORT_TAG = "markdown-initial-import";
 
 export interface MarkdownEditorProps {
   autoFocus?: boolean;
@@ -75,6 +77,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     namespace: "MARKDOWN_EDITOR",
     nodes: editorNodes,
     editorState: () => {
+      // Tag the mount-time import so change tracking can tell it apart from a
+      // real edit. Lexical also tags it history-merge, but slash commands reuse
+      // that tag for their inserts, so ignoring history-merge would swallow them.
+      $addUpdateTag(INITIAL_IMPORT_TAG);
       importMarkdownToLexical(body, resolveMarkdownUrl);
     },
     onError: (error: Error) => console.error(error),
@@ -147,11 +153,12 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           {shouldTrackChanges ? (
             <OnChangePlugin
               ignoreSelectionChange
-              // Lexical tags the initial content import with history-merge.
-              // Reporting it as a change makes every mount look like an edit
-              // and schedules a save of content the user never touched.
-              ignoreHistoryMergeTagChange
-              onChange={(editorState) => {
+              ignoreHistoryMergeTagChange={false}
+              onChange={(editorState, _editor, tags) => {
+                // Reporting the mount-time import as a change makes every mount
+                // look like an edit and schedules a save of content the user
+                // never touched.
+                if (tags.has(INITIAL_IMPORT_TAG)) return;
                 editorState.read(() => {
                   const root = $getRoot();
                   const markdownBody = exportLexicalToMarkdown(root);
