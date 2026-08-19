@@ -45,7 +45,7 @@ afterEach(() => {
 const validExtensionSource = `export default {
   commands: {
     "say-hello": { title: "Say hello", cli: true, run: async () => undefined },
-    "counter.bump": { title: "Bump counter", cli: true, run: async () => undefined },
+    "counter-bump": { title: "Bump counter", cli: true, run: async () => undefined },
   },
   middlewares: {
     rejectDoomDeletes: {
@@ -106,7 +106,7 @@ describe("checkExtensions", () => {
     expect(report).toContain("name:      extension-lab");
     expect(report).toContain("version:   0.1.0");
     expect(report).toContain("CLI: pstdio extension-lab say-hello");
-    expect(report).toContain("CLI: pstdio extension-lab counter bump");
+    expect(report).toContain("CLI: pstdio extension-lab counter-bump");
     expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
@@ -158,7 +158,7 @@ describe("checkExtensions", () => {
     const home = createTempHome();
     const make = () => `export default {
       commands: {
-        "counter.bump": { title: "B", cli: { path: ["counter", "bump"] }, run: async () => undefined },
+        "counter-bump": { title: "B", cli: { path: ["counter", "bump"] }, run: async () => undefined },
       },
     };`;
     writeExtension(home, "dup-a", make());
