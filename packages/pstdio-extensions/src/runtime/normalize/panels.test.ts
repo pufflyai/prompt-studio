@@ -29,8 +29,7 @@ describe("renderer-backed panels", () => {
           panels: {
             tickets: {
               title: "Tickets",
-              region: "main",
-              closable: false,
+              supportedRegions: ["main"],
               renderer: { kind: "kanban", id: "tickets" },
             },
           },
@@ -52,8 +51,7 @@ describe("renderer-backed panels", () => {
           panels: {
             tickets: {
               title: "Tickets",
-              region: "main",
-              closable: false,
+              supportedRegions: ["main"],
               renderer: { kind: "tree", id: "tickets" },
             },
           },
@@ -65,7 +63,7 @@ describe("renderer-backed panels", () => {
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_renderer_missing" }));
   });
 
-  test("accepts the composition capability shape and rejects a panel with neither shape", () => {
+  test("accepts the capability shape and rejects a panel without supported regions", () => {
     const runtime = normalizeExtensionSources([
       wrap(
         defineExtension({
@@ -78,12 +76,6 @@ describe("renderer-backed panels", () => {
               supportedRegions: ["main", "side"],
               renderer: { kind: "kanban", id: "tickets" },
             },
-            legacy: {
-              title: "Tickets legacy",
-              region: "main",
-              closable: false,
-              renderer: { kind: "kanban", id: "tickets" },
-            },
             invalid: {
               title: "No placement contract",
               renderer: { kind: "kanban", id: "tickets" },
@@ -93,7 +85,7 @@ describe("renderer-backed panels", () => {
       ),
     ]);
 
-    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["capability", "legacy"]);
+    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["capability"]);
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_contract_invalid" }));
   });
 });

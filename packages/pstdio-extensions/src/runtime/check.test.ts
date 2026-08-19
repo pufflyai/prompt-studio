@@ -110,7 +110,7 @@ describe("checkExtensions", () => {
     expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
-  test("reports empty eligible locations panel warnings", async () => {
+  test("reports a panel without docked supported regions as an error", async () => {
     const home = createTempHome();
     writeExtension(
       home,
@@ -119,9 +119,7 @@ describe("checkExtensions", () => {
         panels: {
           everywhere: {
             title: "Everywhere",
-            region: "main",
-            closable: true,
-            eligibleLocations: {},
+            supportedRegions: [],
             webview: { entry: "./panel.tsx" },
           },
         },
@@ -130,19 +128,13 @@ describe("checkExtensions", () => {
 
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
 
-    expect(result.errorCount).toBe(0);
-    expect(result.warningCount).toBe(1);
+    expect(result.errorCount).toBe(1);
     expect(result.runtime.diagnostics).toEqual([
       expect.objectContaining({
-        code: "extension_panel_empty_eligible_locations",
-        severity: "warning",
-        metadata: { contributionId: "extension-lab.everywhere" },
+        code: "extension_panel_contract_invalid",
+        severity: "error",
       }),
     ]);
-
-    const report = formatCheckReport(result);
-    expect(report).toContain("Warnings: 1");
-    expect(report).toContain("warning extension_panel_empty_eligible_locations");
   });
 
   test("flags invalid default exports", async () => {
@@ -262,8 +254,21 @@ describe("checkExtensionHostCompatibility", () => {
       schedules: [],
       artifactMounts: [],
       modes: [],
+      statusItems: [],
       resourceKinds: [],
-      resourcePanels: [],
+      resourcePanels: [
+        {
+          id: "lab.rowsForTicket",
+          localId: "rowsForTicket",
+          extensionId: "pstdio.lab",
+          name: "lab",
+          sourcePath: "/extension/extension.ts",
+          resourceKindId: "lab.ticket",
+          panelId: "lab.panel",
+          slotId: "inspector",
+          contribution: { resourceKind: "ticket", panel: "panel", slot: "inspector" },
+        },
+      ],
       resourceHierarchyProviders: [],
       panels: [
         {
@@ -274,10 +279,8 @@ describe("checkExtensionHostCompatibility", () => {
           sourcePath: "/extension/extension.ts",
           contribution: {
             title: "Rows",
-            region: "main",
-            closable: true,
+            supportedRegions: ["main"],
             renderer: { kind: "dataTable", id: "rows" },
-            resourceKind: "ticket",
           },
         },
       ],

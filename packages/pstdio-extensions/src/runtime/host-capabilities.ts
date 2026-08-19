@@ -1,6 +1,5 @@
 import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionHostCompatibility } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../types/runtime";
-import { isLegacyPanelContribution } from "./panel-shape";
 
 type CapabilityMap = ExtensionHostCapabilities["capabilities"];
 
@@ -117,9 +116,7 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     requirement(record, record.id, "controlsRenderer", "renderer.controls.v1"),
   ),
   ...runtime.keybindings.map((record) => requirement(record, record.id, "keybinding", "keybinding.v1")),
-  ...runtime.panels
-    .filter((record) => isLegacyPanelContribution(record.contribution) && record.contribution.resourceKind)
-    .map((record) => requirement(record, record.id, "resourceView", "resource-view.v1")),
+  ...runtime.resourcePanels.map((record) => requirement(record, record.id, "resourcePanel", "resource-view.v1")),
 ];
 
 const missingCapabilityDiagnostic = (

@@ -6,6 +6,7 @@ import type {
   RuntimeRouteRecord,
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
+  RuntimeStatusItemRecord,
   RuntimeTreeItemRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -20,11 +21,6 @@ const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => (
   extensionId: ext.id,
   sourcePath: source.sourcePath,
 });
-
-const hasEmptyEligibleLocations = (panel: Record<string, unknown>) => {
-  const eligibleLocations = panel.eligibleLocations;
-  return isRecord(eligibleLocations) && Object.keys(eligibleLocations).length === 0;
-};
 
 const rendererRecords = (runtime: Accumulator, kind: string) => {
   if (kind === "tree") return runtime.treeRenderers;
@@ -84,40 +80,23 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
 
     if (!rendererBodyResolves(ext, source, runtime, panel, id)) continue;
 
-    // During the composition rollout both panel shapes are valid: the replacement
-    // capability shape (supportedRegions) and the legacy alpha shape (region + closable).
-    // PS-270 deletes the legacy shape.
     const supportedRegions = Array.isArray(panel.supportedRegions) ? panel.supportedRegions : null;
     const hasCapabilityContract =
       supportedRegions !== null &&
       supportedRegions.length > 0 &&
       supportedRegions.every((region) => (dockedWorkbenchRegions as readonly string[]).includes(region as string));
-    const hasLegacyContract = typeof panel.region === "string" && typeof panel.closable === "boolean";
 
-    if (!hasCapabilityContract && !hasLegacyContract) {
+    if (!hasCapabilityContract) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_panel_contract_invalid",
-          message: `Panel "${id}" must declare docked supportedRegions, or the legacy region and closable fields`,
+          message: `Panel "${id}" must declare at least one docked supported region`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
         }),
       );
       continue;
-    }
-
-    if (hasEmptyEligibleLocations(panel)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "extension_panel_empty_eligible_locations",
-          severity: "warning",
-          message: `Panel "${id}" declares eligibleLocations with no constraints, so it becomes a sub-panel/tab that is eligible in every matching location`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: id },
-        }),
-      );
     }
 
     runtime.panels.push({
@@ -246,12 +225,27 @@ const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensio
   }
 };
 
+const registerStatusItems = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  for (const [localId, item] of Object.entries(source.definition.statusItems ?? {})) {
+    if (!isRecord(item) || !isLocalizableString(item.title) || !isRecord(item.webview)) continue;
+    runtime.statusItems.push({
+      id: contributionId(ext, localId),
+      localId,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: item as RuntimeStatusItemRecord["contribution"],
+    });
+  }
+};
+
 export const registerPanelContributions = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
 ) => {
   registerPanels(ext, source, runtime);
+  registerStatusItems(ext, source, runtime);
   registerRoutes(ext, source, runtime);
   registerTreeItems(ext, source, runtime);
   registerActivityItems(ext, source, runtime);

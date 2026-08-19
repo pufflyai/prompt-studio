@@ -79,10 +79,7 @@ const addDiagnostic = (
   );
 };
 
-const panelRegions = (panel: RuntimePanelRecord) => {
-  const contribution = panel.contribution;
-  return "supportedRegions" in contribution ? contribution.supportedRegions : [contribution.region];
-};
+const panelRegions = (panel: RuntimePanelRecord) => panel.contribution.supportedRegions;
 
 const validatesPanelPlacement = (
   runtime: Accumulator,

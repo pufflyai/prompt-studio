@@ -39,13 +39,14 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.lab",
           modeId: "pstdio.lab.mode",
           label: "Lab",
-          resourceKind: "ticket",
-          layout: {
-            panels: ["main"],
-            open: [
-              { region: "sidenav", panel: "lab.sidenav", pinned: true },
-              { region: "main", panel: "lab.overview" },
-            ],
+          panelRegions: ["main"],
+          resources: {
+            ticket: {
+              slots: {
+                primary: { region: "main", required: true },
+                navigation: { region: "sidenav", required: true },
+              },
+            },
           },
         },
       ],
@@ -54,9 +55,7 @@ describe("workbench extension metadata targets", () => {
           id: "lab.files",
           extensionId: "pstdio.lab",
           title: "Files",
-          region: "main",
-          closable: false,
-          resourceKind: "ticket",
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "lab.files" },
         },
       ],
@@ -97,17 +96,11 @@ describe("workbench extension metadata targets", () => {
       target: "workbench.left.tree",
       when: { mode: "workspace" },
     });
-    expect(parsed.modes[0]?.layout).toEqual({
-      panels: ["main"],
-      open: [
-        { region: "sidenav", panel: "lab.sidenav", pinned: true },
-        { region: "main", panel: "lab.overview" },
-      ],
-    });
-    expect(parsed.modes[0]?.resourceKind).toBe("ticket");
+    expect(parsed.modes[0]?.panelRegions).toEqual(["main"]);
+    expect(parsed.modes[0]?.resources?.ticket?.slots?.primary).toEqual({ region: "main", required: true });
     expect(parsed.panels[0]).toMatchObject({
       renderer: { kind: "tree", id: "lab.files" },
-      resourceKind: "ticket",
+      supportedRegions: ["main"],
     });
     expect(parsed.panels[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({
@@ -162,9 +155,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.bad",
           modeId: "pstdio.bad.mode",
           label: "Bad",
-          layout: {
-            panels: ["overlay"],
-          },
+          panelRegions: ["overlay"],
         },
       ],
       panels: [],
@@ -177,7 +168,7 @@ describe("workbench extension metadata targets", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects non-string mode resource kinds", () => {
+  test("rejects chrome regions in mode recipes", () => {
     const result = workbenchExtensionMetadataSchema.safeParse({
       extensions: [],
       commands: [],
@@ -190,7 +181,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.bad",
           modeId: "pstdio.bad.mode",
           label: "Bad",
-          resourceKind: ["ticket"],
+          resources: { ticket: { slots: { primary: { region: "overlay" } } } },
         },
       ],
       panels: [],

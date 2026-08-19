@@ -26,6 +26,7 @@ import type {
   SettingsPanelContribution,
   SettingsSectionContribution,
   SkillContribution,
+  StatusItemContribution,
   TemplateContribution,
   TemplateTypeContribution,
   ThemeContribution,
@@ -151,6 +152,7 @@ export interface UiContributions {
   panels?: Record<string, PanelContribution>;
   resourceKinds?: Record<string, ResourceKindContribution>;
   resourcePanels?: Record<string, ResourcePanelContribution>;
+  statusItems?: Record<string, StatusItemContribution>;
   treeItems?: Record<string, TreeItemContribution>;
   activityItems?: Record<string, ActivityItemContribution>;
   treeRenderers?: Record<string, TreeRendererContribution>;

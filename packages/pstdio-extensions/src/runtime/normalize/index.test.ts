@@ -290,7 +290,7 @@ describe("normalizeExtensionSources runtime records", () => {
         },
       },
       panels: {
-        health: { title: "Health", region: "main", closable: false, renderer: { kind: "dataTable", id: "health" } },
+        health: { title: "Health", supportedRegions: ["main"], renderer: { kind: "dataTable", id: "health" } },
       },
     });
 
@@ -417,9 +417,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         ticketFiles: {
           title: "Files",
-          region: "main",
-          closable: false,
-          resourceKind: "ticket",
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "files" },
         },
       },
@@ -445,9 +443,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       id: "planner.ticketFiles",
       contribution: {
         title: "Files",
-        resourceKind: "ticket",
-        region: "main",
-        closable: false,
+        supportedRegions: ["main"],
         renderer: { kind: "tree", id: "files" },
       },
     });
@@ -458,9 +454,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         ticketEditor: {
           title: "Ticket",
-          region: "main",
-          closable: false,
-          resourceKind: "ticket",
+          supportedRegions: ["main"],
           webview: { entry: packageAsset("./editor.tsx", "file:///fake/planner/extension.ts") },
         },
       },
@@ -471,7 +465,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
     expect(runtime.panels).toEqual([
       expect.objectContaining({
         id: "planner.ticketEditor",
-        contribution: expect.objectContaining({ title: "Ticket", resourceKind: "ticket" }),
+        contribution: expect.objectContaining({ title: "Ticket", supportedRegions: ["main"] }),
       }),
     ]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain("extension_view_unreachable");
@@ -486,8 +480,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         both: {
           title: "Both",
-          region: "main",
-          closable: false,
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "files" },
           webview: { entry: packageAsset("./both.tsx", "file:///fake/planner/extension.ts") },
         },

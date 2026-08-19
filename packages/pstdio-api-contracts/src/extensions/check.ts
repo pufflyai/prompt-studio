@@ -15,6 +15,11 @@ import {
   workbenchExtensionAutomationRecordSchema,
 } from "./commands";
 import { extensionDiagnosticSchema, extensionRecordSchema, localizableStringSchema } from "./common";
+import {
+  extensionResourceHierarchyProviderRecordSchema,
+  extensionResourceKindRecordSchema,
+  extensionResourcePanelRecordSchema,
+} from "./composition";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
 import { extensionHostCompatibilitySchema } from "./host-capabilities";
@@ -25,6 +30,7 @@ import {
   extensionModeRecordSchema,
   extensionPanelRecordSchema,
   extensionRouteRecordSchema,
+  extensionStatusItemRecordSchema,
   extensionTreeItemContributionSchema,
   extensionViewLikeSchema,
   workbenchExtensionPanelRecordSchema,
@@ -94,6 +100,10 @@ export const workbenchExtensionMetadataSchema = z.object({
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(extensionModeRecordSchema),
   panels: z.array(workbenchExtensionPanelRecordSchema),
+  resourceKinds: z.array(extensionResourceKindRecordSchema).optional(),
+  resourcePanels: z.array(extensionResourcePanelRecordSchema).optional(),
+  resourceHierarchyProviders: z.array(extensionResourceHierarchyProviderRecordSchema).optional(),
+  statusItems: z.array(extensionStatusItemRecordSchema).optional(),
   routes: z.array(workbenchExtensionRouteRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   activityItems: z.array(extensionActivityItemRecordSchema).optional(),

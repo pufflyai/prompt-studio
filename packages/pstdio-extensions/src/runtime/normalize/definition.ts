@@ -32,6 +32,7 @@ const contributionKeys = new Set(
     settings: true,
     settingsPanels: true,
     settingsSections: true,
+    statusItems: true,
     skills: true,
     templateTypes: true,
     templates: true,

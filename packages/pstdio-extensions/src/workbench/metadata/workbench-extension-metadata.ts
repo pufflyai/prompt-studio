@@ -15,7 +15,6 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
-import { isLegacyPanelContribution } from "../../runtime/panel-shape";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
@@ -172,9 +171,6 @@ const toPanelRecord = (
   input: CreateWorkbenchExtensionMetadataInput,
   panel: ExtensionRuntime["panels"][number],
 ): WorkbenchExtensionMetadata["panels"][number] | null => {
-  // Composition capability panels are serialized by the replacement metadata (PS-270).
-  // The legacy record shape requires region and closable.
-  if (!isLegacyPanelContribution(panel.contribution)) return null;
   const body = toPanelBody(input, panel, panel.contribution);
   if (!body) return null;
   const panelMenus = Object.entries(panel.contribution.panelMenus ?? {}).flatMap(([localId, menu]) => {
@@ -202,18 +198,7 @@ const toPanelRecord = (
     extensionId: panel.extensionId,
     title: panel.contribution.title,
     icon: panel.contribution.icon,
-    region: panel.contribution.region,
-    closable: panel.contribution.closable,
-    group: panel.contribution.group,
-    placement: panel.contribution.placement,
-    resourceKind: panel.contribution.resourceKind,
-    eligibleLocations: panel.contribution.eligibleLocations
-      ? {
-          resourceKinds: panel.contribution.eligibleLocations.resourceKinds
-            ? [...panel.contribution.eligibleLocations.resourceKinds]
-            : undefined,
-        }
-      : undefined,
+    supportedRegions: [...panel.contribution.supportedRegions],
     panelMenus: panelMenus.length > 0 ? panelMenus : undefined,
     ...body,
   };
@@ -532,6 +517,43 @@ const toSettingDefinitionRecord = (
   description: setting.contribution.description,
 });
 
+const toResourceKindRecord = (record: ExtensionRuntime["resourceKinds"][number]) => ({
+  id: record.id,
+  extensionId: record.extensionId,
+  surface: record.contribution.surface,
+  label: record.contribution.label,
+  icon: record.contribution.icon,
+  slots: Object.fromEntries(
+    Object.entries(record.contribution.slots).map(([slotName, slot]) => [
+      slotName,
+      { cardinality: slot.cardinality, external: slot.external },
+    ]),
+  ),
+});
+
+const toResourcePanelRecord = (record: ExtensionRuntime["resourcePanels"][number]) => ({
+  id: record.id,
+  extensionId: record.extensionId,
+  resourceKind: record.resourceKindId,
+  panel: record.panelId,
+  slot: record.slotId,
+});
+
+const toStatusItemRecord = (
+  input: CreateWorkbenchExtensionMetadataInput,
+  item: ExtensionRuntime["statusItems"][number],
+) => {
+  const webview = resolveWebview(input, item, item.contribution.webview) ?? undefined;
+  if (!webview) return null;
+  return {
+    id: item.id,
+    extensionId: item.extensionId,
+    title: item.contribution.title,
+    when: item.contribution.when as NonNullable<WorkbenchExtensionMetadata["statusItems"]>[number]["when"],
+    webview,
+  };
+};
+
 export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => {
@@ -543,6 +565,14 @@ export const createWorkbenchExtensionMetadata = (
     commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands),
     modes: modes.modes,
     panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
+    resourceKinds: input.runtime.resourceKinds.map(toResourceKindRecord),
+    resourcePanels: input.runtime.resourcePanels.map(toResourcePanelRecord),
+    resourceHierarchyProviders: input.runtime.resourceHierarchyProviders.map((record) => ({
+      id: record.id,
+      extensionId: record.extensionId,
+      resourceKind: record.resourceKindId,
+    })),
+    statusItems: compact(input.runtime.statusItems.map((item) => toStatusItemRecord(input, item))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
     activityItems: input.runtime.activityItems.map(toActivityItemRecord),

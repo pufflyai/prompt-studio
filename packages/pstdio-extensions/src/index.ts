@@ -75,7 +75,6 @@ export {
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
-export { isLegacyPanelContribution } from "./runtime/panel-shape";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 
 export type * from "./types";

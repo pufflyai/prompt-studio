@@ -39,8 +39,10 @@ describe("createWorkbenchExtensionMetadata", () => {
             review: {
               id: "pstdio.lab.review",
               label: "Review",
-              resourceKind: "ticket",
-              layout: { panels: ["main"], open: [{ region: "main", panel: "ticketPanel" }] },
+              panelRegions: ["main"],
+              resources: {
+                ticket: { slots: { primary: { region: "main", required: true } } },
+              },
             },
           },
           routes: {
@@ -73,21 +75,17 @@ describe("createWorkbenchExtensionMetadata", () => {
           panels: {
             rows: {
               title: "Rows",
-              region: "main",
-              closable: false,
+              supportedRegions: ["main"],
               renderer: { kind: "kanban", id: "rows" },
             },
             files: {
               title: "Files",
-              region: "main",
-              closable: false,
+              supportedRegions: ["main"],
               renderer: { kind: "tree", id: "files" },
             },
             ticketPanel: {
               title: "Ticket",
-              region: "main",
-              closable: false,
-              resourceKind: "ticket",
+              supportedRegions: ["main"],
               webview: { entry: webviewAsset("./ticket.tsx") },
             },
           },
@@ -120,7 +118,7 @@ describe("createWorkbenchExtensionMetadata", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "lab.ticketPanel",
-          resourceKind: "ticket",
+          supportedRegions: ["main"],
           webview: expect.objectContaining({ moduleUrl: "/modules/lab.ticketPanel.js" }),
         }),
         expect.objectContaining({
@@ -150,8 +148,8 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.settingsDefinitions?.[0]).toMatchObject({ key: "enabled", default: true });
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.review",
-      resourceKind: "ticket",
-      layout: { panels: ["main"], open: [{ region: "main", panel: "lab.ticketPanel" }] },
+      panelRegions: ["main"],
+      resources: { "lab.ticket": { slots: { primary: { region: "main", required: true } } } },
     });
   });
 });
@@ -411,8 +409,7 @@ describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
           panels: {
             notes: {
               title: "Notes",
-              region: "main",
-              closable: true,
+              supportedRegions: ["main"],
               webview: { entry: webviewAsset("./notes.tsx") },
               panelMenus: {
                 tools: {
@@ -492,7 +489,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             },
           },
           panels: {
-            health: { title: "Health", region: "main", closable: false, renderer: { kind: "dataTable", id: "health" } },
+            health: { title: "Health", supportedRegions: ["main"], renderer: { kind: "dataTable", id: "health" } },
           },
         },
       },

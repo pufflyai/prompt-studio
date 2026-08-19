@@ -29,6 +29,7 @@ import type {
   SettingsPanelContribution,
   SettingsSectionContribution,
   SkillContribution,
+  StatusItemContribution,
   TemplateContribution,
   TemplateTypeContribution,
   ThemeContribution,
@@ -173,6 +174,15 @@ export interface RuntimePanelRecord {
   name: string;
   sourcePath: string;
   contribution: PanelContribution;
+}
+
+export interface RuntimeStatusItemRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: StatusItemContribution;
 }
 
 export interface RuntimeResourceKindRecord {
@@ -467,6 +477,7 @@ export interface ExtensionRuntime {
   resourceKinds: RuntimeResourceKindRecord[];
   resourcePanels: RuntimeResourcePanelRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
+  statusItems: RuntimeStatusItemRecord[];
   routes: RuntimeRouteRecord[];
   treeItems: RuntimeTreeItemRecord[];
   activityItems: RuntimeActivityItemRecord[];

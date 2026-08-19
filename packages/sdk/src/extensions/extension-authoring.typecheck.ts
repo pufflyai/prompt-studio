@@ -1,10 +1,10 @@
 import type {
-  CompositionPanelContribution,
   ControlsQueryParams,
   DataTableRendererQueryParams,
   FileRendererLoadParams,
   KanbanRendererQueryParams,
   ModePlacementContribution,
+  PanelContribution,
   RendererEventReference,
   ResourceRef,
   TreeRendererQueryParams,
@@ -87,49 +87,40 @@ const extension = defineExtension({
     lab: {
       id: "pstdio.typecheck.lab",
       label: "Lab",
-      layout: {
-        panels: ["main"],
-        open: [
-          { region: "sidenav", panel: "labSidenav", pinned: true },
-          { region: "main", panel: "labOverview" },
-        ],
+      panelRegions: ["main"],
+      modePanels: {
+        labSidenav: { region: "sidenav", required: true },
+        labOverview: { region: "main", required: true },
       },
     },
     focus: {
       label: "Lab focus",
-      layout: {
-        panels: ["main"],
-        open: [{ region: "main", panel: "labOverview" }],
-      },
+      panelRegions: ["main"],
+      modePanels: { labOverview: { region: "main" } },
     },
     unsafe: {
       label: "Unsafe",
-      layout: {
-        panels: [
-          // @ts-expect-error mode panels are logical Main, Secondary, or Side roles
-          "overlay",
-        ],
-        open: [
-          {
-            // @ts-expect-error mode layout regions use the declared Workbench regions
-            region: "workbench.overlay",
-            panel: "labOverview",
-          },
-        ],
+      panelRegions: [
+        // @ts-expect-error mode panel regions are logical Main, Secondary, or Side roles
+        "overlay",
+      ],
+      modePanels: {
+        labOverview: {
+          // @ts-expect-error mode placements use the four docked regions
+          region: "workbench.overlay",
+        },
       },
     },
   },
   panels: {
     labSidenav: {
       title: "Lab sidenav",
-      region: "sidenav",
-      closable: false,
+      supportedRegions: ["sidenav"],
       webview: { entry: packageAsset("./lab-sidenav.tsx", import.meta.url) },
     },
     labOverview: {
       title: "Lab overview",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       webview: { entry: packageAsset("./lab-overview.tsx", import.meta.url) },
     },
   },
@@ -293,7 +284,7 @@ const navigationTarget: WorkbenchNavigationTarget = {
 };
 void navigationTarget;
 
-const invalidCompositionPanel: CompositionPanelContribution = {
+const invalidCompositionPanel: PanelContribution = {
   title: "Chrome",
   supportedRegions: [
     // @ts-expect-error composition panels accept only the four docked regions
