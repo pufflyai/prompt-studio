@@ -47,6 +47,12 @@ const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
   refresh: onRefresh ?? (async () => {}),
 });
 
+// Shared no-op deps: these tests exercise watcher wiring, not harness or catalog behavior.
+const noopRuntimeDeps = {
+  harnessRegistry: {} as never,
+  projectRuntimeCatalog: { invalidate: () => {} } as never,
+};
+
 const writeExtension = (dir: string, name: string) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
@@ -93,8 +99,7 @@ describe("createInstalledExtensionRuntime", () => {
     });
 
     const runtime = await createInstalledExtensionRuntime({
-      harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+      ...noopRuntimeDeps,
       extensionService: {
         reloadInstalledSourceBySourcePath: async () => sourceReload,
         reportBuildFailure: async () => {},
@@ -140,8 +145,7 @@ describe("createInstalledExtensionRuntime", () => {
     });
 
     const runtime = await createInstalledExtensionRuntime({
-      harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+      ...noopRuntimeDeps,
       extensionService: {
         reportBuildFailure: async () => {},
         reportBuildSuccess: async () => {},
@@ -175,8 +179,7 @@ describe("createInstalledExtensionRuntime", () => {
     let listExtensionRoots: (() => Promise<Array<{ path: string }>>) | undefined;
 
     const runtime = await createInstalledExtensionRuntime({
-      harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+      ...noopRuntimeDeps,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -207,8 +210,7 @@ describe("createInstalledExtensionRuntime", () => {
     const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
 
     const runtime = await createInstalledExtensionRuntime({
-      harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+      ...noopRuntimeDeps,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -266,8 +268,7 @@ describe("createInstalledExtensionRuntime", () => {
       const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
 
       const runtime = await createInstalledExtensionRuntime({
-        harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+        ...noopRuntimeDeps,
         extensionService,
         installedExtensionSourcesService,
         projectService,

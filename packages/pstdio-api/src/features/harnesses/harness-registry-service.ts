@@ -179,10 +179,7 @@ export const createHarnessRegistryService = (input: {
   // A derived view of the current snapshot, keyed by snapshot identity. It holds
   // no invalidation logic of its own: a new catalog generation is a new snapshot
   // object, which rebuilds the handles while keeping the detect() memo per build.
-  const projectRegistries = new Map<
-    string,
-    { snapshot: ProjectExtensionRuntimeSnapshot; registry: HarnessRegistry }
-  >();
+  const projectRegistries = new Map<string, { snapshot: ProjectExtensionRuntimeSnapshot; registry: HarnessRegistry }>();
 
   const resolveProjectRegistry = async (projectId: string) => {
     const snapshot = await input.extensionRuntimeCatalog.get(projectId);

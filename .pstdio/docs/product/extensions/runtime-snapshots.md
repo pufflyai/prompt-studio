@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "shipped"
 created: "2026-08-18T17:03:48.668Z"
 ---
 
@@ -87,11 +87,13 @@ In controlled testing, repeated public and private renderer commands grew API me
 3. A diagnostic endpoint or test hook can report catalog generations and load counts without exposing handler code.
 4. A stale load discarded after invalidation is logged.
 
-## Proposed Interface
+## Shipped Interface
 
 ~~~ts
 interface ProjectExtensionRuntimeCatalog {
   get(projectId: string): Promise<ProjectExtensionRuntimeSnapshot>;
+  /** Loads one installed source regardless of enablement, for dashboard inspection. */
+  getInstalledSourceRuntime(installedSource: InstalledSource): Promise<ExtensionRuntime>;
   invalidate(input: {
     projectId?: string;
     sourcePath?: string;
@@ -99,15 +101,23 @@ interface ProjectExtensionRuntimeCatalog {
   }): void;
 }
 
+type RuntimeInvalidationReason =
+  | "source_changed"
+  | "enablement_changed"
+  | "repo_link_changed"
+  | "runtime_refresh";
+
 interface ProjectExtensionRuntimeSnapshot {
   generation: number;
   project: { id: string; name: string; shorthand: string };
   enabledSources: EnabledExtensionSource[];
   runtime: ExtensionRuntime;
+  /** Set only on a retained last-healthy snapshot after a whole-load failure. */
+  stale: { code: "extension_runtime_load_failed"; message: string } | null;
 }
 ~~~
 
-The exact fingerprint remains internal. Public callers depend only on snapshot identity and invalidation behavior.
+Snapshots are frozen after publication. Public callers depend only on snapshot identity and invalidation behavior. Tests may inject a `loadSources` loader and an observer that reports load starts, publications, and discards without exposing handlers.
 
 ## Behavior
 
@@ -154,12 +164,12 @@ The exact fingerprint remains internal. Public callers depend only on snapshot i
 
 ## Rollout Plan
 
-1. Expand the existing project runtime catalog interface and tests.
-2. Add route dependencies and migrate command execution.
-3. Migrate events and schedules.
-4. Migrate UI metadata, settings, skills, and templates.
-5. Remove loadProjectExtensionRuntime and other direct enabled-project loaders.
-6. Add an isolated command soak to packaged validation.
+1. Expand the existing project runtime catalog interface and tests. (Done)
+2. Add route dependencies and migrate command execution. (Done)
+3. Migrate events and schedules. (Done)
+4. Migrate UI metadata, settings, skills, templates, and the harness registry. (Done)
+5. Remove loadProjectExtensionRuntime and other direct enabled-project loaders. (Done)
+6. Add an isolated command soak to packaged validation. (Planned)
 
 ## Related Architecture
 

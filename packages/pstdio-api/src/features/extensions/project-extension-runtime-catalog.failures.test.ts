@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { ProjectNotFoundError } from "../../services/extension-service";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempDirs: string[] = [];
 

@@ -32,10 +32,10 @@ import {
 import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
+import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
-import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
@@ -248,49 +248,20 @@ const startNotificationWakeTimer = (notificationService: ReturnType<typeof creat
 const openAppDb = (options: AppOptions) =>
   openDb(options.dbPath ?? process.env.PSTDIO_DB_PATH, options.onDatabaseLockAcquired);
 
-export const createApp = async (options: AppOptions) => {
-  const { db, close: closeDb } = await openAppDb(options);
-  const securityToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN ?? options.runtimeHost?.token;
-  const app = new OpenAPIHono<AppBindings>();
-
-  const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
-  ensureStorageRoot(storageRoot);
-
-  const dbs = createDBServices(db);
-  const {
-    activityEventsService,
-    extensionAutomationPreferencesService,
-    extensionInstancesService,
-    extensionSettingsDBService,
-    extensionSkillPreferencesDBService,
-    extensionStorageService,
-    extensionTemplatePreferencesDBService,
-    installedExtensionSourcesService,
-    notificationsDbService,
-    sessionQueueEntriesService,
-    sessionsDBService,
-    settingsDBService,
-    skillsDBService,
-    templatesDBService,
-  } = dbs;
-
-  // --- infrastructure ---
-  const eventBus = new EventBus({
-    bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
-  });
-
-  // --- domain services ---
-  const {
-    extensionFileService,
-    extensionSettingsService,
-    fileService,
-    notificationService,
-    projectService,
-    repoService,
-    syncService,
-    workspaceSessionService,
-    workspaceService,
-  } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
+// Wires the extension service, the process-owned runtime snapshot catalog, the
+// harness registry, the installed-source runtime processes, and the event-bus
+// subscriptions that keep catalog snapshots invalidated.
+const wireExtensionRuntimeServices = async (input: {
+  db: DbClient;
+  eventBus: EventBus;
+  extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  options: AppOptions;
+  projectService: ReturnType<typeof createProjectService>;
+  repoService: ReturnType<typeof createRepoService>;
+}) => {
+  const { db, eventBus, extensionInstancesService, installedExtensionSourcesService, options } = input;
+  const { projectService, repoService } = input;
   let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
     async () => {};
   const extensionService = createExtensionService({
@@ -338,6 +309,72 @@ export const createApp = async (options: AppOptions) => {
     eventBus,
     invalidate: extensionRuntimeCatalog.invalidate,
   });
+
+  return {
+    extensionRuntime,
+    extensionRuntimeCatalog,
+    extensionService,
+    harnessRegistry,
+    unsubscribeExtensionEvents: () => {
+      unsubscribeRepoLinkRefresh();
+      unsubscribeEnablementInvalidation();
+    },
+  };
+};
+
+export const createApp = async (options: AppOptions) => {
+  const { db, close: closeDb } = await openAppDb(options);
+  const securityToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN ?? options.runtimeHost?.token;
+  const app = new OpenAPIHono<AppBindings>();
+
+  const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
+  ensureStorageRoot(storageRoot);
+
+  const dbs = createDBServices(db);
+  const {
+    activityEventsService,
+    extensionAutomationPreferencesService,
+    extensionInstancesService,
+    extensionSettingsDBService,
+    extensionSkillPreferencesDBService,
+    extensionStorageService,
+    extensionTemplatePreferencesDBService,
+    installedExtensionSourcesService,
+    notificationsDbService,
+    sessionQueueEntriesService,
+    sessionsDBService,
+    settingsDBService,
+    skillsDBService,
+    templatesDBService,
+  } = dbs;
+
+  // --- infrastructure ---
+  const eventBus = new EventBus({
+    bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
+  });
+
+  // --- domain services ---
+  const {
+    extensionFileService,
+    extensionSettingsService,
+    fileService,
+    notificationService,
+    projectService,
+    repoService,
+    syncService,
+    workspaceSessionService,
+    workspaceService,
+  } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
+  const { extensionRuntime, extensionRuntimeCatalog, extensionService, harnessRegistry, unsubscribeExtensionEvents } =
+    await wireExtensionRuntimeServices({
+      db,
+      eventBus,
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      options,
+      projectService,
+      repoService,
+    });
   const templateService = createTemplateService({
     extensionRuntimeCatalog,
     extensionTemplatePreferencesDBService,
@@ -478,8 +515,7 @@ export const createApp = async (options: AppOptions) => {
       startupAbort.abort();
       await startupDone;
       clearInterval(notificationWakeTimer);
-      unsubscribeRepoLinkRefresh();
-      unsubscribeEnablementInvalidation();
+      unsubscribeExtensionEvents();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
       await terminalSupervisor.dispose();

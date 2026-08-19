@@ -99,94 +99,121 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return loading;
   };
 
-  const runLoad = async (projectId: string, state: ProjectState) => {
-    const startedAt = performance.now();
-    const startRevision = state.revision;
-    const reason: string = state.current ? (state.dirtyReason ?? "runtime_refresh") : "cold_read";
-    state.loadCount += 1;
-    deps.observer?.onLoadStart?.({ projectId, reason, revision: startRevision });
+  const collectCachedSources = async (enabledSources: EnabledExtensionSource[]) => {
+    const cachedSources: CachedSource[] = [];
+
+    for (const { installedSource } of enabledSources) {
+      if (installedSource.status !== "loaded") continue;
+      if (!existsSync(join(installedSource.source_path, "package.json"))) continue;
+
+      const cached = await loadSource(installedSource);
+      if (cached) cachedSources.push(cached);
+    }
+
+    return cachedSources;
+  };
+
+  const buildRuntime = async (projectId: string, state: ProjectState) => {
+    const project = await deps.projectService.get(projectId);
+    if (!project) throw new ExtensionRuntimeProjectMissingError(projectId);
+
+    const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
+    state.knownSourcePaths = new Set(enabledSources.map((source) => source.installedSource.source_path));
+    const repos = await deps.repoService.listByProject(projectId);
+    const cachedSources = await collectCachedSources(enabledSources);
+    const runtime = normalizeExtensionSources(
+      cachedSources.map((cached) => cached.source),
+      cachedSources.flatMap((cached) => cached.diagnostics),
+      { repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)) },
+    );
+
+    return { enabledSources, project, runtime };
+  };
+
+  type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
+
+  const discardStaleLoad = (context: LoadContext) => {
+    deps.observer?.onDiscard?.({ projectId: context.projectId, code: "extension_runtime_generation_stale" });
     apiLogger.info(
-      { event: "extensions.runtime_catalog.load_start", project_id: projectId, reason, revision: startRevision },
+      {
+        code: "extension_runtime_generation_stale",
+        duration_ms: Math.round(performance.now() - context.startedAt),
+        event: "extensions.runtime_catalog.discarded",
+        project_id: context.projectId,
+        reason: context.reason,
+        revision: context.startRevision,
+      },
+      "Discarded a project extension runtime load that was invalidated while in flight",
+    );
+    return new ExtensionRuntimeGenerationStaleError(context.projectId);
+  };
+
+  const publishSnapshot = (
+    state: ProjectState,
+    context: LoadContext,
+    loaded: Awaited<ReturnType<typeof buildRuntime>>,
+  ) => {
+    generation += 1;
+    const snapshot = freezeSnapshot({
+      generation,
+      project: { id: loaded.project.id, name: loaded.project.name, shorthand: loaded.project.shorthand },
+      enabledSources: loaded.enabledSources,
+      runtime: loaded.runtime,
+      stale: null,
+    });
+    state.current = snapshot;
+    state.staleView = null;
+    state.loadedRevision = context.startRevision;
+    state.dirtyReason = null;
+    deps.observer?.onPublish?.({ projectId: context.projectId, generation, loadCount: state.loadCount });
+    apiLogger.info(
+      {
+        duration_ms: Math.round(performance.now() - context.startedAt),
+        event: "extensions.runtime_catalog.published",
+        generation,
+        project_id: context.projectId,
+        reason: context.reason,
+        source_count: loaded.enabledSources.length,
+      },
+      "Published project extension runtime snapshot",
+    );
+    return snapshot;
+  };
+
+  const logLoadFailure = (context: LoadContext, error: unknown) => {
+    apiLogger.error(
+      {
+        duration_ms: Math.round(performance.now() - context.startedAt),
+        err: error,
+        event: "extensions.runtime_catalog.load_failed",
+        project_id: context.projectId,
+        reason: context.reason,
+      },
+      "Project extension runtime load failed",
+    );
+  };
+
+  const runLoad = async (projectId: string, state: ProjectState) => {
+    const reason: string = state.current ? (state.dirtyReason ?? "runtime_refresh") : "cold_read";
+    const context: LoadContext = { projectId, reason, startedAt: performance.now(), startRevision: state.revision };
+    state.loadCount += 1;
+    deps.observer?.onLoadStart?.({ projectId, reason, revision: context.startRevision });
+    apiLogger.info(
+      {
+        event: "extensions.runtime_catalog.load_start",
+        project_id: projectId,
+        reason,
+        revision: context.startRevision,
+      },
       "Loading project extension runtime snapshot",
     );
 
     try {
-      const project = await deps.projectService.get(projectId);
-      if (!project) throw new ExtensionRuntimeProjectMissingError(projectId);
-
-      const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
-      state.knownSourcePaths = new Set(enabledSources.map((source) => source.installedSource.source_path));
-      const repos = await deps.repoService.listByProject(projectId);
-      const cachedSources: CachedSource[] = [];
-
-      for (const { installedSource } of enabledSources) {
-        if (installedSource.status !== "loaded") continue;
-        if (!existsSync(join(installedSource.source_path, "package.json"))) continue;
-
-        const cached = await loadSource(installedSource);
-        if (cached) cachedSources.push(cached);
-      }
-
-      const runtime = normalizeExtensionSources(
-        cachedSources.map((cached) => cached.source),
-        cachedSources.flatMap((cached) => cached.diagnostics),
-        { repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)) },
-      );
-
-      if (state.revision !== startRevision) {
-        deps.observer?.onDiscard?.({ projectId, code: "extension_runtime_generation_stale" });
-        apiLogger.info(
-          {
-            code: "extension_runtime_generation_stale",
-            duration_ms: Math.round(performance.now() - startedAt),
-            event: "extensions.runtime_catalog.discarded",
-            project_id: projectId,
-            reason,
-            revision: startRevision,
-          },
-          "Discarded a project extension runtime load that was invalidated while in flight",
-        );
-        throw new ExtensionRuntimeGenerationStaleError(projectId);
-      }
-
-      generation += 1;
-      const snapshot = freezeSnapshot({
-        generation,
-        project: { id: project.id, name: project.name, shorthand: project.shorthand },
-        enabledSources,
-        runtime,
-        stale: null,
-      });
-      state.current = snapshot;
-      state.staleView = null;
-      state.loadedRevision = startRevision;
-      state.dirtyReason = null;
-      deps.observer?.onPublish?.({ projectId, generation, loadCount: state.loadCount });
-      apiLogger.info(
-        {
-          duration_ms: Math.round(performance.now() - startedAt),
-          event: "extensions.runtime_catalog.published",
-          generation,
-          project_id: projectId,
-          reason,
-          source_count: enabledSources.length,
-        },
-        "Published project extension runtime snapshot",
-      );
-      return snapshot;
+      const loaded = await buildRuntime(projectId, state);
+      if (state.revision !== context.startRevision) throw discardStaleLoad(context);
+      return publishSnapshot(state, context, loaded);
     } catch (error) {
-      if (!(error instanceof ExtensionRuntimeGenerationStaleError)) {
-        apiLogger.error(
-          {
-            duration_ms: Math.round(performance.now() - startedAt),
-            err: error,
-            event: "extensions.runtime_catalog.load_failed",
-            project_id: projectId,
-            reason,
-          },
-          "Project extension runtime load failed",
-        );
-      }
+      if (!(error instanceof ExtensionRuntimeGenerationStaleError)) logLoadFailure(context, error);
       throw error;
     }
   };
@@ -202,27 +229,35 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return state.staleView;
   };
 
+  const startLoad = (projectId: string, state: ProjectState) => {
+    const loading = runLoad(projectId, state).finally(() => {
+      if (state.loading === loading) state.loading = null;
+    });
+    state.loading = loading;
+    return loading;
+  };
+
+  // Whole-load infrastructure failure: nothing about the sources changed, so the
+  // last healthy snapshot stays valid. It is served marked stale and the project
+  // stays dirty, which retries the load on the next read.
+  const resolveReadFailure = (projectId: string, state: ProjectState, error: unknown) => {
+    if (error instanceof ExtensionRuntimeProjectMissingError) throw error;
+    if (state.current) return staleViewFor(state, error);
+    throw new ExtensionRuntimeLoadFailedError(projectId, error);
+  };
+
   const get = async (projectId: string): Promise<ProjectExtensionRuntimeSnapshot> => {
     const state = stateFor(projectId);
 
     for (;;) {
       if (state.current && state.loadedRevision === state.revision) return state.current;
 
-      const loading = (state.loading ??= runLoad(projectId, state).finally(() => {
-        if (state.loading === loading) state.loading = null;
-      }));
-
       try {
-        return await loading;
+        return await (state.loading ?? startLoad(projectId, state));
       } catch (error) {
         // A load invalidated in flight never becomes current; read the latest revision.
         if (error instanceof ExtensionRuntimeGenerationStaleError) continue;
-        if (error instanceof ExtensionRuntimeProjectMissingError) throw error;
-        // Whole-load infrastructure failure: nothing about the sources changed, so
-        // the last healthy snapshot stays valid. It is served marked stale and the
-        // project stays dirty, which retries the load on the next read.
-        if (state.current) return staleViewFor(state, error);
-        throw new ExtensionRuntimeLoadFailedError(projectId, error);
+        return resolveReadFailure(projectId, state, error);
       }
     }
   };

@@ -1,6 +1,6 @@
 # Project Extension Runtime Snapshots
 
-This page defines the target ownership and lifecycle of project extension runtime state. It is proposed by PS-255 and is not implemented yet.
+This page defines the ownership and lifecycle of project extension runtime state. It was proposed by PS-255 and is implemented by the project extension runtime catalog in `pstdio-api`.
 
 The project extension runtime catalog is the only owner of normalized enabled-project runtime snapshots. Commands, events, schedules, settings, UI metadata, skills, and templates read the same snapshot instead of loading extensions independently.
 
