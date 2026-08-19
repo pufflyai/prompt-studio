@@ -4,8 +4,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { apiLogger } from "../../lib/logger";
 import { fireExtensionEvent } from "./extension-event-runtime";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
+
+const withRuntimeCatalog = <T extends { extensionService: object; repoService: object }>(deps: T) => ({
+  ...deps,
+  extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+    extensionService: deps.extensionService as never,
+    repoService: deps.repoService as never,
+  }),
+});
 
 afterEach(() => {
   for (const root of tempRoots.splice(0)) {
@@ -57,7 +66,7 @@ describe("fireExtensionEvent", () => {
     const writes: unknown[] = [];
 
     const result = await fireExtensionEvent(
-      {
+      withRuntimeCatalog({
         extensionService: {
           listEnabledSourcesForProject: async () => [
             {
@@ -65,8 +74,9 @@ describe("fireExtensionEvent", () => {
               installedSource: {
                 id: "source-1",
                 extension_id: "pstdio.extension-lab",
-                source_kind: "local",
+                source_kind: "local_path",
                 source_path: sourcePath,
+                status: "loaded",
               },
             },
           ],
@@ -92,7 +102,7 @@ describe("fireExtensionEvent", () => {
         },
         sessionService: {},
         workspaceService: {},
-      } as never,
+      }) as never,
       "project-1",
       "workspace.provision",
       { workspaceDir: "/tmp/worktree" },
@@ -124,7 +134,7 @@ describe("fireExtensionEvent", () => {
 
     try {
       const result = await fireExtensionEvent(
-        {
+        withRuntimeCatalog({
           extensionService: {
             listEnabledSourcesForProject: async () => [
               {
@@ -132,8 +142,9 @@ describe("fireExtensionEvent", () => {
                 installedSource: {
                   id: "source-1",
                   extension_id: "pstdio.extension-lab",
-                  source_kind: "local",
+                  source_kind: "local_path",
                   source_path: sourcePath,
+                  status: "loaded",
                 },
               },
             ],
@@ -157,7 +168,7 @@ describe("fireExtensionEvent", () => {
           },
           sessionService: {},
           workspaceService: {},
-        } as never,
+        }) as never,
         "project-1",
         "workspace.provision",
         { workspaceDir: "/tmp/worktree" },

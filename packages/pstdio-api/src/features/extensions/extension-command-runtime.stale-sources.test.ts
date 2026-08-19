@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProjectExtensionRuntime } from "./extension-command-runtime";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
 const projectContext = { id: "project-1", name: "Project One", shorthand: "PO" };
@@ -45,33 +46,39 @@ describe("loadProjectExtensionRuntime stale sources", () => {
     writeRuntimeExtension(healthyPath, "healthy");
     mkdirSync(stalePath, { recursive: true });
 
+    const extensionService = {
+      listEnabledSourcesForProject: async () => [
+        {
+          instance: { id: "healthy-instance", namespace: "hello", enabled: true },
+          installedSource: {
+            id: "healthy-source",
+            extension_id: "pstdio.hello",
+            source_kind: "local_path",
+            source_path: healthyPath,
+            status: "loaded",
+          },
+        },
+        {
+          instance: { id: "stale-instance", namespace: "pstdio-claude-code", enabled: true },
+          installedSource: {
+            id: "stale-source",
+            extension_id: "pstdio.pstdio-claude-code",
+            source_kind: "local_path",
+            source_path: stalePath,
+            status: "loaded",
+          },
+        },
+      ],
+    };
+    const repoService = { listByProject: async () => [] };
     const { runtime } = await loadProjectExtensionRuntime(
       {
-        extensionService: {
-          listEnabledSourcesForProject: async () => [
-            {
-              instance: { id: "healthy-instance", namespace: "hello", enabled: true },
-              installedSource: {
-                id: "healthy-source",
-                extension_id: "pstdio.hello",
-                source_kind: "local_path",
-                source_path: healthyPath,
-                status: "loaded",
-              },
-            },
-            {
-              instance: { id: "stale-instance", namespace: "pstdio-claude-code", enabled: true },
-              installedSource: {
-                id: "stale-source",
-                extension_id: "pstdio.pstdio-claude-code",
-                source_kind: "local_path",
-                source_path: stalePath,
-                status: "loaded",
-              },
-            },
-          ],
-        },
-        repoService: { listByProject: async () => [] },
+        extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+          extensionService: extensionService as never,
+          repoService: repoService as never,
+        }),
+        extensionService,
+        repoService,
         projectService: { get: async () => projectContext },
       } as never,
       "project-1",

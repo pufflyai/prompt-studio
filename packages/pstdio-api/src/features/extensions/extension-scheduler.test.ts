@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createExtensionScheduler } from "./extension-scheduler";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
 const schedulers: Array<{ dispose: () => Promise<void> }> = [];
@@ -74,8 +75,23 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
 
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
-const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) =>
-  ({
+const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) => {
+  const extensionService = {
+    listEnabledSourcesForProject: async () => [
+      {
+        instance: { id: "instance-1" },
+        installedSource: {
+          id: "source-1",
+          extension_id: "pstdio.lab",
+          source_kind: "local_path" as const,
+          source_path: sourcePath,
+          status: "loaded",
+        },
+      },
+    ],
+  };
+  const repoService = { listByProject: async () => [] };
+  return {
     extensionAutomationPreferencesService: {
       list: async () => automationPreferences,
       get: async (_projectId: string, instanceId: string, automationId: string) =>
@@ -83,19 +99,11 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
           (row) => row.extension_instance_id === instanceId && row.automation_id === automationId,
         ) ?? null,
     },
-    extensionService: {
-      listEnabledSourcesForProject: async () => [
-        {
-          instance: { id: "instance-1" },
-          installedSource: {
-            id: "source-1",
-            extension_id: "pstdio.lab",
-            source_kind: "local",
-            source_path: sourcePath,
-          },
-        },
-      ],
-    },
+    extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+      extensionService: extensionService as never,
+      repoService: repoService as never,
+    }),
+    extensionService,
     projectService: {
       get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
     },
@@ -110,12 +118,11 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     },
     activityEventsService: {},
     fileService: {},
-    repoService: {
-      listByProject: async () => [],
-    },
+    repoService,
     sessionService: {},
     workspaceService: {},
-  }) as never;
+  } as never;
+};
 
 afterEach(async () => {
   await Promise.all(schedulers.splice(0).map((scheduler) => scheduler.dispose()));

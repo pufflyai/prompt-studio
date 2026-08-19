@@ -3,31 +3,37 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { createProjectExtensionRuntimeCatalog } from "../project-extension-runtime-catalog";
 import { createExtensionRoutes } from "../routes";
 
 const createApp = (sourcePath: string) => {
   const app = new OpenAPIHono();
+  const extensionService = {
+    listEnabledSourcesForProject: async () => [
+      {
+        instance: { namespace: "lab" },
+        installedSource: {
+          extension_id: "pstdio.lab",
+          source_kind: "local_path" as const,
+          source_path: sourcePath,
+          status: "loaded",
+        },
+      },
+    ],
+  };
+  const repoService = { listByProject: async () => [] };
   app.route(
     "/v1",
     createExtensionRoutes({
-      extensionService: {
-        listEnabledSourcesForProject: async () => [
-          {
-            instance: { namespace: "lab" },
-            installedSource: {
-              extension_id: "pstdio.lab",
-              source_kind: "local",
-              source_path: sourcePath,
-            },
-          },
-        ],
-      },
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+        extensionService: extensionService as never,
+        repoService: repoService as never,
+      }),
+      extensionService,
       projectService: {
         get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
       },
-      repoService: {
-        listByProject: async () => [],
-      },
+      repoService,
     } as never),
   );
   return app;

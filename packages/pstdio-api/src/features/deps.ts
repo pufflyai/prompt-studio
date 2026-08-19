@@ -24,6 +24,7 @@ import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
+import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { RuntimeRouteDeps } from "./runtime/routes";
 import type { EventBus } from "./sync/event-bus";
@@ -62,6 +63,7 @@ export interface RouteDeps {
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
+  extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;

@@ -243,11 +243,12 @@ const startNotificationWakeTimer = (notificationService: ReturnType<typeof creat
   return timer;
 };
 
+const openAppDb = (options: AppOptions) =>
+  openDb(options.dbPath ?? process.env.PSTDIO_DB_PATH, options.onDatabaseLockAcquired);
+
 export const createApp = async (options: AppOptions) => {
-  const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
-  const { db, close: closeDb } = await openDb(dbPath, options.onDatabaseLockAcquired);
-  const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
-  const securityToken = apiToken ?? options.runtimeHost?.token;
+  const { db, close: closeDb } = await openAppDb(options);
+  const securityToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN ?? options.runtimeHost?.token;
   const app = new OpenAPIHono<AppBindings>();
 
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
@@ -343,6 +344,7 @@ export const createApp = async (options: AppOptions) => {
     extensionAutomationPreferencesService,
     extensionFileService,
     extensionInstancesService,
+    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
     extensionService,
     extensionSettingsDBService,
     extensionSettingsService,
@@ -412,6 +414,7 @@ export const createApp = async (options: AppOptions) => {
     extensionInstancesService,
     extensionAutomationPreferencesService,
     extensionFileService,
+    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
     extensionSettingsDBService,
     extensionService,
     extensionSettingsService,

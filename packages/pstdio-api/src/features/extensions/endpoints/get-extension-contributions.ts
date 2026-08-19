@@ -2,7 +2,6 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
-import { loadInstalledSourceRuntime } from "../extension-command-runtime";
 import { assembleWorkbenchMetadata } from "../workbench-metadata-assembly";
 
 const errorSchema = z.object({ error: z.string() });
@@ -41,7 +40,7 @@ export const getExtensionContributionsHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const runtime = await loadInstalledSourceRuntime(existing.installedSource);
+    const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(existing.installedSource);
     return c.json(await assembleWorkbenchMetadata(deps, projectId, runtime, [existing]), 200);
   };
 };

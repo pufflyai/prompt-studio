@@ -50,6 +50,7 @@ export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExte
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
+  loadSources?: typeof loadExtensionSources;
   repoService: ReturnType<typeof createRepoService>;
 }) => {
   // Caches the in-flight load promise so concurrent catalog reads (for example a template
@@ -60,7 +61,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const cached = sourcesByPath.get(installedSource.source_path);
     if (cached) return cached;
 
-    const loading = loadExtensionSources({
+    const loading = (deps.loadSources ?? loadExtensionSources)({
       extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
     }).then((loaded) => {
       const source = loaded.sources[0];
@@ -94,9 +95,15 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     };
   };
 
+  const getInstalledSourceRuntime = async (installedSource: EnabledExtensionSource["installedSource"]) => {
+    const cached = await loadSource(installedSource);
+    if (!cached) return normalizeExtensionSources([], [], { repoRoots: [] });
+    return normalizeExtensionSources([cached.source], cached.diagnostics, { repoRoots: [] });
+  };
+
   const refresh = () => {
     sourcesByPath.clear();
   };
 
-  return { getProjectRuntime, refresh };
+  return { getInstalledSourceRuntime, getProjectRuntime, refresh };
 };

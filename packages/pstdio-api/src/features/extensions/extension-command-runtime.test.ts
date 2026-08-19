@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
 
@@ -803,33 +804,41 @@ describe("loadProjectExtensionRuntime", () => {
     writeRuntimeExtension(globalPath, "global");
     writeRuntimeExtension(localPath, "local");
 
+    const extensionService = {
+      listEnabledSourcesForProject: async () => [
+        {
+          instance: { id: "global-instance", namespace: "hello", enabled: true },
+          installedSource: {
+            id: "global-source",
+            extension_id: "pstdio.hello",
+            source_kind: "git",
+            source_path: globalPath,
+            status: "loaded",
+          },
+        },
+        {
+          instance: { id: "local-instance", namespace: "hello", enabled: true },
+          installedSource: {
+            id: "local-source",
+            extension_id: "pstdio.hello",
+            source_kind: "local_path",
+            source_path: localPath,
+            status: "loaded",
+          },
+        },
+      ],
+    };
+    const repoService = {
+      listByProject: async () => [{ id: "repo-1", path: repoPath }],
+    };
     const { project, runtime } = await loadProjectExtensionRuntime(
       {
-        extensionService: {
-          listEnabledSourcesForProject: async () => [
-            {
-              instance: { id: "global-instance", namespace: "hello", enabled: true },
-              installedSource: {
-                id: "global-source",
-                extension_id: "pstdio.hello",
-                source_kind: "git",
-                source_path: globalPath,
-              },
-            },
-            {
-              instance: { id: "local-instance", namespace: "hello", enabled: true },
-              installedSource: {
-                id: "local-source",
-                extension_id: "pstdio.hello",
-                source_kind: "local_path",
-                source_path: localPath,
-              },
-            },
-          ],
-        },
-        repoService: {
-          listByProject: async () => [{ id: "repo-1", path: repoPath }],
-        },
+        extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+          extensionService: extensionService as never,
+          repoService: repoService as never,
+        }),
+        extensionService,
+        repoService,
         projectService: { get: async () => projectContext },
       } as never,
       "project-1",
