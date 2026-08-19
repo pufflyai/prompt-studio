@@ -75,6 +75,12 @@ describe("createExtensionTestbenchApi", () => {
               label: "PS-15 Parent ticket preview",
               metadata: {
                 shorthand: "PS-15",
+                resourceParent: {
+                  type: "extension-view",
+                  id: "pstdio-planner.tickets",
+                  label: "Tickets",
+                  icon: "square-kanban",
+                },
               },
             },
           },
