@@ -114,13 +114,24 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       : null;
   }, [resource?.uri, sectionNavigation, workbench]);
 
+  // Contribution refresh re-registers an identical contribution as a new
+  // object. The contribution id is the identity; callbacks read through this
+  // ref so a re-registration never resets an open editor.
+  const contributionRef = useRef(contribution);
+  useEffect(() => {
+    contributionRef.current = contribution;
+  });
+
+  const contributionId = contribution.id;
+  const hasSave = Boolean(contribution.save);
+
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
     let cancelled = false;
     setError(null);
     setLoaded(null);
     const load = () => {
-      Promise.resolve(contribution.load(resource))
+      Promise.resolve(contributionRef.current.load(resource))
         .then((next) => {
           if (cancelled) return;
           setError(null);
@@ -135,17 +146,16 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           setError({ loadKey, message: describeError(loadError) });
         });
     };
-    const save = contribution.save;
-    controllerRef.current = save
+    controllerRef.current = hasSave
       ? createFileEditController({
           debounceMs: SAVE_DEBOUNCE_MS,
           load,
-          save: (value) => Promise.resolve(save(resource, value)),
+          save: (value) => Promise.resolve(contributionRef.current.save?.(resource, value)),
         })
       : null;
     load();
     const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
-      if (event.fileRendererId !== contribution.id) return;
+      if (event.fileRendererId !== contributionId) return;
       const controller = controllerRef.current;
       if (controller) controller.handleRefreshEvent();
       else load();
@@ -158,7 +168,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       controllerRef.current?.flush();
       controllerRef.current = null;
     };
-  }, [contribution, workbench, resource, loadKey]);
+  }, [contributionId, hasSave, workbench, resource, loadKey]);
 
   // The last keystrokes are also flushed when the tab is hidden or closed.
   useEffect(() => {
