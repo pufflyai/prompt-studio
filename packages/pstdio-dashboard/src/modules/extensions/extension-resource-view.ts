@@ -3,7 +3,7 @@ import { selectDashboardNavigationResource } from "@/shared/app/navigation-state
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
+import { setResourceBreadcrumb, updateResourceBreadcrumbLabel } from "@/shared/workbench/resource-sync";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 import { extensionModeLayoutRegion, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
 
@@ -320,7 +320,7 @@ export const registerExtensionResourceView = (
       if (!label || label === activeResource.label) return;
 
       activeResource.label = label;
-      setResourceBreadcrumb(ctx, activeResource);
+      updateResourceBreadcrumbLabel(ctx, activeResource);
       updateResourceGroupTitles(ctx, group, input.metadata, activeResource);
     }),
   });
