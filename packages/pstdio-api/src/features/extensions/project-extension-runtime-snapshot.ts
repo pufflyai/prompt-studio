@@ -13,7 +13,7 @@ export type RuntimeInvalidationReason =
   | "runtime_refresh";
 
 // Set on a retained last-healthy snapshot when a replacement load failed as a whole.
-export type SnapshotStaleMarker = {
+type SnapshotStaleMarker = {
   code: "extension_runtime_load_failed";
   message: string;
 };
