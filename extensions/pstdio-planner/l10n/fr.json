@@ -1,4 +1,6 @@
 {
+  "archiveState.active": "Actif",
+  "archiveState.archived": "Archivé",
   "boardView.archiveAll": "Tout archiver",
   "boardView.emptyTicket": "tâche vide",
   "breakIntoSubTicketsModal.agent": "Agent",
@@ -35,6 +37,7 @@
   "displayMenu.orderingOptions.title": "Titre",
   "displayMenu.orderingOptions.updated": "Mis à jour",
   "displayMenu.propertyOptions.assignee": "Assigné",
+  "displayMenu.propertyOptions.archived": "Archivé",
   "displayMenu.propertyOptions.createdAt": "Créé",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "Statut",

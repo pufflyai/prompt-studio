@@ -1,4 +1,6 @@
 {
+  "archiveState.active": "活跃",
+  "archiveState.archived": "已归档",
   "boardView.archiveAll": "全部归档",
   "boardView.emptyTicket": "空工单",
   "breakIntoSubTicketsModal.agent": "代理",
@@ -35,6 +37,7 @@
   "displayMenu.orderingOptions.title": "标题",
   "displayMenu.orderingOptions.updated": "更新时间",
   "displayMenu.propertyOptions.assignee": "负责人",
+  "displayMenu.propertyOptions.archived": "已归档",
   "displayMenu.propertyOptions.createdAt": "创建时间",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "状态",

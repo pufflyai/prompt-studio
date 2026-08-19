@@ -30,6 +30,22 @@ const makeWorkspace = (id: string, shorthand: string, createdAt: string): Extens
 });
 
 describe("queryTicketsCommand", () => {
+  test("passes archived filter values to the tickets query", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await putTicket(storage, makeTicket({ archived: false, title: "Active" }));
+    await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2", archived: true, title: "Archived" }));
+
+    const ctx = makeCommandContext({
+      storage,
+      params: { filters: { archived: ["archived"] } },
+    });
+
+    const result = await queryTicketsCommand.run(ctx);
+
+    expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
+  });
+
   test("pairs each workspace badge item with that workspace's latest session", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);

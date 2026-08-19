@@ -23,6 +23,9 @@ export const TICKET_RESOURCE_KIND = "ticket";
 export const TICKET_RESOURCE_ICON = "component";
 export const TICKET_WORKSPACE_ATTRIBUTE_ID = "workspace";
 export const TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID = "workspaceItems";
+export const TICKET_ARCHIVE_STATE_ATTRIBUTE_ID = "archived";
+export const TICKET_ARCHIVE_STATE_ACTIVE = "active";
+export const TICKET_ARCHIVE_STATE_ARCHIVED = "archived";
 
 const COLUMN_ACTION_LABELS: Record<string, Localizable<string>> = {
   archive_all: l10n("boardView.archiveAll", "Archive all"),
@@ -153,6 +156,9 @@ const ticketToRowWithTags = (
     },
     attributes: {
       status: ticket.statusId ?? "",
+      [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: ticket.archived
+        ? TICKET_ARCHIVE_STATE_ARCHIVED
+        : TICKET_ARCHIVE_STATE_ACTIVE,
       created: ticket.createdAt,
       updated: ticket.updatedAt,
       id: hierarchy.breadcrumb,
@@ -218,6 +224,19 @@ export const buildTicketAttributes = (
     filterable: true,
     displayable: true,
     editable: true,
+  },
+  {
+    id: TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
+    label: l10n("displayMenu.propertyOptions.archived", "Archived"),
+    type: {
+      kind: "enum",
+      options: [
+        { value: TICKET_ARCHIVE_STATE_ACTIVE, label: l10n("archiveState.active", "Active") },
+        { value: TICKET_ARCHIVE_STATE_ARCHIVED, label: l10n("archiveState.archived", "Archived") },
+      ],
+    },
+    filterable: true,
+    editable: false,
   },
   {
     id: "created",

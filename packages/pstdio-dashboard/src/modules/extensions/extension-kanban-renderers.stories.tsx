@@ -32,7 +32,21 @@ const ticketsRecord = {
       sortable: true,
       displayable: true,
     },
+    {
+      id: "archived",
+      label: "Archived",
+      type: {
+        kind: "enum" as const,
+        options: [
+          { value: "active", label: "Active" },
+          { value: "archived", label: "Archived" },
+        ],
+      },
+      filterable: true,
+      editable: false,
+    },
   ],
+  defaultFilters: { archived: ["active"] },
   defaultSettings: { viewMode: "board" as const, columnGrouping: "status" },
   rowActions: [
     {
@@ -45,9 +59,14 @@ const ticketsRecord = {
 };
 
 const sampleRows = [
-  { id: "PS-10", title: "PS-10 Wire up dashboard board", attributes: { status: "todo" } },
-  { id: "PS-11", title: "PS-11 Wire bridge webview", attributes: { status: "in-progress" } },
-  { id: "PS-12", title: "PS-12 Ship", attributes: { status: "done" } },
+  { id: "PS-10", title: "PS-10 Wire up dashboard board", attributes: { status: "todo", archived: "active" } },
+  {
+    id: "PS-11",
+    title: "PS-11 Wire bridge webview",
+    attributes: { status: "in-progress", archived: "active" },
+  },
+  { id: "PS-12", title: "PS-12 Ship", attributes: { status: "done", archived: "active" } },
+  { id: "PS-9", title: "PS-9 Retired board experiment", attributes: { status: "done", archived: "archived" } },
 ];
 
 const queryResponse: CommandExecuteResponse = {

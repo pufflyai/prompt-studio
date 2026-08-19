@@ -63,16 +63,6 @@ describe("runTicketsQuery", () => {
     expect(Object.keys(result.boardColumnConfigs ?? {})).toContain(todo.id);
   });
 
-  test("excludes archived tickets", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    await putTicket(storage, makeTicket({ shorthand: "T-1", archived: true }));
-
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
-
-    expect(result.rows).toHaveLength(0);
-  });
-
   test("seeds default statuses when the project has none yet", async () => {
     const storage = createMemoryStorage();
     // No explicit seed — the board must still get status columns.
@@ -113,6 +103,7 @@ describe("runTicketsQuery", () => {
 
     expect(result.attributes?.map((attribute) => attribute.id)).toEqual([
       "status",
+      "archived",
       "created",
       "updated",
       "id",
@@ -124,6 +115,7 @@ describe("runTicketsQuery", () => {
       "default-human-requested",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
+      archived: "active",
       created: "2026-01-01T00:00:00.000Z",
       id: "T-1",
       workspace: "",
@@ -322,6 +314,25 @@ describe("runTicketsQuery workspace badges", () => {
       expect.objectContaining({ id: "workspace-2", name: "workspace-2" }),
       expect.objectContaining({ id: "workspace-1", name: "T-1_A1" }),
     ]);
+  });
+});
+
+describe("runTicketsQuery archive filtering", () => {
+  test.each([
+    ["missing filters", undefined, ["Active"]],
+    ["empty archive selection", { archived: [] }, ["Active"]],
+    ["active only", { archived: ["active"] }, ["Active"]],
+    ["archived only", { archived: ["archived"] }, ["Archived"]],
+    ["active and archived", { archived: ["active", "archived"] }, ["Active", "Archived"]],
+  ])("filters archive state for %s", async (_name, filters, expectedTitles) => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await putTicket(storage, makeTicket({ shorthand: "T-1", title: "Active", archived: false, sortOrder: 0 }));
+    await putTicket(storage, makeTicket({ shorthand: "T-2", title: "Archived", archived: true, sortOrder: 1 }));
+
+    const result = await runTicketsQuery({ storage, projectId: "proj-1", filters });
+
+    expect(result.rows.map((row) => row.title)).toEqual(expectedTitles);
   });
 });
 

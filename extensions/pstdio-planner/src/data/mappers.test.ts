@@ -59,6 +59,7 @@ describe("ticketToRow", () => {
     });
     expect(row.attributes).toEqual({
       status: "s-todo",
+      archived: "active",
       created: "2026-01-01T00:00:00.000Z",
       updated: "2026-01-02T00:00:00.000Z",
       id: "T-1",
@@ -71,6 +72,12 @@ describe("ticketToRow", () => {
   test("falls back to the shorthand when there is no title", () => {
     const row = ticketToRow({ ...ticket, title: "" }, "proj-1");
     expect(row.title).toBe("T-1");
+  });
+
+  test("maps archived tickets to the archived filter value", () => {
+    const row = ticketToRow({ ...ticket, archived: true }, "proj-1");
+
+    expect(row.attributes.archived).toBe("archived");
   });
 
   test("adds a canonical parent resource edge to child ticket resources", () => {
@@ -195,6 +202,24 @@ describe("createTicketWorkspaceLookup", () => {
 });
 
 describe("buildTicketAttributes", () => {
+  test("exposes archive state as a filter-only enum", () => {
+    const archiveAttribute = buildTicketAttributes([]).find((attribute) => attribute.id === "archived");
+
+    expect(archiveAttribute).toEqual({
+      id: "archived",
+      label: { $l10n: "displayMenu.propertyOptions.archived", default: "Archived" },
+      type: {
+        kind: "enum",
+        options: [
+          { value: "active", label: { $l10n: "archiveState.active", default: "Active" } },
+          { value: "archived", label: { $l10n: "archiveState.archived", default: "Archived" } },
+        ],
+      },
+      filterable: true,
+      editable: false,
+    });
+  });
+
   test("builds a status enum from sorted statuses", () => {
     const attributes = buildTicketAttributes([
       { ...status, id: "s-done", name: "Done", icon: "check-circle", sortOrder: 4 },

@@ -1,4 +1,9 @@
-import type { ExtensionStorageApi, ExtensionWorkspace, KanbanRendererQueryResult } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionStorageApi,
+  ExtensionWorkspace,
+  KanbanRendererFilterState,
+  KanbanRendererQueryResult,
+} from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -7,6 +12,9 @@ import {
   createTicketRowMapper,
   createTicketWorkspaceLookup,
   statusToColumnConfig,
+  TICKET_ARCHIVE_STATE_ACTIVE,
+  TICKET_ARCHIVE_STATE_ARCHIVED,
+  TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
@@ -14,17 +22,19 @@ import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
   projectId: string;
+  filters?: KanbanRendererFilterState;
   workspaces?: ExtensionWorkspace[];
   workspaceSessions?: TicketWorkspaceSessionLookup;
 }
 
-// The renderer re-applies filter / sort / group locally, so we return every
-// visible ticket plus the live status + tag schema and per-column board config.
+// The renderer re-applies filter / sort / group locally, so we return the
+// requested archive set plus the live status + tag schema and board config.
 // Statuses and tags are seeded lazily here so a freshly enabled project always has
 // board columns and tag attributes regardless of the install-time lifecycle scope.
 export const runTicketsQuery = async ({
   storage,
   projectId,
+  filters,
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
@@ -41,7 +51,15 @@ export const runTicketsQuery = async ({
     createTicketWorkspaceLookup(workspaces, workspaceSessions),
     createTicketParentLookup(tickets),
   );
-  const rows = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived)).map(toTicketRow);
+  const selectedArchiveStates = filters?.[TICKET_ARCHIVE_STATE_ATTRIBUTE_ID];
+  const requestedArchiveStates = new Set(
+    selectedArchiveStates?.length ? selectedArchiveStates : [TICKET_ARCHIVE_STATE_ACTIVE],
+  );
+  const rows = sortedBySortOrder(
+    tickets.filter((ticket) =>
+      requestedArchiveStates.has(ticket.archived ? TICKET_ARCHIVE_STATE_ARCHIVED : TICKET_ARCHIVE_STATE_ACTIVE),
+    ),
+  ).map(toTicketRow);
 
   return {
     rows,

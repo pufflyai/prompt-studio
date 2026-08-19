@@ -2,7 +2,11 @@ import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { cleanupLegacyWorkspaceStatus } from "./src/data/cleanup-legacy-workspace-status";
-import { buildTicketAttributes } from "./src/data/mappers";
+import {
+  buildTicketAttributes,
+  TICKET_ARCHIVE_STATE_ACTIVE,
+  TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
+} from "./src/data/mappers";
 import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
@@ -130,6 +134,7 @@ export default defineExtension({
       onAttributeChange: (ctx, input) => runRendererCommand(plannerCommands["set-ticket-attribute"], input)(ctx),
       onReorder: (ctx, input) => runRendererCommand(plannerCommands["reorder-ticket"], input)(ctx),
       onColumnAction: (ctx, input) => runRendererCommand(plannerCommands["ticket-column-action"], input)(ctx),
+      defaultFilters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
         columnParam: "statusId",

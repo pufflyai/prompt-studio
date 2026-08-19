@@ -206,6 +206,7 @@ describe("pstdio planner extension contributions", () => {
   });
 
   test("places the tickets kanban in a panel with core properties displayed", () => {
+    expect(extension.kanbanRenderers?.tickets?.defaultFilters).toEqual({ archived: ["active"] });
     expect(extension.kanbanRenderers?.tickets?.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",

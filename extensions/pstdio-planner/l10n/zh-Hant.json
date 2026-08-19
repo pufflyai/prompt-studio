@@ -1,4 +1,6 @@
 {
+  "archiveState.active": "使用中",
+  "archiveState.archived": "已封存",
   "boardView.archiveAll": "全部封存",
   "boardView.emptyTicket": "空工單",
   "breakIntoSubTicketsModal.agent": "代理",
@@ -35,6 +37,7 @@
   "displayMenu.orderingOptions.title": "標題",
   "displayMenu.orderingOptions.updated": "更新時間",
   "displayMenu.propertyOptions.assignee": "負責人",
+  "displayMenu.propertyOptions.archived": "已封存",
   "displayMenu.propertyOptions.createdAt": "建立時間",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "狀態",

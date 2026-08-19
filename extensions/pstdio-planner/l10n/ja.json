@@ -1,4 +1,6 @@
 {
+  "archiveState.active": "アクティブ",
+  "archiveState.archived": "アーカイブ済み",
   "boardView.archiveAll": "すべてアーカイブ",
   "boardView.emptyTicket": "空のチケット",
   "breakIntoSubTicketsModal.agent": "エージェント",
@@ -35,6 +37,7 @@
   "displayMenu.orderingOptions.title": "タイトル",
   "displayMenu.orderingOptions.updated": "更新日",
   "displayMenu.propertyOptions.assignee": "担当者",
+  "displayMenu.propertyOptions.archived": "アーカイブ",
   "displayMenu.propertyOptions.createdAt": "作成日",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "ステータス",

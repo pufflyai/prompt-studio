@@ -1,4 +1,6 @@
 {
+  "archiveState.active": "활성",
+  "archiveState.archived": "보관됨",
   "boardView.archiveAll": "모두 보관",
   "boardView.emptyTicket": "빈 티켓",
   "breakIntoSubTicketsModal.agent": "에이전트",
@@ -35,6 +37,7 @@
   "displayMenu.orderingOptions.title": "제목",
   "displayMenu.orderingOptions.updated": "업데이트순",
   "displayMenu.propertyOptions.assignee": "담당자",
+  "displayMenu.propertyOptions.archived": "보관됨",
   "displayMenu.propertyOptions.createdAt": "생성일",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "상태",
