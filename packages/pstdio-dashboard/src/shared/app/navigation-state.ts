@@ -75,30 +75,65 @@ export const clearDashboardNavigationState = (ctx: DashboardNavigationContext) =
   ctx.context.delete(dashboardSelectedResourceContextKey);
 };
 
-export const selectDashboardNavigationResource = (
+// Applies the committed selection to dashboard state. A dashboard-view pseudo
+// resource selects its collection; a real resource replaces the selection; an
+// undefined resource clears the selection but keeps the active collection so
+// aggregate contexts keep their scope name.
+export const applyDashboardNavigationSelection = (
   ctx: DashboardNavigationContext,
-  resource: ResourceRef,
-  input: { modeId?: string } = {},
+  resource: ResourceRef | undefined,
 ) => {
+  if (!resource) {
+    selectedResourceByWorkbench.delete(ctx.context.store);
+    ctx.context.delete(dashboardSelectedResourceContextKey);
+    return;
+  }
   if (resource.kind !== "dashboard-view") {
     activeCollectionByWorkbench.delete(ctx.context.store);
     ctx.context.delete(dashboardActiveCollectionContextKey);
     selectedResourceByWorkbench.set(ctx.context.store, resource);
     ctx.context.set(dashboardSelectedResourceContextKey, resource.uri);
-  } else {
-    const collection = collectionFromResource(resource);
-    if (collection) {
-      activeCollectionByWorkbench.set(ctx.context.store, collection);
-      ctx.context.set(dashboardActiveCollectionContextKey, collection);
-    } else {
-      activeCollectionByWorkbench.delete(ctx.context.store);
-      ctx.context.delete(dashboardActiveCollectionContextKey);
-    }
-    selectedResourceByWorkbench.delete(ctx.context.store);
-    ctx.context.delete(dashboardSelectedResourceContextKey);
+    return;
   }
+  const collection = collectionFromResource(resource);
+  if (collection) {
+    activeCollectionByWorkbench.set(ctx.context.store, collection);
+    ctx.context.set(dashboardActiveCollectionContextKey, collection);
+  } else {
+    activeCollectionByWorkbench.delete(ctx.context.store);
+    ctx.context.delete(dashboardActiveCollectionContextKey);
+  }
+  selectedResourceByWorkbench.delete(ctx.context.store);
+  ctx.context.delete(dashboardSelectedResourceContextKey);
+};
 
-  if (input.modeId !== undefined) ctx.modes.setActiveMode(input.modeId, { deferSeed: true });
-  syncDashboardLayoutPersistenceScope(ctx, input.modeId);
-  if (input.modeId !== undefined) ctx.modes.seedActiveMode();
+const configuredNavigators = new WeakSet<object>();
+
+// Configures the atomic navigator with the dashboard's selection, scope, and
+// breadcrumb ownership. All dashboard navigation runs through the navigator; no
+// caller pairs setActiveMode with a separate resource selection. Safe to call from
+// every dashboard navigation entry point; one workbench configures once.
+export const registerDashboardNavigator = (ctx: WorkbenchModuleContext) => {
+  if (configuredNavigators.has(ctx.context.store)) return;
+  configuredNavigators.add(ctx.context.store);
+  ctx.navigator.configure({
+    getProjectId: () => getDashboardSelectedProjectId(ctx),
+    getSelectedResource: () => getDashboardSelectedResource(ctx),
+    interpretSelection: (resource) => (resource.kind === "dashboard-view" ? undefined : resource),
+    applySelection: (resource) => applyDashboardNavigationSelection(ctx, resource),
+    applyScope: () => syncDashboardLayoutPersistenceScope(ctx),
+    applyBreadcrumb: (resource) => {
+      if (!resource) ctx.breadcrumbs.clearItems();
+    },
+    presentResource: (resource, input) => ctx.resources.openResource(resource, input),
+  });
+};
+
+export const selectDashboardNavigationResource = (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  input: { modeId?: string } = {},
+) => {
+  registerDashboardNavigator(ctx);
+  ctx.navigator.commitContext({ modeId: input.modeId, resource });
 };

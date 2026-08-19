@@ -8,6 +8,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
+import type { ResourceRef } from "../resources/resource-registry";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
@@ -17,6 +18,11 @@ export interface WorkbenchModeContribution {
   id: string;
   label?: string;
   panels?: readonly WorkbenchPanelRegion[];
+  // Resource kinds this mode accepts. The atomic navigator validates targets
+  // against this list; a mode without kinds navigates with a cleared resource.
+  resourceKinds?: readonly string[];
+  // Fallback resource when the mode is entered without a compatible resource.
+  defaultResource?: ResourceRef | (() => Promise<ResourceRef | undefined> | ResourceRef | undefined);
   // Registers the mode's contributions once for the lifetime of the mode.
   activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
   // Seeds default placements only when the persistence scope has no layout yet.

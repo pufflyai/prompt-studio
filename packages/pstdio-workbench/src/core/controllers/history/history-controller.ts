@@ -7,7 +7,7 @@ import {
   workbenchPanelRegions,
 } from "../../registries/layout/layout-types";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
-import type { ResourceRegistry } from "../../registries/resources/resource-registry";
+import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import {
   emptyHistoryState,
@@ -72,6 +72,9 @@ export interface CreateHistoryControllerInput {
   resources: ResourceRegistry;
   persistence?: WorkbenchHistoryPersistence;
   maxEntries?: number;
+  // Replays mode and resource through the atomic navigator so no observer sees an
+  // intermediate pair. Entries replay through the legacy mode restore without it.
+  commitNavigation?(commit: { modeId?: string; resource?: ResourceRef | null; replaceActive?: boolean }): unknown;
 }
 
 const DEFAULT_MAX_ENTRIES = 50;
@@ -515,7 +518,14 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   };
 
   const restoreMode = (entry: WorkbenchNavigationEntry) => {
-    if (!input.modes || !entry.modeId || !input.modes.getMode(entry.modeId)) return;
+    if (!entry.modeId) return;
+    if (input.commitNavigation) {
+      // One atomic transaction restores mode and resource together; presentation
+      // of the resource still happens through the replay path below.
+      input.commitNavigation({ modeId: entry.modeId, resource: entry.resource ?? null, replaceActive: true });
+      return;
+    }
+    if (!input.modes || !input.modes.getMode(entry.modeId)) return;
     if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
   };
 

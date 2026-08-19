@@ -283,6 +283,9 @@ const registerExtensionModes = (
           id: mode.modeId,
           label: resolveLocalizableString(mode.label, mode.extensionId),
           panels: mode.layout?.panels,
+          // Extension modes declare their accepted kinds explicitly so the atomic
+          // navigator rejects incompatible resources instead of keeping them.
+          resourceKinds: resourceKind ? [resourceKind.kind] : [],
           activate: () => undefined,
           seed(modeCtx) {
             activateExtensionModeLayout({ ctx: modeCtx, metadata, mode, projectId });

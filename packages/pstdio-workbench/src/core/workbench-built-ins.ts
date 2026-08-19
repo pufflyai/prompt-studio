@@ -122,20 +122,21 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       when: "!inputFocus",
     },
     {
-      execute: (args?: WorkbenchSwitchModeCommandArgs) => {
+      execute: async (args?: WorkbenchSwitchModeCommandArgs) => {
         if (!args?.modeId) {
           workbench.commandPalette.open({ view: "mode" });
           return;
         }
-        if (!workbench.modes.getMode(args.modeId)) {
+        // Mode switches run through the atomic navigator so the resource, layout
+        // scope, and breadcrumb commit together with the mode.
+        const result = await workbench.navigator.open({ modeId: args.modeId });
+        if (!result.ok && result.code === "navigation_mode_missing") {
           workbench.notifications.show({
             level: "error",
             title: "Mode unavailable",
-            message: `Workbench mode not registered: ${args.modeId}`,
+            message: result.message,
           });
-          return;
         }
-        workbench.modes.setActiveMode(args.modeId);
       },
     },
   );

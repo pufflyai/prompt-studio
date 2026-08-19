@@ -47,6 +47,15 @@ export type {
   WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
 export { createWorkbenchLastResourceController } from "./controllers/last-resource/last-resource-controller";
+export {
+  createWorkbenchNavigator,
+  type WorkbenchNavigationCommit,
+  type WorkbenchNavigationDiagnosticCode,
+  type WorkbenchNavigationResult,
+  type WorkbenchNavigationTarget,
+  type WorkbenchNavigator,
+  type WorkbenchNavigatorHostHooks,
+} from "./controllers/navigator/workbench-navigator";
 export type {
   CreateWorkbenchPanelsControllerInput,
   PersistedWorkbenchPanels,

@@ -162,7 +162,7 @@ const registerProjectCommands = (
     {
       execute: () => {
         if (!getDashboardSelectedProjectId(ctx)) {
-          ctx.modes.setActiveMode("project-selection");
+          ctx.navigator.commitContext({ modeId: "project-selection", resource: null });
           return undefined;
         }
 

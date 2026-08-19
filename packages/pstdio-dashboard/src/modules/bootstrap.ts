@@ -27,7 +27,7 @@ interface LandingRunGuard {
 }
 
 const openProjectSelection = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
-  ctx.modes.setActiveMode("project-selection");
+  ctx.navigator.commitContext({ modeId: "project-selection", resource: null });
 };
 
 const canOpenResource = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], resource: ResourceRef) =>

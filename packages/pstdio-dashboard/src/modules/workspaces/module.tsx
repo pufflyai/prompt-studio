@@ -22,7 +22,7 @@ import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } fro
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
-    ctx.modes.setActiveMode("project-selection");
+    ctx.navigator.commitContext({ modeId: "project-selection", resource: null });
     return;
   }
 

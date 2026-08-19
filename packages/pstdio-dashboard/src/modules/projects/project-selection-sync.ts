@@ -1,6 +1,10 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
-import { clearDashboardNavigationState, syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
+import {
+  clearDashboardNavigationState,
+  registerDashboardNavigator,
+  syncDashboardLayoutPersistenceScope,
+} from "@/shared/app/navigation-state";
 import {
   clearDashboardProjectSelection,
   getDashboardSelectedProjectId,
@@ -43,6 +47,10 @@ export const resetProjectModeOnProjectChange = (
 export const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
   let currentProjectId = getDashboardSelectedProjectId(ctx);
 
+  // Mode-driven scope rotation is owned by the atomic navigator; this sync covers
+  // project selection changes only, so there is no second navigation path.
+  registerDashboardNavigator(ctx);
+
   const syncScope = () => {
     const projectId = getDashboardSelectedProjectId(ctx);
     if (projectId !== currentProjectId) {
@@ -55,11 +63,9 @@ export const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
 
   syncScope();
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, syncScope);
-  const modeSubscription = ctx.modes.onDidChangeActive(() => syncDashboardLayoutPersistenceScope(ctx));
   return {
     dispose: () => {
       unsubscribeProject();
-      modeSubscription.dispose();
     },
   };
 };

@@ -17,6 +17,7 @@ import {
   type LastResourcePersistenceAdapter,
   type WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
+import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -129,6 +130,7 @@ export interface WorkbenchCoreContributionContext {
   layout: WorkbenchLayoutModel;
   modes: WorkbenchModeRegistry;
   navigation: NavigationRegistry;
+  navigator: WorkbenchNavigator;
   notifications: NotificationRegistry;
   panels: WorkbenchPanelsController;
   preferences: PreferenceRegistry;
@@ -277,6 +279,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.keybindings.registerKeybinding(keybinding, withModuleMetadata(input, metadata))),
     },
     lastResource: { ...core.lastResource },
+    navigator: core.navigator,
     layout: {
       ...core.layout,
       openPanel: (id, openInput) => {
@@ -462,6 +465,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     layout,
     modes: undefined as unknown as WorkbenchModeRegistry,
+    navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
     navigation: createNavigationRegistry({
       resolveDispatcher: () => ({
@@ -607,11 +611,16 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     establishLocation: (instanceId) => establishLocation(instanceId),
     resolveContext: () => core,
   });
+  core.navigator = createWorkbenchNavigator({
+    modes: core.modes,
+    getSelectedResource: () => core.getPrimaryResource(),
+  });
   core.history = createHistoryController({
     layout: core.layout,
     modes: core.modes,
     resources: core.resources,
     persistence: input.historyPersistence,
+    commitNavigation: (commit) => core.navigator.commitContext(commit),
   });
 
   core.layout.store.subscribe((state) => {
