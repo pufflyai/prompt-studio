@@ -63,7 +63,7 @@ export const setTicketAttributeCommand = defineCommand({
       attributeId: ctx.params.attributeId,
       value: ctx.params.value,
     });
-    if (ticket) await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return ticket;
   },
 });

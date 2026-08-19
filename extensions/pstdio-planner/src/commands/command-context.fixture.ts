@@ -29,6 +29,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     project: { id: projectId, name: "Test Project", shorthand: "T" },
     params,
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
+    events: { emit: async () => ({ delivered: 0 }) },
     workspaces: { list: async () => [] },
     sessions: { list: async () => [], listByWorkspace: async () => [], addAnchors: async () => {} },
     repos: {

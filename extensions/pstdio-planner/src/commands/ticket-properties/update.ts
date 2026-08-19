@@ -21,7 +21,7 @@ export const ticketPropertiesUpdateCommand = defineCommand({
       attributeId: ctx.params.controlId,
       value: ctx.params.value,
     });
-    if (ticket) await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return ticket;
   },
 });

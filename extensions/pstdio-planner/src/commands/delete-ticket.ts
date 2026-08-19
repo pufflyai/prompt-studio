@@ -19,7 +19,7 @@ export const deleteTicketCommand = defineCommand({
     const ref = ticketRefFromCommandContext(ctx);
     const id = (await findTicket(ctx.storage, ref))?.id ?? ref;
     await ticketsCollection(ctx.storage).delete(id);
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
     return { id, deleted: true };
   },
 });

@@ -82,7 +82,7 @@ export const createTicketCommand = defineCommand({
       createdAt: now,
       updatedAt: now,
     });
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return ticket;
   },
 });

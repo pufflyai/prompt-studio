@@ -37,7 +37,7 @@ export const reorderTicketCommand = defineCommand({
       ),
     );
 
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: rowId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: rowId });
 
     return reordered.map((ticket, sortOrder) => ({ ...ticket, sortOrder }));
   },

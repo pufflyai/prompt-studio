@@ -3,6 +3,7 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicket } from "../data/types";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
+import { makeCommandContext } from "./command-context.fixture";
 
 const now = "2026-06-08T10:00:00.000Z";
 
@@ -58,16 +59,20 @@ describe("archive ticket", () => {
       { id: "ws-other", workspace_shorthand: "T-2_A1", anchors_json: [ticketAnchor("T-2", "ticket-2")] },
     ];
 
-    const result = (await archiveTicketCommand.run({
-      storage,
-      params: { id: "T-1" },
-      workspaces: {
-        list: async () => workspaces,
-        archive: async (id: string) => {
-          archived.push(id);
+    const result = (await archiveTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { id: "T-1" },
+        overrides: {
+          workspaces: {
+            list: async () => workspaces,
+            archive: async (id: string) => {
+              archived.push(id);
+            },
+          },
         },
-      },
-    } as never)) as StoredTicket | null;
+      }),
+    )) as StoredTicket | null;
 
     expect(result?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
@@ -85,18 +90,22 @@ describe("archive ticket", () => {
 
     let commandResolved = false;
     const command = Promise.resolve(
-      archiveTicketCommand.run!({
-        storage,
-        params: { id: "T-1" },
-        workspaces: {
-          list: async () => workspaces,
-          archive: async (id: string) => {
-            archiveStarted.resolve();
-            await cascadeSettled.promise;
-            archived.push(id);
+      archiveTicketCommand.run!(
+        makeCommandContext({
+          storage,
+          params: { id: "T-1" },
+          overrides: {
+            workspaces: {
+              list: async () => workspaces,
+              archive: async (id: string) => {
+                archiveStarted.resolve();
+                await cascadeSettled.promise;
+                archived.push(id);
+              },
+            },
           },
-        },
-      } as never),
+        }),
+      ),
     ).then((result) => {
       commandResolved = true;
       return result as StoredTicket | null;
@@ -128,16 +137,20 @@ describe("archive ticket", () => {
       { id: "ws-other", workspace_shorthand: "T-3_A1", anchors_json: [ticketAnchor("T-3", "ticket-3")] },
     ];
 
-    const result = (await archiveTicketColumnActionCommand.run({
-      storage,
-      params: { columnId: "done", actionId: "archive_all" },
-      workspaces: {
-        list: async () => workspaces,
-        archive: async (id: string) => {
-          archived.push(id);
+    const result = (await archiveTicketColumnActionCommand.run(
+      makeCommandContext({
+        storage,
+        params: { columnId: "done", actionId: "archive_all" },
+        overrides: {
+          workspaces: {
+            list: async () => workspaces,
+            archive: async (id: string) => {
+              archived.push(id);
+            },
+          },
         },
-      },
-    } as never)) as { archived: StoredTicket[] };
+      }),
+    )) as { archived: StoredTicket[] };
 
     expect(result.archived.map((ticket) => ticket.id).sort()).toEqual(["ticket-1", "ticket-2"]);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
@@ -156,17 +169,21 @@ describe("archive ticket", () => {
 
     let commandResolved = false;
     const command = Promise.resolve(
-      archiveTicketColumnActionCommand.run({
-        storage,
-        params: { columnId: "default-done", actionId: "archive_all" },
-        workspaces: {
-          list: async () => workspaces,
-          archive: async () => {
-            archiveStarted.resolve();
-            await cascadeSettled.promise;
+      archiveTicketColumnActionCommand.run(
+        makeCommandContext({
+          storage,
+          params: { columnId: "default-done", actionId: "archive_all" },
+          overrides: {
+            workspaces: {
+              list: async () => workspaces,
+              archive: async () => {
+                archiveStarted.resolve();
+                await cascadeSettled.promise;
+              },
+            },
           },
-        },
-      } as never),
+        }),
+      ),
     ).then((result) => {
       commandResolved = true;
       return result as { archived: StoredTicket[] };
@@ -192,22 +209,26 @@ describe("archive ticket", () => {
     const notificationPosted = deferred();
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
-    const result = (await archiveTicketColumnActionCommand.run({
-      storage,
-      params: { columnId: "default-done", actionId: "archive_all" },
-      workspaces: {
-        list: async () => workspaces,
-        archive: async () => {
-          throw new Error("cascade failed");
+    const result = (await archiveTicketColumnActionCommand.run(
+      makeCommandContext({
+        storage,
+        params: { columnId: "default-done", actionId: "archive_all" },
+        overrides: {
+          workspaces: {
+            list: async () => workspaces,
+            archive: async () => {
+              throw new Error("cascade failed");
+            },
+          },
+          notify: {
+            action: async (input: unknown) => {
+              notifications.push(input);
+              notificationPosted.resolve();
+            },
+          },
         },
-      },
-      notify: {
-        action: async (input: unknown) => {
-          notifications.push(input);
-          notificationPosted.resolve();
-        },
-      },
-    } as never)) as { archived: StoredTicket[] };
+      }),
+    )) as { archived: StoredTicket[] };
 
     await notificationPosted.promise;
 
@@ -230,21 +251,25 @@ describe("archive ticket", () => {
     const notifications: unknown[] = [];
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
-    const result = (await archiveTicketCommand.run({
-      storage,
-      params: { id: "T-1" },
-      workspaces: {
-        list: async () => workspaces,
-        archive: async () => {
-          throw new Error("cascade failed");
+    const result = (await archiveTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { id: "T-1" },
+        overrides: {
+          workspaces: {
+            list: async () => workspaces,
+            archive: async () => {
+              throw new Error("cascade failed");
+            },
+          },
+          notify: {
+            action: async (input: unknown) => {
+              notifications.push(input);
+            },
+          },
         },
-      },
-      notify: {
-        action: async (input: unknown) => {
-          notifications.push(input);
-        },
-      },
-    } as never)) as StoredTicket | null;
+      }),
+    )) as StoredTicket | null;
 
     expect(result?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);

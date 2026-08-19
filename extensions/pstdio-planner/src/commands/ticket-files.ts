@@ -177,7 +177,7 @@ export const createTicketFileCommand = defineCommand({
     const ticketId = selectedTicketId(ctx);
     if (!ticketId) throw new Error("Ticket resource is required.");
     const file = await createTicketFile({ storage: ctx.storage, ticketId, name: ctx.params.name });
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ...file, ticketId };
   },
@@ -199,7 +199,7 @@ export const updateTicketFileCommand = defineCommand({
       content: ctx.params.content,
       name: ctx.params.name,
     });
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
     return ticket;
   },
 });
@@ -219,7 +219,7 @@ export const renameTicketFileCommand = defineCommand({
       fileId: input.fileId,
       name: renameWithCurrentFileEnding(input.name, file?.name ?? ""),
     });
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: input.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: input.ticketId });
     return updated;
   },
 });
@@ -232,7 +232,7 @@ export const deleteTicketFileCommand = defineCommand({
   },
   async run(ctx) {
     await deleteTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, fileId: ctx.params.fileId });
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId };
   },

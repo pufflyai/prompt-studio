@@ -85,7 +85,7 @@ export const createGlassLabArtifactCommand = defineCommand({
   async run(ctx) {
     const artifact = createRandomArtifact();
     await artifactsCollection(ctx.storage).put(artifact.id, artifact);
-    await ctx.events?.emit(labArtifactsChanged, { artifactId: artifact.id });
+    await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });
     return artifact;
   },
 });
@@ -133,7 +133,7 @@ export const updateArtifactMenuCommand = defineCommand({
         ? createRandomArtifact({ status: "locked", summary: "Locked on intake by the Create artifacts menu." })
         : createRandomArtifact();
     await artifactsCollection(ctx.storage).put(artifact.id, artifact);
-    await ctx.events?.emit(labArtifactsChanged, { artifactId: artifact.id });
+    await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });
     return artifact;
   },
 });
@@ -143,7 +143,7 @@ export const deleteGlassLabArtifactCommand = defineCommand({
   params: { rowId: params.text({ required: true }) },
   async run(ctx) {
     await artifactsCollection(ctx.storage).delete(ctx.params.rowId);
-    await ctx.events?.emit(labArtifactsChanged, { artifactId: ctx.params.rowId });
+    await ctx.events.emit(labArtifactsChanged, { artifactId: ctx.params.rowId });
     return { id: ctx.params.rowId };
   },
 });

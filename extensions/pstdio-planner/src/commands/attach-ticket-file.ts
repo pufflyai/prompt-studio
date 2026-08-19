@@ -23,7 +23,7 @@ export const attachTicketFileCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     return next;
   },
 });
@@ -45,7 +45,7 @@ export const detachTicketFileCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);
-    await ctx.events?.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     return next;
   },
 });
