@@ -5,7 +5,6 @@ import {
 } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -48,8 +47,8 @@ export const setExtensionAutomationEnabledHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const { runtime } = await loadProjectExtensionRuntime(deps, projectId);
-    const schedule = runtime.schedules.find(
+    const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+    const schedule = snapshot.runtime.schedules.find(
       (candidate) => candidate.id === automationId && candidate.extensionId === existing.installedSource.extension_id,
     );
     if (!schedule) return c.json({ error: `Automation not found: ${automationId}` }, 404);

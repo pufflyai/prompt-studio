@@ -22,17 +22,19 @@ const createApp = (sourcePath: string) => {
     ],
   };
   const repoService = { listByProject: async () => [] };
+  const projectService = {
+    get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
+  };
   app.route(
     "/v1",
     createExtensionRoutes({
       extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
         extensionService: extensionService as never,
+        projectService: projectService as never,
         repoService: repoService as never,
       }),
       extensionService,
-      projectService: {
-        get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
-      },
+      projectService,
       repoService,
     } as never),
   );

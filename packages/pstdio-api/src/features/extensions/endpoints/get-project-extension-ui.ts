@@ -5,7 +5,6 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
-import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { assembleWorkbenchMetadata } from "../workbench-metadata-assembly";
 
@@ -44,8 +43,8 @@ export const getProjectExtensionUiHandler = (
         },
         projectId,
       });
-      const { runtime, enabledSources } = await loadProjectExtensionRuntime(deps, projectId);
-      return c.json(await assembleWorkbenchMetadata(deps, projectId, runtime, enabledSources), 200);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+      return c.json(await assembleWorkbenchMetadata(deps, projectId, snapshot.runtime, snapshot.enabledSources), 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

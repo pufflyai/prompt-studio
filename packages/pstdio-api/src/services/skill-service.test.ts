@@ -93,7 +93,7 @@ const fakeFileService = {
 } as unknown as Parameters<typeof createSkillService>[0]["fileService"];
 
 const fakeExtensionDeps = {
-  extensionRuntimeCatalog: { getProjectRuntime: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
+  extensionRuntimeCatalog: { get: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
   extensionSkillPreferencesDBService: { list: mock(async () => []) },
 } as unknown as Pick<
   Parameters<typeof createSkillService>[0],
@@ -170,7 +170,7 @@ const setupServiceWithExtension = async () => {
     projectService,
   });
   const service = createSkillService({
-    extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+    extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService }),
     extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
     fileService: createFileService({
       filesDBService: createFilesDBService(db),

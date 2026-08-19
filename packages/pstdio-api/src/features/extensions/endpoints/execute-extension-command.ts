@@ -5,8 +5,8 @@ import { type CommandExecuteBody, commandExecuteBodySchema, commandExecuteRespon
 import { createCommandRunner } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
+import { createCommandEnvironment } from "../command-environment";
 import type { ExtensionsRouteDeps } from "../deps";
-import { createCommandEnvironment, loadProjectExtensionRuntime } from "../extension-command-runtime";
 
 const errorSchema = z.object({
   error: z.string(),
@@ -64,10 +64,10 @@ export const executeExtensionCommandHandler = (
     const body = (await c.req.json()) as CommandExecuteBody;
 
     try {
-      const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       const handler =
-        runtime.commands.find((candidate) => candidate.id === commandId) ??
-        runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+        snapshot.runtime.commands.find((candidate) => candidate.id === commandId) ??
+        snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
       if (!handler) {
         return c.json({ error: `Command "${commandId}" is not registered`, code: "command_not_found", commandId }, 404);
       }
@@ -94,18 +94,18 @@ export const executeExtensionCommandHandler = (
       }
 
       const eventIds = new Set<string>();
-      const runner = createCommandRunner(runtime, {
+      const runner = createCommandRunner(snapshot.runtime, {
         onDidDispatchEvent: (eventId) => eventIds.add(eventId),
         buildEnvironment: (input) =>
-          createCommandEnvironment(deps, enabledSources, {
+          createCommandEnvironment(deps, snapshot.enabledSources, {
             extensionId: input.extensionId,
             name: input.name,
-            project,
+            project: snapshot.project,
             projectId: input.projectId,
             repo: input.repo,
             workspaceDir: input.workspaceDir,
             workspaceId: input.workspaceId,
-            settings: runtime.settings,
+            settings: snapshot.runtime.settings,
           }),
       });
 

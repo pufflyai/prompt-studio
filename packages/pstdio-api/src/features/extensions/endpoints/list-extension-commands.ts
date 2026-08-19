@@ -4,7 +4,7 @@ import { listExtensionCommandsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { loadProjectExtensionRuntime, toCommandRecord } from "../extension-command-runtime";
+import { toCommandRecord } from "../extension-command-record";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -35,12 +35,12 @@ export const listExtensionCommandsHandler = (
     const { projectId } = c.req.param();
 
     try {
-      const { runtime } = await loadProjectExtensionRuntime(deps, projectId);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return c.json(
         {
-          commands: runtime.commands.map(toCommandRecord),
-          translations: runtime.translations,
-          diagnostics: runtime.diagnostics,
+          commands: snapshot.runtime.commands.map(toCommandRecord),
+          translations: snapshot.runtime.translations,
+          diagnostics: snapshot.runtime.diagnostics,
         },
         200,
       );

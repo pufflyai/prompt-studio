@@ -55,11 +55,14 @@ export type WorkspaceProvisioningHooks = {
   ensureConfig: typeof ensureWorkspaceConfig;
 };
 
-const defaultHooks: WorkspaceProvisioningHooks = {
+// Built lazily: this module sits in an import cycle with the extension event
+// runtime, so reading those bindings at module-evaluation time can hit their
+// temporal dead zone depending on which module the process entered first.
+const defaultHooks = (): WorkspaceProvisioningHooks => ({
   fireProvision: fireExtensionEvent,
   fireReadyAsync: fireExtensionEventAsync,
   ensureConfig: ensureWorkspaceConfig,
-};
+});
 
 // Gate `initializing` around the awaited provision so no session can spawn while harness
 // hooks prune and rewrite the agent skill dir — true on both creation and every catalog
@@ -114,7 +117,7 @@ const gatedProvision = async <W extends { id: string }>(
 export const runWorkspaceProvisioning = async <W extends { id: string }>(
   deps: ProvisionCoordinatorDeps,
   input: { projectId: string; workspace: W; repoPath: string },
-  hooks: WorkspaceProvisioningHooks = defaultHooks,
+  hooks: WorkspaceProvisioningHooks = defaultHooks(),
 ) => {
   const { workspace, payload, ok } = await gatedProvision(deps, input, hooks);
   if (ok) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
@@ -162,7 +165,7 @@ const reprovisionWorkspace = async (
 export const provisionProjectWorkspaces = async (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
-  hooks: WorkspaceProvisioningHooks = defaultHooks,
+  hooks: WorkspaceProvisioningHooks = defaultHooks(),
 ) => {
   const [workspaces, repos] = await Promise.all([
     deps.workspaceService.list(projectId),

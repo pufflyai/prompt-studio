@@ -94,6 +94,7 @@ describe("createInstalledExtensionRuntime", () => {
 
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {
         reloadInstalledSourceBySourcePath: async () => sourceReload,
         reportBuildFailure: async () => {},
@@ -140,6 +141,7 @@ describe("createInstalledExtensionRuntime", () => {
 
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {
         reportBuildFailure: async () => {},
         reportBuildSuccess: async () => {},
@@ -174,6 +176,7 @@ describe("createInstalledExtensionRuntime", () => {
 
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -205,6 +208,7 @@ describe("createInstalledExtensionRuntime", () => {
 
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -263,6 +267,7 @@ describe("createInstalledExtensionRuntime", () => {
 
       const runtime = await createInstalledExtensionRuntime({
         harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
         extensionService,
         installedExtensionSourcesService,
         projectService,

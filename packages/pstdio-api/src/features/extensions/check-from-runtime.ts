@@ -12,7 +12,7 @@ import type {
   ExtensionTreeItemContribution,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
-import { toCommandRecord } from "./extension-command-runtime";
+import { toCommandRecord } from "./extension-command-record";
 import {
   toCommandPaletteResourceRecord,
   toDataTableRendererRecord,

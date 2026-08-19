@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
-import { loadProjectExtensionRuntime } from "../../extensions/extension-command-runtime";
 
 const tempRoots: string[] = [];
 
@@ -128,7 +127,7 @@ describe("repo-local default extensions", () => {
       expect(installed).toMatchObject({ source_kind: "local_path", source_path: sourcePath });
 
       const extensionEntry = join(sourcePath, "extension.ts");
-      const { runtime } = await loadProjectExtensionRuntime(handle.deps, project.id);
+      const { runtime } = await handle.deps.extensionRuntimeCatalog.get(project.id);
       expect(runtime.hooks).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

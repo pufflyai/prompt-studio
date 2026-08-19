@@ -18,6 +18,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     });
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {
         reloadInstalledSourceBySourcePath: async () => {},
         reportBuildFailure: async () => {},
@@ -63,6 +64,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     const webviewRefreshes: Array<string | undefined> = [];
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: () => {} } as never,
       extensionService: {
         reloadInstalledSourceBySourcePath: async () => {},
         reportBuildFailure: async () => {},

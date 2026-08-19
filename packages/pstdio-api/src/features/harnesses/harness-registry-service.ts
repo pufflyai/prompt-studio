@@ -5,12 +5,14 @@ import { isLocalizedString } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { loadExtensionSources, normalizeExtensionSources, type RuntimeHarnessRecord } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
+import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
+import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
 
 export type HarnessScopeOptions = {
   /** Restrict to harnesses from extensions enabled for this project. */
@@ -20,11 +22,11 @@ export type HarnessScopeOptions = {
 export type HarnessRegistryService = {
   list(options?: HarnessScopeOptions): Promise<HarnessHandle[]>;
   get(id: string, options?: HarnessScopeOptions): Promise<HarnessHandle | null>;
-  /** Drop cached registries so the next call rebuilds. Call when extension sources reload in place. */
+  /** Drop the host-wide registry so the next call rebuilds. Call when extension sources reload in place. */
   invalidate(): void;
 };
 
-type SourceKind = SourceRow["source_kind"];
+type SourceKind = "local_path" | "git" | "registry";
 
 type BuildRegistryInput = {
   paths: Map<string, SourceKind>;
@@ -53,18 +55,14 @@ const harnessLogger = (extensionId: string) => ({
     apiLogger.error({ ...metadata, extension_id: extensionId }, message),
 });
 
-type EnabledSourcesLister = {
-  listEnabledSourcesForProject(projectId: string): Promise<Array<{ installedSource: SourceRow }>>;
-};
-
-type SourceRow = { source_path: string; source_kind: "local_path" | "git" | "registry" };
-
-// Host-wide, the registry is the union of everything in the user extensions root plus
-// registered sources. Project-scoped calls see only extensions enabled for that project.
+// Project-scoped calls resolve harnesses from the project's runtime snapshot, so
+// they observe the same catalog generation as every other extension consumer.
+// The host-wide union (no projectId) is not an enabled-project runtime and keeps
+// its own loading over the user extensions root plus registered sources.
 export const createHarnessRegistryService = (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  extensionService: EnabledSourcesLister;
-  /** Override the expensive load+normalize+build. Tests inject a counting fake. */
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get">;
+  /** Override the expensive host-scope load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
   installDefaultExtensions?: typeof installDefaultExtensions;
   /** Clock for the detect() TTL memo; defaults to Date.now. */
@@ -93,16 +91,9 @@ export const createHarnessRegistryService = (input: {
     }
   };
 
-  const listScopedPaths = async (options?: HarnessScopeOptions) => {
-    if (options?.projectId) {
-      const enabled = await input.extensionService.listEnabledSourcesForProject(options.projectId);
-      return new Map(enabled.map(({ installedSource }) => [installedSource.source_path, installedSource.source_kind]));
-    }
-
+  const listHostPaths = async () => {
     const sources = selectExistingSources(await input.installedExtensionSourcesService.list());
-    const paths = new Map<string, "local_path" | "git" | "registry">(
-      listUserRootExtensionPaths().map((path) => [path, "local_path"]),
-    );
+    const paths = new Map<string, SourceKind>(listUserRootExtensionPaths().map((path) => [path, "local_path"]));
     for (const source of sources) {
       paths.set(source.source_path, source.source_kind);
     }
@@ -114,7 +105,11 @@ export const createHarnessRegistryService = (input: {
       extensionPackages: [...paths.entries()].map(([path, sourceKind]) => ({ path, sourceKind })),
     });
     const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
-    const registry = createHarnessRegistry(runtime.harnesses, buildContext);
+    return toRegistry(runtime.harnesses);
+  };
+
+  const toRegistry = (records: RuntimeHarnessRecord[]) => {
+    const registry = createHarnessRegistry(records, buildContext);
 
     for (const id of registry.duplicates) {
       apiLogger.warn({ event: "harness.duplicate_id", harness_id: id }, "Duplicate harness id; last install wins");
@@ -181,39 +176,58 @@ export const createHarnessRegistryService = (input: {
     };
   };
 
-  // The scoped path set fully determines the registry, so reuse the build until that
-  // set changes (install/enable/uninstall) or `invalidate()` bumps the generation
+  // A derived view of the current snapshot, keyed by snapshot identity. It holds
+  // no invalidation logic of its own: a new catalog generation is a new snapshot
+  // object, which rebuilds the handles while keeping the detect() memo per build.
+  const projectRegistries = new Map<
+    string,
+    { snapshot: ProjectExtensionRuntimeSnapshot; registry: HarnessRegistry }
+  >();
+
+  const resolveProjectRegistry = async (projectId: string) => {
+    const snapshot = await input.extensionRuntimeCatalog.get(projectId);
+    const cached = projectRegistries.get(projectId);
+    if (cached && cached.snapshot === snapshot) return cached.registry;
+
+    const registry = withDetectCache(toRegistry(snapshot.runtime.harnesses));
+    projectRegistries.set(projectId, { snapshot, registry });
+    return registry;
+  };
+
+  // The host path set fully determines the registry, so reuse the build until that
+  // set changes (install/uninstall) or `invalidate()` bumps the generation
   // (in-place source reloads, which keep the same paths).
-  const cache = new Map<string, { signature: string; registry: HarnessRegistry }>();
-  let generation = 0;
+  let hostCache: { signature: string; registry: HarnessRegistry } | null = null;
+  let hostGeneration = 0;
 
-  const scopeKey = (options?: HarnessScopeOptions) => options?.projectId ?? "__host__";
-
-  const signatureOf = (paths: Map<string, SourceKind>) =>
+  const hostSignatureOf = (paths: Map<string, SourceKind>) =>
     `${[...paths.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([path, kind]) => `${path}:${kind}`)
-      .join("|")}#${generation}`;
+      .join("|")}#${hostGeneration}`;
 
-  const resolveRegistry = async (options?: HarnessScopeOptions) => {
-    if (!options?.projectId) await ensureDefaultExtensionsInstalled();
+  const resolveHostRegistry = async () => {
+    await ensureDefaultExtensionsInstalled();
 
-    const paths = await listScopedPaths(options);
-    const signature = signatureOf(paths);
-    const key = scopeKey(options);
-    const cached = cache.get(key);
-    if (cached && cached.signature === signature) return cached.registry;
+    const paths = await listHostPaths();
+    const signature = hostSignatureOf(paths);
+    if (hostCache && hostCache.signature === signature) return hostCache.registry;
 
-    const registry = withDetectCache(await buildRegistry({ paths, options }));
-    cache.set(key, { signature, registry });
+    const registry = withDetectCache(await buildRegistry({ paths }));
+    hostCache = { signature, registry };
     return registry;
+  };
+
+  const resolveRegistry = (options?: HarnessScopeOptions) => {
+    if (options?.projectId) return resolveProjectRegistry(options.projectId);
+    return resolveHostRegistry();
   };
 
   return {
     list: async (options) => (await resolveRegistry(options)).list(),
     get: async (id, options) => (await resolveRegistry(options)).get(id),
     invalidate: () => {
-      generation += 1;
+      hostGeneration += 1;
     },
   };
 };

@@ -4,11 +4,11 @@ import type {
   createProjectTemplateDefaultsDBService,
   createTemplatesDBService,
 } from "pstdio-db";
+import type { ProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
 import {
-  type ProjectExtensionRuntimeCatalog,
   type ProjectExtensionRuntimeSnapshot,
   resolveEnabledSourceForRecord,
-} from "../features/extensions/project-extension-runtime-catalog";
+} from "../features/extensions/project-extension-runtime-snapshot";
 import {
   catalogId,
   catalogNameFromKey,
@@ -131,7 +131,7 @@ const loadExtensionTemplates = async (
   input: { includeDisabled: boolean },
 ) => {
   const [snapshot, preferences, defaults] = await Promise.all([
-    deps.extensionRuntimeCatalog.getProjectRuntime(projectId),
+    deps.extensionRuntimeCatalog.get(projectId),
     deps.extensionTemplatePreferencesDBService.list(projectId),
     deps.projectTemplateDefaultsDBService.list(projectId),
   ]);

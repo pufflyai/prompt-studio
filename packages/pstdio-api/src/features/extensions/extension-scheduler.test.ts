@@ -91,6 +91,9 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     ],
   };
   const repoService = { listByProject: async () => [] };
+  const projectService = {
+    get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
+  };
   return {
     extensionAutomationPreferencesService: {
       list: async () => automationPreferences,
@@ -101,12 +104,11 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     },
     extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
       extensionService: extensionService as never,
+      projectService: projectService as never,
       repoService: repoService as never,
     }),
     extensionService,
-    projectService: {
-      get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
-    },
+    projectService,
     extensionStorageService: {
       getKv: async () => null,
       setKv: async () => {},

@@ -143,7 +143,7 @@ describe("resolvePrompt", () => {
       projectService,
     });
     const templateService = createTemplateService({
-      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService }),
       extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
       fileService: createFileService({
         filesDBService: createFilesDBService(db),

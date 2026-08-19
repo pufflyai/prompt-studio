@@ -8,9 +8,10 @@ import {
   type RunContext,
 } from "pstdio-scheduler";
 import { apiLogger } from "../../lib/logger";
+import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 import { instanceIdsByExtensionId, isAutomationEnabled, loadAutomationPreferences } from "./extension-automations";
-import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
+import type { ProjectExtensionRuntimeSnapshot } from "./project-extension-runtime-snapshot";
 
 const EXTENSION_SCHEDULE_TIMEOUT_MS = 15_000;
 
@@ -85,12 +86,11 @@ export const createExtensionScheduler = (input: Input) => {
       const jobs: Job[] = [];
 
       for (const projectId of await input.listProjectIds()) {
-        let runtime: Awaited<ReturnType<typeof loadProjectExtensionRuntime>>["runtime"];
+        let snapshot: ProjectExtensionRuntimeSnapshot;
         let instanceIds: Map<string, string>;
         try {
-          const loaded = await loadProjectExtensionRuntime(input.deps, projectId);
-          runtime = loaded.runtime;
-          instanceIds = instanceIdsByExtensionId(loaded.enabledSources);
+          snapshot = await input.deps.extensionRuntimeCatalog.get(projectId);
+          instanceIds = instanceIdsByExtensionId(snapshot.enabledSources);
         } catch (err) {
           apiLogger.error(
             { err, event: "extension.schedule.project.load.error", projectId },
@@ -101,7 +101,7 @@ export const createExtensionScheduler = (input: Input) => {
 
         const preferences = await loadAutomationPreferences(input.deps, projectId);
 
-        for (const schedule of runtime.schedules) {
+        for (const schedule of snapshot.runtime.schedules) {
           if (!isAutomationEnabled(schedule, instanceIds.get(schedule.extensionId), preferences)) continue;
 
           jobs.push({
@@ -124,27 +124,26 @@ export const createExtensionScheduler = (input: Input) => {
 
     runJob: async (job, ctx) => {
       const meta = job.meta as ScheduleJobMeta;
-      const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(input.deps, meta.projectId);
-      const schedule = runtime.schedules.find((candidate) => candidate.id === meta.scheduleId);
+      // One snapshot capture serves the whole run; an invalidation mid-run never swaps it.
+      const snapshot = await input.deps.extensionRuntimeCatalog.get(meta.projectId);
+      const schedule = snapshot.runtime.schedules.find((candidate) => candidate.id === meta.scheduleId);
       if (!schedule) return;
 
       const preferences = await loadAutomationPreferences(input.deps, meta.projectId);
-      if (
-        !isAutomationEnabled(schedule, instanceIdsByExtensionId(enabledSources).get(schedule.extensionId), preferences)
-      )
-        return;
+      const instanceId = instanceIdsByExtensionId(snapshot.enabledSources).get(schedule.extensionId);
+      if (!isAutomationEnabled(schedule, instanceId, preferences)) return;
 
-      const runner = createCommandRunner(runtime, {
+      const runner = createCommandRunner(snapshot.runtime, {
         logger: input.extensionLogger ?? extensionLogger,
         buildEnvironment: (ids) =>
-          createCommandEnvironment(input.deps, enabledSources, {
+          createCommandEnvironment(input.deps, snapshot.enabledSources, {
             extensionId: ids.extensionId,
             name: ids.name,
-            project,
+            project: snapshot.project,
             projectId: ids.projectId,
             repo: ids.repo,
             workspaceDir: ids.workspaceDir,
-            settings: runtime.settings,
+            settings: snapshot.runtime.settings,
           }),
       });
 

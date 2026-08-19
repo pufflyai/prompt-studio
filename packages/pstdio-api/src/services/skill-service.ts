@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
 import type { Skill, SkillFile } from "pstdio-api-contracts";
 import type { createExtensionSkillPreferencesDBService, createSkillsDBService } from "pstdio-db";
+import type { ProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
 import {
-  type ProjectExtensionRuntimeCatalog,
   type ProjectExtensionRuntimeSnapshot,
   resolveEnabledSourceForRecord,
-} from "../features/extensions/project-extension-runtime-catalog";
+} from "../features/extensions/project-extension-runtime-snapshot";
 import {
   catalogId,
   catalogNameFromKey,
@@ -140,7 +140,7 @@ const toExtensionSkill = (input: {
 
 const listExtensionSkills = async (deps: SkillServiceDeps, projectId: string, input: { includeDisabled: boolean }) => {
   const [snapshot, preferences] = await Promise.all([
-    deps.extensionRuntimeCatalog.getProjectRuntime(projectId),
+    deps.extensionRuntimeCatalog.get(projectId),
     deps.extensionSkillPreferencesDBService.list(projectId),
   ]);
   const preferenceByKey = new Map(

@@ -5,10 +5,9 @@ import {
   listExtensionSettingsResponseSchema,
   updateExtensionSettingRequestSchema,
 } from "pstdio-api-contracts";
-import { type ExtensionRuntime, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import type { ExtensionRuntime } from "pstdio-extensions";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 import { ExtensionSettingError, type ExtensionSettingsContext } from "../extension-settings-service";
 
 const errorSchema = z.object({ error: z.string(), code: z.string().optional() });
@@ -37,11 +36,6 @@ const settingsContextForRuntime = (
   ...input,
   definitions: runtime.settings.map(toDefinition),
 });
-
-const loadInstalledRuntime = async (sourcePath: string) => {
-  const loaded = await loadExtensionSources({ extensionPackages: [{ path: sourcePath }] });
-  return normalizeExtensionSources(loaded.sources, loaded.diagnostics);
-};
 
 const settingErrorResponse = (c: Context<AppBindings>, error: ExtensionSettingError) =>
   c.json({ error: error.message, code: error.code }, 400);
@@ -187,8 +181,8 @@ export const deleteGlobalExtensionSettingRoute = createRoute({
 const resolveProjectSettingsContext = async (deps: ExtensionsRouteDeps, projectId: string, instanceId: string) => {
   const record = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
   if (!record) return null;
-  const { runtime } = await loadProjectExtensionRuntime(deps, projectId);
-  return settingsContextForRuntime(runtime, {
+  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+  return settingsContextForRuntime(snapshot.runtime, {
     extensionId: record.installedSource.extension_id,
     extensionInstanceId: record.instance.id,
     installedExtensionId: record.installedSource.id,
@@ -198,7 +192,7 @@ const resolveProjectSettingsContext = async (deps: ExtensionsRouteDeps, projectI
 const resolveGlobalSettingsContext = async (deps: ExtensionsRouteDeps, installName: string) => {
   const installedSource = await deps.extensionService.getInstalledSource(installName);
   if (!installedSource) return null;
-  const runtime = await loadInstalledRuntime(installedSource.source_path);
+  const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(installedSource);
   return settingsContextForRuntime(runtime, {
     extensionId: installedSource.extension_id,
     extensionInstanceId: "",

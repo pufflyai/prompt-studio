@@ -35,9 +35,11 @@ import type { RouteDeps } from "./features/deps";
 import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
+import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
 import {
   createHarnessRegistryService,
@@ -304,12 +306,19 @@ export const createApp = async (options: AppOptions) => {
     },
     projectService,
   });
+  const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
+    extensionService,
+    projectService,
+    repoService,
+  });
   const harnessRegistry =
-    options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService, extensionService });
+    options.harnessRegistry ??
+    createHarnessRegistryService({ installedExtensionSourcesService, extensionRuntimeCatalog });
   const extensionRuntime = await createInstalledExtensionRuntime({
     extensionService,
     harnessRegistry,
     installedExtensionSourcesService,
+    projectRuntimeCatalog: extensionRuntimeCatalog,
     projectService,
     repoService,
     webviewBuilds: resolveExtensionWebviewBuilds(options.extensionWebviewBuilds),
@@ -317,22 +326,27 @@ export const createApp = async (options: AppOptions) => {
   refreshInstalledExtensionProcesses = extensionRuntime.refresh;
   const unsubscribeRepoLinkRefresh = subscribeRepoLinkExtensionRefresh({
     eventBus,
-    refresh: () => extensionRuntime.refresh(),
+    invalidate: extensionRuntimeCatalog.invalidate,
+    refreshWatchers: () => extensionRuntime.refreshWatchers(),
     onError: (err) =>
       apiLogger.error(
         { err, event: "extensions.repo_link_refresh.error" },
         "Failed to refresh extensions after repo link change",
       ),
   });
+  const unsubscribeEnablementInvalidation = subscribeExtensionEnablementInvalidation({
+    eventBus,
+    invalidate: extensionRuntimeCatalog.invalidate,
+  });
   const templateService = createTemplateService({
-    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
+    extensionRuntimeCatalog,
     extensionTemplatePreferencesDBService,
     fileService,
     projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
     templatesDBService,
   });
   const skillService = createSkillService({
-    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
+    extensionRuntimeCatalog,
     extensionSkillPreferencesDBService,
     fileService,
     skillsDBService,
@@ -344,7 +358,7 @@ export const createApp = async (options: AppOptions) => {
     extensionAutomationPreferencesService,
     extensionFileService,
     extensionInstancesService,
-    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
+    extensionRuntimeCatalog,
     extensionService,
     extensionSettingsDBService,
     extensionSettingsService,
@@ -414,7 +428,7 @@ export const createApp = async (options: AppOptions) => {
     extensionInstancesService,
     extensionAutomationPreferencesService,
     extensionFileService,
-    extensionRuntimeCatalog: extensionRuntime.projectRuntimeCatalog,
+    extensionRuntimeCatalog,
     extensionSettingsDBService,
     extensionService,
     extensionSettingsService,
@@ -465,6 +479,7 @@ export const createApp = async (options: AppOptions) => {
       await startupDone;
       clearInterval(notificationWakeTimer);
       unsubscribeRepoLinkRefresh();
+      unsubscribeEnablementInvalidation();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
       await terminalSupervisor.dispose();

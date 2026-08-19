@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
@@ -21,58 +24,90 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
     logger: { info: () => {}, warn: () => {}, error: () => {} },
   }));
 
-type EnabledRow = { installedSource: { source_path: string; source_kind: "local_path" } };
+type SourceRow = { source_path: string; source_kind: "local_path" };
+
+const fakeSnapshot = (generation: number, records: RuntimeHarnessRecord[]) =>
+  ({
+    generation,
+    project: { id: "p1", name: "Project", shorthand: "PS" },
+    enabledSources: [],
+    runtime: { harnesses: records },
+    stale: null,
+  }) as never;
+
+const registeredSource = (name: string): SourceRow => {
+  const path = join(tempHome, name);
+  mkdirSync(path, { recursive: true });
+  return { source_path: path, source_kind: "local_path" };
+};
 
 const makeService = (opts: {
-  enabled: () => EnabledRow[];
-  build: (input: { paths: Map<string, string>; options?: { projectId?: string } }) => Promise<HarnessRegistry>;
+  installedSources?: () => SourceRow[];
+  snapshot?: () => ReturnType<typeof fakeSnapshot>;
+  build?: (input: { paths: Map<string, string> }) => Promise<HarnessRegistry>;
   now?: () => number;
   detectCacheTtlMs?: number;
 }) =>
   createHarnessRegistryService({
-    installedExtensionSourcesService: { list: async () => [] } as never,
-    extensionService: { listEnabledSourcesForProject: async () => opts.enabled() } as never,
+    installedExtensionSourcesService: { list: async () => opts.installedSources?.() ?? [] } as never,
+    extensionRuntimeCatalog: { get: async () => opts.snapshot?.() ?? fakeSnapshot(1, []) } as never,
     buildRegistry: opts.build as never,
+    installDefaultExtensions: (async () => {}) as never,
     now: opts.now,
     detectCacheTtlMs: opts.detectCacheTtlMs,
   });
 
 const SCOPE = { projectId: "p1" };
 const FAKE_ID = testHarnessId("fake");
-const oneSource = (): EnabledRow[] => [{ installedSource: { source_path: "/ext/a", source_kind: "local_path" } }];
 
-describe("harness registry caching", () => {
-  test("reuses the built registry while the enabled source set is unchanged", async () => {
+let previousPstdioHome: string | undefined;
+let tempHome: string;
+
+beforeEach(() => {
+  // Point the host scan at an empty home so only the fake DB rows drive the path set.
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  tempHome = mkdtempSync(join(tmpdir(), "pstdio-harness-cache-home-"));
+  process.env.PSTDIO_HOME = tempHome;
+});
+
+afterEach(() => {
+  if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
+  else process.env.PSTDIO_HOME = previousPstdioHome;
+  rmSync(tempHome, { recursive: true, force: true });
+});
+
+describe("harness registry host-scope caching", () => {
+  test("reuses the built registry while the registered source set is unchanged", async () => {
     let builds = 0;
     const service = makeService({
-      enabled: oneSource,
+      installedSources: () => [registeredSource("ext-a")],
       build: async () => {
         builds += 1;
         return buildFakeRegistry([createTestHarnessRecord("fake")]);
       },
     });
 
-    await service.list(SCOPE);
-    await service.get(FAKE_ID, SCOPE);
-    await service.list(SCOPE);
+    await service.list();
+    await service.get(FAKE_ID);
+    await service.list();
 
     expect(builds).toBe(1);
   });
 
-  test("rebuilds when the enabled source set changes (install/enable)", async () => {
+  test("rebuilds when the registered source set changes (install/uninstall)", async () => {
     let builds = 0;
-    let enabled = oneSource();
+    let sources: SourceRow[] = [registeredSource("ext-a")];
     const service = makeService({
-      enabled: () => enabled,
+      installedSources: () => sources,
       build: async () => {
         builds += 1;
         return buildFakeRegistry([createTestHarnessRecord("fake")]);
       },
     });
 
-    await service.list(SCOPE);
-    enabled = [...enabled, { installedSource: { source_path: "/ext/b", source_kind: "local_path" } }];
-    await service.list(SCOPE);
+    await service.list();
+    sources = [...sources, registeredSource("ext-b")];
+    await service.list();
 
     expect(builds).toBe(2);
   });
@@ -80,21 +115,43 @@ describe("harness registry caching", () => {
   test("invalidate() forces a rebuild on the next call (in-place source reload)", async () => {
     let builds = 0;
     const service = makeService({
-      enabled: oneSource,
+      installedSources: () => [registeredSource("ext-a")],
       build: async () => {
         builds += 1;
         return buildFakeRegistry([createTestHarnessRecord("fake")]);
       },
     });
 
-    await service.list(SCOPE);
+    await service.list();
     service.invalidate();
-    await service.list(SCOPE);
+    await service.list();
 
     expect(builds).toBe(2);
   });
+});
 
-  test("memoizes detect() within the TTL window, re-detecting after it expires", async () => {
+describe("harness registry project scope", () => {
+  test("builds handles from the project's runtime snapshot", async () => {
+    const service = makeService({
+      snapshot: () => fakeSnapshot(1, [createTestHarnessRecord("fake")]),
+    });
+
+    const handles = await service.list(SCOPE);
+
+    expect(handles.map((handle) => handle.id)).toEqual([FAKE_ID]);
+  });
+
+  test("a new snapshot generation rebuilds the project handles", async () => {
+    let snapshot = fakeSnapshot(1, [createTestHarnessRecord("fake")]);
+    const service = makeService({ snapshot: () => snapshot });
+
+    expect((await service.list(SCOPE)).map((handle) => handle.id)).toEqual([FAKE_ID]);
+
+    snapshot = fakeSnapshot(2, [createTestHarnessRecord("fake"), createTestHarnessRecord("other")]);
+    expect((await service.list(SCOPE)).map((handle) => handle.id)).toEqual([FAKE_ID, testHarnessId("other")]);
+  });
+
+  test("memoizes detect() within the TTL window while the snapshot is unchanged", async () => {
     let detects = 0;
     let clock = 0;
     const record = createTestHarnessRecord("fake", {
@@ -105,9 +162,9 @@ describe("harness registry caching", () => {
         },
       },
     });
+    const snapshot = fakeSnapshot(1, [record]);
     const service = makeService({
-      enabled: oneSource,
-      build: async () => buildFakeRegistry([record]),
+      snapshot: () => snapshot,
       now: () => clock,
       detectCacheTtlMs: 1000,
     });

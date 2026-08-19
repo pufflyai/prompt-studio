@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createCommandEnvironment } from "./extension-command-runtime";
+import { createCommandEnvironment } from "./command-environment";
 
 const makeEnabledSources = () => [
   {

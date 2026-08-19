@@ -1,16 +1,14 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { listExtensionAppearanceResponseSchema } from "pstdio-api-contracts";
+import type { ExtensionRuntime } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 
 const errorSchema = z.object({ error: z.string() });
 
-const toThemeRecord = (
-  theme: Awaited<ReturnType<typeof loadProjectExtensionRuntime>>["runtime"]["themes"][number],
-) => ({
+const toThemeRecord = (theme: ExtensionRuntime["themes"][number]) => ({
   id: theme.id,
   extensionId: theme.extensionId,
   title: theme.title,
@@ -22,9 +20,7 @@ const toThemeRecord = (
   monacoTheme: theme.monacoTheme,
 });
 
-const toFileIconThemeRecord = (
-  theme: Awaited<ReturnType<typeof loadProjectExtensionRuntime>>["runtime"]["fileIconThemes"][number],
-) => ({
+const toFileIconThemeRecord = (theme: ExtensionRuntime["fileIconThemes"][number]) => ({
   id: theme.id,
   extensionId: theme.extensionId,
   title: theme.title,
@@ -65,13 +61,13 @@ export const listExtensionAppearanceHandler = (
     const { projectId } = c.req.param();
 
     try {
-      const { runtime } = await loadProjectExtensionRuntime(deps, projectId);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return c.json(
         {
-          themes: runtime.themes.map(toThemeRecord),
-          fileIconThemes: runtime.fileIconThemes.map(toFileIconThemeRecord),
-          translations: runtime.translations,
-          diagnostics: runtime.diagnostics,
+          themes: snapshot.runtime.themes.map(toThemeRecord),
+          fileIconThemes: snapshot.runtime.fileIconThemes.map(toFileIconThemeRecord),
+          translations: snapshot.runtime.translations,
+          diagnostics: snapshot.runtime.diagnostics,
         },
         200,
       );

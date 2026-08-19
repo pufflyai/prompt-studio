@@ -4,7 +4,6 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { createNotificationBodySchema, notificationResponseSchema } from "../../notifications/dto";
 import type { ExtensionsRouteDeps } from "../deps";
-import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 
 const errorSchema = z.object({ error: z.string(), extensionId: z.string().optional() });
 
@@ -40,8 +39,10 @@ export const createExtensionNotificationHandler = (
     const body = (await context.req.json()) as Omit<CreateNotificationInput, "projectId">;
 
     try {
-      const { enabledSources } = await loadProjectExtensionRuntime(deps, projectId);
-      const enabledSource = enabledSources.find((source) => source.installedSource.extension_id === extensionId);
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+      const enabledSource = snapshot.enabledSources.find(
+        (source) => source.installedSource.extension_id === extensionId,
+      );
       if (!enabledSource) return context.json({ error: `Extension "${extensionId}" is not enabled`, extensionId }, 404);
 
       return context.json(

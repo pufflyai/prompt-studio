@@ -110,7 +110,7 @@ describe("TemplateService", () => {
     const list = mock(async () => templates);
     const service = createTemplateService({
       templatesDBService: { list },
-      extensionRuntimeCatalog: { getProjectRuntime: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
+      extensionRuntimeCatalog: { get: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
       extensionTemplatePreferencesDBService: { list: mock(async () => []) },
       projectTemplateDefaultsDBService: { list: mock(async () => []) },
     } as unknown as Parameters<typeof createTemplateService>[0]);
@@ -140,7 +140,7 @@ describe("TemplateService", () => {
       filesStorageService: createFilesStorageService(join(tempRoot, "storage")),
     });
     const service = createTemplateService({
-      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService }),
       extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
       fileService,
       projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
@@ -205,7 +205,7 @@ describe("TemplateService", () => {
       projectService,
     });
     const service = createTemplateService({
-      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, repoService }),
+      extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService }),
       extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
       fileService: createFileService({
         filesDBService: createFilesDBService(db),

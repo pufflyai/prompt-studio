@@ -8,10 +8,13 @@ import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtim
 
 const tempRoots: string[] = [];
 
-const withRuntimeCatalog = <T extends { extensionService: object; repoService: object }>(deps: T) => ({
+const withRuntimeCatalog = <T extends { extensionService: object; projectService: object; repoService: object }>(
+  deps: T,
+) => ({
   ...deps,
   extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
     extensionService: deps.extensionService as never,
+    projectService: deps.projectService as never,
     repoService: deps.repoService as never,
   }),
 });
