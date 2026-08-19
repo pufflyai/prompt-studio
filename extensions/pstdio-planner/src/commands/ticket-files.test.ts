@@ -26,14 +26,14 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 });
 
 const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
-  kind: "resource",
+  kind: "resource" as const,
   resource: {
     type: "ticket",
     id: ticket.id,
     label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
-    metadata: { shorthand: ticket.shorthand, documentId },
+    metadata: { shorthand: ticket.shorthand, documentId, resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
   },
-  input: { strategy: "replace-active" },
+  input: { strategy: "replace-active" as const },
 });
 
 describe("ticket files tree commands", () => {
@@ -198,7 +198,7 @@ describe("ticket files tree workspace commands", () => {
     const unrelated = {
       id: "ws-2",
       workspace_shorthand: "WS-2",
-      anchors_json: [{ type: "ticket", id: "other-ticket", label: "PS-999", metadata: { shorthand: "PS-999" } }],
+      anchors_json: [{ type: "ticket", id: "other-ticket", label: "PS-999", metadata: { shorthand: "PS-999", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } } }],
     };
 
     const sections = await listTicketFilesTreeCommand.run(
@@ -241,7 +241,7 @@ describe("ticket files tree workspace commands", () => {
                   type: "ticket",
                   id: ticket.id,
                   label: `${ticket.shorthand} ${ticket.title}`,
-                  metadata: { shorthand: ticket.shorthand },
+                  metadata: { shorthand: ticket.shorthand, resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
                 },
                 workspaceId: "ws-1",
                 workspaceShorthand: "WS-1",
@@ -303,7 +303,7 @@ describe("ticket files tree workspace commands", () => {
             list: async () => [
               {
                 id: "ws-2",
-                anchors_json: [{ type: "ticket", id: "PS-999", label: "PS-999", metadata: { shorthand: "PS-999" } }],
+                anchors_json: [{ type: "ticket", id: "PS-999", label: "PS-999", metadata: { shorthand: "PS-999", resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } } }],
               },
             ],
           },

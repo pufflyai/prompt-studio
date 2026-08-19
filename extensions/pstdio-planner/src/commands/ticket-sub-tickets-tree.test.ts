@@ -49,7 +49,7 @@ describe("ticket files tree sub-ticket section", () => {
                   type: "ticket",
                   id: parent.id,
                   label: `${parent.shorthand} ${parent.title}`,
-                  metadata: { shorthand: parent.shorthand },
+                  metadata: { shorthand: parent.shorthand, resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
                 },
               },
             },

@@ -112,7 +112,7 @@ export const extensionTreeItemContributionSchema = z.object({
   extensionId: z.string(),
   target: workbenchTreeTargetSchema,
   label: localizableStringSchema,
-  group: z.string().optional(),
+  group: z.string().nullable().optional(),
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
   action: extensionTreeItemActionSchema,

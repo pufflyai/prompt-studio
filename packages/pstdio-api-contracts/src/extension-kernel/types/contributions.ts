@@ -70,7 +70,8 @@ export interface ActivityItemContribution<TParams extends Struct = Struct> {
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
   label: Localizable<string>;
-  group?: string;
+  /** `null` places the item at the tree root without a section heading. */
+  group?: string | null;
   placement?: "first" | "default" | "last";
   icon?: string;
   when?: WhenExpression;

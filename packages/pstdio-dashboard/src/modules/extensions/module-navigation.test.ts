@@ -12,6 +12,7 @@ import {
   clearCachedDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadata } from "./module-test-fixtures";
 
@@ -121,6 +122,44 @@ test("panel tree navigation leaves ticket detail state through a project resourc
       ticket.uri,
       board.uri,
     ]);
+  } finally {
+    disposable.dispose();
+    clearCachedDashboardExtensionMetadata("project-1");
+  }
+});
+
+test("ticket breadcrumbs include the Tickets browse root", async () => {
+  const workbench = createWorkbenchCore();
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata: mock(async () => metadata) }));
+
+  try {
+    await flushMicrotasks();
+    const ticket = {
+      kind: "ticket",
+      uri: "dashboard-workbench://ticket/PS-1",
+      id: "PS-1",
+      label: "PS-1 Ticket",
+      metadata: {
+        projectId: "project-1",
+        shorthand: "PS-1",
+        resourceParent: {
+          type: "extension-view",
+          id: "pstdio-planner.tickets",
+          label: "Tickets",
+          icon: "square-kanban",
+        },
+      },
+    };
+    setResourceBreadcrumb(workbench, ticket);
+
+    const items = workbench.breadcrumbs.getItems();
+    expect(items?.map((item) => item.title)).toEqual(["Tickets", "PS-1 Ticket"]);
+    expect(items?.[0]?.resource?.uri).toBe(
+      "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
+    );
   } finally {
     disposable.dispose();
     clearCachedDashboardExtensionMetadata("project-1");

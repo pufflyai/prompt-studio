@@ -107,7 +107,7 @@ describe("ticket files tree workspace metadata", () => {
                   type: "ticket",
                   id: parent.id,
                   label: `${parent.shorthand} Parent`,
-                  metadata: { shorthand: parent.shorthand },
+                  metadata: { shorthand: parent.shorthand, resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" } },
                 },
               },
             },

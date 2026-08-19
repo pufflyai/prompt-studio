@@ -1,4 +1,5 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
+import { createDashboardExtensionPanelResource } from "../extensions/extension-panel-resource";
 
 export interface ExtensionResourceReference {
   type: string;
@@ -37,17 +38,32 @@ export const dashboardResourceFromExtensionReference = (
   ctx: WorkbenchModuleContext,
   reference: ExtensionResourceReference,
   projectId: string,
-): ResourceRef => ({
-  kind: reference.type,
-  uri: `dashboard-workbench://${reference.type}/${encodeURIComponent(reference.id)}`,
-  id: reference.id,
-  label: reference.label ?? reference.id,
-  icon: reference.icon ?? ctx.resources.getKind(reference.type)?.icon,
-  metadata: {
-    ...reference.metadata,
-    projectId,
-  },
-});
+): ResourceRef => {
+  // Extension panels are browse roots with a canonical URI; a generic
+  // dashboard-workbench://extension-view/... URI would give the same view a
+  // second identity and break sidenav selection and breadcrumb sync.
+  if (reference.type === "extension-view") {
+    return createDashboardExtensionPanelResource({
+      extensionId: textValue(reference.metadata?.extensionId) ?? "",
+      icon: reference.icon,
+      label: reference.label ?? reference.id,
+      panelId: reference.id,
+      projectId,
+    });
+  }
+
+  return {
+    kind: reference.type,
+    uri: `dashboard-workbench://${reference.type}/${encodeURIComponent(reference.id)}`,
+    id: reference.id,
+    label: reference.label ?? reference.id,
+    icon: reference.icon ?? ctx.resources.getKind(reference.type)?.icon,
+    metadata: {
+      ...reference.metadata,
+      projectId,
+    },
+  };
+};
 
 export const dashboardResourceParent = (ctx: WorkbenchModuleContext, resource: ResourceRef, projectId: string) => {
   const reference = normalizeExtensionResourceReference(resource.metadata?.resourceParent);

@@ -324,15 +324,18 @@ export const buildDashboardExtensionTreeSections = (input: {
       const node = createTreeNode({ item, metadata, projectId });
       if (!node) return;
 
-      const group = item.group ?? "Extensions";
-      const section = sectionsByGroup.get(group) ?? {
-        id: `extension-tree-group:${target}:${placement}:${group}`,
-        label: group,
+      // `group: null` places the item at the root without a heading;
+      // an undefined group keeps the default "Extensions" section.
+      const group = item.group === null ? null : (item.group ?? "Extensions");
+      const sectionKey = group ?? "__root__";
+      const section = sectionsByGroup.get(sectionKey) ?? {
+        id: `extension-tree-group:${target}:${placement}:${sectionKey}`,
+        ...(group === null ? {} : { label: group }),
         collapsible: false,
         nodes: [],
       };
       section.nodes.push(node);
-      sectionsByGroup.set(group, section);
+      sectionsByGroup.set(sectionKey, section);
     });
 
   return [...sectionsByGroup.values()];

@@ -96,6 +96,8 @@ export default defineExtension({
       target: "workbench.left.tree",
       label: l10n("kanbanRenderers.tickets.title", "Tickets"),
       icon: "square-kanban",
+      // Tickets is a root item, not an entry under an "Extensions" heading.
+      group: null,
       placement: "first",
       action: { kind: "panel", panel: "tickets" },
     },

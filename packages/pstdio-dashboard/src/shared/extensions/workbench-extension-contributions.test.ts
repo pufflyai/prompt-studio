@@ -430,3 +430,57 @@ describe("dashboard workbench extension ticket menu contributions", () => {
     ]);
   });
 });
+
+describe("root tree placement", () => {
+  test("renders a group-null tree item as a headerless root section", () => {
+    const sections = buildDashboardExtensionTreeSections({
+      metadata: {
+        ...metadata,
+        treeItems: [
+          {
+            id: "pstdio-planner.tickets",
+            extensionId: "pstdio.pstdio-planner",
+            target: "workbench.left.tree",
+            group: null,
+            label: "Tickets",
+            action: { kind: "command", commandId: "extension-lab.say-hello" },
+            icon: "square-kanban",
+          },
+        ],
+      },
+      modeId: "project",
+      projectId: "project-1",
+      target: "workbench.left.tree",
+    });
+
+    expect(sections).toEqual([
+      {
+        id: "extension-tree-group:workbench.left.tree:default:__root__",
+        collapsible: false,
+        nodes: [expect.objectContaining({ label: "Tickets" })],
+      },
+    ]);
+  });
+
+  test("keeps the default group when group is undefined", () => {
+    const sections = buildDashboardExtensionTreeSections({
+      metadata: {
+        ...metadata,
+        treeItems: [
+          {
+            id: "pstdio-planner.tickets",
+            extensionId: "pstdio.pstdio-planner",
+            target: "workbench.left.tree",
+            label: "Tickets",
+            action: { kind: "command", commandId: "extension-lab.say-hello" },
+          },
+        ],
+      },
+      modeId: "project",
+      projectId: "project-1",
+      target: "workbench.left.tree",
+    });
+
+    expect(sections.map((section) => section.label)).toEqual(["Extensions"]);
+  });
+});
