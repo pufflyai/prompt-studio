@@ -69,6 +69,43 @@ const resolveContributionId = (extensionName: string, localOrFullId: string) =>
 const resolveOptionalContributionId = (extensionName: string, localOrFullId: string | undefined) =>
   localOrFullId ? resolveContributionId(extensionName, localOrFullId) : undefined;
 
+// One reference rule for resource kinds: a bare reference resolves inside the
+// declaring extension. It is only rewritten when that extension actually declares the
+// kind, so a reference to a host kind such as `session` stays as written.
+const resolveResourceKindReference = (
+  extensionName: string,
+  resourceKind: string,
+  declaredKindIds: ReadonlySet<string>,
+) => {
+  const candidate = resolveContributionId(extensionName, resourceKind);
+  return declaredKindIds.has(candidate) ? candidate : resourceKind;
+};
+
+const withResolvedResourceKind = <T extends { resourceKind?: string }>(
+  record: T | null,
+  extensionName: string,
+  declaredKindIds: ReadonlySet<string>,
+) => {
+  if (!record?.resourceKind) return record;
+  const resolved = resolveResourceKindReference(extensionName, record.resourceKind, declaredKindIds);
+  return resolved === record.resourceKind ? record : { ...record, resourceKind: resolved };
+};
+
+// `when.resourceType` names resource kinds, so it follows the same rule as a renderer
+// reference: a bare entry resolves inside the declaring extension when that extension
+// declares the kind.
+const withResolvedWhenResourceTypes = <T extends { when?: { resourceType?: string[] } }>(
+  record: T,
+  extensionName: string,
+  declaredKindIds: ReadonlySet<string>,
+) => {
+  const resourceTypes = record.when?.resourceType;
+  if (!resourceTypes?.length) return record;
+  const resolved = resourceTypes.map((kind) => resolveResourceKindReference(extensionName, kind, declaredKindIds));
+  if (resolved.every((kind, index) => kind === resourceTypes[index])) return record;
+  return { ...record, when: { ...record.when, resourceType: resolved } };
+};
+
 const includesWhenValue = (value: string | string[] | undefined, expected: string) =>
   Array.isArray(value) ? value.includes(expected) : value === expected;
 
@@ -114,7 +151,10 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 
-const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionMenuContribution[] =>
+const toMenuContributions = (
+  commands: ExtensionRuntime["commands"],
+  declaredKindIds: ReadonlySet<string> = new Set(),
+): ExtensionMenuContribution[] =>
   commands.flatMap((command) =>
     command.menus.map((menu, index) => ({
       id: `${command.id}.menu.${index}`,
@@ -128,7 +168,11 @@ const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionM
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: menu.when as ExtensionMenuContribution["when"],
+      when: withResolvedWhenResourceTypes(
+        { when: menu.when as ExtensionMenuContribution["when"] },
+        command.name,
+        declaredKindIds,
+      ).when,
     })),
   );
 
@@ -558,11 +602,17 @@ export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => {
   const modes = toWorkbenchExtensionModeRecords(input.runtime);
+  const declaredKindIds = new Set(input.runtime.resourceKinds.map((record) => record.id));
+  const resolveKinds = <T extends { resourceKind?: string }>(records: { name: string }[], mapped: (T | null)[]) =>
+    mapped.map((record, index) => withResolvedResourceKind(record, records[index]!.name, declaredKindIds));
   return {
     extensions: input.runtime.extensions.map(toExtensionRecord),
     commands: input.runtime.commands.map(toCommandRecord),
-    menuContributions: toMenuContributions(input.runtime.commands),
-    commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands),
+    menuContributions: toMenuContributions(input.runtime.commands, declaredKindIds),
+    commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => {
+      const command = input.runtime.commands.find((candidate) => candidate.id === contribution.commandId);
+      return command ? withResolvedWhenResourceTypes(contribution, command.name, declaredKindIds) : contribution;
+    }),
     modes: modes.modes,
     panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
     resourceKinds: input.runtime.resourceKinds.map(toResourceKindRecord),
@@ -574,16 +624,33 @@ export const createWorkbenchExtensionMetadata = (
     })),
     statusItems: compact(input.runtime.statusItems.map((item) => toStatusItemRecord(input, item))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
-    treeItems: input.runtime.treeItems.map(toTreeItemRecord),
+    treeItems: input.runtime.treeItems.map((item) =>
+      withResolvedWhenResourceTypes(toTreeItemRecord(item), item.name, declaredKindIds),
+    ),
     activityItems: input.runtime.activityItems.map(toActivityItemRecord),
     settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
-    kanbanRenderers: compact(input.runtime.kanbanRenderers.map(toKanbanRendererRecord)),
-    dataTableRenderers: compact(input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),
-    commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
-    treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
-    fileRenderers: compact(input.runtime.fileRenderers.map(toFileRendererRecord)),
-    controlsRenderers: compact(input.runtime.controlsRenderers.map(toControlsRendererRecord)),
+    kanbanRenderers: compact(
+      resolveKinds(input.runtime.kanbanRenderers, input.runtime.kanbanRenderers.map(toKanbanRendererRecord)),
+    ),
+    dataTableRenderers: compact(
+      resolveKinds(input.runtime.dataTableRenderers, input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),
+    ),
+    commandPaletteResources: compact(
+      resolveKinds(
+        input.runtime.commandPaletteResources,
+        input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord),
+      ),
+    ),
+    treeRenderers: compact(
+      resolveKinds(input.runtime.treeRenderers, input.runtime.treeRenderers.map(toTreeRendererRecord)),
+    ),
+    fileRenderers: compact(
+      resolveKinds(input.runtime.fileRenderers, input.runtime.fileRenderers.map(toFileRendererRecord)),
+    ),
+    controlsRenderers: compact(
+      resolveKinds(input.runtime.controlsRenderers, input.runtime.controlsRenderers.map(toControlsRendererRecord)),
+    ),
     keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

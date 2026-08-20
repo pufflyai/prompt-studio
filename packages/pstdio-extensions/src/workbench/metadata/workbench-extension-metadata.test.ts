@@ -558,3 +558,40 @@ describe("createWorkbenchExtensionMetadata tree item actions", () => {
     });
   });
 });
+
+describe("createWorkbenchExtensionMetadata resource kind references", () => {
+  test("resolves a bare renderer resource kind to the kind its extension declares", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        packagePath: "/extension",
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local_path",
+        manifest: {
+          id: "pstdio.planner",
+          name: "planner",
+          displayName: "Planner",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          resourceKinds: {
+            ticket: { surface: "primary", slots: { primary: { cardinality: "one", external: false } } },
+          },
+          kanbanRenderers: {
+            tickets: { title: "Tickets", resourceKind: "ticket", query: async () => ({ rows: [] }) },
+            sessions: { title: "Sessions", resourceKind: "session", query: async () => ({ rows: [] }) },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    // The planner declares `ticket`, so the renderer names the declared id.
+    expect(metadata.kanbanRenderers?.[0]?.resourceKind).toBe("planner.ticket");
+    // `session` is a host kind the planner does not declare, so it stays as written.
+    expect(metadata.kanbanRenderers?.[1]?.resourceKind).toBe("session");
+  });
+});
