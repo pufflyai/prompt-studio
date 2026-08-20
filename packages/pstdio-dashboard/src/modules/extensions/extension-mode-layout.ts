@@ -3,9 +3,12 @@ import type {
   ResourceRef,
   WorkbenchModeActivationContext,
   WorkbenchModuleContext,
+  WorkbenchPanelRegion,
   WorkbenchRegion,
 } from "@pstdio/workbench";
+import { workbenchPanelRegions } from "@pstdio/workbench";
 import {
+  listCompositionAddablePanels,
   panelMenuDeclarationOffsets,
   reconcileCompositionLayout,
   registerWorkbenchExtensionPanel,
@@ -232,6 +235,15 @@ const registerExtensionModes = (input: {
           executeCommand,
           projectId,
         }),
+        listAddablePanels: ({ layout, resource }) =>
+          listCompositionAddablePanels({
+            registry,
+            modeId: mode.modeId,
+            layout,
+            resourceKind: resource?.kind,
+          }).filter((panel): panel is typeof panel & { region: WorkbenchPanelRegion } =>
+            workbenchPanelRegions.includes(panel.region as WorkbenchPanelRegion),
+          ),
         activate: () => undefined,
         // The workbench establishes the mode's Location around `seed`, so the first
         // composition pass must run there for the main panel to own its Panel Menus.

@@ -50,4 +50,25 @@ describe("openPanelWidget", () => {
     // The location resource still binds the tab to where it was added.
     expect(placement?.resourceUri).toBe(location.uri);
   });
+
+  test("gives a composition panel the role implied by its destination region", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.layout.registerPanel({
+      closable: true,
+      id: "lab.artifacts",
+      title: "Artifacts",
+      region: "main",
+      singleton: true,
+      rendererId: "lab.artifacts",
+    });
+
+    openPanelWidget({
+      workbench,
+      widget: workbench.layout.getWidget("lab.artifacts")!,
+      region: "main",
+    });
+
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.role).toBe("location");
+  });
 });

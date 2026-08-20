@@ -45,6 +45,7 @@ export default defineExtension({
 - `modePanels` places mode-wide panels that do not consume the active resource. The same placement fields apply.
 - `defaultResource` lets users enter the mode without a compatible resource. It is either a static resource ref (`{ type, id }`) or `{ commandId }` for a command that returns one.
 - Existing valid user placements win over recipe defaults. Restoring a required placement does not reset optional placements or tab order.
+- Closing an optional panel keeps it closed in the saved layout and offers it through the region's Add Panel control. Opening it there restores it in the region resolved by the mode recipe. Required panels are never offered because they cannot be closed.
 
 ## The Host Side Panel and Agents
 

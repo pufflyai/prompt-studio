@@ -349,3 +349,22 @@ describe("composition resolver", () => {
     expect(byName.optionalPanels).toEqual([]);
   });
 });
+
+describe("composition Add Panel options", () => {
+  test("offers a closed optional mode panel", () => {
+    const mode = {
+      id: "lab",
+      modePanels: {
+        "planner.editor": { region: "main" as const },
+      },
+    };
+    const result = resolve({
+      context: { modeId: mode.id },
+      mode,
+      persisted: { regions: { main: { order: [] } } },
+    });
+
+    expect(result.optionalPanels).toEqual(["planner.editor"]);
+    expect(result.addablePanels).toEqual([{ panelId: "planner.editor", region: "main", allowedRegions: ["main"] }]);
+  });
+});

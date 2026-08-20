@@ -64,6 +64,22 @@ describe("listEligibleSubPanels", () => {
     ).toEqual(["workspaces"]);
   });
 
+  test("includes a composition panel when the active mode offers it", () => {
+    const panels = [
+      widget({ id: "overview", role: "content" }),
+      widget({ id: "artifacts", role: "content", resourceKinds: ["artifact"] }),
+    ];
+
+    expect(
+      listEligibleSubPanels({
+        addableWidgetIds: ["artifacts"],
+        widgets: panels,
+        layout: createDefaultWorkbenchLayout(),
+        region: "main",
+      }).map((item) => item.id),
+    ).toEqual(["artifacts"]);
+  });
+
   test("matches explicit location owners", () => {
     const widgets = [
       widget({ id: "ticket-files", eligibleLocations: { resourceKinds: ["ticket"] } }),

@@ -276,21 +276,35 @@ export const resolveComposition = (input: ResolveCompositionInput): ResolvedComp
       code: "extension_mode_resource_unsupported",
       message: `Mode "${mode.id}" does not accept resource kind "${context.resourceKind}"`,
     });
-    return { placements: [], regionOrder: {}, activePanelIds: {}, optionalPanels: [], diagnostics };
+    return { placements: [], regionOrder: {}, activePanelIds: {}, addablePanels: [], optionalPanels: [], diagnostics };
   }
 
   const { candidates, validEdges } = collectCandidates(input, recipe, diagnostics);
   const { requiredFallback, resolvedByPanel } = resolveCandidates(input, candidates, diagnostics);
   const { activePanelIds, placed, placements, regionOrder } = placeResolved(input, resolvedByPanel);
 
-  const optionalPanels = validEdges
-    .map((edge) => edge.panel)
-    .filter((panelId, index, all) => all.indexOf(panelId) === index)
-    .filter((panelId) => !placed.has(panelId))
-    .filter((panelId) => {
-      const panel = input.composition.panels.find((definition) => definition.id === panelId);
-      return panel !== undefined && panel.supportedRegions.length > 0;
+  const addablePanels = Array.from(resolvedByPanel.values())
+    .filter((panel) => !panel.required && !placed.has(panel.panelId))
+    .map(({ panelId, region, allowedRegions }) => ({ panelId, region, allowedRegions }));
+  const addablePanelIds = new Set(addablePanels.map((panel) => panel.panelId));
+  for (const edge of validEdges) {
+    if (placed.has(edge.panel) || addablePanelIds.has(edge.panel)) continue;
+    const policy = recipe?.panels?.[edge.panel] ?? recipe?.slots?.[edge.slot];
+    if (!policy) continue;
+    const resolved = resolveCandidate(
+      input,
+      { panelId: edge.panel, slot: edge.slot, policy, required: false },
+      diagnostics,
+    );
+    if (!resolved) continue;
+    addablePanels.push({
+      panelId: resolved.panelId,
+      region: resolved.region,
+      allowedRegions: resolved.allowedRegions,
     });
+    addablePanelIds.add(resolved.panelId);
+  }
+  const optionalPanels = addablePanels.map((panel) => panel.panelId);
 
-  return { placements, regionOrder, activePanelIds, optionalPanels, diagnostics, requiredFallback };
+  return { placements, regionOrder, activePanelIds, addablePanels, optionalPanels, diagnostics, requiredFallback };
 };

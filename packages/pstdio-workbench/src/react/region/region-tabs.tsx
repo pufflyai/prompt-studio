@@ -13,7 +13,10 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
   listEligibleSubPanels,
+  type RegisteredWidgetContribution,
+  type ResourceRef,
   type WorkbenchCore,
+  type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion as WorkbenchRegionId,
   type WorkbenchWidgetPlacement,
@@ -28,7 +31,11 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
 import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
-import { isPlacementEligibleForRegion, shouldShowRegionTabs } from "./region-tabs-visibility-hooks";
+import {
+  isPlacementEligibleForRegion,
+  listWorkbenchModeAddablePanelIds,
+  shouldShowRegionTabs,
+} from "./region-tabs-visibility-hooks";
 import { SortableRegionTabList } from "./sortable-region-tab-list";
 
 export {
@@ -55,6 +62,23 @@ const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidg
   );
   return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
 };
+
+const listRegionAddableWidgets = (
+  workbench: WorkbenchCore,
+  layout: WorkbenchLayout,
+  widgets: RegisteredWidgetContribution[],
+  region: WorkbenchPanelRegion,
+  resource: ResourceRef | undefined,
+  modeId: string | undefined,
+) =>
+  listEligibleSubPanels({
+    addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layout, region, resource, modeId),
+    widgets,
+    layout,
+    region,
+    resource,
+    modeId,
+  });
 
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
@@ -124,13 +148,14 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const eligibleSubPanels = panelRegion
-    ? listEligibleSubPanels({
-        widgets: Object.values(registeredWidgets),
-        layout: layoutState.layout,
-        region: panelRegion,
+    ? listRegionAddableWidgets(
+        workbench,
+        layoutState.layout,
+        Object.values(registeredWidgets),
+        panelRegion,
         resource,
         modeId,
-      })
+      )
     : [];
   const hasAddAction = eligibleSubPanels.length > 0;
   const showTabs = shouldShowRegionTabs(visiblePlacements, {

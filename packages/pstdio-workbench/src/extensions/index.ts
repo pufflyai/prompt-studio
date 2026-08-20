@@ -15,6 +15,7 @@ export { registerWorkbenchExtensionCommandPaletteResources } from "./contributio
 export {
   compositionRequiredNotificationId,
   createWorkbenchCompositionRegistry,
+  listCompositionAddablePanels,
   reconcileCompositionLayout,
   type WorkbenchCompositionRegistry,
 } from "./contributions/composition-contributions";

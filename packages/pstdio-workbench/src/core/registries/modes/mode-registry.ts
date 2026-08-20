@@ -14,6 +14,17 @@ export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
 export type WorkbenchModeActivationResult = Disposable | readonly Disposable[] | undefined;
 
+export interface WorkbenchModeAddablePanel {
+  panelId: string;
+  region: WorkbenchPanelRegion;
+  allowedRegions?: readonly WorkbenchRegion[];
+}
+
+export interface WorkbenchModeAddablePanelContext {
+  layout: WorkbenchLayout;
+  resource?: ResourceRef;
+}
+
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
@@ -23,6 +34,8 @@ export interface WorkbenchModeContribution {
   resourceKinds?: readonly string[];
   // Fallback resource when the mode is entered without a compatible resource.
   defaultResource?: ResourceRef | (() => Promise<ResourceRef | undefined> | ResourceRef | undefined);
+  // Returns optional composition panels that are closed in the current context.
+  listAddablePanels?(context: WorkbenchModeAddablePanelContext): readonly WorkbenchModeAddablePanel[];
   // Registers the mode's contributions once for the lifetime of the mode.
   activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
   // Seeds default placements only when the persistence scope has no layout yet.

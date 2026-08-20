@@ -8,6 +8,7 @@ import type {
 } from "./layout-types";
 
 interface PanelWidgetEligibilityInput {
+  addableWidgetIds?: readonly string[];
   widget: RegisteredWidgetContribution;
   layout: WorkbenchLayout;
   region: WorkbenchPanelRegion;
@@ -16,6 +17,7 @@ interface PanelWidgetEligibilityInput {
 }
 
 interface ListEligiblePanelWidgetsInput {
+  addableWidgetIds?: readonly string[];
   widgets: RegisteredWidgetContribution[];
   layout: WorkbenchLayout;
   region: WorkbenchPanelRegion;
@@ -132,12 +134,16 @@ const hasOpenSingleton = (
     ),
   );
 
-export const isSubPanelEligible = (input: PanelWidgetEligibilityInput) =>
-  input.widget.role === "sub-panel" &&
-  supportsPanelRegion(input.widget, input.region) &&
-  supportsResource(input.widget, input.resource) &&
-  matchesWorkbenchLocationEligibility(input.widget, input.resource, input.modeId) &&
-  !hasOpenSingleton(input.widget, input.layout, input.resource);
+export const isSubPanelEligible = (input: PanelWidgetEligibilityInput) => {
+  if (hasOpenSingleton(input.widget, input.layout, input.resource)) return false;
+  if (input.addableWidgetIds?.includes(input.widget.id)) return true;
+  return (
+    input.widget.role === "sub-panel" &&
+    supportsPanelRegion(input.widget, input.region) &&
+    supportsResource(input.widget, input.resource) &&
+    matchesWorkbenchLocationEligibility(input.widget, input.resource, input.modeId)
+  );
+};
 
 export const listEligibleSubPanels = (input: ListEligiblePanelWidgetsInput) =>
   input.widgets.filter((widget) => isSubPanelEligible({ ...input, widget }));

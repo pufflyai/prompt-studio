@@ -86,6 +86,12 @@ export interface ResolvedCompositionPlacement {
   origin: "persisted" | "required" | "default";
 }
 
+export interface ResolvedCompositionAddablePanel {
+  panelId: string;
+  region: DockedCompositionRegion;
+  allowedRegions: readonly DockedCompositionRegion[];
+}
+
 export interface CompositionDiagnostic {
   code:
     | "extension_resource_kind_missing"
@@ -105,6 +111,7 @@ export interface ResolvedComposition {
   placements: readonly ResolvedCompositionPlacement[];
   regionOrder: Partial<Record<DockedCompositionRegion, readonly string[]>>;
   activePanelIds: Partial<Record<DockedCompositionRegion, string>>;
+  addablePanels: readonly ResolvedCompositionAddablePanel[];
   optionalPanels: readonly string[];
   diagnostics: readonly CompositionDiagnostic[];
   // The safest main placement when a required placement cannot be resolved.

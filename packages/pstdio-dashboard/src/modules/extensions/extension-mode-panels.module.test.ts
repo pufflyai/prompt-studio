@@ -143,6 +143,34 @@ describe("extension mode-wide panels", () => {
     }
   });
 
+  test("offers a closed optional mode panel through the active mode", async () => {
+    const workbench = createWorkbenchCore();
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposables = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async () => ({ outcome: { ok: true, value: undefined } }) as never,
+      metadata: labMetadata,
+      projectId: "project-1",
+    });
+
+    try {
+      await workbench.navigator.open({ modeId: "pstdio.extension-lab.lab" });
+      const artifacts = workbench.layout
+        .getLayout()
+        .regions.main.widgets.find((placement) => placement.contributionId === "extension-lab.labArtifacts")!;
+      workbench.layout.closeWidget(artifacts.widgetId);
+
+      expect(
+        workbench.modes.getMode("pstdio.extension-lab.lab")?.listAddablePanels?.({
+          layout: workbench.layout.getLayout(),
+          resource: workbench.getPrimaryResource(),
+        }),
+      ).toContainEqual({ panelId: "extension-lab.labArtifacts", region: "main", allowedRegions: ["main"] });
+    } finally {
+      for (const disposable of disposables) disposable.dispose();
+    }
+  });
+
   test("places mode-wide panels when switching from an incompatible resource", async () => {
     const workbench = createWorkbenchCore();
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });

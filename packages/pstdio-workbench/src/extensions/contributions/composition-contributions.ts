@@ -91,6 +91,24 @@ const extractPersistedState = (
   return { regions };
 };
 
+export const listCompositionAddablePanels = (input: {
+  registry: WorkbenchCompositionRegistry;
+  modeId: string;
+  layout: ReturnType<LayoutModel["getLayout"]>;
+  resourceKind?: string;
+}) => {
+  const mode = input.registry.getModeComposition(input.modeId);
+  if (!mode) return [];
+  const composition = input.registry.getComposition();
+  const knownPanelIds = new Set(composition.panels.map((panel) => panel.id));
+  return resolveComposition({
+    context: { modeId: input.modeId, resourceKind: input.resourceKind },
+    mode,
+    composition,
+    persisted: extractPersistedState(input.layout, knownPanelIds),
+  }).addablePanels;
+};
+
 // A panel declares only what it can render, so its role comes from where the recipe
 // puts it: main holds Locations, which tab beside each other, and every other docked
 // region holds Sub Panels of the active Location.

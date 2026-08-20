@@ -26,11 +26,12 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
     // Adding a tab from the region's "+" tray is the user asking for a tab that stays.
     // The resource only binds the tab to its location; the tab is the widget, so it
     // keeps the widget's title instead of inheriting the location resource's label.
-    workbench.layout.openPanel(widget.id, {
+    workbench.layout.openWidget(widget.id, {
       region,
       resource: widgetResource,
       title: widget.title,
-      strategy: { kind: "persistent" },
+      role: region === "main" ? "location" : "sub-panel",
+      tabRetention: "persistent",
     });
   }
 

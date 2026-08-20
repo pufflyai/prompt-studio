@@ -10,8 +10,9 @@ import type {
   WorkbenchCommandExecutionContext,
   WorkbenchModeActivationContext,
   WorkbenchModuleContext,
+  WorkbenchPanelRegion,
 } from "../../core";
-import { workbenchCommandPaletteMenuPath } from "../../core";
+import { workbenchCommandPaletteMenuPath, workbenchPanelRegions } from "../../core";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
@@ -29,6 +30,7 @@ import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import {
   createWorkbenchCompositionRegistry,
+  listCompositionAddablePanels,
   reconcileCompositionLayout,
   type WorkbenchCompositionRegistry,
 } from "../contributions/composition-contributions";
@@ -493,6 +495,15 @@ const registerModes = (input: RegisterWorkbenchExtensionContributionsInput, regi
       panels: mode.panelRegions,
       resourceKinds: Object.keys(mode.resources ?? {}),
       defaultResource: toModeDefaultResource(input, mode.defaultResource),
+      listAddablePanels: ({ layout, resource }) =>
+        listCompositionAddablePanels({
+          registry,
+          modeId: mode.modeId,
+          layout,
+          resourceKind: resource?.kind,
+        }).filter((panel): panel is typeof panel & { region: WorkbenchPanelRegion } =>
+          workbenchPanelRegions.includes(panel.region as WorkbenchPanelRegion),
+        ),
       activate: () => undefined,
       seed: (ctx: WorkbenchModeActivationContext) => applyComposition(ctx, true),
       reconcile: (ctx: WorkbenchModeActivationContext) => applyComposition(ctx, false),

@@ -136,6 +136,7 @@ export type {
   PersistedCompositionLayout,
   ResolveCompositionInput,
   ResolvedComposition,
+  ResolvedCompositionAddablePanel,
   ResolvedCompositionPlacement,
   WorkbenchComposition,
 } from "./registries/layout/composition-resolver-types";
@@ -224,6 +225,8 @@ export {
 export type {
   WorkbenchModeActivationContext,
   WorkbenchModeActivationResult,
+  WorkbenchModeAddablePanel,
+  WorkbenchModeAddablePanelContext,
   WorkbenchModeContribution,
   WorkbenchModeRegistry,
 } from "./registries/modes/mode-registry";

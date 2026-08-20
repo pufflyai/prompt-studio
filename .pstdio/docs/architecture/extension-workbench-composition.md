@@ -99,6 +99,7 @@ The workbench resolves one layout for the active project, mode, and resource:
 8. Expose remaining valid panels through Add Panel.
 
 Invalid or removed optional contributions are omitted and reported without preventing unrelated panels from rendering. A missing required placement produces a visible diagnostic and a safe location fallback.
+Add Panel reads these resolved options from the active mode. It does not infer availability from a panel's global registration, because one panel may participate in several modes and resource slots.
 
 ## Layout Persistence
 

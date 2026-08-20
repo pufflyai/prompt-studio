@@ -24,6 +24,23 @@ const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.
 const isWorkbenchPanelRegion = (region: WorkbenchRegion): region is WorkbenchPanelRegion =>
   workbenchPanelRegions.some((panelRegion) => panelRegion === region);
 
+export const listWorkbenchModeAddablePanelIds = (
+  workbench: WorkbenchCore,
+  layout: ReturnType<WorkbenchCore["layout"]["getLayout"]>,
+  region: WorkbenchPanelRegion,
+  resource: ReturnType<WorkbenchCore["getPrimaryResource"]>,
+  modeId: string | undefined,
+) => {
+  if (!modeId) return [];
+  return (
+    workbench.modes
+      .getMode(modeId)
+      ?.listAddablePanels?.({ layout, resource })
+      .filter((panel) => panel.region === region)
+      .map((panel) => panel.panelId) ?? []
+  );
+};
+
 export const shouldShowRegionTabs = (
   placements: WorkbenchWidgetPlacement[],
   options: { hasLeadingActions?: boolean; hasAddAction?: boolean } = {},
@@ -89,6 +106,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
         !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
     ).length > 1;
   const eligibleSubPanels = listEligibleSubPanels({
+    addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layoutState.layout, region, resource, modeId),
     widgets: Object.values(layoutState.widgets),
     layout: layoutState.layout,
     region,
@@ -159,6 +177,7 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
     hasAddAction:
       isWorkbenchPanelRegion(region) &&
       listEligibleSubPanels({
+        addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layoutState.layout, region, resource, modeId),
         widgets: Object.values(layoutState.widgets),
         layout: layoutState.layout,
         region,
