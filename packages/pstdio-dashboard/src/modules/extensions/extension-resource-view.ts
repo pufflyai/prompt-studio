@@ -109,6 +109,10 @@ const removeManagedCompanions = (
   for (const region of Object.values(ctx.layout.getLayout().regions)) {
     for (const placement of region.widgets) {
       if (!managedWidgetIds.has(placement.contributionId) || keepWidgetIds.has(placement.contributionId)) continue;
+      // A panel id alone does not say who placed the panel: the same panel can be a
+      // companion of one resource and a mode-wide panel of the current mode. Only a
+      // placement opened for a resource is a companion, so leave the rest alone.
+      if (!placement.resourceUri) continue;
       ctx.layout.removeWidgetPlacement(placement.widgetId);
     }
   }
