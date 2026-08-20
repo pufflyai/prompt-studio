@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "shipped"
 created: "2026-08-18T17:03:48.668Z"
 ---
 
@@ -59,17 +59,23 @@ Extension Lab must include:
 
 ## Regression Coverage Map
 
-Every reproduced PS-246 regression has a test owner and a validation layer:
+Every reproduced PS-246 regression has a test that owns it. Each row names the test
+that fails if the regression returns.
 
-| Regression | Owning PRD | Fixture | Validation layer |
-| ---------- | ---------- | ------- | ---------------- |
-| Editor saves unchanged content, remounts, and loses focus and selection | Renderer Edit and Refresh Lifecycle | Editable file renderer | Renderer lifecycle unit tests plus Playwright focus and selection checks |
-| Ticket breadcrumbs lose the Tickets browse root | Extension Navigation and Layout State | Nested resource tree | Workbench hierarchy contract test plus Playwright breadcrumb assertions |
-| Resource presenters infer and change mode from resource kind | Extension Navigation and Layout State | Shared workbench suite | Contract test: a resource-only open preserves the active mode |
-| Lab retains a ticket resource and places Lab panels under the ticket location | Extension Navigation and Layout State | Lab root resource | Navigation state transition unit test plus Playwright mode switch |
-| Closed required Lab panels have no recovery path | Contextual Workbench Composition | Required panel | Mode re-entry reconciliation test plus Playwright |
-| Root tree items cannot opt out of the Extensions group | Contextual Workbench Composition | Root tree item | Sidenav story plus Playwright |
-| Repeated commands import fresh module identities until OOM | Project Extension Runtime Snapshots | No-op public and private commands | Loader-count integration test plus isolated container soak |
+| Regression | Owning test |
+| ---------- | ----------- |
+| Editor saves unchanged content, remounts, and loses focus and selection | `pstdio-workbench` `file-renderer-edit-state.test.ts` and `file-renderer-view.test.ts`; `e2e` `ticket-editor-save-lifecycle.spec.ts` |
+| Ticket breadcrumbs lose the Tickets browse root | `pstdio-workbench` `resource-registry.test.ts` hierarchy cases; `pstdio-dashboard` `resource-hierarchy.test.ts`; `e2e` `ps-173-resource-hierarchy.spec.ts` |
+| Resource presenters infer and change mode from resource kind | `pstdio-workbench` `workbench-navigator.test.ts` ("a resource-only target keeps the mode") |
+| A mode retains an incompatible resource and places its panels under it | `pstdio-dashboard` `project-selection-sync.test.ts` (harvested from PS-258); `pstdio-workbench` `workbench-navigator.test.ts` |
+| Closed required panels have no recovery path | `pstdio-workbench` `mode-registry-reconciliation.test.ts` and `composition-contributions.test.ts`; `pstdio-dashboard` `extension-mode-layout-reconciliation.module.test.ts` (harvested from PS-259) |
+| Root tree items cannot opt out of the Extensions group | `pstdio-dashboard` `workbench-extension-tree-sections.test.ts` and the headerless-root sidenav story |
+| Repeated commands import fresh module identities until OOM | `pstdio-api` `project-extension-runtime-catalog.test.ts` loader-count and generation cases |
+| One resource cannot keep separate layouts per mode | `pstdio-workbench` `composition-resolver.test.ts`; `e2e` `extension-composition-conformance.test.ts` |
+| An external extension cannot add a panel to an existing resource | `pstdio-dashboard` `extension-cross-extension-composition.module.test.ts`; `e2e` `extension-composition-conformance.test.ts` |
+| A second extension claiming another extension's resource kind breaks the owner | `pstdio-dashboard` `extension-resource-kind-ownership.module.test.ts` |
+| A panel reopened for a resource duplicates its owned menus | `pstdio-workbench` `panel-menu-ownership.test.ts` |
+| An extension cannot install while a cross-extension target is absent | `pstdio-extensions` `composition.test.ts` inert-reference cases |
 
 ## Requirements
 
