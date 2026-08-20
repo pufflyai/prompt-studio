@@ -145,9 +145,9 @@ const makeDeps = () => {
   }));
 
   const deps = {
-    createExtensionSourceWatcher: mock(async (input: { reloadInstalledSource: () => Promise<unknown> }) => {
+    createExtensionSourceWatcher: mock(async (input: { onSourceChanged: () => Promise<unknown> }) => {
       reload = async () => {
-        await input.reloadInstalledSource();
+        await input.onSourceChanged();
       };
       return {
         dispose: () => {
