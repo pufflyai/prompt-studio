@@ -23,16 +23,14 @@ import {
   createExtensionMenuCommandHandler,
   type ExecuteDashboardExtensionCommand,
 } from "./extension-command-handler";
+import { isExtensionResourceSidenavView } from "./extension-composition";
 import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
 import { registerExtensionKanbanRenderers } from "./extension-kanban-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
-import {
-  isExtensionResourceSidenavView,
-  registerExtensionResourceSidenavContributions,
-} from "./extension-sidenav-contributions";
+import { registerExtensionResourceSidenavContributions } from "./extension-sidenav-contributions";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -78,6 +76,13 @@ const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, ext
     treeItems: scoped(metadata.treeItems),
     activityItems: scoped(metadata.activityItems),
     panels: scoped(metadata.panels) ?? [],
+    // Contributions register one extension at a time, so its composition must be
+    // scoped too: an extension owns the resource kinds, panel bindings, hierarchy
+    // providers, and status chrome it declared, and nothing else.
+    resourceKinds: scoped(metadata.resourceKinds),
+    resourcePanels: scoped(metadata.resourcePanels),
+    resourceHierarchyProviders: scoped(metadata.resourceHierarchyProviders),
+    statusItems: scoped(metadata.statusItems),
   } satisfies ResolvedWorkbenchExtensionMetadata;
 };
 
@@ -160,6 +165,7 @@ const registerSingleExtensionContributions = (
         },
         metadata.dataTableRenderers ?? [],
         metadata.panels,
+        metadata.resourcePanels,
       ),
     );
     disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
@@ -216,7 +222,7 @@ const registerSingleExtensionContributions = (
         metadata.commandPaletteResources ?? [],
       ),
     );
-    disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
+    disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId, executeCommand));
     disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));

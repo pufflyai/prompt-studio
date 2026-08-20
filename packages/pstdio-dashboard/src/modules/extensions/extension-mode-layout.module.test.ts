@@ -15,13 +15,7 @@ import { createProjectsModule } from "../projects/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createExtensionsModule } from "./module";
-import {
-  emptyAppearance,
-  flushMicrotasks,
-  metadata,
-  metadataWithLabMode,
-  metadataWithTickets,
-} from "./module-test-fixtures";
+import { flushMicrotasks, metadata, metadataWithLabMode, metadataWithTickets } from "./module-test-fixtures";
 
 describe("createExtensionsModule activity rail", () => {
   test("opens the native activity rail for modes with activity items and removes it elsewhere", async () => {
@@ -146,12 +140,6 @@ describe("createExtensionsModule mode layout", () => {
       expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       );
-      expect(
-        workbench.layout.getPanel("dashboard-workbench.extension-view.extension-lab.labOverview")?.eligibleLocations,
-      ).toBeUndefined();
-      expect(
-        workbench.layout.getPanel("dashboard-workbench.extension-view.extension-lab.labSidenav")?.eligibleLocations,
-      ).toEqual({ modeIds: ["pstdio.extension-lab.lab"] });
     } finally {
       projectsDisposable.dispose();
       disposable.dispose();
@@ -200,36 +188,6 @@ describe("createExtensionsModule mode layout persistence", () => {
       disposable.dispose();
       sidenavDisposable.dispose();
       getWriter("installed_extension_sources")?.truncateAndWrite([]);
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
-  test("reopens a mode-layout extension view in the primary region on history replay", async () => {
-    const loadMetadata = mock(async () => metadataWithLabMode);
-    const loadAppearance = mock(async () => emptyAppearance);
-    const workbench = createWorkbenchCore();
-
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
-
-    try {
-      await flushMicrotasks();
-      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
-
-      const mainResource = workbench.layout.getLayout().regions.main.widgets[0]?.resource;
-      expect(mainResource?.kind).toBe("extension-view");
-
-      // Navigate the primary region away, then replay the extension-view entry the way history
-      // goBack/goForward does (openResource with replaceActive). Before the view presenter existed,
-      // this rejected with "No presenter registered for resource kind: extension-view".
-      workbench.layout.openPanel(dashboardWidgetIds.extensionRoute, { strategy: { kind: "replace-active" } });
-      await workbench.resources.openResource(mainResource!, { replaceActive: true });
-
-      expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-      ]);
-    } finally {
-      disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });

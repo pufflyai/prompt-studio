@@ -17,8 +17,7 @@ const metadata = {
     {
       id: panelId,
       extensionId,
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Overview",
       renderer: { kind: "tree", id: panelId },
     },

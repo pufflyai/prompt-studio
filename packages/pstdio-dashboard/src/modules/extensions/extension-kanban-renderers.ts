@@ -277,7 +277,13 @@ export const registerExtensionKanbanRenderers = (
   };
 
   disposables.push(
-    registerWorkbenchExtensionKanbanRenderers(commandContext, metadata.kanbanRenderers ?? [], adapter, metadata.panels),
+    registerWorkbenchExtensionKanbanRenderers(
+      commandContext,
+      metadata.kanbanRenderers ?? [],
+      adapter,
+      metadata.panels,
+      metadata.resourcePanels,
+    ),
   );
 
   return disposables;

@@ -4,18 +4,29 @@ import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { extensionViewWidgetId } from "./extension-view-placement";
 
+const webview = {
+  entry: {
+    kind: "package-asset" as const,
+    path: "./panel.tsx",
+    baseUrl: "file:///extension/extension.ts",
+  },
+  runtimeUrl: "/runtime.html",
+  moduleUrl: "/panel.js",
+};
+
+const registerHostSidenav = (workbench: ReturnType<typeof createWorkbenchCore>) => {
+  workbench.layout.registerPanel({
+    id: "dashboard.sidenav",
+    title: "Dashboard Sidenav",
+    region: "sidenav",
+    rendererId: "dashboard.sidenav",
+    closable: false,
+  });
+};
+
 describe("extension-mode-layout mode chrome", () => {
-  test("seeds activity and status chrome, owns the sidenav, and clears the chrome when leaving", () => {
+  test("shows a status item only while one of its modes is active", () => {
     const workbench = createWorkbenchCore();
-    const webview = {
-      entry: {
-        kind: "package-asset" as const,
-        path: "./panel.tsx",
-        baseUrl: "file:///extension/extension.ts",
-      },
-      runtimeUrl: "/runtime.html",
-      moduleUrl: "/panel.js",
-    };
     const metadata = {
       ...emptyDashboardExtensionMetadata,
       modes: [
@@ -25,104 +36,71 @@ describe("extension-mode-layout mode chrome", () => {
           modeId: "pstdio-lab.lab",
           label: "Lab",
           icon: "FlaskConical",
-          layout: {
-            panels: ["main", "side"] as ("main" | "secondary" | "side")[],
-            open: [
-              { region: "activity" as const, panel: "pstdio-lab.rail", pinned: true },
-              { region: "status" as const, panel: "pstdio-lab.statusStrip", pinned: true },
-              { region: "main" as const, panel: "pstdio-lab.overview" },
-            ],
-          },
+          panelRegions: ["main"] as ("main" | "secondary" | "side")[],
+          modePanels: { "pstdio-lab.overview": { region: "main" as const, required: true } },
         },
       ],
       panels: [
-        {
-          id: "pstdio-lab.rail",
-          extensionId: "pstdio.pstdio-lab",
-          title: "Lab rail",
-          region: "activity" as const,
-          closable: false,
-          webview,
-        },
-        {
-          id: "pstdio-lab.statusStrip",
-          extensionId: "pstdio.pstdio-lab",
-          title: "Lab status",
-          region: "status" as const,
-          closable: false,
-          webview,
-        },
         {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
           title: "Overview",
           icon: "layout-dashboard",
-          region: "main" as const,
-          closable: false,
+          supportedRegions: ["main" as const],
+          webview,
+        },
+      ],
+      statusItems: [
+        {
+          id: "pstdio-lab.statusStrip",
+          extensionId: "pstdio.pstdio-lab",
+          title: "Lab status",
+          when: { mode: ["pstdio-lab.lab"] },
           webview,
         },
       ],
     };
-    workbench.layout.registerPanel({
-      id: "dashboard.sidenav",
-      title: "Dashboard Sidenav",
-      region: "sidenav",
-      rendererId: "dashboard.sidenav",
-      closable: false,
-    });
-    workbench.layout.openPanel("dashboard.sidenav", { pinned: true });
+
     registerExtensionModeContributions(workbench, metadata, "project-1");
     workbench.modes.registerMode({ id: "other", activate: () => undefined });
 
-    workbench.modes.setActiveMode("pstdio-lab.lab");
+    const statusIds = () => workbench.layout.getLayout().regions.status.widgets.map((widget) => widget.contributionId);
 
-    const layout = workbench.layout.getLayout();
-    expect(layout.regions.activity.widgets.map((widget) => widget.contributionId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.rail"),
+    expect(statusIds()).toEqual([]);
+
+    workbench.modes.setActiveMode("pstdio-lab.lab");
+    expect(statusIds()).toEqual([extensionViewWidgetId("pstdio-lab.statusStrip")]);
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      extensionViewWidgetId("pstdio-lab.overview"),
     ]);
-    expect(layout.regions.status.widgets.map((widget) => widget.contributionId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.statusStrip"),
-    ]);
-    // A mode that stages its own activity rail owns navigation: the sidenav is cleared.
-    expect(layout.regions.sidenav.widgets).toEqual([]);
-    const overview = layout.regions.main.widgets.find(
-      (widget) => widget.contributionId === extensionViewWidgetId("pstdio-lab.overview"),
-    );
-    expect(overview?.resource?.icon).toBe("layout-dashboard");
 
     workbench.modes.setActiveMode("other");
-
-    const afterLeave = workbench.layout.getLayout();
-    expect(afterLeave.regions.activity.widgets).toEqual([]);
-    expect(afterLeave.regions.status.widgets).toEqual([]);
+    expect(statusIds()).toEqual([]);
   });
 
-  test("keeps eligibility-scoped main panels as sub-panels of the mode's single location", () => {
+  test("a mode with activity items owns navigation and clears the host sidenav", () => {
     const workbench = createWorkbenchCore();
-    const webview = {
-      entry: {
-        kind: "package-asset" as const,
-        path: "./panel.tsx",
-        baseUrl: "file:///extension/extension.ts",
-      },
-      runtimeUrl: "/runtime.html",
-      moduleUrl: "/panel.js",
-    };
     const metadata = {
       ...emptyDashboardExtensionMetadata,
+      commands: [{ id: "pstdio-lab.home", extensionId: "pstdio.pstdio-lab", title: "Home" }],
+      activityItems: [
+        {
+          id: "pstdio-lab.home",
+          extensionId: "pstdio.pstdio-lab",
+          title: "Home",
+          icon: "house",
+          modes: ["pstdio-lab.lab"],
+          commandId: "pstdio-lab.home",
+        },
+      ],
       modes: [
         {
           id: "pstdio-lab.lab",
           extensionId: "pstdio.pstdio-lab",
           modeId: "pstdio-lab.lab",
           label: "Lab",
-          layout: {
-            panels: ["main", "side"] as ("main" | "secondary" | "side")[],
-            open: [
-              { region: "main" as const, panel: "pstdio-lab.overview" },
-              { region: "main" as const, panel: "pstdio-lab.cams" },
-            ],
-          },
+          panelRegions: ["main"] as ("main" | "secondary" | "side")[],
+          modePanels: { "pstdio-lab.overview": { region: "main" as const, required: true } },
         },
       ],
       panels: [
@@ -130,48 +108,25 @@ describe("extension-mode-layout mode chrome", () => {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
           title: "Overview",
-          region: "main" as const,
-          closable: false,
-          webview,
-        },
-        {
-          id: "pstdio-lab.cams",
-          extensionId: "pstdio.pstdio-lab",
-          title: "Cams",
-          region: "main" as const,
-          closable: false,
-          eligibleLocations: { resourceKinds: ["extension-view"] },
+          supportedRegions: ["main" as const],
           webview,
         },
       ],
     };
 
+    registerHostSidenav(workbench);
+    workbench.layout.openPanel("dashboard.sidenav", { pinned: true });
     registerExtensionModeContributions(workbench, metadata, "project-1");
+
     workbench.modes.setActiveMode("pstdio-lab.lab");
 
-    const main = workbench.layout.getLayout().regions.main;
-    const roleOf = (panelId: string) =>
-      main.widgets.find((widget) => widget.contributionId === extensionViewWidgetId(panelId))?.role;
-    expect(roleOf("pstdio-lab.overview")).toBe("location");
-    // A panel that declares where it is eligible is a tab beside the location,
-    // never a second location — locations would clone sub-panels per location.
-    expect(roleOf("pstdio-lab.cams")).toBe("sub-panel");
-    expect(main.widgets.filter((widget) => widget.role === "location")).toHaveLength(1);
+    expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
   });
 });
 
 describe("extension-mode-layout native menus", () => {
   test("registers native-bodied panel menus of webview panels with their renderer ids", () => {
     const workbench = createWorkbenchCore();
-    const webview = {
-      entry: {
-        kind: "package-asset" as const,
-        path: "./panel.tsx",
-        baseUrl: "file:///extension/extension.ts",
-      },
-      runtimeUrl: "/runtime.html",
-      moduleUrl: "/panel.js",
-    };
     const metadata = {
       ...emptyDashboardExtensionMetadata,
       panels: [
@@ -179,8 +134,7 @@ describe("extension-mode-layout native menus", () => {
           id: "pstdio-lab.cams",
           extensionId: "pstdio.pstdio-lab",
           title: "Cams",
-          region: "main" as const,
-          closable: false,
+          supportedRegions: ["main" as const],
           webview,
           panelMenus: [
             {
@@ -216,10 +170,8 @@ describe("extension-mode-layout native menus", () => {
           modeId: "pstdio-lab.build",
           label: "Build",
           icon: "FlaskConical",
-          layout: {
-            panels: ["main", "secondary", "side"] as ("main" | "secondary" | "side")[],
-            open: [{ region: "sidenav" as const, panel: "pstdio-lab.sidenav", pinned: true }],
-          },
+          panelRegions: ["main", "secondary", "side"] as ("main" | "secondary" | "side")[],
+          modePanels: { "pstdio-lab.sidenav": { region: "sidenav" as const, pinned: true, required: true } },
         },
       ],
       panels: [
@@ -227,27 +179,13 @@ describe("extension-mode-layout native menus", () => {
           id: "pstdio-lab.sidenav",
           extensionId: "pstdio.pstdio-lab",
           title: "Lab Sidenav",
-          region: "sidenav" as const,
-          closable: false,
-          webview: {
-            entry: {
-              kind: "package-asset" as const,
-              path: "./sidenav.tsx",
-              baseUrl: "file:///extension/extension.ts",
-            },
-            runtimeUrl: "/runtime.html",
-            moduleUrl: "/sidenav.js",
-          },
+          supportedRegions: ["sidenav" as const],
+          webview,
         },
       ],
     };
-    workbench.layout.registerPanel({
-      id: "dashboard.sidenav",
-      title: "Dashboard Sidenav",
-      region: "sidenav",
-      rendererId: "dashboard.sidenav",
-      closable: false,
-    });
+
+    registerHostSidenav(workbench);
     registerExtensionModeContributions(workbench, metadata, "project-1");
     workbench.modes.registerMode({ id: "other", activate: () => undefined });
     workbench.modes.onDidChangeActive(() => {

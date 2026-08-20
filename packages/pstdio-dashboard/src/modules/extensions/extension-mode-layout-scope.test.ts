@@ -18,10 +18,8 @@ test("opens a newly selected mode's declared Panel regions after dashboard scope
         modeId: "pstdio.extension-lab.review",
         label: "Review lab",
         icon: "scan-search",
-        layout: {
-          panels: ["main", "secondary", "side"] as ("main" | "secondary" | "side")[],
-          open: [{ region: "secondary" as const, panel: "extension-lab.reviewChecklist" }],
-        },
+        panelRegions: ["main", "secondary", "side"] as ("main" | "secondary" | "side")[],
+        modePanels: { "extension-lab.reviewChecklist": { region: "secondary" as const, required: true } },
       },
     ],
     panels: [
@@ -29,8 +27,7 @@ test("opens a newly selected mode's declared Panel regions after dashboard scope
       {
         id: "extension-lab.reviewChecklist",
         extensionId: "pstdio.extension-lab",
-        region: "secondary" as const,
-        closable: true,
+        supportedRegions: ["secondary" as const],
         title: "Review checklist",
         webview: {
           entry: {
@@ -64,68 +61,6 @@ test("opens a newly selected mode's declared Panel regions after dashboard scope
     expect(workbench.layout.getLayout().regions.secondary.widgets.map((widget) => widget.contributionId)).toEqual([
       "dashboard-workbench.extension-view.extension-lab.reviewChecklist",
     ]);
-  } finally {
-    projectsDisposable.dispose();
-    extensionsDisposable.dispose();
-    clearCachedDashboardExtensionMetadata("project-1");
-  }
-});
-
-test("keeps a native Main Sub Panel attached to the extension mode Location", async () => {
-  const artifactMetadata = {
-    ...metadataWithLabMode,
-    modes: metadataWithLabMode.modes.map((mode) => ({
-      ...mode,
-      layout: {
-        ...mode.layout,
-        open: [...mode.layout.open, { region: "main" as const, panel: "extension-lab.artifacts" }],
-      },
-    })),
-    panels: [
-      ...metadataWithLabMode.panels,
-      {
-        id: "extension-lab.artifacts",
-        extensionId: "pstdio.extension-lab",
-        title: "Artifacts",
-        region: "main" as const,
-        closable: false,
-        renderer: { kind: "dataTable" as const, id: "extension-lab.artifacts" },
-        eligibleLocations: { resourceKinds: ["extension-view"] },
-      },
-    ],
-    dataTableRenderers: [
-      {
-        id: "extension-lab.artifacts",
-        extensionId: "pstdio.extension-lab",
-        title: "Artifacts",
-        queryHandlerId: "extension-lab.artifacts.query",
-      },
-    ],
-  };
-  const loadMetadata = mock(async () => artifactMetadata);
-  const workbench = createWorkbenchCore();
-
-  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  const extensionsDisposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
-  const projectsDisposable = workbench.registerModule(createProjectsModule());
-
-  try {
-    await flushMicrotasks();
-    workbench.modes.setActiveMode("pstdio.extension-lab.lab");
-
-    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({
-        contributionId: "dashboard-workbench.extension-view.extension-lab.labOverview",
-        role: "location",
-      }),
-      expect.objectContaining({
-        contributionId: "extension-lab.artifacts",
-        role: "sub-panel",
-      }),
-    ]);
-    expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
-      "dashboard-workbench.extension-view.extension-lab.labOverview",
-    );
   } finally {
     projectsDisposable.dispose();
     extensionsDisposable.dispose();

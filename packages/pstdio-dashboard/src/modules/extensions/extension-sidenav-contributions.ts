@@ -6,6 +6,7 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { buildDashboardExtensionTreeSections } from "@/shared/extensions/workbench-extension-tree-sections";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { panelResourceKind, resourceSidenavModeId } from "./extension-composition";
 
 interface ExtensionSidenavContributionState {
   metadata: DashboardExtensionMetadata | undefined;
@@ -59,20 +60,6 @@ export const registerExtensionSidenavContributions = (
   });
 };
 
-const resourceSidenavModeId = (
-  metadata: DashboardExtensionMetadata,
-  panel: DashboardExtensionMetadata["panels"][number],
-) => {
-  const mode = metadata.modes.find((candidate) => candidate.resourceKind === panel.resourceKind);
-  const modeRegion = mode?.layout?.open?.find((entry) => entry.panel === panel.id)?.region;
-  return (modeRegion ?? panel.region) === "sidenav" ? (mode?.modeId ?? "project") : undefined;
-};
-
-export const isExtensionResourceSidenavView = (
-  metadata: DashboardExtensionMetadata,
-  panel: DashboardExtensionMetadata["panels"][number],
-) => Boolean(panel.resourceKind && panel.renderer?.kind === "tree" && resourceSidenavModeId(metadata, panel));
-
 const mirrorResourceTreeSelection = (
   ctx: WorkbenchModuleContext,
   input: { modeId: string; treeRendererId: string },
@@ -97,11 +84,11 @@ export const registerExtensionResourceSidenavContributions = (
   const sidenavTreeIds = new Set<string>();
 
   for (const [index, view] of metadata.panels.entries()) {
-    if (!isExtensionResourceSidenavView(metadata, view) || !view.resourceKind || view.renderer?.kind !== "tree")
-      continue;
-    const treeRendererId = view.renderer.id;
+    if (view.renderer?.kind !== "tree") continue;
+    const resourceKind = panelResourceKind(metadata, view.id);
     const modeId = resourceSidenavModeId(metadata, view);
-    if (!modeId) continue;
+    if (!resourceKind || !modeId) continue;
+    const treeRendererId = view.renderer.id;
 
     sidenavTreeIds.add(treeRendererId);
     disposables.push(mirrorResourceTreeSelection(ctx, { modeId, treeRendererId }));
@@ -120,7 +107,7 @@ export const registerExtensionResourceSidenavContributions = (
         // active resource's own tree renders below them.
         order: 50 + index,
         getSections: async (_workbench, input) => {
-          if (input.resource?.kind !== view.resourceKind) return [];
+          if (input.resource?.kind !== resourceKind) return [];
           const sections = await ctx.renderers.getBody(treeRendererId, {
             resource: input.resource,
             viewId: view.id,

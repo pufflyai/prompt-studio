@@ -1,36 +1,26 @@
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-
-type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
+import { compositionResourceKinds, type ResourcePanelBinding, resourcePanelBindings } from "./extension-composition";
 
 export interface ResourceEditorGroup {
   kind: string;
   /** Absent for inspector groups: side-only kinds open in place without a main editor. */
-  primary?: ExtensionPanelRecord;
-  companions: ExtensionPanelRecord[];
+  primary?: ResourcePanelBinding;
+  companions: ResourcePanelBinding[];
 }
 
-// Groups editor + companion side-panel views by resource kind. The primary editor
-// docks in `main`; companion views (e.g. a properties panel targeting main-right)
-// open alongside it bound to the same resource. A kind with only side-region views
-// forms an inspector group: it opens in the Side Panel without a main editor.
-// Modal views are excluded — they create rows via the kanban-renderer flow, not as
-// resource presenters.
-export const groupResourceEditorViews = (panels: ExtensionPanelRecord[]): ResourceEditorGroup[] => {
-  const byKind = new Map<string, ExtensionPanelRecord[]>();
-
-  for (const panel of panels) {
-    if (!panel.resourceKind || panel.region === "overlay") continue;
-    const group = byKind.get(panel.resourceKind) ?? [];
-    group.push(panel);
-    byKind.set(panel.resourceKind, group);
-  }
-
-  return [...byKind]
-    .map(([kind, kindViews]) => {
-      const primary = kindViews.find((panel) => panel.region === "main");
-      if (primary) return { kind, primary, companions: kindViews.filter((panel) => panel !== primary) };
-      if (!kindViews.some((panel) => panel.region === "side")) return undefined;
-      return { kind, primary: undefined, companions: kindViews };
+// Groups the panels bound to a resource kind by resource-panel edges. The binding the
+// mode recipe places in `main` is the editor; the others open alongside it bound to the
+// same resource. A kind the recipe places only in the Side Panel forms an inspector
+// group: it opens in place without a main editor.
+export const groupResourceEditorViews = (metadata: DashboardExtensionMetadata): ResourceEditorGroup[] =>
+  compositionResourceKinds(metadata)
+    .map((kind) => {
+      const bindings = resourcePanelBindings(metadata, kind);
+      const primary = bindings.find((binding) => binding.region === "main");
+      if (primary) {
+        return { kind, primary, companions: bindings.filter((binding) => binding !== primary) };
+      }
+      if (!bindings.some((binding) => binding.region === "side")) return undefined;
+      return { kind, primary: undefined, companions: bindings };
     })
     .filter((group): group is ResourceEditorGroup => Boolean(group));
-};

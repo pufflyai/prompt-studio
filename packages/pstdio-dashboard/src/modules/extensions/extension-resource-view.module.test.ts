@@ -16,15 +16,30 @@ describe("createExtensionsModule resource inspectors", () => {
       modes: [],
       kanbanRenderers: [],
       treeRenderers: [],
+      resourceKinds: [
+        {
+          id: "glass-lab-artifact",
+          extensionId: "pstdio.extension-lab",
+          surface: "attached" as const,
+          slots: { detail: { cardinality: "one" as const, external: false } },
+        },
+      ],
+      resourcePanels: [
+        {
+          id: "extension-lab.labArtifact.detail",
+          extensionId: "pstdio.extension-lab",
+          resourceKind: "glass-lab-artifact",
+          panel: "extension-lab.labArtifactDetail",
+          slot: "detail",
+        },
+      ],
       panels: [
         {
           id: "extension-lab.labArtifactDetail",
           extensionId: "pstdio.extension-lab",
           title: "Artifact",
           icon: "package-search",
-          region: "side" as const,
-          closable: true,
-          resourceKind: "glass-lab-artifact",
+          supportedRegions: ["side" as const],
           webview: {
             entry: {
               kind: "package-asset" as const,

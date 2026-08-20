@@ -4,8 +4,9 @@ import { resolveLocalizableString } from "@/shared/extensions/extension-localiza
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb, updateResourceBreadcrumbLabel } from "@/shared/workbench/resource-sync";
+import { isSidenavResourceTree, type ResourcePanelBinding, resourceModeFor } from "./extension-composition";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
-import { extensionModeLayoutRegion, extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
 const outcomeValueId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
@@ -26,37 +27,20 @@ const resourceLabelFromOutcomeValue = (value: unknown) => {
 };
 
 type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
-type ExtensionModeRecord = DashboardExtensionMetadata["modes"][number];
-type ModeLayoutOpenEntry = NonNullable<NonNullable<ExtensionModeRecord["layout"]>["open"]>[number];
 
-const widgetIdFor = (panel: ExtensionPanelRecord) => extensionViewWidgetIdFor(panel);
+const widgetIdFor = (binding: ResourcePanelBinding) => extensionViewWidgetIdFor(binding.panel);
 
-const companionViewTitle = (panel: ExtensionPanelRecord, resource: ResourceRef, region: string) =>
-  region === "sidenav" || region === "main-left-menu" ? (resource.label ?? panel.title) : panel.title;
+const companionViewTitle = (binding: ResourcePanelBinding, resource: ResourceRef) =>
+  binding.region === "sidenav" || binding.region === "main-left-menu"
+    ? (resource.label ?? binding.panel.title)
+    : binding.panel.title;
 
 const panelMenuWidgetIdFor = (menu: NonNullable<ExtensionPanelRecord["panelMenus"]>[number]) =>
   menu.webview ? extensionViewWidgetIdFor(menu) : menu.id;
 
-const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
-  metadata.modes.find((mode) => mode.resourceKind === kind);
-
-const resourceModeEntryForView = (panel: ExtensionPanelRecord, resourceMode: ExtensionModeRecord | undefined) => {
-  if (!resourceMode || resourceMode.resourceKind !== panel.resourceKind) return undefined;
-  return resourceMode.layout?.open?.find((entry) => entry.panel === panel.id);
-};
-
 const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId: string }) =>
-  group.primary?.extensionId === event.extensionId ||
-  group.companions.some((companion) => companion.extensionId === event.extensionId);
-
-const companionViewRegion = (panel: ExtensionPanelRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
-  modeEntry ? extensionModeLayoutRegion(modeEntry.region) : extensionViewRegion(panel.region);
-
-const isResourceSidenavCompanion = (panel: ExtensionPanelRecord, resourceMode: ExtensionModeRecord | undefined) =>
-  Boolean(
-    panel.renderer?.kind === "tree" &&
-      companionViewRegion(panel, resourceModeEntryForView(panel, resourceMode)) === "sidenav",
-  );
+  group.primary?.panel.extensionId === event.extensionId ||
+  group.companions.some((companion) => companion.panel.extensionId === event.extensionId);
 
 const updatePlacementForResource = (
   ctx: WorkbenchModuleContext,
@@ -89,19 +73,14 @@ const withExtensionResourceContext = (resource: ResourceRef, input: { projectId:
   };
 };
 
-const updateResourceGroupTitles = (
-  ctx: WorkbenchModuleContext,
-  group: ResourceEditorGroup,
-  metadata: DashboardExtensionMetadata,
-  resource: ResourceRef,
-) => {
+const updateResourceGroupTitles = (ctx: WorkbenchModuleContext, group: ResourceEditorGroup, resource: ResourceRef) => {
   if (group.primary) {
     updatePlacementForResource(ctx, {
       panelId: widgetIdFor(group.primary),
       resource,
       title: resource.label,
     });
-    for (const menu of group.primary.panelMenus ?? []) {
+    for (const menu of group.primary.panel.panelMenus ?? []) {
       updatePlacementForResource(ctx, {
         panelId: panelMenuWidgetIdFor(menu),
         resource,
@@ -111,16 +90,13 @@ const updateResourceGroupTitles = (
     }
   }
 
-  const resourceMode = resourceModeFor(metadata, resource.kind);
   for (const companion of group.companions) {
-    if (isResourceSidenavCompanion(companion, resourceMode)) continue;
-    const modeEntry = resourceModeEntryForView(companion, resourceMode);
-    const region = companionViewRegion(companion, modeEntry);
+    if (isSidenavResourceTree(companion)) continue;
     updatePlacementForResource(ctx, {
       panelId: widgetIdFor(companion),
       resource,
-      title: companionViewTitle(companion, resource, region),
-      pinned: modeEntry?.pinned,
+      title: companionViewTitle(companion, resource),
+      pinned: companion.pinned,
     });
   }
 };
@@ -138,54 +114,22 @@ const removeManagedCompanions = (
   }
 };
 
-const openResourceViewGroup = (
-  ctx: WorkbenchModuleContext,
-  input: {
-    group: ResourceEditorGroup & { primary: ExtensionPanelRecord };
-    openInput: { replaceActive?: boolean };
-    resource: ResourceRef;
-    resourceMode?: ExtensionModeRecord;
-  },
-) => {
-  const { group, openInput, resource, resourceMode } = input;
-  const placement = ctx.layout.openPanel(widgetIdFor(group.primary), {
-    strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-    resource,
-    title: resource.label,
-  });
-
-  openResourceCompanionViews(ctx, { companions: group.companions, resource, resourceMode });
-
-  ctx.layout.activatePanel(placement.instanceId);
-
-  return placement;
-};
-
 const openResourceCompanionViews = (
   ctx: WorkbenchModuleContext,
-  input: {
-    companions: ExtensionPanelRecord[];
-    resource: ResourceRef;
-    resourceMode?: ExtensionModeRecord;
-  },
+  input: { companions: ResourcePanelBinding[]; resource: ResourceRef },
 ) => {
-  const { companions, resource, resourceMode } = input;
   const placements = [];
 
-  for (const companion of companions) {
-    const modeEntry = resourceModeEntryForView(companion, resourceMode);
-    const region = companionViewRegion(companion, modeEntry);
-    if (isResourceSidenavCompanion(companion, resourceMode)) continue;
-    const widgetId = widgetIdFor(companion);
-    const title = companionViewTitle(companion, resource, region);
+  for (const companion of input.companions) {
+    if (isSidenavResourceTree(companion)) continue;
 
     // A companion is part of the resource's layout, not a peek at it, so it keeps its tab.
     placements.push(
-      ctx.layout.openPanel(widgetId, {
-        resource,
-        region,
-        pinned: modeEntry?.pinned,
-        title,
+      ctx.layout.openPanel(widgetIdFor(companion), {
+        resource: input.resource,
+        region: companion.region,
+        pinned: companion.pinned,
+        title: companionViewTitle(companion, input.resource),
         strategy: { kind: "persistent" },
       }),
     );
@@ -194,15 +138,32 @@ const openResourceCompanionViews = (
   return placements;
 };
 
+const openResourceViewGroup = (
+  ctx: WorkbenchModuleContext,
+  input: {
+    group: ResourceEditorGroup & { primary: ResourcePanelBinding };
+    openInput: { replaceActive?: boolean };
+    resource: ResourceRef;
+  },
+) => {
+  const placement = ctx.layout.openPanel(widgetIdFor(input.group.primary), {
+    strategy: input.openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
+    resource: input.resource,
+    title: input.resource.label,
+  });
+
+  openResourceCompanionViews(ctx, { companions: input.group.companions, resource: input.resource });
+
+  ctx.layout.activatePanel(placement.instanceId);
+
+  return placement;
+};
+
 // A side-only kind opens as an inspector: the Side Panel shows the bound views while the
 // current mode, main content, and navigation all stay in place.
 const openResourceInspectorGroup = (
   ctx: WorkbenchModuleContext,
-  input: {
-    companions: ExtensionPanelRecord[];
-    resource: ResourceRef;
-    resourceMode?: ExtensionModeRecord;
-  },
+  input: { companions: ResourcePanelBinding[]; resource: ResourceRef },
 ) => {
   ctx.panels.setOpen("side", true);
   ctx.layout.setRegionVisible("side", true);
@@ -214,19 +175,20 @@ const openResourceInspectorGroup = (
   return active;
 };
 
-// A view that declares a `resourceKind` is the primary view for that kind. Opening a domain
-// resource of that kind mounts the primary extension webview in the main region, plus any
-// companion side-panel views (e.g. a properties panel) bound to the same resource. The domain
-// resource stays the navigable identity — the renderer derives which view to mount from the
-// resource kind + cached manifest (PS-11), so no renderer metadata is stored on the resource.
+// Resource-panel edges bind a resource kind to the panels that present it. Opening a
+// domain resource of that kind mounts the panel the mode recipe places in `main`, plus
+// the companion panels (e.g. a properties panel) bound to the same resource. The domain
+// resource stays the navigable identity — the renderer derives which view to mount from
+// the resource kind + cached manifest (PS-11), so no renderer metadata is on the resource.
 export const registerExtensionResourceView = (
   ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ) => {
   const disposables: Disposable[] = [];
-  const groups = groupResourceEditorViews(input.metadata.panels);
+  const groups = groupResourceEditorViews(input.metadata);
   const groupByKind = new Map(groups.map((group) => [group.kind, group]));
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
+  const navigationModeId = (kind: string) => resourceModeFor(input.metadata, kind)?.modeId ?? "project";
 
   for (const { kind, primary, companions } of groups) {
     if (!primary) {
@@ -235,8 +197,8 @@ export const registerExtensionResourceView = (
         disposables.push(
           ctx.resources.registerKind({
             kind,
-            label: inspector ? resolveLocalizableString(inspector.title, inspector.extensionId) : kind,
-            icon: inspector?.icon,
+            label: inspector ? resolveLocalizableString(inspector.panel.title, inspector.panel.extensionId) : kind,
+            icon: inspector?.panel.icon,
           }),
         );
       }
@@ -246,10 +208,9 @@ export const registerExtensionResourceView = (
           priority: 1100,
           canOpen: (resource) => resource.kind === kind,
           open: (resource) => {
-            const resourceMode = resourceModeFor(input.metadata, kind);
             const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
             removeManagedCompanions(ctx, managedCompanionWidgetIds, new Set(companions.map(widgetIdFor)));
-            return openResourceInspectorGroup(ctx, { companions, resource: selectedResource, resourceMode });
+            return openResourceInspectorGroup(ctx, { companions, resource: selectedResource });
           },
         }),
       );
@@ -262,21 +223,17 @@ export const registerExtensionResourceView = (
         priority: 1100,
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
-          const resourceMode = resourceModeFor(input.metadata, kind);
           const expectedCompanionWidgetIds = new Set(
-            companions.filter((companion) => !isResourceSidenavCompanion(companion, resourceMode)).map(widgetIdFor),
+            companions.filter((companion) => !isSidenavResourceTree(companion)).map(widgetIdFor),
           );
           const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
-          selectDashboardNavigationResource(ctx, selectedResource, {
-            modeId: resourceMode?.modeId ?? "project",
-          });
+          selectDashboardNavigationResource(ctx, selectedResource, { modeId: navigationModeId(kind) });
           setResourceBreadcrumb(ctx, selectedResource);
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {
             group: { kind, primary, companions },
             openInput,
             resource: selectedResource,
-            resourceMode,
           });
         },
       }),
@@ -293,13 +250,8 @@ export const registerExtensionResourceView = (
       activeResource = group ? resource : undefined;
 
       if (managedCompanionWidgetIds.size > 0) {
-        const resourceMode = resource ? resourceModeFor(input.metadata, resource.kind) : undefined;
         const keepWidgetIds = group
-          ? new Set(
-              group.companions
-                .filter((companion) => !isResourceSidenavCompanion(companion, resourceMode))
-                .map(widgetIdFor),
-            )
+          ? new Set(group.companions.filter((companion) => !isSidenavResourceTree(companion)).map(widgetIdFor))
           : undefined;
         removeManagedCompanions(ctx, managedCompanionWidgetIds, keepWidgetIds);
       }
@@ -321,7 +273,7 @@ export const registerExtensionResourceView = (
 
       activeResource.label = label;
       updateResourceBreadcrumbLabel(ctx, activeResource);
-      updateResourceGroupTitles(ctx, group, input.metadata, activeResource);
+      updateResourceGroupTitles(ctx, group, activeResource);
     }),
   });
 

@@ -7,8 +7,7 @@ import { extensionViewWidgetId } from "./extension-view-placement";
 const nativePanel = {
   id: "extension-lab.overview",
   extensionId: "pstdio.extension-lab",
-  region: "main",
-  closable: false,
+  supportedRegions: ["main"],
   title: "Overview",
   renderer: { kind: "tree", id: "extension-lab.overview" },
 } satisfies DashboardExtensionMetadata["panels"][number];
@@ -34,7 +33,8 @@ const createMetadata = (panels: DashboardExtensionMetadata["panels"]): Dashboard
       extensionId: "pstdio.extension-lab",
       modeId: "extension-lab.mode",
       label: "Lab",
-      layout: { panels: ["main"], open: [{ region: "main", panel: "extension-lab.overview" }] },
+      panelRegions: ["main"],
+      modePanels: { "extension-lab.overview": { region: "main" } },
     },
   ],
   panels,
@@ -85,7 +85,10 @@ const withWidgets = (widgets: WorkbenchLayout["regions"]["main"]["widgets"]) => 
 
 describe("extension layout compatibility", () => {
   test("is deterministic across metadata order changes", () => {
-    const first = createMetadata([nativePanel, { ...nativePanel, id: "extension-lab.side", region: "side" }]);
+    const first = createMetadata([
+      nativePanel,
+      { ...nativePanel, id: "extension-lab.side", supportedRegions: ["side"] },
+    ]);
     const second = { ...first, panels: [...first.panels].reverse(), modes: [...first.modes].reverse() };
 
     expect(createExtensionLayoutCompatibility(first)).toBe(createExtensionLayoutCompatibility(second));
@@ -97,7 +100,7 @@ describe("extension layout compatibility", () => {
       ...base,
       commands: [{ id: "extension-lab.run", extensionId: nativePanel.extensionId, title: "Run" }],
     } satisfies DashboardExtensionMetadata;
-    const regionChanged = createMetadata([{ ...nativePanel, region: "side" }]);
+    const regionChanged = createMetadata([{ ...nativePanel, supportedRegions: ["side"] }]);
     const modeChanged = {
       ...base,
       modes: base.modes.map((mode) => ({ ...mode, modeId: "extension-lab.other-mode" })),
@@ -153,7 +156,10 @@ describe("extension layout reconciliation", () => {
 
   test("moves a retained placement when its contribution region changes", () => {
     const previousCompatibility = createExtensionLayoutCompatibility(createMetadata([nativePanel]));
-    const movedPanel = { ...nativePanel, region: "side" } satisfies DashboardExtensionMetadata["panels"][number];
+    const movedPanel = {
+      ...nativePanel,
+      supportedRegions: ["side"],
+    } satisfies DashboardExtensionMetadata["panels"][number];
     const layout = withWidgets([
       {
         widgetId: nativePanel.id,

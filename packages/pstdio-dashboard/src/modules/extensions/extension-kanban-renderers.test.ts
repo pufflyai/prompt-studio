@@ -30,8 +30,7 @@ const metadata: DashboardExtensionMetadata = {
       id: "pstdio-core-tickets.tickets",
       extensionId: ticketsRecord.extensionId,
       title: "Tickets",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       renderer: { kind: "kanban", id: ticketsRecord.id },
     },
   ],
@@ -55,7 +54,6 @@ describe("registerExtensionKanbanRenderers", () => {
     expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(workbench.layout.getPanel("pstdio-core-tickets.tickets")).toMatchObject({
       region: "main",
-      closable: false,
       rendererId: "pstdio-core-tickets.tickets",
       singleton: true,
     });

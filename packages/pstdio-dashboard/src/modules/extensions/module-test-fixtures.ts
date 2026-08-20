@@ -80,12 +80,10 @@ export const metadataWithLabMode = {
       modeId: "pstdio.extension-lab.lab",
       label: "Lab",
       icon: "flask-conical",
-      layout: {
-        panels: ["main", "secondary", "side"],
-        open: [
-          { region: "sidenav", panel: "extension-lab.labSidenav", pinned: true },
-          { region: "main", panel: "extension-lab.labOverview" },
-        ],
+      panelRegions: ["main", "secondary", "side"],
+      modePanels: {
+        "extension-lab.labSidenav": { region: "sidenav", pinned: true, required: true },
+        "extension-lab.labOverview": { region: "main", required: true },
       },
     },
   ],
@@ -93,8 +91,7 @@ export const metadataWithLabMode = {
     {
       id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
-      region: "sidenav",
-      closable: false,
+      supportedRegions: ["sidenav"],
       title: "Lab",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-sidenav.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -105,8 +102,7 @@ export const metadataWithLabMode = {
     {
       id: "extension-lab.labOverview",
       extensionId: "pstdio.extension-lab",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Lab overview",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -154,29 +150,61 @@ export const metadataWithTickets = {
       modeId: "pstdio-core-tickets.ticket",
       label: "Ticket",
       icon: "FileText",
-      resourceKind: "ticket",
-      layout: {
-        panels: ["main", "secondary", "side"],
-        open: [{ region: "sidenav", panel: "pstdio-core-tickets.ticketFiles", pinned: true }],
+      panelRegions: ["main", "secondary", "side"],
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            files: { region: "sidenav", pinned: true },
+            properties: { region: "side" },
+          },
+        },
       },
+    },
+  ],
+  resourceKinds: [
+    {
+      id: "ticket",
+      extensionId: "pstdio.pstdio-core-tickets",
+      surface: "primary",
+      label: "Ticket",
+      icon: "component",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        files: { cardinality: "one", external: false },
+        properties: { cardinality: "many", external: true },
+      },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "pstdio-core-tickets.ticket.primary",
+      extensionId: "pstdio.pstdio-core-tickets",
+      resourceKind: "ticket",
+      panel: "pstdio-core-tickets.ticketEditor",
+      slot: "primary",
+    },
+    {
+      id: "pstdio-core-tickets.ticket.files",
+      extensionId: "pstdio.pstdio-core-tickets",
+      resourceKind: "ticket",
+      panel: "pstdio-core-tickets.ticketFiles",
+      slot: "files",
     },
   ],
   panels: [
     {
       id: "pstdio-core-tickets.tickets",
       extensionId: "pstdio.pstdio-core-tickets",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Tickets",
       renderer: { kind: "kanban", id: "pstdio-core-tickets.tickets" },
     },
     {
       id: "pstdio-core-tickets.ticketEditor",
       extensionId: "pstdio.pstdio-core-tickets",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Ticket",
-      resourceKind: "ticket",
       webview: {
         entry: {
           kind: "package-asset",
@@ -209,9 +237,7 @@ export const metadataWithTickets = {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
       title: "Files",
-      region: "sidenav",
-      closable: false,
-      resourceKind: "ticket",
+      supportedRegions: ["sidenav"],
       renderer: { kind: "tree", id: "pstdio-core-tickets.ticketFiles" },
     },
   ],

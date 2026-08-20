@@ -1,4 +1,4 @@
-import { Box, Center, Text } from "@chakra-ui/react";
+import { Center, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -17,13 +17,12 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
   const projectId = readProjectId(input.instance.resource?.metadata) ?? readProjectId(input.panel.config);
   if (!projectId) return undefined;
   const metadata = getCachedDashboardExtensionMetadata(projectId);
-  const view = metadata?.panels
-    .flatMap((panel) => [panel, ...(panel.panelMenus ?? [])])
-    .find((candidate) => extensionViewWidgetId(candidate.id) === input.instance.panelId);
-  return view ? { projectId, view } : undefined;
+  const view = [
+    ...(metadata?.panels ?? []).flatMap((panel) => [panel, ...(panel.panelMenus ?? [])]),
+    ...(metadata?.statusItems ?? []),
+  ].find((candidate) => extensionViewWidgetId(candidate.id) === input.instance.panelId);
+  return view?.webview ? { projectId, view, webview: view.webview } : undefined;
 };
-
-const modalWebviewHeight = "clamp(320px, calc(100dvh - 8rem), 360px)";
 
 export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
@@ -40,9 +39,9 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
     );
   }
 
-  const { projectId, view } = derived;
+  const { projectId, view, webview } = derived;
 
-  const frame = (
+  return (
     <ExtensionWebviewFrame
       extensionId={view.extensionId}
       projectId={projectId}
@@ -57,17 +56,9 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
       }
       terminal={input.workbench.terminal}
       title={resolveLocalizableString(view.title, view.extensionId)}
-      webview={view.webview}
+      webview={webview}
       webviewId={view.id}
       workbench={input.workbench}
     />
-  );
-
-  if (!("region" in view) || view.region !== "overlay") return frame;
-
-  return (
-    <Box h={modalWebviewHeight} minH="0" overflow="hidden" w="full">
-      {frame}
-    </Box>
   );
 };

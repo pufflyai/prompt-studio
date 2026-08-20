@@ -3,7 +3,7 @@ import { selectDashboardNavigationResource } from "@/shared/app/navigation-state
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { extensionViewRegion, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
 export const openExtensionPanelResource = (
   ctx: WorkbenchModuleContext,
@@ -25,10 +25,11 @@ export const openExtensionPanelResource = (
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, resource.uri);
   }
 
+  // No region: the panel widget already carries its own docking region, so a direct
+  // open lands where the panel declares it belongs.
   return ctx.layout.openPanel(extensionViewWidgetIdFor(panel), {
     strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
     resource,
-    region: extensionViewRegion(panel.region),
     title: resource.label,
   });
 };

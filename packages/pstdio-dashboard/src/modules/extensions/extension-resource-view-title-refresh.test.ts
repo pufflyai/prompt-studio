@@ -16,10 +16,25 @@ const metadata = {
       modeId: "tickets.ticket",
       label: "Ticket",
       icon: "FileText",
+      panelRegions: ["main", "secondary", "side"],
+      resources: { ticket: { slots: { primary: { region: "main" } } } },
+    },
+  ],
+  resourceKinds: [
+    {
+      id: "ticket",
+      extensionId: "tickets",
+      surface: "primary",
+      slots: { primary: { cardinality: "one", external: false } },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "tickets.ticket.primary",
+      extensionId: "tickets",
       resourceKind: "ticket",
-      layout: {
-        panels: ["main", "secondary", "side"],
-      },
+      panel: "tickets.editor",
+      slot: "primary",
     },
   ],
   routes: [],
@@ -39,10 +54,8 @@ const metadata = {
     {
       id: "tickets.editor",
       extensionId: "tickets",
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Ticket",
-      resourceKind: "ticket",
       renderer: { kind: "file", id: "tickets.content" },
       panelMenus: [
         {

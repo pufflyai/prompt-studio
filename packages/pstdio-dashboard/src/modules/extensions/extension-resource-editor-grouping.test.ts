@@ -1,72 +1,123 @@
 import { describe, expect, test } from "bun:test";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { groupResourceEditorViews } from "./extension-resource-editor-grouping";
 
 type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
+type ExtensionRegion = ExtensionPanelRecord["supportedRegions"][number];
 
-const panel = (overrides: Partial<ExtensionPanelRecord> & { id: string }): ExtensionPanelRecord =>
+const panel = (id: string, region: ExtensionRegion = "main"): ExtensionPanelRecord =>
   ({
+    id,
     extensionId: "ext",
-    title: overrides.id,
-    region: "main",
-    closable: false,
-    webview: { id: overrides.id, entry: "entry", capabilities: [] },
-    ...overrides,
+    title: id,
+    supportedRegions: [region],
+    webview: { entry: { kind: "package-asset", path: `./${id}.tsx`, baseUrl: "file:///ext/extension.ts" } },
   }) as ExtensionPanelRecord;
 
-describe("groupResourceEditorViews", () => {
-  test("pairs the main editor with companion side-panels for the same resource kind", () => {
-    const properties = panel({
-      id: "properties",
-      resourceKind: "ticket",
-      region: "secondary",
-    });
-    const editor = panel({ id: "editor", resourceKind: "ticket" });
-    const modal = panel({ id: "modal", resourceKind: "ticket", region: "overlay" });
+const edge = (resourceKind: string, panelId: string, slot: string) => ({
+  id: `${resourceKind}.${slot}`,
+  extensionId: "ext",
+  resourceKind,
+  panel: panelId,
+  slot,
+});
 
-    const groups = groupResourceEditorViews([properties, editor, modal]);
+const kind = (id: string, slots: string[]) => ({
+  id,
+  extensionId: "ext",
+  surface: "primary" as const,
+  slots: Object.fromEntries(slots.map((slot) => [slot, { cardinality: "one" as const, external: false }])),
+});
+
+const metadata = (input: Partial<DashboardExtensionMetadata>) =>
+  ({ ...emptyDashboardExtensionMetadata, ...input }) as DashboardExtensionMetadata;
+
+describe("groupResourceEditorViews", () => {
+  test("pairs the main editor with companion panels bound to the same resource kind", () => {
+    const groups = groupResourceEditorViews(
+      metadata({
+        panels: [panel("properties", "secondary"), panel("editor")],
+        resourceKinds: [kind("ticket", ["primary", "properties"])],
+        resourcePanels: [edge("ticket", "properties", "properties"), edge("ticket", "editor", "primary")],
+        modes: [
+          {
+            id: "ext.ticket",
+            extensionId: "ext",
+            modeId: "ext.ticket",
+            label: "Ticket",
+            resources: {
+              ticket: { slots: { primary: { region: "main" }, properties: { region: "secondary" } } },
+            },
+          },
+        ],
+      }),
+    );
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.kind).toBe("ticket");
-    // The editor (target main) is primary even though it is listed after the panel.
-    expect(groups[0]?.primary?.id).toBe("editor");
-    expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["properties"]);
+    // The panel the recipe puts in `main` is primary even when it is declared later.
+    expect(groups[0]?.primary?.panel.id).toBe("editor");
+    expect(groups[0]?.companions.map((companion) => companion.panel.id)).toEqual(["properties"]);
   });
 
-  test("prefers an explicit main target over a no-target companion", () => {
-    const files = panel({ id: "files", resourceKind: "ticket", region: "sidenav" });
-    const editor = panel({ id: "editor", resourceKind: "ticket", region: "main" });
+  test("uses the mode recipe region, not the panel's declaration order, to pick the editor", () => {
+    const groups = groupResourceEditorViews(
+      metadata({
+        panels: [panel("files", "sidenav"), panel("editor")],
+        resourceKinds: [kind("ticket", ["primary", "files"])],
+        resourcePanels: [edge("ticket", "files", "files"), edge("ticket", "editor", "primary")],
+        modes: [
+          {
+            id: "ext.ticket",
+            extensionId: "ext",
+            modeId: "ext.ticket",
+            label: "Ticket",
+            resources: { ticket: { slots: { primary: { region: "main" }, files: { region: "sidenav" } } } },
+          },
+        ],
+      }),
+    );
 
-    const groups = groupResourceEditorViews([files, editor]);
-
-    expect(groups[0]?.primary?.id).toBe("editor");
-    expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["files"]);
+    expect(groups[0]?.primary?.panel.id).toBe("editor");
+    expect(groups[0]?.companions.map((companion) => companion.panel.id)).toEqual(["files"]);
   });
 
   test("groups side-only kinds as inspector groups without a primary", () => {
-    const detail = panel({ id: "detail", resourceKind: "artifact", region: "side" });
-
-    const groups = groupResourceEditorViews([detail]);
+    const groups = groupResourceEditorViews(
+      metadata({
+        panels: [panel("detail", "side")],
+        resourceKinds: [kind("artifact", ["detail"])],
+        resourcePanels: [edge("artifact", "detail", "detail")],
+      }),
+    );
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.kind).toBe("artifact");
     expect(groups[0]?.primary).toBeUndefined();
-    expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["detail"]);
+    expect(groups[0]?.companions.map((companion) => companion.panel.id)).toEqual(["detail"]);
   });
 
-  test("still drops kinds with neither a main nor a side panel", () => {
-    const files = panel({ id: "files", resourceKind: "artifact", region: "sidenav" });
+  test("drops kinds with neither a main nor a side panel", () => {
+    const groups = groupResourceEditorViews(
+      metadata({
+        panels: [panel("files", "sidenav")],
+        resourceKinds: [kind("artifact", ["files"])],
+        resourcePanels: [edge("artifact", "files", "files")],
+      }),
+    );
 
-    expect(groupResourceEditorViews([files])).toHaveLength(0);
+    expect(groups).toHaveLength(0);
   });
 
-  test("excludes modal and kind-less views, and keeps kinds independent", () => {
-    const ticketEditor = panel({ id: "ticket-editor", resourceKind: "ticket" });
-    const sessionEditor = panel({ id: "session-editor", resourceKind: "session" });
-    const onlyModal = panel({ id: "create", resourceKind: "note", region: "overlay" });
-    const kindless = panel({ id: "overview" });
-
-    const groups = groupResourceEditorViews([ticketEditor, sessionEditor, onlyModal, kindless]);
+  test("keeps resource kinds independent and ignores panels with no edge", () => {
+    const groups = groupResourceEditorViews(
+      metadata({
+        panels: [panel("ticket-editor"), panel("session-editor"), panel("overview")],
+        resourceKinds: [kind("ticket", ["primary"]), kind("session", ["primary"])],
+        resourcePanels: [edge("ticket", "ticket-editor", "primary"), edge("session", "session-editor", "primary")],
+      }),
+    );
 
     expect(groups.map((group) => group.kind).sort()).toEqual(["session", "ticket"]);
     expect(groups.every((group) => group.companions.length === 0)).toBe(true);

@@ -5,17 +5,11 @@ import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workb
 import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadataWithLabMode } from "./module-test-fixtures";
 
-// Harvested from PS-259: closing a structural extension panel must be recoverable by
+// Harvested from PS-259: a missing required extension panel must be recoverable by
 // reselecting the active mode, without resetting the remaining tab order.
 describe("extension mode layout reconciliation", () => {
-  test("reopens a closed main panel without changing the remaining tab order", async () => {
-    const recoverableLabMetadata = {
-      ...metadataWithLabMode,
-      panels: metadataWithLabMode.panels.map((panel) =>
-        panel.id === "extension-lab.labOverview" ? { ...panel, closable: true } : panel,
-      ),
-    };
-    const loadMetadata = mock(async () => recoverableLabMetadata);
+  test("restores a missing required main panel without changing the remaining tab order", async () => {
+    const loadMetadata = mock(async () => metadataWithLabMode);
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -26,12 +20,19 @@ describe("extension mode layout reconciliation", () => {
       region: "main",
       rendererId: "project.notes",
     });
+    const overviewId = "dashboard-workbench.extension-view.extension-lab.labOverview";
 
     try {
       await flushMicrotasks();
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
       workbench.layout.openWidget("project.notes");
-      workbench.layout.closePanel("dashboard-workbench.extension-view.extension-lab.labOverview");
+
+      const overview = workbench.layout
+        .getLayout()
+        .regions.main.widgets.find((panel) => panel.contributionId === overviewId)!;
+      // A required placement is not closable, so only a stale layout can lose it.
+      expect(overview.closable).toBe(false);
+      workbench.layout.removeWidgetPlacement(overview.widgetId);
 
       expect(workbench.layout.getLayout().regions.main.widgets.map((panel) => panel.contributionId)).toEqual([
         "project.notes",
@@ -41,7 +42,7 @@ describe("extension mode layout reconciliation", () => {
 
       expect(workbench.layout.getLayout().regions.main.widgets.map((panel) => panel.contributionId)).toEqual([
         "project.notes",
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
+        overviewId,
       ]);
     } finally {
       notesDisposable.dispose();
