@@ -131,7 +131,17 @@ const createPlacementCandidates = (input: {
       const replacementWidgetId = input.migration.get(placement.widgetId);
       const widgetId = replacementWidgetId ?? placement.widgetId;
       const reset = input.resetExtensionId && extensionId === input.resetExtensionId;
-      const obsolete = Boolean(extensionId) && !currentWidgetIds.has(widgetId);
+      // These records describe extension panels, so only a placement that is one may be
+      // judged obsolete by them. A dashboard-owned panel that merely presents an
+      // extension resource — a route panel, for instance — keeps its placement as long
+      // as the extension is installed; comparing it against panel ids it never had would
+      // drop the open view on every metadata refresh.
+      const panelPlacement =
+        input.extensionIdByPlacementId.has(placement.widgetId) ||
+        input.extensionIdByPlacementId.has(placement.contributionId);
+      const obsolete = panelPlacement
+        ? !currentWidgetIds.has(widgetId)
+        : Boolean(extensionId) && !input.knownExtensionIds.has(extensionId!);
       if (reset || obsolete) continue;
 
       candidates.push({

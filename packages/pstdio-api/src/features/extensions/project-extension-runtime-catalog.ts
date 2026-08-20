@@ -1,6 +1,4 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { type LoadedExtensionSource, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
@@ -14,11 +12,7 @@ import {
   type ProjectExtensionRuntimeSnapshot,
   type RuntimeInvalidationReason,
 } from "./project-extension-runtime-snapshot";
-
-type CachedSource = {
-  diagnostics: Awaited<ReturnType<typeof loadExtensionSources>>["diagnostics"];
-  source: LoadedExtensionSource;
-};
+import { canonicalSourcePath, createExtensionSourceCache } from "./project-extension-runtime-sources";
 
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
@@ -51,10 +45,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   loadSources?: typeof loadExtensionSources;
   observer?: ProjectExtensionRuntimeCatalogObserver;
 }) => {
-  // Caches the in-flight load promise per source path so every project and every
-  // concurrent read shares one module import per source version. Bun retains each
-  // import identity for the process lifetime, so this map is the memory invariant.
-  const sourcesByPath = new Map<string, Promise<CachedSource | null>>();
+  const sources = createExtensionSourceCache({ loadSources: deps.loadSources });
+
   const states = new Map<string, ProjectState>();
   let generation = 0;
 
@@ -75,52 +67,16 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return created;
   };
 
-  const loadSource = (installedSource: EnabledExtensionSource["installedSource"]) => {
-    const cached = sourcesByPath.get(installedSource.source_path);
-    if (cached) return cached;
-
-    const loading: Promise<CachedSource | null> = (deps.loadSources ?? loadExtensionSources)({
-      extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
-    }).then(
-      (loaded) => {
-        const source = loaded.sources[0];
-        if (!source) return null;
-        return { diagnostics: loaded.diagnostics, source };
-      },
-      (error) => {
-        // A rejected load must not poison the cache; the next read retries the import.
-        if (sourcesByPath.get(installedSource.source_path) === loading) {
-          sourcesByPath.delete(installedSource.source_path);
-        }
-        throw error;
-      },
-    );
-    sourcesByPath.set(installedSource.source_path, loading);
-    return loading;
-  };
-
-  const collectCachedSources = async (enabledSources: EnabledExtensionSource[]) => {
-    const cachedSources: CachedSource[] = [];
-
-    for (const { installedSource } of enabledSources) {
-      if (installedSource.status !== "loaded") continue;
-      if (!existsSync(join(installedSource.source_path, "package.json"))) continue;
-
-      const cached = await loadSource(installedSource);
-      if (cached) cachedSources.push(cached);
-    }
-
-    return cachedSources;
-  };
-
   const buildRuntime = async (projectId: string, state: ProjectState) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ExtensionRuntimeProjectMissingError(projectId);
 
     const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
-    state.knownSourcePaths = new Set(enabledSources.map((source) => source.installedSource.source_path));
+    state.knownSourcePaths = new Set(
+      enabledSources.map((source) => canonicalSourcePath(source.installedSource.source_path)),
+    );
     const repos = await deps.repoService.listByProject(projectId);
-    const cachedSources = await collectCachedSources(enabledSources);
+    const cachedSources = await sources.collect(enabledSources);
     const runtime = normalizeExtensionSources(
       cachedSources.map((cached) => cached.source),
       cachedSources.flatMap((cached) => cached.diagnostics),
@@ -265,7 +221,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   // Loads one installed source's runtime regardless of its enabled state, so the
   // dashboard can document what a disabled extension would contribute.
   const getInstalledSourceRuntime = async (installedSource: EnabledExtensionSource["installedSource"]) => {
-    const cached = await loadSource(installedSource);
+    const cached = await sources.load(installedSource);
     if (!cached) return normalizeExtensionSources([], [], { repoRoots: [] });
     return normalizeExtensionSources([cached.source], cached.diagnostics, { repoRoots: [] });
   };
@@ -281,9 +237,10 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     let affected = 0;
 
     if (input.sourcePath) {
-      sourcesByPath.delete(input.sourcePath);
+      const sourcePath = canonicalSourcePath(input.sourcePath);
+      sources.forget(sourcePath);
       for (const [projectId, state] of states) {
-        if (projectId !== input.projectId && !state.knownSourcePaths.has(input.sourcePath)) continue;
+        if (projectId !== input.projectId && !state.knownSourcePaths.has(sourcePath)) continue;
         markDirty(state, input.reason);
         affected += 1;
       }
@@ -294,7 +251,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
         affected = 1;
       }
     } else {
-      sourcesByPath.clear();
+      sources.forgetAll();
       for (const state of states.values()) {
         markDirty(state, input.reason);
         affected += 1;

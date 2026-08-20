@@ -48,14 +48,20 @@ type SourceRows = Array<{
   };
 }>;
 
-const sourceRow = (input: { id: string; extensionId: string; kind?: "local_path" | "git"; path: string }) => ({
+const sourceRow = (input: {
+  id: string;
+  extensionId: string;
+  kind?: "local_path" | "git";
+  path: string;
+  status?: string;
+}) => ({
   instance: { id: `${input.id}-instance`, namespace: "hello", enabled: true },
   installedSource: {
     id: input.id,
     extension_id: input.extensionId,
     source_kind: input.kind ?? ("local_path" as const),
     source_path: input.path,
-    status: "loaded",
+    status: input.status ?? "loaded",
   },
 });
 
@@ -172,6 +178,27 @@ describe("project extension runtime catalog with real sources", () => {
     expect(snapshot.runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain(
       "extension_manifest_not_found",
     );
+  });
+
+  // Writing to a source file leaves it briefly not "loaded". Dropping it from the
+  // snapshot tells every consumer the extension is gone, and the views it owns are torn
+  // down instead of refreshed.
+  test("keeps the last healthy contributions of a source that is reloading", async () => {
+    const root = createTempDir();
+    const path = join(root, "reloading");
+    writeRuntimeExtension(path, "healthy");
+    let status = "loaded";
+
+    const catalog = createCatalog({
+      sources: () => [sourceRow({ id: "reloading-source", extensionId: "pstdio.hello", path, status })],
+    });
+
+    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual(["hello.healthy"]);
+
+    status = "loading";
+    catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+
+    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual(["hello.healthy"]);
   });
 
   test("a broken source publishes with empty contributions and its import diagnostic", async () => {

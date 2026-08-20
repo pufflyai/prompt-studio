@@ -8,6 +8,7 @@ export type EnabledExtensionSource = Awaited<
 
 export type RuntimeInvalidationReason =
   | "source_changed"
+  | "webviews_built"
   | "enablement_changed"
   | "repo_link_changed"
   | "runtime_refresh";
