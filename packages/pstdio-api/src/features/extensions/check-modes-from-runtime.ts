@@ -1,20 +1,12 @@
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { addDiagnostic } from "./extension-diagnostics";
-import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
+import { reservedDashboardModeIds, resolveModeId } from "./extension-mode-identity";
 
-// Mode layout/duplication checks live with the check adapter (mirroring what
-// `buildWorkbenchExtensionMetadata` does for the workbench surface): normalize
-// emits the raw `RuntimeModeRecord`, the adapter resolves the legacy modeId,
-// validates layout via the host's `extension-mode-layout`, and flags
-// duplicates within the single source being checked.
+// Mode duplication checks live with the check adapter: normalize emits the raw
+// `RuntimeModeRecord` and validates composition recipes, and the adapter resolves
+// the mode id and flags duplicates within the single source being checked.
 export const collectCheckModes = (check: ExtensionsCheckResponse, runtime: ExtensionRuntime) => {
-  const panelIdsByName = new Map<string, Map<string, string>>();
-  for (const panel of runtime.panels) {
-    const entry = panelIdsByName.get(panel.name) ?? new Map<string, string>();
-    entry.set(panel.localId, panel.id);
-    panelIdsByName.set(panel.name, entry);
-  }
   const seenModeIds = new Set<string>();
   for (const mode of runtime.modes) {
     const modeId = resolveModeId({
@@ -33,29 +25,16 @@ export const collectCheckModes = (check: ExtensionsCheckResponse, runtime: Exten
       });
       continue;
     }
-    const normalized = normalizeModeLayout({
-      extensionId: mode.extensionId,
-      extensionName: mode.name,
-      layout: mode.contribution.layout,
-      modeId,
-      sourcePath: mode.sourcePath,
-      panelIdsByLocalId: panelIdsByName.get(mode.name) ?? new Map<string, string>(),
-    });
-    if (normalized.diagnostic) {
-      addDiagnostic(check, normalized.diagnostic);
-      continue;
-    }
     seenModeIds.add(modeId);
-    const resourceKind =
-      typeof mode.contribution.resourceKind === "string" ? mode.contribution.resourceKind : undefined;
     check.modes.push({
       id: mode.id,
       extensionId: mode.extensionId,
       modeId,
       label: mode.contribution.label,
       icon: typeof mode.contribution.icon === "string" ? mode.contribution.icon : undefined,
-      ...(resourceKind !== undefined ? { resourceKind } : {}),
-      layout: normalized.layout,
+      panelRegions: mode.contribution.panelRegions ? [...mode.contribution.panelRegions] : undefined,
+      resources: mode.contribution.resources as (typeof check.modes)[number]["resources"],
+      modePanels: mode.contribution.modePanels as (typeof check.modes)[number]["modePanels"],
     });
   }
 };

@@ -208,8 +208,7 @@ describe("checkExtensionSource host compatibility", () => {
         panels: {
           rows: {
             title: "Rows",
-            region: "main",
-            closable: true,
+            supportedRegions: ["main"],
             renderer: { kind: "dataTable", id: "rows" },
           },
         },

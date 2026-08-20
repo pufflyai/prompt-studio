@@ -11,7 +11,6 @@ import type {
   ExtensionThemeRecord,
   ExtensionTreeItemContribution,
 } from "pstdio-api-contracts";
-import { isLegacyPanelContribution } from "pstdio-extensions";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-record";
 import {
@@ -175,18 +174,11 @@ const toPanelBody = (
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
 
-// Composition capability panels carry no legacy placement fields; the check output
-// keeps them optional until PS-270 replaces the record shape.
 const toPanelRecord = (panel: ExtensionRuntime["panels"][number]) => ({
   id: panel.id,
   extensionId: panel.extensionId,
   title: panel.contribution.title,
-  region: isLegacyPanelContribution(panel.contribution) ? panel.contribution.region : undefined,
-  closable: isLegacyPanelContribution(panel.contribution) ? panel.contribution.closable : undefined,
-  group: isLegacyPanelContribution(panel.contribution) ? panel.contribution.group : undefined,
-  placement: isLegacyPanelContribution(panel.contribution) ? panel.contribution.placement : undefined,
-  resourceKind: isLegacyPanelContribution(panel.contribution) ? panel.contribution.resourceKind : undefined,
-  eligibleLocations: isLegacyPanelContribution(panel.contribution) ? panel.contribution.eligibleLocations : undefined,
+  supportedRegions: [...panel.contribution.supportedRegions],
   panelMenus: Object.entries(panel.contribution.panelMenus ?? {}).map(([localId, menu]) => ({
     id: `${panel.id}.${localId}`,
     extensionId: panel.extensionId,

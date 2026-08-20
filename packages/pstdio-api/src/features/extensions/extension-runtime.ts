@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
   checkExtensionHostCompatibility,
+  collectConventionDiagnostics,
   dashboardExtensionHostCapabilities,
   loadExtensionPackage,
   normalizeExtensionSources,
@@ -246,6 +247,9 @@ export const checkExtensionSource = async (
     populateCheckFromRuntime(check, runtime, options);
     addRuntimeDiagnostics(check, loaded.diagnostics);
     addRuntimeDiagnostics(check, runtime.diagnostics);
+    // Convention checks (icon names, contribution id casing, dangling command
+    // references) report authoring problems the schemas cannot catch.
+    addRuntimeDiagnostics(check, collectConventionDiagnostics(runtime));
     return { check, loaded };
   } catch (error) {
     const fallback = collectFallbackMetadata(sourcePath);

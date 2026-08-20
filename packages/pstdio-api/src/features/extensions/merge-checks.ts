@@ -1,7 +1,7 @@
 import type { ExtensionKeybindingRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { keybindingDedupeEntries } from "pstdio-extensions";
 import { addDiagnostic } from "./extension-diagnostics";
-import { reservedDashboardModeIds } from "./extension-mode-layout";
+import { reservedDashboardModeIds } from "./extension-mode-identity";
 
 const findDuplicateKeybinding = (existing: ExtensionKeybindingRecord[], binding: ExtensionKeybindingRecord) => {
   const existingByKey = new Map(

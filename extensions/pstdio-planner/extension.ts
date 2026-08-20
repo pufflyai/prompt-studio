@@ -218,15 +218,41 @@ export default defineExtension({
     },
   },
 
+  // The ticket resource owns its extension points: the editor holds the primary
+  // location, the files tree owns navigation, and the properties menu rides on the
+  // editor panel. Other extensions may add inspectors.
+  resourceKinds: {
+    ticket: {
+      surface: "primary",
+      label: l10n("resourceKinds.ticket.label", "Ticket"),
+      icon: "component",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        navigation: { cardinality: "one", external: true },
+        inspector: { cardinality: "many", external: true },
+      },
+    },
+  },
+
+  resourcePanels: {
+    ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
+    ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
+  },
+
   modes: {
     ticket: {
       id: "pstdio-planner.ticket",
       label: l10n("modes.ticket.label", "Ticket"),
-      icon: "FileText",
-      resourceKind: "ticket",
-      layout: {
-        panels: ["main", "secondary", "side"],
-        open: [{ region: "sidenav", panel: "ticketFiles", pinned: true }],
+      icon: "file-text",
+      panelRegions: ["main", "secondary", "side"],
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            navigation: { region: "sidenav", required: true, pinned: true },
+            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
+          },
+        },
       },
     },
   },
@@ -246,15 +272,12 @@ export default defineExtension({
   panels: {
     tickets: {
       title: l10n("kanbanRenderers.tickets.title", "Tickets"),
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       renderer: { kind: "kanban", id: "tickets" },
     },
     ticketEditor: {
       title: l10n("panels.ticketEditor.title", "Ticket"),
-      region: "main",
-      closable: false,
-      resourceKind: "ticket",
+      supportedRegions: ["main"],
       renderer: { kind: "file", id: "ticketContent" },
       panelMenus: {
         properties: {
@@ -268,9 +291,7 @@ export default defineExtension({
     // rebinds the editor to the ticket resource with the chosen document metadata.
     ticketFiles: {
       title: l10n("panels.ticketFiles.title", "Files"),
-      region: "sidenav",
-      closable: false,
-      resourceKind: "ticket",
+      supportedRegions: ["sidenav"],
       renderer: { kind: "tree", id: "ticketFiles" },
     },
   },

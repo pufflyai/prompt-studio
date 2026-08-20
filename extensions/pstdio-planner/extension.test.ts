@@ -34,12 +34,25 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.modes?.ticket).toMatchObject({
       id: "pstdio-planner.ticket",
       label: { $l10n: "modes.ticket.label", default: "Ticket" },
-      icon: "FileText",
-      resourceKind: "ticket",
-      layout: {
-        panels: ["main", "secondary", "side"],
-        open: [{ region: "sidenav", panel: "ticketFiles", pinned: true }],
+      icon: "file-text",
+      panelRegions: ["main", "secondary", "side"],
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            navigation: { region: "sidenav", required: true, pinned: true },
+          },
+        },
       },
+    });
+    // The ticket resource owns the slots the mode places.
+    expect(extension.resourceKinds?.ticket).toMatchObject({
+      surface: "primary",
+      slots: { primary: { cardinality: "one", external: false } },
+    });
+    expect(extension.resourcePanels).toMatchObject({
+      ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
+      ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
     });
   });
 
@@ -52,9 +65,7 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.panels?.ticketFiles).toMatchObject({
       title: { $l10n: "panels.ticketFiles.title", default: "Files" },
-      region: "sidenav",
-      closable: false,
-      resourceKind: "ticket",
+      supportedRegions: ["sidenav"],
       renderer: { kind: "tree", id: "ticketFiles" },
     });
     expect(extension.panels?.ticketFiles).not.toHaveProperty("target");
@@ -219,7 +230,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
     expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
     expect(extension.panels?.tickets).toMatchObject({
-      region: "main",
+      supportedRegions: ["main"],
       renderer: { kind: "kanban", id: "tickets" },
     });
   });

@@ -54,15 +54,15 @@ describe("extension-lab workbench attachments", () => {
     expect(Object.keys(extension.modes ?? {})).toEqual(["lab"]);
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
-      layout: {
-        // No "secondary": keeps the Terminal entry out of the Lab mode.
-        panels: ["main", "side"],
-        open: [
-          { region: "status", panel: "labStatusBar", pinned: true },
-          { region: "main", panel: "labOverview" },
-          { region: "main", panel: "labCams" },
-          { region: "main", panel: "labArtifacts" },
-        ],
+      // No "secondary": keeps the Terminal entry out of the Lab mode.
+      panelRegions: ["main", "side"],
+      modePanels: {
+        labOverview: { region: "main", required: true },
+        labCams: { region: "main" },
+        labArtifacts: { region: "main" },
+      },
+      resources: {
+        "glass-lab-artifact": { slots: { inspector: { region: "side" } } },
       },
     });
     // The Lab owns navigation through native activity items; no sidenav or
@@ -82,9 +82,10 @@ describe("extension-lab workbench attachments", () => {
       command: "workbench.action.switchMode",
       params: { modeId: "project" },
     });
-    expect(extension.panels?.labStatusBar).toMatchObject({
-      region: "status",
-      closable: false,
+    // Status chrome is a typed status item, not a docked panel.
+    expect(extension.panels).not.toHaveProperty("labStatusBar");
+    expect(extension.statusItems?.labStatusBar).toMatchObject({
+      when: { mode: "pstdio.extension-lab.lab" },
       webview: { entry: { path: "./src/views/lab-status-bar.tsx" } },
     });
   });
@@ -92,13 +93,13 @@ describe("extension-lab workbench attachments", () => {
   test("gives each main panel an icon and an action menu where it belongs", () => {
     expect(extension.panels?.labOverview).toMatchObject({
       icon: "layout-dashboard",
-      region: "main",
+      supportedRegions: ["main"],
       webview: { entry: { path: "./src/views/lab-overview.tsx" } },
     });
     expect(extension.panels?.labOverview?.panelMenus).toBeUndefined();
     expect(extension.panels?.labArtifacts).toMatchObject({
       icon: "package-search",
-      region: "main",
+      supportedRegions: ["main", "secondary"],
       renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
         create: expect.objectContaining({ side: "right", renderer: { kind: "controls", id: "labArtifactCreate" } }),
@@ -106,7 +107,7 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.panels?.labCams).toMatchObject({
       icon: "cctv",
-      region: "main",
+      supportedRegions: ["main", "secondary"],
       webview: { entry: { path: "./src/views/lab-cams.tsx" } },
       panelMenus: {
         cameras: expect.objectContaining({ side: "left", renderer: { kind: "tree", id: "labCams" } }),
@@ -127,16 +128,21 @@ describe("extension-lab workbench attachments", () => {
 
   test("opens artifacts as a side inspector bound to the resource kind", () => {
     expect(extension.panels?.labArtifactDetail).toMatchObject({
-      region: "side",
-      closable: true,
-      resourceKind: "glass-lab-artifact",
+      supportedRegions: ["side"],
       webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
     });
-    // Side-only kinds open in place; a main editor panel must not exist for the kind.
-    const mainEditors = Object.values(extension.panels ?? {}).filter(
-      (panel) => panel.resourceKind === "glass-lab-artifact" && panel.region === "main",
-    );
-    expect(mainEditors).toEqual([]);
+    // An attached resource adds an inspector; it never replaces the primary
+    // location, so the kind declares no primary slot.
+    expect(extension.resourceKinds?.["glass-lab-artifact"]).toMatchObject({
+      surface: "attached",
+      slots: { inspector: { cardinality: "many", external: true } },
+    });
+    expect(extension.resourceKinds?.["glass-lab-artifact"]?.slots).not.toHaveProperty("primary");
+    expect(extension.resourcePanels?.labArtifactDetail).toMatchObject({
+      resourceKind: "glass-lab-artifact",
+      panel: "labArtifactDetail",
+      slot: "inspector",
+    });
   });
 
   test("keeps the remaining lab surfaces", () => {

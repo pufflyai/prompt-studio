@@ -1,5 +1,5 @@
-import { commandRef } from "pstdio-api-contracts/extension-kernel";
 import { describe, expect, test } from "bun:test";
+import { commandRef } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
 import {

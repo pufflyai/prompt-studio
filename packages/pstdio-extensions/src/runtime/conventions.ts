@@ -62,20 +62,19 @@ const collectIconDiagnostics = (runtime: ExtensionRuntime) => {
   return diagnostics;
 };
 
-const localIdRecords = (runtime: ExtensionRuntime): ContributionSite[] => [
-  ...runtime.commands,
-  ...runtime.privateHandlers,
-  ...runtime.modes,
-  ...runtime.panels,
-  ...runtime.treeItems,
-  ...runtime.activityItems,
-  ...runtime.resourceKinds,
-  ...runtime.resourcePanels,
-  ...runtime.treeRenderers,
-  ...runtime.fileRenderers,
-  ...runtime.controlsRenderers,
-  ...runtime.dataTableRenderers,
-  ...runtime.kanbanRenderers,
+// Only author-declared ids are checked. Private handler ids are synthesized by the
+// runtime as `<renderer>.<operation>`, so their dots and casing are not the
+// author's choice.
+const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionSite[]][] => [
+  ["command", runtime.commands],
+  ["mode", runtime.modes],
+  ["panel", runtime.panels],
+  ["treeItem", runtime.treeItems],
+  ["activityItem", runtime.activityItems],
+  ["resourceKind", runtime.resourceKinds],
+  ["resourcePanel", runtime.resourcePanels],
+  ["renderer", [...runtime.treeRenderers, ...runtime.fileRenderers, ...runtime.controlsRenderers]],
+  ["renderer", [...runtime.dataTableRenderers, ...runtime.kanbanRenderers]],
 ];
 
 const isKebab = (localId: string) => localId.includes("-") && localId === localId.toLowerCase();
@@ -83,42 +82,47 @@ const isCamel = (localId: string) => /[A-Z]/.test(localId);
 
 const collectIdCasingDiagnostics = (runtime: ExtensionRuntime) => {
   const diagnostics: ExtensionDiagnostic[] = [];
-  const byExtension = new Map<string, ContributionSite[]>();
-  for (const record of localIdRecords(runtime)) {
-    byExtension.set(record.extensionId, [...(byExtension.get(record.extensionId) ?? []), record]);
+  // Casing is compared inside one contribution kind: this repo deliberately uses
+  // kebab-case commands beside camelCase renderer and panel ids.
+  const byExtensionKind = new Map<string, ContributionSite[]>();
+  for (const [kind, records] of localIdRecordsByKind(runtime)) {
+    for (const record of records) {
+      const key = `${record.extensionId}\0${kind}`;
+      byExtensionKind.set(key, [...(byExtensionKind.get(key) ?? []), record]);
+    }
   }
 
-  for (const [extensionId, records] of byExtension) {
+  for (const record of localIdRecordsByKind(runtime).flatMap(([, records]) => records)) {
     // A dotted local id collides with the namespaced `<extension>.<id>` reference
     // form, so references to it resolve to the wrong extension.
-    for (const record of records) {
-      if (!record.localId.includes(".")) continue;
-      diagnostics.push(
-        createDiagnostic({
-          code: "extension_contribution_id_casing",
-          severity: "warning",
-          message: `Contribution id "${record.localId}" contains "."; dots are reserved for cross-extension references`,
-          extensionId,
-          sourcePath: record.sourcePath,
-          metadata: { contributionId: record.id, reason: "dotted-local-id" },
-        }),
-      );
-    }
+    if (!record.localId.includes(".")) continue;
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_contribution_id_casing",
+        severity: "warning",
+        message: `Contribution id "${record.localId}" contains "."; dots are reserved for cross-extension references`,
+        extensionId: record.extensionId,
+        sourcePath: record.sourcePath,
+        metadata: { contributionId: record.id, reason: "dotted-local-id" },
+      }),
+    );
+  }
 
+  for (const [key, records] of byExtensionKind) {
+    const [extensionId, kind] = key.split("\0");
     const kebab = records.find((record) => isKebab(record.localId));
     const camel = records.find((record) => isCamel(record.localId));
-    if (kebab && camel) {
-      diagnostics.push(
-        createDiagnostic({
-          code: "extension_contribution_id_casing",
-          severity: "warning",
-          message: `Extension mixes contribution id styles: "${kebab.localId}" (kebab-case) and "${camel.localId}" (camelCase); pick one`,
-          extensionId,
-          sourcePath: kebab.sourcePath,
-          metadata: { reason: "mixed-casing", examples: [kebab.localId, camel.localId] },
-        }),
-      );
-    }
+    if (!kebab || !camel) continue;
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_contribution_id_casing",
+        severity: "warning",
+        message: `Extension mixes ${kind} id styles: "${kebab.localId}" (kebab-case) and "${camel.localId}" (camelCase); pick one`,
+        extensionId: extensionId!,
+        sourcePath: kebab.sourcePath,
+        metadata: { reason: "mixed-casing", kind, examples: [kebab.localId, camel.localId] },
+      }),
+    );
   }
   return diagnostics;
 };
