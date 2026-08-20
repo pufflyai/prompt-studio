@@ -51,7 +51,9 @@ describe("extension-lab workbench attachments", () => {
   });
 
   test("stages a single Lab mode with native activity items and status chrome", () => {
-    expect(Object.keys(extension.modes ?? {})).toEqual(["lab"]);
+    // Lab is the mode-wide workspace; Animation and Sculpt are the conformance
+    // fixture that arranges one shared blend-project resource two ways.
+    expect(Object.keys(extension.modes ?? {})).toEqual(["lab", "animation", "sculpt"]);
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
       // No "secondary": keeps the Terminal entry out of the Lab mode.
@@ -99,7 +101,7 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.panels?.labOverview?.panelMenus).toBeUndefined();
     expect(extension.panels?.labArtifacts).toMatchObject({
       icon: "package-search",
-      supportedRegions: ["main", "secondary"],
+      supportedRegions: ["main", "secondary", "side"],
       renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
         create: expect.objectContaining({ side: "right", renderer: { kind: "controls", id: "labArtifactCreate" } }),
@@ -107,7 +109,7 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.panels?.labCams).toMatchObject({
       icon: "cctv",
-      supportedRegions: ["main", "secondary"],
+      supportedRegions: ["main", "secondary", "sidenav", "side"],
       webview: { entry: { path: "./src/views/lab-cams.tsx" } },
       panelMenus: {
         cameras: expect.objectContaining({ side: "left", renderer: { kind: "tree", id: "labCams" } }),

@@ -190,4 +190,24 @@ describe("composition normalization", () => {
     expect(runtime.resourceHierarchyProviders.map((record) => record.id)).toEqual(["owner.ticket", "owner.dangling"]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_resource_kind_missing");
   });
+
+  test("treats a contribution to an extension that is not installed as inert, not an error", () => {
+    // The addon alone: its edge targets owner.ticket, which is not present.
+    const runtime = normalizeExtensionSources([wrap("addon", addon)]);
+
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.severity)).toEqual(["warning"]);
+    expect(runtime.diagnostics[0]).toMatchObject({ code: "extension_resource_kind_missing" });
+    // The panel itself still registers, so the extension installs and stays usable.
+    expect(runtime.panels.map((panel) => panel.id)).toEqual(["addon.insights"]);
+  });
+
+  test("keeps a dangling reference inside an installed extension an error", () => {
+    const broken = defineExtension({
+      ...owner,
+      resourcePanels: { editor: { resourceKind: "missing-local-kind", panel: "editor", slot: "primary" } },
+    });
+    const runtime = normalizeExtensionSources([wrap("owner", broken)]);
+
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.severity)).toContain("error");
+  });
 });

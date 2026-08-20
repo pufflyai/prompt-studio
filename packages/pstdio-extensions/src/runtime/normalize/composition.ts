@@ -67,16 +67,28 @@ const addDiagnostic = (
   code: string,
   failedReference: string,
   message: string,
+  severity: "error" | "warning" = "error",
 ) => {
   runtime.diagnostics.push(
     createDiagnostic({
       code,
+      severity,
       message,
       extensionId: record.extensionId,
       sourcePath: record.sourcePath,
       metadata: { contributionId: record.id, failedReference },
     }),
   );
+};
+
+// A namespaced reference to an extension that is not installed is inert, not an
+// authoring mistake: extensions install independently, so a cross-extension
+// contribution simply contributes nothing until its target is present. A
+// reference into an extension that IS present stays an error.
+const referencesAbsentExtension = (runtime: Accumulator, reference: string) => {
+  const prefix = reference.split(".")[0];
+  if (!prefix || !reference.includes(".")) return false;
+  return !runtime.extensions.some((extension) => extension.name === prefix);
 };
 
 const panelRegions = (panel: RuntimePanelRecord) => panel.contribution.supportedRegions;
@@ -120,12 +132,16 @@ const validateResourcePanels = (runtime: Accumulator) => {
     const kind = runtime.resourceKinds.find((candidate) => candidate.id === edge.resourceKindId);
     const panel = runtime.panels.find((candidate) => candidate.id === edge.panelId);
     if (!kind) {
+      const absent = referencesAbsentExtension(runtime, edge.resourceKindId);
       addDiagnostic(
         runtime,
         edge,
         "extension_resource_kind_missing",
         edge.resourceKindId,
-        `Unknown resource kind "${edge.resourceKindId}"`,
+        absent
+          ? `Resource kind "${edge.resourceKindId}" is not installed; this contribution is inactive`
+          : `Unknown resource kind "${edge.resourceKindId}"`,
+        absent ? "warning" : "error",
       );
       continue;
     }
@@ -164,12 +180,16 @@ const validateModeRecipe = (
   const kindId = resolveContributionReference(ext, rawKindId);
   const kind = runtime.resourceKinds.find((candidate) => candidate.id === kindId);
   if (!kind) {
+    const absent = referencesAbsentExtension(runtime, kindId);
     addDiagnostic(
       runtime,
       mode,
       "extension_mode_resource_unsupported",
       kindId,
-      `Mode "${mode.id}" references unsupported resource kind "${kindId}"`,
+      absent
+        ? `Mode "${mode.id}" arranges resource kind "${kindId}", which is not installed`
+        : `Mode "${mode.id}" references unsupported resource kind "${kindId}"`,
+      absent ? "warning" : "error",
     );
     return;
   }
