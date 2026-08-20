@@ -247,15 +247,13 @@ export const registerExtensionModeContributions = (
   metadata: DashboardExtensionMetadata,
   projectId: string,
   executeCommand: ExecuteDashboardExtensionCommand = executeExtensionCommand,
+  // Composition spans extensions: one extension may place a panel another extension
+  // contributed into an open slot. Callers registering one extension at a time pass
+  // the registry built from the complete metadata so those edges still resolve.
+  registry: WorkbenchCompositionRegistry = createExtensionCompositionRegistry(metadata),
 ) => [
   ...registerExtensionViews(ctx, metadata, projectId),
   ...registerExtensionStatusItems(ctx, metadata, projectId),
   ...registerCompositionResourceKinds(ctx, metadata),
-  ...registerExtensionModes({
-    ctx,
-    executeCommand,
-    metadata,
-    projectId,
-    registry: createExtensionCompositionRegistry(metadata),
-  }),
+  ...registerExtensionModes({ ctx, executeCommand, metadata, projectId, registry }),
 ];

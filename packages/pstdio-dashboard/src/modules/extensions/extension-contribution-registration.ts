@@ -6,6 +6,7 @@ import {
   registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionRendererRefreshEvents,
   registerWorkbenchExtensionTreeRenderers,
+  type WorkbenchCompositionRegistry,
 } from "@pstdio/workbench/extensions";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
@@ -23,7 +24,7 @@ import {
   createExtensionMenuCommandHandler,
   type ExecuteDashboardExtensionCommand,
 } from "./extension-command-handler";
-import { isExtensionResourceSidenavView } from "./extension-composition";
+import { createExtensionCompositionRegistry, isExtensionResourceSidenavView } from "./extension-composition";
 import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
 import { registerExtensionKanbanRenderers } from "./extension-kanban-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
@@ -99,9 +100,11 @@ const metadataExtensionIds = (metadata: ResolvedWorkbenchExtensionMetadata) => {
 };
 
 const registerSingleExtensionContributions = (
-  input: Omit<RegisterExtensionContributionsInput, "onRegistrationError">,
+  input: Omit<RegisterExtensionContributionsInput, "onRegistrationError"> & {
+    compositionRegistry: WorkbenchCompositionRegistry;
+  },
 ) => {
-  const { ctx, executeCommand, metadata, projectId } = input;
+  const { compositionRegistry, ctx, executeCommand, metadata, projectId } = input;
   const disposables: Disposable[] = [];
   try {
     const treeRendererMetadata = {
@@ -222,7 +225,9 @@ const registerSingleExtensionContributions = (
         metadata.commandPaletteResources ?? [],
       ),
     );
-    disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId, executeCommand));
+    disposables.push(
+      ...registerExtensionModeContributions(ctx, metadata, projectId, executeCommand, compositionRegistry),
+    );
     disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
     disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
@@ -242,11 +247,15 @@ const registerSingleExtensionContributions = (
 
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
+  // One registry for every extension: an extension's mode may place a panel that
+  // another extension contributed into one of its open slots.
+  const compositionRegistry = createExtensionCompositionRegistry(input.metadata);
 
   for (const extensionId of metadataExtensionIds(input.metadata)) {
     try {
       disposables.push(
         ...registerSingleExtensionContributions({
+          compositionRegistry,
           ctx: input.ctx,
           executeCommand: input.executeCommand,
           metadata: extensionMetadataById(input.metadata, extensionId),

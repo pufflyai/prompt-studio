@@ -1,0 +1,120 @@
+import { describe, expect, test } from "bun:test";
+import { createWorkbenchCore } from "@pstdio/workbench";
+import { selectDashboardProject } from "@/shared/app/project-context";
+import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { registerExtensionContributions } from "./extension-contribution-registration";
+import { metadata as baseMetadata } from "./module-test-fixtures";
+
+// Composition spans extensions: one extension opens a slot, another contributes a
+// panel into it. Contributions register one extension at a time, so this proves the
+// external edge still resolves instead of being scoped away with its owner.
+const crossExtensionMetadata = {
+  ...baseMetadata,
+  extensions: [
+    { id: "pstdio.planner", name: "planner", displayName: "Planner", sourcePath: "/extensions/planner/extension.ts" },
+    {
+      id: "pstdio.insights",
+      name: "insights",
+      displayName: "Insights",
+      sourcePath: "/extensions/insights/extension.ts",
+    },
+  ],
+  modes: [
+    {
+      id: "planner.ticket",
+      extensionId: "pstdio.planner",
+      modeId: "planner.ticket",
+      label: "Ticket",
+      panelRegions: ["main", "secondary", "side"],
+      resources: {
+        "planner.ticket": {
+          slots: {
+            primary: { region: "main", required: true },
+            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
+          },
+        },
+      },
+    },
+  ],
+  resourceKinds: [
+    {
+      id: "planner.ticket",
+      extensionId: "pstdio.planner",
+      surface: "primary",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        inspector: { cardinality: "many", external: true },
+      },
+    },
+  ],
+  panels: [
+    {
+      id: "planner.editor",
+      extensionId: "pstdio.planner",
+      supportedRegions: ["main"],
+      title: "Ticket",
+      webview: {
+        entry: { kind: "package-asset", path: "./editor.tsx", baseUrl: "file:///extension/extension.ts" },
+        runtimeUrl: "/v1/extensions/runtime",
+        moduleUrl: "/modules/planner.editor.js",
+      },
+    },
+    {
+      id: "insights.details",
+      extensionId: "pstdio.insights",
+      supportedRegions: ["side", "secondary"],
+      title: "Insights",
+      webview: {
+        entry: { kind: "package-asset", path: "./insights.tsx", baseUrl: "file:///extension/extension.ts" },
+        runtimeUrl: "/v1/extensions/runtime",
+        moduleUrl: "/modules/insights.details.js",
+      },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "planner.editor",
+      extensionId: "pstdio.planner",
+      resourceKind: "planner.ticket",
+      panel: "planner.editor",
+      slot: "primary",
+    },
+    {
+      id: "insights.ticketDetails",
+      extensionId: "pstdio.insights",
+      resourceKind: "planner.ticket",
+      panel: "insights.details",
+      slot: "inspector",
+    },
+  ],
+} satisfies DashboardExtensionMetadata;
+
+describe("cross-extension composition", () => {
+  test("places a panel one extension contributed into another extension's open slot", async () => {
+    const workbench = createWorkbenchCore();
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposables = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async () => ({ outcome: { ok: true, value: undefined } }) as never,
+      metadata: crossExtensionMetadata,
+      projectId: "project-1",
+    });
+
+    try {
+      await workbench.navigator.open({
+        modeId: "planner.ticket",
+        resource: { kind: "planner.ticket", uri: "pstdio://ticket/PS-1", id: "PS-1", label: "PS-1" },
+      });
+
+      const regionOf = (contributionId: string) =>
+        Object.values(workbench.layout.getLayout().regions).find((region) =>
+          region.widgets.some((placement) => placement.contributionId === contributionId),
+        )?.id;
+
+      expect(regionOf("dashboard-workbench.extension-view.planner.editor")).toBe("main");
+      expect(regionOf("dashboard-workbench.extension-view.insights.details")).toBe("side");
+    } finally {
+      for (const disposable of disposables) disposable.dispose();
+    }
+  });
+});
