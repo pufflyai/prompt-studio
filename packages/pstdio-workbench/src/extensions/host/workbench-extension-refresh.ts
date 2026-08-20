@@ -86,7 +86,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
   const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
 
   for (const panel of metadata.panels) {
-    if (!panel.webview || panel.region === "overlay") continue;
+    if (!panel.webview) continue;
     const placement = findOpenPlacement(workbench, panel.id);
     if (!placement) continue;
     workbench.layout.openPanel(panel.id, {

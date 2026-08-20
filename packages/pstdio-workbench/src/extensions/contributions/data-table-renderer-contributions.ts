@@ -22,9 +22,7 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
-  toWorkbenchPanelEligibility,
-  toWorkbenchPanelMenus,
+  toWorkbenchCompositionPanelContribution,
 } from "./panel-contributions";
 
 type DataTableViewRecord = WorkbenchExtensionMetadata["panels"][number];
@@ -140,24 +138,19 @@ const registerView = (
   panel: DataTableViewRecord,
   index: number,
   menuDeclarationOffset: number,
+  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
 ) => {
   const rendererId = panelRendererId(panel, "dataTable");
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
-    contribution: {
-      id: panel.id,
-      title: text(panel.title, panel.id),
-      icon: panel.icon,
-      region: panel.region,
-      closable: panel.closable,
+    contribution: toWorkbenchCompositionPanelContribution({
+      panel,
       rendererId,
-      singleton: true,
-      resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
-      eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
-      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
-    },
+      declarationIndex: index,
+      menuDeclarationOffset: menuDeclarationOffset,
+      resourcePanels,
+    }),
   });
 };
 
@@ -165,11 +158,12 @@ export const registerWorkbenchExtensionDataTableRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: WorkbenchExtensionDataTableRendererRecord[],
   panels: DataTableViewRecord[],
+  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
 ): Disposable => {
   const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerView(context, panel, index, menuOffsets[index]!);
+    const disposable = registerView(context, panel, index, menuOffsets[index]!, resourcePanels);
     if (disposable) disposables.push(disposable);
   });
   return {

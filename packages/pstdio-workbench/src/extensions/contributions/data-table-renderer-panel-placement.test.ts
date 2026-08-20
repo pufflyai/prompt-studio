@@ -7,7 +7,7 @@ import { registerWorkbenchExtensionDataTableRenderers } from "./data-table-rende
 type ViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
-  test("honors panel and panel-menu placement when registering and opening widgets", () => {
+  test("registers panels in declaration order and honors panel-menu placement", () => {
     const workbench = createWorkbenchCore();
     const record = {
       id: "lab.table",
@@ -17,52 +17,47 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
     } satisfies WorkbenchExtensionDataTableRendererRecord;
     const panels = [
       {
-        id: "lab.last",
+        id: "lab.first",
         extensionId: "pstdio.lab",
-        title: "Last",
-        closable: false,
-        region: "main",
-        placement: "last",
+        title: "First",
+        supportedRegions: ["main"],
         renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
         id: "lab.default",
         extensionId: "pstdio.lab",
         title: "Default",
-        closable: false,
-        region: "main",
+        supportedRegions: ["main"],
         renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
-        id: "lab.first",
+        id: "lab.last",
         extensionId: "pstdio.lab",
-        title: "First",
-        closable: false,
-        region: "main",
-        placement: "first",
+        title: "Last",
+        supportedRegions: ["main"],
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
-            id: "lab.first.menu-last",
+            id: "lab.owner.menu-last",
             extensionId: "pstdio.lab",
-            ownerPanelId: "lab.first",
+            ownerPanelId: "lab.last",
             title: "Menu Last",
             side: "right",
             placement: "last",
             renderer: { kind: "dataTable", id: "lab.table" },
           },
           {
-            id: "lab.first.menu-default",
+            id: "lab.owner.menu-default",
             extensionId: "pstdio.lab",
-            ownerPanelId: "lab.first",
+            ownerPanelId: "lab.last",
             title: "Menu Default",
             side: "right",
             renderer: { kind: "dataTable", id: "lab.table" },
           },
           {
-            id: "lab.first.menu-first",
+            id: "lab.owner.menu-first",
             extensionId: "pstdio.lab",
-            ownerPanelId: "lab.first",
+            ownerPanelId: "lab.last",
             title: "Menu First",
             side: "right",
             placement: "first",
@@ -82,18 +77,17 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
       panels,
     );
 
-    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual([
-      "lab.first",
-      "lab.first.menu-first",
-      "lab.default",
-      "lab.first.menu-default",
-      "lab.last",
-      "lab.first.menu-last",
+    const registeredIds = workbench.layout.listPanels().map((panel) => panel.id);
+    expect(registeredIds.filter((id) => !id.includes("menu"))).toEqual(["lab.first", "lab.default", "lab.last"]);
+    expect(registeredIds.filter((id) => id.includes("menu"))).toEqual([
+      "lab.owner.menu-first",
+      "lab.owner.menu-default",
+      "lab.owner.menu-last",
     ]);
 
-    workbench.layout.openPanel("lab.last", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("lab.default", { strategy: { kind: "persistent" } });
     workbench.layout.openPanel("lab.first", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.default", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.last", { strategy: { kind: "persistent" } });
 
     expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
       "lab.first",
@@ -101,9 +95,9 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
       "lab.last",
     ]);
     expect(workbench.layout.listPanelInstances("main-right-menu").map((panel) => panel.panelId)).toEqual([
-      "lab.first.menu-first",
-      "lab.first.menu-default",
-      "lab.first.menu-last",
+      "lab.owner.menu-first",
+      "lab.owner.menu-default",
+      "lab.owner.menu-last",
     ]);
   });
 
@@ -120,8 +114,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         id: "lab.a",
         extensionId: "pstdio.lab",
         title: "Panel A",
-        closable: false,
-        region: "main",
+        supportedRegions: ["main"],
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
@@ -138,8 +131,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         id: "lab.b",
         extensionId: "pstdio.lab",
         title: "Panel B",
-        closable: false,
-        region: "main",
+        supportedRegions: ["main"],
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {

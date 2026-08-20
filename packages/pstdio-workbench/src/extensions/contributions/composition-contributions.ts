@@ -129,11 +129,22 @@ export const reconcileCompositionLayout = (
 
   for (const placement of resolved.placements) {
     const current = ctx.layout.getLayout();
-    const existing = dockedCompositionRegions
-      .flatMap((region) => current.regions[region].widgets)
-      .find((candidate) => candidate.contributionId === placement.panelId);
-    if (existing) {
-      if ((existing.closable ?? true) !== placement.closable) {
+    const existingRegion = dockedCompositionRegions.find((region) =>
+      current.regions[region].widgets.some((candidate) => candidate.contributionId === placement.panelId),
+    );
+    const existing = existingRegion
+      ? current.regions[existingRegion].widgets.find((candidate) => candidate.contributionId === placement.panelId)
+      : undefined;
+    if (existing && existingRegion) {
+      // A placement sitting in a region the recipe no longer allows moves to the
+      // resolved region; a valid user move stays where the user put it.
+      if (!placement.allowedRegions.includes(existingRegion)) {
+        ctx.layout.openWidget(placement.panelId, {
+          region: placement.region,
+          closable: placement.closable,
+          pinned: true,
+        });
+      } else if ((existing.closable ?? true) !== placement.closable) {
         ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable });
       }
       continue;

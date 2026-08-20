@@ -30,6 +30,7 @@ const setup = () => {
     applyBreadcrumb: (resource) => {
       if (!resource) workbench.breadcrumbs.clearItems();
     },
+    presentResource: () => undefined,
   });
   return { workbench, getSelected: () => selected, scopes };
 };

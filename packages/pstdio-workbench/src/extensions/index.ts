@@ -49,7 +49,7 @@ export {
   panelMenuDeclarationOffsets,
   type RegisterWorkbenchExtensionPanelInput,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
+  toWorkbenchCompositionPanelContribution,
 } from "./contributions/panel-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,

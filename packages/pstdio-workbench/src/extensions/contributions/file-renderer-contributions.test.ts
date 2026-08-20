@@ -28,7 +28,7 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
 const resource = { kind: "ticket", uri: "pstdio://ticket/ticket-1", id: "ticket-1", label: "PS-1" };
 
 describe("registerWorkbenchExtensionFileRenderers", () => {
-  test("honors panel placement when registering and opening file-backed panels", () => {
+  test("registers and opens file-backed panels in declaration order", () => {
     const workbench = createWorkbenchCore();
     const metadata = {
       ...baseMetadata,
@@ -43,29 +43,24 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
       ],
       panels: [
         {
-          id: "lab.last",
+          id: "lab.a",
           extensionId: "pstdio.lab",
-          region: "main",
+          supportedRegions: ["main"],
           title: "Last",
-          closable: false,
-          placement: "last",
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
-          id: "lab.default",
+          id: "lab.b",
           extensionId: "pstdio.lab",
-          region: "main",
+          supportedRegions: ["main"],
           title: "Default",
-          closable: false,
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
-          id: "lab.first",
+          id: "lab.c",
           extensionId: "pstdio.lab",
-          region: "main",
+          supportedRegions: ["main"],
           title: "First",
-          closable: false,
-          placement: "first",
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
       ],
@@ -78,16 +73,16 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
       workbench,
     });
 
-    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual(["lab.first", "lab.default", "lab.last"]);
+    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual(["lab.a", "lab.b", "lab.c"]);
 
-    workbench.layout.openPanel("lab.last", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("lab.default", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("lab.first", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.a", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.b", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.c", { strategy: { kind: "persistent" } });
 
     expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
-      "lab.first",
-      "lab.default",
-      "lab.last",
+      "lab.a",
+      "lab.b",
+      "lab.c",
     ]);
   });
 
@@ -111,10 +106,8 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
         {
           id: "lab.ticketEditor",
           extensionId: "pstdio.lab",
-          region: "main",
+          supportedRegions: ["main"],
           title: "Ticket",
-          closable: false,
-          resourceKind: "ticket",
           renderer: { kind: "file", id: "lab.ticketContent" },
           panelMenus: [
             {
@@ -126,6 +119,15 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
               renderer: { kind: "controls", id: "lab.ticketProperties" },
             },
           ],
+        },
+      ],
+      resourcePanels: [
+        {
+          id: "lab.ticketEditor",
+          extensionId: "pstdio.lab",
+          resourceKind: "ticket",
+          panel: "lab.ticketEditor",
+          slot: "primary",
         },
       ],
     } satisfies WorkbenchExtensionMetadata;

@@ -70,10 +70,8 @@ const metadata = {
       extensionId: EXTENSION_ID,
       modeId: MODE_ID,
       label: "Lab review",
-      layout: {
-        panels: ["main"],
-        open: [{ region: "main", panel: TREE_VIEW_ID, pinned: true }],
-      },
+      panelRegions: ["main"],
+      modePanels: { [TREE_VIEW_ID]: { region: "main", required: true } },
     },
   ],
   routes: [],
@@ -84,8 +82,7 @@ const metadata = {
     {
       id: TREE_VIEW_ID,
       extensionId: EXTENSION_ID,
-      region: "main",
-      closable: false,
+      supportedRegions: ["main"],
       title: "Lab tree",
       renderer: { kind: "tree", id: TREE_ID },
     },

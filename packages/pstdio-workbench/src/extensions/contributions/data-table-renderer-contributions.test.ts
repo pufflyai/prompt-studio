@@ -24,8 +24,7 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       id: "lab.healthView",
       extensionId: "pstdio.lab",
       title: "Health",
-      closable: false,
-      region: "main",
+      supportedRegions: ["main"],
       renderer: { kind: "dataTable", id: "lab.health" },
     } satisfies ViewRecord;
     const refreshes: string[] = [];
@@ -117,8 +116,8 @@ describe("registerWorkbenchExtensionDataTableRenderers", () => {
       id: "ticket.panel",
       title: "Ticket",
       region: "main",
-      rendererId: "test",
       closable: false,
+      rendererId: "test",
     });
     const calls: Array<{ commandId: string; resourceType: unknown; rowId: unknown }> = [];
     const record = {

@@ -406,7 +406,12 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
 
   const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
   input.metadata.panels.forEach((panel, index) => {
-    const disposable = registerTreeViewWidget(input, panel, index, menuOffsets[index]!);
+    const disposable = registerTreeViewWidget(
+      { workbench: input.workbench, resourcePanels: input.metadata.resourcePanels },
+      panel,
+      index,
+      menuOffsets[index]!,
+    );
     if (disposable) disposables.push(disposable);
   });
 

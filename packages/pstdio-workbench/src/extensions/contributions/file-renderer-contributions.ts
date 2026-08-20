@@ -13,9 +13,7 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
-  toWorkbenchPanelEligibility,
-  toWorkbenchPanelMenus,
+  toWorkbenchCompositionPanelContribution,
 } from "./panel-contributions";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
@@ -154,19 +152,13 @@ const registerFileViewWidget = (
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
-    contribution: {
-      id: panel.id,
-      title: text(panel.title, panel.id),
-      icon: panel.icon,
-      region: panel.region,
-      closable: panel.closable,
+    contribution: toWorkbenchCompositionPanelContribution({
+      panel,
       rendererId,
-      singleton: true,
-      resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
-      eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
-      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
-    },
+      declarationIndex: index,
+      menuDeclarationOffset: menuDeclarationOffset,
+      resourcePanels: input.metadata.resourcePanels,
+    }),
   });
 };
 

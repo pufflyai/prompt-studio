@@ -11,9 +11,7 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
-  toWorkbenchPanelEligibility,
-  toWorkbenchPanelMenus,
+  toWorkbenchCompositionPanelContribution,
 } from "./panel-contributions";
 
 type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
@@ -88,24 +86,19 @@ const registerControlsViewWidget = (
   panel: ControlsViewRecord,
   index: number,
   menuDeclarationOffset: number,
+  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
 ) => {
   const rendererId = panelRendererId(panel, "controls");
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
-    contribution: {
-      id: panel.id,
-      title: text(panel.title, panel.id),
-      icon: panel.icon,
-      region: panel.region,
-      closable: panel.closable,
+    contribution: toWorkbenchCompositionPanelContribution({
+      panel,
       rendererId,
-      singleton: true,
-      resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
-      eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-      panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuDeclarationOffset),
-      ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
-    },
+      declarationIndex: index,
+      menuDeclarationOffset: menuDeclarationOffset,
+      resourcePanels,
+    }),
   });
 };
 
@@ -117,13 +110,14 @@ export const registerWorkbenchExtensionControlsRenderers = (
   records: WorkbenchExtensionControlsRendererRecord[],
   panels: ControlsViewRecord[],
   adapter: WorkbenchExtensionControlsAdapter = {},
+  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
 ): Disposable => {
   const disposables: Disposable[] = [];
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!);
+    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!, resourcePanels);
     if (disposable) disposables.push(disposable);
   });
 

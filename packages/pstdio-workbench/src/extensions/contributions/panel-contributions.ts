@@ -9,34 +9,50 @@ import type {
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 
-type ExtensionPanelMenu = NonNullable<WorkbenchExtensionMetadata["panels"][number]["panelMenus"]>[number];
-type ExtensionPanelPlacement = NonNullable<WorkbenchExtensionMetadata["panels"][number]["placement"]>;
-
-interface WorkbenchExtensionPlacementInput {
-  placement?: ExtensionPanelPlacement;
-  declarationIndex?: number;
-}
+type ExtensionPanelRecord = WorkbenchExtensionMetadata["panels"][number];
+type ExtensionPanelMenu = NonNullable<ExtensionPanelRecord["panelMenus"]>[number];
+type ExtensionResourcePanels = WorkbenchExtensionMetadata["resourcePanels"];
 
 export interface RegisterWorkbenchExtensionPanelInput {
   contribution: WorkbenchPanelContribution;
   workbench: WorkbenchModuleContext;
 }
 
-export const toWorkbenchPanelEligibility = (eligibility?: { resourceKinds?: readonly string[] }) =>
-  eligibility
-    ? {
-        resourceKinds: eligibility.resourceKinds ? [...eligibility.resourceKinds] : undefined,
-      }
-    : undefined;
+// Panels keep manifest declaration order until the user reorders them.
+export const declarationPriority = (declarationIndex = 0) => ({ priority: -declarationIndex });
 
-const placementBasePriority = {
-  first: 1_000_000,
-  default: 0,
-  last: -1_000_000,
-} satisfies Record<ExtensionPanelPlacement, number>;
+// The resource kinds a panel serves come from its resource-panel edges; the panel
+// capability itself no longer names resource kinds.
+export const panelResourceKinds = (panelId: string, resourcePanels: ExtensionResourcePanels | undefined) => {
+  const kinds = (resourcePanels ?? [])
+    .filter((edge) => edge.panel === panelId)
+    .map((edge) => edge.resourceKind)
+    .filter((kind, index, all) => all.indexOf(kind) === index);
+  return kinds.length > 0 ? kinds : undefined;
+};
 
-export const toWorkbenchExtensionPlacementMetadata = (input: WorkbenchExtensionPlacementInput) => ({
-  priority: placementBasePriority[input.placement ?? "default"] - (input.declarationIndex ?? 0),
+// Registers a metadata panel as a workbench widget. The widget's region is only the
+// fallback for direct opens; the composition resolver places the panel per active
+// mode-resource context and owns required-state closability.
+export const toWorkbenchCompositionPanelContribution = (input: {
+  panel: ExtensionPanelRecord;
+  rendererId: string;
+  declarationIndex: number;
+  menuDeclarationOffset: number;
+  resourcePanels?: ExtensionResourcePanels;
+  config?: WorkbenchPanelContribution["config"];
+}): WorkbenchPanelContribution => ({
+  id: input.panel.id,
+  title: text(input.panel.title, input.panel.id),
+  icon: input.panel.icon,
+  region: input.panel.supportedRegions[0] ?? "main",
+  closable: true,
+  rendererId: input.rendererId,
+  singleton: true,
+  resourceKinds: panelResourceKinds(input.panel.id, input.resourcePanels),
+  panelMenus: toWorkbenchPanelMenus(input.panel.panelMenus, input.menuDeclarationOffset),
+  config: input.config,
+  ...declarationPriority(input.declarationIndex),
 });
 
 // Panel menus tie-break by manifest declaration order across every owner panel,
@@ -60,6 +76,8 @@ const panelMenuRendererId = (menu: ExtensionPanelMenu) => {
   return rendererId;
 };
 
+const menuPlacementBasePriority = { first: 1_000_000, default: 0, last: -1_000_000 } as const;
+
 export const toWorkbenchPanelMenus = (
   menus: readonly ExtensionPanelMenu[] | undefined,
   declarationOffset = 0,
@@ -70,16 +88,13 @@ export const toWorkbenchPanelMenus = (
     side: menu.side,
     rendererId: panelMenuRendererId(menu),
     config: menu.webview ? toBridgeWebviewConfig(menu.webview) : undefined,
-    ...toWorkbenchExtensionPlacementMetadata({
-      placement: menu.placement,
-      declarationIndex: declarationOffset + index,
-    }),
+    priority: menuPlacementBasePriority[menu.placement ?? "default"] - (declarationOffset + index),
   }));
 
 export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable =>
   input.workbench.layout.registerPanel(input.contribution);
 
 export const panelRendererId = (
-  panel: WorkbenchExtensionMetadata["panels"][number],
-  kind: NonNullable<WorkbenchExtensionMetadata["panels"][number]["renderer"]>["kind"],
+  panel: ExtensionPanelRecord,
+  kind: NonNullable<ExtensionPanelRecord["renderer"]>["kind"],
 ) => (panel.renderer?.kind === kind ? panel.renderer.id : undefined);

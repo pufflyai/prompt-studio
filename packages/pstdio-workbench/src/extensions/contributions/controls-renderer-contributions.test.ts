@@ -6,7 +6,7 @@ import { registerWorkbenchExtensionControlsRenderers } from "./controls-renderer
 type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 describe("registerWorkbenchExtensionControlsRenderers", () => {
-  test("honors panel placement when registering and opening controls-backed panels", () => {
+  test("registers and opens controls-backed panels in declaration order", () => {
     const workbench = createWorkbenchCore();
     const record = {
       id: "inspector",
@@ -16,29 +16,24 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     } satisfies WorkbenchExtensionControlsRendererRecord;
     const panels = [
       {
-        id: "inspector-last",
+        id: "inspector-a",
         extensionId: "acme.image-tools",
-        title: "Last",
-        closable: false,
-        region: "main",
-        placement: "last",
+        title: "A",
+        supportedRegions: ["main"],
         renderer: { kind: "controls", id: "inspector" },
       },
       {
-        id: "inspector-default",
+        id: "inspector-b",
         extensionId: "acme.image-tools",
-        title: "Default",
-        closable: false,
-        region: "main",
+        title: "B",
+        supportedRegions: ["main"],
         renderer: { kind: "controls", id: "inspector" },
       },
       {
-        id: "inspector-first",
+        id: "inspector-c",
         extensionId: "acme.image-tools",
-        title: "First",
-        closable: false,
-        region: "main",
-        placement: "first",
+        title: "C",
+        supportedRegions: ["main"],
         renderer: { kind: "controls", id: "inspector" },
       },
     ] satisfies ControlsViewRecord[];
@@ -50,19 +45,19 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     );
 
     expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual([
-      "inspector-first",
-      "inspector-default",
-      "inspector-last",
+      "inspector-a",
+      "inspector-b",
+      "inspector-c",
     ]);
 
-    workbench.layout.openPanel("inspector-last", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("inspector-default", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("inspector-first", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("inspector-a", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("inspector-b", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("inspector-c", { strategy: { kind: "persistent" } });
 
     expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
-      "inspector-first",
-      "inspector-default",
-      "inspector-last",
+      "inspector-a",
+      "inspector-b",
+      "inspector-c",
     ]);
   });
 
@@ -82,9 +77,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       id: "inspector-panel",
       extensionId: "acme.image-tools",
       title: "Inspector",
-      closable: false,
-      resourceKind: "image",
-      region: "main",
+      supportedRegions: ["main"],
       renderer: { kind: "controls", id: "inspector" },
     } satisfies ControlsViewRecord;
 
@@ -102,12 +95,23 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       },
       [record],
       [panel],
+      undefined,
+      [
+        {
+          id: "acme.image-tools.inspector",
+          extensionId: "acme.image-tools",
+          resourceKind: "image",
+          panel: "inspector-panel",
+          slot: "inspector",
+        },
+      ],
     );
 
     const renderer = workbench.renderers.getControlsRenderer("inspector");
     expect(renderer).toBeDefined();
 
-    // The Panel places the renderer in its declared region.
+    // The panel widget falls back to its first supported region; the resource
+    // kinds it serves come from its resource-panel edges.
     expect(workbench.layout.getPanel("inspector-panel")).toMatchObject({
       region: "main",
       rendererId: "inspector",

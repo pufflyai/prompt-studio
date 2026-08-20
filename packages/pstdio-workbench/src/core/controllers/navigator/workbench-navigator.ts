@@ -55,6 +55,8 @@ export interface WorkbenchNavigatorCommitInput {
 
 export interface WorkbenchNavigator {
   configure(hooks: WorkbenchNavigatorHostHooks): void;
+  // The currently selected resource as the host sees it.
+  getSelectedResource(): ResourceRef | undefined;
   // Resolves fallbacks (last or default resource) and commits atomically.
   open(target: WorkbenchNavigationTarget): Promise<WorkbenchNavigationResult>;
   // Commits an already-resolved pair synchronously. A failed target changes nothing.
@@ -68,6 +70,8 @@ export interface WorkbenchNavigator {
 export interface CreateWorkbenchNavigatorInput {
   modes: WorkbenchModeRegistry;
   getSelectedResource(): ResourceRef | undefined;
+  // Default presentation used when the host configures no presentResource hook.
+  presentResource?(resource: ResourceRef, input: { replaceActive: boolean }): Promise<unknown> | unknown;
 }
 
 // A mode without declared kinds keeps the legacy accept-anything behavior until
@@ -82,6 +86,9 @@ const lastResourceKey = (projectId: string | undefined, modeId: string) => `${pr
 
 export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): WorkbenchNavigator => {
   let hooks: WorkbenchNavigatorHostHooks = {};
+  // Hosts without an applySelection hook still get consistent commit semantics:
+  // the navigator remembers the committed resource itself.
+  let fallbackSelection: ResourceRef | undefined;
   const lastResources = new Map<string, ResourceRef>();
   const listeners = new Set<(commit: WorkbenchNavigationCommit) => void>();
 
@@ -90,7 +97,10 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
     lastResources.set(lastResourceKey(hooks.getProjectId?.(), modeId), resource);
   };
 
-  const getSelectedResource = () => hooks.getSelectedResource?.() ?? input.getSelectedResource();
+  const getSelectedResource = () => hooks.getSelectedResource?.() ?? fallbackSelection ?? input.getSelectedResource();
+
+  const presentResource = (resource: ResourceRef, present: { replaceActive: boolean }) =>
+    (hooks.presentResource ?? input.presentResource)?.(resource, present);
 
   const commitContext = (commit: WorkbenchNavigatorCommitInput): WorkbenchNavigationResult => {
     const activeModeId = input.modes.getActiveModeId();
@@ -122,7 +132,9 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
     // Commit order: selection, mode (seed deferred), scope rotation (exactly once),
     // reconciliation, breadcrumb. Observers of the final notification see one
     // committed pair, never an intermediate combination.
-    hooks.applySelection?.(commit.resource === undefined ? resource : (commit.resource ?? undefined));
+    if (hooks.applySelection)
+      hooks.applySelection(commit.resource === undefined ? resource : (commit.resource ?? undefined));
+    else fallbackSelection = resource;
     if (targetModeId !== activeModeId) {
       input.modes.setActiveMode(targetModeId, { deferSeed: true });
     }
@@ -162,9 +174,9 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
         resource: target.resource,
         replaceActive: target.replaceActive,
       });
-      if (result.ok && hooks.presentResource) {
+      if (result.ok) {
         try {
-          await hooks.presentResource(target.resource, { replaceActive: target.replaceActive ?? false });
+          await presentResource(target.resource, { replaceActive: target.replaceActive ?? false });
         } catch (error) {
           return {
             ok: false,
@@ -193,9 +205,9 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
         resource: fallback,
         replaceActive: target.replaceActive,
       });
-      if (result.ok && hooks.presentResource) {
+      if (result.ok) {
         try {
-          await hooks.presentResource(fallback, { replaceActive: target.replaceActive ?? false });
+          await presentResource(fallback, { replaceActive: target.replaceActive ?? false });
         } catch {
           // The stored fallback disappeared; commit the mode with a cleared context.
           lastResources.delete(lastResourceKey(hooks.getProjectId?.(), targetModeId));
@@ -218,6 +230,7 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
     configure(nextHooks) {
       hooks = nextHooks;
     },
+    getSelectedResource,
     open,
     commitContext,
     getLastResource: (projectId, modeId) => lastResources.get(lastResourceKey(projectId, modeId)),

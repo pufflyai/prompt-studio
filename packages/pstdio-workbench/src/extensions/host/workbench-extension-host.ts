@@ -27,6 +27,11 @@ import {
 } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
+import {
+  createWorkbenchCompositionRegistry,
+  reconcileCompositionLayout,
+  type WorkbenchCompositionRegistry,
+} from "../contributions/composition-contributions";
 import { registerWorkbenchExtensionDataTableRenderers } from "../contributions/data-table-renderer-contributions";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
@@ -39,11 +44,9 @@ import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanb
 import {
   panelMenuDeclarationOffsets,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
-  toWorkbenchPanelEligibility,
-  toWorkbenchPanelMenus,
+  toWorkbenchCompositionPanelContribution,
 } from "../contributions/panel-contributions";
-import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
+import { registerWorkbenchExtensionRoutes } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import {
@@ -214,27 +217,54 @@ const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInp
     return [
       registerWorkbenchExtensionPanel({
         workbench: input.workbench,
-        contribution: {
-          id: panel.id,
-          title: text(panel.title, panel.id),
-          region: panel.region,
-          closable: panel.closable,
+        contribution: toWorkbenchCompositionPanelContribution({
+          panel,
           rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-          singleton: true,
-          resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
-          eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-          panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuOffsets[index]!),
-          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
-          config: {
-            ...toBridgeWebviewConfig(panel.webview),
-            ...(panel.region === "overlay"
-              ? { size: "lg", scrollBehavior: "inside", contentHeight: "min(560px, calc(100dvh - 48px))" }
-              : {}),
-          },
-        },
+          declarationIndex: index,
+          menuDeclarationOffset: menuOffsets[index]!,
+          resourcePanels: input.metadata.resourcePanels,
+          config: toBridgeWebviewConfig(panel.webview),
+        }),
       }),
     ];
   });
+};
+
+// Status items are chrome contributions: the host renders them in the status
+// surface and keeps them out of docked layout and persistence. A `when.mode`
+// expression scopes the item to its modes.
+const registerStatusItems = (input: RegisterWorkbenchExtensionContributionsInput) => {
+  const disposables: Disposable[] = [];
+  for (const [index, item] of (input.metadata.statusItems ?? []).entries()) {
+    if (!item.webview) continue;
+    disposables.push(
+      input.workbench.layout.registerWidget({
+        id: item.id,
+        title: text(item.title, item.id),
+        region: "status",
+        rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+        closable: false,
+        priority: -index,
+        config: toBridgeWebviewConfig(item.webview),
+      }),
+    );
+    const matchesMode = () => {
+      const modes = item.when?.mode;
+      if (!modes) return true;
+      const active = input.workbench.modes.getActiveModeId() ?? "";
+      return Array.isArray(modes) ? modes.includes(active) : modes === active;
+    };
+    const sync = () => {
+      const placed = input.workbench.layout
+        .getLayout()
+        .regions.status.widgets.find((placement) => placement.contributionId === item.id);
+      if (matchesMode() && !placed) input.workbench.layout.openWidget(item.id, { region: "status" });
+      else if (!matchesMode() && placed) input.workbench.layout.removeWidgetPlacement(placed.widgetId);
+    };
+    sync();
+    disposables.push(input.workbench.modes.onDidChangeActive(sync));
+  }
+  return disposables;
 };
 
 const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) => {
@@ -291,33 +321,67 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
 };
 
 const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributionsInput) => {
-  const resourceKinds = new Set<string>();
-  for (const panel of input.metadata.panels) if (panel.resourceKind) resourceKinds.add(panel.resourceKind);
-  for (const renderer of input.metadata.kanbanRenderers ?? [])
-    if (renderer.resourceKind) resourceKinds.add(renderer.resourceKind);
+  const kindRecords = new Map<
+    string,
+    { surface: "primary" | "secondary" | "attached"; label?: string; icon?: string }
+  >();
+  for (const kind of input.metadata.resourceKinds ?? []) {
+    kindRecords.set(kind.id, {
+      surface: kind.surface,
+      label: kind.label ? text(kind.label, kind.id) : undefined,
+      icon: kind.icon,
+    });
+  }
+  for (const renderer of input.metadata.kanbanRenderers ?? []) {
+    if (renderer.resourceKind && !kindRecords.has(renderer.resourceKind)) {
+      kindRecords.set(renderer.resourceKind, { surface: "primary" });
+    }
+  }
 
+  const edges = input.metadata.resourcePanels ?? [];
   const disposables: Disposable[] = [];
-  for (const kind of resourceKinds) {
+  for (const [kind, record] of kindRecords) {
     if (!input.workbench.resources.getKind(kind)) {
       disposables.push(
-        input.workbench.resources.registerKind({ kind, label: kind, icon: "FileText", surface: "primary" }),
+        input.workbench.resources.registerKind({
+          kind,
+          label: record.label ?? kind,
+          icon: record.icon ?? "FileText",
+          surface: record.surface,
+        }),
       );
     }
-    const panels = input.metadata.panels.filter((panel) => panel.resourceKind === kind && panel.region !== "overlay");
+    const kindEdges = edges.filter((edge) => edge.resourceKind === kind);
+    const panels = kindEdges
+      .map((edge) => ({ edge, panel: input.metadata.panels.find((candidate) => candidate.id === edge.panel) }))
+      .filter((entry): entry is { edge: (typeof kindEdges)[number]; panel: (typeof input.metadata.panels)[number] } =>
+        Boolean(entry.panel),
+      );
     if (panels.length > 0) {
       disposables.push(
         input.workbench.resources.registerPresenter({
           id: `workbench.extension.resource.${kind}`,
           canOpen: (resource) => resource.kind === kind,
           open: (resource) => {
-            const instances = panels.map((panel) =>
+            // Reuse a placement where the composition resolver (or the user) put
+            // it; only unplaced panels fall back to their default region.
+            const placedRegion = (panelId: string) => {
+              const layout = input.workbench.layout.getLayout();
+              const dockedRegions = ["sidenav", "main", "secondary", "side"] as const;
+              return dockedRegions.find((region) =>
+                layout.regions[region].widgets.some((placement) => placement.contributionId === panelId),
+              );
+            };
+            const instances = panels.map(({ panel }) =>
               input.workbench.layout.openPanel(panel.id, {
+                region: placedRegion(panel.id),
                 resource,
                 title: resource.label ?? resource.id ?? resource.uri,
                 strategy: { kind: "persistent" },
               }),
             );
-            return instances.find((_instance, index) => panels[index]?.region === "main") ?? instances[0]!;
+            const primaryIndex = panels.findIndex(({ edge }) => edge.slot === "primary");
+            return instances[primaryIndex >= 0 ? primaryIndex : 0]!;
           },
         }),
       );
@@ -327,56 +391,105 @@ const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributio
 };
 
 type WorkbenchExtensionModeRecord = WorkbenchExtensionMetadata["modes"][number];
-type WorkbenchExtensionModeLayout = NonNullable<WorkbenchExtensionModeRecord["layout"]>;
-type WorkbenchExtensionModeOpenEntry = NonNullable<WorkbenchExtensionModeLayout["open"]>[number];
 
-const openModePanel = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
-  if (!entry.panel) return;
-  ctx.layout.openPanel(entry.panel, {
-    region: entry.region,
-    pinned: entry.pinned,
-    title: text(entry.title),
-    strategy: { kind: "persistent" },
-  });
-  // Seeding a Side Panel arrangement is ingress — reveal the region so the mode's
-  // declared layout is actually visible the first time the mode opens.
-  const region = entry.region ?? ctx.layout.getPanel(entry.panel)?.region;
-  if (region === "side") ctx.shell.setSidePanelPresentation("attached");
-};
-
-const openModeResource = (
-  input: RegisterWorkbenchExtensionContributionsInput,
-  ctx: WorkbenchModeActivationContext,
-  entry: WorkbenchExtensionModeOpenEntry,
-) => {
-  if (!entry.resource) return;
-  const route = input.metadata.routes.find(
-    (candidate) => candidate.id === entry.resource || candidate.path === entry.resource,
-  );
-  if (!route) return;
-  void ctx.resources.openResource(routeResource(route, input.routeResourceKind ?? routeResourceKindDefault));
-};
-
-const activateModeLayout = (
-  input: RegisterWorkbenchExtensionContributionsInput,
-  ctx: WorkbenchModeActivationContext,
-  mode: WorkbenchExtensionModeRecord,
-) => {
-  for (const entry of mode.layout?.open ?? []) {
-    openModePanel(ctx, entry);
-    openModeResource(input, ctx, entry);
+// Registers the metadata composition (resource kinds, panel capabilities,
+// resource-panel edges, and mode recipes) so the composition resolver can place
+// panels per active mode-resource context.
+const registerComposition = (input: RegisterWorkbenchExtensionContributionsInput) => {
+  const registry = createWorkbenchCompositionRegistry();
+  const disposables: Disposable[] = [];
+  for (const kind of input.metadata.resourceKinds ?? []) {
+    disposables.push(
+      registry.registerResourceKind({
+        id: kind.id,
+        extensionId: kind.extensionId,
+        surface: kind.surface,
+        slots: kind.slots,
+      }),
+    );
   }
+  for (const panel of input.metadata.panels) {
+    disposables.push(
+      registry.registerPanelCapability({
+        id: panel.id,
+        extensionId: panel.extensionId,
+        title: text(panel.title, panel.id),
+        icon: panel.icon,
+        supportedRegions: panel.supportedRegions,
+      }),
+    );
+  }
+  for (const edge of input.metadata.resourcePanels ?? []) {
+    disposables.push(
+      registry.registerResourcePanel({
+        id: edge.id,
+        extensionId: edge.extensionId,
+        resourceKind: edge.resourceKind,
+        panel: edge.panel,
+        slot: edge.slot,
+      }),
+    );
+  }
+  for (const mode of input.metadata.modes) {
+    disposables.push(
+      registry.registerModeComposition({
+        id: mode.modeId,
+        resources: mode.resources,
+        modePanels: mode.modePanels,
+      }),
+    );
+  }
+  return { registry, disposables };
 };
 
-const registerModes = (input: RegisterWorkbenchExtensionContributionsInput) =>
+const extensionResourceUri = (type: string, id: string) =>
+  `pstdio://extension-resource/${encodeURIComponent(type)}/${encodeURIComponent(id)}`;
+
+const toModeDefaultResource = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  defaultResource: WorkbenchExtensionModeRecord["defaultResource"],
+) => {
+  if (!defaultResource) return undefined;
+  if ("commandId" in defaultResource) {
+    return async () => {
+      const result = (await input.executeCommand(defaultResource.commandId, { projectId: input.projectId })) as
+        | { type?: string; id?: string; label?: string }
+        | undefined;
+      if (!result || typeof result.type !== "string" || typeof result.id !== "string") return undefined;
+      return {
+        kind: result.type,
+        uri: extensionResourceUri(result.type, result.id),
+        id: result.id,
+        label: result.label,
+      };
+    };
+  }
+  return {
+    kind: defaultResource.type,
+    uri: extensionResourceUri(defaultResource.type, defaultResource.id),
+    id: defaultResource.id,
+    label: defaultResource.label,
+  };
+};
+
+const registerModes = (input: RegisterWorkbenchExtensionContributionsInput, registry: WorkbenchCompositionRegistry) =>
   input.metadata.modes.map((mode) =>
     input.workbench.modes.registerMode({
       id: mode.modeId,
       label: text(mode.label, mode.modeId),
-      panels: mode.layout?.panels,
+      panels: mode.panelRegions,
+      resourceKinds: Object.keys(mode.resources ?? {}),
+      defaultResource: toModeDefaultResource(input, mode.defaultResource),
       activate: () => undefined,
-      seed: (ctx) => {
-        activateModeLayout(input, ctx, mode);
+      reconcile: (ctx: WorkbenchModeActivationContext) => {
+        const resource = ctx.navigator.getSelectedResource();
+        reconcileCompositionLayout(
+          { layout: ctx.layout, notifications: ctx.notifications },
+          { registry, modeId: mode.modeId, resourceKind: resource?.kind },
+        );
+        // Reveal the Side Panel when the recipe placed something there so the
+        // mode's declared layout is visible the first time it opens.
+        if (ctx.layout.getLayout().regions.side.widgets.length > 0) ctx.shell.setSidePanelPresentation("attached");
       },
     }),
   );
@@ -398,6 +511,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
       input.metadata.kanbanRenderers ?? [],
       undefined,
       input.metadata.panels,
+      input.metadata.resourcePanels,
     ),
   );
   disposables.push(
@@ -405,6 +519,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
       context,
       input.metadata.dataTableRenderers ?? [],
       input.metadata.panels,
+      input.metadata.resourcePanels,
     ),
   );
   disposables.push(
@@ -426,8 +541,11 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
       workbench: input.workbench,
     }),
   );
+  disposables.push(...registerStatusItems(input));
   disposables.push(...registerResourcePresenters(input));
-  disposables.push(...registerModes(input));
+  const composition = registerComposition(input);
+  disposables.push(...composition.disposables);
+  disposables.push(...registerModes(input, composition.registry));
 
   return {
     dispose() {

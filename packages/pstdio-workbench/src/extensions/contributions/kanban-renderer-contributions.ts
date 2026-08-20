@@ -36,9 +36,7 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
-  toWorkbenchExtensionPlacementMetadata,
-  toWorkbenchPanelEligibility,
-  toWorkbenchPanelMenus,
+  toWorkbenchCompositionPanelContribution,
 } from "./panel-contributions";
 
 type BoardColumnConfig = ReturnType<NonNullable<KanbanRendererContribution["getBoardColumnConfig"]>>;
@@ -237,6 +235,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
   records: readonly WorkbenchExtensionKanbanRendererRecord[],
   adapter: WorkbenchExtensionKanbanRendererAdapter = {},
   panels: WorkbenchExtensionMetadata["panels"] = [],
+  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
 ) => {
   const disposables: Disposable[] = [];
   const localize: Localizer =
@@ -335,19 +334,13 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     disposables.push(
       registerWorkbenchExtensionPanel({
         workbench: context.workbench,
-        contribution: {
-          id: panel.id,
-          title: text(panel.title, panel.id),
-          icon: panel.icon,
-          region: panel.region,
-          closable: panel.closable,
+        contribution: toWorkbenchCompositionPanelContribution({
+          panel,
           rendererId,
-          singleton: true,
-          resourceKinds: panel.resourceKind ? [panel.resourceKind] : undefined,
-          eligibleLocations: toWorkbenchPanelEligibility(panel.eligibleLocations),
-          panelMenus: toWorkbenchPanelMenus(panel.panelMenus, menuOffsets[index]!),
-          ...toWorkbenchExtensionPlacementMetadata({ placement: panel.placement, declarationIndex: index }),
-        },
+          declarationIndex: index,
+          menuDeclarationOffset: menuOffsets[index]!,
+          resourcePanels,
+        }),
       }),
     );
   });

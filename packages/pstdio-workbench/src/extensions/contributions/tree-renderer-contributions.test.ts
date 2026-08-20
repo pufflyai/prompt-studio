@@ -24,11 +24,18 @@ const metadata = {
     {
       id: "lab.ticketFiles",
       extensionId: "pstdio.lab",
-      region: "main",
+      supportedRegions: ["main"],
       title: "Files",
-      closable: false,
-      resourceKind: "ticket",
       renderer: { kind: "tree", id: "lab.files" },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "lab.ticketFiles",
+      extensionId: "pstdio.lab",
+      resourceKind: "ticket",
+      panel: "lab.ticketFiles",
+      slot: "navigation",
     },
   ],
   treeRenderers: [
@@ -37,6 +44,7 @@ const metadata = {
       extensionId: "pstdio.lab",
       title: "Files",
       icon: "Files",
+      resourceKind: "ticket",
       bodyHandlerId: "lab.files.body",
       childrenHandlerId: "lab.files.children",
       footerHandlerId: "lab.files.footer",

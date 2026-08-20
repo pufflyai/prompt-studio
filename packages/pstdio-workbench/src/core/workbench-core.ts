@@ -614,6 +614,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   core.navigator = createWorkbenchNavigator({
     modes: core.modes,
     getSelectedResource: () => core.getPrimaryResource(),
+    presentResource: (resource, present) => core.resources.openResource(resource, present),
   });
   core.history = createHistoryController({
     layout: core.layout,

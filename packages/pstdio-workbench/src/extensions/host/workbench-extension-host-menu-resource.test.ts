@@ -38,14 +38,29 @@ const metadata = {
   treeItems: [],
   treeRenderers: [],
   kanbanRenderers: [],
+  resourceKinds: [
+    {
+      id: "ticket",
+      extensionId: "pstdio.lab",
+      surface: "primary",
+      slots: { primary: { cardinality: "one", external: false } },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "lab.ticketPanel",
+      extensionId: "pstdio.lab",
+      resourceKind: "ticket",
+      panel: "lab.ticketPanel",
+      slot: "primary",
+    },
+  ],
   panels: [
     {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
-      region: "main",
+      supportedRegions: ["main"],
       title: "Ticket",
-      closable: false,
-      resourceKind: "ticket",
       webview,
     },
   ],

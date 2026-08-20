@@ -23,10 +23,8 @@ const metadata = {
     {
       id: "lab.ticketFiles",
       extensionId: "pstdio.lab",
-      region: "main",
+      supportedRegions: ["main"],
       title: "Files",
-      closable: false,
-      resourceKind: "ticket",
       renderer: { kind: "tree", id: "lab.files" },
     },
   ],
@@ -51,35 +49,30 @@ const success = (commandId: string, value: unknown): CommandExecuteResponse => (
 });
 
 describe("registerWorkbenchExtensionTreeRenderers placement", () => {
-  test("honors panel placement when registering and opening tree-backed panels", () => {
+  test("registers and opens tree-backed panels in declaration order", () => {
     const workbench = createWorkbenchCore();
     const placementMetadata = {
       ...metadata,
       panels: [
         {
-          id: "lab.last",
+          id: "lab.a",
           extensionId: "pstdio.lab",
           title: "Last",
-          closable: false,
-          region: "main",
-          placement: "last",
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "lab.files" },
         },
         {
-          id: "lab.default",
+          id: "lab.b",
           extensionId: "pstdio.lab",
           title: "Default",
-          closable: false,
-          region: "main",
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "lab.files" },
         },
         {
-          id: "lab.first",
+          id: "lab.c",
           extensionId: "pstdio.lab",
           title: "First",
-          closable: false,
-          region: "main",
-          placement: "first",
+          supportedRegions: ["main"],
           renderer: { kind: "tree", id: "lab.files" },
         },
       ],
@@ -92,16 +85,16 @@ describe("registerWorkbenchExtensionTreeRenderers placement", () => {
       workbench,
     });
 
-    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual(["lab.first", "lab.default", "lab.last"]);
+    expect(workbench.layout.listPanels().map((panel) => panel.id)).toEqual(["lab.a", "lab.b", "lab.c"]);
 
-    workbench.layout.openPanel("lab.last", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("lab.default", { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel("lab.first", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.a", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.b", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("lab.c", { strategy: { kind: "persistent" } });
 
     expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
-      "lab.first",
-      "lab.default",
-      "lab.last",
+      "lab.a",
+      "lab.b",
+      "lab.c",
     ]);
   });
 });

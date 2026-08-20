@@ -60,13 +60,43 @@ const metadata = {
       extensionId: "pstdio.lab",
       modeId: "lab.review",
       label: "Review",
-      layout: {
-        panels: ["main"],
-        open: [
-          { region: "main", panel: "lab.ticketPanel", pinned: true },
-          { region: "side", panel: "lab.rows" },
-        ],
+      panelRegions: ["main", "side"],
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            auxiliary: { region: "side" },
+          },
+        },
       },
+    },
+  ],
+  resourceKinds: [
+    {
+      id: "ticket",
+      extensionId: "pstdio.lab",
+      surface: "primary",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        auxiliary: { cardinality: "many", external: true },
+      },
+    },
+  ],
+  resourcePanels: [
+    {
+      id: "lab.ticketPanel",
+      extensionId: "pstdio.lab",
+      resourceKind: "ticket",
+      panel: "lab.ticketPanel",
+      slot: "primary",
+    },
+    { id: "lab.rows", extensionId: "pstdio.lab", resourceKind: "ticket", panel: "lab.rows", slot: "auxiliary" },
+    {
+      id: "lab.ticketModal",
+      extensionId: "pstdio.lab",
+      resourceKind: "ticket",
+      panel: "lab.ticketModal",
+      slot: "auxiliary",
     },
   ],
   routes: [
@@ -115,28 +145,22 @@ const metadata = {
     {
       id: "lab.rows",
       extensionId: "pstdio.lab",
-      region: "main",
+      supportedRegions: ["main", "side"],
       title: "Rows",
-      closable: false,
-      resourceKind: "ticket",
       renderer: { kind: "kanban", id: "lab.rows" },
     },
     {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
-      region: "main",
+      supportedRegions: ["main"],
       title: "Ticket",
-      closable: false,
-      resourceKind: "ticket",
       webview,
     },
     {
       id: "lab.ticketModal",
       extensionId: "pstdio.lab",
-      region: "overlay",
+      supportedRegions: ["side"],
       title: "Ticket modal",
-      closable: true,
-      resourceKind: "ticket",
       webview: { ...webview, moduleUrl: "/ticket-modal.js" },
     },
   ],
@@ -172,7 +196,7 @@ describe("registerWorkbenchExtensionContributions", () => {
       config: expect.objectContaining({ moduleUrl: "/ticket.js" }),
     });
     expect(workbench.layout.getPanel("lab.ticketModal")).toMatchObject({
-      region: "overlay",
+      region: "side",
       rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
       resourceKinds: ["ticket"],
       config: expect.objectContaining({
@@ -240,12 +264,15 @@ describe("registerWorkbenchExtensionContributions", () => {
     });
     expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.details" });
 
-    workbench.modes.setActiveMode("lab.review");
-    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({
-      panelId: "lab.ticketPanel",
-      pinned: true,
+    await workbench.navigator.open({
+      modeId: "lab.review",
+      resource: { kind: "ticket", uri: "workbench://ticket/T-1", id: "T-1", label: "T-1" },
     });
-    expect(workbench.layout.listPanelInstances("side").at(-1)).toMatchObject({ panelId: "lab.rows" });
+    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.ticketPanel" });
+    expect(workbench.layout.listPanelInstances("side").map((instance) => instance.panelId)).toEqual([
+      "lab.rows",
+      "lab.ticketModal",
+    ]);
     expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
   });
 
