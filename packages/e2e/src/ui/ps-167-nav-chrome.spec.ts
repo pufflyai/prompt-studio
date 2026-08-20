@@ -84,7 +84,10 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(secondary)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /(?:Open|Show) Side Panel/ })).toHaveCount(0);
+  // A session can be started from any project location, so the Tickets board offers the
+  // Side Panel exactly as the Workspaces view does. Its control belongs to the Nav
+  // Chrome, beside the other region controls.
+  await expect(nav.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
   await orderedCenters([back, forward, secondary]);
 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
