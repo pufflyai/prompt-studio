@@ -1,4 +1,4 @@
-import { CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
+import { Box, CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ListRow } from "@pstdio/ui";
@@ -152,18 +152,23 @@ const WorkbenchRegionTabContextMenu = (props: {
 const WorkbenchRegionTabLabel = (props: {
   contentRendererId?: string;
   icon?: string;
+  id: string;
   label: string;
   placement: WorkbenchWidgetPlacement;
   workbench: WorkbenchCore;
 }) => {
-  const { contentRendererId, icon, label, placement, workbench } = props;
+  const { contentRendererId, icon, id, label, placement, workbench } = props;
   if (contentRendererId) {
-    return <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contentRendererId} />;
+    return (
+      <Box id={id} display="contents">
+        <WorkbenchTabRenderer workbench={workbench} placement={placement} rendererId={contentRendererId} />
+      </Box>
+    );
   }
   return (
     <>
       {icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null}
-      <Text as="span" minW="0" truncate>
+      <Text as="span" id={id} minW="0" truncate>
         {label}
       </Text>
     </>
@@ -251,6 +256,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { activeWidgetId, disabled = false, placement, sortable = false, workbench } = props;
   const isActive = placement.widgetId === activeWidgetId;
   const label = placement.title ?? placement.contributionId;
+  const labelId = `workbench-tab-label-${placement.widgetId}`;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const icon = resolveTabIconName(
     placement,
@@ -272,10 +278,11 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         minW="0"
         flexShrink={0}
         title={label}
-        // The tab is named after the panel it opens. Without this, the nested Close
-        // button's label joins the computed name, so a tab would be called
-        // "Artifacts Close Artifacts" and rename itself whenever it became closable.
-        aria-label={label}
+        // Name the tab from its label element alone. Computing the name from the tab's
+        // contents would fold in the nested Close button, so a closable tab would be
+        // called "Artifacts Close Artifacts" and rename itself the moment it became
+        // closable. The label element still carries any status or count a tab renders.
+        aria-labelledby={labelId}
         disabled={disabled}
         className="group"
         aria-haspopup={behavior.hasCustomMenu || behavior.hasContextMenu ? "menu" : undefined}
@@ -293,6 +300,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         <WorkbenchRegionTabLabel
           contentRendererId={contentRendererId}
           icon={icon}
+          id={labelId}
           label={label}
           placement={placement}
           workbench={workbench}
