@@ -32,6 +32,8 @@ const crossExtensionMetadata = {
             primary: { region: "main", required: true },
             inspector: { region: "side", allowedRegions: ["side", "secondary"] },
           },
+          // An external contribution is optional until a mode names it.
+          panels: { "insights.details": { region: "side" } },
         },
       },
     },
@@ -89,30 +91,53 @@ const crossExtensionMetadata = {
   ],
 } satisfies DashboardExtensionMetadata;
 
+const withoutNamedPanel = {
+  ...crossExtensionMetadata,
+  modes: crossExtensionMetadata.modes.map((mode) => ({
+    ...mode,
+    resources: { "planner.ticket": { slots: mode.resources["planner.ticket"].slots } },
+  })),
+} satisfies DashboardExtensionMetadata;
+
+const openTicket = async (metadata: DashboardExtensionMetadata) => {
+  const workbench = createWorkbenchCore();
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const disposables = registerExtensionContributions({
+    ctx: workbench,
+    executeCommand: async () => ({ outcome: { ok: true, value: undefined } }) as never,
+    metadata,
+    projectId: "project-1",
+  });
+  await workbench.navigator.open({
+    modeId: "planner.ticket",
+    resource: { kind: "planner.ticket", uri: "pstdio://ticket/PS-1", id: "PS-1", label: "PS-1" },
+  });
+  const regionOf = (contributionId: string) =>
+    Object.values(workbench.layout.getLayout().regions).find((region) =>
+      region.widgets.some((placement) => placement.contributionId === contributionId),
+    )?.id;
+  return { disposables, regionOf };
+};
+
 describe("cross-extension composition", () => {
   test("places a panel one extension contributed into another extension's open slot", async () => {
-    const workbench = createWorkbenchCore();
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposables = registerExtensionContributions({
-      ctx: workbench,
-      executeCommand: async () => ({ outcome: { ok: true, value: undefined } }) as never,
-      metadata: crossExtensionMetadata,
-      projectId: "project-1",
-    });
+    const { disposables, regionOf } = await openTicket(crossExtensionMetadata);
 
     try {
-      await workbench.navigator.open({
-        modeId: "planner.ticket",
-        resource: { kind: "planner.ticket", uri: "pstdio://ticket/PS-1", id: "PS-1", label: "PS-1" },
-      });
-
-      const regionOf = (contributionId: string) =>
-        Object.values(workbench.layout.getLayout().regions).find((region) =>
-          region.widgets.some((placement) => placement.contributionId === contributionId),
-        )?.id;
-
       expect(regionOf("dashboard-workbench.extension-view.planner.editor")).toBe("main");
       expect(regionOf("dashboard-workbench.extension-view.insights.details")).toBe("side");
+    } finally {
+      for (const disposable of disposables) disposable.dispose();
+    }
+  });
+
+  test("leaves an external contribution unplaced until the mode names it", async () => {
+    const { disposables, regionOf } = await openTicket(withoutNamedPanel);
+
+    try {
+      expect(regionOf("dashboard-workbench.extension-view.planner.editor")).toBe("main");
+      // Available through Add Panel, but the owner's slot recipe does not place it.
+      expect(regionOf("dashboard-workbench.extension-view.insights.details")).toBeUndefined();
     } finally {
       for (const disposable of disposables) disposable.dispose();
     }

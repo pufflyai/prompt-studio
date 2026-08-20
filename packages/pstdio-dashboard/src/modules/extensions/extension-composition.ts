@@ -154,9 +154,13 @@ export const isExtensionResourceSidenavView = (
   panel: Pick<ExtensionPanelRecord, "id">,
 ) => Boolean(resourceSidenavModeId(metadata, panel));
 
-export const compositionResourceKinds = (metadata: DashboardExtensionMetadata) => [
-  ...new Set((metadata.resourcePanels ?? []).map((edge) => edge.resourceKind)),
-];
+// The resource kinds this metadata OWNS. Contributions register one extension at a
+// time, and a resource kind has exactly one owner: the extension that declared it. An
+// extension contributing a panel into another extension's open slot must not also
+// claim that kind's resource presenter, or registering the owner fails and the owner
+// loses every contribution it declared.
+export const compositionResourceKinds = (metadata: DashboardExtensionMetadata) =>
+  (metadata.resourceKinds ?? []).map((kind) => kind.id);
 
 // The panels one mode can place: mode-wide entries, resource panel overrides, and the
 // panels bound to the slots its resource recipes place.
