@@ -11,6 +11,7 @@ export interface ExtensionCommandEvent {
 const subscribers = new Set<(event: ExtensionCommandEvent) => void>();
 export interface ExtensionRefreshEvent extends FileRendererRefreshEnvelope {
   id: string;
+  projectId?: string;
 }
 
 const eventSubscribers = new Set<(event: ExtensionRefreshEvent) => void>();

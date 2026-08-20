@@ -123,6 +123,16 @@ export const executeExtensionCommandHandler = (
         metadata: body.metadata as JsonObject | undefined,
       });
 
+      if (body.source !== "dashboard") {
+        for (const eventId of eventIds) {
+          deps.eventBus.emit("extension_events", "set", {
+            id: crypto.randomUUID(),
+            projectId,
+            eventId,
+          });
+        }
+      }
+
       return c.json({ commandId, extensionId: handler.extensionId, eventIds: [...eventIds], outcome }, 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);

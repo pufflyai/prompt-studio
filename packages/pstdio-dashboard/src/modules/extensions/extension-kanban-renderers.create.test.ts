@@ -60,7 +60,24 @@ describe("registerExtensionKanbanRenderers create form", () => {
             return response(
               commandId,
               commandId === "pstdio-planner.create-ticket"
-                ? { id: "ticket-1", shorthand: "PS-1", title: "Created ticket" }
+                ? {
+                    id: "ticket-1",
+                    shorthand: "PS-1",
+                    title: "Created ticket",
+                    resource: {
+                      type: "ticket",
+                      id: "ticket-1",
+                      label: "PS-1 Created ticket",
+                      metadata: {
+                        shorthand: "PS-1",
+                        resourceParent: {
+                          type: "extension-view",
+                          id: "pstdio-planner.tickets",
+                          label: "Tickets",
+                        },
+                      },
+                    },
+                  }
                 : {},
             );
           },
@@ -128,7 +145,15 @@ describe("registerExtensionKanbanRenderers create form", () => {
         kind: "ticket",
         id: "ticket-1",
         label: "PS-1 Created ticket",
-        metadata: { projectId: "proj-1" },
+        metadata: {
+          projectId: "proj-1",
+          shorthand: "PS-1",
+          resourceParent: {
+            type: "extension-view",
+            id: "pstdio-planner.tickets",
+            label: "Tickets",
+          },
+        },
       }),
     ]);
   });

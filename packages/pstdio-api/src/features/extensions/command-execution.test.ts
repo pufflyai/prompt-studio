@@ -15,6 +15,7 @@ let sourcePath: string;
 let projectId: string;
 let previousPstdioHome: string | undefined;
 let previousDefaultExtensions: string | undefined;
+let appEventBus: Awaited<ReturnType<typeof createApp>>["eventBus"];
 
 const writeCommandExtension = (root: string) => {
   const extensionRoot = join(root, "extensions", "lab");
@@ -116,6 +117,7 @@ beforeEach(async () => {
   });
   app = created.app;
   closeApp = created.close;
+  appEventBus = created.eventBus;
 
   const project = await createJson("/v1/projects", { name: "Command Project", agents: [testHarnessId("opencode")] });
   projectId = project.id;
@@ -172,6 +174,8 @@ describe("extension command execution routes", () => {
   });
 
   test("executes commands with params, repo context, resource context, and persisted storage", async () => {
+    const syncEvents: Array<{ table: string; data: unknown }> = [];
+    const unsubscribe = appEventBus.subscribe((event) => syncEvents.push({ table: event.table, data: event.data }));
     const repo = await createJson(`/v1/projects/${projectId}/repos`, { name: "repo", path: tempRoot });
     const bumpResponse = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.bump/execute`, {
       method: "POST",
@@ -200,6 +204,11 @@ describe("extension command execution routes", () => {
         status: "success",
         value: { counter: 2, projectId, projectShorthand: "CP", repoPath: tempRoot, resourceId: "PS-1" },
       },
+    });
+    unsubscribe();
+    expect(syncEvents).toContainEqual({
+      table: "extension_events",
+      data: expect.objectContaining({ projectId, eventId: "lab.counter.changed" }),
     });
 
     const readResponse = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.read/execute`, {

@@ -1,7 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/collections";
+import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
@@ -83,6 +85,13 @@ export const createTicketCommand = defineCommand({
       updatedAt: now,
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
-    return ticket;
+    return {
+      ...ticket,
+      resource: {
+        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket])),
+        projectId: ctx.projectId,
+        icon: TICKET_RESOURCE_ICON,
+      },
+    };
   },
 });

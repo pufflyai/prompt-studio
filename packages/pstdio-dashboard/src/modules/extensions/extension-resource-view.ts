@@ -1,11 +1,14 @@
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
+import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb, updateResourceBreadcrumbLabel } from "@/shared/workbench/resource-sync";
+import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { isSidenavResourceTree, type ResourcePanelBinding } from "./extension-composition";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
+import { resourceFromQueryValue } from "./extension-resource-query";
 import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
 const outcomeValueId = (value: unknown) => {
@@ -186,9 +189,14 @@ const openResourceInspectorGroup = (
 // the resource kind + cached manifest (PS-11), so no renderer metadata is on the resource.
 export const registerExtensionResourceView = (
   ctx: WorkbenchModuleContext,
-  input: { metadata: DashboardExtensionMetadata; projectId: string },
+  input: {
+    metadata: DashboardExtensionMetadata;
+    projectId: string;
+    executeCommand?: ExecuteDashboardExtensionCommand;
+  },
 ) => {
   const disposables: Disposable[] = [];
+  const executeCommand = input.executeCommand ?? executeExtensionCommand;
   const groups = groupResourceEditorViews(input.metadata);
   const groupByKind = new Map(groups.map((group) => [group.kind, group]));
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
@@ -250,6 +258,28 @@ export const registerExtensionResourceView = (
   // refresh just its breadcrumb when a save changes the display title.
   let activeResource: ResourceRef | undefined;
 
+  const refreshActiveResource = async (rendererId: string) => {
+    const current = activeResource;
+    if (!current?.id) return;
+    const renderer = input.metadata.kanbanRenderers?.find(
+      (candidate) => candidate.id === rendererId && candidate.resourceKind === current.kind,
+    );
+    if (!renderer) return;
+
+    const response = await executeCommand(input.projectId, renderer.queryHandlerId, { params: {} });
+    if (!response.outcome.ok || activeResource !== current) return;
+    const refreshed = resourceFromQueryValue(response.outcome.value, current.id, input.projectId);
+    if (!refreshed || refreshed.kind !== current.kind) return;
+
+    current.label = refreshed.label;
+    current.icon = refreshed.icon;
+    current.metadata = refreshed.metadata;
+    setResourceBreadcrumb(ctx, current);
+    const group = groupByKind.get(current.kind);
+    if (group) updateResourceGroupTitles(ctx, group, current);
+    ctx.lastResource.set(current);
+  };
+
   disposables.push(
     ctx.onDidChangePrimaryResource((resource) => {
       const group = resource ? groupByKind.get(resource.kind) : undefined;
@@ -280,8 +310,15 @@ export const registerExtensionResourceView = (
       activeResource.label = label;
       updateResourceBreadcrumbLabel(ctx, activeResource);
       updateResourceGroupTitles(ctx, group, activeResource);
+      ctx.lastResource.set(activeResource);
     }),
   });
+
+  disposables.push(
+    ctx.renderers.onDidRefreshKanbanRenderer((event) => {
+      void refreshActiveResource(event.kanbanRendererId).catch(() => undefined);
+    }),
+  );
 
   return disposables;
 };

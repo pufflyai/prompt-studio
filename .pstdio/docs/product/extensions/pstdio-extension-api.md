@@ -213,6 +213,30 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 
 UI-facing contributions attach to implemented host-owned targets. The attachment model is covered in [Dashboard UI attachments](./workbench-attachments.md).
 
+## Kanban create results
+
+A Kanban `createRow` command may return a `resource` next to the created record. Return the same canonical resource
+reference used by the renderer query. Include `metadata.resourceParent` when the resource has a breadcrumb parent.
+The dashboard opens this reference after creation, so the created resource has the same label and hierarchy as a row
+opened from the board.
+
+```ts
+return {
+  ...task,
+  resource: {
+    type: "task",
+    id: task.id,
+    label: task.title,
+    metadata: {
+      resourceParent: { type: "extension-view", id: "tasks", label: "Tasks" },
+    },
+  },
+};
+```
+
+The dashboard still falls back to the created record's `id`, `shorthand`, and `title` when `resource` is absent. That
+fallback has no extension-owned hierarchy metadata.
+
 ## IDs And Scopes
 
 For the package above:

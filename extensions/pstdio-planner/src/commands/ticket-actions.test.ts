@@ -36,6 +36,7 @@ describe("runAttemptCommand", () => {
   test("creates an anchored workspace and session with the ticket shorthand in the prompt", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const storedTicket = await ticketsCollection(storage).get(ticket.id);
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
 
@@ -59,11 +60,10 @@ describe("runAttemptCommand", () => {
         },
       }),
     );
-
     expect(result).toMatchObject({
       decision: "started",
       mode: "worktree",
-      ticket,
+      ticket: storedTicket,
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: { ...createSessionResource(), workspace_id: "workspace-1" },
       attempt: {
@@ -306,6 +306,7 @@ describe("createWorkspaceCommand", () => {
   test("creates an anchored workspace for the ticket without starting a session", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const storedTicket = await ticketsCollection(storage).get(ticket.id);
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
 
@@ -329,10 +330,9 @@ describe("createWorkspaceCommand", () => {
         },
       }),
     );
-
     expect(result).toEqual({
       mode: "worktree",
-      ticket,
+      ticket: storedTicket,
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: null,
     });

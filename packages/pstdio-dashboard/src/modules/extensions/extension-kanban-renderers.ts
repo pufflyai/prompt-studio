@@ -38,7 +38,7 @@ const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
 // ResourceRef so a kind-specific presenter (e.g. the ticket editor) can claim it.
 // Idempotent: a row resolved at click time is already a lifted ResourceRef, so it
 // passes through untouched rather than being re-lifted off a missing `type`.
-const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
+export const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
   if (isWorkbenchResource(resource)) return resource;
   const ref = resource as KanbanRendererResourceRef & { icon?: string };
@@ -83,7 +83,9 @@ const synthesizeCreatedResource = (
   created: unknown,
   projectId: string,
 ): ResourceRef | undefined => {
-  const row = created as { id?: string; shorthand?: string; title?: string } | undefined;
+  const row = created as { id?: string; resource?: unknown; shorthand?: string; title?: string } | undefined;
+  const resource = toWorkbenchResource(row?.resource, projectId);
+  if (resource) return resource;
   if (!row?.id || !record.resourceKind) return undefined;
   const label = [row.shorthand, row.title].filter(Boolean).join(" ") || row.id;
   return toWorkbenchResource({ type: record.resourceKind, id: row.id, projectId, label }, projectId);

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { registerExtensionResourceView } from "./extension-resource-view";
 
 const metadata = {
@@ -156,6 +157,114 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(workbench.layout.getLayout().regions.sidenav.widgets[0]?.widgetId).toBe(scratch.instanceId);
       expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.instanceId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["T-1 New title"]);
+    } finally {
+      disposable.dispose();
+    }
+  });
+
+  test("reloads the complete breadcrumb trail when the ticket renderer refreshes", async () => {
+    let storedResource: ResourceRef | undefined;
+    const workbench = createWorkbenchCore({
+      lastResourcePersistence: {
+        getLastResource: () => storedResource,
+        setLastResource: (resource) => {
+          storedResource = resource ? structuredClone(resource) : undefined;
+        },
+      },
+    });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "tickets.ticket", label: "Ticket", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.renderers.registerKanbanRenderer({
+      id: "tickets.board",
+      title: "Tickets",
+      resourceKind: "ticket",
+      attributes: [],
+      executeQuery: () => [],
+    });
+    workbench.layout.registerPanel({
+      closable: false,
+      id: "tickets.editor",
+      title: "Ticket",
+      region: "main",
+      rendererId: "tickets.content",
+      resourceKinds: ["ticket"],
+      panelMenus: [
+        {
+          id: "tickets.files",
+          title: "Files",
+          side: "left",
+          rendererId: "tickets.files",
+        },
+      ],
+    });
+
+    const refreshedResource = {
+      type: "ticket",
+      id: "ticket-1",
+      label: "T-1 New title",
+      metadata: {
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-0",
+          label: "T-0 New parent",
+          metadata: {
+            resourceParent: { type: "extension-view", id: "tickets.board", label: "Tickets" },
+          },
+        },
+      },
+    };
+    const executeCommand = async () => ({
+      commandId: "tickets.query",
+      extensionId: "tickets",
+      outcome: {
+        ok: true as const,
+        status: "success" as const,
+        value: { rows: [{ id: "ticket-1", title: "New title", resource: refreshedResource }] },
+      },
+    });
+    const disposable = workbench.registerModule({
+      id: "test.extension-resource-refresh",
+      activate: (ctx) => [
+        registerExtensionResourceHierarchy(ctx, { metadata, projectId: "project-1" }),
+        ...registerExtensionResourceView(ctx, { metadata, projectId: "project-1", executeCommand }),
+      ],
+    });
+    const resource = {
+      ...ticketResource,
+      metadata: {
+        projectId: "project-1",
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-0",
+          label: "T-0 Old parent",
+          metadata: {
+            resourceParent: { type: "extension-view", id: "tickets.board", label: "Tickets" },
+          },
+        },
+      },
+    } satisfies ResourceRef;
+
+    try {
+      await workbench.resources.openResource(resource, { replaceActive: true });
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+        "Tickets",
+        "T-0 Old parent",
+        "T-1 Old title",
+      ]);
+
+      workbench.renderers.refreshKanbanRenderer("tickets.board");
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+        "Tickets",
+        "T-0 New parent",
+        "T-1 New title",
+      ]);
+      expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("T-1 New title");
+      expect(storedResource?.label).toBe("T-1 New title");
+      expect((storedResource?.metadata?.resourceParent as { label?: string }).label).toBe("T-0 New parent");
     } finally {
       disposable.dispose();
     }

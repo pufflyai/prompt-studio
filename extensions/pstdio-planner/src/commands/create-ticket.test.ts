@@ -100,6 +100,30 @@ describe("createTicketCommand", () => {
     expect(created.statusId).toBe("ready");
     expect(created.tagIds).toEqual(["default-priority-high", "default-type-bug"]);
     expect(created.parentId).toBe(parent.id);
+    expect(created.resource).toEqual({
+      type: "ticket",
+      id: created.id,
+      projectId: "proj-1",
+      label: `${created.shorthand} Child`,
+      icon: "component",
+      metadata: {
+        shorthand: created.shorthand,
+        resourceParent: {
+          type: "ticket",
+          id: parent.id,
+          label: `${parent.shorthand} Parent`,
+          metadata: {
+            shorthand: parent.shorthand,
+            resourceParent: {
+              type: "extension-view",
+              id: "pstdio-planner.tickets",
+              label: "Tickets",
+              icon: "square-kanban",
+            },
+          },
+        },
+      },
+    });
   });
 
   test("continues shorthand and sort order after hard delete", async () => {

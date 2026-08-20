@@ -234,7 +234,11 @@ const registerSingleExtensionContributions = (
     disposables.push(
       registerWorkbenchExtensionRendererRefreshEvents({
         metadata,
-        subscribe: (listener) => ({ dispose: subscribeToExtensionEventFeed(listener) }),
+        subscribe: (listener) => ({
+          dispose: subscribeToExtensionEventFeed((event) => {
+            if (!event.projectId || event.projectId === projectId) listener(event);
+          }),
+        }),
         workbench: ctx,
       }),
     );
