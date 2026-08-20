@@ -1,33 +1,33 @@
 ---
 name: create-proposal
-description: "Create a proposal ticket. Use this when asked to write a proposal, introduce changes that add features, large refactors, introduce breaking API or schema changes, modify architecture or design patterns, update security patterns, or to save a plan as proposal. Do not create proposals for bug fixes that restore intended behavior, typos or formatting/comment-only changes, non-breaking dependency updates, configuration-only changes, or tests that validate existing behavior."
+description: "Create a proposal ticket. Use for new features, large refactors, breaking API or schema changes, architecture changes, security changes, or when the user asks to save a plan as a proposal. Do not use for bug fixes, wording-only changes, non-breaking dependency updates, configuration changes, or tests for existing behavior."
 metadata:
-  version: 0.0.3
+  version: 0.0.4
 ---
 
-A proposal is a planner ticket built from the `proposal` template. Create and edit it with the `pst tickets …` CLI.
+A proposal is a Planner ticket built from the `proposal` template. Use the `pst tickets` commands to create and edit it.
 
 ## Workflow
 
-1. Derive a concise, verb-led `title` from the request (`add-`, `update-`, `remove-`, `refactor-`, `fix-`).
-2. Create the proposal ticket from the `proposal` template (confirm its name with `pst templates list`):
-   - `pst tickets write --title "<title>"` to create the draft and lay down `.pstdio/tickets/<shorthand>/ticket.md`.
-   - `pst templates write --name proposal --ticket <shorthand>` to apply the template to that file.
-3. Research the codebase and docs before editing. Gather enough concrete context to make the proposal reviewable.
-4. Fill every section the proposal template provides — typically why, goals / non-goals, acceptance scenarios, implementation outline, change touch points, assumptions, and risks — with concrete, testable statements. Track open questions with `[MISSING INFORMATION]`.
-5. Create every supporting resource whose trigger applies (see table). Supporting resources are part of the proposal, not optional polish — fill them with real findings, not placeholders.
-6. If no supporting resource applies, add a short "Supporting Resources" note in the proposal explaining why `ticket.md` is enough.
-7. Save the proposal: `pst tickets save --id <shorthand>` (reconciles the body and supporting files into the store).
+1. Derive a short, verb-led title from the request, such as `add-`, `update-`, `remove-`, `refactor-`, or `fix-`.
+2. Confirm the `proposal` template exists with `pst templates list`.
+3. Run `pst tickets write --title "<title>"`. This creates `.pstdio/tickets/<shorthand>/ticket.md`.
+4. Run `pst templates write --name proposal --ticket <shorthand>` to apply the template.
+5. Read the relevant code and documentation before editing the ticket. Record concrete findings that a reviewer can check.
+6. Complete every applicable template section. Use specific, testable statements. Mark unanswered questions with `[MISSING INFORMATION]`.
+7. Create each supporting file required by the table below. Fill it with findings from the research, not placeholders.
+8. If no supporting file applies, add a short "Supporting resources" section that explains why `ticket.md` is enough.
+9. Run `pst tickets save --id <shorthand>` to save the body and supporting files.
 
 ## Ticket files
 
-Ticket files are planning resources for a ticket. Create one in `.pstdio/tickets/<shorthand>/files/<name>` and it is attached to the ticket on the next `pst tickets save`. Use workspace reports, not ticket files, for agent-produced review, validation, test, or implementation evidence.
+Put planning material in `.pstdio/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in workspace reports instead.
 
-- Create a resource as soon as one trigger matches — do not ask first.
-- Prefer one focused resource over piling every detail into `ticket.md`.
-- Skip a matching resource only when it would be empty after research, and record why in the proposal.
+- Create a file as soon as one trigger matches. Do not ask first.
+- Keep each file focused. Do not put every detail in `ticket.md`.
+- Skip a matching file only when research found nothing useful for it. Record the reason in the proposal.
 
-| Resource                   | Create When                                                                                                                             |
+| Resource                   | Create when                                                                                                                             |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `research.md`              | The proposal depends on external systems, libraries, unfamiliar behavior, prior art, logs, or repo investigation beyond the obvious.    |
 | `contracts.md`             | The change touches HTTP APIs, SDK APIs, CLI commands, extension hooks, events, storage interfaces, or any caller/callee contract.       |
@@ -36,6 +36,6 @@ Ticket files are planning resources for a ticket. Create one in `.pstdio/tickets
 | `cookbook.md`              | Users, integrators, or future agents will need a concrete usage recipe for a public API, SDK, CLI, workflow, or operational process.    |
 | `adr.md`                   | The proposal makes a lasting architectural decision, changes security/auth patterns, changes package boundaries, or chooses a tradeoff. |
 
-## Notes
+## Finish condition
 
-- **Do not start the implementation.** Stop after the proposal content is saved.
+Stop after saving the proposal. Do not implement it.

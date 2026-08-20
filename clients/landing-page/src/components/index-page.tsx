@@ -36,7 +36,8 @@ const IndexPageContent = () => {
         <Container maxW="4xl" px={{ base: "8", md: "4" }} py={{ base: "20", md: "28" }} flex="1" display="flex">
           <Stack gap="10" align="center" justify="center" textAlign="center" width="100%">
             <Heading as="h1" textStyle="heading/XL" maxW="4xl">
-              Plan and delegate tasks to AI coding agents at scale.
+              Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you
+              work.
             </Heading>
             <HStack px="lg" py="xs" rounded="sm" borderWidth="1px" borderColor="border" bg="bg.subtle">
               <Text as="code" fontFamily="mono">

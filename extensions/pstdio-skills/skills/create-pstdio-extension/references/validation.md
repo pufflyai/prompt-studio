@@ -1,6 +1,6 @@
-# Extension Validation
+# Extension validation
 
-## TDD Loop
+## TDD loop
 
 For behavior changes, reproduce the issue or missing behavior first:
 
@@ -13,7 +13,7 @@ For behavior changes, reproduce the issue or missing behavior first:
 Skip tests for docs-only, config-only, generated wording, and UI-only changes. For UI changes, add or update stories
 and use e2e checks when behavior changes.
 
-## Focused Checks
+## Focused checks
 
 Use Bun commands only.
 
@@ -25,7 +25,7 @@ bun run --cwd <path-to-extension> typecheck
 Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
 tests next to the relevant extension file or in the package that owns the runtime behavior.
 
-## Local Authoring Loop
+## Local development loop
 
 Run Prompt Studio and start the extension watcher from a linked git project:
 
@@ -37,7 +37,7 @@ The first cycle checks the extension contract and dashboard host capabilities, p
 
 Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
 
-## Install And Runtime Smoke
+## Install and runtime smoke test
 
 Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
 
@@ -85,7 +85,7 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst
 
 Then exercise the route, menu item, settings panel, renderer, or command palette entry in the dashboard.
 
-## Packaged Artifacts
+## Packaged artifacts
 
 When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults,
 reinstall the extension and confirm the packaged asset set still loads:
@@ -97,7 +97,7 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 
 Keep any packaged smoke-test expectations aligned with the current bundled artifact set.
 
-## Final Validation
+## Final validation
 
 Before handoff for non-documentation changes, run the full validation command your project defines
 (for example `bun run validate`). If validation cannot run, record the exact command, failure, and reason.

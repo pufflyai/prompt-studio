@@ -34,7 +34,7 @@ Examples:
 
 | Source                    | Root                        | When loaded     |
 | ------------------------- | --------------------------- | --------------- |
-| User installed extensions | `$PSTDIO_HOME/extensions`   | `pst launch`    |
+| User installed extensions | `$PSTDIO_HOME/extensions`   | `pst`           |
 | Repo-local extensions     | `<repo>/.pstdio/extensions` | project load    |
 | Dev or test extensions    | configured extension root   | dev/test launch |
 
@@ -44,7 +44,7 @@ One-off package validation, such as install-time validation, can use the package
 
 ```mermaid
 graph TD
-  Launch["pst launch"] --> UserRoots["Load user extension roots"]
+  Launch["pst"] --> UserRoots["Load user extension roots"]
   Project["Project loaded"] --> RepoRoots["Load repo-local extension roots"]
 
   UserRoots --> RuntimeManager["Extension runtime manager"]
@@ -238,11 +238,11 @@ declare and receive it through their supported configuration path rather than re
 
 ## What The Runtime Does Not Own
 
-- Extension webview one-shot bundling. Owned by `packages/pstdio-api/src/features/extensions/extension-webview-build-manager.ts`; the author-facing contract is covered by [Extension API](../product/extensions/pstdio-extension-api.md), [Dashboard UI attachments](../product/extensions/workbench-attachments.md), and [Extension cookbook](../product/extensions/cookbook.md).
+- Extension webview one-shot bundling. Owned by `packages/pstdio-api/src/features/extensions/extension-webview-build-manager.ts`; the author-facing contract is covered by [Extension API](../../../extensions/docs/api.md), [Dashboard UI attachments](../../../extensions/docs/workbench-attachments.md), and [Extension cookbook](../../../extensions/docs/cookbook.md).
 - Serving webview assets to the dashboard. The extension-owned access service issues process-lived capability URLs,
   and the separate asset route realm authorizes and serves managed build output without entering normal session
   middleware. See [ADR 0008](../adrs/0008-capability-secured-extension-webview-assets.md). Dashboard placement and
-  webview contribution behavior are documented in [Dashboard UI attachments](../product/extensions/workbench-attachments.md).
+  webview contribution behavior are documented in [Dashboard UI attachments](../../../extensions/docs/workbench-attachments.md).
 - Guest webview sandbox execution.
 - Extension command process spawning from inside a command handler.
 - Project settings storage and extension enablement persistence.

@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/blog-layout.astro
 title: Welcome to Prompt Studio!
-description: Prompt Studio, is an agent orchestration framework you can extend to fit the way you work.
+description: Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
 released: "2026-04-24"
 category: Announcements
 image: /images/banner.png
@@ -30,7 +30,7 @@ Lately, my time to code has been limited. That forced me to think very carefully
 - outputs diverge from your intent
 - reviewing everything becomes tricky
 
-**Prompt Studio exists to solve that.**
+Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
 
 It helps you manage fleets of agents (coding or otherwise) by:
 
@@ -56,9 +56,9 @@ We’re still early in figuring out what a good “agentic workflow” looks lik
 
 That’s a tough trade-off: **the more a tool tries to help, the more it risks getting in your way.**
 
-## App or Framework?
+## A workbench you can extend
 
-Prompt Studio takes a different approach: instead of being a fully opinionated app, it’s **a framework you (or your coding agent) can build on top of**.
+Prompt Studio takes a different approach. It gives you and your agents a workbench you can shape instead of prescribing one fixed workflow.
 
 Every project can have its own extensions:
 
@@ -75,7 +75,7 @@ These are some of the extensions I’ve built for myself on top of Prompt Studio
 - launch Storybook directly from the workspace
 - automatically capture a screenshot after frontend changes
 
-These help me with my particular workflow, but it would make no sense for these to be part of the core platform.
+These help me with my particular workflow, but they do not belong in the core workbench.
 
 ## Work with the Harnesses you love
 

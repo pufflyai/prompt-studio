@@ -14,16 +14,16 @@ Install the CLI globally using your preferred package manager:
 npm i -g pstdio@latest
 ```
 
-## Initialize Your Project
+## Create a project
 
 Navigate to your project directory and run:
 
 ```bash
-pst init
+pst projects create
 ```
 
-This creates a `.pstdio` folder with default configuration files.
+This creates a Prompt Studio project, links the current repository, and writes `.pstdio/config.json`.
 
 ## Next Steps
 
-Once initialized, you can start creating and managing your prompts. Check the configuration guide for details on customizing your setup.
+Run `pst` to open the workbench. Run `pst --help` to see the current CLI commands.

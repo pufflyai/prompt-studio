@@ -1,4 +1,4 @@
-# Repo Rules
+# Repository rules
 
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.
 - Write **TypeScript only**.
@@ -7,13 +7,13 @@
 
 # Language
 
-Use simple English in plans, explanations, documentation, tickets, comments, and messages.
+Use simple technical English in plans, explanations, documentation, tickets, comments, and messages.
 
 - Write short, direct sentences.
 - Use plain words instead of jargon.
 - Explain technical terms that readers may not know.
 
-# Coding Rules
+# Coding rules
 
 Keep the project structure clean and easy to understand. Make a larger change when needed to preserve or improve that structure.
 
@@ -29,7 +29,7 @@ Do not:
 - Deep relative imports across packages
 - Importing from `clients/*`
 
-## First-Principles Engineering
+## First-principles engineering
 
 Fix the cause, not only the visible problem. Before writing code, answer these questions:
 
@@ -62,14 +62,14 @@ The ADR must explain:
 
 Clearly describe it as a temporary workaround, not the intended design.
 
-## Visual Design Rules
+## Visual design rules
 
 - Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
 - The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil MCP tools. Never edit them by hand.
 - If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
 - Storybook defines component **APIs and props**. Pencil defines how components **look**.
 
-## Styling Rules
+## Styling rules
 
 Build the UI with the design system. Do not create one-off styles.
 
@@ -83,11 +83,11 @@ Do not use:
 - Fixed colors, font sizes, spacing, or corner sizes instead of tokens
 - Local style overrides that repeat styles a recipe variant should provide
 
-## Required Workflow: Test-Driven Development
+## Required workflow: test-driven development
 
 Follow these steps **every time**:
 
-### 1. Red — Write a Test First
+### 1. Red: write a test first
 
 - Skip this step when no useful test applies.
 - Reproduce a bug with Playwright or another tool before trying to fix it.
@@ -102,7 +102,7 @@ Do not write:
 - Tests that assert literal bundled copy.
 - Tests that assert generated file wording.
 
-### 2. Green — Make the Test Pass
+### 2. Green: make the test pass
 
 - Write only the code needed to pass the test
 - Do not make the solution more general than needed
@@ -110,7 +110,7 @@ Do not write:
 
 Run tests often.
 
-### 3. Refactor — Clean Up
+### 3. Refactor: clean up
 
 - Improve readability
 - Delete unused or legacy code
@@ -122,7 +122,7 @@ Run tests often.
 
 Tests must stay green.
 
-### 4. Prove It Works (Required)
+### 4. Prove it works (required)
 
 (Skip this step for changes that only affect documentation.)
 
@@ -130,7 +130,7 @@ Before finishing a task, run `bun run validate`. Fix every reported issue.
 
 Always validate UI changes using Playwright.
 
-### 5. Test Packaged Files
+### 5. Test packaged files
 
 - If bundled runtime files change, update the packaged smoke test. These files include built-in templates, prompts, skills, and other packaged defaults.
 - Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` in sync with the packaged files.
@@ -156,7 +156,7 @@ Do not add:
 
 A pull request may contain only one migration entry. If the tools create more than one, combine them into one.
 
-## Fixing Bugs
+## Fixing bugs
 
 - Always reproduce a bug before fixing it.
 - Always write a test that proves the bug stays fixed.
@@ -168,7 +168,7 @@ A pull request may contain only one migration entry. If the tools create more th
 - **Commits**: Use `<category>(<PS-XXX>): <statement>; <statement>`. The categories are `feat`, `fix`, `refactor`, and `chore`. Each statement must finish the sentence "This commit will..." Example: `fix(PS-42): add new button component; add new button to templates`.
 - **Pull requests**: Open them as drafts against `main` unless the user says otherwise. Use `<category>(<PS-XXX>): <statement>` for the title. Example: `fix(PS-42): add new button component`.
 
-## Coding Style Rules
+## Coding style rules
 
 - Put content that may grow, such as endpoints and schemas, in separate files
 - Every file must stay below about **350 lines**
@@ -177,13 +177,13 @@ A pull request may contain only one migration entry. If the tools create more th
 - Let TypeScript infer return types; do not write them yourself
 - Do not nest ternary expressions
 
-### Database Migrations
+### Database migrations
 
 - Never create or edit Drizzle migration SQL files by hand.
 - For a schema change, update the schema source first. Then generate the migration with the package script, such as `bun run --cwd packages/pstdio-db db:generate`.
 - If a generated migration is wrong, fix the schema or the generation setup and generate it again. Do not edit the migration SQL by hand.
 
-### React Rules
+### React rules
 
 - Do not use `memo()`, `useCallback()`, or `useMemo()`. The React compiler handles this work.
 - Put complex prop definitions in an interface.
@@ -192,7 +192,7 @@ A pull request may contain only one migration entry. If the tools create more th
 - Use kebab-case for component file names, such as `my-component.tsx`.
 - Never use the `NativeSelect` component.
 
-### Testing Rules
+### Testing rules
 
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
@@ -210,17 +210,17 @@ Do not write:
 - Tests that assert generated file wording.
 - Tests that only prove a removed feature, command, or setting stays absent.
 
-# Running and Validating the App
+# Running and validating the app
 
 - **Never** run the dev server directly.
 - **Never** connect directly to the local PGlite database.
 - **Always** run the Docker version with `bun run dev:isolated`. This keeps the database isolated.
 
-## Manual Playwright Validation
+## Manual Playwright validation
 
 Run `bun run dev:playwright`. Open the dashboard URL printed by the command with Playwright or another browser tool. When finished, stop it with `bun run dev:playwright:down`.
 
-## CI Timeouts
+## CI timeouts
 
 A CI timeout is a fixed performance limit. If a job reaches that limit, something became slower. Treat the slowdown as the bug.
 
@@ -234,7 +234,7 @@ If a job times out, report what became slower and by how much. Then fix the slow
 
 ---
 
-# Project Planning and Documentation
+# Project planning and documentation
 
 - Use the pstdio command-line tool to manage tickets.
 - After editing a ticket, save it with `pst tickets save --id PS-XXX`.

@@ -16,32 +16,32 @@ created: "{{CREATED_AT}}"
 
 [Why this decision? Include tradeoffs and decision drivers.]
 
-## Alternatives Considered
+## Alternatives considered
 
-1. **[Alternative A]**: [why rejected]
-2. **[Alternative B]**: [why rejected]
+1. [Alternative A]: [Why it was rejected]
+2. [Alternative B]: [Why it was rejected]
 
 ## Consequences
 
-### Positive
+### Benefits
 
 - [What gets better?]
 
-### Negative / Risks
+### Costs and risks
 
 - [What gets worse or harder?]
 
-## Migration / Rollout Plan
+## Migration and rollout
 
 [How do we move from the current state to the decided state? Include any sequencing.]
 
-## Verification & Evidence
+## Verification
 
-_Goal: the decision’s impact is verifiable by an LLM through execution + concrete outputs._
+_Record evidence that a reviewer can inspect._
 
-- **Commands to run**: [exact commands]
-- **Expected evidence**: [logs, HTTP responses, screenshots/videos/traces, artifacts]
-- **Where to find artifacts**: [paths, URLs, container/log sources]
+- Commands: [Exact commands]
+- Expected result: [Logs, HTTP responses, screenshots, traces, or artifacts]
+- Artifact location: [Paths, URLs, containers, or log sources]
 
 ## Follow-ups
 

@@ -1,4 +1,4 @@
-# Extension Scope
+# Extension scope
 
 Choose the extension source location before scaffolding files:
 

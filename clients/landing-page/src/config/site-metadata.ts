@@ -1,12 +1,13 @@
 export const siteMetadata = {
-  title: "Prompt Studio — AI Coding Agents at Scale",
+  title: "Prompt Studio",
   siteUrl: "https://prompt.studio",
   faviconSvgPath: "/images/favicon.svg",
   faviconPngPath: "/images/favicon-32x32.png",
   bannerPath: "/images/banner.png",
   description:
-    "Delegate tasks to AI coding agents at scale. Prompt Studio is an open-source CLI and dashboard for agentic coding workflows — orchestrate parallel agents without losing control.",
+    "Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.",
   keywords: [
+    "workbench for AI agents",
     "AI coding agent",
     "coding agent task manager",
     "agent orchestration",

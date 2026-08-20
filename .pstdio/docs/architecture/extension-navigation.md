@@ -94,6 +94,6 @@ When two modes accept the same resource, switching modes keeps the resource and 
 
 ## Related Product Requirements
 
-- [Extension Navigation and Layout State](../product/extensions/navigation-and-layout-state.md)
-- [Contextual Workbench Composition](../product/extensions/contextual-workbench-composition.md)
-- [Extension Conformance and Regression Coverage](../product/extensions/conformance.md)
+- [Extension Navigation and Layout State](../../../extensions/docs/navigation-and-layout-state.md)
+- [Contextual Workbench Composition](../../../extensions/docs/contextual-workbench-composition.md)
+- [Extension Conformance and Regression Coverage](../../../extensions/docs/conformance.md)

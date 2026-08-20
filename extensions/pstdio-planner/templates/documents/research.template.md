@@ -13,22 +13,18 @@ created: "{{CREATED_AT}}"
 
 ## Findings
 
-### [Finding 1]
+### [Finding]
 
-- **Evidence**: [file path, commit, log excerpt, external doc]
-- **Implication**: [what this means for the implementation]
+- Evidence: [File path, commit, log excerpt, or external documentation]
+- Effect on the implementation: [What changes because of this finding]
 
-### [Finding 2]
+Repeat the finding section when the research produced more than one result.
 
-- **Evidence**: [...]
-- **Implication**: [...]
+## Reproduction steps
 
-## Reproduction Steps
+[List the local reproduction steps, then state the observed and expected results.]
 
-1. [How to reproduce the relevant behavior locally]
-2. [Observed vs. expected]
-
-## Open Questions
+## Open questions
 
 - [ ] [Unresolved question, owner, blocker]
 

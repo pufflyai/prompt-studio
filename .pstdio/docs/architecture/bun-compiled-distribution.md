@@ -18,7 +18,7 @@ End users MUST NOT need Bun or Node.js installed.
 | Runtime      | Node.js (built with `--target node`)          | None (standalone binary)                        |
 | Externals    | `ink`, `react`, `ink-text-input` externalized | Everything bundled into binary                  |
 | API server   | Separate `server.js` spawned via `node`       | Embedded in same binary, started via subcommand |
-| Distribution | Single npm package `pstdio`                | Two channels: `curl \| sh` + npm wrapper        |
+| Distribution | Single npm package `pstdio`                   | Two channels: `curl \| sh` + npm wrapper        |
 | Install size | ~4MB JS + node_modules                        | ~60-90MB single binary                          |
 
 ---
@@ -95,10 +95,10 @@ All of these work in `bun build --compile`:
 
 | Target             | Package name               | Binary       |
 | ------------------ | -------------------------- | ------------ |
-| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pst`     |
-| `bun-darwin-x64`   | `@pstdio/cli-darwin-x64`   | `pst`     |
-| `bun-linux-x64`    | `@pstdio/cli-linux-x64`    | `pst`     |
-| `bun-linux-arm64`  | `@pstdio/cli-linux-arm64`  | `pst`     |
+| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pst`        |
+| `bun-darwin-x64`   | `@pstdio/cli-darwin-x64`   | `pst`        |
+| `bun-linux-x64`    | `@pstdio/cli-linux-x64`    | `pst`        |
+| `bun-linux-arm64`  | `@pstdio/cli-linux-arm64`  | `pst`        |
 | `bun-windows-x64`  | `@pstdio/cli-win-x64`      | `pstdio.exe` |
 
 ### Later
@@ -465,11 +465,3 @@ The compiled binary uses a clear separation:
 - **`ensureApi`** self-spawns the binary via `process.execPath` with the `serve` subcommand.
 
 This avoids the main risk: a compiled single binary depending on sibling `dist/` folders or Hono's filesystem-based static serving. Since Bun v1.2.17, `bun build --compile` supports embedding arbitrary files and exposing them via `Bun.embeddedFiles()`, which is purpose-built for this use case.
-
----
-
-## 14) Open questions
-
-2. **Self-update** — Consider adding `pst update` that re-runs the install script or checks GitHub Releases for a newer version.
-
-3. **Signing** — macOS binaries should be code-signed to avoid Gatekeeper warnings. This requires an Apple Developer certificate in CI.

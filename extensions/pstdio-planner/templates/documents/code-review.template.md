@@ -2,7 +2,7 @@
 created: "{{CREATED_AT}}"
 ---
 
-# Review Summary
+# Review summary
 
 ## Status
 
@@ -10,11 +10,11 @@ PASS | FAIL
 
 ## Findings
 
-### Critical Issues
+### Critical issues
 
 - [file:line] Description
 
-### Minor Issues
+### Minor issues
 
 - [file:line] Description
 
@@ -22,7 +22,7 @@ PASS | FAIL
 
 - [file:line] Description
 
-## Test Coverage
+## Test coverage
 
 - Missing tests:
 - Weak coverage areas:

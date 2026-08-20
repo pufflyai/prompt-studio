@@ -138,7 +138,7 @@ A tree contribution may use `group: null` to appear at the root without a headin
 
 ## Related Product Requirements
 
-- [Contextual Workbench Composition](../product/extensions/contextual-workbench-composition.md)
-- [Extension Navigation and Layout State](../product/extensions/navigation-and-layout-state.md)
-- [Renderer Edit and Refresh Lifecycle](../product/extensions/renderer-edit-refresh-lifecycle.md)
-- [Extension Conformance and Regression Coverage](../product/extensions/conformance.md)
+- [Contextual Workbench Composition](../../../extensions/docs/contextual-workbench-composition.md)
+- [Extension Navigation and Layout State](../../../extensions/docs/navigation-and-layout-state.md)
+- [Renderer Edit and Refresh Lifecycle](../../../extensions/docs/renderer-edit-refresh-lifecycle.md)
+- [Extension Conformance and Regression Coverage](../../../extensions/docs/conformance.md)

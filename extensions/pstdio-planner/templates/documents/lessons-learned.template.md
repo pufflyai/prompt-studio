@@ -12,7 +12,7 @@ created: "{{CREATED_AT}}"
 user_prompt: "{{USER_PROMPT}}"
 ---
 
-# Lessons Learned
+# Lessons learned
 
 ## Summary
 
@@ -28,9 +28,9 @@ user_prompt: "{{USER_PROMPT}}"
 
 ## Timeline
 
-- [t1: What happened first?]
-- [t2: What happened next?]
-- [t3: What happened after?]
+- [Time: Event]
+
+[Add events in chronological order.]
 
 ## Expected behavior
 
@@ -64,8 +64,6 @@ user_prompt: "{{USER_PROMPT}}"
 
 [How do we know the fix works?]
 
-## Key takeaways
+## What to remember
 
-1. [Takeaway]
-2. [Takeaway]
-3. [Takeaway]
+- [Concrete lesson that changes future work]

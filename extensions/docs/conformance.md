@@ -165,6 +165,6 @@ CI artifacts should include:
 
 ## Related Architecture
 
-- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
-- [Extension Navigation](../../architecture/extension-navigation.md)
-- [Project Extension Runtime Snapshots](../../architecture/project-extension-runtime-snapshots.md)
+- [Extension Workbench Composition](../../.pstdio/docs/architecture/extension-workbench-composition.md)
+- [Extension Navigation](../../.pstdio/docs/architecture/extension-navigation.md)
+- [Project Extension Runtime Snapshots](../../.pstdio/docs/architecture/project-extension-runtime-snapshots.md)

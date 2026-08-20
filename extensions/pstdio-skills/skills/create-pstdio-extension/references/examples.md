@@ -1,6 +1,6 @@
-# Extension Examples
+# Extension examples
 
-## Command With CLI And Dashboard Menu
+## Command with CLI and dashboard menu
 
 ```ts
 import { defineExtension, params } from "@pstdio/sdk/extensions";
@@ -32,7 +32,7 @@ export default defineExtension({
 });
 ```
 
-## Middleware Validation
+## Middleware validation
 
 ```ts
 import { commandRef, defineExtension, params } from "@pstdio/sdk/extensions";
@@ -69,7 +69,7 @@ export default defineExtension({
 });
 ```
 
-## Hook On Session Completion
+## Hook on session completion
 
 ```ts
 import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
@@ -89,7 +89,7 @@ export default defineExtension({
 });
 ```
 
-## Workspace Provisioning Hook
+## Workspace provisioning hook
 
 `workspace.provision` is awaited: it gates session launch until your hook resolves, so use it to
 materialize files a session needs (e.g. an agent's skills dir). Long background setup belongs in the
@@ -149,7 +149,7 @@ export default defineExtension({
 });
 ```
 
-## Templates And Skills
+## Templates and skills
 
 ```ts
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
@@ -171,7 +171,7 @@ export default defineExtension({
 });
 ```
 
-## Artifact Mount
+## Artifact mount
 
 ```ts
 import { defineExtension } from "@pstdio/sdk/extensions";
@@ -196,7 +196,7 @@ export default defineExtension({
 });
 ```
 
-## Dashboard Kanban Renderer
+## Dashboard kanban renderer
 
 ```ts
 import { defineExtension } from "@pstdio/sdk/extensions";
@@ -240,7 +240,7 @@ export default defineExtension({
 The panel wraps the renderer and declares the regions it supports. The `treeItems` panel action makes it reachable
 from the project sidenav.
 
-## Workbench Panels And Resource Slots
+## Workbench panels and resource slots
 
 A panel declares what it renders and which docked regions it supports. It never places itself. The resource kind
 owns named slots; a `resourcePanels` entry binds one panel to one slot. The active mode's recipe then places each
@@ -297,7 +297,7 @@ export default defineExtension({
 A slot with `external: false` rejects contributions from other extensions during `pst extensions check`
 (`extension_resource_slot_closed`). The `primary` slot is always closed to external panels.
 
-## Native Resource Detail Mode
+## Native resource detail mode
 
 Use this pattern for host-rendered resource screens: the file renderer owns document content, the tree renderer owns
 side-panel navigation, the resource kind exposes the slots, and the mode recipe places them.
@@ -388,7 +388,7 @@ stays host-owned for the Side Panel. A mode can also place a specific known pane
 recipe (it wins over the slot placement), open mode-wide panels with `modePanels`, and name a `defaultResource` so
 users can enter the mode without a compatible resource.
 
-## Dashboard Route Tree Item
+## Dashboard route tree item
 
 ```ts
 import {

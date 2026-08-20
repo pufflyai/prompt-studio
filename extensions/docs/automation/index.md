@@ -12,4 +12,4 @@ The default automation is provided by:
 
 - `pstdio-planner`
 
-See [Extensions](../extensions/pstdio-extension-api.md) for the current authoring surface.
+See the [Extension API](../api.md) for the current authoring surface.

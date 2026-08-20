@@ -3,34 +3,17 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: CLI Feedback and Help
+# CLI feedback and help
 
-## Summary
+This page defines how the CLI responds to missing subcommands, unknown commands, and invalid arguments.
 
-This PRD documents how the CLI responds to missing subcommands, unknown commands, and invalid command usage.
-
-## Detailed Behavior
-
-
-## Purpose
-
-Define how the CLI communicates when commands are incomplete, unknown, or invalid.
-
----
-
-## Missing Subcommand
-
-### Trigger
+## Missing subcommand
 
 User invokes a command group without a subcommand.
-
-### Behavior
 
 - Show group help text instead of throwing an error.
 - Applies to command groups such as `agents` and `projects`.
 - Does not apply to leaf commands that have no subcommands (for example, `close`).
-
-### Example
 
 ```text
 $ pst agents
@@ -40,20 +23,14 @@ pst agents [command]
 Manage coding agents
 
 Commands:
-  pst agents list    List configured agents and their status
-  pst agents setup   Set up agents for this project
-  pst agents remove  Remove agents from project configuration
+  pst agents list            List configured agents and their status
+  pst agents setup           Set up an agent for this project
+  pst agents install-skills  Install enabled skills for an agent
 ```
 
----
-
-## Unknown or Invalid Command
-
-### Trigger
+## Unknown command or invalid arguments
 
 User types an unknown command or invalid arguments.
-
-### Behavior
 
 - Print an error message.
 - Then print the relevant help text.
@@ -74,9 +51,7 @@ Commands:
   ...
 ```
 
----
-
-## Rules for New Command Groups
+## Rules for new command groups
 
 1. Define the group with an optional positional, for example `"mygroup [command]"` (not `<command>`).
 2. Do not use `demandCommand`.

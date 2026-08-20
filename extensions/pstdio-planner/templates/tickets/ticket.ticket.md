@@ -20,17 +20,17 @@ blocked_reason: ""
 
 ## Scope
 
-### In Scope
+### In scope
 
 - [Included work]
 - [Tests required to validate work (or explicitly "none")]
 - [Documentation updates required or explicitly none]
 
-### Out of Scope
+### Out of scope
 
 - [Explicitly excluded work]
 
-## Implementation Notes
+## Implementation notes
 
 [Describe the approach, key files/modules, assumptions, and include code snippets.]
 

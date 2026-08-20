@@ -6,32 +6,18 @@ section: Introduction
 order: 2
 ---
 
-## Config File
+## Config file
 
-After running `pst init`, you'll find a configuration file at `.pstdio/config.json`. This file controls how Prompt Studio behaves in your project.
-
-## Options
-
-The configuration supports the following top-level options:
-
-- **`name`** — The display name for your project
-- **`version`** — The config schema version
-
-## Agents
-
-You can configure AI agents in the `agents` section of your config. Each agent defines a set of instructions and tools available to it.
+After running `pst projects create`, you will find `.pstdio/config.json`. It links the repository to a Prompt Studio project.
 
 ```json
 {
-  "agents": [
-    {
-      "name": "reviewer",
-      "instructions": "Review code for quality and consistency."
-    }
-  ]
+  "project_id": "<project-id>"
 }
 ```
 
-## Environment Variables
+Prompt Studio stores project and agent settings through its API. Use `pst projects view` and `pst agents list` to inspect them.
 
-Sensitive values like API keys should be stored in environment variables rather than in the config file.
+## Environment variables
+
+Store secrets such as API keys in environment variables, not `.pstdio/config.json`.

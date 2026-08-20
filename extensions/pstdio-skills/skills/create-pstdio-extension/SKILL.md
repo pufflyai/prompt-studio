@@ -1,11 +1,11 @@
 ---
 name: create-pstdio-extension
-description: "Create or edit a Prompt Studio extension. Use when asked to add or change extension behavior, user actions, automation, project or workspace workflows, templates, skills, custom pages, native resource editors, resource file trees, settings UI, themes, artifact storage, workspace providers, agent providers, or extension validation."
+description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.1
+  version: 0.0.2
 ---
 
-# create-pstdio-extension
+# Create a Prompt Studio extension
 
 ## Workflow
 
@@ -15,7 +15,7 @@ metadata:
    - Installed editable extensions live under `$PSTDIO_HOME/extensions/<install-name>/` or `~/.pstdio/extensions/<install-name>/`.
    - Use [references/scope.md](references/scope.md) to choose repo-local vs user scope before scaffolding new files.
    - Inspect the target `package.json`, `extension.ts`, tests, and nearby extension patterns before editing.
-2. Choose the contribution surface.
+2. Choose the contribution type.
    - Use commands for user-triggered operations from the CLI, dashboard menus, command palette, schedules, or other commands.
    - Use middlewares to validate, reject, or rewrite command invocations before a command runs.
    - Use hooks to react to project, ticket, workspace, worktree, git, session, attempt-status, or command lifecycle events.
@@ -47,13 +47,13 @@ metadata:
    - Read [references/validation.md](references/validation.md) for commands and smoke-test expectations.
    - Use `pst extensions dev <path>` as the primary local authoring loop inside a linked project.
    - Do not use `--skip-install` for user/global install smoke tests. Installed extensions must have package-local dependencies.
-   - Run focused tests first, then your project's full validation command before handoff unless the change is documentation-only.
+   - Run focused tests first. Then run the project's full validation command before handoff unless only documentation changed.
    - If bundled runtime artifacts changed, stop the dev loop, run a production-like `pst extensions add --force`, and re-run `pst extensions check`.
 6. Add a changeset when changing released extension source or assets.
 
 ## References
 
-- [references/extension-api.md](references/extension-api.md) - package manifest, contribution surfaces, ids, context APIs, and asset rules.
+- [references/extension-api.md](references/extension-api.md) - package manifest, contribution types, ids, context APIs, and asset rules.
 - [references/examples.md](references/examples.md) - compact examples for common extension use cases.
 - [references/scope.md](references/scope.md) - repo-local vs user extension source selection.
 - [references/validation.md](references/validation.md) - typecheck, install, runtime, package, and dashboard validation guidance.

@@ -14,7 +14,7 @@ blocked_reason: ""
 
 [One paragraph describing the bug, who is affected, and the expected outcome after the fix ships.]
 
-## Reproduction Summary
+## Reproduction summary
 
 - **Status**: [Reproduced / Intermittent / Could not reproduce]
 - **Environment**: [OS, browser/app version, branch/commit, local/prod/staging / Unknown]
@@ -22,17 +22,15 @@ blocked_reason: ""
 - **First observed**: [Date or approximate time / Unknown]
 - **Affected area**: [Feature, page, command, integration, or workflow / Unknown]
 
-## Steps to Reproduce
+## Steps to reproduce
 
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+[List the exact reproduction steps in order.]
 
-## Expected Behavior
+## Expected behavior
 
 [What should happen.]
 
-## Actual Behavior
+## Actual behavior
 
 [What happens instead. Include exact error messages when available.]
 
@@ -50,11 +48,11 @@ Attach bug-reproduction planning files under this ticket's files, then link them
 - **Users affected**: [Who or how many / Unknown]
 - **Workaround**: [Available workaround / Unknown]
 
-## Technical Notes
+## Technical notes
 
 [Relevant code paths, recent changes, suspected cause, related tickets, or debugging notes.]
 
-## Acceptance Criteria
+## Acceptance criteria
 
 - [ ] The bug is reproduced by an automated regression test where applicable.
 - [ ] The issue no longer occurs using the reproduction steps above.

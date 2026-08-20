@@ -1,14 +1,14 @@
 # Prompt Studio
 
-Prompt Studio is a local-first project management tool for AI-driven development. It runs as a CLI and web dashboard.
+Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
 
 ## What it does
 
-- **Projects** — organize work into isolated projects, each with its own configuration, tickets, and documentation.
-- **Agents** — define and manage AI coding agents that operate on your codebase.
-- **Tickets** — track tasks with statuses, tags, and templates, all stored as local files.
-- **Sessions** — capture agent work sessions with full history.
-- **Documentation** — write and browse project docs from the CLI or dashboard.
+- Projects group repositories, configuration, tickets, and documentation.
+- Agents connect coding tools that work in your repositories.
+- Tickets track work with statuses, tags, and templates.
+- Sessions keep the conversation and execution history for agent work.
+- Documentation is available from both the CLI and dashboard.
 
 ## Quick start
 
@@ -34,22 +34,29 @@ Prompt Studio follows a local-first architecture. All data lives in your repo un
 └── templates/         # ticket templates
 ```
 
-Two surfaces consume the same API:
+The CLI and dashboard use the same API:
 
-- **CLI** (`pst`) — terminal commands
-- **Dashboard** — web-based UI
+- `pst` provides terminal commands.
+- The dashboard provides the web interface.
 
 See the [Architecture](/architecture/api) and [Contributing](/contributing/overview) sections for more details.
 
-## Documentation Layout
+See the [CLI command index](/product/cli/index) for the current core commands.
+
+## Documentation layout
 
 `.pstdio/docs/` is organized by folder and markdown files. Browse the tree directly; no separate navigation manifest is required.
 
-| Folder | Purpose |
-| ------ | ------- |
-| `adrs/` | Architecture Decision Records for accepted project decisions. |
-| `architecture/` | System boundaries, runtime flows, and package relationships. |
-| `contributing/` | Development workflow, testing, standards, and maintenance guidance. |
-| `lessons-learned/` | Root cause notes for issues that took time to diagnose. |
-| `product/` | User-facing guides and cookbooks for CLI, dashboard, SDK, hooks, platform, and extensions. |
-| `references/` | Lookup-oriented API, SDK, workbench, endpoint, and command references. |
+| Folder             | Purpose                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| `adrs/`            | Architecture Decision Records for accepted project decisions.                              |
+| `architecture/`    | System boundaries, runtime flows, and package relationships.                               |
+| `contributing/`    | Development workflow, testing, standards, and maintenance guidance.                        |
+| `lessons-learned/` | Root cause notes for issues that took time to diagnose.                                    |
+| `product/`         | User-facing guides and cookbooks for the core CLI, dashboard, SDK, and platform.            |
+| `references/`      | Lookup-oriented API, SDK, workbench, endpoint, and command references.                     |
+
+Extension documentation follows the code that owns it:
+
+- [Extension authoring guides](../../extensions/docs/index.md) live under `extensions/docs/`.
+- Each first-party extension keeps its product guides in its own folder. See the [Planner extension](../../extensions/pstdio-planner/README.md).

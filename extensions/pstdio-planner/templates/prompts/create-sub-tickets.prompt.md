@@ -1,2 +1,2 @@
-Breakdown ticket: {{ticket}} into sub-tickets
-{{#templateName}}Use template: {{templateName}}{{/templateName}}
+Break ticket {{ticket}} into sub-tickets.
+{{#templateName}}Use the {{templateName}} template.{{/templateName}}

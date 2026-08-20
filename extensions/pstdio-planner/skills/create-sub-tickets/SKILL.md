@@ -2,22 +2,24 @@
 name: create-sub-tickets
 description: "Break a parent ticket into actionable sub-tickets. Use when asked to create child or sub-tickets for a ticket."
 metadata:
-  version: 0.0.2
+  version: 0.0.3
 ---
 
 Sub-tickets are planner tickets linked to a parent. Create them like any ticket (see create-ticket) with `--parent` set.
 
 ## Workflow
 
-1. **Identify the parent.** You are given the parent ticket's shorthand (e.g. `PS-12`). Pass it to `--id` / `--parent` — commands resolve it.
-2. **Read the parent body:** `pst tickets view --id <parent>`. Derive sub-tickets that are each:
+1. Identify the parent ticket. Pass its shorthand, such as `PS-12`, to `--id` or `--parent`.
+2. Read it with `pst tickets panel --id <parent>`. Split the work into sub-tickets that are:
    - Small enough to implement in one sitting.
    - Independently testable.
-   - Cover one system — split anything that spans multiple systems or large scopes.
-3. **Create each sub-ticket** with the parent linked: `pst tickets write --title "<title>" --parent <parent-shorthand>`, then fill `.pstdio/tickets/<shorthand>/ticket.md` and `pst tickets save --id <shorthand>`.
-4. **Write each child's body** to the same standard as create-ticket: concrete files/modules, how the work is validated and the commands to run it (where the repo has tests), recorded assumptions, `parallelizable` and `depends_on` set. Apply a template with `pst templates write --name <template> --ticket <shorthand>` if useful (`pst templates list` for available ones). Priority/type are tags (`--tags` from `pst tags list`), not body sections.
-5. **Resolve blockers.** Check non-done tickets with `pst tickets list`. If a child depends on another ticket, record it in `depends_on` and set the blocked status when applicable.
-6. **Stop after the sub-tickets are saved.** Do not implement code or touch unrelated tickets.
+   - Limited to one system. Split work that crosses systems or has a large scope.
+3. Create each sub-ticket with `pst tickets write --title "<title>" --parent <parent-shorthand>`.
+4. Fill `.pstdio/tickets/<shorthand>/ticket.md`. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, `parallelizable`, and `depends_on`.
+5. Apply a template when it helps. List templates with `pst templates list`, then run `pst templates write --name <template> --ticket <shorthand>`. Priority and type belong in tags from `pst tags list`, not in body sections.
+6. Check unfinished tickets with `pst tickets list`. If another ticket blocks a child, add it to `depends_on` and use the project's blocked status.
+7. Save each child with `pst tickets save --id <shorthand>`.
+8. Stop after saving the sub-tickets. Do not implement them or edit unrelated tickets.
 
 ## Example
 
@@ -26,6 +28,6 @@ pst tickets write --title "Add upload retry config schema" --parent PS-12
 pst tickets save --id PS-43
 ```
 
-## Notes
+## Reference
 
-- `pst tickets list --parent PS-12` lists the children of a parent.
+`pst tickets list --parent PS-12` lists a ticket's children.

@@ -1,26 +1,18 @@
-Review the changes in the current workspace for ticket: {{ticket}}.
+Review the current workspace changes for ticket {{ticket}}.
 
-Focus on:
+Find implementation gaps, logic errors, incorrect assumptions, broken existing behavior, and missing or outdated tests.
 
-* Identify gaps in the implementation.
-* Identify logic errors, edge cases, or incorrect assumptions.
-* Detect any behavior that may have been unintentionally broken.
-* Highlight missing tests, insufficient coverage, or outdated tests.
+For each finding:
 
-### Expectations
+- Cite the exact file and line.
+- Classify it as critical, minor, or a suggestion.
+- Explain the behavior and the required change.
 
-* Reference specific **files and lines** where issues are found.
-* Clearly distinguish between critical issues (must fix), minor issues (should fix), and suggestions (optional improvements).
+Create the report with `pst reports write --kind review --name review --template review --source review-changes`. Read the returned JSON. Fill its `path` with the review scope, confidence, validation evidence, prioritized findings, useful links, and follow-up work. Save it with `pst reports save --name <returned-name>` and keep the returned `reportId`.
 
-### Output
+Repeated reviews get numbered names and files, so earlier reviews remain unchanged. This is an independent code review. Create a `review` report, not a `change_request` report.
 
-Scaffold the review report by running `pst reports write --kind review --name review --template review --source review-changes`. Read the returned JSON, then fill in its `path` with scope, confidence, validation evidence, prioritized change requests, relevant resources, and follow-up work. Save it with `pst reports save --name <returned-name>` and keep the returned `reportId`. Repeated reviews receive numbered names and files, so they do not overwrite earlier reviews.
-
-This is an independent code review. Create a `review` report, not a `change_request` report. The implementation agent owns the change request report.
-
-### Final Action
-
-Submit an explicit verdict before finishing. Do not change the ticket status directly.
+Submit a verdict before finishing. Do not change the ticket status.
 
 - If there are no critical or minor findings, run:
 

@@ -42,4 +42,4 @@ console.log(sessions);
 ## Next
 
 - [Method Reference](/references/sdk/reference)
-- [Extensions](../extensions/pstdio-extension-api.md)
+- [Extensions](../../../../extensions/docs/api.md)

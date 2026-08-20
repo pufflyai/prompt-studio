@@ -173,4 +173,4 @@ Snapshots are frozen after publication. Public callers depend only on snapshot i
 
 ## Related Architecture
 
-- [Project Extension Runtime Snapshots](../../architecture/project-extension-runtime-snapshots.md)
+- [Project Extension Runtime Snapshots](../../.pstdio/docs/architecture/project-extension-runtime-snapshots.md)

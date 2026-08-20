@@ -99116,7 +99116,7 @@
       "type": "frame",
       "id": "kdsou",
       "x": 34759,
-      "y": -6920,
+      "y": -7216,
       "name": "Website · Landing · Agentic Kanban",
       "theme": {
         "mode": "dark"
@@ -99244,7 +99244,7 @@
       "type": "frame",
       "id": "U3MmAa",
       "x": 34759,
-      "y": -5780,
+      "y": -6141,
       "name": "Website · Landing · Agentic Design",
       "theme": {
         "mode": "dark"
@@ -113581,7 +113581,7 @@
       "type": "frame",
       "id": "V3OnvZ",
       "x": 34759,
-      "y": -4760,
+      "y": -5093,
       "name": "web/Workbench",
       "reusable": true,
       "clip": true,
@@ -150461,8 +150461,8 @@
     {
       "type": "frame",
       "id": "Q1dRGx",
-      "x": 34872,
-      "y": -11632,
+      "x": 34759,
+      "y": -11572,
       "name": "Website · Landing · Workbench",
       "theme": {
         "mode": "dark"

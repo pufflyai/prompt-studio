@@ -4,7 +4,7 @@ status: "draft"
 created: "{{CREATED_AT}}"
 ---
 
-# Product Requirements Document
+# Product requirements
 
 ## Summary
 
@@ -16,10 +16,9 @@ created: "{{CREATED_AT}}"
 
 ## Goals
 
-- [Goal 1]
-- [Goal 2]
+- [Goal]
 
-## Non-Goals
+## Non-goals
 
 - [Out of scope item]
 
@@ -41,24 +40,21 @@ created: "{{CREATED_AT}}"
 
 ## Requirements
 
-### Functional Requirements
+### Functional requirements
 
-1. [Requirement]
-2. [Requirement]
+[List each testable requirement.]
 
-### UX Requirements
+### UX requirements
 
 - [Interaction, content, accessibility, or platform requirement]
 
-### Operational Requirements
+### Operational requirements
 
 - [Logging, rollout, support, compliance, or analytics requirement]
 
 ## Behavior
 
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+[Describe the successful user flow in order.]
 
 ## Interface
 
@@ -70,13 +66,13 @@ created: "{{CREATED_AT}}"
 [Example usage or request/response]
 ```
 
-## Success Metrics
+## Success measures
 
 | Metric   | Baseline  | Target | How It Is Measured |
 | -------- | --------- | ------ | ------------------ |
 | [Metric] | [Current] | [Goal] | [Method]           |
 
-## Rules & Constraints
+## Rules and constraints
 
 - [Rule or invariant that must hold.]
 - [Constraint or limitation.]
@@ -87,11 +83,10 @@ created: "{{CREATED_AT}}"
 | ----------------- | ------------------------- |
 | `"Error message"` | [When this error occurs.] |
 
-## Risks & Open Questions
+## Risks and open questions
 
 - [Risk or unresolved question]
 
-## Rollout Plan
+## Rollout plan
 
-1. [Milestone or phase]
-2. [Milestone or phase]
+[List milestones or phases in order.]

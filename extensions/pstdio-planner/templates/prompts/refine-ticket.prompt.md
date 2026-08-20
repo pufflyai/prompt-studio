@@ -1,4 +1,4 @@
-Refine ticket: {{ticket}}
-{{#templateName}}Use template {{templateName}}{{/templateName}}
-{{#additionalContext}}Additional context:
+Refine ticket {{ticket}}.
+{{#templateName}}Use the {{templateName}} template.{{/templateName}}
+{{#additionalContext}}Use this added context:
 {{additionalContext}}{{/additionalContext}}

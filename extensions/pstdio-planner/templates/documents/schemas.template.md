@@ -11,8 +11,8 @@ created: "{{CREATED_AT}}"
 
 ### [Entity name]
 
-- **Location**: [file path, table name, or service]
-- **Purpose**: [what it represents]
+- Location: [File path, table name, or service]
+- Meaning: [What it represents]
 
 | Field  | Type   | Nullable | Notes                            |
 | ------ | ------ | -------- | -------------------------------- |

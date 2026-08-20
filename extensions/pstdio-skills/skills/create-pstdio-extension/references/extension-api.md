@@ -1,6 +1,6 @@
-# Prompt Studio Extension API
+# Prompt Studio extension API
 
-## Package Manifest
+## Package manifest
 
 Every extension package needs a `package.json` next to its entry file:
 
@@ -30,7 +30,7 @@ Required fields are `name`, `version`, `publisher`, `main`, and `engines.pstdio`
 `${publisher}.${name}`. Keep the package `name` lowercase kebab-case because it scopes command ids, catalog names,
 artifact roots, themes, and CLI paths.
 
-## Entry Module
+## Entry module
 
 `extension.ts` should only export contributions:
 
@@ -92,9 +92,9 @@ theme id         planner.monokai
 Catalog display names are derived from contribution keys by converting camelCase, underscores, spaces, and dots to
 kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` become `create-pstdio-extension`.
 
-## Contribution Surfaces
+## Contribution types
 
-| Surface                                           | Use case                                                                          |
+| Type                                              | Use case                                                                          |
 | ------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `commands`                                        | User-triggered or automation-triggered operations.                                |
 | `middlewares`                                     | Validate, reject, patch params, or replace invocation data before a command runs. |
@@ -117,7 +117,7 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
 | `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                     |
 
-## Host Capability Validation
+## Host capability validation
 
 `pst extensions check` validates declared dashboard UI surfaces against the dashboard build that will load them. Contract-valid extensions can still fail if the host does not advertise the bridge for a surface. The diagnostic code is `extension_host_capability_missing`; its metadata includes `contributionId`, `missingCapability`, `hostVersion`, and `requiredSince` when known.
 
@@ -151,7 +151,7 @@ Current dashboard capability names:
 | `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
 | `resource-view.v1` | Resource detail views. |
 
-## Commands And Params
+## Commands and params
 
 Commands can be exposed to the CLI with `cli: true` or `cli: { path, description, examples }`. Add dashboard entry
 points with `menus` and a host-owned workbench target such as `workbench.nav.actions` or
@@ -185,7 +185,7 @@ Middleware may return:
 - `ctx.commands.replaceInvocation({ ... })`
 - `ctx.commands.reject({ code, reason })`
 
-## Hooks And Events
+## Hooks and events
 
 Use kernel event refs from `@pstdio/sdk/extensions` when possible:
 
@@ -198,7 +198,7 @@ Use kernel event refs from `@pstdio/sdk/extensions` when possible:
 Use `commandEvent(commandRef, "completed")` to react to command lifecycle events. Hooks observe events; they do not
 cancel the operation that emitted the event.
 
-## Package Assets
+## Package assets
 
 Use `packageAsset("./relative/path", import.meta.url)` for all shipped files and directories. Asset paths must resolve
 inside the extension package. Skill assets may point at a directory containing `SKILL.md` plus support files.
@@ -211,7 +211,7 @@ and `preferences.set`.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
-## Native Resource Views
+## Native resource views
 
 Use native renderers when the host should own the editor or tree chrome instead of loading a custom webview. A native
 resource detail screen usually has:
@@ -265,7 +265,7 @@ export default defineExtension({
 });
 ```
 
-## Project Sidenav UI
+## Project sidenav UI
 
 For a Planner-style native list or board, define a `kanbanRenderers` contribution with a `query` callback. Add a
 Panel with `renderer: { kind: "kanban", id: "<renderer-id>" }`. To show it in the project sidenav, add a `treeItems`

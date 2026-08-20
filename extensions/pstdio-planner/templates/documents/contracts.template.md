@@ -9,10 +9,10 @@ created: "{{CREATED_AT}}"
 
 ## Surfaces
 
-### [Surface name — e.g. `POST /v1/things`]
+### [Contract name, for example `POST /v1/things`]
 
-- **Where it lives**: [file path or route definition]
-- **Consumers**: [who calls it — UI, SDK, extension, external client]
+- Location: [File path or route definition]
+- Callers: [UI, SDK, extension, or external client]
 
 #### Request
 
@@ -38,6 +38,6 @@ created: "{{CREATED_AT}}"
 
 - [Ordering guarantees, idempotency, auth requirements, rate limits]
 
-## Backwards Compatibility
+## Backward compatibility
 
 - [What existing callers assume and how this change affects them]

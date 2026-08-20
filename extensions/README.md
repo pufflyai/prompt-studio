@@ -1,8 +1,8 @@
-# Prompt Studio Extensions
+# Prompt Studio extensions
 
-This folder contains first-party extensions for Prompt Studio. Each subfolder ships an `extension.ts` entrypoint, optional `package.json` deps, and any templates/skills/webview assets the extension contributes.
+This folder contains the first-party Prompt Studio extensions. An extension can ship an `extension.ts` entrypoint, package dependencies, templates, skills, and webview assets.
 
-## Installing an Extension
+## Install an extension
 
 Use `pst extensions add` to install an extension into the scope declared by its `package.json` `pstdio.scope` field. The default scope is `user`, which installs to `~/.pstdio/extensions/<install-name>/` or `$PSTDIO_HOME/extensions/<install-name>/` if set. `repo` scope installs to `<repo>/.pstdio/extensions/<install-name>/` and must be run inside a linked repo.
 
@@ -19,7 +19,7 @@ This:
 3. Loads the installed copy through the v2 runtime to validate the default export and report diagnostics.
 4. Auto-enables the extension for the current project (when run inside one).
 
-### From the Prompt Studio repo
+### From the Prompt Studio repository
 
 ```bash
 pst extensions add <name>
@@ -46,7 +46,7 @@ Fix errors before using the extension. Review warnings too; they call out valid 
 
 `pst extensions check` validates the extension contract and the dashboard host capabilities. If an extension declares a UI surface that the current dashboard does not support, the command exits non-zero and names the missing capability plus the Prompt Studio version that first supports it when known. With `--json`, read `hostCompatibility.status`, `hostCompatibility.host`, and each diagnostic `metadata.missingCapability`.
 
-## Local Development Loop
+## Local development loop
 
 Run the development command from a linked git project while Prompt Studio is running:
 
@@ -68,7 +68,7 @@ Press Ctrl+C or send SIGTERM to stop. The command waits for an active refresh to
 | A webview build fails | Read the printed view ID and Bun diagnostics. The last successful bundle remains visible while you fix the source. |
 | A save produces no refresh | Confirm the file is not excluded by the extension `.gitignore` or the standard extension ignore rules. |
 
-## Dev Workflow (in-monorepo)
+## Develop inside this monorepo
 
 When developing extensions inside this monorepo, you usually want them installed under `~/.pstdio-dev/` so they don't pollute your real user root.
 
@@ -88,7 +88,9 @@ bun run dev
 
 ### Default first-party extensions
 
-The API auto-installs a configured list of default extensions. Each package decides whether it lands in the user extension root or the linked repo extension root through `package.json` `pstdio.scope`. Each default entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path — the latter is useful in dev to install from the in-monorepo `extensions/<name>` folder instead of fetching from GitHub. Default list:
+The API installs a configured list of default extensions. Each package uses `pstdio.scope` in `package.json` to select the user extension root or the linked repository's extension root. A default entry can name a published extension or a local folder. Use a local folder during development to install from `extensions/<name>` instead of GitHub.
+
+The default list is:
 
 - `pstdio-planner`
 - `pstdio-skills`
@@ -115,7 +117,7 @@ type DefaultExtensionsConfig = {
 
 Resolution rule (same as the CLI): if `source` starts with `./`, `../`, `/`, or `~/` it is a local path; otherwise it is a named extension resolved against `https://github.com/pufflyai/prompt-studio` at `extensions/<name>`.
 
-Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run pstdio:local:add-dev` uses this to install from the monorepo:
+Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. `bun run pstdio:local:add-dev` uses the following value to install from the monorepo:
 
 ```ts
 {
@@ -126,7 +128,7 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 }
 ```
 
-### Watching an extension in the dev environment
+### Watch an extension in the development environment
 
 Use the watch command as the primary authoring loop. Run it inside the linked Prompt Studio repo:
 
@@ -136,7 +138,7 @@ PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/extension-lab
 
 Because `extension-lab` uses user scope and `PSTDIO_HOME` is set to `~/.pstdio-dev`, each valid snapshot is published at `~/.pstdio-dev/extensions/extension-lab/`. Use `pst extensions add --force` separately for a production-like install smoke test.
 
-### Workspace SDK During Local Development
+### Use the workspace SDK during development
 
 First-party extensions depend on `@pstdio/sdk`. User/global install smoke tests must run dependency
 installation and leave package-local dependencies under the installed extension root.
@@ -159,7 +161,7 @@ Should list the extension with its commands, hooks, schedules, and zero errors.
 
 Host compatibility should be `verified` against the bundled dashboard. If a check runs without a dashboard descriptor, Prompt Studio reports `hostCompatibility.status: "unverified"`; contract validation still ran, but UI bridge support was not proven.
 
-## Releasing an Extension
+## Release an extension
 
 Extensions are versioned and tagged by Changesets. The flow:
 
@@ -176,13 +178,15 @@ bun changeset tag
 git push --follow-tags
 ```
 
-Users pin a specific release with:
+Users install the catalog release with:
 
 ```bash
-pst extensions add pstdio-planner --ref pstdio-planner@0.2.0
+pst extensions add pstdio-planner
 ```
 
-## Authoring a New Extension
+Use `--branch <branch>` only when testing an extension branch during development.
+
+## Author a new extension
 
 Minimum viable layout:
 
@@ -209,4 +213,9 @@ When an extension changes a panel from a webview to a native renderer, renames a
 
 Each enabled extension also registers a command palette action named `Reset <extension> layout`. Use it to remove that extension's local placements from the current project's stored layouts and the active workbench. The reset is local to the current browser profile.
 
-For the full extension API surface, see [the product extension API docs](../.pstdio/docs/product/extensions/pstdio-extension-api.md). For loader internals, see [the extension runtime loader architecture doc](../.pstdio/docs/architecture/extensions-runtime.md).
+## Documentation
+
+- [Extension authoring guide](./docs/index.md)
+- [Extension API](./docs/api.md)
+- [Planner extension](./pstdio-planner/README.md)
+- [Extension runtime architecture](../.pstdio/docs/architecture/extensions-runtime.md)

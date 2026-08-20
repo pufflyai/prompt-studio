@@ -14,7 +14,7 @@ Optional longer description of the release.
 
 ---
 
-## Field Reference
+## Field reference
 
 | Markdown                 | Maps to                        | Required |
 | ------------------------ | ------------------------------ | -------- |
@@ -28,7 +28,7 @@ Optional longer description of the release.
 | `- **title** — desc`     | `change.title`, `.description` | --       |
 | `[Learn more](url)`      | `change.link`                  | no       |
 
-## Parsing Rules
+## Parsing rules
 
 1. Split on `---` to get individual entries.
 2. The H2 heading is the `version` string.

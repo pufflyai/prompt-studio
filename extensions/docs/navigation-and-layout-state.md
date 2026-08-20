@@ -208,5 +208,5 @@ treeItems: {
 
 ## Related Architecture
 
-- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
-- [Extension Navigation](../../architecture/extension-navigation.md)
+- [Extension Workbench Composition](../../.pstdio/docs/architecture/extension-workbench-composition.md)
+- [Extension Navigation](../../.pstdio/docs/architecture/extension-navigation.md)

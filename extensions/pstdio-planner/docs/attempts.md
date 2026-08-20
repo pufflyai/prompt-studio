@@ -42,8 +42,8 @@ loop until its matching handoff is resolved by a human or agent action.
 These are not current APIs:
 
 - `PATCH /v1/workspaces/:id/attempt-status`
-- `pst workspaces set-status` and `pstdio-planner.workspaceStatus.*`
-- `pst tickets update-when-attempt-status`
+- Core workspace status mutation and the old planner workspace-status command family
+- The old command that inferred ticket status from workspace state
 - Workspace-status settings and their legacy storage collections
 - `attemptStatusEvents.changed` and `post-attempt-status-*` hooks
 - Ticket-status inference from generic session start or completion hooks

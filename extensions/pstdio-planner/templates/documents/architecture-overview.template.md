@@ -3,71 +3,70 @@ user_prompt: "{{USER_PROMPT}}"
 created: "{{CREATED_AT}}"
 ---
 
-# Architecture Overview
+# Architecture overview
 
-[1–3 sentences summarizing the technical approach.]
+[Summarize the technical approach in one to three sentences.]
 
-## Design Summary
+## Design summary
 
 [Describe the proposed technical design without repeating the ticket goals.]
 
-## Current Architecture
+## Current architecture
 
 - [Relevant current component/service/module]
 - [Relevant limitation]
 - [Relevant dependency]
 
-## Proposed Architecture
+## Proposed architecture
 
 - [New or changed component]
 - [New or changed responsibility]
 - [New or changed integration]
 
-## Component Responsibilities
+## Component responsibilities
 
 | Component   | Responsibility   | Change   |
 | ----------- | ---------------- | -------- |
 | [Component] | [Responsibility] | [Change] |
 
-## Data & State Changes
+## Data and state changes
 
 | Data / State | Owner   | Change   | Notes   |
 | ------------ | ------- | -------- | ------- |
 | [Data/state] | [Owner] | [Change] | [Notes] |
 
-## APIs, Events, and Contracts
+## APIs, events, and contracts
 
 | Contract              | Producer / Owner | Consumer   | Change   |
 | --------------------- | ---------------- | ---------- | -------- |
 | [API/event/interface] | [Owner]          | [Consumer] | [Change] |
 
-## Key Decisions
+## Key decisions
 
-### Decision 1 — [Title]
+### Decision: [Title]
 
-**Decision:** [Decision]
+| Choice     | Reason   | Cost or consequence |
+| ---------- | -------- | ------------------- |
+| [Decision] | [Reason] | [Cost]              |
 
-**Rationale:** [Reason]
+## Reliability, security, and operations
 
-**Trade-off:** [Cost or consequence]
+| Area        | Design                                      |
+| ----------- | ------------------------------------------- |
+| Reliability | [Retries, timeouts, and failure handling]   |
+| Security    | [Authentication, permissions, private data] |
+| Operations  | [Logs, metrics, traces, and alerts]         |
 
-## Reliability, Security, and Observability
+## Deployment and rollout
 
-- **Reliability:** [Retries, timeouts, failure handling]
-- **Security:** [Auth, permissions, sensitive data]
-- **Observability:** [Logs, metrics, traces, alerts]
+[List the rollout steps in order. Include rollback or cleanup.]
 
-## Deployment & Rollout
+## Technical risks
 
-1. [Rollout step 1]
-2. [Rollout step 2]
-3. [Rollback or cleanup step]
+| Risk                            | Mitigation   |
+| ------------------------------- | ------------ |
+| [Technical or operational risk] | [Mitigation] |
 
-## Architecture-Specific Risks
-
-- [Technical or operational risk]
-- [Mitigation]
-
-## Open Architecture Questions
+## Open questions
 
 - [Question]

@@ -253,4 +253,4 @@ modes: {
 
 ## Related Architecture
 
-- [Extension Workbench Composition](../../architecture/extension-workbench-composition.md)
+- [Extension Workbench Composition](../../.pstdio/docs/architecture/extension-workbench-composition.md)

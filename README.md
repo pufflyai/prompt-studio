@@ -1,7 +1,7 @@
 <p align="center">
   Prompt Studio (alpha)
 </p>
-<p align="center">Prompt Studio helps you plan and delegate tasks to coding agents without losing control.</p>
+<p align="center">Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.</p>
 <p align="center">
  <a href="https://www.npmjs.com/package/pstdio"><img alt="npm" src="https://img.shields.io/npm/v/pstdio?style=flat-square" /></a>
   <a href="https://github.com/pufflyai/prompt-studio/actions/workflows/test-and-build.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/pufflyai/prompt-studio/test-and-build.yml?style=flat-square" /></a>
@@ -10,25 +10,25 @@
 
 **This project is in alpha and is not ready for general use.**
 
-## Installation
+## Install
 
 ```bash
 npm i -g pstdio@latest        # or bun/pnpm/yarn
 ```
 
-## Quickstart
+## Quick start
 
 1. Run `pst` to start the dashboard.
-2. Connect a coding agent, we support Claude Code and Open Code (more coming soon).
-3. Create a new project.
-4. Select the local repository you want to work on.
+2. Connect Claude Code or OpenCode.
+3. Create a project.
+4. Link the local repository where the agents will work.
 
-Now your agents running in this repo will know how to create tickets, refine them, update their status, keep your documentation in sync with new features etc.
+Prompt Studio installs project skills for the connected agent. Those skills cover ticket creation, refinement, implementation, and documentation updates.
 
-We recommend adding `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` so local ticket files do not get committed.
+Add `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` if you do not want local project data in the repository.
 
 ### Commands
 
 Learn more about the CLI using `pst --help`.
 
-`pst serve` uses an authenticated loopback runtime. Open the dashboard through the exact `127.0.0.1` URL printed by the command. Other hosts and LAN origins are rejected.
+`pst serve` accepts connections only through its authenticated loopback URL. Open the exact `127.0.0.1` URL printed by the command. It rejects other hosts and LAN origins.

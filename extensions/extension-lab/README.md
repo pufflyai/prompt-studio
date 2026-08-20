@@ -1,11 +1,11 @@
 # Extension Lab
 
-Sandbox extension that exercises the proposal-stage `defineExtension` API end-to-end while depending only on **kernel-owned** concepts (no `pstdio-ext-planner`, no `pstdio-ext-workspace-shell`). Use it as a reference when building a real extension and as a smoke test that the runtime, CLI, dashboard, and harness registry wire the surfaces correctly.
+Sandbox extension that exercises the `defineExtension` API end-to-end while depending only on host-owned concepts. Use it as a reference when building an extension and as a smoke test for the runtime, CLI, dashboard, and harness registry.
 
-> Status: this lab targets the proposed `@pstdio/sdk/extensions` API. The runtime that loads it is not shipped yet — see [`extensions/docs/extension-runtime.md`](../docs/extension-runtime.md) and [`extensions/docs/pstdio-extension-api.md`](../docs/pstdio-extension-api.md).
+See the [Extension API](../docs/api.md) and [runtime architecture](../../.pstdio/docs/architecture/extensions-runtime.md) for the current contracts.
 
 `id`: `pstdio.extension-lab`
-`namespace`: `lab`
+`CLI namespace`: `extension-lab`
 
 ## Install
 
@@ -20,22 +20,14 @@ pst extensions add ./extensions/extension-lab
 Verify and inspect:
 
 ```bash
-pst extensions list
 pst extensions check
-pst lab --help
+pst extension-lab --help
 ```
 
-Edit in place and live-reload picks up changes:
+For local development, watch the repository source:
 
 ```bash
-code ~/.pstdio/extensions/extension-lab
-```
-
-Disable / remove for the current project (keeps the source on disk):
-
-```bash
-pst extensions disable extension-lab
-pst extensions remove extension-lab
+pst extensions dev ./extensions/extension-lab
 ```
 
 ## What it contributes
@@ -48,6 +40,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 | ----------------- | --------------------- | ---- | ----------------------------------------------------------------------------------------- |
 | `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
 | `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
+| `counter.read`    | `lab.counter.read`    | yes  | Reads the counter from extension storage.                                                  |
 | `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
 | `glass-lab-artifacts.create` | `lab.glass-lab-artifacts.create` | no | Creates a randomized artifact in project-scoped extension storage.                       |
 | `glass-lab-artifacts.delete` | `lab.glass-lab-artifacts.delete` | no | Deletes the selected artifact from extension storage.                                    |
@@ -101,19 +94,20 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ## Trying it from the CLI
 
-Once the lab is enabled for the current project, the namespace `lab` becomes a CLI subcommand group:
+Once the lab is enabled for the current project, `extension-lab` becomes a CLI subcommand group:
 
 ```bash
-pst lab --help
-pst lab say-hello
-pst lab counter bump
-pst lab counter reset
+pst extension-lab --help
+pst extension-lab say-hello
+pst extension-lab counter bump [--amount <number>]
+pst extension-lab counter read
+pst extension-lab counter reset
 ```
 
 Provoke the rejection round trip end-to-end:
 
 ```bash
-pst lab demo try-awaken
+pst extension-lab demo try-awaken
 ```
 
 Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a warning notification toast in dashboard/testbench surfaces. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a heartbeat log every minute while a project that has the lab enabled is loaded.

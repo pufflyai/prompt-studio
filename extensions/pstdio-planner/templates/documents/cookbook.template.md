@@ -16,22 +16,18 @@ created: "{{CREATED_AT}}"
 1. [Step]
 2. [Step]
 
-## Usage
+## Examples
 
-### Example 1 — [Title]
-
-```bash
-[Command]
-```
-
-### Example 2 — [Title]
+### [Task]
 
 ```bash
 [Command]
 ```
 
-## Verification & Evidence
+[Repeat this example section for each distinct task.]
 
-- **Commands to run**: [exact commands]
-- **Expected evidence**: [logs, HTTP responses, screenshots/videos/traces, artifacts]
-- **Where to find artifacts**: [paths, URLs, container/log sources]
+## Verification
+
+- Commands: [Exact commands]
+- Expected result: [Logs, HTTP responses, screenshots, traces, or artifacts]
+- Artifact location: [Paths, URLs, containers, or log sources]

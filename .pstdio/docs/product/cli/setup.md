@@ -87,7 +87,7 @@ Prints the dashboard and API URLs.
 ### Usage
 
 ```sh
-pst serve [--port <port>]
+pst serve [--port <port>] [--host <host>]
 ```
 
 ### Flags
@@ -95,6 +95,7 @@ pst serve [--port <port>]
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--port` | `number` | `0` | Server port for the combined runtime; `0` selects an available port. |
+| `--host` | `string` | `127.0.0.1` | Host address for the runtime. Detached runtimes require a loopback address. |
 
 The command returns after readiness. It attaches to an existing persistent runtime or atomically promotes an existing
 desktop-owned runtime without restarting it.

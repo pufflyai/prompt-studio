@@ -10,45 +10,40 @@ blocked_reason: ""
 
 # {{TICKET_TITLE}}
 
-[1–3 sentences describing the change and the user-visible outcome.]
+[Describe the change and its user-visible outcome in one to three sentences.]
 
 ## Why
 
-[Problem/opportunity + motivation. What’s broken/missing today? Why now?]
+[Describe the problem or opportunity. What is broken or missing today? Why should it change now?]
 
 ## Goals
 
-- [Outcome 1]
-- [Outcome 2]
+- [Outcome]
 
-### Non-Goals
+### Non-goals
 
 - [What is explicitly not included]
 
-## User Scenarios & Acceptance
+## User scenarios and acceptance
 
-### Scenario 1 — [Title] (Priority: P1)
-
-> **Given** [state], **When** [action], **Then** [outcome]
-
-### Scenario 2 — [Title] (Priority: P2)
+### Scenario: [Title] (Priority: P1)
 
 > **Given** [state], **When** [action], **Then** [outcome]
 
-## Implementation Outline
+Repeat the scenario section for each distinct behavior.
 
-1. [Phase 1]
-2. [Phase 2]
+## Implementation outline
 
-## Change Touch Points
+[List the implementation phases in order.]
 
-- [Product-level surfaces affected — features, user flows, screens, integrations, or capabilities. Not code files or paths.]
+## Product changes
+
+- [Affected feature, workflow, screen, integration, or capability. Do not list code paths here.]
 
 ## Assumptions
 
 - A1: [Assumption]
-- A2: [Assumption]
 
-## Potential Issues
+## Risks and open questions
 
-- [List potential issues, conflicts, discrepancies, risks]
+- [Potential issue, conflict, discrepancy, risk, or unanswered question]
