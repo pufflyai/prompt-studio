@@ -4,6 +4,7 @@ import { settingsPanelResource } from "@pstdio/workbench/react";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
+import { isPanelForResourceKind } from "../lib/resource-bindings";
 import { contentContributionWidgetId } from "./content-contribution-panel";
 import { MenuSelect } from "./menu-select";
 
@@ -91,10 +92,9 @@ const viewItems = (props: ContributionExplorerProps) => {
     label: text(view.title, view.id),
     description: view.id,
     onActivate: () => {
-      const isModal = view.region === "overlay";
       workbench.layout.openPanel(view.id, {
-        pinned: !isModal,
-        resource: view.resourceKind === resource.kind ? resource : undefined,
+        pinned: true,
+        resource: isPanelForResourceKind(bench.metadata, view.id, resource.kind) ? resource : undefined,
         title: text(view.title, view.id),
       });
     },
@@ -234,7 +234,7 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
 
         workbench.layout.openPanel(widgetId, {
           pinned: true,
-          resource: view?.resourceKind === resource.kind || !view ? resource : undefined,
+          resource: !view || isPanelForResourceKind(bench.metadata, view.id, resource.kind) ? resource : undefined,
           title,
         });
       },

@@ -2,6 +2,7 @@ import { Box, SimpleGrid, Text } from "@chakra-ui/react";
 import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "@pstdio/workbench";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
+import { isPanelForResourceKind, resourceKindsFromMetadata } from "../lib/resource-bindings";
 
 const primaryRendererId = "extension-testbench.primary.renderer";
 const primaryWidgetId = "extension-testbench.primary";
@@ -76,18 +77,16 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
 };
 
 const findTreeView = (bench: ExtensionBenchLoadResponse, resource: ResourceRef) =>
-  bench.metadata.panels.find((view) => view.renderer?.kind === "tree" && view.resourceKind === resource.kind) ??
-  bench.metadata.panels.find((view) => view.renderer?.kind === "tree");
+  bench.metadata.panels.find(
+    (view) => view.renderer?.kind === "tree" && isPanelForResourceKind(bench.metadata, view.id, resource.kind),
+  ) ?? bench.metadata.panels.find((view) => view.renderer?.kind === "tree");
 
 export const registerResourceKinds = (
   workbench: WorkbenchCore,
   bench: ExtensionBenchLoadResponse,
   resource: ResourceRef,
 ) => {
-  const kinds = new Set([resource.kind]);
-  for (const view of bench.metadata.panels) {
-    if (view.resourceKind) kinds.add(view.resourceKind);
-  }
+  const kinds = new Set([resource.kind, ...resourceKindsFromMetadata(bench.metadata)]);
 
   for (const kind of kinds) {
     if (workbench.resources.getKind(kind)) continue;

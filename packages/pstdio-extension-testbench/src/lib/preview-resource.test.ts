@@ -45,17 +45,33 @@ describe("createPreviewResource", () => {
     });
   });
 
-  test("uses a ticket preview resource when the extension contributes ticket views", () => {
+  test("uses a ticket preview resource when the extension declares a ticket resource kind", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
+      resourceKinds: [
+        {
+          id: "tickets.ticket",
+          extensionId: "pstdio.tickets",
+          surface: "primary",
+          slots: { primary: { cardinality: "one", external: false } },
+        },
+      ],
+      resourcePanels: [
+        {
+          id: "tickets.editorPanel",
+          extensionId: "pstdio.tickets",
+          resourceKind: "tickets.ticket",
+          panel: "tickets.editor",
+          slot: "primary",
+        },
+      ],
       panels: [
         {
           id: "tickets.editor",
           extensionId: "pstdio.tickets",
-          resourceKind: "ticket",
-          region: "main",
-          closable: false,
           title: "Ticket",
+          supportedRegions: ["main"],
+          renderer: { kind: "file", id: "tickets.editorRenderer" },
         },
       ],
     });
@@ -65,6 +81,38 @@ describe("createPreviewResource", () => {
       uri: "bench://ticket/PS-16",
       id: "PS-16",
       label: "PS-16 Tree renderer preview",
+      icon: "FileText",
+    });
+  });
+
+  test("derives the kind from a resource-panel edge when no resource kind is declared", () => {
+    const resource = createPreviewResource({
+      ...baseMetadata,
+      resourcePanels: [
+        {
+          id: "acme.plannerInsights",
+          extensionId: "acme.insights",
+          resourceKind: "planner.note",
+          panel: "acme.insights",
+          slot: "inspector",
+        },
+      ],
+      panels: [
+        {
+          id: "acme.insights",
+          extensionId: "acme.insights",
+          title: "Insights",
+          supportedRegions: ["side", "secondary"],
+          renderer: { kind: "controls", id: "acme.insightControls" },
+        },
+      ],
+    });
+
+    expect(resource).toEqual({
+      kind: "note",
+      uri: "bench://note/preview",
+      id: "preview",
+      label: "note preview",
       icon: "FileText",
     });
   });
