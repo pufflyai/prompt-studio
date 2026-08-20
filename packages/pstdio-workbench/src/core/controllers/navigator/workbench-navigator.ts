@@ -45,7 +45,8 @@ export interface WorkbenchNavigatorHostHooks {
 }
 
 export interface WorkbenchNavigatorCommitInput {
-  modeId?: string;
+  // `null` clears the active mode; `undefined` keeps it.
+  modeId?: string | null;
   // `null` clears the selected resource; `undefined` keeps a compatible current one.
   resource?: ResourceRef | null;
   replaceActive?: boolean;
@@ -102,11 +103,16 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
   const presentResource = (resource: ResourceRef, present: { replaceActive: boolean }) =>
     (hooks.presentResource ?? input.presentResource)?.(resource, present);
 
+  // `undefined` keeps the active mode; `null` clears it.
+  const resolveTargetMode = (requested: string | null | undefined) => {
+    const activeModeId = input.modes.getActiveModeId();
+    const targetModeId = requested === undefined ? activeModeId : (requested ?? undefined);
+    return { activeModeId, targetModeId, mode: targetModeId ? input.modes.getMode(targetModeId) : undefined };
+  };
+
   // Resolves the final pair before anything mutates: a failed target changes nothing.
   const resolveCommit = (commit: WorkbenchNavigatorCommitInput) => {
-    const activeModeId = input.modes.getActiveModeId();
-    const targetModeId = commit.modeId ?? activeModeId;
-    const mode = targetModeId ? input.modes.getMode(targetModeId) : undefined;
+    const { activeModeId, mode, targetModeId } = resolveTargetMode(commit.modeId);
     if (targetModeId && !mode) {
       return {
         failure: {

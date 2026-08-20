@@ -397,6 +397,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     setPersistenceScope: scopeMethods.setPersistenceScope,
     getPersistenceScope: scopeMethods.getPersistenceScope,
     hasPersistedLayout: scopeMethods.hasPersistedLayout,
+    enteredWithPersistedLayout: scopeMethods.enteredWithPersistedLayout,
     onWillChangePersistenceScope: scopeMethods.onWillChangePersistenceScope,
     onDidChangePersistenceScope: scopeMethods.onDidChangePersistenceScope,
   };

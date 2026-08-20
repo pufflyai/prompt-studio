@@ -74,7 +74,11 @@ export interface CreateHistoryControllerInput {
   maxEntries?: number;
   // Replays mode and resource through the atomic navigator so no observer sees an
   // intermediate pair. Entries replay through the legacy mode restore without it.
-  commitNavigation?(commit: { modeId?: string; resource?: ResourceRef | null; replaceActive?: boolean }): unknown;
+  commitNavigation?(commit: {
+    modeId?: string | null;
+    resource?: ResourceRef | null;
+    replaceActive?: boolean;
+  }): unknown;
 }
 
 const DEFAULT_MAX_ENTRIES = 50;
@@ -372,15 +376,16 @@ const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]
   return () => rotating;
 };
 
-// Restores the entry's mode. With an atomic navigator the mode and resource commit
-// together, so no observer sees the pair mid-replay; presentation of the resource
+// Restores the entry's context. An entry records the whole committed pair, including
+// "no mode" and "no resource", so replay commits it verbatim through the atomic
+// navigator and no observer sees an intermediate pair. Presentation of the resource
 // still happens through the replay path.
-const restoreEntryMode = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
-  if (!entry.modeId) return;
+const restoreEntryContext = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
   if (input.commitNavigation) {
-    input.commitNavigation({ modeId: entry.modeId, resource: entry.resource ?? null, replaceActive: true });
+    input.commitNavigation({ modeId: entry.modeId ?? null, resource: entry.resource ?? null, replaceActive: true });
     return;
   }
+  if (!entry.modeId) return;
   if (!input.modes?.getMode(entry.modeId)) return;
   if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
 };
@@ -530,7 +535,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     }
   };
 
-  const restoreMode = (entry: WorkbenchNavigationEntry) => restoreEntryMode(input, entry);
+  const restoreMode = (entry: WorkbenchNavigationEntry) => restoreEntryContext(input, entry);
 
   const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined, replaceActive: boolean) => {
     const resource = entry.resource!;

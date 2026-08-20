@@ -258,7 +258,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
     restoreModeLayout(context, availableLayout);
     context.layout.reconcilePanelMenus();
-    if (!seededScopes.has(scopeKey) && !context.layout.hasPersistedLayout()) {
+    if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
       seedScope(mode, context);
     }
     seededScopes.add(scopeKey);
@@ -388,8 +388,11 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       return store.getState().activeModeId;
     },
 
+    // A deferred seed is the second half of one transition: the caller rotates the
+    // layout persistence scope between the two halves. Observers must not treat the
+    // gap as a settled context, so the transition is not over until the seed runs.
     isTransitioning() {
-      return transitioning;
+      return transitioning || deferredSeedModeId !== undefined;
     },
 
     setActiveMode(id, setActiveInput = {}) {
@@ -412,8 +415,13 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     seedActiveMode() {
       const activeModeId = store.getState().activeModeId;
       const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
-      deferredSeedModeId = undefined;
-      if (mode) reconcileScope(mode);
+      transitioning = true;
+      try {
+        if (mode) reconcileScope(mode);
+      } finally {
+        deferredSeedModeId = undefined;
+        transitioning = false;
+      }
     },
 
     onDidChangeActive(listener) {

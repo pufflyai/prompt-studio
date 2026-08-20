@@ -70,3 +70,38 @@ describe("mode layout reconciliation", () => {
     expect(log).toEqual(["seed", "reconcile", "seed", "reconcile", "reconcile"]);
   });
 });
+
+// Entering a mode restores and persists its panels before the mode seeds. Deciding
+// "is this scope new?" from a live persistence read therefore sees the registry's own
+// pre-seed write and skips the seed, leaving the mode with no default placements.
+describe("mode seeding", () => {
+  test("seeds a scope the user never laid out, even though entering the mode persists first", () => {
+    const snapshots = new Map<string | undefined, unknown>();
+    const layout = createLayoutModel({
+      persistence: {
+        getLayout: (scope) => snapshots.get(scope) as ReturnType<typeof layout.getLayout> | undefined,
+        setLayout: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
+      },
+    });
+    const context = {
+      context: createContextKeyService(),
+      layout,
+      panels: createWorkbenchPanelsController(),
+    } as unknown as WorkbenchModeActivationContext;
+    const registry = createWorkbenchModeRegistry({ resolveContext: () => context });
+
+    layout.registerWidget({ id: "picker", title: "Picker", region: "overlay", rendererId: "noop" });
+    registry.registerMode({
+      id: "project-selection",
+      activate: () => undefined,
+      seed: (modeCtx) => modeCtx.layout.openPanel("picker", { title: "Projects" }),
+    });
+
+    // The navigator splits the transition so the persistence scope rotates between
+    // activating the mode and seeding it.
+    registry.setActiveMode("project-selection", { deferSeed: true });
+    registry.seedActiveMode();
+
+    expect(layout.getLayout().regions.overlay.widgets.map((placement) => placement.contributionId)).toEqual(["picker"]);
+  });
+});

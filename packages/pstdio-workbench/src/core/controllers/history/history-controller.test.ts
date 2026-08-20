@@ -473,6 +473,47 @@ describe("createHistoryController mode-aware navigation", () => {
     expect(workbench.modes.getActiveModeId()).toBe("settings");
   });
 
+  // A collection context has no mode. Going back to one has to leave the mode it came
+  // from and clear that mode's resource, or the breadcrumb keeps naming the resource the
+  // user just navigated away from.
+  test("replays an entry with no mode by clearing the mode and its resource", async () => {
+    const workbench = setupWorkbench();
+    const board = { kind: "board", uri: "board:tickets", id: "tickets", label: "Tickets" };
+
+    workbench.resources.registerKind({ kind: "board", label: "Board" });
+    workbench.layout.registerWidget({
+      id: "board-viewer",
+      title: "Board",
+      region: "main",
+      singleton: true,
+      rendererId: "noop",
+      resourceKinds: ["board"],
+    });
+    workbench.resources.registerPresenter({
+      id: "board-presenter",
+      canOpen: (resource) => resource.kind === "board",
+      open: (resource) => workbench.layout.openPanel("board-viewer", { resource, title: resource.label }),
+    });
+    workbench.modes.registerMode({
+      id: "ticket",
+      label: "Ticket",
+      resourceKinds: [TICKET_KIND],
+      activate: () => undefined,
+    });
+
+    await workbench.resources.openResource(board);
+    await workbench.navigator.open({
+      modeId: "ticket",
+      resource: { kind: TICKET_KIND, uri: `${TICKET_KIND}:1`, id: "1", label: "Ticket 1" },
+    });
+    expect(workbench.modes.getActiveModeId()).toBe("ticket");
+
+    workbench.history.goBack();
+
+    expect(workbench.modes.getActiveModeId()).toBeUndefined();
+    expect(workbench.navigator.getSelectedResource()?.uri).toBe(board.uri);
+  });
+
   test("does not duplicate a retained Location while its next mode activates", async () => {
     const workbench = createWorkbenchCore();
     const root = { kind: TICKET_KIND, uri: `${TICKET_KIND}:root`, id: "root", label: "Tickets" };

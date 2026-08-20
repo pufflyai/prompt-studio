@@ -1,4 +1,5 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { getDashboardSelectedProjectId } from "./project-context";
 
 export type DashboardCollection = "sessions" | "workspaces" | "tickets";
@@ -122,8 +123,12 @@ export const registerDashboardNavigator = (ctx: WorkbenchModuleContext) => {
     interpretSelection: (resource) => (resource.kind === "dashboard-view" ? undefined : resource),
     applySelection: (resource) => applyDashboardNavigationSelection(ctx, resource),
     applyScope: () => syncDashboardLayoutPersistenceScope(ctx),
+    // The trail is a function of the committed resource, so it is rebuilt on every
+    // commit. Presenters must not be the only writers: replaying a context whose
+    // location placement already exists presents nothing and would keep a stale trail.
     applyBreadcrumb: (resource) => {
-      if (!resource) ctx.breadcrumbs.clearItems();
+      if (resource) setResourceBreadcrumb(ctx, resource);
+      else ctx.breadcrumbs.clearItems();
     },
     presentResource: (resource, input) => ctx.resources.openResource(resource, input),
   });
