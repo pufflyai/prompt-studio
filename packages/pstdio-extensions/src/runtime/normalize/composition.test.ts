@@ -58,6 +58,29 @@ const addon = defineExtension({
 });
 
 describe("composition normalization", () => {
+  // A resource kind's id is the plain name it was declared with, because that same
+  // string is the resource type in every payload crossing the extension boundary and in
+  // persisted resource URIs. Both spellings of a reference resolve to it.
+  test("keeps a declared resource kind id plain and resolves both reference spellings to it", () => {
+    const runtime = normalizeExtensionSources([wrap("owner", owner), wrap("addon", addon)]);
+
+    expect(runtime.resourceKinds.map((record) => record.id)).toEqual(["ticket"]);
+    expect(runtime.resourcePanels.map((record) => record.resourceKindId)).toEqual(["ticket", "ticket"]);
+    expect(runtime.modes[0]?.contribution.resources).toHaveProperty("ticket");
+    expect(runtime.diagnostics).toEqual([]);
+  });
+
+  test("emits extension_resource_kind_duplicate when two extensions declare the same kind", () => {
+    const rival = defineExtension({
+      resourceKinds: {
+        ticket: { surface: "attached", slots: { inspector: { cardinality: "many", external: true } } },
+      },
+    });
+    const runtime = normalizeExtensionSources([wrap("owner", owner), wrap("rival", rival)]);
+
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_resource_kind_duplicate");
+  });
+
   test("resolves cross-extension edges after collection independent of source order", () => {
     const forward = normalizeExtensionSources([wrap("owner", owner), wrap("addon", addon)]);
     const reverse = normalizeExtensionSources([wrap("addon", addon), wrap("owner", owner)]);
@@ -81,7 +104,7 @@ describe("composition normalization", () => {
     const runtime = normalizeExtensionSources([wrap("owner", owner), wrap("addon", invalid)]);
 
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain(code);
-    expect(runtime.resourceKinds.map((record) => record.id)).toEqual(["owner.ticket"]);
+    expect(runtime.resourceKinds.map((record) => record.id)).toEqual(["ticket"]);
     // The invalid optional edge is dropped; the valid edges keep composing.
     expect(runtime.resourcePanels.map((record) => record.id)).toEqual(["owner.editor", "addon.insights"]);
   });

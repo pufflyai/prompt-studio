@@ -76,6 +76,7 @@ that fails if the regression returns.
 | A second extension claiming another extension's resource kind breaks the owner | `pstdio-dashboard` `extension-resource-kind-ownership.module.test.ts` |
 | A panel reopened for a resource duplicates its owned menus | `pstdio-workbench` `panel-menu-ownership.test.ts` |
 | An extension cannot install while a cross-extension target is absent | `pstdio-extensions` `composition.test.ts` inert-reference cases |
+| A resource kind renamed by the host stops matching the resource type its commands return | `pstdio-extensions` `composition.test.ts` and `workbench-extension-metadata.test.ts` reference-spelling cases; `e2e` `extension-composition-conformance.test.ts`; `e2e` `ps-167-nav-chrome.spec.ts` |
 
 ## Requirements
 

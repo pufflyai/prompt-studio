@@ -146,8 +146,8 @@ defineExtension({
 
   resourcePanels: {
     ticketInsights: {
-      // A bare id resolves inside the declaring extension.
-      // Another extension's contribution uses the namespaced form.
+      // A kind reference may be bare or namespaced. Naming the owner is
+      // clearer when the kind belongs to another extension.
       resourceKind: "planner.ticket",
       panel: "insights",
       slot: "inspector",
@@ -209,8 +209,10 @@ modes: {
 
 ## Rules and Constraints
 
-- Resource and panel ids are stable, namespaced contribution ids.
-- A bare id in a contribution resolves inside the declaring extension. A reference to another extension's resource kind, panel, or slot uses the namespaced form `<extension>.<id>`.
+- Panel and mode ids are stable, namespaced contribution ids. A bare id in a contribution resolves inside the declaring extension; a reference to another extension's panel uses the namespaced form `<extension>.<id>`.
+- A resource kind's id is the plain name its extension declares. The host does not namespace it, because that same name is the resource type in every payload crossing the extension boundary, in resource URIs, and in stored session anchors.
+- A resource kind reference may be written bare or namespaced as `<extension>.<kind>`. Both resolve to the declared id; the namespaced form records who owns the kind.
+- A resource kind has exactly one owner. Two extensions declaring the same kind is an install-time error for both.
 - A slot name is local to its resource kind.
 - External extensions cannot claim a closed slot or primary location.
 - A mode layout cannot expand a panel's supported regions.
@@ -223,6 +225,7 @@ modes: {
 | Code | Cause |
 | ---- | ----- |
 | extension_resource_kind_missing | A resource-panel or mode references an unknown resource kind. |
+| extension_resource_kind_duplicate | Two extensions declare the same resource kind. |
 | extension_resource_slot_missing | A resource-panel or mode references an unknown slot. |
 | extension_resource_slot_closed | An external extension contributes to a closed slot. |
 | extension_panel_missing | A resource-panel or mode references an unknown panel. |

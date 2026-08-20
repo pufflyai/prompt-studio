@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
+import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionContributions } from "./extension-contribution-registration";
@@ -33,15 +34,16 @@ const labMetadata = {
       modePanels: {
         "extension-lab.labOverview": { region: "main", required: true },
         "extension-lab.labCams": { region: "main" },
+        "extension-lab.labArtifacts": { region: "main" },
       },
       resources: {
-        "extension-lab.glass-lab-artifact": { slots: { inspector: { region: "side" } } },
+        "glass-lab-artifact": { slots: { inspector: { region: "side" } } },
       },
     },
   ],
   resourceKinds: [
     {
-      id: "extension-lab.glass-lab-artifact",
+      id: "glass-lab-artifact",
       extensionId: "pstdio.extension-lab",
       surface: "attached",
       slots: { inspector: { cardinality: "many", external: true } },
@@ -63,6 +65,23 @@ const labMetadata = {
       webview: webview("cams"),
     },
     {
+      id: "extension-lab.labArtifacts",
+      extensionId: "pstdio.extension-lab",
+      supportedRegions: ["main", "secondary", "side"],
+      title: "Artifacts",
+      renderer: { kind: "dataTable", id: "extension-lab.glassLabArtifacts" },
+      panelMenus: [
+        {
+          id: "extension-lab.labArtifacts.create",
+          extensionId: "pstdio.extension-lab",
+          ownerPanelId: "extension-lab.labArtifacts",
+          title: "Create artifacts",
+          side: "right",
+          renderer: { kind: "controls", id: "extension-lab.labArtifactCreate" },
+        },
+      ],
+    },
+    {
       id: "extension-lab.labArtifactDetail",
       extensionId: "pstdio.extension-lab",
       supportedRegions: ["side"],
@@ -70,11 +89,20 @@ const labMetadata = {
       webview: webview("artifact"),
     },
   ],
+  dataTableRenderers: [
+    {
+      id: "extension-lab.glassLabArtifacts",
+      extensionId: "pstdio.extension-lab",
+      title: "Artifacts",
+      resourceKind: "glass-lab-artifact",
+      queryHandlerId: "extension-lab.glass-lab-artifacts.query",
+    },
+  ],
   resourcePanels: [
     {
       id: "extension-lab.labArtifactDetail",
       extensionId: "pstdio.extension-lab",
-      resourceKind: "extension-lab.glass-lab-artifact",
+      resourceKind: "glass-lab-artifact",
       panel: "extension-lab.labArtifactDetail",
       slot: "inspector",
     },
@@ -98,6 +126,42 @@ describe("extension mode-wide panels", () => {
       expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
         "dashboard-workbench.extension-view.extension-lab.labCams",
+        "extension-lab.labArtifacts",
+      ]);
+    } finally {
+      for (const disposable of disposables) disposable.dispose();
+    }
+  });
+
+  test("places mode-wide panels when switching from an incompatible resource", async () => {
+    const workbench = createWorkbenchCore();
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "extension-view", label: "Extension view" });
+    const disposables = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async () => ({ outcome: { ok: true, value: undefined } }) as never,
+      metadata: labMetadata,
+      projectId: "project-1",
+    });
+
+    try {
+      // A collection view is active first, exactly as the Tickets board is in the app.
+      selectDashboardNavigationResource(workbench, {
+        kind: "extension-view",
+        uri: "dashboard-workbench://project/project-1/extension-views/planner.tickets",
+        id: "planner.tickets",
+        label: "Tickets",
+      });
+      // The Lab tree item switches mode through the workbench command.
+      await workbench.commands.executeCommand("workbench.action.switchMode", {
+        modeId: "pstdio.extension-lab.lab",
+      });
+
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
+      expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.extension-lab.labOverview",
+        "dashboard-workbench.extension-view.extension-lab.labCams",
+        "extension-lab.labArtifacts",
       ]);
     } finally {
       for (const disposable of disposables) disposable.dispose();

@@ -9,7 +9,12 @@ import type { NormalizedExtension, RuntimePanelRecord } from "../../types/runtim
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
-import { contributionId, resolveContributionReference } from "./references";
+import {
+  contributionId,
+  resolveContributionReference,
+  resolveResourceKindReference,
+  resourceKindReferences,
+} from "./references";
 
 const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, localId: string) => ({
   id: contributionId(ext, localId),
@@ -28,6 +33,9 @@ export const collectCompositionContributions = (
     if (!isRecord(contribution) || !isRecord(contribution.slots) || typeof contribution.surface !== "string") continue;
     runtime.resourceKinds.push({
       ...recordBase(ext, source, localId),
+      // A resource kind keeps the plain name it was declared with. See
+      // `resolveResourceKindReference` for why the host must not namespace it.
+      id: localId,
       contribution: contribution as unknown as ResourceKindContribution,
     });
   }
@@ -43,7 +51,9 @@ export const collectCompositionContributions = (
     }
     runtime.resourcePanels.push({
       ...recordBase(ext, source, localId),
-      resourceKindId: resolveContributionReference(ext, contribution.resourceKind),
+      // Kept as written: resource kinds are resolved once every extension is
+      // collected, so a cross-extension edge does not depend on source order.
+      resourceKindId: contribution.resourceKind,
       panelId: resolveContributionReference(ext, contribution.panel),
       slotId: contribution.slot,
       contribution: contribution as unknown as ResourcePanelContribution,
@@ -55,7 +65,7 @@ export const collectCompositionContributions = (
       continue;
     runtime.resourceHierarchyProviders.push({
       ...recordBase(ext, source, localId),
-      resourceKindId: resolveContributionReference(ext, provider.resourceKind),
+      resourceKindId: provider.resourceKind,
       provider: provider as unknown as ResourceHierarchyProvider,
     });
   }
@@ -241,12 +251,11 @@ const validateKnownPanelPlacement = (
 const validateModeRecipe = (
   runtime: Accumulator,
   mode: (typeof runtime.modes)[number],
-  rawKindId: string,
+  kindId: string,
   recipe: ModeResourceRecipeContribution,
 ) => {
   const ext = runtime.extensions.find((candidate) => candidate.id === mode.extensionId);
   if (!ext) return;
-  const kindId = resolveContributionReference(ext, rawKindId);
   const kind = runtime.resourceKinds.find((candidate) => candidate.id === kindId);
   if (!kind) {
     const absent = referencesAbsentExtension(runtime, kindId);
@@ -297,7 +306,42 @@ const validateModeRecipe = (
   }
 };
 
+// Resource kind references resolve after every extension is collected, so a
+// cross-extension reference is independent of source order.
+const resolveResourceKindReferences = (runtime: Accumulator) => {
+  const references = resourceKindReferences(runtime.resourceKinds);
+  runtime.resourcePanels = runtime.resourcePanels.map((edge) => ({
+    ...edge,
+    resourceKindId: resolveResourceKindReference(edge.resourceKindId, references),
+  }));
+  runtime.resourceHierarchyProviders = runtime.resourceHierarchyProviders.map((provider) => ({
+    ...provider,
+    resourceKindId: resolveResourceKindReference(provider.resourceKindId, references),
+  }));
+  return references;
+};
+
+// A resource kind has exactly one owner. Two extensions declaring the same kind would
+// leave the running workbench with one registration and an ambiguous owner, so this is
+// an install-time error for both of them.
+const validateResourceKindOwnership = (runtime: Accumulator) => {
+  for (const kind of runtime.resourceKinds) {
+    const owner = runtime.resourceKinds.find((candidate) => candidate.id === kind.id);
+    if (owner === kind) continue;
+    addDiagnostic(
+      runtime,
+      kind,
+      "extension_resource_kind_duplicate",
+      kind.id,
+      `Resource kind "${kind.id}" is already declared by extension "${owner?.name}"`,
+    );
+  }
+};
+
 export const validateCompositionRelationships = (runtime: Accumulator) => {
+  const references = resolveResourceKindReferences(runtime);
+  validateResourceKindOwnership(runtime);
+
   for (const kind of runtime.resourceKinds) {
     if (
       kind.contribution.surface === "primary" &&
@@ -320,7 +364,7 @@ export const validateCompositionRelationships = (runtime: Accumulator) => {
     const ext = runtime.extensions.find((candidate) => candidate.id === mode.extensionId);
     if (!ext) continue;
     for (const [resourceKind, recipe] of Object.entries(mode.contribution.resources ?? {})) {
-      validateModeRecipe(runtime, mode, resourceKind, recipe);
+      validateModeRecipe(runtime, mode, resolveResourceKindReference(resourceKind, references), recipe);
     }
     for (const [panelReference, placement] of Object.entries(mode.contribution.modePanels ?? {})) {
       validatesPanelPlacement(runtime, mode, resolveContributionReference(ext, panelReference), placement);

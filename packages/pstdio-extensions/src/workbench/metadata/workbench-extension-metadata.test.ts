@@ -149,7 +149,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.review",
       panelRegions: ["main"],
-      resources: { "lab.ticket": { slots: { primary: { region: "main", required: true } } } },
+      resources: { ticket: { slots: { primary: { region: "main", required: true } } } },
     });
   });
 });
@@ -560,7 +560,7 @@ describe("createWorkbenchExtensionMetadata tree item actions", () => {
 });
 
 describe("createWorkbenchExtensionMetadata resource kind references", () => {
-  test("resolves a bare renderer resource kind to the kind its extension declares", () => {
+  test("resolves both reference spellings to the plain declared resource kind id", () => {
     const runtime = normalizeExtensionSources([
       {
         packagePath: "/extension",
@@ -582,6 +582,7 @@ describe("createWorkbenchExtensionMetadata resource kind references", () => {
           kanbanRenderers: {
             tickets: { title: "Tickets", resourceKind: "ticket", query: async () => ({ rows: [] }) },
             sessions: { title: "Sessions", resourceKind: "session", query: async () => ({ rows: [] }) },
+            owned: { title: "Owned", resourceKind: "planner.ticket", query: async () => ({ rows: [] }) },
           },
         },
       },
@@ -589,9 +590,12 @@ describe("createWorkbenchExtensionMetadata resource kind references", () => {
 
     const metadata = createWorkbenchExtensionMetadata({ runtime });
 
-    // The planner declares `ticket`, so the renderer names the declared id.
-    expect(metadata.kanbanRenderers?.[0]?.resourceKind).toBe("planner.ticket");
+    // A resource kind keeps the plain name it was declared with, so the bare reference
+    // already names it and the namespaced reference resolves to the same id.
+    expect(metadata.resourceKinds?.map((record) => record.id)).toEqual(["ticket"]);
+    expect(metadata.kanbanRenderers?.[0]?.resourceKind).toBe("ticket");
     // `session` is a host kind the planner does not declare, so it stays as written.
     expect(metadata.kanbanRenderers?.[1]?.resourceKind).toBe("session");
+    expect(metadata.kanbanRenderers?.[2]?.resourceKind).toBe("ticket");
   });
 });

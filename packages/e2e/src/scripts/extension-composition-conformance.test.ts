@@ -23,25 +23,29 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([plannerPath, labPath]);
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.resourceKinds.map((kind) => kind.id)).toEqual([
-      "pstdio-planner.ticket",
-      "extension-lab.glass-lab-artifact",
-      "extension-lab.blend-project",
+    // A resource kind keeps the plain name its extension declared; the owner is the
+    // `extensionId` on the record, not a prefix on the id.
+    expect(runtime.resourceKinds.map((kind) => [kind.id, kind.extensionId])).toEqual([
+      ["ticket", "pstdio.pstdio-planner"],
+      ["glass-lab-artifact", "pstdio.extension-lab"],
+      ["blend-project", "pstdio.extension-lab"],
     ]);
   });
 
   test("resolves the Lab's cross-extension inspector into the Planner ticket slot", async () => {
     const runtime = await loadRuntime([plannerPath, labPath]);
 
+    // The Lab writes the namespaced spelling `pstdio-planner.ticket`; it resolves to the
+    // Planner's declared kind.
     const external = runtime.resourcePanels.find((edge) => edge.id === "extension-lab.ticketInsights");
     expect(external).toMatchObject({
-      resourceKindId: "pstdio-planner.ticket",
+      resourceKindId: "ticket",
       panelId: "extension-lab.labArtifacts",
       slotId: "inspector",
     });
     // The Planner's own primary placement is untouched by the external contribution.
     expect(runtime.resourcePanels.find((edge) => edge.slotId === "primary")).toMatchObject({
-      resourceKindId: "pstdio-planner.ticket",
+      resourceKindId: "ticket",
       panelId: "pstdio-planner.ticketEditor",
     });
   });

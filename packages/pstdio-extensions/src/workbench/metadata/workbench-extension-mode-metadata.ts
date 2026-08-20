@@ -1,7 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ModePlacementContribution, ModeResourceRecipeContribution } from "@pstdio/sdk/extensions";
 import { normalizeWorkbenchModePanels } from "pstdio-api-contracts/extension-kernel";
-import { resolveContributionReference } from "../../runtime/normalize/references";
+import { resolveContributionReference, resolveResourceKindReference } from "../../runtime/normalize/references";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 
 type ExtensionDiagnostic = WorkbenchExtensionMetadata["diagnostics"][number];
@@ -27,9 +27,10 @@ const createLayoutDiagnostic = (
   sourcePath: mode.sourcePath,
 });
 
-// Mode metadata crosses the API boundary, so recipe keys and panel references are
-// serialized as fully namespaced ids. Bare references resolve to the declaring
-// extension; namespaced references stay unchanged.
+// Mode metadata crosses the API boundary, so panel references are serialized as fully
+// namespaced ids: a bare reference resolves to the declaring extension and a namespaced
+// one stays unchanged. Resource kind keys follow their own rule and keep the plain name
+// the declaring extension gave the kind.
 const declaringExtension = (mode: ExtensionRuntime["modes"][number]): NormalizedExtension =>
   ({ id: mode.extensionId, name: mode.name }) as NormalizedExtension;
 
@@ -46,11 +47,12 @@ const resolvePlacementMap = (
 const resolveModeResources = (
   ext: NormalizedExtension,
   resources: Record<string, ModeResourceRecipeContribution> | undefined,
+  references: ReadonlyMap<string, string>,
 ) => {
   if (!resources) return undefined;
   return Object.fromEntries(
     Object.entries(resources).map(([kindId, recipe]) => [
-      resolveContributionReference(ext, kindId),
+      resolveResourceKindReference(kindId, references),
       { ...recipe, panels: resolvePlacementMap(ext, recipe.panels) },
     ]),
   );
@@ -69,7 +71,10 @@ const resolveDefaultResource = (
   return { commandId: resolveContributionReference(ext, defaultResource.id) };
 };
 
-export const toWorkbenchExtensionModeRecords = (runtime: ExtensionRuntime) => {
+export const toWorkbenchExtensionModeRecords = (
+  runtime: ExtensionRuntime,
+  resourceKindReferences: ReadonlyMap<string, string>,
+) => {
   const modes: ExtensionModeRecord[] = [];
   const diagnostics: WorkbenchExtensionMetadata["diagnostics"] = [...runtime.diagnostics];
   const modeIds = new Set(reservedModeIds);
@@ -105,7 +110,11 @@ export const toWorkbenchExtensionModeRecords = (runtime: ExtensionRuntime) => {
       label: mode.contribution.label,
       icon: mode.contribution.icon,
       ...(mode.contribution.panelRegions !== undefined ? { panelRegions } : {}),
-      resources: resolveModeResources(ext, mode.contribution.resources) as ExtensionModeRecord["resources"],
+      resources: resolveModeResources(
+        ext,
+        mode.contribution.resources,
+        resourceKindReferences,
+      ) as ExtensionModeRecord["resources"],
       modePanels: resolvePlacementMap(ext, mode.contribution.modePanels) as ExtensionModeRecord["modePanels"],
       defaultResource: resolveDefaultResource(ext, mode.contribution.defaultResource),
     });

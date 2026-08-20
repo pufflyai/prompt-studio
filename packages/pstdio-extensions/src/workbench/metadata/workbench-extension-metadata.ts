@@ -15,6 +15,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
+import { resolveResourceKindReference, resourceKindReferences } from "../../runtime/normalize/references";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
@@ -69,39 +70,25 @@ const resolveContributionId = (extensionName: string, localOrFullId: string) =>
 const resolveOptionalContributionId = (extensionName: string, localOrFullId: string | undefined) =>
   localOrFullId ? resolveContributionId(extensionName, localOrFullId) : undefined;
 
-// One reference rule for resource kinds: a bare reference resolves inside the
-// declaring extension. It is only rewritten when that extension actually declares the
-// kind, so a reference to a host kind such as `session` stays as written.
-const resolveResourceKindReference = (
-  extensionName: string,
-  resourceKind: string,
-  declaredKindIds: ReadonlySet<string>,
-) => {
-  const candidate = resolveContributionId(extensionName, resourceKind);
-  return declaredKindIds.has(candidate) ? candidate : resourceKind;
-};
-
 const withResolvedResourceKind = <T extends { resourceKind?: string }>(
   record: T | null,
-  extensionName: string,
-  declaredKindIds: ReadonlySet<string>,
+  references: ReadonlyMap<string, string>,
 ) => {
   if (!record?.resourceKind) return record;
-  const resolved = resolveResourceKindReference(extensionName, record.resourceKind, declaredKindIds);
+  const resolved = resolveResourceKindReference(record.resourceKind, references);
   return resolved === record.resourceKind ? record : { ...record, resourceKind: resolved };
 };
 
-// `when.resourceType` names resource kinds, so it follows the same rule as a renderer
-// reference: a bare entry resolves inside the declaring extension when that extension
-// declares the kind.
+// `when.resourceType` names resource kinds, so it follows the same reference rule as a
+// renderer's `resourceKind`: a namespaced entry resolves to the declared kind and a host
+// kind such as `session` stays as written.
 const withResolvedWhenResourceTypes = <T extends { when?: { resourceType?: string[] } }>(
   record: T,
-  extensionName: string,
-  declaredKindIds: ReadonlySet<string>,
+  references: ReadonlyMap<string, string>,
 ) => {
   const resourceTypes = record.when?.resourceType;
   if (!resourceTypes?.length) return record;
-  const resolved = resourceTypes.map((kind) => resolveResourceKindReference(extensionName, kind, declaredKindIds));
+  const resolved = resourceTypes.map((kind) => resolveResourceKindReference(kind, references));
   if (resolved.every((kind, index) => kind === resourceTypes[index])) return record;
   return { ...record, when: { ...record.when, resourceType: resolved } };
 };
@@ -153,7 +140,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
 
 const toMenuContributions = (
   commands: ExtensionRuntime["commands"],
-  declaredKindIds: ReadonlySet<string> = new Set(),
+  references: ReadonlyMap<string, string> = new Map(),
 ): ExtensionMenuContribution[] =>
   commands.flatMap((command) =>
     command.menus.map((menu, index) => ({
@@ -168,11 +155,7 @@ const toMenuContributions = (
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: withResolvedWhenResourceTypes(
-        { when: menu.when as ExtensionMenuContribution["when"] },
-        command.name,
-        declaredKindIds,
-      ).when,
+      when: withResolvedWhenResourceTypes({ when: menu.when as ExtensionMenuContribution["when"] }, references).when,
     })),
   );
 
@@ -601,18 +584,17 @@ const toStatusItemRecord = (
 export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => {
-  const modes = toWorkbenchExtensionModeRecords(input.runtime);
-  const declaredKindIds = new Set(input.runtime.resourceKinds.map((record) => record.id));
-  const resolveKinds = <T extends { resourceKind?: string }>(records: { name: string }[], mapped: (T | null)[]) =>
-    mapped.map((record, index) => withResolvedResourceKind(record, records[index]!.name, declaredKindIds));
+  const references = resourceKindReferences(input.runtime.resourceKinds);
+  const modes = toWorkbenchExtensionModeRecords(input.runtime, references);
+  const resolveKinds = <T extends { resourceKind?: string }>(mapped: (T | null)[]) =>
+    mapped.map((record) => withResolvedResourceKind(record, references));
   return {
     extensions: input.runtime.extensions.map(toExtensionRecord),
     commands: input.runtime.commands.map(toCommandRecord),
-    menuContributions: toMenuContributions(input.runtime.commands, declaredKindIds),
-    commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => {
-      const command = input.runtime.commands.find((candidate) => candidate.id === contribution.commandId);
-      return command ? withResolvedWhenResourceTypes(contribution, command.name, declaredKindIds) : contribution;
-    }),
+    menuContributions: toMenuContributions(input.runtime.commands, references),
+    commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) =>
+      withResolvedWhenResourceTypes(contribution, references),
+    ),
     modes: modes.modes,
     panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
     resourceKinds: input.runtime.resourceKinds.map(toResourceKindRecord),
@@ -624,33 +606,18 @@ export const createWorkbenchExtensionMetadata = (
     })),
     statusItems: compact(input.runtime.statusItems.map((item) => toStatusItemRecord(input, item))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
-    treeItems: input.runtime.treeItems.map((item) =>
-      withResolvedWhenResourceTypes(toTreeItemRecord(item), item.name, declaredKindIds),
-    ),
+    treeItems: input.runtime.treeItems.map((item) => withResolvedWhenResourceTypes(toTreeItemRecord(item), references)),
     activityItems: input.runtime.activityItems.map(toActivityItemRecord),
     settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
-    kanbanRenderers: compact(
-      resolveKinds(input.runtime.kanbanRenderers, input.runtime.kanbanRenderers.map(toKanbanRendererRecord)),
-    ),
-    dataTableRenderers: compact(
-      resolveKinds(input.runtime.dataTableRenderers, input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),
-    ),
+    kanbanRenderers: compact(resolveKinds(input.runtime.kanbanRenderers.map(toKanbanRendererRecord))),
+    dataTableRenderers: compact(resolveKinds(input.runtime.dataTableRenderers.map(toDataTableRendererRecord))),
     commandPaletteResources: compact(
-      resolveKinds(
-        input.runtime.commandPaletteResources,
-        input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord),
-      ),
+      resolveKinds(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     ),
-    treeRenderers: compact(
-      resolveKinds(input.runtime.treeRenderers, input.runtime.treeRenderers.map(toTreeRendererRecord)),
-    ),
-    fileRenderers: compact(
-      resolveKinds(input.runtime.fileRenderers, input.runtime.fileRenderers.map(toFileRendererRecord)),
-    ),
-    controlsRenderers: compact(
-      resolveKinds(input.runtime.controlsRenderers, input.runtime.controlsRenderers.map(toControlsRendererRecord)),
-    ),
+    treeRenderers: compact(resolveKinds(input.runtime.treeRenderers.map(toTreeRendererRecord))),
+    fileRenderers: compact(resolveKinds(input.runtime.fileRenderers.map(toFileRendererRecord))),
+    controlsRenderers: compact(resolveKinds(input.runtime.controlsRenderers.map(toControlsRendererRecord))),
     keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
