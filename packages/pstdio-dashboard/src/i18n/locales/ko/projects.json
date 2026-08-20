@@ -253,6 +253,13 @@
         "fixSessionStarted": "수정 세션이 시작되었습니다",
         "fixSessionFailed": "수정 세션 시작에 실패했습니다"
       },
+      "update": {
+        "available": "업데이트 있음",
+        "description": "확장 폴더에 새 소스가 있습니다. 업데이트를 적용할 때까지 프로젝트는 현재 버전을 계속 사용합니다.",
+        "action": "업데이트",
+        "succeeded": "확장을 업데이트했습니다",
+        "failed": "업데이트가 거부되었습니다"
+      },
       "automations": {
         "title": "자동화",
         "toggleAriaLabel": "자동화 {{name}} 전환",

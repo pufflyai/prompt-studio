@@ -304,6 +304,24 @@ describe("installExtensionSource", () => {
   });
 });
 
+describe("installExtensionSource API version gate", () => {
+  test("refuses an extension built for another API version and leaves the root untouched", async () => {
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    writeManifest(source, { engines: { pstdio: "1.0.0-alpha.999" }, packageManager: "bun@1.3.13" });
+
+    const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
+
+    await expect(installExtensionSource({ source, env: { PSTDIO_HOME: pstdioHome }, runCommand })).rejects.toThrow(
+      "1.0.0-alpha.999",
+    );
+
+    // Nothing is copied and no dependency install runs for source the host will not accept.
+    expect(existsSync(join(pstdioHome, "extensions", "source-extension"))).toBe(false);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+});
+
 describe("installExtensionSource dependency reinstall", () => {
   test("reuses an existing install but reinstalls deps when node_modules is missing", async () => {
     const source = join(root, "source-extension");

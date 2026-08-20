@@ -41,6 +41,11 @@ type SyncInstalledExtensionsForProjectsDeps = InstalledExtensionDiscoveryDeps & 
 
 type DiscoveredInstalledExtension = Omit<SyncInstalledSourceInput, "projectId">;
 
+export type SyncedInstalledExtension = {
+  installName: string;
+  sourceHash: string | null;
+};
+
 type PrunedExtensionInstance = {
   installedSource: { extension_id: string; manifest_json: unknown };
 };
@@ -93,7 +98,7 @@ const syncSnapshotForProject = async (
   },
 ) => {
   const { discovered, presentSourcePaths, root, rootExists } = deps.snapshot;
-  const synced: string[] = [];
+  const synced: SyncedInstalledExtension[] = [];
 
   for (const extension of discovered) {
     await deps.extensionService.syncInstalledSourceForProject({
@@ -101,7 +106,8 @@ const syncSnapshotForProject = async (
       projectId: deps.projectId,
       sourceKind: "local_path",
     });
-    synced.push(extension.installName);
+    // The hash of the folder as it is on disk, which the caller compares against the adopted hash.
+    synced.push({ installName: extension.installName, sourceHash: extension.sourceHash ?? null });
   }
 
   if (rootExists) {
@@ -129,7 +135,7 @@ export const syncInstalledExtensionsForProject = async (deps: SyncInstalledExten
 export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExtensionsForProjectsDeps) => {
   const snapshotStartedAt = new Date().toISOString();
   const snapshot = await discoverInstalledExtensions(deps);
-  const synced: Array<{ installName: string; projectId: string }> = [];
+  const synced: Array<SyncedInstalledExtension & { projectId: string }> = [];
 
   for (const project of await deps.projectService.list()) {
     const projectSynced = await syncSnapshotForProject({
@@ -138,7 +144,7 @@ export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExte
       snapshot,
       snapshotStartedAt,
     });
-    synced.push(...projectSynced.map((installName) => ({ installName, projectId: project.id })));
+    synced.push(...projectSynced.map((entry) => ({ ...entry, projectId: project.id })));
   }
 
   return synced;

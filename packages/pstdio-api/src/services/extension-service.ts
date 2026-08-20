@@ -216,11 +216,27 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return deps.extensionInstancesService.findByScopeInstalledSource("project", input.projectId, installedSource.id);
   };
 
-  const resolveProjectInstalledSource = async (input: EnableInstalledSourceInput) => {
+  // Discovery must never adopt. A folder that changed on disk is an offer the user takes from the
+  // extension panel; until then the project keeps running the source it already accepted.
+  const attachInstalledSource = async (input: RegisterInstalledSourceInput) => {
+    const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
+    if (existing && input.sourceHash && existing.source_hash && input.sourceHash !== existing.source_hash) {
+      return existing;
+    }
+
+    return registerInstalledSource(input);
+  };
+
+  const resolveProjectInstalledSource = async (
+    input: EnableInstalledSourceInput,
+    resolveSource: (
+      source: RegisterInstalledSourceInput,
+    ) => Promise<Awaited<ReturnType<typeof registerInstalledSource>>>,
+  ) => {
     const project = await deps.projectService.get(input.projectId);
     if (!project) throw new ProjectNotFoundError(input.projectId);
 
-    const installedSource = await registerInstalledSource(input);
+    const installedSource = await resolveSource(input);
     const existing = await findProjectInstanceForSource(input, installedSource);
 
     return { existing, installedSource };
@@ -253,7 +269,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const enableInstalledSourceForProject = async (input: EnableInstalledSourceInput) => {
-    const { existing, installedSource } = await resolveProjectInstalledSource(input);
+    const { existing, installedSource } = await resolveProjectInstalledSource(input, registerInstalledSource);
 
     const instance = existing
       ? await deps.extensionInstancesService.update(existing.id, { enabled: true })
@@ -267,7 +283,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const syncInstalledSourceForProject = async (input: SyncInstalledSourceInput) => {
-    const { existing, installedSource } = await resolveProjectInstalledSource(input);
+    const { existing, installedSource } = await resolveProjectInstalledSource(input, attachInstalledSource);
     if (existing) return { installedSource, instance: existing };
 
     const instance = await createProjectInstance(input, installedSource, false);

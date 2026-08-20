@@ -29,7 +29,6 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       repoService: {} as never,
       webviewBuilds: true,
       createRootWatcher: async () => createProcess(),
-      createSourceWatcher: async () => createProcess(),
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
           refreshedSourcePaths.push(sourcePath);
@@ -60,7 +59,6 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     const unexpectedRootRefreshReleased = new Promise<void>((resolve) => {
       releaseUnexpectedRootRefresh = resolve;
     });
-    const sourceRefreshes: Array<string | undefined> = [];
     const webviewRefreshes: Array<string | undefined> = [];
     const runtime = await createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
@@ -79,10 +77,6 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
           rootRefreshCount++;
           if (rootRefreshCount > 1) await unexpectedRootRefreshReleased;
         }),
-      createSourceWatcher: async () =>
-        createProcess(async (sourcePath) => {
-          sourceRefreshes.push(sourcePath);
-        }),
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
           webviewRefreshes.push(sourcePath);
@@ -94,7 +88,6 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       await wait();
 
       expect(rootRefreshCount).toBe(1);
-      expect(sourceRefreshes).toEqual([undefined, "/extensions/lab"]);
       expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);
     } finally {
       releaseUnexpectedRootRefresh();

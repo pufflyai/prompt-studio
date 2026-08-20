@@ -258,6 +258,13 @@
         "fixSessionStarted": "Session de correction démarrée",
         "fixSessionFailed": "Échec du démarrage de la session de correction"
       },
+      "update": {
+        "available": "Mise à jour disponible",
+        "description": "Une nouvelle source attend dans le dossier des extensions. Le projet continue d'utiliser la version adoptée jusqu'à ce que vous acceptiez la mise à jour.",
+        "action": "Mettre à jour",
+        "succeeded": "Extension mise à jour",
+        "failed": "Mise à jour refusée"
+      },
       "automations": {
         "title": "Automatisations",
         "toggleAriaLabel": "Activer/désactiver l'automatisation {{name}}",

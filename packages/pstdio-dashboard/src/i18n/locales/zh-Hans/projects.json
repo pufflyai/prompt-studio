@@ -253,6 +253,13 @@
         "fixSessionStarted": "修复会话已启动",
         "fixSessionFailed": "启动修复会话失败"
       },
+      "update": {
+        "available": "有可用更新",
+        "description": "扩展目录中有新的源代码。在你接受更新之前，项目会继续运行已采用的版本。",
+        "action": "更新",
+        "succeeded": "扩展已更新",
+        "failed": "更新被拒绝"
+      },
       "automations": {
         "title": "自动化",
         "toggleAriaLabel": "切换自动化 {{name}}",

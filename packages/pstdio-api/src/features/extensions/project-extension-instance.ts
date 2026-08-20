@@ -16,6 +16,7 @@ type InstalledSourceLike = {
   source_path: string;
   version: string | null;
   manifest_json: unknown;
+  source_hash: string | null;
   status: "pending" | "loaded" | "error" | "missing" | "disabled";
   last_loaded_at: string | null;
   last_error_json: unknown;
@@ -33,9 +34,15 @@ export const nameFromSource = (installedSource: InstalledSourceLike) => {
   return optionalString(manifest.name) ?? installedSource.install_name;
 };
 
+/**
+ * `diskSourceHash` is the hash of the folder as it is on disk right now. It differs from the
+ * source's stored hash exactly when new source is waiting to be adopted. Callers that have not
+ * scanned the folder pass nothing, which reports no update rather than guessing.
+ */
 export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
+  diskSourceHash?: string | null,
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   return {
@@ -55,5 +62,8 @@ export const toProjectExtensionInstance = (
     lastError: (installedSource.last_error_json ?? null) as Record<string, unknown> | null,
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
+    updateAvailable: Boolean(
+      diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
+    ),
   };
 };

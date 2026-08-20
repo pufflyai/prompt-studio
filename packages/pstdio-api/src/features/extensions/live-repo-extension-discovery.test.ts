@@ -89,7 +89,7 @@ afterEach(() => {
 });
 
 describe("live repo-local extension discovery", () => {
-  test("discovers and updates a repo-local extension added after the API starts", async () => {
+  test("discovers a repo-local extension added after the API starts", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-live-discovery-"));
     tempRoots.push(root);
     const restoreEnv = setEnv({
@@ -154,22 +154,6 @@ describe("live repo-local extension discovery", () => {
       });
       expect(instances).toHaveLength(1);
       expect(instances[0]?.enabled).toBe(true);
-
-      // Edit the extension; the source watcher attached during discovery should reload it live.
-      writeExtension(sourcePath, "live-tool", "2.0.0");
-
-      let edit = 0;
-      const updated = await pollUntil(
-        async () => {
-          const row = await handle?.deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
-          return row?.version === "2.0.0" ? row : null;
-        },
-        () => writeFileSync(join(sourcePath, "extension.ts"), `export default {};\n// edit ${edit++}\n`),
-        1200,
-        25,
-      );
-
-      expect(updated?.version).toBe("2.0.0");
     } finally {
       await handle?.close();
       restoreEnv();

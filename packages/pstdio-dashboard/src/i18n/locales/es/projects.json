@@ -258,6 +258,13 @@
         "fixSessionStarted": "Sesión de corrección iniciada",
         "fixSessionFailed": "Error al iniciar la sesión de corrección"
       },
+      "update": {
+        "available": "Actualización disponible",
+        "description": "Hay código nuevo esperando en la carpeta de extensiones. El proyecto sigue usando la versión adoptada hasta que aceptes la actualización.",
+        "action": "Actualizar",
+        "succeeded": "Extensión actualizada",
+        "failed": "Actualización rechazada"
+      },
       "automations": {
         "title": "Automatizaciones",
         "toggleAriaLabel": "Alternar automatización {{name}}",

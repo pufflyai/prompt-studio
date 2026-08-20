@@ -253,6 +253,13 @@
         "fixSessionStarted": "修正セッションを開始しました",
         "fixSessionFailed": "修正セッションの開始に失敗しました"
       },
+      "update": {
+        "available": "更新があります",
+        "description": "拡張機能フォルダーに新しいソースがあります。更新を適用するまで、プロジェクトは現在のバージョンを使い続けます。",
+        "action": "更新",
+        "succeeded": "拡張機能を更新しました",
+        "failed": "更新は拒否されました"
+      },
       "automations": {
         "title": "自動化",
         "toggleAriaLabel": "自動化{{name}}を切り替え",

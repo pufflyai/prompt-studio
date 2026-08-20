@@ -433,7 +433,7 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["planner", "worktree-setup"]);
+      expect(synced.map((entry) => entry.installName)).toEqual(["planner", "worktree-setup"]);
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(2);
       expect(calls[0]?.installName).toBe("planner");
       expect(calls[0]?.name).toBe("planner");
@@ -457,7 +457,7 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["planner"]);
+      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
       expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
         activeSourcePaths: [join(root, "planner")],
         projectId: "project-1",
@@ -504,7 +504,7 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["planner"]);
+      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(1);
       expect(failures).toEqual([
         {
@@ -532,7 +532,7 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["planner"]);
+      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
       expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
         activeSourcePaths: [join(root, "planner")],
         projectId: "project-1",
@@ -562,7 +562,7 @@ describe("syncInstalledExtensionsForProject", () => {
         },
       });
 
-      expect(synced).toEqual([
+      expect(synced.map(({ installName, projectId }) => ({ installName, projectId }))).toEqual([
         { installName: "planner", projectId: "project-1" },
         { installName: "planner", projectId: "project-2" },
       ]);

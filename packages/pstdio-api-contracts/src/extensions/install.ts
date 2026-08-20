@@ -39,6 +39,8 @@ export const projectExtensionInstanceSchema = z.object({
   lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
+  /** New source is waiting in the extensions root. The project keeps running the adopted version until a person takes it. */
+  updateAvailable: z.boolean(),
 });
 
 export const listProjectExtensionsResponseSchema = z.object({

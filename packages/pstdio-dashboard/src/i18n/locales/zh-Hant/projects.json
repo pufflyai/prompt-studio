@@ -253,6 +253,13 @@
         "fixSessionStarted": "修復工作階段已啟動",
         "fixSessionFailed": "啟動修復工作階段失敗"
       },
+      "update": {
+        "available": "有可用更新",
+        "description": "擴充目錄中有新的原始碼。在你接受更新之前，專案會繼續執行已採用的版本。",
+        "action": "更新",
+        "succeeded": "擴充功能已更新",
+        "failed": "更新遭拒絕"
+      },
       "automations": {
         "title": "自動化",
         "toggleAriaLabel": "切換自動化 {{name}}",

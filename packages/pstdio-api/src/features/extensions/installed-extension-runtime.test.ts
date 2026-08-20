@@ -90,54 +90,6 @@ describe("selectExistingSources", () => {
 });
 
 describe("createInstalledExtensionRuntime", () => {
-  test("lets the extension service own runtime refresh after a watched source reload", async () => {
-    let reloadInstalledSource: ((sourcePath: string) => Promise<unknown>) | undefined;
-    let resolveSourceReload: (() => void) | undefined;
-    let webviewRefreshCount = 0;
-    const refreshedSourcePaths: Array<string | undefined> = [];
-    const sourceReload = new Promise<void>((resolve) => {
-      resolveSourceReload = resolve;
-    });
-
-    const runtime = await createInstalledExtensionRuntime({
-      ...noopRuntimeDeps,
-      extensionService: {
-        reloadInstalledSourceBySourcePath: async () => sourceReload,
-        reportBuildFailure: async () => {},
-        reportBuildSuccess: async () => {},
-      } as never,
-      installedExtensionSourcesService: { list: async () => [] } as never,
-      projectService: { list: async () => [] } as never,
-      repoService: {} as never,
-      webviewBuilds: true,
-      createRootWatcher: async () => createProcess(),
-      createSourceWatcher: async (config) => {
-        reloadInstalledSource = config.reloadInstalledSource;
-        return createProcess();
-      },
-      createWebviewBuildManager: () =>
-        createProcess(async (sourcePath) => {
-          webviewRefreshCount += 1;
-          refreshedSourcePaths.push(sourcePath);
-        }),
-    });
-
-    try {
-      const reload = reloadInstalledSource?.("/extensions/lab");
-      await wait();
-
-      expect(webviewRefreshCount).toBe(1);
-      expect(refreshedSourcePaths).toEqual([undefined]);
-
-      resolveSourceReload?.();
-      await reload;
-      await wait();
-      expect(refreshedSourcePaths).toEqual([undefined]);
-    } finally {
-      runtime.dispose();
-    }
-  });
-
   test("does not wait for webview builds when refreshing after source changes", async () => {
     let resolveBackgroundBuild: (() => void) | undefined;
     let webviewRefreshCount = 0;
@@ -156,7 +108,6 @@ describe("createInstalledExtensionRuntime", () => {
       repoService: {} as never,
       webviewBuilds: true,
       createRootWatcher: async () => createProcess(),
-      createSourceWatcher: async () => createProcess(),
       createWebviewBuildManager: () =>
         createProcess(async () => {
           webviewRefreshCount += 1;
@@ -190,7 +141,6 @@ describe("createInstalledExtensionRuntime", () => {
         listExtensionRoots = config.listExtensionRoots as never;
         return createProcess();
       },
-      createSourceWatcher: async () => createProcess(),
     });
 
     const roots = (await listExtensionRoots?.()) ?? [];
@@ -227,7 +177,6 @@ describe("createInstalledExtensionRuntime", () => {
             return watcher;
           },
         }),
-      createSourceWatcher: async () => createProcess(),
     });
 
     try {
@@ -253,7 +202,6 @@ describe("createInstalledExtensionRuntime", () => {
       const extensionInstancesService = createExtensionInstancesDBService(db);
 
       let refreshRuntime = async () => {};
-      let sourceRefreshes = 0;
       const extensionService = createExtensionService({
         extensionInstancesService,
         installedExtensionSourcesService,
@@ -286,15 +234,10 @@ describe("createInstalledExtensionRuntime", () => {
               return watcher;
             },
           }),
-        createSourceWatcher: async () =>
-          createProcess(async () => {
-            sourceRefreshes += 1;
-          }),
       });
       refreshRuntime = runtime.refresh;
 
       try {
-        const sourceRefreshesAfterStartup = sourceRefreshes;
         writeExtension(sourcePath, "repo-tool");
 
         const repoWatcher = watchers.find((entry) => entry.path === repoRoot);
@@ -309,9 +252,7 @@ describe("createInstalledExtensionRuntime", () => {
         expect(installed).toMatchObject({ install_name: "repo-tool", source_kind: "local_path", status: "loaded" });
         expect(instances).toHaveLength(1);
         expect(instances[0]?.enabled).toBe(true);
-        expect(sourceRefreshes).toBeGreaterThan(sourceRefreshesAfterStartup);
 
-        const sourceRefreshesAfterDiscovery = sourceRefreshes;
         rmSync(sourcePath, { recursive: true, force: true });
         repoWatcher?.watcher.listener("rename", "repo-tool");
 
@@ -321,7 +262,6 @@ describe("createInstalledExtensionRuntime", () => {
 
         const [reconciled] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
         expect(reconciled?.enabled).toBe(false);
-        expect(sourceRefreshes).toBeGreaterThan(sourceRefreshesAfterDiscovery);
       } finally {
         runtime.dispose();
       }

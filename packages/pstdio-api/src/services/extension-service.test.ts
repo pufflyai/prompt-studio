@@ -131,6 +131,62 @@ describe("extensionService", () => {
     expect(second.instance.enabled).toBe(true);
   });
 
+  test("sync keeps the adopted registration when the folder on disk changed", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const adopted = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "1.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-1",
+      manifest: { version: "1.0.0" },
+    });
+
+    // Discovery finds new source in the extensions root. It is an offer, not an adoption.
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "2.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-2",
+      manifest: { version: "2.0.0" },
+    });
+
+    expect(synced.installedSource.id).toBe(adopted.installedSource.id);
+    expect(synced.installedSource.source_hash).toBe("hash-1");
+    expect(synced.installedSource.version).toBe("1.0.0");
+    expect(synced.installedSource.manifest_json).toEqual({ version: "1.0.0" });
+  });
+
+  test("sync still registers a source the project has never seen", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "1.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-1",
+      manifest: { version: "1.0.0" },
+    });
+
+    expect(synced.installedSource.source_hash).toBe("hash-1");
+    expect(synced.instance.enabled).toBe(false);
+  });
+
   test("fails with ProjectNotFoundError when the project does not exist", async () => {
     await expect(
       service.enableInstalledSourceForProject({
@@ -339,6 +395,8 @@ describe("extensionService reload", () => {
       expect(result.installedSource.manifest_json).toEqual({ id: "pstdio.reload", templates: ["ticket"] });
       expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_reload_failed" });
       expect(reloadEvents.at(-1)?.status).toBe("error");
+      // A refused update keeps the adopted hash, so the source still reads as having an update waiting.
+      expect(result.installedSource.source_hash).toBe("old-hash");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

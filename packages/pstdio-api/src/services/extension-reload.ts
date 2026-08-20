@@ -93,8 +93,10 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     return { installedSource: completed, check: result.check };
   } catch (error) {
     const currentErrorJson = buildErrorJson("extension_reload_failed", error);
+    // Source that failed validation is never adopted: keep the hash the project accepted so the
+    // extension still reports an update waiting rather than looking up to date and broken.
     const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-      source_hash: nextSourceHash ?? existing.source_hash,
+      source_hash: existing.source_hash,
       status: "error",
       last_error_json: currentErrorJson,
     });

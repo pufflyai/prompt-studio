@@ -35,16 +35,18 @@ export const listProjectExtensionsHandler = (
   return async (c) => {
     const { projectId } = c.req.valid("param");
     try {
-      await syncInstalledExtensionsForProject({
+      const synced = await syncInstalledExtensionsForProject({
         extensionService: deps.extensionService,
         onProjectExtensionInstancesPruned: async () => {
           await refreshProjectSkillsInRepos(deps, projectId);
         },
         projectId,
       });
+      // The sync pass already hashed every folder on disk; compare against what the project adopted.
+      const diskHashes = new Map(synced.map((entry) => [entry.installName, entry.sourceHash]));
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const extensions = records.map(({ instance, installedSource }) =>
-        toProjectExtensionInstance(instance, installedSource),
+        toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name)),
       );
       return c.json({ extensions }, 200);
     } catch (error) {

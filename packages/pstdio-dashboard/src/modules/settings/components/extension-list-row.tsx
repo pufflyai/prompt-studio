@@ -1,7 +1,7 @@
 import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { Switch, type SwitchProps } from "@pstdio/ui";
-import { ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
+import { ArrowUpCircle, ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover, type ExtensionHealthPopoverProps } from "./extension-health-popover";
@@ -64,6 +64,14 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
             {extension.extensionId}
             {extension.version ? ` · v${extension.version}` : ""}
           </Text>
+          {extension.updateAvailable && (
+            <HStack gap="2xs" flexShrink="0" color="fg.info" data-testid="extension-update-marker">
+              <Icon boxSize="3.5">
+                <ArrowUpCircle />
+              </Icon>
+              <Text textStyle="label/XS">{t("projectSettings.extensionsPanel.update.available")}</Text>
+            </HStack>
+          )}
         </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}

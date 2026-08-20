@@ -23,6 +23,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     lastLoadedAt: "2026-08-04T09:14:00.000Z",
     enabled: true,
     config: {},
+    updateAvailable: false,
   },
   {
     id: "core-tickets-instance",
@@ -44,6 +45,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     },
     enabled: true,
     config: {},
+    updateAvailable: false,
   },
   {
     id: "lab-instance",
@@ -60,6 +62,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     status: "disabled",
     enabled: false,
     config: {},
+    updateAvailable: false,
   },
 ];
 
@@ -109,6 +112,14 @@ type Story = StoryObj<typeof ExtensionsPanelView>;
 export const Populated: Story = {
   args: {
     extensions: installedExtensions,
+    diagnostics,
+    automations,
+  },
+};
+
+export const UpdateAvailable: Story = {
+  args: {
+    extensions: installedExtensions.map((extension, index) => ({ ...extension, updateAvailable: index === 0 })),
     diagnostics,
     automations,
   },

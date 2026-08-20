@@ -18,6 +18,7 @@ const extension: ProjectExtensionInstance = {
   lastLoadedAt: "2026-08-04T09:14:00.000Z",
   enabled: true,
   config: {},
+  updateAvailable: false,
 };
 
 const automations: WorkbenchExtensionAutomationRecord[] = [
@@ -120,6 +121,7 @@ const meta: Meta<typeof ExtensionDetail> = {
     onToggleAutomation: noop,
     onChangeSetting: noop,
     onRetry: noop,
+    onUpdate: noop,
     onAttemptFix: noop,
     onUninstall: noop,
   },
@@ -147,5 +149,26 @@ export const FailedToLoad: Story = {
 export const Disabled: Story = {
   args: {
     extension: { ...extension, enabled: false, status: "disabled" },
+  },
+};
+
+export const UpdateAvailable: Story = {
+  args: {
+    extension: { ...extension, updateAvailable: true },
+  },
+};
+
+export const UpdateRefused: Story = {
+  args: {
+    extension: {
+      ...extension,
+      updateAvailable: true,
+      status: "error",
+      lastError: {
+        code: "extension_reload_failed",
+        message:
+          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.2 but this host provides 1.0.0-alpha.1. Update Prompt Studio, or install a build of the extension for this version.',
+      },
+    },
   },
 };

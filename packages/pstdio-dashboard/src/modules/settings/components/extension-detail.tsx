@@ -6,7 +6,17 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { AlertMessage, EmptyState, ParamEditor, Switch, type SwitchProps } from "@pstdio/ui";
-import { ArrowLeft, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2, Wrench } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpCircle,
+  Blocks,
+  Puzzle,
+  RotateCw,
+  SlidersHorizontal,
+  Timer,
+  Trash2,
+  Wrench,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
@@ -21,6 +31,7 @@ export interface ExtensionDetailProps {
   settings: ExtensionSettingValueRecord[];
   toggling?: boolean;
   retrying?: boolean;
+  updating?: boolean;
   fixing?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
@@ -29,6 +40,7 @@ export interface ExtensionDetailProps {
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   onChangeSetting: (key: string, value: unknown) => void;
   onRetry: () => void;
+  onUpdate: () => void;
   onAttemptFix: () => void;
   onUninstall: () => void;
 }
@@ -47,6 +59,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     settings,
     toggling,
     retrying,
+    updating,
     fixing,
     uninstalling,
     togglingAutomationId,
@@ -55,6 +68,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onToggleAutomation,
     onChangeSetting,
     onRetry,
+    onUpdate,
     onAttemptFix,
     onUninstall,
   } = props;
@@ -110,6 +124,29 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {extension.description}
           </Text>
+        )}
+
+        {extension.updateAvailable && (
+          <AlertMessage
+            status="info"
+            title={t("projectSettings.extensionsPanel.update.available")}
+            data-testid="extension-update-available"
+            endElement={
+              <Button
+                variant="outline"
+                size="2xs"
+                onClick={onUpdate}
+                loading={updating}
+                data-testid="extension-update"
+                flexShrink="0"
+              >
+                <ArrowUpCircle size={12} />
+                {t("projectSettings.extensionsPanel.update.action")}
+              </Button>
+            }
+          >
+            {t("projectSettings.extensionsPanel.update.description")}
+          </AlertMessage>
         )}
 
         {failed && (

@@ -46,6 +46,23 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     (diagnostic) => diagnostic.extensionId === extension.extensionId,
   );
 
+  // Taking an update adopts the source waiting on disk, which is the same operation as reloading a
+  // failed source: validate what is there now, then adopt it. Only the wording differs.
+  const handleUpdate = () => {
+    reload.mutate(
+      { instanceId: extension.id },
+      {
+        onSuccess: (updated) => {
+          toaster.create(
+            updated.status === "loaded"
+              ? { type: "success", title: t("projectSettings.extensionsPanel.update.succeeded") }
+              : { type: "error", title: t("projectSettings.extensionsPanel.update.failed") },
+          );
+        },
+      },
+    );
+  };
+
   const handleRetry = () => {
     reload.mutate(
       { instanceId: extension.id },
@@ -107,6 +124,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         settings={settingsQuery.data?.settings ?? []}
         toggling={setEnabled.isPending}
         retrying={reload.isPending}
+        updating={reload.isPending}
         fixing={attemptFix.isPending}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
@@ -119,6 +137,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
         onRetry={handleRetry}
+        onUpdate={handleUpdate}
         onAttemptFix={handleAttemptFix}
         onUninstall={() => setConfirmingUninstall(true)}
       />

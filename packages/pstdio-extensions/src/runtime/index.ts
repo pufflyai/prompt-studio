@@ -18,18 +18,6 @@ export {
   dashboardExtensionHostCapabilities,
 } from "./host-capabilities";
 export {
-  type DependencyInstallReport,
-  ExtensionInstallError,
-  type FetchGithubExtensionInput,
-  type InstallExtensionDeps,
-  type InstallExtensionInput,
-  type InstallExtensionResult,
-  type InstalledExtensionRecord,
-  type InstallSourceKind,
-  installExtensionSource,
-  type ResolvedInstallSource,
-} from "./install";
-export {
   type ExtensionPackageRef,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,
@@ -54,11 +42,6 @@ export {
   readPackageManifest,
 } from "./package-manifest";
 export { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
-export {
-  type RunPackageInstallOptions,
-  type RunPackageInstallResult,
-  runPackageInstall,
-} from "./run-package-install";
 export {
   type BuildEnvironmentInput,
   type CommandExecuteInput,

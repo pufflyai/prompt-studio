@@ -274,6 +274,13 @@
         "fixSessionStarted": "Fix session started",
         "fixSessionFailed": "Failed to start fix session"
       },
+      "update": {
+        "available": "Update available",
+        "description": "New source is waiting in the extensions root. The project keeps running the version it adopted until you take the update.",
+        "action": "Update",
+        "succeeded": "Extension updated",
+        "failed": "Update refused"
+      },
       "automations": {
         "title": "Automations",
         "toggleAriaLabel": "Toggle automation {{name}}",

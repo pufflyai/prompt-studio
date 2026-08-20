@@ -83,7 +83,9 @@ describe("extensionService installed source sync", () => {
     );
 
     expect(synced.installedSource.id).toBe(enabled.installedSource.id);
-    expect(synced.installedSource.version).toBe("2.0.0");
+    // Discovery reports the new source but never adopts it, so the project keeps what it accepted.
+    expect(synced.installedSource.version).toBeNull();
+    expect(synced.installedSource.source_hash).toBe("hash-1");
     expect(synced.instance.id).toBe(enabled.instance.id);
     expect(synced.instance.enabled).toBe(true);
   });
@@ -106,7 +108,8 @@ describe("extensionService installed source sync", () => {
     await service.syncInstalledSourceForProject(
       createServiceInput(project.id, { name: "planner", manifest: { name: "planner" }, sourceHash: "hash-1" }),
     );
-    await service.syncInstalledSourceForProject(
+    // Renaming is adopted by an explicit act, not by discovery.
+    await service.enableInstalledSourceForProject(
       createServiceInput(project.id, { name: "ai-planner", manifest: { name: "ai-planner" }, sourceHash: "hash-2" }),
     );
 
