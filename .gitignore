@@ -168,6 +168,8 @@ _embed-manifest.generated.ts
 packages/pstdio-db/vendor
 
 # e2e
+playwright-report
+test-results
 packages/e2e/playwright-report
 packages/e2e/test-results
 packages/e2e/screenshots
