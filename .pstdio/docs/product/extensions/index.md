@@ -49,9 +49,11 @@ Scheduled contributions (`schedules`) surface in the dashboard as **automations*
 
 ## Dashboard UI Model
 
-The implemented dashboard UI model uses host-owned workbench targets. Extensions attach menus, tree items, views, and settings panels to targets such as `workbench.top.actions`, `workbench.commandPalette`, `workbench.left.tree`, and `workbench.settings`.
+The implemented dashboard UI model uses host-owned workbench targets. Extensions attach menus, tree items, and settings panels to targets such as `workbench.nav.actions`, `workbench.left.tree`, and `workbench.settings`.
 
 Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
+
+Panels are not attachments. A panel declares the docked regions it supports (`sidenav`, `main`, `secondary`, `side`), a `resourcePanels` entry binds it to a resource kind slot, and the active mode's placement recipe puts it in a region.
 
 ## Lifecycle
 

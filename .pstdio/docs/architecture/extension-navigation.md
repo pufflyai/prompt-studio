@@ -1,6 +1,6 @@
 # Extension Navigation
 
-This page defines the target navigation architecture for extension resources and modes. It is proposed by PS-255 and is not implemented yet.
+This page defines the navigation architecture for extension resources and modes. PS-255 proposed it. PS-266 through PS-270 implemented it.
 
 Mode and resource are separate parts of one navigation context. A mode describes the current task and layout. A resource describes the active domain object. Opening one does not silently select the other.
 

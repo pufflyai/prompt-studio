@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "shipped"
 created: "2026-08-18T17:03:48.668Z"
 ---
 
@@ -130,9 +130,9 @@ This matches the current kernel, where mode layout targets already cover only do
 5. Removed or invalid contributions are omitted and reported. They do not prevent unrelated valid panels from rendering.
 6. Two panels in the same slot and region use stable contribution order until the user reorders them.
 
-## Proposed Interface
+## Interface
 
-The final names may change during SDK review, but the relationships are normative.
+These are the shipped names. The relationships are normative.
 
 ~~~ts
 defineExtension({
@@ -181,7 +181,7 @@ modes: {
       ticket: {
         slots: {
           primary: { region: "main", required: true },
-          navigation: { region: "sidenav", required: true },
+          navigation: { region: "sidenav" },
           inspector: {
             region: "side",
             allowedRegions: ["side", "secondary"],

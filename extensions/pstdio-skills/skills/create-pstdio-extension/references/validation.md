@@ -47,8 +47,24 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 ```
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
-For example, `extension_panel_empty_eligible_locations` means a panel used `eligibleLocations: {}` and will
-load as a supporting tab that is eligible everywhere.
+
+Composition diagnostics to expect:
+
+- `extension_panel_contract_invalid`: a panel must declare at least one docked supported region.
+- `extension_resource_kind_missing`: a resource panel, mode, or hierarchy provider references an unknown resource kind.
+- `extension_resource_slot_missing`: a resource panel or mode references an unknown slot.
+- `extension_resource_slot_closed`: an external extension contributes to a closed slot.
+- `extension_panel_missing`: a resource panel or mode references an unknown panel.
+- `extension_panel_region_unsupported`: a mode places a panel outside its supported regions.
+- `extension_mode_resource_unsupported`: a recipe references a resource kind the mode does not accept, or a panel not registered for it.
+- `extension_placement_required_invalid`: `required` is set on a cardinality-many slot placement without naming a panel.
+- `extension_resource_primary_invalid`: a primary resource has zero or several primary location placements.
+
+Convention diagnostics to expect:
+
+- `extension_icon_unknown`: an icon name is not in the host icon set.
+- `extension_contribution_id_casing`: a contribution key does not use the expected casing.
+- `extension_command_reference_missing`: a contribution references a command that does not exist.
 
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
 dependencies under the installed extension root so the packaged runtime does not depend on workspace

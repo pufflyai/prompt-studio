@@ -102,11 +102,15 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `panels`, `treeItems`                   | Custom webview pages, Workbench Panels, and navigation entries.                    |
-| `kanbanRenderers`, `dataTableRenderers`           | Native dashboard data surfaces placed through Panels.                             |
+| `routes`, `panels`, `treeItems`                   | Custom webview pages, workbench panels, and navigation entries.                   |
+| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and panel-to-slot bindings.               |
+| `modes`                                           | Placement recipes that arrange slots and known panels for accepted resources.     |
+| `statusItems`                                     | Status-surface chrome. Not a panel; takes no part in docked layout.               |
+| `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
+| `kanbanRenderers`, `dataTableRenderers`           | Native dashboard data surfaces wrapped by panels.                                 |
 | `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
 | `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
-| `controlsRenderers`                               | Reusable callback-backed inspector/property renderers, placed by a Panel.          |
+| `controlsRenderers`                               | Reusable callback-backed inspector/property renderers, wrapped by a panel.        |
 | `settingsPanels`                                  | Dashboard configuration UI.                                                       |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
@@ -201,7 +205,7 @@ inside the extension package. Skill assets may point at a directory containing `
 
 ## Webviews
 
-Routes, Panels, settings panels, and renderers point at webview entries with `packageAsset()`. Declare only the
+Routes, panels, settings panels, status items, and renderers point at webview entries with `packageAsset()`. Declare only the
 capabilities the webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`,
 and `preferences.set`.
 
@@ -212,14 +216,18 @@ Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/exten
 Use native renderers when the host should own the editor or tree chrome instead of loading a custom webview. A native
 resource detail screen usually has:
 
-- A `modes` contribution with `resourceKind` and a `layout.open` entry that pins supporting Panels.
+- A `resourceKinds` contribution that declares the resource's surface and named slots.
 - A `fileRenderers` contribution for the main document/file content.
 - A `treeRenderers` contribution for side-panel navigation or file lists.
-- `panels` that bind the mode/resource to those renderers.
+- `panels` that wrap those renderers and declare `supportedRegions`.
+- `resourcePanels` entries that bind each panel to one resource kind slot.
+- A `modes` contribution whose `resources` recipe places the slots into regions.
 
-Each Panel must declare exactly one of `webview` or `renderer`. A native renderer reference has a `kind` (`tree`,
-`file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. For resource detail screens,
-set `resourceKind` on the editor and auxiliary Panels, then let `modes.<mode>.layout.open` pin Panels such as the tree.
+Each panel must declare exactly one of `webview` or `renderer`, plus at least one docked region in
+`supportedRegions` (`sidenav`, `main`, `secondary`, or `side`). A native renderer reference has a `kind` (`tree`,
+`file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. In the mode recipe, mark
+the `primary` slot placement `required: true` so the host restores the editor whenever the mode-resource context
+activates.
 
 `fileRenderers` need `title` and a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -265,15 +273,15 @@ contribution whose action opens that Panel.
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
 `action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
-Use this for custom webview pages only; native resource screens should use `modes`, `panels`, `fileRenderers`, and
-`treeRenderers`.
+Use this for custom webview pages only; native resource screens should use `resourceKinds`, `resourcePanels`,
+`modes`, `panels`, `fileRenderers`, and `treeRenderers`.
 
-For an editable inspector/property Panel, define a `controlsRenderers` renderer with a `query` callback (returns
+For an editable inspector/property panel, define a `controlsRenderers` renderer with a `query` callback (returns
 `{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `onValueChange`, `onApply`, and `onReset`
-callbacks. Nest the menu under its owning Panel:
+callbacks. Nest the menu under its owning panel:
 `panelMenus: { properties: { title: "Properties", side: "right", renderer: { kind: "controls", id: "<id>" } } }`.
 The active owner instance determines when the menu is available, and it retains its attached or collapsed state.
-The Panel companions its `resourceKind`; omitting both
+Bind the owning panel to its resource kind with a `resourcePanels` entry; omitting both
 `onValueChange` and `onApply` makes it read-only. Callback payloads must be JSON — commit file metadata or
 data URLs, never live `File` objects.
 

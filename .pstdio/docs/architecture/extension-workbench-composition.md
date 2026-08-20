@@ -1,6 +1,6 @@
 # Extension Workbench Composition
 
-This page defines the target architecture for extension-owned workbench UI. It is proposed by PS-255 and is not implemented yet.
+This page defines the architecture for extension-owned workbench UI. PS-255 proposed it. PS-266 through PS-270 implemented it.
 
 The architecture separates stable UI capability from contextual layout. A resource defines what it is. A panel defines what it can render. A mode defines how compatible resources and panels are arranged. User layout state records choices inside that valid composition.
 
@@ -81,7 +81,7 @@ Docked regions hold panels: `sidenav`, `main`, `secondary`, and `side`. Mode rec
 
 Chrome surfaces are host-owned fixed slots: nav actions, the activity bar, the status bar, and overlays. Extensions contribute typed items to chrome targets, as menus and activity items do today. A chrome item may show or hide by active mode through a `when` expression, but no mode recipe positions it, and no chrome state lives in persisted panel layout.
 
-This split already exists in the kernel: mode layout targets cover only docked areas, while menus, trees, and settings attach to typed workbench targets. The replacement contract removes the single region union that let a panel claim a chrome region.
+This split exists in the kernel: mode layout targets cover only docked areas, while menus, trees, and settings attach to typed workbench targets. The contract has no single region union, so a panel cannot claim a chrome region.
 
 A panel body that also supports overlay presentation declares that capability explicitly. An overlay opens from an action; it is never a resolved layout placement.
 
@@ -104,7 +104,7 @@ Invalid or removed optional contributions are omitted and reported without preve
 
 Layout state is scoped by project, mode, and resource URI. This lets the same resource retain different layouts in different modes.
 
-The persistence format has an internal schema revision. Layouts created by the current composition contract are not interpreted under the replacement contract. The host may preserve state only when its meaning is independent of the replaced panel roles and bindings.
+The persistence format has an internal schema revision. Layouts saved under the old alpha contract are not read under this contract. The host keeps saved state only when its meaning does not depend on the removed panel roles and bindings.
 
 ## Resource Hierarchy
 
@@ -134,7 +134,7 @@ A tree contribution may use `group: null` to appear at the root without a headin
 - Required placements cannot be closed.
 - Reconciliation restores required structure without resetting valid optional user state.
 - Resource instances and history never store renderer definitions.
-- The alpha extension contract is replaced in place without a major version or parallel compatibility engine.
+- The alpha extension contract was replaced in place, without a major version or a parallel compatibility engine.
 
 ## Related Product Requirements
 

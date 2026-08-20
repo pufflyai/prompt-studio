@@ -121,6 +121,10 @@ export default defineExtension({
   modes: {},
   routes: {},
   panels: {},
+  resourceKinds: {},
+  resourcePanels: {},
+  resourceHierarchyProviders: {},
+  statusItems: {},
   treeRenderers: {},
   fileRenderers: {},
   controlsRenderers: {},
@@ -158,9 +162,12 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `treeRenderers`, `fileRenderers`                  | Callback-backed native Workbench trees and file content.                                          |
 | `controlsRenderers`, `dataTableRenderers`         | Callback-backed native controls and tabular data.                                                  |
 | `kanbanRenderers`                                 | Callback-backed native boards and lists.                                                           |
-| `panels`                                          | Workbench panels backed by webviews or native renderer references.                                 |
+| `panels`                                          | Workbench panels backed by webviews or native renderer references; declare `supportedRegions`.     |
+| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and panel-to-slot bindings.                                |
+| `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
+| `statusItems`                                     | Status-surface chrome rendered by the host; not part of docked layout.                             |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
-| `modes`                                           | Workbench mode metadata with optional layout reset/open behavior and resource-kind ownership.      |
+| `modes`                                           | Workbench modes with placement recipes for accepted resource kinds.                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
 | `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
@@ -317,15 +324,18 @@ when a hook should react to a command outcome.
 
 Dashboard UI contributions are declarative:
 
-- menus attach commands to targets such as `workbench.top.actions` or `workbench.commandPalette`
-- tree items attach routes, commands, or links to area-tree targets such as `workbench.left.tree`
+- menus attach commands to targets such as `workbench.nav.actions` or `workbench.nav.overflow`; command palette entries use the command's own `palette` field
+- tree items attach routes, commands, panels, resources, or links to area-tree targets such as `workbench.left.tree`
 - native renderers register Workbench trees, files, controls, tables, boards, and lists backed by callbacks
-- panels attach webviews or native renderers to workbench regions
+- panels wrap webviews or native renderers and declare the docked regions they support
+- resource kinds declare domain resources and their named slots; resource panels bind panels to slots
+- modes declare placement recipes that arrange slots and known panels for accepted resource kinds
+- status items contribute status-surface chrome
 - settings panels use webview package assets
-- modes declare workbench mode metadata and optional layout/resource ownership
 
-Native renderers are reusable contributions. Place one in the dashboard by declaring a Panel with `renderer`; that
-field is mutually exclusive with `webview`.
+Native renderers are reusable contributions. Wrap one in a panel with `renderer`; that
+field is mutually exclusive with `webview`. Bind the panel to a resource kind slot with
+`resourcePanels`, and let the mode recipe place it.
 
 ```ts
 export default defineExtension({
@@ -343,25 +353,39 @@ export default defineExtension({
       defaultExpandedSectionIds: ["files"],
     },
   },
-  modes: {
+  resourceKinds: {
     ticket: {
-      id: "planner.ticket",
-      label: "Ticket",
-      icon: "FileText",
-      resourceKind: "ticket",
-      layout: {
-        panels: ["main", "secondary", "side"],
-        open: [{ region: "sidenav", panel: "files", pinned: true }],
+      surface: "primary",
+      slots: {
+        primary: { cardinality: "one", external: false },
+        navigation: { cardinality: "many", external: true },
       },
     },
   },
   panels: {
     files: {
       title: "Files",
-      region: "sidenav",
-      closable: false,
-      resourceKind: "ticket",
+      supportedRegions: ["sidenav"],
       renderer: { kind: "tree", id: "files" },
+    },
+  },
+  resourcePanels: {
+    files: { resourceKind: "ticket", panel: "files", slot: "navigation" },
+  },
+  modes: {
+    ticket: {
+      id: "planner.ticket",
+      label: "Ticket",
+      icon: "FileText",
+      panelRegions: ["main", "secondary", "side"],
+      resources: {
+        ticket: {
+          slots: {
+            primary: { region: "main", required: true },
+            navigation: { region: "sidenav", pinned: true },
+          },
+        },
+      },
     },
   },
 });
@@ -371,20 +395,19 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
-Panel role is currently selected by `eligibleLocations`:
+Panel role comes from the slot it binds to:
 
-- omit `eligibleLocations` for full content panels
-- use `eligibleLocations: {}` for a supporting sub-panel/tab that is eligible everywhere
-- use `eligibleLocations: { resourceKinds: ["ticket"] }` for a supporting sub-panel/tab constrained to ticket resources
-
-The empty object form is valid, but `pst extensions check` warns with `extension_panel_empty_eligible_locations` so authors notice the everywhere-eligible tab behavior.
+- the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
+- other slots hold supporting panels; a slot with `external: true` accepts panels from other extensions
+- a panel bound to no slot can still be placed by a mode's `modePanels` map or opened by a `treeItems` panel action
+- a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
 
 Visibility can be limited with `when`:
 
 ```ts
 menus: [
   {
-    target: "workbench.top.actions",
+    target: "workbench.nav.actions",
     label: "Run review",
     when: { mode: "workspace", resourceType: ["workspace"] },
   },
@@ -469,4 +492,4 @@ The theme id is `planner.monokai` for package `planner`.
 
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
-Warnings are actionable even when the extension still loads. For example, `extension_panel_empty_eligible_locations` means a panel declared `eligibleLocations: {}`. The panel is not invalid, but it becomes a supporting sub-panel/tab that is eligible in every matching location.
+Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `extension_panel_contract_invalid` (a panel must declare at least one docked supported region) and `extension_resource_slot_closed` (an external contribution targets a closed slot) drop the invalid contribution and keep the rest of the extension loading.

@@ -1,6 +1,6 @@
 # Dashboard UI Attachments
 
-Prompt Studio extensions attach dashboard UI to host-owned workbench targets. Targets describe stable host surfaces such as top actions, command palette, left tree, and settings. Active mode and resource applicability belong in `when`.
+Prompt Studio extensions attach dashboard UI to host-owned workbench targets. Targets describe stable host surfaces such as nav actions, the left tree, and settings. Active mode and resource applicability belong in `when`.
 
 Extensions do not create dashboard chrome. They declare contributions, and the dashboard resolves each target into the current workbench layout.
 
@@ -15,7 +15,7 @@ export default defineExtension({
       title: "Say hello",
       menus: [
         {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           label: "Say hello",
           icon: "message-circle",
           presentation: "button",
@@ -36,19 +36,16 @@ export default defineExtension({
 
 | Target | Kind | Product surface |
 | ------ | ---- | --------------- |
-| `workbench.top.actions` | menu | Primary top workbench actions. |
-| `workbench.top.overflow` | menu | Top workbench overflow actions. |
-| `workbench.commandPalette` | menu | Dashboard command palette. |
+| `workbench.nav.actions` | menu | Primary actions in the top workbench chrome. |
+| `workbench.nav.overflow` | menu | Overflow actions in the top workbench chrome. |
 | `workbench.left.tree` | tree item | Active tree in the left workbench area. |
 | `workbench.main.left.tree` | tree item | Active tree in the main-left area. |
 | `workbench.main.right.tree` | tree item | Active tree in the main-right area. |
-| `workbench.main` | view | Direct extension view in the main area. |
-| `workbench.main.left` | view | Direct extension view in the main-left area. |
-| `workbench.main.right` | view | Direct extension view in the main-right area. |
-| `workbench.main.bottom` | view | Direct extension view in the main-bottom area. |
 | `workbench.settings` | settings | Extension settings panel. |
 
 Targets are closed and host-owned. A menu cannot target `workbench.left.tree`, and normal contributions cannot attach to bare mode-layout areas such as `workbench.left`.
+
+Panels are not attachments. A panel declares the docked regions it supports, and the active mode places it. See [Workbench panels](#workbench-panels). Command palette entries are declared on the command itself with `palette`, not with a menu target.
 
 ## When Expressions
 
@@ -80,7 +77,7 @@ export default defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           label: "Run attempt",
           icon: "play",
           presentation: "button",
@@ -99,18 +96,17 @@ Commands invoked from dashboard attachments receive normal command context plus 
 
 ## Command Palette Entry
 
+The command palette is not a menu target. Declare the entry on the command with `palette`:
+
 ```ts
-menus: [
-  {
-    target: "workbench.commandPalette",
-    group: "Lab",
-    label: "Read lab counter",
-    icon: "badge-info",
-  },
-];
+palette: {
+  group: "Lab",
+  label: "Read lab counter",
+  icon: "badge-info",
+},
 ```
 
-Use command palette entries for actions that should be discoverable without being pinned into a header.
+`palette: true` adds the command with its own title. Use command palette entries for actions that should be discoverable without being pinned into a header.
 
 ## Route And Tree Item
 
@@ -161,58 +157,66 @@ settingsPanels: {
 
 Settings panels must declare `scope: "project"` or `scope: "global"`. The panel contents remain ordinary extension webviews.
 
+## Status Item
+
+A status item is chrome. The host renders it in the status surface, so it has no region and no saved placement.
+
+```ts
+statusItems: {
+  buildState: {
+    title: "Build",
+    when: { mode: "workspace" },
+    webview: { entry: packageAsset("./src/build-status.tsx", import.meta.url) },
+  },
+}
+```
+
 ## Workbench Panels
 
-An extension panel without `eligibleLocations` is full content. It can be used as the main content for a resource or mode layout:
+A panel declares its title, an optional icon, the docked regions it supports, and exactly one body: a `webview` or a native `renderer` reference. A panel never places itself.
 
 ```ts
 panels: {
   ticketEditor: {
     title: "Ticket",
-    region: "main",
-    closable: false,
-    resourceKind: "ticket",
+    supportedRegions: ["main"],
     webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
   },
 }
 ```
 
-Adding `eligibleLocations` makes the panel supporting UI, shown as a closable sub-panel or tab. An empty object is valid and means the tab is eligible everywhere:
+To show a panel for a resource, bind it to one of the resource kind's slots with a `resourcePanels` entry. A slot is a named extension point declared by the resource kind:
 
 ```ts
-panels: {
-  notes: {
-    title: "Notes",
-    region: "secondary",
-    closable: true,
-    eligibleLocations: {},
-    webview: { entry: packageAsset("./src/notes.tsx", import.meta.url) },
+resourceKinds: {
+  ticket: {
+    surface: "primary",
+    slots: {
+      primary: { cardinality: "one", external: false },
+      inspector: { cardinality: "many", external: true },
+    },
   },
+},
+resourcePanels: {
+  ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
 }
 ```
 
-Constrain supporting tabs when they only apply to some resource kinds:
+Slots with `external: true` accept panels from other extensions. A contribution from another extension references the kind with the namespaced form:
 
 ```ts
-panels: {
-  ticketFiles: {
-    title: "Files",
-    region: "secondary",
-    closable: true,
-    eligibleLocations: { resourceKinds: ["ticket"] },
-    webview: { entry: packageAsset("./src/ticket-files.tsx", import.meta.url) },
-  },
+resourcePanels: {
+  ticketInsights: { resourceKind: "planner.ticket", panel: "insights", slot: "inspector" },
 }
 ```
+
+The active mode's `resources` recipe places each slot (and, when named, each specific panel) into a region. See [Extension modes](./modes-and-layout.md).
 
 ## Panel Placement
 
-Extension panels and panel menus can set `placement: "first" | "default" | "last"`.
+The mode recipe decides regions. Inside a region, two panels in the same slot use stable contribution declaration order until the user reorders them. A saved user tab order is not reset on contribution refresh, and restoring a required placement does not reset optional placements or tab order.
 
-- `first` entries are placed before `default` entries in the same workbench region.
-- `last` entries are placed after `default` entries in the same workbench region.
-- Entries with the same placement use manifest declaration order. The dashboard registers every extension panel with a declaration index, so each tab keeps a deterministic relative order across reloads.
-- The rule is applied when the dashboard creates the initial tab placement. A saved user tab order is not reset on contribution refresh.
+Panel menus and other item contributions can still set `placement: "first" | "default" | "last"` for relative order among siblings; entries with the same placement use declaration order.
 
 ## Diagnostics
 
@@ -223,7 +227,8 @@ Invalid UI attachments are reported by extension checks and runtime diagnostics:
 | Unknown target id | `extension_target_invalid`. |
 | Target used by the wrong contribution kind | `extension_target_unsupported`. |
 | Missing settings scope | `extension_settings_scope_invalid`. |
-| Panel has `eligibleLocations: {}` | `extension_panel_empty_eligible_locations` warning. The panel is valid, but it becomes an everywhere-eligible sub-panel/tab. |
+| Panel declares no docked supported region | `extension_panel_contract_invalid`. |
+| Invalid slot, kind, panel, or placement in composition | `extension_resource_kind_missing`, `extension_resource_slot_missing`, `extension_resource_slot_closed`, `extension_panel_missing`, `extension_panel_region_unsupported`, `extension_mode_resource_unsupported`, `extension_placement_required_invalid`, or `extension_resource_primary_invalid`. |
 | Missing package asset | Webview, template, skill, theme, or icon source cannot be loaded. |
 
 Diagnostics include the extension id, package path, contribution id, requested target, expected kind, and supported alternatives when applicable.
