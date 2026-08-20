@@ -192,17 +192,21 @@ describe("createExtensionsModule mode layout persistence", () => {
     }
   });
 
-  test("does not statically open resource-bound mode layout views", async () => {
+  // A resource-bound panel belongs to an open resource, not to the workbench. Entering a
+  // project must not place the ticket's files tree or properties menu before a ticket is
+  // open.
+  test("does not statically open resource-bound views", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 
     try {
       await flushMicrotasks();
 
-      workbench.modes.setActiveMode("pstdio-core-tickets.ticket");
+      workbench.modes.setActiveMode("project");
 
       expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([]);

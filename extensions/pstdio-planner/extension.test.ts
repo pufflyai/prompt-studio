@@ -30,26 +30,11 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
   } satisfies StoredTicket);
 
 describe("pstdio planner extension contributions", () => {
-  test("contributes a ticket detail workbench mode", () => {
-    expect(extension.modes?.ticket).toMatchObject({
-      id: "pstdio-planner.ticket",
-      label: { $l10n: "modes.ticket.label", default: "Ticket" },
-      icon: "file-text",
-      panelRegions: ["main", "secondary", "side"],
-      resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav", required: true, pinned: true },
-          },
-        },
-      },
-    });
-    // The ticket resource owns the slots the mode places.
-    expect(extension.resourceKinds?.ticket).toMatchObject({
-      surface: "primary",
-      slots: { primary: { cardinality: "one", external: false } },
-    });
+  test("contributes the ticket resource without a ticket mode", () => {
+    // A ticket is a resource. A ticket mode would reshape the workbench on open and
+    // drop the project chrome the user had.
+    expect(extension.modes).toBeUndefined();
+    expect(extension.resourceKinds?.ticket).toMatchObject({ surface: "primary" });
     expect(extension.resourcePanels).toMatchObject({
       ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
       ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },

@@ -221,6 +221,11 @@ export default defineExtension({
   // The ticket resource owns its extension points: the editor holds the primary
   // location, the files tree owns navigation, and the properties menu rides on the
   // editor panel. Other extensions may add inspectors.
+  //
+  // A ticket is a resource, not a mode. Opening one keeps the workbench the user is in,
+  // so each bound panel lands in the region it supports and the project's own chrome
+  // stays put. Declaring a ticket mode instead made opening a ticket reshape the
+  // workbench and lose that chrome.
   resourceKinds: {
     ticket: {
       surface: "primary",
@@ -237,24 +242,6 @@ export default defineExtension({
   resourcePanels: {
     ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
     ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
-  },
-
-  modes: {
-    ticket: {
-      id: "pstdio-planner.ticket",
-      label: l10n("modes.ticket.label", "Ticket"),
-      icon: "file-text",
-      panelRegions: ["main", "secondary", "side"],
-      resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav", required: true, pinned: true },
-            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
-          },
-        },
-      },
-    },
   },
 
   fileRenderers: {

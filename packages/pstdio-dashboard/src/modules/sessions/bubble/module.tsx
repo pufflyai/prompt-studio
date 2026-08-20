@@ -78,8 +78,12 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       closable: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
+      // Starting a session makes sense from any project location except the Sessions
+      // view itself. `extension-view` covers an extension's own collection views, such
+      // as the Tickets board, which is a browse-root resource rather than a
+      // dashboard-owned one.
       eligibleLocations: {
-        resourceKinds: ["dashboard-view", "ticket", "workspace"],
+        resourceKinds: ["dashboard-view", "extension-view", "ticket", "workspace"],
         canOpen: (resource) => resource.kind !== "dashboard-view" || resource.id !== dashboardResources.sessions.id,
       },
       icon: "MessageCircle",

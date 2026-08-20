@@ -20,7 +20,7 @@ describe("createSessionBubbleModule", () => {
     expect(contribution).toMatchObject({
       region: "side",
       closable: true,
-      eligibleLocations: { resourceKinds: ["dashboard-view", "ticket", "workspace"] },
+      eligibleLocations: { resourceKinds: ["dashboard-view", "extension-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
       tab: {
         contentRendererId: "dashboard-workbench.session-tab",

@@ -143,25 +143,7 @@ export const metadataWithTickets = {
       action: { kind: "panel", panelId: "pstdio-core-tickets.tickets" },
     },
   ],
-  modes: [
-    {
-      id: "pstdio-core-tickets.ticket",
-      extensionId: "pstdio.pstdio-core-tickets",
-      modeId: "pstdio-core-tickets.ticket",
-      label: "Ticket",
-      icon: "FileText",
-      panelRegions: ["main", "secondary", "side"],
-      resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            files: { region: "sidenav", pinned: true },
-            properties: { region: "side" },
-          },
-        },
-      },
-    },
-  ],
+  modes: [],
   resourceKinds: [
     {
       id: "ticket",

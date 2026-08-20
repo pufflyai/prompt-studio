@@ -4,7 +4,7 @@ import { resolveLocalizableString } from "@/shared/extensions/extension-localiza
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb, updateResourceBreadcrumbLabel } from "@/shared/workbench/resource-sync";
-import { isSidenavResourceTree, type ResourcePanelBinding, resourceModeFor } from "./extension-composition";
+import { isSidenavResourceTree, type ResourcePanelBinding } from "./extension-composition";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
@@ -192,7 +192,6 @@ export const registerExtensionResourceView = (
   const groups = groupResourceEditorViews(input.metadata);
   const groupByKind = new Map(groups.map((group) => [group.kind, group]));
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
-  const navigationModeId = (kind: string) => resourceModeFor(input.metadata, kind)?.modeId ?? "project";
 
   for (const { kind, primary, companions } of groups) {
     if (!primary) {
@@ -231,7 +230,10 @@ export const registerExtensionResourceView = (
             companions.filter((companion) => !isSidenavResourceTree(companion)).map(widgetIdFor),
           );
           const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
-          selectDashboardNavigationResource(ctx, selectedResource, { modeId: navigationModeId(kind) });
+          // Opening a resource never infers a mode: it keeps the workbench the user is
+          // in, so the project's own chrome stays put and the resource's panels land in
+          // the regions they support.
+          selectDashboardNavigationResource(ctx, selectedResource);
           setResourceBreadcrumb(ctx, selectedResource);
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {

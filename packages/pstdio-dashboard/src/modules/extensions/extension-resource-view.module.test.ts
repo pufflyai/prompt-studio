@@ -101,6 +101,7 @@ describe("createExtensionsModule resource views", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.modes.setActiveMode("project");
     const disposable = workbench.registerModule(
       createExtensionsModule({ executeCommand, loadMetadata, loadAppearance }),
     );
@@ -125,7 +126,9 @@ describe("createExtensionsModule resource views", () => {
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
-      expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
+      // A ticket is a resource: opening one keeps the workbench the user is in, so the
+      // project's own chrome stays put instead of being replaced by a ticket mode.
+      expect(workbench.modes.getActiveModeId()).toBe("project");
       expect(workbench.renderers.getTreeRenderer("pstdio-core-tickets.ticketFiles")).toMatchObject({
         title: "Files",
       });

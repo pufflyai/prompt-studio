@@ -67,7 +67,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
     await flushMicrotasks();
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
-    expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
+    expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(
       (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
         section.nodes.map((node) => node.label),
@@ -79,7 +79,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
     await flushMicrotasks();
 
     expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
-    expect(workbench.modes.getMode("pstdio-core-tickets.ticket")).toBeDefined();
+    expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(
       (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
         section.nodes.map((node) => node.label),
