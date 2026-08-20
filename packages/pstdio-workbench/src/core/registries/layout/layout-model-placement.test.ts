@@ -655,3 +655,25 @@ describe("createLayoutModel placement management", () => {
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 });
+
+// Panel menus, Sub Panel selections, and the primary resource all follow the active
+// Location. Selecting one Location tab while another stays the active Location shows the
+// wrong panel's menus.
+describe("createLayoutModel Location tab selection", () => {
+  test("selecting a Location tab in main makes it the active Location", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, { id: "lab.overview", title: "Overview", region: "main" });
+    registerTestWidget(layout, { id: "lab.cams", title: "Cams", region: "main" });
+
+    const overview = layout.openWidget("lab.overview", { role: "location" });
+    const cams = layout.openWidget("lab.cams", { role: "location" });
+    layout.setRegionActiveWidget("main", overview.widgetId);
+    expect(layout.getLayout().activeLocationWidgetId).toBe(overview.widgetId);
+
+    layout.setRegionActiveWidget("main", cams.widgetId);
+
+    expect(layout.getLayout().regions.main.activeWidgetId).toBe(cams.widgetId);
+    expect(layout.getLayout().activeLocationWidgetId).toBe(cams.widgetId);
+  });
+});

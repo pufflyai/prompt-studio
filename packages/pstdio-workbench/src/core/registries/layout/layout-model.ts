@@ -11,6 +11,7 @@ import {
   findPlacementByWidgetId,
   getActiveLocationPlacement,
   removePlacementsForContribution,
+  selectRegionActiveWidget,
   setLocationSubPanelSelection,
 } from "./layout-operations";
 import { createLayoutPlacementMethods } from "./layout-placement-methods";
@@ -297,32 +298,9 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     reconcilePanelMenus: ownedMenus.reconcilePanelMenus,
 
     setRegionActiveWidget(regionId, widgetId) {
-      const layout = getLayout();
-      const region = layout.regions[regionId];
-      const placement = widgetId ? region.widgets.find((candidate) => candidate.widgetId === widgetId) : undefined;
-      if (widgetId && !placement) throw new Error(`Widget placement not found in ${regionId}: ${widgetId}`);
-      if (region.activeWidgetId === widgetId) return;
-
-      const nextLayout = {
-        ...layout,
-        activeWidgetId: layout.activeWidgetId === region.activeWidgetId ? placement?.widgetId : layout.activeWidgetId,
-        activeResourceUri:
-          layout.activeWidgetId === region.activeWidgetId ? placement?.resourceUri : layout.activeResourceUri,
-        regions: {
-          ...layout.regions,
-          [regionId]: { ...region, activeWidgetId: placement?.widgetId },
-        },
-      };
-      const withSelection =
-        regionId !== "side" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)
-          ? setLocationSubPanelSelection(
-              nextLayout,
-              getActiveLocationPlacement(nextLayout),
-              regionId as WorkbenchPanelRegion,
-              placement?.role === "sub-panel" ? placement.widgetId : undefined,
-            )
-          : nextLayout;
-      setLayout(withSelection);
+      const nextLayout = selectRegionActiveWidget(getLayout(), regionId, widgetId);
+      if (!nextLayout) return;
+      setLayout(nextLayout);
       persistLayout();
     },
 

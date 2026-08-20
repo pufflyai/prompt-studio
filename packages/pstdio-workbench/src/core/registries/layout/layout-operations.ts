@@ -342,3 +342,35 @@ export const activateInLayout = (
     },
   };
 };
+
+// Selects one widget as a region's active tab. In main the selected Location tab is the
+// active Location: panel menus, Sub Panel selections, and the primary resource all
+// follow it, so selecting a Location without moving it would leave them on the old
+// panel. Returns undefined when the selection is already current.
+export const selectRegionActiveWidget = (
+  layout: WorkbenchLayout,
+  regionId: WorkbenchRegion,
+  widgetId: string | undefined,
+) => {
+  const region = layout.regions[regionId];
+  const placement = widgetId ? region.widgets.find((candidate) => candidate.widgetId === widgetId) : undefined;
+  if (widgetId && !placement) throw new Error(`Widget placement not found in ${regionId}: ${widgetId}`);
+  if (region.activeWidgetId === widgetId) return undefined;
+
+  const followsRegion = layout.activeWidgetId === region.activeWidgetId;
+  const nextLayout: WorkbenchLayout = {
+    ...layout,
+    activeWidgetId: followsRegion ? placement?.widgetId : layout.activeWidgetId,
+    activeResourceUri: followsRegion ? placement?.resourceUri : layout.activeResourceUri,
+    activeLocationWidgetId:
+      regionId === "main" && placement?.role === "location" ? placement.widgetId : layout.activeLocationWidgetId,
+    regions: { ...layout.regions, [regionId]: { ...region, activeWidgetId: placement?.widgetId } },
+  };
+  if (regionId === "side" || !workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)) return nextLayout;
+  return setLocationSubPanelSelection(
+    nextLayout,
+    getActiveLocationPlacement(nextLayout),
+    regionId as WorkbenchPanelRegion,
+    placement?.role === "sub-panel" ? placement.widgetId : undefined,
+  );
+};
