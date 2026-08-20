@@ -41,6 +41,9 @@ const fetchExtensionMetadata = async (request: import("@playwright/test").APIReq
 const layoutWidgetIds = (persisted: { layout: { regions: Record<string, { widgets: { widgetId: string }[] }> } }) =>
   Object.values(persisted.layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId));
 
+// The layout store discards layouts written by an older schema version, so this
+// covers the live rule instead: a current-version layout is reconciled against the
+// panels an extension still contributes, and the per-extension reset command clears it.
 test("reconciles and locally resets extension layouts across reloads", async ({ page, request }) => {
   const project = await createProject(request);
   const metadata = await fetchExtensionMetadata(request, project.id);
@@ -61,7 +64,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
       extensionId: nativePanel!.extensionId,
       modeIds: [],
       panelId: nativePanel!.id,
-      region: nativePanel!.region,
+      region: nativePanel!.supportedRegions[0],
       widgetId: legacyWidgetId,
     },
     {
@@ -108,7 +111,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
       const seedKey = `ps-221-layout-seeded:${currentProjectId}`;
       if (localStorage.getItem(seedKey)) return;
-      localStorage.setItem(currentLayoutKey, JSON.stringify({ version: 2, layout: currentLayout }));
+      localStorage.setItem(currentLayoutKey, JSON.stringify({ version: 3, layout: currentLayout }));
       localStorage.setItem(currentCompatibilityKey, JSON.stringify(oldCompatibility));
       localStorage.setItem(seedKey, "true");
     },
@@ -127,7 +130,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
     .not.toBe(JSON.stringify(previousCompatibility));
   const migrated = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), layoutKey);
   expect(layoutWidgetIds(migrated).sort()).toEqual(["dashboard.unrelated", nativePanel!.id].sort());
-  const migratedPlacement = migrated.layout.regions[nativePanel!.region].widgets.find(
+  const migratedPlacement = migrated.layout.regions[nativePanel!.supportedRegions[0]!].widgets.find(
     (placement: { widgetId: string }) => placement.widgetId === nativePanel!.id,
   );
   expect(migratedPlacement).toMatchObject({
@@ -138,7 +141,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   expect(migrated.layout.activeWidgetId).toBe(nativePanel!.id);
   expect(migrated.layout.activeLocationWidgetId).toBe(nativePanel!.id);
   expect(migrated.layout.locationSubPanelSelections["resource://legacy"]).toEqual({
-    [nativePanel!.region]: nativePanel!.id,
+    [nativePanel!.supportedRegions[0]!]: nativePanel!.id,
   });
 
   const extensionName = extension!.displayName || extension!.name || extension!.id;
