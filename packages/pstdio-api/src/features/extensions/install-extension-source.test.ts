@@ -3,7 +3,12 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { ExtensionAlreadyInstalledError, installExtensionSource, resolvePstdioHome } from "./install-extension-source";
+import {
+  ExtensionAlreadyInstalledError,
+  installExtensionSource,
+  namedSourceRef,
+  resolvePstdioHome,
+} from "./install-extension-source";
 
 const packageManifest = (
   fields: Partial<{ id: string; namespace: string; name: string }> & Record<string, unknown> = {},
@@ -276,7 +281,7 @@ describe("installExtensionSource", () => {
       homedir: () => "/unused",
       prepareNamedSource: async () => ({
         path: namedSource,
-        ref: "https://github.com/pufflyai/prompt-studio#main:extensions/planner",
+        ref: "https://github.com/pufflyai/prompt-studio@0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c#extensions/planner",
       }),
     });
 
@@ -284,6 +289,35 @@ describe("installExtensionSource", () => {
     expect(result.source.kind).toBe("named");
     expect(result.metadata.name).toBe("planner");
     expect(existsSync(join(pstdioHome, "extensions", "planner-dev", "extension.ts"))).toBe(true);
+  });
+
+  test("records the commit the named source resolved to and passes the requested ref through", async () => {
+    const namedSource = join(root, "named-source");
+    makeExtension(namedSource, { id: "pstdio.planner", namespace: "planner", name: "Planner" });
+    const requestedRefs: Array<string | undefined> = [];
+
+    const result = await installExtensionSource({
+      source: "planner",
+      ref: "pstdio@0.26.2",
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      prepareNamedSource: async (name, _tempDir, ref) => {
+        requestedRefs.push(ref);
+        return {
+          path: namedSource,
+          ref: namedSourceRef("0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c", name),
+        };
+      },
+    });
+
+    expect(requestedRefs).toEqual(["pstdio@0.26.2"]);
+    // The pin is the commit, not the tag that was asked for: a tag can move, a commit cannot.
+    expect(result.source).toMatchObject({
+      kind: "named",
+      name: "planner",
+      ref: "https://github.com/pufflyai/prompt-studio@0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c#extensions/planner",
+    });
   });
 
   test("refuses to copy an extension into itself", async () => {

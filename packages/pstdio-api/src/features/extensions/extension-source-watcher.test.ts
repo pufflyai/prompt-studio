@@ -38,7 +38,7 @@ describe("createExtensionSourceWatcher", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 5,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (installName) => {
+      onSourceChanged: async (installName) => {
         reloaded.push(installName);
       },
       watch: (_path, listener) => {
@@ -72,7 +72,7 @@ describe("createExtensionSourceWatcher", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 10,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (installName) => {
+      onSourceChanged: async (installName) => {
         reloaded.push(installName);
       },
       watch: (_path, listener) => {
@@ -110,7 +110,7 @@ describe("createExtensionSourceWatcher", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 5,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async () => {
+      onSourceChanged: async () => {
         reloadCount++;
         activeReloads++;
         maxActiveReloads = Math.max(maxActiveReloads, activeReloads);
@@ -154,7 +154,7 @@ describe("createExtensionSourceWatcher", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (installName) => {
+      onSourceChanged: async (installName) => {
         reloaded.push(installName);
       },
       watch: (_path, listener) => {
@@ -187,7 +187,7 @@ describe("createExtensionSourceWatcher", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => rows,
-      reloadInstalledSource: async () => {},
+      onSourceChanged: async () => {},
       watch: (_path, listener) => {
         const fake = new FakeWatcher(listener);
         watchers.push(fake);
@@ -217,7 +217,7 @@ describe("createExtensionSourceWatcher", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (path) => {
+      onSourceChanged: async (path) => {
         reloaded.push(path);
       },
       watch: (_path, listener) => {
@@ -252,7 +252,7 @@ describe("createExtensionSourceWatcher", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async () => {},
+      onSourceChanged: async () => {},
       onError: (error) => errors.push(error),
       watch: (_path, listener, onError) => {
         triggerError = onError;
@@ -286,7 +286,7 @@ describe("createExtensionSourceWatcher registrations", () => {
       debounceMs: 5,
       includeIgnoredPath: (path) => path === "bun.lock",
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (path) => {
+      onSourceChanged: async (path) => {
         reloaded.push(path);
       },
       watchDependencies: false,
@@ -319,7 +319,7 @@ describe("createExtensionSourceWatcher registrations", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 5,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (path) => {
+      onSourceChanged: async (path) => {
         reloaded.push(path);
       },
       watch: (path, listener) => {
@@ -355,7 +355,7 @@ describe("createExtensionSourceWatcher registrations", () => {
     const watchedPaths: string[] = [];
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async () => {},
+      onSourceChanged: async () => {},
       watch: (path, listener) => {
         watchedPaths.push(path);
         return new FakeWatcher(listener);
@@ -387,7 +387,7 @@ describe("createExtensionSourceWatcher registrations", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 5,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (path) => {
+      onSourceChanged: async (path) => {
         reloaded.push(path);
       },
       watch: (path, listener) => {
@@ -421,7 +421,7 @@ describe("createExtensionSourceWatcher registrations", () => {
     const watcher = await createExtensionSourceWatcher({
       debounceMs: 5,
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async () => {},
+      onSourceChanged: async () => {},
       watch: (path, listener) => {
         const fake = new FakeWatcher(listener);
         watchedPaths.push(path);
@@ -455,7 +455,7 @@ describe("createExtensionSourceWatcher registrations", () => {
         { install_name: "shared", source_path: firstPath },
         { install_name: "shared", source_path: secondPath },
       ],
-      reloadInstalledSource: async (sourcePath) => {
+      onSourceChanged: async (sourcePath) => {
         reloaded.push(sourcePath);
       },
       watch: (_path, listener) => {
@@ -492,7 +492,7 @@ describe("createExtensionSourceWatcher registrations", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => rows,
-      reloadInstalledSource: async (sourcePath) => {
+      onSourceChanged: async (sourcePath) => {
         reloaded.push(sourcePath);
       },
       watch: (_path, listener) => new FakeWatcher(listener),

@@ -47,7 +47,6 @@ Required fields:
 - `version`: extension package semver.
 - `publisher`: publisher id segment, matching `^[a-z][a-z0-9-]*$`.
 - `main`: relative path to the extension entry file inside the package.
-- `engines.pstdio`: supported Prompt Studio extension API semver range.
 
 Optional fields:
 
@@ -61,6 +60,38 @@ Derived fields:
 - Command ids, CLI paths, artifact paths, themes, templates, and skills are scoped by package `name`.
 
 Invalid packages produce diagnostics from `pst extensions check`. Missing manifest fields, invalid `main`, unsupported `engines.pstdio`, and entry import failures are reported with the package path.
+
+## Installing And Updating
+
+Installs and updates are explicit. Source that appears in the extensions root is never adopted on its own.
+
+- `pst extensions add <name>` installs the extension that belongs to the running release. The name is
+  resolved to a release tag, then to the commit that tag points at, and that commit is recorded with
+  the install. The same install can never resolve to different source later.
+- `pst extensions add <name> --branch <branch>` installs from a branch instead. A branch moves, so
+  this is for extension development only.
+- Editing a folder under the extensions root does not change what a project runs. The extension is
+  marked as having an update available, and the project keeps running the version it adopted.
+- Choosing **Update** in the extension panel validates the source on disk and adopts it. If the source
+  is refused, for example because it targets a different `engines.pstdio`, the previously adopted
+  version keeps running and the update stays on offer.
+- Editing an installed folder still rebuilds that extension's webview assets, so an open webview
+  updates while you work. Only its contributions wait for the update, because those are what the
+  project agreed to run.
+- `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
+  not automatic adoption.
+
+## Releasing A Breaking Contract Change
+
+The extension API version, the host, and the bundled extensions move together.
+
+A change that breaks an extension contract must, in the same pull request:
+
+1. Bump `EXTENSION_API_VERSION` to the next alpha.
+2. Update `engines.pstdio` in every extension in this repository.
+
+`bun run verify:extension-api-version` fails when any manifest is left behind, so a release can never
+be half-migrated.
 
 ## Source Layout
 

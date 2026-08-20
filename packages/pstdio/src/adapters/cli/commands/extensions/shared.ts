@@ -6,6 +6,7 @@ import {
 import { apiClient } from "@/features/api-client";
 
 export type ExtensionsAddArgs = {
+  branch?: string;
   force?: boolean;
   name?: string;
   "skip-install"?: boolean;

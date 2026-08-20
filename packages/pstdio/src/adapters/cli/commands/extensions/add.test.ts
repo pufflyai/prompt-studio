@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, type Mock, mock, test } from "bun:test";
 import { ExtensionAlreadyInstalledError } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments } from "yargs";
+import { CLI_VERSION } from "@/features/cli-version";
 import { createHandler } from "./add";
 import type { ExtensionsAddArgs } from "./shared";
 
@@ -84,6 +85,7 @@ describe("extensions add", () => {
       source: "planner",
       installName: "planner-dev",
       force: true,
+      ref: `pstdio@${CLI_VERSION}`,
       repoPath: "/repo",
       skipInstall: true,
     });
@@ -97,6 +99,15 @@ describe("extensions add", () => {
     expect(output).toContain("Project: enabled for project-1");
   });
 
+  test("installs from a branch only when asked", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    await handler(argv({ source: "planner", branch: "feature/new-renderer" }));
+
+    expect(deps.installExtensionSource).toHaveBeenCalledWith(expect.objectContaining({ ref: "feature/new-renderer" }));
+  });
+
   test("skips enablement when outside a linked project", async () => {
     const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
@@ -107,6 +118,7 @@ describe("extensions add", () => {
       source: "./planner",
       installName: undefined,
       force: undefined,
+      ref: `pstdio@${CLI_VERSION}`,
       skipInstall: undefined,
     });
     expect(deps.ensureApi).not.toHaveBeenCalled();

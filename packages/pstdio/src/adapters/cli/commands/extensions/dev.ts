@@ -252,7 +252,7 @@ export const createHandler =
         includeIgnoredPath: (path) => extensionDependencyInputNames.includes(path as never),
         listInstalledSources: async () => [{ install_name: installName, source_path: sourcePath }],
         onError: (error) => deps.error(error instanceof Error ? error.message : String(error)),
-        reloadInstalledSource: () => queueCycle(),
+        onSourceChanged: () => queueCycle(),
         watchDependencies: false,
       });
       deps.log(`watching ${sourcePath}`);

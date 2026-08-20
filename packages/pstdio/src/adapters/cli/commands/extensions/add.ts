@@ -6,6 +6,7 @@ import {
   installExtensionSource,
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
+import { CLI_VERSION } from "@/features/cli-version";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
 import { installDefaultSkills } from "@/features/skills/install-default-skills";
@@ -34,6 +35,10 @@ export const builder = (yargs: Argv) =>
       type: "boolean",
       default: false,
       describe: "Skip dependency installation",
+    })
+    .option("branch", {
+      type: "string",
+      describe: "Install from a branch instead of this release (for extension development)",
     });
 
 type Deps = {
@@ -58,6 +63,11 @@ const defaultDeps: Deps = {
   readConfig,
 };
 
+// A bare name installs the extension that belongs to this release, never whatever the default
+// branch happens to hold. A branch is opt-in, because it is a moving target.
+export const resolveNamedSourceRef = (branch: string | undefined, cliVersion = CLI_VERSION) =>
+  branch ?? `pstdio@${cliVersion}`;
+
 const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
   const root = deps.findGitRoot(deps.cwd());
   if (!root) return null;
@@ -75,6 +85,7 @@ export const createHandler =
         source: argv.source,
         installName: argv.name,
         force: argv.force,
+        ref: resolveNamedSourceRef(argv.branch),
         ...(project ? { repoPath: project.root } : {}),
         skipInstall: argv["skip-install"],
       });

@@ -43,7 +43,8 @@ export type CreateExtensionSourceWatcherInput = {
   includeIgnoredPath?: (path: string) => boolean;
   listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
   onError?: (error: unknown) => void;
-  reloadInstalledSource: (sourcePath: string) => Promise<unknown>;
+  /** Called when a watched source folder changes. It must not adopt the new source. */
+  onSourceChanged: (sourcePath: string) => Promise<unknown>;
   watch?: WatchSource;
   watchDependencies?: boolean;
 };
@@ -113,7 +114,7 @@ export const createExtensionSourceWatcher = async (
 
     registration.running = true;
     input
-      .reloadInstalledSource(registration.sourcePath)
+      .onSourceChanged(registration.sourcePath)
       .catch((error) => input.onError?.(error))
       .finally(() => {
         registration.running = false;
@@ -238,7 +239,7 @@ export const createExtensionSourceWatcher = async (
     registrations.delete(sourcePath);
     addRegistration(next);
     try {
-      await input.reloadInstalledSource(sourcePath);
+      await input.onSourceChanged(sourcePath);
     } catch (error) {
       input.onError?.(error);
     }

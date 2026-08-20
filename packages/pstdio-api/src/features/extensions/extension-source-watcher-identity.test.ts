@@ -22,7 +22,7 @@ describe("createExtensionSourceWatcher source identity", () => {
 
     const watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
-      reloadInstalledSource: async (path) => {
+      onSourceChanged: async (path) => {
         reloaded.push(path);
       },
       watch: () => {

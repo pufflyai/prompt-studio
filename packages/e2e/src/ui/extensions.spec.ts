@@ -281,28 +281,39 @@ test("extension detail toggles automations and retries load errors", async ({ pa
     await disableResponse;
     await expect(automationRow.locator("input[type='checkbox']")).not.toBeChecked({ timeout: 10_000 });
 
-    // Break the source on disk: the watcher flips the extension into the error state
-    // and the load-error notification appears.
+    // Break the source on disk. The project keeps running what it adopted, so the extension stays
+    // healthy and the change is offered as an update instead.
     writeAutomationExtension({ broken: true, installName });
-    await expect(page.getByTestId("extension-detail-health")).toBeVisible({ timeout: 15_000 });
+    await page.reload();
+    await expect(page.getByTestId("extension-update-available")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("extension-detail-health")).toHaveCount(0);
 
-    // Retry while still broken: the reload endpoint runs and reports the error state again.
-    const reloadResponse = page.waitForResponse(
+    // Taking the broken update validates it, refuses it, and reports the error state.
+    const refusedUpdate = page.waitForResponse(
       (response) => response.url().includes("/reload") && response.request().method() === "POST",
     );
-    await page.getByTestId("extension-retry").click();
-    expect((await reloadResponse).status()).toBe(200);
-    await expect(page.getByTestId("extension-detail-health")).toBeVisible();
+    await page.getByTestId("extension-update").click();
+    expect((await refusedUpdate).status()).toBe(200);
+    await expect(page.getByTestId("extension-detail-health")).toBeVisible({ timeout: 15_000 });
 
-    // Fixing the source lets the watcher reload it back to healthy, which clears the notification.
+    // Fixing the source and taking the update again clears the notification.
     writeAutomationExtension({ installName });
+    await page.reload();
+    const acceptedUpdate = page.waitForResponse(
+      (response) => response.url().includes("/reload") && response.request().method() === "POST",
+    );
+    await page.getByTestId("extension-update").click();
+    expect((await acceptedUpdate).status()).toBe(200);
     await expect(page.getByTestId("extension-detail-health")).toHaveCount(0, { timeout: 15_000 });
   } finally {
     restoreDefaultExtensions();
   }
 });
 
-test("dashboard-wb hot reloads extension root additions and source edits", async ({ page, request }) => {
+test("dashboard-wb discovers extension root additions and offers source edits as updates", async ({
+  page,
+  request,
+}) => {
   const unique = Date.now();
   const installName = `e2e-hot-reload-${unique}`;
   const project = await createProjectViaApi(request, `Extension Hot Reload ${unique}`);
@@ -341,6 +352,19 @@ test("dashboard-wb hot reloads extension root additions and source edits", async
       installName,
     });
 
+    // The edit is an offer. The row keeps the adopted description until the update is taken.
+    await page.reload();
+    await expect(row).toContainText("Initial hot reload extension.");
+    await expect(row.getByTestId("extension-update-marker")).toBeVisible({ timeout: 10_000 });
+
+    await row.click();
+    const takenUpdate = page.waitForResponse(
+      (response) => response.url().includes("/reload") && response.request().method() === "POST",
+    );
+    await page.getByTestId("extension-update").click();
+    expect((await takenUpdate).status()).toBe(200);
+
+    await page.goto(`/projects/${project.id}/settings?panel=extensions`);
     await expect(row).toContainText("Updated hot reload extension.", { timeout: 10_000 });
 
     await page.keyboard.press("ControlOrMeta+KeyK");

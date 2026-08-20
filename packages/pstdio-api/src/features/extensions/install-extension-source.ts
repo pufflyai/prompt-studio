@@ -57,7 +57,9 @@ export type InstallExtensionSourceInput = {
   repoPath?: string;
   isPackagedRuntime?: () => boolean;
   bunCacheDir?: string;
-  prepareNamedSource?: (name: string, tempDir: string) => Promise<{ path: string; ref: string }>;
+  prepareNamedSource?: (name: string, tempDir: string, ref?: string) => Promise<{ path: string; ref: string }>;
+  /** Git ref for a named source. Omitting it takes the default branch, which only development does. */
+  ref?: string;
   processExecPath?: string;
   reuseInstalledDependencies?: boolean;
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
@@ -226,39 +228,56 @@ const prepareInstallDependencies = async (input: {
   return linkedInstalledDependencies;
 };
 
+/**
+ * Clones the extension monorepo and reports the commit that was checked out.
+ *
+ * The commit sha is the pin: a tag can be moved and a branch always moves, so recording the ref a
+ * caller asked for would not tell us later what was actually installed. `ref` may be a tag, branch,
+ * or sha; omitting it takes the default branch, which only the development flag does.
+ */
 const cloneRepoSparse = async (
   checkoutPath: string,
   paths: string[],
   run: (command: string, args: string[], options: { cwd: string }) => Promise<CommandResult>,
+  ref?: string,
 ) => {
   const tempParent = dirname(checkoutPath);
-  const clone = await run(
-    "git",
-    ["clone", "--depth", "1", "--filter=blob:none", "--sparse", DEFAULT_REPO_URL, checkoutPath],
-    { cwd: tempParent },
-  );
+  const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
+  if (ref) cloneArgs.push("--branch", ref);
+  const clone = await run("git", [...cloneArgs, DEFAULT_REPO_URL, checkoutPath], { cwd: tempParent });
   if (clone.exitCode !== 0) {
-    throw new Error(`Failed to clone ${DEFAULT_REPO_URL}: ${clone.stderr.trim() || clone.stdout.trim()}`);
+    const detail = clone.stderr.trim() || clone.stdout.trim();
+    throw new Error(`Failed to clone ${DEFAULT_REPO_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
   }
 
   const sparse = await run("git", ["sparse-checkout", "set", ...paths], { cwd: checkoutPath });
   if (sparse.exitCode !== 0) {
     throw new Error(`Failed to fetch ${paths.join(", ")}: ${sparse.stderr.trim() || sparse.stdout.trim()}`);
   }
+
+  const head = await run("git", ["rev-parse", "HEAD"], { cwd: checkoutPath });
+  if (head.exitCode !== 0) {
+    throw new Error(`Failed to resolve the installed commit: ${head.stderr.trim() || head.stdout.trim()}`);
+  }
+
+  return head.stdout.trim();
 };
 
-const prepareNamedSource = async (name: string, tempDir: string) => {
+export const namedSourceRef = (commit: string, name: string) => `${DEFAULT_REPO_URL}@${commit}#extensions/${name}`;
+
+const prepareNamedSource = async (name: string, tempDir: string, ref?: string) => {
   const checkoutPath = join(tempDir, "prompt-studio");
-  await cloneRepoSparse(checkoutPath, [`extensions/${name}`], runCommand);
+  const commit = await cloneRepoSparse(checkoutPath, [`extensions/${name}`], runCommand, ref);
   return {
     path: join(checkoutPath, "extensions", name),
-    ref: `${DEFAULT_REPO_URL}#main:extensions/${name}`,
+    ref: namedSourceRef(commit, name),
   };
 };
 
 export const createSharedNamedSourceCheckout = async (
   names: string[],
   options: {
+    ref?: string;
     runCommand?: (command: string, args: string[], opts: { cwd: string }) => Promise<CommandResult>;
   } = {},
 ) => {
@@ -270,11 +289,13 @@ export const createSharedNamedSourceCheckout = async (
   }
 
   const checkoutPath = join(tempDir, "prompt-studio");
+  let commit: string;
   try {
-    await cloneRepoSparse(
+    commit = await cloneRepoSparse(
       checkoutPath,
       names.map((name) => `extensions/${name}`),
       options.runCommand ?? runCommand,
+      options.ref,
     );
   } catch (error) {
     cleanup();
@@ -283,7 +304,7 @@ export const createSharedNamedSourceCheckout = async (
 
   const shared = async (name: string) => ({
     path: join(checkoutPath, "extensions", name),
-    ref: `${DEFAULT_REPO_URL}#main:extensions/${name}`,
+    ref: namedSourceRef(commit, name),
   });
 
   return { prepareNamedSource: shared, cleanup };
@@ -302,7 +323,7 @@ const resolveSource = async (input: InstallExtensionSourceInput, tempDir: string
     return { kind: "local" as const, path, ref: undefined };
   }
 
-  const named = await (input.prepareNamedSource ?? prepareNamedSource)(input.source, tempDir);
+  const named = await (input.prepareNamedSource ?? prepareNamedSource)(input.source, tempDir, input.ref);
   return { kind: "named" as const, name: input.source, path: named.path, ref: named.ref };
 };
 
