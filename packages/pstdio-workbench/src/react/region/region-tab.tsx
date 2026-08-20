@@ -272,6 +272,10 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         minW="0"
         flexShrink={0}
         title={label}
+        // The tab is named after the panel it opens. Without this, the nested Close
+        // button's label joins the computed name, so a tab would be called
+        // "Artifacts Close Artifacts" and rename itself whenever it became closable.
+        aria-label={label}
         disabled={disabled}
         className="group"
         aria-haspopup={behavior.hasCustomMenu || behavior.hasContextMenu ? "menu" : undefined}

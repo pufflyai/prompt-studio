@@ -473,26 +473,31 @@ const toModeDefaultResource = (
 };
 
 const registerModes = (input: RegisterWorkbenchExtensionContributionsInput, registry: WorkbenchCompositionRegistry) =>
-  input.metadata.modes.map((mode) =>
-    input.workbench.modes.registerMode({
+  input.metadata.modes.map((mode) => {
+    // Seed and reconcile run the same composition pass with different jobs. The mode
+    // registry seeds a scope once and reconciles on every later activation, so it — not
+    // a guess about persisted state — decides when the recipe's optional placements open.
+    const applyComposition = (ctx: WorkbenchModeActivationContext, seeding: boolean) => {
+      reconcileCompositionLayout(
+        { layout: ctx.layout, notifications: ctx.notifications },
+        { registry, modeId: mode.modeId, resourceKind: ctx.navigator.getSelectedResource()?.kind, seeding },
+      );
+      // Reveal the Side Panel when the recipe placed something there so the mode's
+      // declared layout is visible the first time it opens.
+      if (ctx.layout.getLayout().regions.side.widgets.length > 0) ctx.shell.setSidePanelPresentation("attached");
+    };
+
+    return input.workbench.modes.registerMode({
       id: mode.modeId,
       label: text(mode.label, mode.modeId),
       panels: mode.panelRegions,
       resourceKinds: Object.keys(mode.resources ?? {}),
       defaultResource: toModeDefaultResource(input, mode.defaultResource),
       activate: () => undefined,
-      reconcile: (ctx: WorkbenchModeActivationContext) => {
-        const resource = ctx.navigator.getSelectedResource();
-        reconcileCompositionLayout(
-          { layout: ctx.layout, notifications: ctx.notifications },
-          { registry, modeId: mode.modeId, resourceKind: resource?.kind },
-        );
-        // Reveal the Side Panel when the recipe placed something there so the
-        // mode's declared layout is visible the first time it opens.
-        if (ctx.layout.getLayout().regions.side.widgets.length > 0) ctx.shell.setSidePanelPresentation("attached");
-      },
-    }),
-  );
+      seed: (ctx: WorkbenchModeActivationContext) => applyComposition(ctx, true),
+      reconcile: (ctx: WorkbenchModeActivationContext) => applyComposition(ctx, false),
+    });
+  });
 
 export const registerWorkbenchExtensionContributions = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = [];

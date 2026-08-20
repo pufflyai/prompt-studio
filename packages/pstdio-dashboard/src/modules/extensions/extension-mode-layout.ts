@@ -191,12 +191,15 @@ const registerExtensionModes = (input: {
     const ownsNavigation = modeIdsWithActivityItems.has(mode.modeId);
     if (ownsNavigation) disposables.push(registerNavigationOwningMode(mode.modeId));
 
-    const applyComposition = (modeCtx: WorkbenchModeActivationContext) => {
+    // `seeding` distinguishes the two jobs. Only the mode registry knows which one
+    // this is: it seeds a scope once and reconciles on every later activation, so the
+    // recipe's optional placements open exactly on the first visit.
+    const applyComposition = (modeCtx: WorkbenchModeActivationContext, seeding: boolean) => {
       if (ownsNavigation) modeCtx.layout.clearRegion("sidenav");
       const resource = modeCtx.navigator.getSelectedResource();
       const resolved = reconcileCompositionLayout(
         { layout: modeCtx.layout, notifications: modeCtx.notifications },
-        { registry, modeId: mode.modeId, resourceKind: resource?.kind },
+        { registry, modeId: mode.modeId, resourceKind: resource?.kind, seeding },
       );
       const placements = resolved?.placements ?? [];
       if (resource) {
@@ -232,9 +235,9 @@ const registerExtensionModes = (input: {
         activate: () => undefined,
         // The workbench establishes the mode's Location around `seed`, so the first
         // composition pass must run there for the main panel to own its Panel Menus.
-        seed: applyComposition,
+        seed: (modeCtx) => applyComposition(modeCtx, true),
         enter: (modeCtx) => activateModeChromeContributions(modeCtx, mode.modeId),
-        reconcile: applyComposition,
+        reconcile: (modeCtx) => applyComposition(modeCtx, false),
       }),
     );
   }

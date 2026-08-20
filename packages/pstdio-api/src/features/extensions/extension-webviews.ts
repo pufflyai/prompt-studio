@@ -27,7 +27,9 @@ export const classifyWebviewEntry = (asset: PackageAssetDescriptor): WebviewEntr
   return { extension, kind: "unsupported" };
 };
 
-const contributionMaps = ["panels", "routes", "settingsPanels"] as const;
+// Every contribution kind that can carry a webview body. A kind missing here builds no
+// bundle, so its view fails to load at runtime with no build-time signal.
+const contributionMaps = ["panels", "routes", "settingsPanels", "statusItems"] as const;
 
 const collectWebview = (webviews: WebviewContributionRecord[], id: string, contribution: Record<string, unknown>) => {
   if (!isRecord(contribution.webview) || !isPackageAssetDescriptor(contribution.webview.entry)) return;

@@ -44,6 +44,7 @@ describe("collectExtensionWebviews", () => {
           },
         },
         settingsPanels: { prefs: { webview: { entry: asset("./settings.tsx") } } },
+        statusItems: { status: { webview: { entry: asset("./status.tsx") } } },
       },
     });
 
@@ -52,6 +53,7 @@ describe("collectExtensionWebviews", () => {
       "test.panel",
       "test.panel.inspector",
       "test.prefs",
+      "test.status",
     ]);
   });
 });

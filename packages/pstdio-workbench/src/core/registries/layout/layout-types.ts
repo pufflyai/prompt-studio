@@ -267,6 +267,10 @@ export interface OpenWidgetInput {
   resource?: ResourceRef;
   title?: string;
   region?: WorkbenchRegion;
+  // The role this placement takes, when the caller knows it better than the widget
+  // does. A panel is a Location in main and a Sub Panel elsewhere, so a placement made
+  // by the composition resolver carries the role its region implies.
+  role?: WorkbenchWidgetRole;
   ownerId?: string;
   source?: ContributionSource;
   pinned?: boolean;

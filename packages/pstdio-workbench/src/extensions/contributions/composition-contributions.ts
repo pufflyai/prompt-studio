@@ -91,10 +91,10 @@ const extractPersistedState = (
   return { regions };
 };
 
-const hasAnyKnownPlacement = (layout: ReturnType<LayoutModel["getLayout"]>, knownPanelIds: ReadonlySet<string>) =>
-  dockedCompositionRegions.some((region) =>
-    layout.regions[region].widgets.some((placement) => knownPanelIds.has(placement.contributionId)),
-  );
+// A panel declares only what it can render, so its role comes from where the recipe
+// puts it: main holds Locations, which tab beside each other, and every other docked
+// region holds Sub Panels of the active Location.
+const placementRole = (region: DockedCompositionRegion) => (region === "main" ? "location" : "sub-panel");
 
 // Opens or corrects one resolved placement. A placement sitting in a region the
 // recipe no longer allows moves to the resolved region; a valid user move stays.
@@ -108,6 +108,7 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
       region: placement.region,
       closable: placement.closable,
       pinned: true,
+      role: placementRole(placement.region),
     });
 
   if (!existingRegion) {
@@ -121,8 +122,10 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
   const existing = current.regions[existingRegion].widgets.find(
     (candidate) => candidate.contributionId === placement.panelId,
   );
-  if (existing && (existing.closable ?? true) !== placement.closable) {
-    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable });
+  if (!existing) return;
+  const role = placementRole(existingRegion);
+  if ((existing.closable ?? true) !== placement.closable || existing.role !== role) {
+    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable, role });
   }
 };
 
@@ -164,25 +167,23 @@ const reportRequiredFallback = (ctx: CompositionReconcileContext, modeId: string
 
 export const compositionRequiredNotificationId = (modeId: string) => `workbench.composition.required.${modeId}`;
 
-// Reconciles the docked layout for one mode-resource context against the registered
-// composition. Runs on every context activation: it restores missing required
-// structure, enforces resolved closability, and reports unresolved required
-// placements once through a stable notification id (repeated reconciliation updates
-// the same diagnostic instead of stacking toasts).
+// Applies the registered composition to the docked layout for one mode-resource
+// context. `seeding` says which job this call is doing, and only the mode registry
+// knows: it seeds a scope once, and reconciles on every later activation. Seeding
+// places the mode's whole recipe. Reconciling restores missing required structure,
+// enforces resolved closability, and keeps the user's optional choices, tab order, and
+// moves. Both report an unresolved required placement under a stable notification id,
+// so repeated reconciliation updates the same message instead of stacking toasts.
 export const reconcileCompositionLayout = (
   ctx: CompositionReconcileContext,
-  input: { registry: WorkbenchCompositionRegistry; modeId: string; resourceKind?: string },
+  input: { registry: WorkbenchCompositionRegistry; modeId: string; resourceKind?: string; seeding?: boolean },
 ) => {
   const mode = input.registry.getModeComposition(input.modeId);
   if (!mode) return undefined;
   const composition = input.registry.getComposition();
   const knownPanelIds = new Set(composition.panels.map((panel) => panel.id));
   const layout = ctx.layout.getLayout();
-  // A scope counts as new only when nothing was persisted for it and none of the
-  // composition's panels are placed; a reselect after closing optional panels keeps
-  // the user's choices.
-  const isNewScope = !ctx.layout.hasPersistedLayout() && !hasAnyKnownPlacement(layout, knownPanelIds);
-  const persisted = isNewScope ? undefined : extractPersistedState(layout, knownPanelIds);
+  const persisted = input.seeding ? undefined : extractPersistedState(layout, knownPanelIds);
 
   const resolved = resolveComposition({
     context: { modeId: input.modeId, resourceKind: input.resourceKind },

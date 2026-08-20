@@ -82,7 +82,12 @@ describe("composition reconciliation", () => {
     const registry = setupRegistry();
     const ctx = setupWorkbench();
 
-    reconcileCompositionLayout(ctx, { registry, modeId: "planner.ticket-mode", resourceKind: "planner.ticket" });
+    reconcileCompositionLayout(ctx, {
+      registry,
+      modeId: "planner.ticket-mode",
+      resourceKind: "planner.ticket",
+      seeding: true,
+    });
 
     const layout = ctx.layout.getLayout();
     expect(layout.regions.main.widgets.map((placement) => placement.contributionId)).toEqual(["planner.editor"]);
@@ -94,7 +99,12 @@ describe("composition reconciliation", () => {
   test("restores a missing required placement without reopening a closed optional panel", () => {
     const registry = setupRegistry();
     const ctx = setupWorkbench();
-    reconcileCompositionLayout(ctx, { registry, modeId: "planner.ticket-mode", resourceKind: "planner.ticket" });
+    reconcileCompositionLayout(ctx, {
+      registry,
+      modeId: "planner.ticket-mode",
+      resourceKind: "planner.ticket",
+      seeding: true,
+    });
 
     const seeded = ctx.layout.getLayout();
     const properties = seeded.regions.side.widgets[0];
@@ -112,7 +122,12 @@ describe("composition reconciliation", () => {
   test("keeps a valid user move and tab order through reconciliation", () => {
     const registry = setupRegistry();
     const ctx = setupWorkbench();
-    reconcileCompositionLayout(ctx, { registry, modeId: "planner.ticket-mode", resourceKind: "planner.ticket" });
+    reconcileCompositionLayout(ctx, {
+      registry,
+      modeId: "planner.ticket-mode",
+      resourceKind: "planner.ticket",
+      seeding: true,
+    });
 
     const properties = ctx.layout.getLayout().regions.side.widgets[0];
     expect(properties).toBeDefined();

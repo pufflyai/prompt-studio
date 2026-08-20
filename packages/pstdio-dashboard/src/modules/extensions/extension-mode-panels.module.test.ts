@@ -63,6 +63,16 @@ const labMetadata = {
       supportedRegions: ["main", "side"],
       title: "Cams",
       webview: webview("cams"),
+      panelMenus: [
+        {
+          id: "extension-lab.labCams.cameras",
+          extensionId: "pstdio.extension-lab",
+          ownerPanelId: "extension-lab.labCams",
+          title: "Cameras",
+          side: "left",
+          renderer: { kind: "tree", id: "extension-lab.labCams" },
+        },
+      ],
     },
     {
       id: "extension-lab.labArtifacts",
