@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionRuntime } from "./runtime";
 
 const tempDirs: string[] = [];
@@ -21,7 +22,7 @@ const writePackage = (dir: string, name: string, fields: Record<string, unknown>
         version: "1.0.0",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
         ...fields,
       },
       null,

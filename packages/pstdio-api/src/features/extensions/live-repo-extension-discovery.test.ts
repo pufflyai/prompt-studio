@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createApp } from "../../app";
 import { resolveTestFilesRoot } from "../../test-utils/resolve-test-files-root";
 
@@ -37,7 +38,7 @@ const writeExtension = (dir: string, name: string, version: string) => {
       displayName: name,
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       type: "module",
     }),
   );

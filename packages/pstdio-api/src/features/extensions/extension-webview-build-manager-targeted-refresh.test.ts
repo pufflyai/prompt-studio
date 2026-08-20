@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
@@ -23,7 +24,7 @@ const writeExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(root, "src/first.tsx"), "console.log('first');");
@@ -49,7 +50,7 @@ const writeSingleWebviewExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");

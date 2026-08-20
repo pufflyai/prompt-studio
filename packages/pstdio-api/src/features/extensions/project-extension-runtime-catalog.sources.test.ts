@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionSources } from "pstdio-extensions";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
@@ -24,7 +25,7 @@ const writeRuntimeExtension = (root: string, commandName: string, options: { bro
       displayName: "Hello",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   const body = options.broken

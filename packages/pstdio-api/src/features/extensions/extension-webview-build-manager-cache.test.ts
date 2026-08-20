@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER } from "./install-extension-source";
 
@@ -15,7 +16,7 @@ const writeExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
@@ -43,7 +44,7 @@ const writeExtensionWithIndependentWebviews = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('main');");
@@ -157,7 +158,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
         dependencies: { react: "^19.0.0" },
       }),
     );

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
 export const createTestExtensionSource = (fields: {
   displayName: string;
@@ -19,7 +20,7 @@ export const createTestExtensionSource = (fields: {
         displayName: fields.displayName,
         publisher: "test",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,

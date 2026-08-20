@@ -2,6 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { apiLogger } from "../../lib/logger";
 import { fireExtensionEvent } from "./extension-event-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -45,7 +46,7 @@ const writeExtension = (
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       type: "module",
     }),
   );

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
 import { createExtensionWebviewAssetRoutes } from "./extension-webview-asset-routes";
 
@@ -23,7 +24,7 @@ const writeExtension = (root: string, entry: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(root, "src", "main.tsx"), "console.log('managed');");

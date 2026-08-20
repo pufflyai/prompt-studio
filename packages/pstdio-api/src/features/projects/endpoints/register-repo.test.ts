@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
@@ -30,7 +31,7 @@ const writeRepoDefaultExtension = (sourcePath: string) => {
       displayName: "Repo Default Extension",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       pstdio: { scope: "repo" },
       private: true,
       type: "module",
@@ -86,7 +87,7 @@ const writeSkillExtension = (root: string) => {
       displayName: "Test Repo Skill",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
   writeFileSync(join(skillRoot, "SKILL.md"), "# Create Ticket\n", "utf8");

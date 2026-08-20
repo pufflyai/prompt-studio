@@ -3,6 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createGitRepo, createProjectViaApi } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -31,7 +32,7 @@ const writeExtension = (extensionRoot: string, input: { dependency?: boolean; co
         displayName: "Dev Smoke",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
         dependencies,
         type: "module",
       },

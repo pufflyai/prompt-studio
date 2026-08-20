@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -35,7 +36,7 @@ const createInstalledExtension = (input: { displayName: string; installName: str
         displayName: input.displayName,
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,

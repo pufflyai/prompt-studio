@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -42,7 +43,7 @@ const createInstalledExtension = (input: { displayName: string; installName: str
         displayName: input.displayName,
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,
@@ -110,7 +111,7 @@ const writeHotReloadExtension = (input: { command?: boolean; description: string
         description: input.description,
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,
@@ -212,7 +213,7 @@ const writeAutomationExtension = (input: { broken?: boolean; installName: string
         description: "Extension with a scheduled automation.",
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,

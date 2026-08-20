@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   installDefaultExtensions,
   installRepoDefaultExtensions,
@@ -88,7 +89,7 @@ const writeExtension = (dir: string, namespace: string, scope?: "repo" | "user")
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       ...(scope ? { pstdio: { scope } } : {}),
     }),
   );
@@ -222,7 +223,7 @@ describe("installDefaultExtensions", () => {
           version: "1.0.0",
           publisher: "pstdio",
           main: "./extension.ts",
-          engines: { pstdio: "^1.0.0" },
+          engines: { pstdio: EXTENSION_API_VERSION },
         }),
       ),
       toEmbedded(`..\\..\\..\\extensions\\${extensionName}\\extension.ts`, "export default {};"),
@@ -265,7 +266,7 @@ describe("installDefaultExtensions", () => {
           version: "1.0.0",
           publisher: "pstdio",
           main: "./extension.ts",
-          engines: { pstdio: "^1.0.0" },
+          engines: { pstdio: EXTENSION_API_VERSION },
         }),
       ),
       toEmbedded(`../../../extensions/${extensionName}/extension.ts`, "export default {};"),

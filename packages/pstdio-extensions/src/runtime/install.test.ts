@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { ExtensionInstallError, installExtensionSource } from "./install";
 
 const tempDirs: string[] = [];
@@ -29,7 +30,7 @@ const baseManifest = (fields: Record<string, unknown> = {}) => ({
   displayName: "My Extension",
   publisher: "acme",
   main: "./extension.ts",
-  engines: { pstdio: "^1.0.0" },
+  engines: { pstdio: EXTENSION_API_VERSION },
   ...fields,
 });
 

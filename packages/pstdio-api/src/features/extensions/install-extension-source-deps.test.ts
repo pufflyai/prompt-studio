@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { installExtensionSource } from "./install-extension-source";
 
 const writeExtension = (dir: string) => {
@@ -15,7 +16,7 @@ const writeExtension = (dir: string) => {
         displayName: "Source Extension",
         publisher: "test",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
         type: "module",
         packageManager: "bun@1.3.13",
         dependencies: { "@pstdio/sdk": "^0.8.0" },

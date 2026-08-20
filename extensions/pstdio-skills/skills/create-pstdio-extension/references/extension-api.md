@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^1.0.0"
+    "pstdio": "1.0.0-alpha.1"
   },
   "private": true,
   "type": "module",

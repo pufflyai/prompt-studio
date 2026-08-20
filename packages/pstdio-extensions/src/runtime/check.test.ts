@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "../types/runtime";
 import { checkExtensions, formatCheckReport } from "./check";
 import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "./host-capabilities";
@@ -27,7 +28,7 @@ const writeExtension = (homeRoot: string, name: string, source: string) => {
         displayName: name === "extension-lab" ? "Extension Lab" : name,
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       },
       null,
       2,
@@ -162,7 +163,7 @@ describe("checkExtensions", () => {
         version: "0.1.0",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       }),
     );
 

@@ -168,31 +168,19 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
   return resolved;
 };
 
-const satisfiesApiVersion = (range: string) => {
-  // biome-ignore lint/suspicious/noExplicitAny: Bun runtime helper not in core typings
-  const semver = (globalThis as any).Bun?.semver as { satisfies(version: string, range: string): boolean } | undefined;
-  if (!semver) return satisfiesApiVersionRange(EXTENSION_API_VERSION, range);
-  return semver.satisfies(EXTENSION_API_VERSION, range);
-};
+// An extension declares the exact API version it was built against. Ranges are refused:
+// `^1.0.0-alpha.1` also matches `1.0.0-alpha.2` under semver, so a range would wave through
+// every alpha bump while looking like a gate.
+const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
 
-const parseSemver = (version: string) => {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
-  if (!match) return null;
-  return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
-};
+const apiVersionError = (name: string, declared: string) => {
+  if (declared === EXTENSION_API_VERSION) return null;
 
-const satisfiesApiVersionRange = (version: string, range: string) => {
-  const parsed = parseSemver(version);
-  if (!parsed) return false;
-  if (range === "*" || range === version) return true;
-  if (range.startsWith("^")) {
-    const minimum = parseSemver(range.slice(1));
-    if (!minimum || parsed.major !== minimum.major) return false;
-    if (parsed.minor < minimum.minor) return false;
-    if (parsed.minor === minimum.minor && parsed.patch < minimum.patch) return false;
-    return true;
+  if (isVersionRange(declared)) {
+    return `Extension "${name}" declares engines.pstdio "${declared}". While the extension API is in alpha it must be the exact version "${EXTENSION_API_VERSION}", not a range.`;
   }
-  return false;
+
+  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. Update Prompt Studio, or install a build of the extension for this version.`;
 };
 
 export const readPackageManifest = (packageDir: string): ReadPackageManifestResult => {
@@ -265,11 +253,12 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
   if (!entryPath) return { manifest: null, entryPath: null, diagnostics };
 
-  if (!satisfiesApiVersion(enginesPstdio as string)) {
+  const versionError = apiVersionError(name as string, enginesPstdio as string);
+  if (versionError) {
     diagnostics.push(
       createDiagnostic({
         code: "extension_manifest_unsupported_api_version",
-        message: `engines.pstdio "${enginesPstdio}" does not satisfy host API version ${EXTENSION_API_VERSION}`,
+        message: versionError,
         sourcePath: packagePath,
       }),
     );

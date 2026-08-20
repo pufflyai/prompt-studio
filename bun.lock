@@ -582,6 +582,7 @@
     "scripts": {
       "name": "pstdio-scripts",
       "dependencies": {
+        "pstdio-api-contracts": "workspace:*",
         "pstdio-extensions": "workspace:*",
       },
       "devDependencies": {

@@ -20,11 +20,13 @@
     "typecheck": "tsc --noEmit",
     "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
     "verify:boundaries": "bun --cwd .. ./scripts/verify/verify-boundaries.ts",
+    "verify:extension-api-version": "bun --cwd .. ./scripts/verify/verify-extension-api-version.ts",
     "verify:lockfile": "bun --cwd .. ./scripts/verify/verify-lockfile.ts",
     "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts",
     "verify:translations": "bun --cwd .. ./scripts/verify/verify-translations.ts"
   },
   "dependencies": {
+    "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*"
   },
   "devDependencies": {

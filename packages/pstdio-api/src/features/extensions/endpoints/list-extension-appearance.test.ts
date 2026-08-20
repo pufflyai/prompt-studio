@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createProjectExtensionRuntimeCatalog } from "../project-extension-runtime-catalog";
 import { createExtensionRoutes } from "../routes";
 
@@ -53,7 +54,7 @@ describe("list extension appearance", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       }),
     );
     writeFileSync(
@@ -118,7 +119,7 @@ describe("list extension appearance", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: "^1.0.0" },
+        engines: { pstdio: EXTENSION_API_VERSION },
       }),
     );
     writeFileSync(
