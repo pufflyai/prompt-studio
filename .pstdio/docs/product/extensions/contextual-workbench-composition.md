@@ -214,6 +214,7 @@ modes: {
 - A resource kind reference may be written bare or namespaced as `<extension>.<kind>`. Both resolve to the declared id; the namespaced form records who owns the kind.
 - A resource kind has exactly one owner. Two extensions declaring the same kind is an install-time error for both.
 - A slot name is local to its resource kind.
+- A resource is not a mode. Opening one keeps the workbench the user is in, so a resource kind needs a mode only when it reshapes the workbench around itself. Without a mode recipe, each panel bound to the kind lands in the region it supports and the surrounding chrome stays put.
 - External extensions cannot claim a closed slot or primary location.
 - A mode layout cannot expand a panel's supported regions.
 - Required placement reconciliation cannot reset user tab order.
