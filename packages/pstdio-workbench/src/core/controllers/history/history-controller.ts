@@ -372,6 +372,19 @@ const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]
   return () => rotating;
 };
 
+// Restores the entry's mode. With an atomic navigator the mode and resource commit
+// together, so no observer sees the pair mid-replay; presentation of the resource
+// still happens through the replay path.
+const restoreEntryMode = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
+  if (!entry.modeId) return;
+  if (input.commitNavigation) {
+    input.commitNavigation({ modeId: entry.modeId, resource: entry.resource ?? null, replaceActive: true });
+    return;
+  }
+  if (!input.modes?.getMode(entry.modeId)) return;
+  if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
+};
+
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
@@ -517,17 +530,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     }
   };
 
-  const restoreMode = (entry: WorkbenchNavigationEntry) => {
-    if (!entry.modeId) return;
-    if (input.commitNavigation) {
-      // One atomic transaction restores mode and resource together; presentation
-      // of the resource still happens through the replay path below.
-      input.commitNavigation({ modeId: entry.modeId, resource: entry.resource ?? null, replaceActive: true });
-      return;
-    }
-    if (!input.modes || !input.modes.getMode(entry.modeId)) return;
-    if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
-  };
+  const restoreMode = (entry: WorkbenchNavigationEntry) => restoreEntryMode(input, entry);
 
   const replayResource = (entry: WorkbenchNavigationEntry, scope: string | undefined, replaceActive: boolean) => {
     const resource = entry.resource!;

@@ -6,6 +6,8 @@ import type {
   CompositionResourcePanelEdge,
   DockedCompositionRegion,
   PersistedCompositionLayout,
+  ResolvedComposition,
+  ResolvedCompositionPlacement,
   WorkbenchComposition,
 } from "../../core/registries/layout/composition-resolver-types";
 import { dockedCompositionRegions } from "../../core/registries/layout/composition-resolver-types";
@@ -94,6 +96,72 @@ const hasAnyKnownPlacement = (layout: ReturnType<LayoutModel["getLayout"]>, know
     layout.regions[region].widgets.some((placement) => knownPanelIds.has(placement.contributionId)),
   );
 
+// Opens or corrects one resolved placement. A placement sitting in a region the
+// recipe no longer allows moves to the resolved region; a valid user move stays.
+const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCompositionPlacement) => {
+  const current = ctx.layout.getLayout();
+  const existingRegion = dockedCompositionRegions.find((region) =>
+    current.regions[region].widgets.some((candidate) => candidate.contributionId === placement.panelId),
+  );
+  const open = () =>
+    ctx.layout.openWidget(placement.panelId, {
+      region: placement.region,
+      closable: placement.closable,
+      pinned: true,
+    });
+
+  if (!existingRegion) {
+    if (placement.origin === "persisted" || placement.origin === "default" || placement.required) open();
+    return;
+  }
+  if (!placement.allowedRegions.includes(existingRegion)) {
+    open();
+    return;
+  }
+  const existing = current.regions[existingRegion].widgets.find(
+    (candidate) => candidate.contributionId === placement.panelId,
+  );
+  if (existing && (existing.closable ?? true) !== placement.closable) {
+    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable });
+  }
+};
+
+// Restoring required structure must not steal the user's active tabs.
+const restoreActiveTabs = (
+  ctx: CompositionReconcileContext,
+  activeBefore: ReadonlyMap<DockedCompositionRegion, string | undefined>,
+) => {
+  for (const [region, activeWidgetId] of activeBefore) {
+    if (!activeWidgetId) continue;
+    const current = ctx.layout.getLayout().regions[region];
+    if (current.activeWidgetId === activeWidgetId) continue;
+    if (current.widgets.some((widget) => widget.widgetId === activeWidgetId)) {
+      ctx.layout.setRegionActiveWidget(region, activeWidgetId);
+    }
+  }
+};
+
+// An unresolved required placement shows one diagnostic under a stable id and leaves
+// a usable location in main, so repeated reconciliation updates the same message.
+const reportRequiredFallback = (ctx: CompositionReconcileContext, modeId: string, resolved: ResolvedComposition) => {
+  const notificationId = compositionRequiredNotificationId(modeId);
+  if (!resolved.requiredFallback) {
+    ctx.notifications.dismiss(notificationId);
+    return;
+  }
+  const fallbackPanelId = resolved.requiredFallback.panelId;
+  const placed = ctx.layout
+    .getLayout()
+    .regions.main.widgets.some((placement) => placement.contributionId === fallbackPanelId);
+  if (!placed) ctx.layout.openWidget(fallbackPanelId, { region: "main", pinned: true });
+  ctx.notifications.show({
+    id: notificationId,
+    level: "error",
+    title: "A required panel could not be placed",
+    message: resolved.diagnostics.map((diagnostic) => diagnostic.message).join(" "),
+  });
+};
+
 export const compositionRequiredNotificationId = (modeId: string) => `workbench.composition.required.${modeId}`;
 
 // Reconciles the docked layout for one mode-resource context against the registered
@@ -127,65 +195,10 @@ export const reconcileCompositionLayout = (
     dockedCompositionRegions.map((region) => [region, ctx.layout.getLayout().regions[region].activeWidgetId]),
   );
 
-  for (const placement of resolved.placements) {
-    const current = ctx.layout.getLayout();
-    const existingRegion = dockedCompositionRegions.find((region) =>
-      current.regions[region].widgets.some((candidate) => candidate.contributionId === placement.panelId),
-    );
-    const existing = existingRegion
-      ? current.regions[existingRegion].widgets.find((candidate) => candidate.contributionId === placement.panelId)
-      : undefined;
-    if (existing && existingRegion) {
-      // A placement sitting in a region the recipe no longer allows moves to the
-      // resolved region; a valid user move stays where the user put it.
-      if (!placement.allowedRegions.includes(existingRegion)) {
-        ctx.layout.openWidget(placement.panelId, {
-          region: placement.region,
-          closable: placement.closable,
-          pinned: true,
-        });
-      } else if ((existing.closable ?? true) !== placement.closable) {
-        ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable });
-      }
-      continue;
-    }
-    if (placement.origin === "persisted" || placement.origin === "default" || placement.required) {
-      ctx.layout.openWidget(placement.panelId, {
-        region: placement.region,
-        closable: placement.closable,
-        pinned: true,
-      });
-    }
-  }
-
-  // Restoring required structure must not steal the user's active tabs.
-  for (const [region, activeWidgetId] of activeBefore) {
-    if (!activeWidgetId) continue;
-    const current = ctx.layout.getLayout().regions[region];
-    if (current.activeWidgetId !== activeWidgetId && current.widgets.some((w) => w.widgetId === activeWidgetId)) {
-      ctx.layout.setRegionActiveWidget(region, activeWidgetId);
-    }
-  }
-
+  for (const placement of resolved.placements) applyPlacement(ctx, placement);
+  restoreActiveTabs(ctx, activeBefore);
   ctx.layout.reconcilePanelMenus();
-
-  const notificationId = compositionRequiredNotificationId(input.modeId);
-  if (resolved.requiredFallback) {
-    const fallbackPlaced = ctx.layout
-      .getLayout()
-      .regions.main.widgets.some((placement) => placement.contributionId === resolved.requiredFallback?.panelId);
-    if (!fallbackPlaced) {
-      ctx.layout.openWidget(resolved.requiredFallback.panelId, { region: "main", pinned: true });
-    }
-    ctx.notifications.show({
-      id: notificationId,
-      level: "error",
-      title: "A required panel could not be placed",
-      message: resolved.diagnostics.map((diagnostic) => diagnostic.message).join(" "),
-    });
-  } else {
-    ctx.notifications.dismiss(notificationId);
-  }
+  reportRequiredFallback(ctx, input.modeId, resolved);
 
   return resolved;
 };

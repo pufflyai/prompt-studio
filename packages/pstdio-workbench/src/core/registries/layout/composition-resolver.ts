@@ -2,6 +2,7 @@ import type {
   CompositionDiagnostic,
   CompositionModeRecipe,
   CompositionPlacementPolicy,
+  CompositionResourceKindDefinition,
   DockedCompositionRegion,
   ResolveCompositionInput,
   ResolvedComposition,
@@ -23,6 +24,86 @@ const intersectRegions = (
 // Collects the placement candidates a recipe requests for the active context, in
 // declaration order: resource slot placements, then known-panel overrides, then
 // mode-wide panels. A panel entry wins over its slot placement.
+// An edge may consume a resource kind when the slot exists, the slot accepts the
+// contributing extension, and the panel it names is registered.
+const isUsableEdge = (
+  input: ResolveCompositionInput,
+  kind: CompositionResourceKindDefinition | undefined,
+  edge: ResolveCompositionInput["composition"]["resourcePanels"][number],
+  diagnostics: CompositionDiagnostic[],
+) => {
+  if (!kind || edge.resourceKind !== kind.id) return false;
+  const slot = kind.slots[edge.slot];
+  if (!slot) {
+    diagnostics.push({
+      code: "extension_resource_slot_missing",
+      message: `Resource panel "${edge.id}" names unknown slot "${edge.slot}"`,
+      panelId: edge.panel,
+      slot: edge.slot,
+    });
+    return false;
+  }
+  if (edge.extensionId !== kind.extensionId && (!slot.external || edge.slot === "primary")) {
+    diagnostics.push({
+      code: "extension_resource_slot_closed",
+      message: `Slot "${edge.slot}" is closed to external panels`,
+      panelId: edge.panel,
+      slot: edge.slot,
+    });
+    return false;
+  }
+  if (!input.composition.panels.some((panel) => panel.id === edge.panel)) {
+    diagnostics.push({
+      code: "extension_panel_missing",
+      message: `Resource panel "${edge.id}" names unknown panel "${edge.panel}"`,
+      panelId: edge.panel,
+      slot: edge.slot,
+    });
+    return false;
+  }
+  return true;
+};
+
+// Every valid edge in one slot becomes a candidate, unless the recipe names that
+// panel explicitly: a panel entry wins over its slot placement. `required` only
+// holds for a single-cardinality slot, so a required many-slot is reported and the
+// placement stays optional.
+const slotCandidates = (args: {
+  diagnostics: CompositionDiagnostic[];
+  kind: CompositionResourceKindDefinition | undefined;
+  input: ResolveCompositionInput;
+  overriddenPanels: ReadonlySet<string>;
+  policy: CompositionPlacementPolicy;
+  slotName: string;
+  validEdges: ResolveCompositionInput["composition"]["resourcePanels"];
+}): PlacementCandidate[] => {
+  const slot = args.kind?.slots[args.slotName];
+  if (!slot) {
+    args.diagnostics.push({
+      code: "extension_resource_slot_missing",
+      message: `Mode "${args.input.mode.id}" places unknown slot "${args.slotName}"`,
+      slot: args.slotName,
+    });
+    return [];
+  }
+  const required = args.policy.required === true;
+  if (required && slot.cardinality === "many") {
+    args.diagnostics.push({
+      code: "extension_placement_required_invalid",
+      message: `Required slot "${args.slotName}" has cardinality many; name a specific panel instead`,
+      slot: args.slotName,
+    });
+  }
+  return args.validEdges
+    .filter((edge) => edge.slot === args.slotName && !args.overriddenPanels.has(edge.panel))
+    .map((edge) => ({
+      panelId: edge.panel,
+      slot: args.slotName,
+      policy: args.policy,
+      required: required && slot.cardinality === "one",
+    }));
+};
+
 const collectCandidates = (
   input: ResolveCompositionInput,
   recipe: CompositionModeRecipe | undefined,
@@ -31,68 +112,12 @@ const collectCandidates = (
   const { composition, context } = input;
   const kind = composition.resourceKinds.find((candidate) => candidate.id === context.resourceKind);
   const candidates: PlacementCandidate[] = [];
-  const validEdges = composition.resourcePanels.filter((edge) => {
-    if (!kind || edge.resourceKind !== kind.id) return false;
-    const slot = kind.slots[edge.slot];
-    if (!slot) {
-      diagnostics.push({
-        code: "extension_resource_slot_missing",
-        message: `Resource panel "${edge.id}" names unknown slot "${edge.slot}"`,
-        panelId: edge.panel,
-        slot: edge.slot,
-      });
-      return false;
-    }
-    if (edge.extensionId !== kind.extensionId && (!slot.external || edge.slot === "primary")) {
-      diagnostics.push({
-        code: "extension_resource_slot_closed",
-        message: `Slot "${edge.slot}" is closed to external panels`,
-        panelId: edge.panel,
-        slot: edge.slot,
-      });
-      return false;
-    }
-    if (!composition.panels.some((panel) => panel.id === edge.panel)) {
-      diagnostics.push({
-        code: "extension_panel_missing",
-        message: `Resource panel "${edge.id}" names unknown panel "${edge.panel}"`,
-        panelId: edge.panel,
-        slot: edge.slot,
-      });
-      return false;
-    }
-    return true;
-  });
+  const validEdges = composition.resourcePanels.filter((edge) => isUsableEdge(input, kind, edge, diagnostics));
 
   const overriddenPanels = new Set(Object.keys(recipe?.panels ?? {}));
 
   for (const [slotName, policy] of Object.entries(recipe?.slots ?? {})) {
-    const slot = kind?.slots[slotName];
-    if (!slot) {
-      diagnostics.push({
-        code: "extension_resource_slot_missing",
-        message: `Mode "${input.mode.id}" places unknown slot "${slotName}"`,
-        slot: slotName,
-      });
-      continue;
-    }
-    const required = policy.required === true;
-    if (required && slot.cardinality === "many") {
-      diagnostics.push({
-        code: "extension_placement_required_invalid",
-        message: `Required slot "${slotName}" has cardinality many; name a specific panel instead`,
-        slot: slotName,
-      });
-    }
-    for (const edge of validEdges.filter((candidate) => candidate.slot === slotName)) {
-      if (overriddenPanels.has(edge.panel)) continue;
-      candidates.push({
-        panelId: edge.panel,
-        slot: slotName,
-        policy,
-        required: required && slot.cardinality === "one",
-      });
-    }
+    candidates.push(...slotCandidates({ diagnostics, kind, input, overriddenPanels, policy, slotName, validEdges }));
   }
 
   for (const [panelId, policy] of Object.entries(recipe?.panels ?? {})) {
@@ -155,6 +180,77 @@ const resolveCandidate = (
   };
 };
 
+// Resolves each candidate against its panel's capabilities. A required placement
+// that cannot resolve keeps the workbench usable through a safe main fallback.
+const resolveCandidates = (
+  input: ResolveCompositionInput,
+  candidates: readonly PlacementCandidate[],
+  diagnostics: CompositionDiagnostic[],
+) => {
+  const resolvedByPanel = new Map<string, ResolvedCompositionPlacement>();
+  let requiredFallback: { panelId: string } | undefined;
+
+  for (const candidate of candidates) {
+    const resolved = resolveCandidate(input, candidate, diagnostics);
+    if (resolved) {
+      if (!resolvedByPanel.has(resolved.panelId)) resolvedByPanel.set(resolved.panelId, resolved);
+      continue;
+    }
+    if (!candidate.required) continue;
+    const fallbackPanel = input.composition.panels.find((panel) => panel.supportedRegions.includes("main"));
+    if (fallbackPanel) requiredFallback = { panelId: fallbackPanel.id };
+  }
+
+  return { requiredFallback, resolvedByPanel };
+};
+
+type PersistedRegionState = { order: readonly string[]; activePanelId?: string };
+
+const persistedRegions = (persisted: NonNullable<ResolveCompositionInput["persisted"]>) =>
+  Object.entries(persisted.regions).filter((entry): entry is [DockedCompositionRegion, PersistedRegionState] =>
+    Boolean(entry[1]),
+  );
+
+// Persisted user placements win over defaults: the user's region survives when the
+// panel allows it, and the persisted tab order is kept. Missing required structure is
+// restored afterwards without resetting optional user state. A scope with no
+// persisted layout seeds every resolved placement.
+const placeResolved = (
+  input: ResolveCompositionInput,
+  resolvedByPanel: ReadonlyMap<string, ResolvedCompositionPlacement>,
+) => {
+  const placements: ResolvedCompositionPlacement[] = [];
+  const regionOrder: Partial<Record<DockedCompositionRegion, string[]>> = {};
+  const activePanelIds: Partial<Record<DockedCompositionRegion, string>> = {};
+  const placed = new Set<string>();
+
+  const place = (placement: ResolvedCompositionPlacement, region: DockedCompositionRegion) => {
+    if (placed.has(placement.panelId)) return;
+    placed.add(placement.panelId);
+    placements.push({ ...placement, region });
+    regionOrder[region] = [...(regionOrder[region] ?? []), placement.panelId];
+  };
+
+  if (!input.persisted) {
+    for (const resolved of resolvedByPanel.values()) place(resolved, resolved.region);
+    return { activePanelIds, placed, placements, regionOrder };
+  }
+
+  for (const [region, state] of persistedRegions(input.persisted)) {
+    for (const panelId of state.order) {
+      const resolved = resolvedByPanel.get(panelId);
+      if (!resolved) continue;
+      place({ ...resolved, origin: "persisted" }, resolved.allowedRegions.includes(region) ? region : resolved.region);
+    }
+    if (state.activePanelId && placed.has(state.activePanelId)) activePanelIds[region] = state.activePanelId;
+  }
+  for (const resolved of resolvedByPanel.values()) {
+    if (resolved.required && !placed.has(resolved.panelId)) place(resolved, resolved.region);
+  }
+
+  return { activePanelIds, placed, placements, regionOrder };
+};
+
 // Resolves one effective layout for the active mode-resource context:
 //  1. confirm the mode accepts the resource kind;
 //  2. collect the kind's slots and valid resource-panel contributions;
@@ -178,59 +274,8 @@ export const resolveComposition = (input: ResolveCompositionInput): ResolvedComp
   }
 
   const { candidates, validEdges } = collectCandidates(input, recipe, diagnostics);
-  const resolvedByPanel = new Map<string, ResolvedCompositionPlacement>();
-  let requiredFallback: { panelId: string } | undefined;
-
-  for (const candidate of candidates) {
-    const resolved = resolveCandidate(input, candidate, diagnostics);
-    if (resolved) {
-      if (!resolvedByPanel.has(resolved.panelId)) resolvedByPanel.set(resolved.panelId, resolved);
-      continue;
-    }
-    if (!candidate.required) continue;
-    // An unresolvable required placement keeps the workbench usable: fall back to
-    // the first panel that can establish the main location.
-    const fallbackPanel = input.composition.panels.find((panel) => panel.supportedRegions.includes("main"));
-    if (fallbackPanel) requiredFallback = { panelId: fallbackPanel.id };
-  }
-
-  const placements: ResolvedCompositionPlacement[] = [];
-  const regionOrder: Partial<Record<DockedCompositionRegion, string[]>> = {};
-  const activePanelIds: Partial<Record<DockedCompositionRegion, string>> = {};
-  const placed = new Set<string>();
-
-  const place = (placement: ResolvedCompositionPlacement, region: DockedCompositionRegion) => {
-    if (placed.has(placement.panelId)) return;
-    placed.add(placement.panelId);
-    placements.push({ ...placement, region });
-    regionOrder[region] = [...(regionOrder[region] ?? []), placement.panelId];
-  };
-
-  if (input.persisted) {
-    // Valid persisted user placements win over defaults: keep the user's region
-    // choice when the panel allows it, and keep the persisted tab order.
-    for (const [region, state] of Object.entries(input.persisted.regions) as [
-      DockedCompositionRegion,
-      { order: readonly string[]; activePanelId?: string },
-    ][]) {
-      if (!state) continue;
-      for (const panelId of state.order) {
-        const resolved = resolvedByPanel.get(panelId);
-        if (!resolved) continue;
-        const region_ = resolved.allowedRegions.includes(region) ? region : resolved.region;
-        place({ ...resolved, origin: "persisted" }, region_);
-      }
-      if (state.activePanelId && placed.has(state.activePanelId)) {
-        activePanelIds[region] = state.activePanelId;
-      }
-    }
-    // Missing required structure is restored without resetting optional user state.
-    for (const resolved of resolvedByPanel.values()) {
-      if (resolved.required && !placed.has(resolved.panelId)) place(resolved, resolved.region);
-    }
-  } else {
-    for (const resolved of resolvedByPanel.values()) place(resolved, resolved.region);
-  }
+  const { requiredFallback, resolvedByPanel } = resolveCandidates(input, candidates, diagnostics);
+  const { activePanelIds, placed, placements, regionOrder } = placeResolved(input, resolvedByPanel);
 
   const optionalPanels = validEdges
     .map((edge) => edge.panel)

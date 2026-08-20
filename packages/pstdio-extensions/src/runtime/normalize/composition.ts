@@ -169,6 +169,75 @@ const validateResourcePanels = (runtime: Accumulator) => {
   runtime.resourcePanels = valid;
 };
 
+// A slot placement is valid when the resource kind declares the slot; `required`
+// only holds for a single-cardinality slot. Every edge in the slot must also be
+// placeable in the requested region.
+const validateSlotPlacement = (
+  runtime: Accumulator,
+  args: {
+    kind: (typeof runtime.resourceKinds)[number];
+    kindId: string;
+    mode: (typeof runtime.modes)[number];
+    placement: ModePlacementContribution;
+    slotId: string;
+  },
+) => {
+  const slot = args.kind.contribution.slots[args.slotId];
+  if (!slot) {
+    addDiagnostic(
+      runtime,
+      args.mode,
+      "extension_resource_slot_missing",
+      args.slotId,
+      `Mode "${args.mode.id}" references unknown slot "${args.slotId}"`,
+    );
+    return;
+  }
+  if (args.placement.required && slot.cardinality === "many") {
+    addDiagnostic(
+      runtime,
+      args.mode,
+      "extension_placement_required_invalid",
+      args.slotId,
+      `Required slot "${args.slotId}" has cardinality many`,
+    );
+  }
+  for (const edge of runtime.resourcePanels.filter(
+    (candidate) => candidate.resourceKindId === args.kindId && candidate.slotId === args.slotId,
+  )) {
+    validatesPanelPlacement(runtime, args.mode, edge.panelId, args.placement);
+  }
+};
+
+// A known-panel entry may only place a panel that is registered for the resource.
+const validateKnownPanelPlacement = (
+  runtime: Accumulator,
+  args: {
+    ext: NormalizedExtension;
+    kindId: string;
+    mode: (typeof runtime.modes)[number];
+    placement: ModePlacementContribution;
+    rawPanelId: string;
+  },
+) => {
+  const panelId = resolveContributionReference(args.ext, args.rawPanelId);
+  const edge = runtime.resourcePanels.find(
+    (candidate) => candidate.resourceKindId === args.kindId && candidate.panelId === panelId,
+  );
+  if (!edge) {
+    const panelExists = runtime.panels.some((candidate) => candidate.id === panelId);
+    addDiagnostic(
+      runtime,
+      args.mode,
+      panelExists ? "extension_mode_resource_unsupported" : "extension_panel_missing",
+      panelId,
+      `Panel "${panelId}" is not registered for resource kind "${args.kindId}"`,
+    );
+    return;
+  }
+  validatesPanelPlacement(runtime, args.mode, panelId, args.placement);
+};
+
 const validateModeRecipe = (
   runtime: Accumulator,
   mode: (typeof runtime.modes)[number],
@@ -195,50 +264,11 @@ const validateModeRecipe = (
   }
 
   for (const [slotId, placement] of Object.entries(recipe.slots ?? {})) {
-    const slot = kind.contribution.slots[slotId];
-    if (!slot) {
-      addDiagnostic(
-        runtime,
-        mode,
-        "extension_resource_slot_missing",
-        slotId,
-        `Mode "${mode.id}" references unknown slot "${slotId}"`,
-      );
-      continue;
-    }
-    if (placement.required && slot.cardinality === "many") {
-      addDiagnostic(
-        runtime,
-        mode,
-        "extension_placement_required_invalid",
-        slotId,
-        `Required slot "${slotId}" has cardinality many`,
-      );
-    }
-    for (const edge of runtime.resourcePanels.filter(
-      (candidate) => candidate.resourceKindId === kindId && candidate.slotId === slotId,
-    )) {
-      validatesPanelPlacement(runtime, mode, edge.panelId, placement);
-    }
+    validateSlotPlacement(runtime, { kind, kindId, mode, placement, slotId });
   }
 
   for (const [rawPanelId, placement] of Object.entries(recipe.panels ?? {})) {
-    const panelId = resolveContributionReference(ext, rawPanelId);
-    const edge = runtime.resourcePanels.find(
-      (candidate) => candidate.resourceKindId === kindId && candidate.panelId === panelId,
-    );
-    if (!edge) {
-      const panelExists = runtime.panels.some((candidate) => candidate.id === panelId);
-      addDiagnostic(
-        runtime,
-        mode,
-        panelExists ? "extension_mode_resource_unsupported" : "extension_panel_missing",
-        panelId,
-        `Panel "${panelId}" is not registered for resource kind "${kindId}"`,
-      );
-      continue;
-    }
-    validatesPanelPlacement(runtime, mode, panelId, placement);
+    validateKnownPanelPlacement(runtime, { ext, kindId, mode, placement, rawPanelId });
   }
 
   if (kind.contribution.surface === "primary") {

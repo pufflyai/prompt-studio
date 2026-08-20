@@ -55,4 +55,21 @@ describe("panel menu ownership", () => {
 
     expect(layout.getLayout().regions["side-left-menu"].widgets).toEqual([]);
   });
+
+  test("keeps one menu instance when its panel is reopened for a resource", () => {
+    const layout = createLayoutModel();
+    registerPanelWithMenus(layout);
+    layout.openWidget("lab.tools");
+    layout.openWidget("lab.tools.actions");
+
+    // A resource presenter reopens the same panel bound to a resource. The menu must
+    // follow its owner instead of leaving an unbound copy behind.
+    layout.openWidget("lab.tools", {
+      resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1" },
+    });
+
+    const menus = layout.getLayout().regions["side-left-menu"].widgets;
+    expect(menus.map((placement) => placement.contributionId)).toEqual(["lab.tools.actions"]);
+    expect(menus[0]?.ownerResourceUri).toBe("pstdio://ticket/PS-1");
+  });
 });

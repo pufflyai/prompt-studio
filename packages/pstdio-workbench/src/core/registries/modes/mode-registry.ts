@@ -274,6 +274,32 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     mode.reconcile?.(input.resolveContext());
   };
 
+  // Switching modes stashes the outgoing unscoped layout, disposes the active mode,
+  // and restores the incoming mode's unscoped layout before activating it. Scoped
+  // layouts are owned by the persistence scope instead.
+  const transitionToMode = (id: string | undefined) => {
+    const context = input.resolveContext();
+    const previousModeId = store.getState().activeModeId;
+    const unscoped = context.layout.getPersistenceScope() === undefined;
+    if (previousModeId && unscoped) unscopedLayouts.set(previousModeId, context.layout.getLayout());
+
+    disposeActive();
+    if (id === undefined) {
+      store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
+      return;
+    }
+
+    const mode = store.getState().modes[id];
+    if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
+    if (unscoped) {
+      restoreModeLayout(
+        context,
+        restoreUnscopedModeLayout(context.layout.getLayout(), unscopedLayouts.get(id), panelsForMode(mode)),
+      );
+    }
+    activate(id, { seed: deferredSeedModeId !== id });
+  };
+
   const disposeActive = () => {
     disposeReverse(activeDisposables);
     activeDisposables = [];
@@ -377,25 +403,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       transitioning = true;
       deferredSeedModeId = setActiveInput.deferSeed ? id : undefined;
       try {
-        const context = input.resolveContext();
-        const previousModeId = store.getState().activeModeId;
-        if (previousModeId && context.layout.getPersistenceScope() === undefined) {
-          unscopedLayouts.set(previousModeId, context.layout.getLayout());
-        }
-        disposeActive();
-        if (id === undefined) {
-          store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
-          return;
-        }
-        const mode = store.getState().modes[id];
-        if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
-        if (context.layout.getPersistenceScope() === undefined) {
-          restoreModeLayout(
-            context,
-            restoreUnscopedModeLayout(context.layout.getLayout(), unscopedLayouts.get(id), panelsForMode(mode)),
-          );
-        }
-        activate(id, { seed: deferredSeedModeId !== id });
+        transitionToMode(id);
       } finally {
         transitioning = false;
       }

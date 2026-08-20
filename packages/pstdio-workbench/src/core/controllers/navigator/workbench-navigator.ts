@@ -102,26 +102,41 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
   const presentResource = (resource: ResourceRef, present: { replaceActive: boolean }) =>
     (hooks.presentResource ?? input.presentResource)?.(resource, present);
 
-  const commitContext = (commit: WorkbenchNavigatorCommitInput): WorkbenchNavigationResult => {
+  // Resolves the final pair before anything mutates: a failed target changes nothing.
+  const resolveCommit = (commit: WorkbenchNavigatorCommitInput) => {
     const activeModeId = input.modes.getActiveModeId();
     const targetModeId = commit.modeId ?? activeModeId;
     const mode = targetModeId ? input.modes.getMode(targetModeId) : undefined;
     if (targetModeId && !mode) {
-      return { ok: false, code: "navigation_mode_missing", message: `Workbench mode not registered: ${targetModeId}` };
+      return {
+        failure: {
+          ok: false as const,
+          code: "navigation_mode_missing" as const,
+          message: `Workbench mode not registered: ${targetModeId}`,
+        },
+      };
     }
 
     const requestedRaw = commit.resource === null ? undefined : commit.resource;
     const requestedEffective = requestedRaw ? (hooks.interpretSelection?.(requestedRaw) ?? requestedRaw) : undefined;
-    // Validation happens before any state changes: a failed target changes nothing.
     if (requestedEffective && mode && !modeAccepts(mode, requestedEffective)) {
       return {
-        ok: false,
-        code: "navigation_resource_incompatible",
-        message: `Mode "${targetModeId}" does not accept resource kind "${requestedEffective.kind}"`,
+        failure: {
+          ok: false as const,
+          code: "navigation_resource_incompatible" as const,
+          message: `Mode "${targetModeId}" does not accept resource kind "${requestedEffective.kind}"`,
+        },
       };
     }
     const kept = commit.resource === undefined ? getSelectedResource() : undefined;
     const resource = requestedEffective ?? (mode && kept && modeAccepts(mode, kept) ? kept : undefined);
+    return { activeModeId, resource, targetModeId };
+  };
+
+  const commitContext = (commit: WorkbenchNavigatorCommitInput): WorkbenchNavigationResult => {
+    const outcome = resolveCommit(commit);
+    if (outcome.failure) return outcome.failure;
+    const { activeModeId, resource, targetModeId } = outcome;
 
     const resolved: WorkbenchNavigationCommit = {
       modeId: targetModeId,
@@ -152,6 +167,59 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
     return mode.defaultResource;
   };
 
+  // Commits the pair, then presents the resource. Presentation failure is reported
+  // rather than thrown so callers can fall back without seeing a partial commit.
+  const commitAndPresent = async (
+    target: WorkbenchNavigationTarget,
+    resource: ResourceRef,
+  ): Promise<WorkbenchNavigationResult> => {
+    const result = commitContext({
+      modeId: target.modeId,
+      resource,
+      replaceActive: target.replaceActive,
+    });
+    if (!result.ok) return result;
+    try {
+      await presentResource(resource, { replaceActive: target.replaceActive ?? false });
+    } catch (error) {
+      return {
+        ok: false,
+        code: "navigation_resource_missing",
+        message: error instanceof Error ? error.message : `Resource cannot be presented: ${resource.uri}`,
+      };
+    }
+    return result;
+  };
+
+  // Entering a mode that does not accept the active resource restores that mode's
+  // last compatible resource, then its default. A mode that needs neither commits
+  // with a cleared context.
+  const enterModeWithFallback = async (
+    target: WorkbenchNavigationTarget,
+    mode: WorkbenchModeContribution,
+    targetModeId: string,
+  ): Promise<WorkbenchNavigationResult> => {
+    const key = lastResourceKey(hooks.getProjectId?.(), targetModeId);
+    const last = lastResources.get(key);
+    const fallback = last && modeAccepts(mode, last) ? last : await resolveDefaultResource(mode);
+
+    if (fallback && modeAccepts(mode, fallback)) {
+      const result = await commitAndPresent(target, fallback);
+      if (result.ok || result.code !== "navigation_resource_missing") return result;
+      // The stored fallback disappeared; commit the mode with a cleared context.
+      lastResources.delete(key);
+      return commitContext({ modeId: target.modeId, resource: null, replaceActive: target.replaceActive });
+    }
+    if ((mode.resourceKinds ?? []).length > 0 && mode.defaultResource) {
+      return {
+        ok: false,
+        code: "navigation_default_missing",
+        message: `Mode "${targetModeId}" has no valid default resource`,
+      };
+    }
+    return commitContext({ modeId: target.modeId, resource: null, replaceActive: target.replaceActive });
+  };
+
   const open = async (target: WorkbenchNavigationTarget): Promise<WorkbenchNavigationResult> => {
     const activeModeId = input.modes.getActiveModeId();
     const targetModeId = target.modeId ?? activeModeId;
@@ -169,23 +237,7 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
           message: `Mode "${targetModeId}" does not accept resource kind "${target.resource.kind}"`,
         };
       }
-      const result = commitContext({
-        modeId: target.modeId,
-        resource: target.resource,
-        replaceActive: target.replaceActive,
-      });
-      if (result.ok) {
-        try {
-          await presentResource(target.resource, { replaceActive: target.replaceActive ?? false });
-        } catch (error) {
-          return {
-            ok: false,
-            code: "navigation_resource_missing",
-            message: error instanceof Error ? error.message : `Resource cannot be presented: ${target.resource.uri}`,
-          };
-        }
-      }
-      return result;
+      return await commitAndPresent(target, target.resource);
     }
 
     // Mode-only targets keep a compatible resource, otherwise restore the mode's
@@ -197,33 +249,7 @@ export const createWorkbenchNavigator = (input: CreateWorkbenchNavigatorInput): 
     if (current && modeAccepts(mode, current)) {
       return commitContext({ modeId: target.modeId, replaceActive: target.replaceActive });
     }
-    const last = lastResources.get(lastResourceKey(hooks.getProjectId?.(), targetModeId));
-    const fallback = last && modeAccepts(mode, last) ? last : await resolveDefaultResource(mode);
-    if (fallback && modeAccepts(mode, fallback)) {
-      const result = commitContext({
-        modeId: target.modeId,
-        resource: fallback,
-        replaceActive: target.replaceActive,
-      });
-      if (result.ok) {
-        try {
-          await presentResource(fallback, { replaceActive: target.replaceActive ?? false });
-        } catch {
-          // The stored fallback disappeared; commit the mode with a cleared context.
-          lastResources.delete(lastResourceKey(hooks.getProjectId?.(), targetModeId));
-          return commitContext({ modeId: target.modeId, resource: null, replaceActive: target.replaceActive });
-        }
-      }
-      return result;
-    }
-    if ((mode.resourceKinds ?? []).length > 0 && mode.defaultResource) {
-      return {
-        ok: false,
-        code: "navigation_default_missing",
-        message: `Mode "${targetModeId}" has no valid default resource`,
-      };
-    }
-    return commitContext({ modeId: target.modeId, resource: null, replaceActive: target.replaceActive });
+    return await enterModeWithFallback(target, mode, targetModeId);
   };
 
   return {
