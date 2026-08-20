@@ -94,14 +94,20 @@ const slotCandidates = (args: {
       slot: args.slotName,
     });
   }
-  return args.validEdges
-    .filter((edge) => edge.slot === args.slotName && !args.overriddenPanels.has(edge.panel))
-    .map((edge) => ({
-      panelId: edge.panel,
-      slot: args.slotName,
-      policy: args.policy,
-      required: required && slot.cardinality === "one",
-    }));
+  return (
+    args.validEdges
+      .filter((edge) => edge.slot === args.slotName && !args.overriddenPanels.has(edge.panel))
+      // An external contribution is optional: it reaches the layout through Add Panel
+      // unless the mode names it in its `panels` map. Only the resource kind's own
+      // panels are placed by a slot recipe.
+      .filter((edge) => edge.extensionId === args.kind?.extensionId)
+      .map((edge) => ({
+        panelId: edge.panel,
+        slot: args.slotName,
+        policy: args.policy,
+        required: required && slot.cardinality === "one",
+      }))
+  );
 };
 
 const collectCandidates = (

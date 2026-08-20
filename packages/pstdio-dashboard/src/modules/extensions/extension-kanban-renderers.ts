@@ -208,7 +208,13 @@ export const registerExtensionKanbanRenderers = (
   };
 
   for (const record of metadata.kanbanRenderers ?? []) {
-    if (record.resourceKind && !registeredKinds.has(record.resourceKind)) {
+    // A declared resource kind owns its registration; a renderer only fills in a kind
+    // nothing has registered yet (a board whose rows are not a composition resource).
+    if (
+      record.resourceKind &&
+      !registeredKinds.has(record.resourceKind) &&
+      !ctx.resources.getKind(record.resourceKind)
+    ) {
       registeredKinds.add(record.resourceKind);
       disposables.push(
         ctx.resources.registerKind({

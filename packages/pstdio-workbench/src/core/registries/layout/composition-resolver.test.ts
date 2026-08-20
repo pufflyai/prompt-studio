@@ -86,12 +86,13 @@ describe("composition resolver", () => {
     expect(result.diagnostics).toEqual([]);
     expect(result.regionOrder.main).toEqual(["planner.editor"]);
     expect(result.regionOrder.sidenav).toEqual(["planner.tree"]);
-    expect(result.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties"]);
     expect(result.placements.find((placement) => placement.panelId === "planner.editor")).toMatchObject({
       required: true,
       closable: false,
     });
-    expect(result.optionalPanels).toEqual([]);
+    // An external contribution stays available through Add Panel until a mode names it.
+    expect(result.optionalPanels).toEqual(["acme.insights"]);
   });
 
   test("rejects a context whose mode does not accept the resource kind without resolving placements", () => {
@@ -101,8 +102,20 @@ describe("composition resolver", () => {
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["extension_mode_resource_unsupported"]);
   });
 
+  const ticketModeWithInsights = {
+    ...ticketMode,
+    resources: {
+      "planner.ticket": {
+        slots: ticketMode.resources["planner.ticket"].slots,
+        // A mode may name an external contribution to place it by default.
+        panels: { "acme.insights": { region: "side" as const, allowedRegions: ["side", "secondary"] as const } },
+      },
+    },
+  };
+
   test("persisted tab order wins over declaration order", () => {
     const result = resolve({
+      mode: ticketModeWithInsights,
       persisted: {
         regions: {
           main: { order: ["planner.editor"], activePanelId: "planner.editor" },
@@ -118,6 +131,7 @@ describe("composition resolver", () => {
 
   test("keeps a valid persisted user move and drops a disallowed one", () => {
     const result = resolve({
+      mode: ticketModeWithInsights,
       persisted: {
         regions: {
           main: { order: ["planner.editor"] },
@@ -178,7 +192,7 @@ describe("composition resolver", () => {
       "extension_resource_slot_missing",
     ]);
     expect(result.regionOrder.main).toEqual(["planner.editor"]);
-    expect(result.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties"]);
   });
 
   test("rejects an external contribution to a closed slot", () => {
@@ -319,7 +333,19 @@ describe("composition resolver", () => {
     expect(second.regionOrder.main).toEqual(["planner.editor"]);
     expect(first.regionOrder.sidenav).toEqual(["planner.tree"]);
     expect(second.regionOrder.side).toEqual(["planner.tree"]);
-    expect(first.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
-    expect(second.regionOrder.secondary).toEqual(["planner.properties", "acme.insights"]);
+    expect(first.regionOrder.side).toEqual(["planner.properties"]);
+    expect(second.regionOrder.secondary).toEqual(["planner.properties"]);
+  });
+
+  test("an external contribution is optional until the mode names it", () => {
+    const bySlot = resolve({});
+    const byName = resolve({ mode: ticketModeWithInsights });
+
+    // The slot recipe places only the resource owner's panels.
+    expect(bySlot.regionOrder.side).toEqual(["planner.properties"]);
+    expect(bySlot.optionalPanels).toEqual(["acme.insights"]);
+    // Naming the external panel in the recipe places it.
+    expect(byName.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+    expect(byName.optionalPanels).toEqual([]);
   });
 });
