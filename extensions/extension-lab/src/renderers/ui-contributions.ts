@@ -31,6 +31,40 @@ export const labModes = {
       },
     },
   },
+
+  // Animation and Sculpt accept the same blend-project resource and arrange it
+  // differently: the stage stays required in main while the supporting panels
+  // swap regions. Switching modes keeps the resource and restores each layout.
+  animation: {
+    id: "pstdio.extension-lab.animation",
+    label: l10n("modes.animation.label", "Animation"),
+    icon: "clapperboard",
+    panelRegions: ["main", "secondary", "side"],
+    resources: {
+      "blend-project": {
+        slots: {
+          primary: { region: "main", required: true },
+          navigation: { region: "sidenav", required: true },
+          inspector: { region: "side", allowedRegions: ["side", "secondary"] },
+        },
+      },
+    },
+  },
+  sculpt: {
+    id: "pstdio.extension-lab.sculpt",
+    label: l10n("modes.sculpt.label", "Sculpt"),
+    icon: "hammer",
+    panelRegions: ["main", "secondary", "side"],
+    resources: {
+      "blend-project": {
+        slots: {
+          primary: { region: "main", required: true },
+          navigation: { region: "side", required: true },
+          inspector: { region: "secondary", allowedRegions: ["secondary", "side"] },
+        },
+      },
+    },
+  },
 } satisfies NonNullable<ExtensionDefinition["modes"]>;
 
 // The Glass Lab artifact is an attached resource: opening one adds an inspector
@@ -42,12 +76,34 @@ export const labResourceKinds = {
     icon: "package-search",
     slots: { inspector: { cardinality: "many", external: true } },
   },
+  // The blend project is one resource that two modes arrange differently. It is the
+  // fixture for "one resource, different layouts per mode".
+  "blend-project": {
+    surface: "primary",
+    label: l10n("resourceKinds.blendProject.label", "Blend project"),
+    icon: "box",
+    slots: {
+      primary: { cardinality: "one", external: false },
+      navigation: { cardinality: "one", external: true },
+      inspector: { cardinality: "many", external: true },
+    },
+  },
 } satisfies NonNullable<ExtensionDefinition["resourceKinds"]>;
 
 export const labResourcePanels = {
   labArtifactDetail: {
     resourceKind: "glass-lab-artifact",
     panel: "labArtifactDetail",
+    slot: "inspector",
+  },
+  blendStage: { resourceKind: "blend-project", panel: "labOverview", slot: "primary" },
+  blendCams: { resourceKind: "blend-project", panel: "labCams", slot: "navigation" },
+  blendArtifacts: { resourceKind: "blend-project", panel: "labArtifacts", slot: "inspector" },
+  // A cross-extension contribution: the Lab adds an inspector to the Planner's
+  // open ticket slot without owning the ticket resource or its modes.
+  ticketInsights: {
+    resourceKind: "pstdio-planner.ticket",
+    panel: "labArtifacts",
     slot: "inspector",
   },
 } satisfies NonNullable<ExtensionDefinition["resourcePanels"]>;
@@ -87,7 +143,9 @@ export const createLabPanels = (baseUrl: string) =>
     labArtifacts: {
       title: l10n("panels.labArtifacts.title", "Artifacts"),
       icon: "package-search",
-      supportedRegions: ["main", "secondary"],
+      // Placed in main by the Lab, in an inspector region by the blend modes, and
+      // in the Planner's ticket inspector slot as a cross-extension contribution.
+      supportedRegions: ["main", "secondary", "side"],
       renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
         create: {
@@ -100,8 +158,9 @@ export const createLabPanels = (baseUrl: string) =>
     labCams: {
       title: l10n("panels.labCams.title", "Cams"),
       icon: "cctv",
-      // Like the Artifacts table: a tab beside the Overview location.
-      supportedRegions: ["main", "secondary"],
+      // A tab beside the Overview location, and the navigation panel the blend
+      // modes place in their own regions.
+      supportedRegions: ["main", "secondary", "sidenav", "side"],
       webview: {
         entry: packageAsset("./src/views/lab-cams.tsx", baseUrl),
         capabilities: ["commands.execute"],

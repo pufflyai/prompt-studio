@@ -267,4 +267,59 @@ describe("composition resolver", () => {
     expect(result.regionOrder.sidenav).toEqual(["planner.tree"]);
     expect(result.placements[0]).toMatchObject({ required: true, closable: false });
   });
+
+  test("one resource resolves a distinct layout in each compatible mode", () => {
+    const animation = {
+      id: "lab.animation",
+      resources: {
+        "planner.ticket": {
+          slots: {
+            primary: { region: "main" as const, required: true },
+            navigation: { region: "sidenav" as const, required: true },
+            inspector: { region: "side" as const, allowedRegions: ["side", "secondary"] as const },
+          },
+        },
+      },
+    };
+    const sculpt = {
+      id: "lab.sculpt",
+      resources: {
+        "planner.ticket": {
+          slots: {
+            primary: { region: "main" as const, required: true },
+            navigation: { region: "side" as const, required: true },
+            inspector: { region: "secondary" as const, allowedRegions: ["secondary", "side"] as const },
+          },
+        },
+      },
+    };
+
+    // The navigation panel must support both regions the two modes place it in.
+    const movable: WorkbenchComposition = {
+      ...composition,
+      panels: composition.panels.map((panel) =>
+        panel.id === "planner.tree" ? { ...panel, supportedRegions: ["sidenav", "side"] } : panel,
+      ),
+    };
+    const first = resolve({
+      context: { modeId: animation.id, resourceKind: "planner.ticket" },
+      mode: animation,
+      composition: movable,
+    });
+    const second = resolve({
+      context: { modeId: sculpt.id, resourceKind: "planner.ticket" },
+      mode: sculpt,
+      composition: movable,
+    });
+
+    expect(first.diagnostics).toEqual([]);
+    expect(second.diagnostics).toEqual([]);
+    // The resource keeps its primary location while its supporting panels move.
+    expect(first.regionOrder.main).toEqual(["planner.editor"]);
+    expect(second.regionOrder.main).toEqual(["planner.editor"]);
+    expect(first.regionOrder.sidenav).toEqual(["planner.tree"]);
+    expect(second.regionOrder.side).toEqual(["planner.tree"]);
+    expect(first.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
+    expect(second.regionOrder.secondary).toEqual(["planner.properties", "acme.insights"]);
+  });
 });
