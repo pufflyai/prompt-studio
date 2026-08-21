@@ -42,6 +42,11 @@ export const reloadProjectExtensionHandler = (
 
     const result = await deps.extensionService.reloadInstalledSource(existing.installedSource.install_name);
 
-    return c.json(toProjectExtensionInstance(existing.instance, result.installedSource), 200);
+    return c.json(
+      toProjectExtensionInstance(existing.instance, result.installedSource, undefined, {
+        releaseUpgradesEnabled: deps.extensionUpgradeService?.enabled,
+      }),
+      200,
+    );
   };
 };

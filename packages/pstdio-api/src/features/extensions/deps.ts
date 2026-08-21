@@ -28,6 +28,7 @@ export type ExtensionsRouteDeps = Pick<
   sessionService: RouteDeps["sessionService"];
   workspaceService: RouteDeps["workspaceService"];
   webviewCacheRoot?: string;
+  extensionUpgradeService?: RouteDeps["extensionUpgradeService"];
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
   terminal?: ExtensionTerminalApi;
 };

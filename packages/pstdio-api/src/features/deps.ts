@@ -11,6 +11,7 @@ import type {
 } from "pstdio-db";
 import type { createExtensionFileService } from "../services/extension-file-service";
 import type { createExtensionService } from "../services/extension-service";
+import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
 import type { createNotificationService } from "../services/notification-service";
 import type { createProjectService } from "../services/project-service";
@@ -63,6 +64,7 @@ export interface RouteDeps {
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
+  extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;

@@ -37,6 +37,7 @@ export {
 } from "./normalize/reserved-keybindings";
 export {
   type ExtensionLoadScope,
+  getExtensionApiVersionError,
   type PackageManifest,
   type ReadPackageManifestResult,
   readPackageManifest,

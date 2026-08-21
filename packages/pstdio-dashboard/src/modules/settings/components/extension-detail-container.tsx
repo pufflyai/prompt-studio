@@ -12,6 +12,7 @@ import {
   useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
+  useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
 
@@ -33,6 +34,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
   const updateSetting = useUpdateProjectExtensionSetting(projectId);
   const reload = useReloadProjectExtension(projectId);
+  const upgrade = useUpgradeProjectExtension(projectId);
   const attemptFix = useAttemptExtensionFix(projectId);
   const uninstall = useUninstallProjectExtension(projectId);
   const [confirmingUninstall, setConfirmingUninstall] = useState(false);
@@ -73,6 +75,31 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
               ? { type: "success", title: t("projectSettings.extensionsPanel.health.retrySucceeded") }
               : { type: "error", title: t("projectSettings.extensionsPanel.health.retryFailed") },
           );
+        },
+      },
+    );
+  };
+
+  const handleUpgrade = () => {
+    upgrade.mutate(
+      { instanceId: extension.id },
+      {
+        onSuccess: (result) => {
+          toaster.create({
+            type: "success",
+            title: t(
+              result.changed
+                ? "projectSettings.extensionsPanel.upgrade.succeeded"
+                : "projectSettings.extensionsPanel.upgrade.current",
+            ),
+          });
+        },
+        onError: (error) => {
+          toaster.create({
+            type: "error",
+            title: t("projectSettings.extensionsPanel.upgrade.failed"),
+            description: error instanceof Error ? error.message : undefined,
+          });
         },
       },
     );
@@ -125,6 +152,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         toggling={setEnabled.isPending}
         retrying={reload.isPending}
         updating={reload.isPending}
+        upgrading={upgrade.isPending}
         fixing={attemptFix.isPending}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
@@ -138,6 +166,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
         onRetry={handleRetry}
         onUpdate={handleUpdate}
+        onUpgrade={handleUpgrade}
         onAttemptFix={handleAttemptFix}
         onUninstall={() => setConfirmingUninstall(true)}
       />

@@ -173,7 +173,7 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
 // every alpha bump while looking like a gate.
 const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
 
-const apiVersionError = (name: string, declared: string) => {
+export const getExtensionApiVersionError = (name: string, declared: string) => {
   if (declared === EXTENSION_API_VERSION) return null;
 
   if (isVersionRange(declared)) {
@@ -253,7 +253,7 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
   if (!entryPath) return { manifest: null, entryPath: null, diagnostics };
 
-  const versionError = apiVersionError(name as string, enginesPstdio as string);
+  const versionError = getExtensionApiVersionError(name as string, enginesPstdio as string);
   if (versionError) {
     diagnostics.push(
       createDiagnostic({

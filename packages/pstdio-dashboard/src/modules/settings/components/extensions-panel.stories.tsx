@@ -23,6 +23,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     lastLoadedAt: "2026-08-04T09:14:00.000Z",
     enabled: true,
     config: {},
+    canUpgrade: true,
     updateAvailable: false,
   },
   {
@@ -45,6 +46,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     },
     enabled: true,
     config: {},
+    canUpgrade: false,
     updateAvailable: false,
   },
   {
@@ -62,6 +64,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     status: "disabled",
     enabled: false,
     config: {},
+    canUpgrade: true,
     updateAvailable: false,
   },
 ];

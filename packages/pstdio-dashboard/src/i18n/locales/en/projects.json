@@ -281,6 +281,12 @@
         "succeeded": "Extension updated",
         "failed": "Update refused"
       },
+      "upgrade": {
+        "action": "Upgrade",
+        "succeeded": "Extension upgraded",
+        "current": "Extension is already current",
+        "failed": "Extension upgrade failed"
+      },
       "automations": {
         "title": "Automations",
         "toggleAriaLabel": "Toggle automation {{name}}",

@@ -32,6 +32,7 @@ export interface ExtensionDetailProps {
   toggling?: boolean;
   retrying?: boolean;
   updating?: boolean;
+  upgrading?: boolean;
   fixing?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
@@ -41,6 +42,7 @@ export interface ExtensionDetailProps {
   onChangeSetting: (key: string, value: unknown) => void;
   onRetry: () => void;
   onUpdate: () => void;
+  onUpgrade: () => void;
   onAttemptFix: () => void;
   onUninstall: () => void;
 }
@@ -60,6 +62,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     toggling,
     retrying,
     updating,
+    upgrading,
     fixing,
     uninstalling,
     togglingAutomationId,
@@ -69,11 +72,13 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onChangeSetting,
     onRetry,
     onUpdate,
+    onUpgrade,
     onAttemptFix,
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
   const failed = extension.status === "error";
+  const incompatible = errorText(extension.lastError, "code") === "extension_manifest_unsupported_api_version";
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
   const settingsParams = settingsToParams(settings);
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
@@ -111,6 +116,19 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
             </Text>
           </Stack>
+          {extension.canUpgrade && !incompatible && (
+            <Button
+              variant="outline"
+              size="2xs"
+              onClick={onUpgrade}
+              loading={upgrading}
+              data-testid="extension-upgrade"
+              flexShrink="0"
+            >
+              <ArrowUpCircle size={12} />
+              {t("projectSettings.extensionsPanel.upgrade.action")}
+            </Button>
+          )}
           <Switch
             size="sm"
             checked={extension.enabled}
@@ -155,22 +173,42 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             title={errorText(extension.lastError, "code") ?? t("projectSettings.extensionsPanel.status.error")}
             data-testid="extension-detail-health"
             endElement={
-              <HStack gap="xs" flexShrink="0">
-                <Button variant="outline" size="2xs" onClick={onRetry} loading={retrying} data-testid="extension-retry">
-                  <RotateCw size={12} />
-                  {t("projectSettings.extensionsPanel.health.retry")}
-                </Button>
+              incompatible && extension.canUpgrade ? (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="2xs"
-                  onClick={onAttemptFix}
-                  loading={fixing}
-                  data-testid="extension-attempt-fix"
+                  onClick={onUpgrade}
+                  loading={upgrading}
+                  data-testid="extension-incompatible-upgrade"
+                  flexShrink="0"
                 >
-                  <Wrench size={12} />
-                  {t("projectSettings.extensionsPanel.health.attemptFix")}
+                  <ArrowUpCircle size={12} />
+                  {t("projectSettings.extensionsPanel.upgrade.action")}
                 </Button>
-              </HStack>
+              ) : (
+                <HStack gap="xs" flexShrink="0">
+                  <Button
+                    variant="outline"
+                    size="2xs"
+                    onClick={onRetry}
+                    loading={retrying}
+                    data-testid="extension-retry"
+                  >
+                    <RotateCw size={12} />
+                    {t("projectSettings.extensionsPanel.health.retry")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="2xs"
+                    onClick={onAttemptFix}
+                    loading={fixing}
+                    data-testid="extension-attempt-fix"
+                  >
+                    <Wrench size={12} />
+                    {t("projectSettings.extensionsPanel.health.attemptFix")}
+                  </Button>
+                </HStack>
+              )
             }
           >
             {errorText(extension.lastError, "message") ?? t("projectSettings.extensionsPanel.health.unknownError")}

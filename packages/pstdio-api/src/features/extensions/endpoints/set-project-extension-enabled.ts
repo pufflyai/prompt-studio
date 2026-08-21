@@ -52,6 +52,11 @@ export const setProjectExtensionEnabledHandler = (
     // pruning skills (and harness dirs) that just left the project.
     await refreshProjectSkillsInRepos(deps, projectId);
 
-    return c.json(toProjectExtensionInstance(updated, existing.installedSource), 200);
+    return c.json(
+      toProjectExtensionInstance(updated, existing.installedSource, undefined, {
+        releaseUpgradesEnabled: deps.extensionUpgradeService?.enabled,
+      }),
+      200,
+    );
   };
 };

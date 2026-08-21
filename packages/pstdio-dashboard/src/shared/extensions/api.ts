@@ -5,6 +5,7 @@ import type {
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
+  UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
@@ -50,6 +51,11 @@ export const setExtensionAutomationEnabled = (
 
 export const reloadProjectExtension = (projectId: string, instanceId: string) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}/reload`, {
+    method: "POST",
+  });
+
+export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
+  apiRequest<UpgradeProjectExtensionResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
     method: "POST",
   });
 

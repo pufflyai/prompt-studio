@@ -73,7 +73,12 @@ const reportStartupError = (error: Error) => {
 
 const defaultDeps: ServeAppDeps = {
   createApp: async (runtimeHost, onDatabaseLockAcquired) =>
-    createApp({ filesRoot: await resolveFilesRoot(), onDatabaseLockAcquired, runtimeHost }),
+    createApp({
+      filesRoot: await resolveFilesRoot(),
+      onDatabaseLockAcquired,
+      runtimeHost,
+      extensionReleaseRef: `pstdio@${CLI_VERSION}`,
+    }),
   injectConfig,
   isCompiledBinary,
   loadEmbeddedAssets,

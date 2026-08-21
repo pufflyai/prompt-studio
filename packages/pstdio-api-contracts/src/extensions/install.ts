@@ -39,6 +39,8 @@ export const projectExtensionInstanceSchema = z.object({
   lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
+  /** The API can replace this named source with the extension from the running Prompt Studio release. */
+  canUpgrade: z.boolean(),
   /** New source is waiting in the extensions root. The project keeps running the adopted version until a person takes it. */
   updateAvailable: z.boolean(),
 });
@@ -58,6 +60,11 @@ export const setExtensionAutomationEnabledRequestSchema = z.object({
 export const attemptExtensionFixResponseSchema = z.object({
   sessionId: z.string(),
   title: z.string(),
+});
+
+export const upgradeProjectExtensionResponseSchema = z.object({
+  changed: z.boolean(),
+  extension: projectExtensionInstanceSchema,
 });
 
 export const updateInstalledExtensionTemplateInputSchema = z.object({
@@ -91,6 +98,7 @@ export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensions
 export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
 export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAutomationEnabledRequestSchema>;
 export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
+export type UpgradeProjectExtensionResponse = z.infer<typeof upgradeProjectExtensionResponseSchema>;
 export type UpdateInstalledExtensionTemplateInput = z.infer<typeof updateInstalledExtensionTemplateInputSchema>;
 export type UpdateInstalledExtensionTemplateResponse = z.infer<typeof updateInstalledExtensionTemplateResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

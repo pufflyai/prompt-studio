@@ -40,6 +40,7 @@ export {
   findReservedKeybindingConflict,
   findReservedKeybindingConflicts,
   formatCheckReport,
+  getExtensionApiVersionError,
   type HostCommandExecuteInput,
   keybindingDedupeEntries,
   type LoadExtensionRuntimeInput,

@@ -15,6 +15,7 @@ import {
   setProjectExtensionEnabled,
   uninstallProjectExtension,
   updateProjectExtensionSetting,
+  upgradeProjectExtension,
 } from "./api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
@@ -102,6 +103,17 @@ export const useReloadProjectExtension = (projectId: string | undefined) => {
     mutationFn: ({ instanceId }: { instanceId: string }) => {
       if (!projectId) throw new Error("Project id is required to reload extensions.");
       return reloadProjectExtension(projectId, instanceId);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
+export const useUpgradeProjectExtension = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ instanceId }: { instanceId: string }) => {
+      if (!projectId) throw new Error("Project id is required to upgrade extensions.");
+      return upgradeProjectExtension(projectId, instanceId);
     },
     onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
   });

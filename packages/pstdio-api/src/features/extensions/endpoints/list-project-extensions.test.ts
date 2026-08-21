@@ -68,6 +68,8 @@ const seedInstance = async (
     displayName: string;
     installName: string;
     enabled?: boolean;
+    enginesPstdio?: string;
+    sourceKind?: "git" | "local_path";
     version?: string | null;
   },
 ) => {
@@ -76,9 +78,15 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    manifest: {
+      id: fields.extensionId,
+      name: fields.name,
+      displayName: fields.displayName,
+      ...(fields.enginesPstdio ? { enginesPstdio: fields.enginesPstdio } : {}),
+    },
     name: fields.name,
     sourcePath,
+    sourceKind: fields.sourceKind,
     version: fields.version ?? null,
   });
 
@@ -86,10 +94,16 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    manifest: {
+      id: fields.extensionId,
+      name: fields.name,
+      displayName: fields.displayName,
+      ...(fields.enginesPstdio ? { enginesPstdio: fields.enginesPstdio } : {}),
+    },
     name: fields.name,
     projectId,
     sourcePath: installedSource.source_path,
+    sourceKind: fields.sourceKind,
     version: fields.version ?? null,
   });
 
@@ -244,6 +258,30 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       installName: "discovered-extension-source",
       name: "discovered-extension",
       projectId: project.id,
+    });
+  });
+
+  test("reports an incompatible adopted extension as an error", async () => {
+    const project = await createProject("Incompatible Extension Project");
+    const seeded = await seedInstance(project.id, {
+      name: "incompatible-extension",
+      extensionId: "test.incompatible-extension",
+      displayName: "Incompatible Extension",
+      installName: "incompatible-extension-source",
+      enginesPstdio: "1.0.0-alpha.1",
+      sourceKind: "git",
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const row = body.extensions.find((entry: { id: string }) => entry.id === seeded.instanceId);
+
+    expect(row).toMatchObject({
+      canUpgrade: false,
+      status: "error",
+      lastError: { code: "extension_manifest_unsupported_api_version" },
     });
   });
 

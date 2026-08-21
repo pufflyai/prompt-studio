@@ -46,7 +46,9 @@ export const listProjectExtensionsHandler = (
       const diskHashes = new Map(synced.map((entry) => [entry.installName, entry.sourceHash]));
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const extensions = records.map(({ instance, installedSource }) =>
-        toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name)),
+        toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
+          releaseUpgradesEnabled: deps.extensionUpgradeService?.enabled,
+        }),
       );
       return c.json({ extensions }, 200);
     } catch (error) {
