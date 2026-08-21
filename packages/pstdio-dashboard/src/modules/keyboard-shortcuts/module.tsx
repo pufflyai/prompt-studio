@@ -16,7 +16,6 @@ export const createKeyboardShortcutsModule = () =>
         title: "Keyboard shortcuts",
         region: "overlay",
         singleton: true,
-        closable: true,
         rendererId: dashboardWidgetIds.shortcutHelp,
         config: { size: "md", placement: "center", scrollBehavior: "inside" },
       });
@@ -27,7 +26,10 @@ export const createKeyboardShortcutsModule = () =>
 
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openShortcuts, label: "Keyboard shortcuts", category: "Help", icon: "CircleHelp" },
-        { execute: () => ctx.layout.openPanel(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }) },
+        {
+          execute: () =>
+            ctx.layout.openPanel(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts", closable: true }),
+        },
       );
       ctx.keybindings.registerKeybinding({
         commandId: dashboardCommandIds.openShortcuts,

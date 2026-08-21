@@ -85,7 +85,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   if (!widget) {
     return <WorkbenchWidgetFallback label="Widget contribution is no longer registered." />;
   }
-  const panel = "role" in widget ? toPanelContribution(widget as RegisteredWidgetContribution) : widget;
+  const panel = "singleton" in widget ? toPanelContribution(widget as RegisteredWidgetContribution) : widget;
   const instance = toPanelInstance(placement);
 
   return (

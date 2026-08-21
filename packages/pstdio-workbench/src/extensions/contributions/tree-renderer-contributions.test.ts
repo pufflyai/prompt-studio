@@ -24,7 +24,7 @@ const metadata = {
     {
       id: "lab.ticketFiles",
       extensionId: "pstdio.lab",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Files",
       renderer: { kind: "tree", id: "lab.files" },
     },
@@ -142,8 +142,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(workbench.layout.getPanel("lab.ticketFiles")).toMatchObject({
       region: "main",
       rendererId: "lab.files",
-      resourceKinds: ["ticket"],
     });
+    expect(workbench.layout.getPanel("lab.ticketFiles")?.resourceKinds).toBeUndefined();
     expect(body[0]?.nodes[0]).toMatchObject({
       id: "ticket",
       label: "ticket.md",

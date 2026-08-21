@@ -30,7 +30,6 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       rendererId: "docs.documents",
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: "docs.notes",
       title: "notes.md",
       region: "main",
@@ -38,6 +37,6 @@ export const createDocumentRendererModule = (): WorkbenchModuleContribution => (
       singleton: true,
     });
 
-    ctx.layout.openPanel("docs.notes");
+    ctx.layout.openPanel("docs.notes", { closable: true });
   },
 });`;

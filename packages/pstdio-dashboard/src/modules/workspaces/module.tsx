@@ -26,7 +26,7 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
     return;
   }
 
-  return ctx.layout.openPanel(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
+  return ctx.layout.openPanel(dashboardWidgetIds.createWorkspace, { title: "Create workspace", closable: true });
 };
 
 // The unified sidenav is mode-reactive (it opens and recomposes itself on mode change), so the
@@ -109,7 +109,6 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Create workspace",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.createWorkspace,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
@@ -123,7 +122,6 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Rename workspace",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.renameWorkspace,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
@@ -134,7 +132,6 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
 
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
       region: "main",

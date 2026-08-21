@@ -24,7 +24,6 @@ const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCor
   workbench.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
   workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
   workbench.layout.registerPanel({
-    closable: false,
     id: dashboardWidgetIds.workspace,
     title: "Workspace",
     region: "main",

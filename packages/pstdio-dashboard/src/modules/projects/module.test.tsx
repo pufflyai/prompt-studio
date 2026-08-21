@@ -71,7 +71,6 @@ describe("createProjectsModule", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     workbench.layout.registerPanel({
-      closable: false,
       id: "scratch",
       title: "Scratch",
       region: "main",
@@ -189,9 +188,8 @@ describe("createProjectsModule", () => {
     } satisfies WorkbenchPersistenceAdapter;
     const seed = createWorkbenchCore({ persistence });
     seed.host.setPersistenceScope("project/project-1/mode/none/aggregate/empty");
-    seed.layout.registerPanel({ closable: false, id: "start", title: "Start", region: "main", rendererId: "noop" });
+    seed.layout.registerPanel({ id: "start", title: "Start", region: "main", rendererId: "noop" });
     seed.layout.registerPanel({
-      closable: true,
       id: "terminal",
       title: "Terminal",
       region: "secondary",
@@ -205,14 +203,12 @@ describe("createProjectsModule", () => {
     let selectedProjectId: string | undefined = "project-1";
     const workbench = createWorkbenchCore({ persistence });
     workbench.layout.registerPanel({
-      closable: true,
       id: "start",
       title: "Start",
       region: "main",
       rendererId: "noop",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "terminal",
       title: "Terminal",
       region: "secondary",

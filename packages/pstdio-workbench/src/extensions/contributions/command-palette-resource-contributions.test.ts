@@ -104,7 +104,6 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
       title: "Ticket",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     workbench.resources.registerPresenter({
       id: "ticket",
@@ -168,14 +167,12 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
       title: "Ticket",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     workbench.layout.registerPanel({
       id: "notes",
       title: "Notes",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     workbench.commands.registerCommand(
       { id: "workbench.extensionNavigation.openPanel", label: "Open panel" },

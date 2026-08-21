@@ -53,7 +53,7 @@ const metadata = {
       id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
       title: "Lab sidenav",
-      supportedRegions: ["sidenav"],
+      show: { region: "sidenav" },
       webview,
     },
   ],
@@ -63,21 +63,18 @@ describe("refreshOpenWorkbenchExtensionWebviews", () => {
   test("refreshes only already-open webview routes and panels while preserving the active widget", () => {
     const workbench = createWorkbenchCore();
     workbench.layout.registerPanel({
-      closable: false,
       id: "extension-lab.labPage",
       title: "Old route",
       region: "main",
       rendererId: "webview:bridge",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "extension-lab.faultyPage",
       title: "Faulty",
       region: "main",
       rendererId: "webview:bridge",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "extension-lab.labSidenav",
       title: "Old sidenav",
       region: "sidenav",

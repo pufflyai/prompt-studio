@@ -118,7 +118,6 @@ export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContext) => {
   });
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.tickets,
       title: "Tickets",
       region: "main",

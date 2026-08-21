@@ -174,7 +174,6 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: HOME_WIDGET_ID,
       title: "Navigation demo",
       region: "main",
@@ -186,14 +185,12 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
-      closable: true,
       singleton: true,
       rendererId: TICKET_RENDERER_ID,
       resourceKinds: [TICKET_KIND],
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: TREE_WIDGET_ID,
       title: "Workspace tree",
       region: "sidenav",

@@ -4,14 +4,14 @@ import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { groupResourceEditorViews } from "./extension-resource-editor-grouping";
 
 type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
-type ExtensionRegion = ExtensionPanelRecord["supportedRegions"][number];
+type ExtensionRegion = "sidenav" | "main" | "secondary" | "side";
 
 const panel = (id: string, region: ExtensionRegion = "main"): ExtensionPanelRecord =>
   ({
     id,
     extensionId: "ext",
     title: id,
-    supportedRegions: [region],
+    show: { region },
     webview: { entry: { kind: "package-asset", path: `./${id}.tsx`, baseUrl: "file:///ext/extension.ts" } },
   }) as ExtensionPanelRecord;
 

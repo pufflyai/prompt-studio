@@ -92,7 +92,7 @@ export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resou
 export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
 
-  ctx.layout.openPanel(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
+  ctx.layout.openPanel(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource, closable: true });
 };
 
 export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {

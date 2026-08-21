@@ -22,13 +22,13 @@ const setupRegistry = () => {
     id: "planner.editor",
     extensionId: "pstdio.planner",
     title: "Editor",
-    supportedRegions: ["main"],
+    show: { region: "main" },
   });
   registry.registerPanelCapability({
     id: "planner.properties",
     extensionId: "pstdio.planner",
     title: "Properties",
-    supportedRegions: ["side", "secondary"],
+    show: { region: "side", allowedRegions: ["side", "secondary"] },
   });
   registry.registerResourcePanel({
     id: "planner.editor",
@@ -155,19 +155,12 @@ describe("composition reconciliation", () => {
       id: "planner.editor",
       extensionId: "pstdio.planner",
       title: "Editor",
-      supportedRegions: ["main"],
-    });
-    registry.registerResourcePanel({
-      id: "planner.editor",
-      extensionId: "pstdio.planner",
-      resourceKind: "planner.ticket",
-      panel: "planner.editor",
-      slot: "primary",
+      show: { resourceKind: "planner.ticket", region: "main" },
     });
     registry.registerModeComposition({
       id: "planner.ticket-mode",
       resources: {
-        "planner.ticket": { slots: { primary: { region: "sidenav", required: true } } },
+        "planner.ticket": { panels: { "planner.editor": { region: "sidenav", required: true } } },
       },
     });
     const ctx = setupWorkbench();

@@ -55,7 +55,7 @@ const metadata = {
     {
       id: "tickets.editor",
       extensionId: "tickets",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Ticket",
       renderer: { kind: "file", id: "tickets.content" },
       panelMenus: [
@@ -87,7 +87,6 @@ describe("registerExtensionResourceView title refresh", () => {
     workbench.modes.registerMode({ id: "tickets.ticket", label: "Ticket", activate: () => undefined });
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.layout.registerPanel({
-      closable: false,
       id: "tickets.editor",
       title: "Ticket",
       region: "main",
@@ -103,7 +102,6 @@ describe("registerExtensionResourceView title refresh", () => {
       ],
     });
     workbench.layout.registerPanel({
-      closable: true,
       id: "left.scratch",
       title: "Scratch",
       region: "sidenav",
@@ -183,7 +181,6 @@ describe("registerExtensionResourceView title refresh", () => {
       executeQuery: () => [],
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "tickets.editor",
       title: "Ticket",
       region: "main",

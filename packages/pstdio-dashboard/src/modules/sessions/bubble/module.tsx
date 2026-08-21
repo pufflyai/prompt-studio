@@ -75,7 +75,6 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       title: "New session",
       region: "side",
       singleton: false,
-      closable: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
       // Starting a session makes sense from any project location except the Sessions

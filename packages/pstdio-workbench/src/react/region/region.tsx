@@ -11,7 +11,7 @@ import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   getWorkbenchPanelForMenuRegion,
-  matchesWorkbenchLocationEligibility,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
   workbenchPanelMenuRegions,
@@ -117,7 +117,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       return contribution
         ? (sidePanelRegionIds.has(region)
             ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement)) &&
+            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement)) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,

@@ -1,7 +1,5 @@
 import {
-  getWorkbenchModePanelForRegion,
-  isWorkbenchModePanelAvailable,
-  matchesWorkbenchLocationEligibility,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   type WorkbenchCore,
   type WorkbenchRegion,
@@ -20,12 +18,8 @@ export const useWorkbenchRegionContent = (
 ) => {
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  const modePanel = getWorkbenchModePanelForRegion(region);
-  const panelAvailable =
-    !modePanel || isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel);
 
   return useWorkbenchStore(workbench.layout.store, (state) => {
-    if (!panelAvailable) return false;
     if (state.placeholders[region]) return true;
     if (!options.locationScoped) return state.layout.regions[region].widgets.length > 0;
 
@@ -34,7 +28,7 @@ export const useWorkbenchRegionContent = (
       if (!widget) return false;
       return region === "side"
         ? matchesWorkbenchModeEligibility(widget, modeId)
-        : matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
+        : isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement);
     });
   });
 };

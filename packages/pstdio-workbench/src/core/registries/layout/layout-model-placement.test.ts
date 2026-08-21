@@ -101,7 +101,6 @@ describe("createLayoutModel Location-owned placements", () => {
     const layout = createLayoutModel();
 
     layout.registerPanel({
-      closable: false,
       id: "project.content",
       title: "Project",
       region: "main",
@@ -109,7 +108,6 @@ describe("createLayoutModel Location-owned placements", () => {
       rendererId: "test.renderer",
     });
     layout.registerPanel({
-      closable: true,
       eligibleLocations: {},
       id: "project.notes",
       title: "Notes",
@@ -139,7 +137,6 @@ describe("createLayoutModel Location-owned placements", () => {
     const layout = createLayoutModel();
 
     layout.registerPanel({
-      closable: false,
       id: "lab.overview",
       title: "Overview",
       region: "main",
@@ -147,7 +144,6 @@ describe("createLayoutModel Location-owned placements", () => {
       rendererId: "test.renderer",
     });
     layout.registerPanel({
-      closable: false,
       eligibleLocations: {},
       id: "lab.cams",
       title: "Cams",
@@ -194,12 +190,12 @@ describe("createLayoutModel Location-owned placements", () => {
 
     const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
     const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
-    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true, role: "location" });
     const alphaNotes = layout.openWidget("project.notes");
-    layout.openWidget("project.location", { resource: betaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: betaResource, replaceActive: true, role: "location" });
     const betaNotes = layout.openWidget("project.notes");
 
-    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true, role: "location" });
 
     expect(alphaNotes.widgetId).not.toBe(betaNotes.widgetId);
     expect(layout.getLayout().regions.main.widgets).toEqual(
@@ -230,9 +226,9 @@ describe("createLayoutModel Location-owned placements", () => {
 
     const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
     const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
-    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true, role: "location" });
     const first = layout.openWidget("lab.sidenav", { pinned: true });
-    layout.openWidget("project.location", { resource: betaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: betaResource, replaceActive: true, role: "location" });
     const second = layout.openWidget("lab.sidenav", { pinned: true });
 
     expect(second.widgetId).toBe(first.widgetId);
@@ -261,9 +257,9 @@ describe("createLayoutModel Location-owned placements", () => {
 
     const alphaResource = { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" };
     const betaResource = { kind: "project", uri: "pstdio://project/beta", label: "Beta" };
-    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: alphaResource, replaceActive: true, role: "location" });
     const alphaInspector = layout.openWidget("project.inspector");
-    layout.openWidget("project.location", { resource: betaResource, replaceActive: true });
+    layout.openWidget("project.location", { resource: betaResource, replaceActive: true, role: "location" });
     const betaInspector = layout.openWidget("project.inspector");
 
     expect(alphaInspector.widgetId).not.toBe(betaInspector.widgetId);

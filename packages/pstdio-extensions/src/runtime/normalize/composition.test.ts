@@ -31,11 +31,10 @@ const owner = defineExtension({
   panels: {
     editor: {
       title: "Editor",
-      supportedRegions: ["main"],
+      show: { for: "ticket", region: "main", required: true },
       webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
     },
   },
-  resourcePanels: { editor: { resourceKind: "ticket", panel: "editor", slot: "primary" } },
   modes: {
     project: {
       label: "Project",
@@ -48,7 +47,6 @@ const addon = defineExtension({
   panels: {
     insights: {
       title: "Insights",
-      supportedRegions: ["side", "secondary"],
       webview: { entry: packageAsset("./insights.tsx", import.meta.url) },
     },
   },
@@ -65,7 +63,7 @@ describe("composition normalization", () => {
     const runtime = normalizeExtensionSources([wrap("owner", owner), wrap("addon", addon)]);
 
     expect(runtime.resourceKinds.map((record) => record.id)).toEqual(["ticket"]);
-    expect(runtime.resourcePanels.map((record) => record.resourceKindId)).toEqual(["ticket", "ticket"]);
+    expect(runtime.resourcePanels.map((record) => record.resourceKindId)).toEqual(["ticket"]);
     expect(runtime.modes[0]?.contribution.resources).toHaveProperty("ticket");
     expect(runtime.diagnostics).toEqual([]);
   });
@@ -85,8 +83,8 @@ describe("composition normalization", () => {
     const forward = normalizeExtensionSources([wrap("owner", owner), wrap("addon", addon)]);
     const reverse = normalizeExtensionSources([wrap("addon", addon), wrap("owner", owner)]);
 
-    expect(forward.resourcePanels.map((record) => record.id)).toEqual(["owner.editor", "addon.insights"]);
-    expect(reverse.resourcePanels.map((record) => record.id)).toEqual(["addon.insights", "owner.editor"]);
+    expect(forward.resourcePanels.map((record) => record.id)).toEqual(["addon.insights"]);
+    expect(reverse.resourcePanels.map((record) => record.id)).toEqual(["addon.insights"]);
     expect(forward.diagnostics).toEqual([]);
     expect(reverse.diagnostics).toEqual([]);
   });
@@ -106,10 +104,10 @@ describe("composition normalization", () => {
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain(code);
     expect(runtime.resourceKinds.map((record) => record.id)).toEqual(["ticket"]);
     // The invalid optional edge is dropped; the valid edges keep composing.
-    expect(runtime.resourcePanels.map((record) => record.id)).toEqual(["owner.editor", "addon.insights"]);
+    expect(runtime.resourcePanels.map((record) => record.id)).toEqual(["addon.insights"]);
   });
 
-  test("emits extension_panel_region_unsupported when a mode places a panel outside its regions", () => {
+  test("emits extension_panel_placement_unresolvable when a mode places a panel outside its declaration", () => {
     const invalidMode = defineExtension({
       ...owner,
       modes: {
@@ -118,7 +116,7 @@ describe("composition normalization", () => {
           resources: {
             ticket: {
               slots: { primary: { region: "main", required: true } },
-              panels: { "addon.insights": { region: "main" } },
+              panels: { editor: { region: "side" } },
             },
           },
         },
@@ -126,7 +124,9 @@ describe("composition normalization", () => {
     });
     const runtime = normalizeExtensionSources([wrap("owner", invalidMode), wrap("addon", addon)]);
 
-    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_panel_region_unsupported");
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "extension_panel_placement_unresolvable",
+    );
   });
 
   test("emits extension_mode_resource_unsupported for a recipe naming an unknown resource kind", () => {
@@ -172,6 +172,12 @@ describe("composition normalization", () => {
   test("emits extension_resource_primary_invalid when a primary recipe has no main placement", () => {
     const invalidMode = defineExtension({
       ...owner,
+      panels: {
+        editor: {
+          ...owner.panels!.editor!,
+          show: { for: "ticket", region: "side" },
+        },
+      },
       modes: {
         project: {
           label: "Project",

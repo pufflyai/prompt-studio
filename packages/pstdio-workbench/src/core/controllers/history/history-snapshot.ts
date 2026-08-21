@@ -2,14 +2,14 @@ import type { LayoutModel } from "../../registries/layout/layout-model";
 import { findPlacementByWidgetId, getActiveLocationPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { workbenchPanelRegions } from "../../registries/layout/layout-types";
-import { matchesWorkbenchLocationEligibility } from "../../registries/layout/panel-widget-eligibility";
+import { isWorkbenchPanelPlacementVisible } from "../../registries/layout/panel-widget-eligibility";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { WorkbenchLocationRef, WorkbenchNavigationEntry, WorkbenchSubPanelRef } from "./history-types";
 
 export const workbenchNavigationPanelRegions = ["main", "secondary"] as const;
 
-export const workbenchPlacementRole = (layout: LayoutModel, placement: WorkbenchWidgetPlacement) =>
-  placement.role ?? layout.getWidget(placement.contributionId)?.role ?? "content";
+export const workbenchPlacementRole = (_layout: LayoutModel, placement: WorkbenchWidgetPlacement) =>
+  placement.role ?? "content";
 
 export const findSubPanelPlacement = (layout: LayoutModel, reference: WorkbenchSubPanelRef) => {
   if (reference.instanceKey) {
@@ -50,7 +50,7 @@ export const selectedSubPanelsFromLayout = (layout: LayoutModel, modeId: string 
       active &&
       widget &&
       workbenchPlacementRole(layout, active) === "sub-panel" &&
-      matchesWorkbenchLocationEligibility(widget, location?.resource, modeId, active)
+      isWorkbenchPanelPlacementVisible(widget, location?.resource, modeId, active)
     ) {
       selected[regionId] = subPanelRefFromPlacement(active);
     }

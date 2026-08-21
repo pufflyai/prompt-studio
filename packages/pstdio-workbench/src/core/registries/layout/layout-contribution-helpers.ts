@@ -102,7 +102,6 @@ export const createContributionRegistrations = (input: {
       const { priority, reuse, singleton, ...widgetContribution } = widget;
       const record: RegisteredWidgetContribution = {
         ...widgetContribution,
-        role: widget.role ?? "content",
         reuse: reuse ?? "resource",
         singleton: singleton ?? true,
         ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),

@@ -103,7 +103,6 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       render: (input) => <SettingsLauncher input={input} />,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: LAUNCHER_WIDGET_ID,
       title: "Settings",
       region: "main",

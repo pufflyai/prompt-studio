@@ -13,7 +13,6 @@ export const createClosedCompositionPanelsWorkbench = () => {
   const workbench = createWorkbenchCore();
   workbench.renderers.registerRenderer({ id: rendererId, render: () => null });
   workbench.layout.registerPanel({
-    closable: false,
     id: overviewId,
     title: "Overview",
     region: "main",
@@ -21,7 +20,6 @@ export const createClosedCompositionPanelsWorkbench = () => {
   });
   for (const panel of optionalPanels) {
     workbench.layout.registerPanel({
-      closable: true,
       id: panel.panelId,
       title: panel.title,
       region: "main",

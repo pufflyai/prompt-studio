@@ -34,19 +34,6 @@ const panelBodySchema = {
   renderer: z.object({ kind: z.enum(["tree", "file", "controls", "dataTable", "kanban"]), id: z.string() }).optional(),
 };
 
-export const extensionCompositionPanelRecordSchema = z
-  .object({
-    id: z.string(),
-    extensionId: z.string(),
-    title: localizableStringSchema,
-    icon: z.string().optional(),
-    supportedRegions: z.array(dockedWorkbenchRegionSchema).min(1),
-    ...panelBodySchema,
-  })
-  .refine((value) => [value.webview, value.renderer].filter(Boolean).length === 1, {
-    message: "Composition panels must declare exactly one body",
-  });
-
 export const extensionModePlacementSchema = z.object({
   region: dockedWorkbenchRegionSchema,
   allowedRegions: z.array(dockedWorkbenchRegionSchema).optional(),
@@ -54,6 +41,26 @@ export const extensionModePlacementSchema = z.object({
   defaultOpen: z.boolean().optional(),
   pinned: z.boolean().optional(),
 });
+
+export const extensionPanelPlacementSchema = z.object({
+  for: z.string().optional(),
+  region: dockedWorkbenchRegionSchema,
+  allowedRegions: z.array(dockedWorkbenchRegionSchema).optional(),
+  required: z.boolean().optional(),
+});
+
+export const extensionCompositionPanelRecordSchema = z
+  .object({
+    id: z.string(),
+    extensionId: z.string(),
+    title: localizableStringSchema,
+    icon: z.string().optional(),
+    show: z.union([extensionPanelPlacementSchema, z.array(extensionPanelPlacementSchema).min(1)]).optional(),
+    ...panelBodySchema,
+  })
+  .refine((value) => [value.webview, value.renderer].filter(Boolean).length === 1, {
+    message: "Composition panels must declare exactly one body",
+  });
 
 export const extensionModeResourceRecipeSchema = z.object({
   slots: z.record(z.string(), extensionModePlacementSchema).optional(),

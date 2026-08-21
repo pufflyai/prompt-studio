@@ -100,7 +100,6 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
       render: ({ instance }) => <DocPanel resource={instance.resource} />,
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: DOC_WIDGET_ID,
       title: "Document",
       region: "main",
@@ -117,7 +116,6 @@ export const createTreeCustomizationModule = (): WorkbenchModuleContribution => 
       getChildren: () => [],
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: TREE_ID,
       title: "Customizable tree",
       region: "sidenav",

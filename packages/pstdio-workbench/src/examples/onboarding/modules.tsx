@@ -105,7 +105,6 @@ const registerGuideWidget = (ctx: WorkbenchModuleContext) => {
     id: GUIDE_WIDGET_ID,
     title: "Guide",
     region: "main",
-    closable: true,
     singleton: false,
     resourceKinds: [GUIDE_KIND],
     rendererId: GUIDE_RENDERER_ID,
@@ -154,7 +153,6 @@ const registerDocsTree = (ctx: WorkbenchModuleContext, options: { resourceBacked
     getChildren: () => [],
   });
   ctx.layout.registerPanel({
-    closable: false,
     id: DOCS_TREE_ID,
     title: "Docs",
     region: "sidenav",
@@ -214,7 +212,6 @@ export const createTreeViewsModule = (): WorkbenchModuleContribution => ({
       getChildren: () => [],
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: DOCS_TREE_ID,
       title: "Docs",
       region: "sidenav",
@@ -276,7 +273,6 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.modes",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: MODE_SWITCHER_WIDGET_ID,
       title: "Modes",
       region: "activity",
@@ -300,7 +296,6 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
       activate(modeCtx) {
         registerEmptyMain(modeCtx);
         modeCtx.layout.registerPanel({
-          closable: false,
           id: "onboarding.review.widget",
           title: "Review queue",
           region: "main",

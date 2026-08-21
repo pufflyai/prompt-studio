@@ -439,7 +439,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
           panels: {
             ticketFiles: {
               title: "Files",
-              supportedRegions: ["sidenav"],
+              show: { region: "sidenav" },
               renderer: { kind: "tree", id: "files" },
             },
           },
@@ -466,7 +466,7 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
     expect(metadata.panels).toEqual([
       expect.objectContaining({
         id: "planner.ticketFiles",
-        supportedRegions: ["sidenav"],
+        show: { region: "sidenav" },
         renderer: { kind: "tree", id: "planner.files" },
       }),
     ]);

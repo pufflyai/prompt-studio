@@ -178,7 +178,7 @@ const toPanelRecord = (panel: ExtensionRuntime["panels"][number]) => ({
   id: panel.id,
   extensionId: panel.extensionId,
   title: panel.contribution.title,
-  supportedRegions: [...panel.contribution.supportedRegions],
+  show: panel.contribution.show,
   panelMenus: Object.entries(panel.contribution.panelMenus ?? {}).map(([localId, menu]) => ({
     id: `${panel.id}.${localId}`,
     extensionId: panel.extensionId,

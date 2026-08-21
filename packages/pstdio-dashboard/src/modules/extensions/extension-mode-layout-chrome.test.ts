@@ -20,7 +20,6 @@ const registerHostSidenav = (workbench: ReturnType<typeof createWorkbenchCore>) 
     title: "Dashboard Sidenav",
     region: "sidenav",
     rendererId: "dashboard.sidenav",
-    closable: false,
   });
 };
 
@@ -46,7 +45,7 @@ describe("extension-mode-layout mode chrome", () => {
           extensionId: "pstdio.pstdio-lab",
           title: "Overview",
           icon: "layout-dashboard",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],
@@ -108,7 +107,7 @@ describe("extension-mode-layout mode chrome", () => {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
           title: "Overview",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],
@@ -134,7 +133,7 @@ describe("extension-mode-layout native menus", () => {
           id: "pstdio-lab.cams",
           extensionId: "pstdio.pstdio-lab",
           title: "Cams",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
           panelMenus: [
             {
@@ -179,7 +178,7 @@ describe("extension-mode-layout native menus", () => {
           id: "pstdio-lab.sidenav",
           extensionId: "pstdio.pstdio-lab",
           title: "Lab Sidenav",
-          supportedRegions: ["sidenav" as const],
+          show: { region: "sidenav" as const },
           webview,
         },
       ],

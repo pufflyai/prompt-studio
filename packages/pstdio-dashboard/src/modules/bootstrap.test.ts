@@ -18,7 +18,6 @@ describe("createBootstrapModule", () => {
     for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
       const widgetId = `test.${resource.id}`;
       workbench.layout.registerPanel({
-        closable: false,
         id: widgetId,
         title: resource.label ?? resource.id,
         region: "main",
@@ -69,7 +68,6 @@ describe("createBootstrapModule", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.layout.registerPanel({
-      closable: false,
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
       region: "main",

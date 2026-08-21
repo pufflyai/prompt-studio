@@ -33,8 +33,11 @@ describe("reconcileAnchors", () => {
     const layout = createLayoutModel();
     layout.registerLocation({ id: "ticket", title: "Ticket", region: "main", rendererId: "noop" });
     layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
-    layout.openWidget("ticket", { resource: ticket });
-    layout.openWidget("terminal", { resource: { kind: "terminal", uri: "pstdio://terminal/x" } });
+    layout.openWidget("ticket", { resource: ticket, role: "location" });
+    layout.openWidget("terminal", {
+      resource: { kind: "terminal", uri: "pstdio://terminal/x" },
+      role: "sub-panel",
+    });
 
     const actions = reconcileAnchors({
       layout: layout.getLayout(),

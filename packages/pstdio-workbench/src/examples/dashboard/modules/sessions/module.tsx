@@ -18,7 +18,6 @@ const SessionsOverviewWidget = lazy(() =>
 const registerSessionWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.sessions,
       title: "Sessions",
       region: "main",
@@ -39,7 +38,6 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContext) => {
 
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.session,
       title: "Session",
       region: "side",

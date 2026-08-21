@@ -6,7 +6,6 @@ const registerPanelWithMenus = (layout: ReturnType<typeof createLayoutModel>) =>
     id: "lab.tools",
     title: "Tools",
     region: "side",
-    closable: true,
     rendererId: "lab.tools",
     panelMenus: [
       { id: "lab.tools.actions", title: "Actions", side: "left", rendererId: "lab.tools.actions" },
@@ -19,7 +18,7 @@ describe("panel menu ownership", () => {
   test("menus follow their panel instance when it moves to another allowed region", () => {
     const layout = createLayoutModel();
     registerPanelWithMenus(layout);
-    layout.openWidget("lab.tools");
+    layout.openWidget("lab.tools", { closable: true });
     layout.openWidget("lab.tools.actions");
     layout.openWidget("lab.tools.filters");
 
@@ -47,7 +46,7 @@ describe("panel menu ownership", () => {
   test("orphan menus are removed when their owner has no placement", () => {
     const layout = createLayoutModel();
     registerPanelWithMenus(layout);
-    layout.openWidget("lab.tools");
+    layout.openWidget("lab.tools", { closable: true });
     layout.openWidget("lab.tools.actions");
     layout.closeWidget(layout.getLayout().regions.side.widgets[0]?.widgetId ?? "");
 

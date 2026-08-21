@@ -131,7 +131,6 @@ export const createTreeNavigationWorkbench = () => {
         getChildren: () => [],
       });
       ctx.layout.registerPanel({
-        closable: false,
         id: NAV_TREE_ID,
         title: "Tree navigation",
         region: "sidenav",
@@ -139,7 +138,6 @@ export const createTreeNavigationWorkbench = () => {
         regionSize: { defaultPx: 240, minPx: 200, maxPx: 320 },
       });
       ctx.layout.registerPanel({
-        closable: false,
         id: TICKETS_WIDGET_ID,
         title: "Tickets",
         region: "main",
@@ -147,7 +145,6 @@ export const createTreeNavigationWorkbench = () => {
       });
       ctx.renderers.registerRenderer({ id: TICKETS_WIDGET_ID, render: (input) => <TicketsWidget input={input} /> });
       ctx.layout.registerPanel({
-        closable: false,
         id: WORKSPACES_WIDGET_ID,
         title: "Workspaces",
         region: "main",
@@ -158,7 +155,6 @@ export const createTreeNavigationWorkbench = () => {
         render: (input) => <WorkspacesWidget input={input} />,
       });
       ctx.layout.registerPanel({
-        closable: false,
         id: TICKET_WIDGET_ID,
         title: "Ticket",
         region: "main",

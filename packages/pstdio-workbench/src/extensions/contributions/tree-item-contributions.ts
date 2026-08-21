@@ -78,7 +78,6 @@ export const registerWorkbenchExtensionTreeItems = (input: RegisterWorkbenchExte
         ],
       }),
       input.workbench.layout.registerPanel({
-        closable: false,
         id: rendererId,
         title: "Extensions",
         region: resolveWorkbenchTreeRegion(target),

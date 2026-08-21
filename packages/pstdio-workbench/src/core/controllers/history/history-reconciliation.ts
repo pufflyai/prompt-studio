@@ -33,7 +33,7 @@ const reconcileEntry = (input: {
 }) => {
   const { entry, layout, modes, resources } = input;
   if (entry.modeId && modes && !modes.getMode(entry.modeId)) return undefined;
-  if (entry.closedSubPanel && layout.getWidget(entry.closedSubPanel.reference.contributionId)?.role !== "sub-panel") {
+  if (entry.closedSubPanel && !layout.getWidget(entry.closedSubPanel.reference.contributionId)) {
     return undefined;
   }
   const contribution = entry.contributionId ? layout.getWidget(entry.contributionId) : undefined;
@@ -41,7 +41,7 @@ const reconcileEntry = (input: {
     entry.kind === "mode"
       ? Boolean(entry.modeId && modes?.getMode(entry.modeId))
       : Boolean(
-          (contribution && contribution.role !== "panel-menu" && contribution.role !== "sub-panel") ||
+          (contribution && !contribution.panelMenuOwner && !contribution.eligibleLocations) ||
             (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
         );
   if (!hasLocation) return undefined;
@@ -49,7 +49,7 @@ const reconcileEntry = (input: {
   const selectedSubPanels = Object.fromEntries(
     Object.entries(entry.selectedSubPanels).filter(([, reference]) => {
       const widget = reference ? layout.getWidget(reference.contributionId) : undefined;
-      return widget?.role === "sub-panel";
+      return Boolean(widget);
     }),
   ) as WorkbenchNavigationEntry["selectedSubPanels"];
   return { ...entry, selectedSubPanels };

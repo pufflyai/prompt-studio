@@ -58,13 +58,8 @@ describe("extension-lab workbench attachments", () => {
       id: "pstdio.extension-lab.lab",
       // No "secondary": keeps the Terminal entry out of the Lab mode.
       panelRegions: ["main", "side"],
-      modePanels: {
-        labOverview: { region: "main", required: true },
-        labCams: { region: "main" },
-        labArtifacts: { region: "main" },
-      },
       resources: {
-        "glass-lab-artifact": { slots: { inspector: { region: "side" } } },
+        "glass-lab-artifact": {},
       },
     });
     // The Lab owns navigation through native activity items; no sidenav or
@@ -95,13 +90,16 @@ describe("extension-lab workbench attachments", () => {
   test("gives each main panel an icon and an action menu where it belongs", () => {
     expect(extension.panels?.labOverview).toMatchObject({
       icon: "layout-dashboard",
-      supportedRegions: ["main"],
+      show: [
+        { region: "main", required: true },
+        { for: "blend-project", region: "main", required: true },
+      ],
       webview: { entry: { path: "./src/views/lab-overview.tsx" } },
     });
     expect(extension.panels?.labOverview?.panelMenus).toBeUndefined();
     expect(extension.panels?.labArtifacts).toMatchObject({
       icon: "package-search",
-      supportedRegions: ["main", "secondary", "side"],
+      show: [{ region: "main" }, { for: "blend-project", region: "side", allowedRegions: ["side", "secondary"] }],
       renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
         create: expect.objectContaining({ side: "right", renderer: { kind: "controls", id: "labArtifactCreate" } }),
@@ -109,7 +107,15 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.panels?.labCams).toMatchObject({
       icon: "cctv",
-      supportedRegions: ["main", "secondary", "sidenav", "side"],
+      show: [
+        { region: "main" },
+        {
+          for: "blend-project",
+          region: "sidenav",
+          allowedRegions: ["sidenav", "side"],
+          required: true,
+        },
+      ],
       webview: { entry: { path: "./src/views/lab-cams.tsx" } },
       panelMenus: {
         cameras: expect.objectContaining({ side: "left", renderer: { kind: "tree", id: "labCams" } }),
@@ -130,7 +136,7 @@ describe("extension-lab workbench attachments", () => {
 
   test("opens artifacts as a side inspector bound to the resource kind", () => {
     expect(extension.panels?.labArtifactDetail).toMatchObject({
-      supportedRegions: ["side"],
+      show: { for: "glass-lab-artifact", region: "side" },
       webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
     });
     // An attached resource adds an inspector; it never replaces the primary
@@ -140,9 +146,10 @@ describe("extension-lab workbench attachments", () => {
       slots: { inspector: { cardinality: "many", external: true } },
     });
     expect(extension.resourceKinds?.["glass-lab-artifact"]?.slots).not.toHaveProperty("primary");
-    expect(extension.resourcePanels?.labArtifactDetail).toMatchObject({
-      resourceKind: "glass-lab-artifact",
-      panel: "labArtifactDetail",
+    expect(extension.resourcePanels).not.toHaveProperty("labArtifactDetail");
+    expect(extension.resourcePanels?.ticketInsights).toMatchObject({
+      resourceKind: "pstdio-planner.ticket",
+      panel: "labArtifacts",
       slot: "inspector",
     });
   });

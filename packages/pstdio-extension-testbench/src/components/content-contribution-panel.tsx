@@ -120,7 +120,6 @@ export const registerContentContributionWidgets = (workbench: WorkbenchCore, ben
 
   for (const config of configs) {
     workbench.layout.registerPanel({
-      closable: false,
       id: contentContributionWidgetId(config.kind, config.contribution.id),
       title: text(config.contribution.title, config.contribution.id),
       region: "main",

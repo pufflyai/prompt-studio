@@ -1,11 +1,8 @@
 import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
-  getWorkbenchModePanelForRegion,
-  isWorkbenchModePanelAvailable,
-  listEligibleSubPanels,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchPanelMenuOwner,
-  matchesWorkbenchPanelPlacementLocation,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
@@ -15,6 +12,7 @@ import {
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
+import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { suppressesSidenavTabStrip } from "./region-tabs-visibility";
@@ -23,23 +21,6 @@ const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.
 
 const isWorkbenchPanelRegion = (region: WorkbenchRegion): region is WorkbenchPanelRegion =>
   workbenchPanelRegions.some((panelRegion) => panelRegion === region);
-
-export const listWorkbenchModeAddablePanelIds = (
-  workbench: WorkbenchCore,
-  layout: ReturnType<WorkbenchCore["layout"]["getLayout"]>,
-  region: WorkbenchPanelRegion,
-  resource: ReturnType<WorkbenchCore["getPrimaryResource"]>,
-  modeId: string | undefined,
-) => {
-  if (!modeId) return [];
-  return (
-    workbench.modes
-      .getMode(modeId)
-      ?.listAddablePanels?.({ layout, resource })
-      .filter((panel) => panel.region === region)
-      .map((panel) => panel.panelId) ?? []
-  );
-};
 
 export const shouldShowRegionTabs = (
   placements: WorkbenchWidgetPlacement[],
@@ -63,8 +44,7 @@ export const shouldShowPanelHeader = (input: WorkbenchPanelHeaderVisibility) =>
   input.hasPanelMenus === true ||
   input.hasHeaderActions === true;
 
-const isSubPanelPlacement = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) =>
-  (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "sub-panel";
+const isSubPanelPlacement = (placement: WorkbenchWidgetPlacement) => placement.role === "sub-panel";
 
 export const isPlacementEligibleForRegion = (
   workbench: WorkbenchCore,
@@ -75,7 +55,7 @@ export const isPlacementEligibleForRegion = (
 ) => {
   const widget = workbench.layout.getWidget(placement.contributionId);
   return widget
-    ? matchesWorkbenchPanelPlacementLocation(widget, resource, modeId, placement, {
+    ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
         ignoreResourceLocation: region === "side",
       })
     : false;
@@ -88,31 +68,22 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  if (!isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, region)) return false;
+  const compositionPanels = useWorkbenchCompositionPanels(workbench)[region];
   const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource, {
     ignoreOwnerResourceUri: region === "side",
   });
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layoutState.layout);
   const openSubPanels = layoutState.layout.regions[region].widgets.filter(
     (placement) =>
-      isSubPanelPlacement(workbench, placement) &&
-      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      isSubPanelPlacement(placement) && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
   const hasMultipleLocations =
     region === "main" &&
     layoutState.layout.regions.main.widgets.filter(
       (placement) =>
-        (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location" &&
-        !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
+        placement.role === "location" && !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
     ).length > 1;
-  const eligibleSubPanels = listEligibleSubPanels({
-    addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layoutState.layout, region, resource, modeId),
-    widgets: Object.values(layoutState.widgets),
-    layout: layoutState.layout,
-    region,
-    resource,
-    modeId,
-  });
+  const eligibleSubPanels = compositionPanels.addable;
   const menuRegions = workbenchPanelMenuRegions[region];
   const hasPanelMenus = [menuRegions.left, menuRegions.right].some(
     (menuRegion) =>
@@ -144,21 +115,16 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  const modePanel = getWorkbenchModePanelForRegion(region);
-  if (modePanel && !isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel)) {
-    return false;
-  }
+  const compositionPanels = useWorkbenchCompositionPanels(workbench);
   const placements = layoutState.layout.regions[region].widgets.filter(
     (placement) =>
-      isSubPanelPlacement(workbench, placement) &&
-      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      isSubPanelPlacement(placement) && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
   const locationTabs =
     region === "main"
       ? layoutState.layout.regions.main.widgets.filter(
           (placement) =>
-            (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location" &&
-            !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
+            placement.role === "location" && !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
         )
       : [];
   const leadingItems = listWorkbenchMenuItemsFromState(
@@ -174,15 +140,6 @@ export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: 
 
   return shouldShowRegionTabs(tabPlacements, {
     hasLeadingActions: leadingItems.length > 0,
-    hasAddAction:
-      isWorkbenchPanelRegion(region) &&
-      listEligibleSubPanels({
-        addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layoutState.layout, region, resource, modeId),
-        widgets: Object.values(layoutState.widgets),
-        layout: layoutState.layout,
-        region,
-        resource,
-        modeId,
-      }).length > 0,
+    hasAddAction: isWorkbenchPanelRegion(region) && compositionPanels[region].addable.length > 0,
   });
 };

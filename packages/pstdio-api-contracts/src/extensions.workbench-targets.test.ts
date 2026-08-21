@@ -55,7 +55,7 @@ describe("workbench extension metadata targets", () => {
           id: "lab.files",
           extensionId: "pstdio.lab",
           title: "Files",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           renderer: { kind: "tree", id: "lab.files" },
         },
       ],
@@ -100,7 +100,7 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.modes[0]?.resources?.ticket?.slots?.primary).toEqual({ region: "main", required: true });
     expect(parsed.panels[0]).toMatchObject({
       renderer: { kind: "tree", id: "lab.files" },
-      supportedRegions: ["main"],
+      show: { region: "main" },
     });
     expect(parsed.panels[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({

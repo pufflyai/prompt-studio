@@ -262,6 +262,7 @@ const registerPanelFixture = (ctx: WorkbenchModuleContext, kind: CompositionKind
       ctx.breadcrumbs.setItems([{ title: resource.label ?? "Location", icon: resource.icon, resource }]);
       return ctx.layout.openPanel(LOCATION_ID, {
         strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
+        closable: false,
         resource,
         title: resource.label,
       });
@@ -277,7 +278,6 @@ const registerPanelFixture = (ctx: WorkbenchModuleContext, kind: CompositionKind
     },
   });
   ctx.layout.registerPanel({
-    closable: false,
     id: LOCATION_ID,
     title: "Location",
     region: "main",
@@ -293,7 +293,6 @@ const registerEligiblePanelFixtures = (ctx: WorkbenchModuleContext, kind: Compos
   for (const region of panelRegions) {
     for (const definition of subPanelDefinitions(kind)) {
       ctx.layout.registerPanel({
-        closable: true,
         id: `onboarding.panel-composition.${region}.${definition.id}`,
         title: definition.title,
         icon: definition.icon,

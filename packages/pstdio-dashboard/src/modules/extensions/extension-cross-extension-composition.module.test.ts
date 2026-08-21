@@ -53,7 +53,7 @@ const crossExtensionMetadata = {
     {
       id: "planner.editor",
       extensionId: "pstdio.planner",
-      supportedRegions: ["main"],
+      show: { for: "planner.ticket", region: "main", required: true },
       title: "Ticket",
       webview: {
         entry: { kind: "package-asset", path: "./editor.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -64,7 +64,6 @@ const crossExtensionMetadata = {
     {
       id: "insights.details",
       extensionId: "pstdio.insights",
-      supportedRegions: ["side", "secondary"],
       title: "Insights",
       webview: {
         entry: { kind: "package-asset", path: "./insights.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -74,13 +73,6 @@ const crossExtensionMetadata = {
     },
   ],
   resourcePanels: [
-    {
-      id: "planner.editor",
-      extensionId: "pstdio.planner",
-      resourceKind: "planner.ticket",
-      panel: "planner.editor",
-      slot: "primary",
-    },
     {
       id: "insights.ticketDetails",
       extensionId: "pstdio.insights",

@@ -52,7 +52,6 @@ export const createWorkbenchSettingsModule = (
       });
 
       ctx.layout.registerPanel({
-        closable: false,
         id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
         title: `${title} navigation`,
         region: "sidenav",
@@ -61,7 +60,6 @@ export const createWorkbenchSettingsModule = (
       });
 
       ctx.layout.registerPanel({
-        closable: false,
         id: WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
         title,
         region: "main",
@@ -80,7 +78,6 @@ export const createWorkbenchSettingsModule = (
         title,
         region: "overlay",
         singleton: true,
-        closable: true,
         rendererId: RENDERER_ID,
         config: {
           size: "xl",
@@ -117,7 +114,12 @@ export const createWorkbenchSettingsModule = (
         id: "workbench.settings.presenter",
         canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
         open: (resource) =>
-          ctx.layout.openPanel(WIDGET_ID, { resource, title: resource.label, strategy: { kind: "persistent" } }),
+          ctx.layout.openPanel(WIDGET_ID, {
+            resource,
+            title: resource.label,
+            closable: true,
+            strategy: { kind: "persistent" },
+          }),
       });
 
       ctx.commands.registerCommand(

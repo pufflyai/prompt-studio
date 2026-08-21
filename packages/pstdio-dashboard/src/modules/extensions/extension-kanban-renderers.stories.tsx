@@ -104,7 +104,7 @@ const metadata: DashboardExtensionMetadata = {
       id: "story.tickets",
       extensionId: ticketsRecord.extensionId,
       title: "Tickets",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "kanban", id: ticketsRecord.id },
     },
   ],

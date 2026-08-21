@@ -12,6 +12,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
+import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
@@ -211,6 +212,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     open,
     onClose,
   });
+  const compositionPanels = useWorkbenchCompositionPanels(workbench);
 
   const closePalette = () => {
     rollbackThemePreview(setThemePreference, themePreviewRef);
@@ -241,7 +243,11 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose: commitThemePreview,
   });
   const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
-  const panelWidgetEntries = createWorkbenchPanelWidgetPaletteEntries({ workbench, onClose });
+  const panelWidgetEntries = createWorkbenchPanelWidgetPaletteEntries({
+    workbench,
+    onClose,
+    panelsByRegion: compositionPanels,
+  });
   const entries = [
     ...resourceEntries,
     ...commandPaletteResourceEntries,

@@ -19,7 +19,6 @@ describe("createSessionBubbleModule", () => {
     const contribution = workbench.layout.getPanel(dashboardWidgetIds.sessionBubble);
     expect(contribution).toMatchObject({
       region: "side",
-      closable: true,
       eligibleLocations: { resourceKinds: ["dashboard-view", "extension-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
       tab: {
@@ -27,6 +26,7 @@ describe("createSessionBubbleModule", () => {
         customMenuRendererId: "dashboard-workbench.session-tab-menu",
       },
     });
+    expect(contribution).not.toHaveProperty("closable");
     expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.sessions)).toBe(false);
     expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.start)).toBe(true);
   });

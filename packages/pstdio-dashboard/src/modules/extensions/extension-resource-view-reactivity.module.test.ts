@@ -90,14 +90,12 @@ describe("createExtensionsModule ticket reactivity", () => {
 
     try {
       workbench.layout.registerPanel({
-        closable: false,
         id: "test.global-header",
         title: "Global header",
         region: "nav",
         rendererId: "test.global-header",
       });
       workbench.layout.registerPanel({
-        closable: false,
         id: "test.dashboard-view",
         title: "Dashboard view",
         region: "main",

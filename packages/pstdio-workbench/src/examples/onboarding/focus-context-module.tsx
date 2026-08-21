@@ -218,7 +218,6 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.focus-context",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: FOCUS_CONTEXT_MAIN_WIDGET_ID,
       title: "Focus and context",
       region: "main",
@@ -226,7 +225,6 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: FOCUS_CONTEXT_SIDENAV_WIDGET_ID,
       title: "Focus",
       region: "sidenav",
@@ -234,7 +232,6 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: FOCUS_CONTEXT_PANEL_WIDGET_ID,
       title: "Context",
       region: "secondary",
@@ -242,7 +239,6 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: FOCUS_CONTEXT_STATUS_WIDGET_ID,
       title: "Focus status",
       region: "status",

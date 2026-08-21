@@ -22,7 +22,7 @@ describe("extension composition contracts", () => {
       id: "insights.details",
       extensionId: "pstdio.insights",
       title: "Insights",
-      supportedRegions: ["side", "secondary"],
+      show: { region: "side", allowedRegions: ["side", "secondary"] },
       renderer: { kind: "controls", id: "insights.details" },
     });
     const edge = extensionResourcePanelRecordSchema.parse({
@@ -42,7 +42,7 @@ describe("extension composition contracts", () => {
     });
 
     expect(Object.keys(resource.slots)).toEqual(["primary", "inspector"]);
-    expect(panel.supportedRegions).toEqual(["side", "secondary"]);
+    expect(panel.show).toEqual({ region: "side", allowedRegions: ["side", "secondary"] });
     expect(edge.slot).toBe("inspector");
     expect(Object.keys(mode.resources)).toEqual(["planner.ticket"]);
   });

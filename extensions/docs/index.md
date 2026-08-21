@@ -53,7 +53,7 @@ The implemented dashboard UI model uses host-owned workbench targets. Extensions
 
 Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
 
-Panels are not attachments. A panel declares the docked regions it supports (`sidenav`, `main`, `secondary`, `side`), a `resourcePanels` entry binds it to a resource kind slot, and the active mode's placement recipe puts it in a region.
+Panels are not attachments. A panel's `show` declaration gives its default placement for the extension's own resources or modes. A mode recipe may move that placement within `allowedRegions`. Use `resourcePanels` only to bind a panel into a slot owned by another extension.
 
 ## Lifecycle
 

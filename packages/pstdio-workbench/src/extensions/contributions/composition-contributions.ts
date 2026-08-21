@@ -27,6 +27,19 @@ export interface WorkbenchCompositionRegistry {
   getModeComposition(modeId: string): CompositionModeDefinition | undefined;
 }
 
+interface DeclaredPanelPlacement {
+  for?: string;
+  region: DockedCompositionRegion;
+  allowedRegions?: readonly DockedCompositionRegion[];
+  required?: boolean;
+}
+
+export const toPanelPlacements = (show: DeclaredPanelPlacement | readonly DeclaredPanelPlacement[] | undefined) => {
+  if (!show) return [];
+  const placements = Array.isArray(show) ? show : [show];
+  return placements.map(({ for: resourceKind, ...placement }) => ({ ...placement, resourceKind }));
+};
+
 export const createWorkbenchCompositionRegistry = (): WorkbenchCompositionRegistry => {
   const resourceKinds: CompositionResourceKindDefinition[] = [];
   const panels: CompositionPanelDefinition[] = [];
@@ -124,7 +137,7 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
   const open = () =>
     ctx.layout.openWidget(placement.panelId, {
       region: placement.region,
-      closable: placement.closable,
+      closable: !placement.required,
       pinned: true,
       role: placementRole(placement.region),
     });
@@ -142,8 +155,9 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
   );
   if (!existing) return;
   const role = placementRole(existingRegion);
-  if ((existing.closable ?? true) !== placement.closable || existing.role !== role) {
-    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable: placement.closable, role });
+  const closable = !placement.required;
+  if ((existing.closable ?? true) !== closable || existing.role !== role) {
+    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable, role });
   }
 };
 

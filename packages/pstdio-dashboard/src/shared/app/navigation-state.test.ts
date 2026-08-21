@@ -36,7 +36,6 @@ describe("selectDashboardNavigationResource", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
     workbench.layout.registerPanel({
-      closable: true,
       id: "dashboard.session",
       title: "Session",
       region: "side",

@@ -19,16 +19,8 @@ export const labModes = {
     // No "secondary": the Lab has no use for it, and omitting it removes the
     // secondary panel chrome — including the Terminal entry in its "+" menu.
     panelRegions: ["main", "side"],
-    // Mode-wide panels: they do not consume the active resource.
-    modePanels: {
-      labOverview: { region: "main", required: true },
-      labCams: { region: "main" },
-      labArtifacts: { region: "main" },
-    },
     resources: {
-      "glass-lab-artifact": {
-        slots: { inspector: { region: "side", allowedRegions: ["side"] } },
-      },
+      "glass-lab-artifact": {},
     },
   },
 
@@ -41,13 +33,7 @@ export const labModes = {
     icon: "clapperboard",
     panelRegions: ["main", "secondary", "side"],
     resources: {
-      "blend-project": {
-        slots: {
-          primary: { region: "main", required: true },
-          navigation: { region: "sidenav", required: true },
-          inspector: { region: "side", allowedRegions: ["side", "secondary"] },
-        },
-      },
+      "blend-project": {},
     },
   },
   sculpt: {
@@ -57,10 +43,9 @@ export const labModes = {
     panelRegions: ["main", "secondary", "side"],
     resources: {
       "blend-project": {
-        slots: {
-          primary: { region: "main", required: true },
-          navigation: { region: "side", required: true },
-          inspector: { region: "secondary", allowedRegions: ["secondary", "side"] },
+        panels: {
+          labCams: { region: "side" },
+          labArtifacts: { region: "secondary" },
         },
       },
     },
@@ -91,14 +76,6 @@ export const labResourceKinds = {
 } satisfies NonNullable<ExtensionDefinition["resourceKinds"]>;
 
 export const labResourcePanels = {
-  labArtifactDetail: {
-    resourceKind: "glass-lab-artifact",
-    panel: "labArtifactDetail",
-    slot: "inspector",
-  },
-  blendStage: { resourceKind: "blend-project", panel: "labOverview", slot: "primary" },
-  blendCams: { resourceKind: "blend-project", panel: "labCams", slot: "navigation" },
-  blendArtifacts: { resourceKind: "blend-project", panel: "labArtifacts", slot: "inspector" },
   // A cross-extension contribution: the Lab adds an inspector to the Planner's
   // open ticket slot without owning the ticket resource or its modes.
   ticketInsights: {
@@ -127,7 +104,10 @@ export const createLabPanels = (baseUrl: string) =>
     labOverview: {
       title: l10n("panels.labOverview.title", "Overview"),
       icon: "layout-dashboard",
-      supportedRegions: ["main"],
+      show: [
+        { region: "main", required: true },
+        { for: "blend-project", region: "main", required: true },
+      ],
       webview: {
         entry: packageAsset("./src/views/lab-overview.tsx", baseUrl),
         capabilities: [
@@ -143,9 +123,7 @@ export const createLabPanels = (baseUrl: string) =>
     labArtifacts: {
       title: l10n("panels.labArtifacts.title", "Artifacts"),
       icon: "package-search",
-      // Placed in main by the Lab, in an inspector region by the blend modes, and
-      // in the Planner's ticket inspector slot as a cross-extension contribution.
-      supportedRegions: ["main", "secondary", "side"],
+      show: [{ region: "main" }, { for: "blend-project", region: "side", allowedRegions: ["side", "secondary"] }],
       renderer: { kind: "dataTable", id: "glassLabArtifacts" },
       panelMenus: {
         create: {
@@ -158,9 +136,10 @@ export const createLabPanels = (baseUrl: string) =>
     labCams: {
       title: l10n("panels.labCams.title", "Cams"),
       icon: "cctv",
-      // A tab beside the Overview location, and the navigation panel the blend
-      // modes place in their own regions.
-      supportedRegions: ["main", "secondary", "sidenav", "side"],
+      show: [
+        { region: "main" },
+        { for: "blend-project", region: "sidenav", allowedRegions: ["sidenav", "side"], required: true },
+      ],
       webview: {
         entry: packageAsset("./src/views/lab-cams.tsx", baseUrl),
         capabilities: ["commands.execute"],
@@ -176,7 +155,7 @@ export const createLabPanels = (baseUrl: string) =>
     labArtifactDetail: {
       title: l10n("panels.labArtifactDetail.title", "Artifact"),
       icon: "package-search",
-      supportedRegions: ["side"],
+      show: { for: "glass-lab-artifact", region: "side" },
       webview: { entry: packageAsset("./src/views/lab-artifact.tsx", baseUrl) },
     },
   }) satisfies NonNullable<ExtensionDefinition["panels"]>;

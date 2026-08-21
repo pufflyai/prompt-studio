@@ -18,7 +18,6 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
       title: "Ticket",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     workbench.resources.registerPresenter({
       id: "ticket-presenter",

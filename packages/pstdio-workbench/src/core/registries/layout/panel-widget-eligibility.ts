@@ -7,27 +7,6 @@ import type {
   WorkbenchWidgetPlacement,
 } from "./layout-types";
 
-interface PanelWidgetEligibilityInput {
-  addableWidgetIds?: readonly string[];
-  widget: RegisteredWidgetContribution;
-  layout: WorkbenchLayout;
-  region: WorkbenchPanelRegion;
-  resource?: ResourceRef;
-  modeId?: string;
-}
-
-interface ListEligiblePanelWidgetsInput {
-  addableWidgetIds?: readonly string[];
-  widgets: RegisteredWidgetContribution[];
-  layout: WorkbenchLayout;
-  region: WorkbenchPanelRegion;
-  resource?: ResourceRef;
-  modeId?: string;
-}
-
-const supportsPanelRegion = (widget: RegisteredWidgetContribution, region: WorkbenchPanelRegion) =>
-  widget.region === region || widget.fallbackRegion === region;
-
 const supportsResource = (widget: RegisteredWidgetContribution, resource: ResourceRef | undefined) => {
   if (widget.resourceKinds?.length && (!resource || !widget.resourceKinds.includes(resource.kind))) return false;
   if (widget.canOpen && (!resource || !widget.canOpen(resource))) return false;
@@ -51,7 +30,7 @@ export const getActiveWorkbenchSubPanel = (
 
 export const getActiveWorkbenchLocationPanel = (layout: WorkbenchLayout) => getActiveLocationPlacement(layout);
 
-export const matchesWorkbenchLocationEligibility = (
+const matchesLocationEligibility = (
   widget: RegisteredWidgetContribution,
   resource: ResourceRef | undefined,
   modeId: string | undefined,
@@ -81,16 +60,16 @@ export const matchesWorkbenchModeEligibility = (widget: RegisteredWidgetContribu
   return !eligibleModeIds?.length || (modeId !== undefined && eligibleModeIds.includes(modeId));
 };
 
-export const matchesWorkbenchPanelPlacementLocation = (
+export const isWorkbenchPanelPlacementVisible = (
   widget: RegisteredWidgetContribution,
   resource: ResourceRef | undefined,
   modeId: string | undefined,
-  placement: WorkbenchWidgetPlacement,
+  placement?: WorkbenchWidgetPlacement,
   options: { ignoreResourceLocation?: boolean } = {},
 ) => {
-  if (!supportsResource(widget, placement.resource ?? resource)) return false;
+  if (!supportsResource(widget, placement?.resource ?? resource)) return false;
   if (options.ignoreResourceLocation) return matchesWorkbenchModeEligibility(widget, modeId);
-  return matchesWorkbenchLocationEligibility(widget, resource, modeId, placement);
+  return matchesLocationEligibility(widget, resource, modeId, placement);
 };
 
 export const allowsWorkbenchFloatingPanels = (
@@ -121,29 +100,3 @@ export const matchesWorkbenchPanelMenuOwner = (
   }
   return false;
 };
-
-const hasOpenSingleton = (
-  widget: RegisteredWidgetContribution,
-  layout: WorkbenchLayout,
-  resource: ResourceRef | undefined,
-) =>
-  widget.singleton &&
-  Object.values(layout.regions).some((region) =>
-    region.widgets.some(
-      (placement) => placement.contributionId === widget.id && placement.ownerResourceUri === resource?.uri,
-    ),
-  );
-
-export const isSubPanelEligible = (input: PanelWidgetEligibilityInput) => {
-  if (hasOpenSingleton(input.widget, input.layout, input.resource)) return false;
-  if (input.addableWidgetIds?.includes(input.widget.id)) return true;
-  return (
-    input.widget.role === "sub-panel" &&
-    supportsPanelRegion(input.widget, input.region) &&
-    supportsResource(input.widget, input.resource) &&
-    matchesWorkbenchLocationEligibility(input.widget, input.resource, input.modeId)
-  );
-};
-
-export const listEligibleSubPanels = (input: ListEligiblePanelWidgetsInput) =>
-  input.widgets.filter((widget) => isSubPanelEligible({ ...input, widget }));

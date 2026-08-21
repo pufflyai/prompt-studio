@@ -40,7 +40,6 @@ export const registerWorkbenchExtensionRoutes = (input: RegisterWorkbenchExtensi
   for (const route of input.metadata.routes) {
     disposables.push(
       input.workbench.layout.registerPanel({
-        closable: false,
         id: route.id,
         title: text(route.label, route.id),
         region: "main",

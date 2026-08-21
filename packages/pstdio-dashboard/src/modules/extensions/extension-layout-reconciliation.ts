@@ -32,6 +32,12 @@ type LayoutRegionEntry = [WorkbenchRegion, WorkbenchLayout["regions"][WorkbenchR
 const compareRecord = (left: ExtensionLayoutCompatibilityRecord, right: ExtensionLayoutCompatibilityRecord) =>
   left.extensionId.localeCompare(right.extensionId) || left.panelId.localeCompare(right.panelId);
 
+const declaredPanelRegion = (panel: DashboardExtensionMetadata["panels"][number]): WorkbenchRegion => {
+  if (!panel.show) return "main";
+  const placements = Array.isArray(panel.show) ? panel.show : [panel.show];
+  return placements[0]?.region ?? "main";
+};
+
 export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionMetadata) => {
   const panelModeIds = modeIdsByPanelId(metadata);
   const records = metadata.panels
@@ -41,9 +47,9 @@ export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionM
         extensionId: panel.extensionId,
         modeIds: [...(panelModeIds.get(panel.id) ?? [])].sort(),
         panelId: panel.id,
-        // A panel's own capability, not a mode recipe: the fingerprint must change
-        // when the regions a panel can dock into change.
-        region: (panel.supportedRegions[0] ?? "main") as WorkbenchRegion,
+        // A panel's default declaration, not a mode recipe: the fingerprint must
+        // change when its initial placement changes.
+        region: declaredPanelRegion(panel),
         widgetId: extensionViewWidgetIdFor(panel),
       }),
     )

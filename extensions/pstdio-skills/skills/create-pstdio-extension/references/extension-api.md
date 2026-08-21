@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.1"
+    "pstdio": "1.0.0-alpha.2"
   },
   "private": true,
   "type": "module",
@@ -219,15 +219,14 @@ resource detail screen usually has:
 - A `resourceKinds` contribution that declares the resource's surface and named slots.
 - A `fileRenderers` contribution for the main document/file content.
 - A `treeRenderers` contribution for side-panel navigation or file lists.
-- `panels` that wrap those renderers and declare `supportedRegions`.
-- `resourcePanels` entries that bind each panel to one resource kind slot.
-- A `modes` contribution whose `resources` recipe places the slots into regions.
+- `panels` that wrap those renderers and declare `show` for resource kinds owned by the extension.
+- `resourcePanels` entries only for panels contributed into another extension's slots.
+- A `modes` contribution whose `resources` recipe accepts the resource and describes any placement changes.
 
-Each panel must declare exactly one of `webview` or `renderer`, plus at least one docked region in
-`supportedRegions` (`sidenav`, `main`, `secondary`, or `side`). A native renderer reference has a `kind` (`tree`,
+Each panel must declare exactly one of `webview` or `renderer`. An owned placement uses `show` with a docked `region`
+(`sidenav`, `main`, `secondary`, or `side`), optional `for`, `allowedRegions`, and `required`. A native renderer reference has a `kind` (`tree`,
 `file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. In the mode recipe, mark
-the `primary` slot placement `required: true` so the host restores the editor whenever the mode-resource context
-activates.
+the primary panel placement `required: true` so the host restores the editor whenever the mode-resource context activates.
 
 `fileRenderers` need `title` and a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,

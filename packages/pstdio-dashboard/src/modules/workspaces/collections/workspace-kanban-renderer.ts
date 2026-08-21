@@ -97,7 +97,6 @@ export const registerWorkspaceKanbanRenderer = (ctx: WorkbenchModuleContext) => 
   });
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
       region: "main",

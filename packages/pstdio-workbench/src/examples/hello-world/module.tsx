@@ -30,7 +30,6 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
       id: welcomeWidgetId,
       title: "Welcome",
       region: "main",
-      closable: true,
       rendererId: welcomeWidgetId,
     });
 

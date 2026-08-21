@@ -21,7 +21,6 @@ describe("openCreatedSessionFromDraft", () => {
   test("replaces the current draft placement with the created session", () => {
     const workbench = createWorkbenchCore();
     workbench.layout.registerPanel({
-      closable: true,
       id: dashboardWidgetIds.sessionBubble,
       title: "Session",
       region: "side",

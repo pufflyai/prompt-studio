@@ -223,7 +223,7 @@ export default defineExtension({
   panels: {
     tasks: {
       title: "Tasks",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "kanban", id: "tasks" },
     },
   },
@@ -237,14 +237,14 @@ export default defineExtension({
 });
 ```
 
-The panel wraps the renderer and declares the regions it supports. The `treeItems` panel action makes it reachable
+The panel wraps the renderer and declares its default placement. The `treeItems` panel action makes it reachable
 from the project sidenav.
 
 ## Workbench panels and resource slots
 
-A panel declares what it renders and which docked regions it supports. It never places itself. The resource kind
-owns named slots; a `resourcePanels` entry binds one panel to one slot. The active mode's recipe then places each
-slot into a region.
+A panel declares what it renders and where it appears for resource kinds owned by the same extension. The resource
+kind owns named slots for cross-extension contributions. The active mode's recipe may move an owned panel within
+its `allowedRegions` and places contributed slots.
 
 The resource owner declares the kind, its slots, and its own panels:
 
@@ -264,12 +264,9 @@ export default defineExtension({
   panels: {
     ticketEditor: {
       title: "Ticket",
-      supportedRegions: ["main"],
+      show: { for: "ticket", region: "main", required: true },
       webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
     },
-  },
-  resourcePanels: {
-    ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
   },
 });
 ```
@@ -284,7 +281,6 @@ export default defineExtension({
   panels: {
     insights: {
       title: "Insights",
-      supportedRegions: ["side", "secondary"],
       renderer: { kind: "controls", id: "insightControls" },
     },
   },
@@ -322,12 +318,7 @@ export default defineExtension({
       icon: "FileText",
       panelRegions: ["main", "secondary", "side"],
       resources: {
-        note: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav", pinned: true },
-          },
-        },
+        note: {},
       },
     },
   },
@@ -355,18 +346,14 @@ export default defineExtension({
   panels: {
     noteEditor: {
       title: l10n("panels.noteEditor.title", "Note"),
-      supportedRegions: ["main"],
+      show: { for: "note", region: "main", required: true },
       renderer: { kind: "file", id: "noteContent" },
     },
     noteTree: {
       title: l10n("panels.noteTree.title", "Files"),
-      supportedRegions: ["sidenav"],
+      show: { for: "note", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "noteTree" },
     },
-  },
-  resourcePanels: {
-    noteEditor: { resourceKind: "note", panel: "noteEditor", slot: "primary" },
-    noteTree: { resourceKind: "note", panel: "noteTree", slot: "navigation" },
   },
   resourceHierarchyProviders: {
     note: {
@@ -380,10 +367,10 @@ export default defineExtension({
 `resourceHierarchyProviders` gives the host the parent of a resource. Breadcrumbs follow that chain; return `null` at
 the root.
 
-The mode's `resources` recipe accepts the `note` kind and maps its slots to regions. `required: true` makes a
-placement structural: the host restores it whenever the mode-resource context activates, and the user cannot close
-it. A slot placement can be `required` only when the slot's cardinality is `one`; for a cardinality-many slot, name
-the panel in the recipe's `panels` map instead. `panelRegions` lists the host chrome regions (`main`, `secondary`, `side`) the mode exposes; the side region
+The mode's `resources` recipe accepts the `note` kind. Each panel's `show` declaration supplies its default region.
+`required: true` makes a placement structural: the host restores it whenever the mode-resource context activates,
+and the user cannot close it. A slot placement can be `required` only when the slot's cardinality is `one`; for a
+cardinality-many slot, name the panel in the recipe's `panels` map instead. `panelRegions` lists the host chrome regions (`main`, `secondary`, `side`) the mode exposes; the side region
 stays host-owned for the Side Panel. A mode can also place a specific known panel with a `panels` map inside the
 recipe (it wins over the slot placement), open mode-wide panels with `modePanels`, and name a `defaultResource` so
 users can enter the mode without a compatible resource.

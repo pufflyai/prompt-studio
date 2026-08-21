@@ -61,14 +61,14 @@ const sharedKindMetadata = {
     {
       id: "planner.tickets",
       extensionId: "pstdio.planner",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Tickets",
       renderer: { kind: "kanban", id: "planner.tickets" },
     },
     {
       id: "planner.editor",
       extensionId: "pstdio.planner",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Ticket",
       webview: {
         entry: { kind: "package-asset", path: "./editor.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -79,7 +79,7 @@ const sharedKindMetadata = {
     {
       id: "insights.details",
       extensionId: "pstdio.insights",
-      supportedRegions: ["side"],
+      show: { region: "side" },
       title: "Insights",
       webview: {
         entry: { kind: "package-asset", path: "./insights.tsx", baseUrl: "file:///extension/extension.ts" },

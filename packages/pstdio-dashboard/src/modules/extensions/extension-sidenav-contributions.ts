@@ -14,7 +14,7 @@ interface ExtensionSidenavContributionState {
 }
 
 const extensionNavigationMetadata = (state: ExtensionSidenavContributionState) =>
-  getCachedDashboardExtensionMetadata(state.projectId) ?? state.metadata;
+  state.metadata ?? getCachedDashboardExtensionMetadata(state.projectId);
 
 export const registerExtensionSidenavContributions = (
   ctx: WorkbenchModuleContext,

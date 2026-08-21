@@ -12,11 +12,7 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  listEligibleSubPanels,
-  type RegisteredWidgetContribution,
-  type ResourceRef,
   type WorkbenchCore,
-  type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion as WorkbenchRegionId,
   type WorkbenchWidgetPlacement,
@@ -27,15 +23,12 @@ import { hasCommandParameters } from "../command-palette/command-palette-params"
 import type { WorkbenchMenuItem } from "../menus/menu-items";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
+import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
 import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
-import {
-  isPlacementEligibleForRegion,
-  listWorkbenchModeAddablePanelIds,
-  shouldShowRegionTabs,
-} from "./region-tabs-visibility-hooks";
+import { isPlacementEligibleForRegion, shouldShowRegionTabs } from "./region-tabs-visibility-hooks";
 import { SortableRegionTabList } from "./sortable-region-tab-list";
 
 export {
@@ -63,23 +56,6 @@ const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidg
   return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
 };
 
-const listRegionAddableWidgets = (
-  workbench: WorkbenchCore,
-  layout: WorkbenchLayout,
-  widgets: RegisteredWidgetContribution[],
-  region: WorkbenchPanelRegion,
-  resource: ResourceRef | undefined,
-  modeId: string | undefined,
-) =>
-  listEligibleSubPanels({
-    addableWidgetIds: listWorkbenchModeAddablePanelIds(workbench, layout, region, resource, modeId),
-    widgets,
-    layout,
-    region,
-    resource,
-    modeId,
-  });
-
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
@@ -88,13 +64,12 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
   const historyHydrating = useWorkbenchStore(workbench.history.store, (state) => state.hydrating);
   const regionState = layoutState.layout.regions[region];
-  const registeredWidgets = layoutState.widgets;
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  const compositionPanels = useWorkbenchCompositionPanels(workbench);
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
-      (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "sub-panel" &&
-      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      placement.role === "sub-panel" && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the region id so persistence has a sensible default.
@@ -105,11 +80,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabOverrides, getKey);
   const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
   const locationPanels =
-    region === "main"
-      ? regionState.widgets.filter(
-          (placement) => (placement.role ?? workbench.layout.getWidget(placement.contributionId)?.role) === "location",
-        )
-      : [];
+    region === "main" ? regionState.widgets.filter((placement) => placement.role === "location") : [];
   // A sub-panels-only Location presents no tab of its own; only its Sub Panels do.
   const tabbedLocationPanels = locationPanels.filter(
     (placement) => !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
@@ -148,14 +119,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const eligibleSubPanels = panelRegion
-    ? listRegionAddableWidgets(
-        workbench,
-        layoutState.layout,
-        Object.values(registeredWidgets),
-        panelRegion,
-        resource,
-        modeId,
-      )
+    ? compositionPanels[panelRegion].addable.map((panel) => panel.contribution)
     : [];
   const hasAddAction = eligibleSubPanels.length > 0;
   const showTabs = shouldShowRegionTabs(visiblePlacements, {

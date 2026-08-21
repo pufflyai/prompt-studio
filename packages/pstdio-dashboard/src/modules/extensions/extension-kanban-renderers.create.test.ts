@@ -91,7 +91,6 @@ describe("registerExtensionKanbanRenderers create form", () => {
           title: "Ticket",
           region: "main",
           rendererId: "test",
-          closable: false,
         }),
         ctx.resources.registerPresenter({
           id: "test.ticket-presenter",

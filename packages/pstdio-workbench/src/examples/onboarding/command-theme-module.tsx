@@ -88,7 +88,6 @@ export const createCommandKeybindingThemeModule = (): WorkbenchModuleContributio
   id: "onboarding.commands-keybindings-themes",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: COMMANDS_WIDGET_ID,
       title: "Commands",
       region: "main",

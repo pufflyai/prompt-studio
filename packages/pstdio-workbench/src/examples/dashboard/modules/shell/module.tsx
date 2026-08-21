@@ -20,7 +20,6 @@ const dashboardResourceKinds = [
 
 const registerChrome = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: SIDENAV_HEADER_WIDGET_ID,
     title: "Project brand",
     region: "sidenav-header",
@@ -34,7 +33,6 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
 
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.status,
       title: "Dashboard status",
       region: "status",
@@ -51,7 +49,6 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
 
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.extensionRoute,
       title: "Extension route",
       region: "main",

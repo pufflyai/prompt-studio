@@ -17,10 +17,10 @@ The architecture separates stable UI capability from contextual layout. A resour
 
 | Part | Owns | Does not own |
 | ---- | ---- | ------------ |
-| Panel | Renderer, title, supported placement targets, and intrinsic instance behavior. | Current mode, resource kind, region, or required state. |
+| Panel | Renderer, title, and default placement policy for resources or modes owned by its extension. | Current resolved placement or user layout. |
 | Resource kind | Resource identity rules, hierarchy behavior, surface, and semantic panel slots. | Final workbench regions or mode selection. |
-| Resource-panel contribution | A panel's ability to consume one resource kind through one slot. | Required state or final region. |
-| Mode | Accepted resource kinds, mode-wide panels, and contextual placement recipes. | Resource identity or renderer implementation. |
+| Resource-panel contribution | A panel's ability to consume another extension's resource kind through one slot. | Required state or final region. |
+| Mode | Accepted resource kinds and contextual placement overrides. | Resource identity or renderer implementation. |
 | Resource instance | URI, kind, label, parent, metadata, and domain identity. | Panel definitions or layout state. |
 | Persisted layout | User choices for one project, mode, and resource location. | Extension capability definitions. |
 
@@ -31,7 +31,8 @@ The host resolves the workbench in one direction:
 ```text
 active mode
   + active resource kind
-  + registered resource-panel contributions
+  + panel placement declarations
+  + cross-extension resource-panel contributions
   + persisted user choices
   = effective placements
 ```
@@ -40,11 +41,11 @@ No panel, resource, or dashboard adapter may reverse this flow by inferring a mo
 
 ## Panels
 
-A panel is a reusable renderer. It declares a stable namespaced id and the placement targets it supports.
+A panel is a reusable renderer. It declares a stable namespaced id and one or more default placements through `show`. A placement may name a resource kind owned by the extension, or omit `for` to place the panel in the extension's modes.
 
-A panel does not declare its current mode or resource kind. It may be registered for several resource kinds through separate resource-panel contributions. Its actual region is chosen by the active mode recipe and valid persisted user placement.
+Each placement declares a default region and the regions a mode may move it to. The resolver combines that declaration with the active mode, active resource, and valid persisted user placement.
 
-Panel menus are relative to a panel instance. When the instance moves between supported regions, its menus move with it.
+Panel menus are relative to a panel instance. When the instance moves within `allowedRegions`, its menus move with it.
 
 ## Resource Kinds and Slots
 
@@ -57,19 +58,17 @@ A resource kind declares its surface and semantic slots. Common slots include:
 
 Each slot declares cardinality and whether another extension may contribute to it. The primary slot is closed to external replacement. Other slots may be open extension points.
 
-An external extension registers a resource-panel edge that names a resource kind, panel, and open slot. The registration composes with the resource definition; it does not mutate or replace it. External panels are optional unless a mode explicitly promotes a known contribution.
+An external extension registers a resource-panel edge that names a resource kind, panel, and open slot. The registration composes with the resource definition; it does not mutate or replace it. An extension does not create resource-panel edges for its own resource kinds. External panels are optional unless a mode explicitly promotes a known contribution.
 
 ## Modes and Placement Recipes
 
 A mode is a task and layout context. It declares:
 
 - accepted resource kinds;
-- mode-wide panels that do not consume the active resource;
 - a placement recipe for each accepted resource kind;
-- supported regions for each placed slot or known panel;
-- required and default placements.
+- placement overrides for slots or known panels.
 
-Required and default are placement policies, not panel properties. A required placement cannot be closed and is reconciled whenever its context activates. A default placement is seeded for a new layout but remains user-managed.
+Required and default are resolved placement policies, not registration properties. A panel may declare the default `required` value and a mode may override it. A required placement cannot be closed and is reconciled whenever its context activates. An optional placement is seeded for a new layout but remains user-managed.
 
 Two modes may accept the same resource kind and arrange it differently. Animation and Sculpt can therefore retain one project resource while restoring distinct tools, timelines, inspectors, sizes, and tab state.
 
@@ -90,9 +89,9 @@ A panel body that also supports overlay presentation declares that capability ex
 The workbench resolves one layout for the active project, mode, and resource:
 
 1. Confirm that the mode accepts the resource kind.
-2. Collect resource slots and valid resource-panel contributions.
+2. Collect panel declarations and valid cross-extension resource-panel contributions.
 3. Apply the mode's placement recipe.
-4. Intersect panel-supported regions with mode-supported regions.
+4. Reject mode overrides outside the panel placement's allowed regions.
 5. Restore valid user placements and tab order.
 6. Restore missing required placements.
 7. Seed default placements only for a new layout.

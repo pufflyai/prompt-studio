@@ -29,7 +29,7 @@ describe("renderer-backed panels", () => {
           panels: {
             tickets: {
               title: "Tickets",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               renderer: { kind: "kanban", id: "tickets" },
             },
           },
@@ -51,7 +51,7 @@ describe("renderer-backed panels", () => {
           panels: {
             tickets: {
               title: "Tickets",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               renderer: { kind: "tree", id: "tickets" },
             },
           },
@@ -63,7 +63,7 @@ describe("renderer-backed panels", () => {
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_renderer_missing" }));
   });
 
-  test("accepts the capability shape and rejects a panel without supported regions", () => {
+  test("accepts panels with owned placement or only an externally owned slot", () => {
     const runtime = normalizeExtensionSources([
       wrap(
         defineExtension({
@@ -73,19 +73,19 @@ describe("renderer-backed panels", () => {
           panels: {
             capability: {
               title: "Tickets",
-              supportedRegions: ["main", "side"],
+              show: { region: "main", allowedRegions: ["main", "side"] },
               renderer: { kind: "kanban", id: "tickets" },
             },
-            invalid: {
-              title: "No placement contract",
+            external: {
+              title: "External slot panel",
               renderer: { kind: "kanban", id: "tickets" },
-            } as never,
+            },
           },
         }),
       ),
     ]);
 
-    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["capability"]);
-    expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_panel_contract_invalid" }));
+    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["capability", "external"]);
+    expect(runtime.diagnostics).toEqual([]);
   });
 });

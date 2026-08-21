@@ -82,7 +82,7 @@ const metadata = {
     {
       id: TREE_VIEW_ID,
       extensionId: EXTENSION_ID,
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Lab tree",
       renderer: { kind: "tree", id: TREE_ID },
     },
@@ -190,7 +190,6 @@ export const createExtensionContributionsModule = (): WorkbenchModuleContributio
   id: "onboarding.extension-contributions",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: HOST_WIDGET_ID,
       title: "Extension contributions",
       region: "main",

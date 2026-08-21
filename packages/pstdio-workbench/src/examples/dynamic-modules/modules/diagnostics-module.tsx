@@ -16,7 +16,6 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
     ctx.resources.registerKind({ kind: diagnosticKind, label: "Diagnostic", icon: "ListChecks" });
     ctx.renderers.registerRenderer({ id: diagnosticsWidgetId, render: (input) => <DiagnosticsWidget input={input} /> });
     ctx.layout.registerPanel({
-      closable: false,
       id: diagnosticsWidgetId,
       title: "Diagnostics",
       region: "secondary",

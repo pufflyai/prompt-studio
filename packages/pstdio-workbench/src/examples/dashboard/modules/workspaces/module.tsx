@@ -51,7 +51,6 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContext, resource: ResourceRef
 const registerWorkspaceDetailWidget = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.workspace,
       title: "Workspace",
       region: "main",

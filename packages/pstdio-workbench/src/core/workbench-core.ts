@@ -6,6 +6,10 @@ import {
   createWorkbenchCommandPaletteController,
   type WorkbenchCommandPaletteController,
 } from "./controllers/command-palette/command-palette-controller";
+import {
+  createWorkbenchCompositionController,
+  type WorkbenchCompositionController,
+} from "./controllers/composition/composition-controller";
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
 import {
   createHistoryController,
@@ -122,6 +126,7 @@ export interface WorkbenchCoreContributionContext {
   commandPalette: WorkbenchCommandPaletteController;
   commandPaletteResources: CommandPaletteResourceRegistry;
   commands: CommandRegistry;
+  composition: WorkbenchCompositionController;
   context: ContextKeyService;
   focus: WorkbenchFocusController;
   history: HistoryController;
@@ -405,6 +410,17 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
   return context;
 };
 
+const createCoreCompositionController = (core: WorkbenchCore) =>
+  createWorkbenchCompositionController({
+    getActiveMode: () => {
+      const modeId = core.modes.getActiveModeId();
+      return modeId ? core.modes.getMode(modeId) : undefined;
+    },
+    getLayout: core.layout.getLayout,
+    getResource: core.getPrimaryResource,
+    listWidgets: core.layout.listWidgets,
+  });
+
 export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
@@ -448,6 +464,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     breadcrumbs: createWorkbenchBreadcrumbController(),
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
+    composition: undefined as unknown as WorkbenchCompositionController,
     context,
     focus,
     host: {
@@ -616,6 +633,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     getSelectedResource: () => core.getPrimaryResource(),
     presentResource: (resource, present) => core.resources.openResource(resource, present),
   });
+  core.composition = createCoreCompositionController(core);
   core.history = createHistoryController({
     layout: core.layout,
     modes: core.modes,

@@ -43,7 +43,6 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Projects",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.projectPicker,
     // Center the close trigger within the 3rem search header instead of the default top offset.
     config: { size: "lg", placement: "center", scrollBehavior: "inside", closeTriggerTop: "3.5" },
@@ -58,7 +57,6 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Create project",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.createProject,
     config: { size: "lg", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
@@ -76,7 +74,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
     activate: () => undefined,
     seed(modeCtx) {
       for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
-      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" });
+      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true });
     },
   });
 };
@@ -132,7 +130,7 @@ const registerProjects = (
       // bootstrap. Re-selecting the same project stays on the current view.
       return (
         ctx.layout.getActivePanel("main") ??
-        ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" })
+        ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true })
       );
     },
   });
@@ -166,13 +164,16 @@ const registerProjectCommands = (
           return undefined;
         }
 
-        return ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects" });
+        return ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true });
       },
     },
   );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.createProject, label: "Create project", category: "Dashboard", icon: "Plus" },
-    { execute: () => ctx.layout.openPanel(dashboardWidgetIds.createProject, { title: "Create project" }) },
+    {
+      execute: () =>
+        ctx.layout.openPanel(dashboardWidgetIds.createProject, { title: "Create project", closable: true }),
+    },
   );
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: dashboardCommandIds.openProjects,

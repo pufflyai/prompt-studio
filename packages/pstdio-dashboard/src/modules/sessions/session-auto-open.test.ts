@@ -57,7 +57,6 @@ const createSessionWorkbench = () => {
 const registerTicketRoute = (workbench: ReturnType<typeof createWorkbenchCore>) => {
   workbench.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "component" });
   workbench.layout.registerPanel({
-    closable: false,
     id: "test.ticket",
     title: "Ticket",
     region: "main",

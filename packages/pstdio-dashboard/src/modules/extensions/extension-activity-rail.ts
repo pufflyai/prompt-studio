@@ -11,7 +11,6 @@ export const registerDashboardActivityRail = (
   getMetadata: () => ResolvedWorkbenchExtensionMetadata | undefined,
 ) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: dashboardWidgetIds.activityRail,
     title: "Activity",
     region: "activity",

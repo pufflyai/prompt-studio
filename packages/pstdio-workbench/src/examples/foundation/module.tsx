@@ -157,7 +157,6 @@ const registerPanels = (workbench: WorkbenchCore) => {
   });
 
   workbench.layout.registerPanel({
-    closable: false,
     id: "foundation.activity",
     title: "Activity",
     region: "activity",
@@ -165,7 +164,6 @@ const registerPanels = (workbench: WorkbenchCore) => {
     config: "Blocks",
   });
   workbench.layout.registerPanel({
-    closable: false,
     id: "foundation.sidenav",
     title: "Sidenav",
     region: "sidenav",
@@ -177,17 +175,14 @@ const registerPanels = (workbench: WorkbenchCore) => {
     title: "Foundation",
     region: "main",
     rendererId: foundationRendererId,
-    closable: true,
   });
   workbench.layout.registerPanel({
     id: "foundation.panel",
     title: "Panel",
     region: "secondary",
     rendererId: foundationRendererId,
-    closable: true,
   });
   workbench.layout.registerPanel({
-    closable: false,
     id: "foundation.status",
     title: "Ready",
     region: "status",

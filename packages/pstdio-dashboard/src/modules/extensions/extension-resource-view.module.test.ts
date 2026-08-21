@@ -39,7 +39,7 @@ describe("createExtensionsModule resource inspectors", () => {
           extensionId: "pstdio.extension-lab",
           title: "Artifact",
           icon: "package-search",
-          supportedRegions: ["side" as const],
+          show: { region: "side" as const },
           webview: {
             entry: {
               kind: "package-asset" as const,

@@ -209,7 +209,7 @@ describe("checkExtensionSource host compatibility", () => {
         panels: {
           rows: {
             title: "Rows",
-            supportedRegions: ["main"],
+            show: { region: "main" },
             renderer: { kind: "dataTable", id: "rows" },
           },
         },

@@ -66,7 +66,7 @@ test("panel tree navigation leaves ticket detail state through a project resourc
         id: "extension-lab.board",
         extensionId: "pstdio.extension-lab",
         title: "Board",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         webview: metadata.routes[0]!.webview,
       },
     ],
@@ -80,7 +80,6 @@ test("panel tree navigation leaves ticket detail state through a project resourc
     title: "Ticket",
     region: "main",
     rendererId: "test",
-    closable: false,
   });
   workbench.resources.registerPresenter({
     id: "ticket",

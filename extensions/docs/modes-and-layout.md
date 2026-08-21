@@ -2,7 +2,7 @@
 
 A mode is a named way of working in the dashboard workbench. An extension registers a mode and gives it placement recipes. A recipe says which resource kinds the mode accepts and where their panels go.
 
-A mode does not own panels. Panels declare what they can do (`supportedRegions`), resource kinds declare their extension points (slots), and the mode recipe decides placement for one mode-resource context.
+A panel declares its default placement for its extension's own resources or mode. Resource kinds declare slots for cross-extension contributions. A mode recipe only describes placement changes for one mode-resource context.
 
 ## Current Shape
 
@@ -35,10 +35,10 @@ export default defineExtension({
 - Mode identity comes from the contribution record. `label` is required and is the user-facing name. `icon` is optional.
 - `resources` maps accepted resource kind ids to recipes. A bare kind id resolves inside the declaring extension; use `<extension>.<id>` for another extension's kind.
 - A recipe's `slots` map places each slot of the resource kind into a docked region: `sidenav`, `main`, `secondary`, or `side`.
-- A recipe's `panels` map places one specific known panel by id. A panel entry wins over its slot placement. It must still satisfy the panel's `supportedRegions` and the slot's rules.
+- A recipe's `panels` map changes one known panel's declared placement. The region must be in that panel placement's `allowedRegions`.
 - Each placement can set:
   - `required`: the placement is structural. The host restores it whenever the mode-resource context activates, and the user cannot close it. On a slot, `required` is valid only when the slot's cardinality is `one`; in a cardinality-many slot, name a specific panel in the `panels` map instead.
-  - `allowedRegions`: the regions the user may move the placement to. A mode cannot expand a panel's own `supportedRegions`.
+  - `allowedRegions`: the regions the user may move the placement to. A mode cannot expand the panel's declared set.
   - `defaultOpen`: seed the panel open in a new layout; the user may close it.
   - `pinned`: keep the tab pinned.
 - Exactly one main-region placement establishes the location for a primary resource.
@@ -59,7 +59,7 @@ The Side Panel is host chrome. It carries the Prompt Studio agents: session prev
 
 ## Worked Example: A Ticket Screen
 
-The resource owner declares the kind, the panels, and the bindings. The mode arranges them.
+The resource owner declares the kind and puts its own panel placement beside each panel body. The mode only states differences. `resourcePanels` is reserved for panels contributed by another extension.
 
 ```ts
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
@@ -78,18 +78,14 @@ export default defineExtension({
   panels: {
     ticketEditor: {
       title: "Ticket",
-      supportedRegions: ["main"],
+      show: { for: "ticket", region: "main", required: true },
       webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
     },
     ticketFiles: {
       title: "Files",
-      supportedRegions: ["sidenav"],
+      show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "ticketFilesTree" },
     },
-  },
-  resourcePanels: {
-    ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
-    ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
   },
   modes: {
     ticket: {
@@ -99,25 +95,16 @@ export default defineExtension({
       panelRegions: ["main", "secondary", "side"],
       defaultResource: { commandId: "tickets.defaultTicket" },
       resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav" },
-            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
-          },
-          panels: {
-            ticketFiles: { region: "sidenav", required: true, pinned: true },
-          },
-        },
+        ticket: {},
       },
     },
   },
 });
 ```
 
-Opening a ticket in this mode places the editor in `main`, pins the file tree in `sidenav`, and lets any inspector contribution (including one from another extension, because the slot is `external: true`) open in `side` or move to `secondary`.
+Opening a ticket in this mode places the editor in `main` and pins the file tree in `sidenav`. A different mode can move either panel within its declared `allowedRegions`.
 
-The `navigation` slot has cardinality `many`, so its slot placement cannot be `required`. Naming `ticketFiles` in the `panels` map makes that one panel structural while other extensions may still add optional panels to the same slot.
+Another extension can bind its panel to the open `inspector` slot with `resourcePanels`. The ticket mode can then place that slot in `side` or `secondary`.
 
 ## Relationship To UI Contributions
 

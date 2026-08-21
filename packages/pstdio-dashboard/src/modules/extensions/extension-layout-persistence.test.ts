@@ -17,7 +17,7 @@ const metadata = {
     {
       id: panelId,
       extensionId,
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Overview",
       renderer: { kind: "tree", id: panelId },
     },
@@ -69,7 +69,6 @@ describe("extension layout persistence", () => {
       region: "main",
       rendererId: panelId,
       singleton: true,
-      closable: false,
     });
     workbench.layout.registerPanel({
       id: "dashboard.native",
@@ -77,7 +76,6 @@ describe("extension layout persistence", () => {
       region: "main",
       rendererId: "dashboard.native",
       singleton: true,
-      closable: false,
     });
     workbench.layout.restoreLayout(projectLayout);
     const disposables = registerExtensionLayoutResetCommands({

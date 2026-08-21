@@ -7,7 +7,6 @@ describe("openPanelWidget", () => {
     const workbench = createWorkbenchCore();
 
     workbench.layout.registerPanel({
-      closable: false,
       id: "chrome.overview",
       title: "Overview",
       region: "main",
@@ -15,7 +14,6 @@ describe("openPanelWidget", () => {
       rendererId: "chrome.overview",
     });
     workbench.layout.registerPanel({
-      closable: true,
       id: "chrome.timeline",
       title: "Timeline",
       region: "main",
@@ -55,7 +53,6 @@ describe("openPanelWidget", () => {
     const workbench = createWorkbenchCore();
 
     workbench.layout.registerPanel({
-      closable: true,
       id: "lab.artifacts",
       title: "Artifacts",
       region: "main",

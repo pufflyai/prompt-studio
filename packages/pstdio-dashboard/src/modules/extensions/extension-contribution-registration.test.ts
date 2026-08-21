@@ -28,7 +28,7 @@ const metadata = {
     {
       id: "extension-lab.stale-sidebar",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["sidenav"],
+      show: { region: "sidenav" },
       title: "Stale Lab sidebar",
       webview: stubWebview("stale-lab-sidebar"),
       panelMenus: [
@@ -83,7 +83,7 @@ const dataTableMetadata = {
       id: "data-table-demo.services",
       extensionId: "pstdio.data-table-demo",
       title: "Services",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "dataTable", id: "data-table-demo.services" },
     },
   ],

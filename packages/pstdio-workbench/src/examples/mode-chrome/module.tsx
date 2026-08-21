@@ -26,7 +26,6 @@ const viewResource = (id: string, label: string, icon: string) => ({
 
 const registerWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.rail,
     title: "Activity rail",
     region: "activity",
@@ -38,7 +37,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     render: (input) => <ChromeActivityRail input={input} />,
   });
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.status,
     title: "Status strip",
     region: "status",
@@ -51,7 +49,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   });
 
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.overview,
     title: "Overview",
     icon: "layout-dashboard",
@@ -83,7 +80,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     },
   });
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.catalog,
     title: "Catalog",
     icon: "package-search",
@@ -94,7 +90,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   });
 
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.notes,
     title: "Notes",
     icon: "notebook-pen",
@@ -115,7 +110,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   for (const { title: extra, icon } of extraPanels) {
     const id = `mode-chrome.extra-${extra.toLowerCase()}`;
     ctx.layout.registerPanel({
-      closable: true,
       id,
       title: extra,
       icon,
@@ -129,7 +123,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   }
 
   ctx.layout.registerPanel({
-    closable: true,
     id: chromeWidgetIds.inspector,
     title: "Item",
     icon: "package-search",
@@ -145,7 +138,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   // A sub-panels-only Location: it anchors the resource but renders no tab and
   // no content of its own — its Sub Panels are the content.
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.boardHost,
     title: "Board",
     region: "main",
@@ -155,7 +147,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   });
   ctx.renderers.registerRenderer({ id: chromeWidgetIds.boardHost, render: () => <ChromeBoardHost /> });
   ctx.layout.registerPanel({
-    closable: true,
     id: chromeWidgetIds.boardColumns,
     title: "Columns",
     icon: "columns-3",
@@ -175,7 +166,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
     ),
   });
   ctx.layout.registerPanel({
-    closable: true,
     id: chromeWidgetIds.boardSwimlanes,
     title: "Swimlanes",
     icon: "rows-3",
@@ -196,7 +186,6 @@ const registerWidgets = (ctx: WorkbenchModuleContext) => {
   });
 
   ctx.layout.registerPanel({
-    closable: false,
     id: chromeWidgetIds.libraryPage,
     title: "Library",
     icon: "book-open",

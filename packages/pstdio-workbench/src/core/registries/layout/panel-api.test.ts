@@ -4,14 +4,12 @@ import { createLayoutModel } from "./layout-model";
 const createLayoutWithPanels = () => {
   const layout = createLayoutModel();
   layout.registerPanel({
-    closable: true,
     id: "app.session",
     title: "Session",
     region: "side",
     rendererId: "session.renderer",
   });
   layout.registerPanel({
-    closable: false,
     id: "app.nav",
     title: "Navigation",
     region: "sidenav",

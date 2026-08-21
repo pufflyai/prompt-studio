@@ -20,7 +20,7 @@ test("maps panel tree items to project navigation resources", () => {
         id: "extension-lab.board",
         extensionId: "pstdio.extension-lab",
         title: "Board",
-        supportedRegions: ["main"],
+        show: { region: "main" },
       },
     ],
   } satisfies DashboardExtensionMetadata;

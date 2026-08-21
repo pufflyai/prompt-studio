@@ -14,10 +14,10 @@ describe("createSessionBubbleModule workspace resolution", () => {
     workbench.registerModule(createSessionBubbleModule());
 
     expect(workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)).toMatchObject({
-      closable: true,
       region: "side",
       openCommandId: dashboardCommandIds.createSession,
     });
+    expect(workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)).not.toHaveProperty("closable");
   });
 
   test("opens an unscoped session draft on the project default workspace", async () => {

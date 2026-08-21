@@ -1,5 +1,5 @@
 import type { WorkbenchRegion } from "@pstdio/workbench";
-import { createWorkbenchCompositionRegistry } from "@pstdio/workbench/extensions";
+import { createWorkbenchCompositionRegistry, toPanelPlacements } from "@pstdio/workbench/extensions";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
@@ -10,10 +10,15 @@ type ExtensionModeRecipe = NonNullable<ExtensionModeRecord["resources"]>[string]
 
 export interface ResourcePanelBinding {
   panel: ExtensionPanelRecord;
-  slot: string;
+  slot?: string;
   region: WorkbenchRegion;
   pinned?: boolean;
 }
+
+const panelPlacements = (panel: ExtensionPanelRecord | undefined) => {
+  if (!panel?.show) return [];
+  return Array.isArray(panel.show) ? panel.show : [panel.show];
+};
 
 const widgetIdsByPanelId = (panels: readonly ExtensionPanelRecord[]) =>
   new Map(panels.map((panel) => [panel.id, extensionViewWidgetIdFor(panel)]));
@@ -66,7 +71,7 @@ export const createExtensionCompositionRegistry = (metadata: DashboardExtensionM
       extensionId: panel.extensionId,
       title: panel.title,
       icon: panel.icon,
-      supportedRegions: panel.supportedRegions,
+      show: toPanelPlacements(panel.show),
     });
   }
   for (const edge of metadata.resourcePanels ?? []) {
@@ -82,6 +87,7 @@ export const createExtensionCompositionRegistry = (metadata: DashboardExtensionM
   for (const mode of metadata.modes) {
     registry.registerModeComposition({
       id: mode.modeId,
+      extensionId: mode.extensionId,
       resources: toWidgetRecipes(mode.resources, widgetIds),
       modePanels: toWidgetPlacements(mode.modePanels, widgetIds),
     });
@@ -94,30 +100,40 @@ export const createExtensionCompositionRegistry = (metadata: DashboardExtensionM
 export const resourceModeFor = (metadata: DashboardExtensionMetadata, resourceKind: string) =>
   metadata.modes.find((mode) => Boolean(mode.resources?.[resourceKind]));
 
-// Where each panel bound to a resource kind belongs. The mode recipe decides the
-// region; a panel the recipe does not place falls back to its first supported region.
+// A panel owned by the resource extension carries its default placement. Slot edges
+// stay only for cross-extension contributions and use the target mode's slot recipe.
 export const resourcePanelBindings = (
   metadata: DashboardExtensionMetadata,
   resourceKind: string,
 ): ResourcePanelBinding[] => {
   const panelById = new Map(metadata.panels.map((panel) => [panel.id, panel]));
+  const kind = metadata.resourceKinds?.find((candidate) => candidate.id === resourceKind);
   const recipe = resourceModeFor(metadata, resourceKind)?.resources?.[resourceKind];
-
-  return (metadata.resourcePanels ?? [])
+  const own = metadata.panels.flatMap((panel) =>
+    panel.extensionId === kind?.extensionId
+      ? panelPlacements(panel)
+          .filter((placement) => placement.for === resourceKind)
+          .map((placement) => ({ panel, region: placement.region }))
+      : [],
+  );
+  const external = (metadata.resourcePanels ?? [])
     .filter((edge) => edge.resourceKind === resourceKind)
     .flatMap((edge) => {
       const panel = panelById.get(edge.panel);
       if (!panel) return [];
       const placement = recipe?.panels?.[edge.panel] ?? recipe?.slots?.[edge.slot];
+      const fallback = panelPlacements(panel)[0];
+      if (!placement && !fallback) return [];
       return [
         {
           panel,
           slot: edge.slot,
-          region: placement?.region ?? panel.supportedRegions[0] ?? "main",
+          region: placement?.region ?? fallback?.region ?? "main",
           pinned: placement?.pinned,
         },
       ];
     });
+  return [...own, ...external];
 };
 
 const resourcePanelBinding = (
@@ -131,6 +147,7 @@ const resourcePanelBinding = (
 
 // The resource kind a panel serves comes from its resource-panel edges.
 export const panelResourceKind = (metadata: DashboardExtensionMetadata, panelId: string) =>
+  panelPlacements(metadata.panels.find((panel) => panel.id === panelId)).find((placement) => placement.for)?.for ??
   (metadata.resourcePanels ?? []).find((edge) => edge.panel === panelId)?.resourceKind;
 
 // A resource tree the recipe docks in the sidenav is dashboard navigation chrome: it
@@ -167,6 +184,9 @@ export const compositionResourceKinds = (metadata: DashboardExtensionMetadata) =
 const modePlacedPanelIds = (metadata: DashboardExtensionMetadata, mode: ExtensionModeRecord) => {
   const panelIds = new Set(Object.keys(mode.modePanels ?? {}));
   for (const [resourceKind, recipe] of Object.entries(mode.resources ?? {})) {
+    for (const panel of metadata.panels) {
+      if (panelPlacements(panel).some((placement) => placement.for === resourceKind)) panelIds.add(panel.id);
+    }
     for (const panelId of Object.keys(recipe.panels ?? {})) panelIds.add(panelId);
     const slots = new Set(Object.keys(recipe.slots ?? {}));
     const edges = (metadata.resourcePanels ?? []).filter(

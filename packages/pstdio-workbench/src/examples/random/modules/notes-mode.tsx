@@ -52,7 +52,6 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     disposables.push(
       ctx.renderers.registerRenderer({ id: widget.id, render: widget.render }),
       ctx.layout.registerPanel({
-        closable: false,
         id: widget.id,
         title: widget.title,
         region: widget.region,
@@ -70,7 +69,6 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       getChildren: () => [],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: "notes.navigation",
       title: notesMode.label,
       region: "main-left-menu",

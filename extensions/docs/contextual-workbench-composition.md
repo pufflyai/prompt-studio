@@ -42,9 +42,9 @@ This prevents several valid products:
 
 | Term | Definition |
 | ---- | ---------- |
-| Panel | A named renderer and its intrinsic capabilities. |
+| Panel | A named renderer with default placements for its owner's resources or modes. |
 | Resource kind | A domain resource type with surface and semantic panel slots. |
-| Resource panel | A registration that lets a panel consume one resource kind in one slot. |
+| Resource panel | A cross-extension registration that lets a panel consume one resource kind through one open slot. |
 | Slot | A semantic extension point such as primary, navigation, inspector, or auxiliary. |
 | Mode layout | A recipe that maps accepted resources, slots, and known panels to regions. |
 | Placement | One panel instance in one region for one mode-resource context. |
@@ -78,9 +78,9 @@ Each concern has exactly one owner:
 ### Panel Definitions
 
 1. A panel declares one body, title, icon, and stable namespaced id.
-2. A dockable panel declares its supported regions or supported target class.
-3. A panel does not declare a current mode or current resource kind.
-4. A panel does not declare required or default-open behavior.
+2. `show` declares default placements for resource kinds owned by the extension or for the extension's modes.
+3. A placement declares `region`, optional `allowedRegions`, and optional `required`.
+4. A panel does not declare its current resolved region or role.
 5. A panel menu is owned by a panel instance and follows that instance's region.
 6. An overlay-only or chrome-only body cannot be placed into a docked panel region unless it explicitly supports it.
 
@@ -102,7 +102,7 @@ This matches the current kernel, where mode layout targets already cover only do
 2. A primary resource kind declares exactly one primary slot with cardinality one.
 3. A resource kind may declare navigation, inspector, auxiliary, or extension-defined slots.
 4. Each slot declares cardinality and whether external extensions may contribute.
-5. A resource-panel contribution references an existing resource kind, panel, and slot.
+5. A resource-panel contribution references an existing resource kind, panel, and slot owned by another extension.
 6. Resource-panel registrations compose as registry entries. They do not mutate or replace the resource kind record.
 7. A panel may register against several resource kinds or slots.
 8. An external contribution to a closed slot fails validation.
@@ -112,7 +112,7 @@ This matches the current kernel, where mode layout targets already cover only do
 1. A mode declares the resource kinds it accepts.
 2. A mode may declare mode-wide panels that do not consume the active resource.
 3. For each accepted resource kind, the mode maps supported slots to default regions.
-4. A mode places a specific known panel through a `panels` map keyed by panel id. A panel entry wins over its slot placement and must satisfy the panel's supported regions and its slot's rules.
+4. A mode places a specific known panel through a `panels` map keyed by panel id. A panel entry wins over its slot placement and must stay within the panel placement's `allowedRegions`.
 5. A mode marks placements as required or default.
 6. `required` on a slot placement is valid only when the slot's cardinality is one. In a cardinality-many slot, `required` must name a specific panel in the `panels` map.
 7. External resource panels are optional unless the mode explicitly names them.
@@ -124,7 +124,7 @@ This matches the current kernel, where mode layout targets already cover only do
 ### Composition Resolution
 
 1. The host resolves one effective layout from active mode, active resource, registered contributions, and persisted layout.
-2. A panel may be placed only when the mode accepts the resource, the resource exposes the panel's slot, and the region is supported by both panel and mode.
+2. An owned panel uses its `show` declaration. A cross-extension panel uses an open resource slot. A mode may move an owned panel only within its declared regions.
 3. Existing valid user placements win over default placements.
 4. Missing required placements are restored without resetting optional placements or tab order.
 5. Removed or invalid contributions are omitted and reported. They do not prevent unrelated valid panels from rendering.
@@ -139,7 +139,6 @@ defineExtension({
   panels: {
     insights: {
       title: "Insights",
-      supportedRegions: ["side", "secondary"],
       renderer: { kind: "controls", id: "ticketInsights" },
     },
   },
@@ -216,7 +215,7 @@ modes: {
 - A slot name is local to its resource kind.
 - A resource is not a mode. Opening one keeps the workbench the user is in, so a resource kind needs a mode only when it reshapes the workbench around itself. Without a mode recipe, each panel bound to the kind lands in the region it supports and the surrounding chrome stays put.
 - External extensions cannot claim a closed slot or primary location.
-- A mode layout cannot expand a panel's supported regions.
+- A mode layout cannot move a panel beyond the panel placement's `allowedRegions`.
 - Required placement reconciliation cannot reset user tab order.
 - No stored resource or history record contains renderer definitions.
 - The replacement schema removes the current alpha fields rather than maintaining two composition systems.
@@ -230,7 +229,7 @@ modes: {
 | extension_resource_slot_missing | A resource-panel or mode references an unknown slot. |
 | extension_resource_slot_closed | An external extension contributes to a closed slot. |
 | extension_panel_missing | A resource-panel or mode references an unknown panel. |
-| extension_panel_region_unsupported | A mode places a panel outside its supported regions. |
+| extension_panel_placement_unresolvable | A mode moves a panel outside the regions allowed by its declaration. |
 | extension_mode_resource_unsupported | A layout references a resource kind the mode does not accept. |
 | extension_placement_required_invalid | `required` is set on a cardinality-many slot placement without naming a panel. |
 | extension_resource_primary_invalid | A primary resource has zero or several primary location placements. |

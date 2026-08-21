@@ -133,7 +133,7 @@ export const createPlacement = (
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
   tabRetention: spec.tabRetention,
   tab: spec.tab ?? widget.tab,
-  role: spec.role ?? widget.role,
+  role: spec.role ?? "content",
 });
 
 interface ReplaceRegionWidgetsOptions {

@@ -103,7 +103,6 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: INTRO_WIDGET_ID,
       title: "Keep-alive demo",
       region: "main",
@@ -116,7 +115,6 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       title: "Chat (attached)",
       region: "main-right-menu",
       regionSize: { defaultPx: 360, minPx: 280 },
-      closable: true,
       singleton: true,
       rendererId: CHAT_RENDERER_ID,
     });
@@ -126,7 +124,6 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       title: "Chat (bubble)",
       region: "side",
       regionSize: { defaultPx: 360, minPx: 280 },
-      closable: true,
       singleton: true,
       rendererId: CHAT_RENDERER_ID,
     });

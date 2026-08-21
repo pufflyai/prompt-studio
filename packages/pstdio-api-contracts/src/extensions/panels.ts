@@ -8,7 +8,7 @@ import {
   localizableStringSchema,
   workbenchExtensionWebviewSchema,
 } from "./common";
-import { dockedWorkbenchRegionSchema, extensionModeCompositionRecordSchema } from "./composition";
+import { extensionModeCompositionRecordSchema, extensionPanelPlacementSchema } from "./composition";
 import { extensionResourceRefSchema } from "./execute";
 import { workbenchTreeTargetSchema } from "./targets";
 
@@ -50,7 +50,7 @@ const extensionPanelRecordBaseSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  supportedRegions: z.array(dockedWorkbenchRegionSchema).min(1),
+  show: z.union([extensionPanelPlacementSchema, z.array(extensionPanelPlacementSchema).min(1)]).optional(),
   panelMenus: z.array(extensionPanelMenuRecordSchema).optional(),
   ...panelBodySchema,
 });

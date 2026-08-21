@@ -59,7 +59,7 @@ const metadata = {
     {
       id: "lab.ticketPanel",
       extensionId: "pstdio.lab",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Ticket",
       webview,
     },

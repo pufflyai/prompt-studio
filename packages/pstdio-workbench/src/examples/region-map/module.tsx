@@ -86,7 +86,6 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
         title: regionLabels[region],
         region,
         singleton: true,
-        closable: region === "overlay",
         config: region === "overlay" ? overlayConfig : undefined,
         rendererId: regionMapRendererId,
       });

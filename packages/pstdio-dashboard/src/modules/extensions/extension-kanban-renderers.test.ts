@@ -30,7 +30,7 @@ const metadata: DashboardExtensionMetadata = {
       id: "pstdio-core-tickets.tickets",
       extensionId: ticketsRecord.extensionId,
       title: "Tickets",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "kanban", id: ticketsRecord.id },
     },
   ],
@@ -218,7 +218,6 @@ describe("registerExtensionKanbanRenderers row activation", () => {
           title: "Ticket",
           region: "main",
           rendererId: "test",
-          closable: false,
         }),
         ctx.resources.registerPresenter({
           id: "test.ticket-presenter",
@@ -275,7 +274,6 @@ describe("registerExtensionKanbanRenderers row activation", () => {
           title: "Ticket",
           region: "main",
           rendererId: "test",
-          closable: false,
         }),
         ctx.resources.registerPresenter({
           id: "test.ticket-presenter",

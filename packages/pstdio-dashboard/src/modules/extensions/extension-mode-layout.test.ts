@@ -29,7 +29,7 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.first",
           extensionId: "pstdio.pstdio-lab",
           title: "First",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
           panelMenus: [
             {
@@ -64,14 +64,14 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.second",
           extensionId: "pstdio.pstdio-lab",
           title: "Second",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
         {
           id: "pstdio-lab.third",
           extensionId: "pstdio.pstdio-lab",
           title: "Third",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],
@@ -106,7 +106,7 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.a",
           extensionId: "pstdio.pstdio-lab",
           title: "Panel A",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
           panelMenus: [
             {
@@ -123,7 +123,7 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.b",
           extensionId: "pstdio.pstdio-lab",
           title: "Panel B",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
           panelMenus: [
             {
@@ -159,7 +159,7 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
           title: "Lab overview",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],
@@ -179,7 +179,7 @@ describe("extension-mode-layout panel registration", () => {
     }
   });
 
-  test("derives a panel's resource kinds from its resource-panel edges", () => {
+  test("keeps an unscoped panel available outside its resource-panel edges", () => {
     const workbench = createWorkbenchCore();
     const metadata = {
       ...emptyDashboardExtensionMetadata,
@@ -188,7 +188,7 @@ describe("extension-mode-layout panel registration", () => {
           id: "pstdio-lab.editor",
           extensionId: "pstdio.pstdio-lab",
           title: "Editor",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],
@@ -215,9 +215,7 @@ describe("extension-mode-layout panel registration", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    expect(workbench.layout.getPanel(extensionViewWidgetId("pstdio-lab.editor"))?.resourceKinds).toEqual([
-      "glass-lab-artifact",
-    ]);
+    expect(workbench.layout.getPanel(extensionViewWidgetId("pstdio-lab.editor"))?.resourceKinds).toBeUndefined();
     expect(workbench.resources.getKind("glass-lab-artifact")).toMatchObject({
       kind: "glass-lab-artifact",
       label: "Glass Lab artifact",
@@ -247,7 +245,7 @@ describe("extension-mode-layout mode composition", () => {
           id: "pstdio-lab.checklist",
           extensionId: "pstdio.pstdio-lab",
           title: "Review checklist",
-          supportedRegions: ["secondary" as const],
+          show: { region: "secondary" as const },
           webview,
         },
       ],
@@ -286,7 +284,7 @@ describe("extension-mode-layout mode composition", () => {
           id: "pstdio-lab.parameters",
           extensionId: "pstdio.pstdio-lab",
           title: "Parameters",
-          supportedRegions: ["side" as const],
+          show: { region: "side" as const },
           webview,
         },
       ],
@@ -319,7 +317,7 @@ describe("extension-mode-layout mode composition", () => {
           id: "pstdio-lab.overview",
           extensionId: "pstdio.pstdio-lab",
           title: "Overview",
-          supportedRegions: ["main" as const],
+          show: { region: "main" as const },
           webview,
         },
       ],

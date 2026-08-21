@@ -8,19 +8,18 @@ import type {
   WorkbenchPanelMenuDefinition,
   WorkbenchPanelRegion,
   WorkbenchSubPanelContribution,
-  WorkbenchWidgetRole,
 } from "./layout-types";
 import { workbenchPanelMenuRegions, workbenchPanelRegions } from "./layout-types";
 
 type LegacyWorkbenchPanelContribution = WorkbenchLocationContribution | WorkbenchSubPanelContribution;
 type RegisteredPanelInput = LegacyWorkbenchPanelContribution | WorkbenchPanelContribution;
-type WorkbenchPanelRole = Extract<WorkbenchWidgetRole, "content" | "location" | "sub-panel">;
+type WorkbenchPanelKind = "panel" | "location" | "sub-panel";
 
 interface RegisterPanelContributionInput {
   metadata?: ContributionMetadata;
   panel: RegisteredPanelInput;
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): Disposable;
-  role: WorkbenchPanelRole;
+  kind: WorkbenchPanelKind;
   closable?: boolean;
 }
 
@@ -31,7 +30,7 @@ interface CreatePanelRegistrationsInput {
 const panelMenuContribution = (
   panel: RegisteredPanelInput,
   menu: WorkbenchPanelMenuDefinition,
-  role: WorkbenchPanelRole,
+  kind: WorkbenchPanelKind,
 ): WidgetContribution => {
   const { side, ...contribution } = menu;
   const region = panel.region as WorkbenchPanelRegion;
@@ -41,15 +40,14 @@ const panelMenuContribution = (
     region: workbenchPanelMenuRegions[region][side],
     fallbackRegion: fallbackRegion ? workbenchPanelMenuRegions[fallbackRegion][side] : undefined,
     panelMenuOwner: {
-      level: role === "sub-panel" ? "sub-panel" : "panel",
+      level: kind === "sub-panel" ? "sub-panel" : "panel",
       contributionId: panel.id,
     },
-    role: "panel-menu",
   };
 };
 
 export const registerPanelContribution = (input: RegisterPanelContributionInput) => {
-  const { closable, metadata, panel, registerWidget, role } = input;
+  const { closable, kind, metadata, panel, registerWidget } = input;
   const { panelMenus = [], ...panelContribution } = panel;
   const registrations: Disposable[] = [];
 
@@ -60,13 +58,12 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
   try {
     const registeredPanel: WidgetContribution & { ownedPanelMenuIds: readonly string[] } = {
       ...panelContribution,
-      closable: closable ?? role === "sub-panel",
+      ...(closable === undefined ? {} : { closable }),
       ownedPanelMenuIds: panelMenus.map((menu) => menu.id),
-      role,
     };
     registrations.push(registerWidget(registeredPanel, metadata));
     for (const menu of panelMenus) {
-      registrations.push(registerWidget(panelMenuContribution(panel, menu, role), metadata));
+      registrations.push(registerWidget(panelMenuContribution(panel, menu, kind), metadata));
     }
   } catch (error) {
     for (const registration of registrations.reverse()) registration.dispose();
@@ -79,29 +76,35 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
 };
 
 export const createPanelRegistrations = (input: CreatePanelRegistrationsInput) => {
-  const panelRole = (panel: WorkbenchPanelContribution): WorkbenchPanelRole => {
-    if (panel.eligibleLocations) return "sub-panel";
-    return "content";
-  };
-
   const registerPanel = (panel: WorkbenchPanelContribution, metadata?: ContributionMetadata) => {
     return registerPanelContribution({
       panel,
-      role: panelRole(panel),
-      closable: panel.closable,
+      kind: panel.eligibleLocations ? "sub-panel" : "panel",
       metadata,
       registerWidget: input.registerWidget,
     });
   };
 
   const registerLocation = (location: WorkbenchLocationContribution, metadata?: ContributionMetadata) =>
-    registerPanelContribution({ panel: location, role: "location", metadata, registerWidget: input.registerWidget });
+    registerPanelContribution({
+      panel: location,
+      kind: "location",
+      closable: location.closable ?? false,
+      metadata,
+      registerWidget: input.registerWidget,
+    });
 
   const registerSubPanel = (subPanel: WorkbenchSubPanelContribution, metadata?: ContributionMetadata) =>
-    registerPanelContribution({ panel: subPanel, role: "sub-panel", metadata, registerWidget: input.registerWidget });
+    registerPanelContribution({
+      panel: { ...subPanel, eligibleLocations: subPanel.eligibleLocations ?? {} },
+      kind: "sub-panel",
+      closable: subPanel.closable ?? true,
+      metadata,
+      registerWidget: input.registerWidget,
+    });
 
   const registerPanelMenu = (panelMenu: WorkbenchPanelMenuContribution, metadata?: ContributionMetadata) =>
-    input.registerWidget({ ...panelMenu, role: "panel-menu" }, metadata);
+    input.registerWidget({ ...panelMenu, panelMenuOwner: panelMenu.panelMenuOwner ?? { level: "panel" } }, metadata);
 
   return { registerPanel, registerLocation, registerSubPanel, registerPanelMenu };
 };

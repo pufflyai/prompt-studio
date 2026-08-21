@@ -1,75 +1,15 @@
 import type {
   ModePlacementContribution,
   ModeResourceRecipeContribution,
-  ResourceHierarchyProvider,
-  ResourceKindContribution,
-  ResourcePanelContribution,
+  PanelPlacementContribution,
 } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimePanelRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord } from "./accumulator";
-import {
-  contributionId,
-  resolveContributionReference,
-  resolveResourceKindReference,
-  resourceKindReferences,
-} from "./references";
+import type { Accumulator } from "./accumulator";
+import { resolveCompositionResourceKindReferences } from "./composition-collection";
+import { resolveContributionReference, resolveResourceKindReference } from "./references";
 
-const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, localId: string) => ({
-  id: contributionId(ext, localId),
-  localId,
-  extensionId: ext.id,
-  name: ext.name,
-  sourcePath: source.sourcePath,
-});
-
-export const collectCompositionContributions = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  runtime: Accumulator,
-) => {
-  for (const [localId, contribution] of Object.entries(source.definition.resourceKinds ?? {})) {
-    if (!isRecord(contribution) || !isRecord(contribution.slots) || typeof contribution.surface !== "string") continue;
-    runtime.resourceKinds.push({
-      ...recordBase(ext, source, localId),
-      // A resource kind keeps the plain name it was declared with. See
-      // `resolveResourceKindReference` for why the host must not namespace it.
-      id: localId,
-      contribution: contribution as unknown as ResourceKindContribution,
-    });
-  }
-
-  for (const [localId, contribution] of Object.entries(source.definition.resourcePanels ?? {})) {
-    if (
-      !isRecord(contribution) ||
-      typeof contribution.resourceKind !== "string" ||
-      typeof contribution.panel !== "string" ||
-      typeof contribution.slot !== "string"
-    ) {
-      continue;
-    }
-    runtime.resourcePanels.push({
-      ...recordBase(ext, source, localId),
-      // Kept as written: resource kinds are resolved once every extension is
-      // collected, so a cross-extension edge does not depend on source order.
-      resourceKindId: contribution.resourceKind,
-      panelId: resolveContributionReference(ext, contribution.panel),
-      slotId: contribution.slot,
-      contribution: contribution as unknown as ResourcePanelContribution,
-    });
-  }
-
-  for (const [localId, provider] of Object.entries(source.definition.resourceHierarchyProviders ?? {})) {
-    if (!isRecord(provider) || typeof provider.resourceKind !== "string" || typeof provider.parent !== "function")
-      continue;
-    runtime.resourceHierarchyProviders.push({
-      ...recordBase(ext, source, localId),
-      resourceKindId: provider.resourceKind,
-      provider: provider as unknown as ResourceHierarchyProvider,
-    });
-  }
-};
+export { collectCompositionContributions } from "./composition-collection";
 
 const addDiagnostic = (
   runtime: Accumulator,
@@ -101,13 +41,26 @@ const referencesAbsentExtension = (runtime: Accumulator, reference: string) => {
   return !runtime.extensions.some((extension) => extension.name === prefix);
 };
 
-const panelRegions = (panel: RuntimePanelRecord) => panel.contribution.supportedRegions;
+const panelPlacements = (panel: RuntimePanelRecord) => {
+  const show = panel.contribution.show;
+  if (!show) return [];
+  return Array.isArray(show) ? show : [show];
+};
+
+const placementRegions = (placement: ModePlacementContribution) => [
+  placement.region,
+  ...(placement.allowedRegions ?? []),
+];
+
+const panelPlacementFor = (panel: RuntimePanelRecord, resourceKind: string | undefined) =>
+  panelPlacements(panel).find((placement) => placement.for === resourceKind);
 
 const validatesPanelPlacement = (
   runtime: Accumulator,
   mode: { extensionId: string; sourcePath: string; id: string },
   panelId: string,
   placement: ModePlacementContribution,
+  base?: PanelPlacementContribution,
 ) => {
   const panel = runtime.panels.find((candidate) => candidate.id === panelId);
   if (!panel) {
@@ -120,16 +73,15 @@ const validatesPanelPlacement = (
     );
     return false;
   }
-  const unsupported = [placement.region, ...(placement.allowedRegions ?? [])].find(
-    (region) => !panelRegions(panel).includes(region),
-  );
+  const allowed = base ? placementRegions(base) : placementRegions(placement);
+  const unsupported = placementRegions(placement).find((region) => !allowed.includes(region));
   if (unsupported) {
     addDiagnostic(
       runtime,
       mode,
-      "extension_panel_region_unsupported",
+      "extension_panel_placement_unresolvable",
       `${panelId}:${unsupported}`,
-      `Panel "${panelId}" does not support region "${unsupported}"`,
+      `Panel "${panelId}" cannot be placed in region "${unsupported}"`,
     );
     return false;
   }
@@ -179,9 +131,8 @@ const validateResourcePanels = (runtime: Accumulator) => {
   runtime.resourcePanels = valid;
 };
 
-// A slot placement is valid when the resource kind declares the slot; `required`
-// only holds for a single-cardinality slot. Every edge in the slot must also be
-// placeable in the requested region.
+// A slot placement is valid when the resource kind declares the slot. A cross-extension
+// edge gets its region from the slot, so it has no second panel-region contract to check.
 const validateSlotPlacement = (
   runtime: Accumulator,
   args: {
@@ -212,11 +163,6 @@ const validateSlotPlacement = (
       `Required slot "${args.slotId}" has cardinality many`,
     );
   }
-  for (const edge of runtime.resourcePanels.filter(
-    (candidate) => candidate.resourceKindId === args.kindId && candidate.slotId === args.slotId,
-  )) {
-    validatesPanelPlacement(runtime, args.mode, edge.panelId, args.placement);
-  }
 };
 
 // A known-panel entry may only place a panel that is registered for the resource.
@@ -234,8 +180,12 @@ const validateKnownPanelPlacement = (
   const edge = runtime.resourcePanels.find(
     (candidate) => candidate.resourceKindId === args.kindId && candidate.panelId === panelId,
   );
-  if (!edge) {
-    const panelExists = runtime.panels.some((candidate) => candidate.id === panelId);
+  const panel = runtime.panels.find((candidate) => candidate.id === panelId);
+  const kind = runtime.resourceKinds.find((candidate) => candidate.id === args.kindId);
+  const ownPlacement =
+    panel && panel.extensionId === kind?.extensionId ? panelPlacementFor(panel, args.kindId) : undefined;
+  if (!edge && !ownPlacement) {
+    const panelExists = Boolean(panel);
     addDiagnostic(
       runtime,
       args.mode,
@@ -245,7 +195,7 @@ const validateKnownPanelPlacement = (
     );
     return;
   }
-  validatesPanelPlacement(runtime, args.mode, panelId, args.placement);
+  validatesPanelPlacement(runtime, args.mode, panelId, args.placement, ownPlacement);
 };
 
 const validateModeRecipe = (
@@ -281,20 +231,18 @@ const validateModeRecipe = (
   }
 
   if (kind.contribution.surface === "primary") {
-    const slotMain = Object.entries(recipe.slots ?? {}).filter(
-      ([slotId, placement]) => slotId === "primary" && placement.region === "main",
-    ).length;
-    const panelMain = Object.entries(recipe.panels ?? {}).filter(([rawPanelId, placement]) => {
-      const panelId = resolveContributionReference(ext, rawPanelId);
-      return (
-        placement.region === "main" &&
-        runtime.resourcePanels.some(
-          (candidate) =>
-            candidate.resourceKindId === kindId && candidate.panelId === panelId && candidate.slotId === "primary",
-        )
-      );
+    const overrides = new Map(
+      Object.entries(recipe.panels ?? {}).map(([rawPanelId, placement]) => [
+        resolveContributionReference(ext, rawPanelId),
+        placement,
+      ]),
+    );
+    const panelMain = runtime.panels.filter((panel) => {
+      if (panel.extensionId !== kind.extensionId) return false;
+      const placement = panelPlacementFor(panel, kindId);
+      return placement && (overrides.get(panel.id) ?? placement).region === "main";
     }).length;
-    if (slotMain + panelMain !== 1) {
+    if (panelMain !== 1) {
       addDiagnostic(
         runtime,
         mode,
@@ -306,19 +254,23 @@ const validateModeRecipe = (
   }
 };
 
-// Resource kind references resolve after every extension is collected, so a
-// cross-extension reference is independent of source order.
-const resolveResourceKindReferences = (runtime: Accumulator) => {
-  const references = resourceKindReferences(runtime.resourceKinds);
-  runtime.resourcePanels = runtime.resourcePanels.map((edge) => ({
-    ...edge,
-    resourceKindId: resolveResourceKindReference(edge.resourceKindId, references),
-  }));
-  runtime.resourceHierarchyProviders = runtime.resourceHierarchyProviders.map((provider) => ({
-    ...provider,
-    resourceKindId: resolveResourceKindReference(provider.resourceKindId, references),
-  }));
-  return references;
+const validatePanelPlacements = (runtime: Accumulator) => {
+  for (const panel of runtime.panels) {
+    for (const placement of panelPlacements(panel)) {
+      if (!placement.for) continue;
+      const kind = runtime.resourceKinds.find((candidate) => candidate.id === placement.for);
+      if (kind?.extensionId === panel.extensionId) continue;
+      addDiagnostic(
+        runtime,
+        panel,
+        "extension_panel_placement_unresolvable",
+        placement.for,
+        kind
+          ? `Panel "${panel.id}" must use a resource-panel slot to contribute to "${placement.for}"`
+          : `Panel "${panel.id}" references unknown resource kind "${placement.for}"`,
+      );
+    }
+  }
 };
 
 // A resource kind has exactly one owner. Two extensions declaring the same kind would
@@ -339,7 +291,7 @@ const validateResourceKindOwnership = (runtime: Accumulator) => {
 };
 
 export const validateCompositionRelationships = (runtime: Accumulator) => {
-  const references = resolveResourceKindReferences(runtime);
+  const references = resolveCompositionResourceKindReferences(runtime);
   validateResourceKindOwnership(runtime);
 
   for (const kind of runtime.resourceKinds) {
@@ -359,6 +311,7 @@ export const validateCompositionRelationships = (runtime: Accumulator) => {
   }
 
   validateResourcePanels(runtime);
+  validatePanelPlacements(runtime);
 
   for (const mode of runtime.modes) {
     const ext = runtime.extensions.find((candidate) => candidate.id === mode.extensionId);
@@ -367,7 +320,9 @@ export const validateCompositionRelationships = (runtime: Accumulator) => {
       validateModeRecipe(runtime, mode, resolveResourceKindReference(resourceKind, references), recipe);
     }
     for (const [panelReference, placement] of Object.entries(mode.contribution.modePanels ?? {})) {
-      validatesPanelPlacement(runtime, mode, resolveContributionReference(ext, panelReference), placement);
+      const panelId = resolveContributionReference(ext, panelReference);
+      const panel = runtime.panels.find((candidate) => candidate.id === panelId);
+      validatesPanelPlacement(runtime, mode, panelId, placement, panel && panelPlacementFor(panel, undefined));
     }
   }
 

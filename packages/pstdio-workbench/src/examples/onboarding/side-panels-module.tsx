@@ -212,7 +212,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
     if (input.floatingDemo) registerFloatingSidePanelDemo(ctx);
 
     ctx.layout.registerPanel({
-      closable: false,
       id: RESOURCE_PICKER_WIDGET_ID,
       title: "Resources",
       region: "sidenav",
@@ -222,7 +221,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
     });
     registerSidePanelMenuExamples(ctx);
     ctx.layout.registerPanel({
-      closable: false,
       id: DETAIL_WIDGET_ID,
       title: "Resource",
       region: "main",
@@ -243,7 +241,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       ],
     });
     ctx.layout.registerPanel({
-      closable: true,
       eligibleLocations: {},
       id: INSPECTOR_WIDGET_ID,
       title: "Inspector",
@@ -254,7 +251,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       panelMenus: sidePanelMenuDefinitions.inspector,
     });
     ctx.layout.registerPanel({
-      closable: true,
       eligibleLocations: {},
       id: ACTIVITY_WIDGET_ID,
       title: "Activity",
@@ -269,7 +265,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       },
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: PREVIEW_WIDGET_ID,
       title: "Preview",
       icon: "Eye",
@@ -279,7 +274,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       rendererId: DETAIL_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: true,
       eligibleLocations: {},
       id: PROBLEMS_WIDGET_ID,
       title: "Problems",
@@ -288,7 +282,6 @@ export const createSidePanelsModule = (input: CreateSidePanelsModuleInput = {}):
       rendererId: ACTIVITY_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: true,
       eligibleLocations: {},
       id: FILES_WIDGET_ID,
       title: "Files",

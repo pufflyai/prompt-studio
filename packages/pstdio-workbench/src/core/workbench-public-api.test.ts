@@ -10,18 +10,17 @@ describe("Workbench public API", () => {
       title: "Ticket",
       region: "main",
       rendererId: "ticket.renderer",
-      closable: false,
     });
     workbench.layout.registerPanel({
       id: "diff",
       title: "Diff",
       region: "secondary",
       rendererId: "diff.renderer",
-      closable: true,
     });
 
     const ticket = workbench.layout.openPanel("ticket");
     const diff = workbench.layout.openPanel("diff", {
+      closable: true,
       strategy: { kind: "preview", position: "start" },
     });
 

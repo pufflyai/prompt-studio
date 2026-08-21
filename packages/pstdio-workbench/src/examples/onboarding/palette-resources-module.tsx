@@ -124,14 +124,12 @@ export const createPaletteResourcesModule = (): WorkbenchModuleContribution => (
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: PANEL_WIDGET_ID,
       title: "Palette resources",
       region: "main",
       rendererId: PANEL_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",

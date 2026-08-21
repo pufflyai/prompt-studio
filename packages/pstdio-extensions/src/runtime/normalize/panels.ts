@@ -1,4 +1,3 @@
-import { dockedWorkbenchRegions } from "@pstdio/sdk/extensions";
 import type {
   NormalizedExtension,
   RuntimeActivityItemRecord,
@@ -17,6 +16,8 @@ import { contributionId, resolveContributionReference } from "./references";
 import { hasCompatibleSlotKind } from "./slot-kind";
 import { hasCompatibleWorkbenchTarget, hasRequiredWorkbenchTarget } from "./workbench-targets";
 
+const dockedPanelRegions = new Set(["sidenav", "main", "secondary", "side"]);
+
 const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => ({
   extensionId: ext.id,
   sourcePath: source.sourcePath,
@@ -29,6 +30,23 @@ const rendererRecords = (runtime: Accumulator, kind: string) => {
   if (kind === "dataTable") return runtime.dataTableRenderers;
   if (kind === "kanban") return runtime.kanbanRenderers;
   return [];
+};
+
+const isPanelPlacement = (value: unknown) => {
+  if (!isRecord(value) || typeof value.region !== "string" || !dockedPanelRegions.has(value.region)) return false;
+  if (value.for !== undefined && typeof value.for !== "string") return false;
+  if (value.required !== undefined && typeof value.required !== "boolean") return false;
+  if (value.allowedRegions === undefined) return true;
+  return (
+    Array.isArray(value.allowedRegions) &&
+    value.allowedRegions.every((region) => typeof region === "string" && dockedPanelRegions.has(region))
+  );
+};
+
+const hasValidPanelShow = (show: unknown) => {
+  if (show === undefined) return true;
+  if (Array.isArray(show)) return show.length > 0 && show.every(isPanelPlacement);
+  return isPanelPlacement(show);
 };
 
 // Each renderer-backed panel references a renderer by local/full id; fail loudly when it
@@ -65,6 +83,19 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
     const hasWebview = isRecord(panel.webview);
     const hasRenderer = isRecord(panel.renderer);
 
+    if (!hasValidPanelShow(panel.show)) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_panel_contract_invalid",
+          message: `Panel "${id}" has an invalid placement declaration`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id },
+        }),
+      );
+      continue;
+    }
+
     if ([hasWebview, hasRenderer].filter(Boolean).length !== 1) {
       runtime.diagnostics.push(
         createDiagnostic({
@@ -79,25 +110,6 @@ const registerPanels = (ext: NormalizedExtension, source: LoadedExtensionSource,
     }
 
     if (!rendererBodyResolves(ext, source, runtime, panel, id)) continue;
-
-    const supportedRegions = Array.isArray(panel.supportedRegions) ? panel.supportedRegions : null;
-    const hasCapabilityContract =
-      supportedRegions !== null &&
-      supportedRegions.length > 0 &&
-      supportedRegions.every((region) => (dockedWorkbenchRegions as readonly string[]).includes(region as string));
-
-    if (!hasCapabilityContract) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "extension_panel_contract_invalid",
-          message: `Panel "${id}" must declare at least one docked supported region`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: id },
-        }),
-      );
-      continue;
-    }
 
     runtime.panels.push({
       id,

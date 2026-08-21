@@ -43,10 +43,13 @@ describe("shipped extension composition", () => {
       panelId: "extension-lab.labArtifacts",
       slotId: "inspector",
     });
-    // The Planner's own primary placement is untouched by the external contribution.
-    expect(runtime.resourcePanels.find((edge) => edge.slotId === "primary")).toMatchObject({
-      resourceKindId: "ticket",
-      panelId: "pstdio-planner.ticketEditor",
+    // Only cross-extension relationships use resourcePanels. The Planner owns its
+    // editor placement directly on the panel contribution.
+    expect(runtime.resourcePanels.map((edge) => edge.id)).toEqual(["extension-lab.ticketInsights"]);
+    expect(runtime.panels.find((panel) => panel.id === "pstdio-planner.ticketEditor")?.contribution.show).toEqual({
+      for: "ticket",
+      region: "main",
+      required: true,
     });
   });
 
@@ -63,17 +66,37 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([labPath]);
     const recipeFor = (modeId: string) =>
       runtime.modes.find((mode) => mode.contribution.id === modeId)?.contribution.resources?.["blend-project"];
+    const placementFor = (panelId: string) => {
+      const show = runtime.panels.find((panel) => panel.id === panelId)?.contribution.show;
+      const placements = Array.isArray(show) ? show : [show];
+      return placements.find((placement) => placement?.for === "blend-project");
+    };
 
     const animation = recipeFor("pstdio.extension-lab.animation");
     const sculpt = recipeFor("pstdio.extension-lab.sculpt");
 
-    expect(animation?.slots?.primary).toMatchObject({ region: "main", required: true });
-    expect(sculpt?.slots?.primary).toMatchObject({ region: "main", required: true });
-    // The same resource keeps its primary location while its supporting panels move.
-    expect(animation?.slots?.navigation?.region).toBe("sidenav");
-    expect(sculpt?.slots?.navigation?.region).toBe("side");
-    expect(animation?.slots?.inspector?.region).toBe("side");
-    expect(sculpt?.slots?.inspector?.region).toBe("secondary");
+    expect(placementFor("extension-lab.labOverview")).toEqual({
+      for: "blend-project",
+      region: "main",
+      required: true,
+    });
+    expect(placementFor("extension-lab.labCams")).toEqual({
+      for: "blend-project",
+      region: "sidenav",
+      allowedRegions: ["sidenav", "side"],
+      required: true,
+    });
+    expect(placementFor("extension-lab.labArtifacts")).toEqual({
+      for: "blend-project",
+      region: "side",
+      allowedRegions: ["side", "secondary"],
+    });
+    // Animation uses the panel-owned defaults. Sculpt stores only its overrides.
+    expect(animation).toEqual({});
+    expect(sculpt?.panels).toEqual({
+      labCams: { region: "side" },
+      labArtifacts: { region: "secondary" },
+    });
   });
 
   test("keeps the Lab status bar out of docked layout", async () => {

@@ -18,7 +18,6 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
       title: "Assistant",
       region: "side",
       singleton: true,
-      closable: true,
       rendererId: assistantWidgetId,
     });
     ctx.commands.registerCommand(

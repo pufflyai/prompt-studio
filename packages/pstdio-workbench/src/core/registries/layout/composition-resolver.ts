@@ -1,6 +1,7 @@
 import type {
   CompositionDiagnostic,
   CompositionModeRecipe,
+  CompositionPanelPlacement,
   CompositionPlacementPolicy,
   CompositionResourceKindDefinition,
   DockedCompositionRegion,
@@ -13,19 +14,19 @@ interface PlacementCandidate {
   panelId: string;
   slot?: string;
   policy: CompositionPlacementPolicy;
+  base?: CompositionPanelPlacement;
   required: boolean;
 }
 
-const intersectRegions = (
-  supported: readonly DockedCompositionRegion[],
-  requested: readonly DockedCompositionRegion[],
-) => requested.filter((region) => supported.includes(region));
+const policyRegions = (policy: CompositionPlacementPolicy) => [
+  ...new Set([policy.region, ...(policy.allowedRegions ?? [])]),
+];
 
-// Collects the placement candidates a recipe requests for the active context, in
-// declaration order: resource slot placements, then known-panel overrides, then
-// mode-wide panels. A panel entry wins over its slot placement.
-// An edge may consume a resource kind when the slot exists, the slot accepts the
-// contributing extension, and the panel it names is registered.
+const panelPlacements = (panel: ResolveCompositionInput["composition"]["panels"][number]) => {
+  if (!panel.show) return [];
+  return Array.isArray(panel.show) ? panel.show : [panel.show];
+};
+
 const isUsableEdge = (
   input: ResolveCompositionInput,
   kind: CompositionResourceKindDefinition | undefined,
@@ -64,10 +65,6 @@ const isUsableEdge = (
   return true;
 };
 
-// Every valid edge in one slot becomes a candidate, unless the recipe names that
-// panel explicitly: a panel entry wins over its slot placement. `required` only
-// holds for a single-cardinality slot, so a required many-slot is reported and the
-// placement stays optional.
 const slotCandidates = (args: {
   diagnostics: CompositionDiagnostic[];
   kind: CompositionResourceKindDefinition | undefined;
@@ -94,20 +91,27 @@ const slotCandidates = (args: {
       slot: args.slotName,
     });
   }
-  return (
-    args.validEdges
-      .filter((edge) => edge.slot === args.slotName && !args.overriddenPanels.has(edge.panel))
-      // An external contribution is optional: it reaches the layout through Add Panel
-      // unless the mode names it in its `panels` map. Only the resource kind's own
-      // panels are placed by a slot recipe.
-      .filter((edge) => edge.extensionId === args.kind?.extensionId)
-      .map((edge) => ({
-        panelId: edge.panel,
-        slot: args.slotName,
-        policy: args.policy,
-        required: required && slot.cardinality === "one",
-      }))
-  );
+  return args.validEdges
+    .filter((edge) => edge.slot === args.slotName && !args.overriddenPanels.has(edge.panel))
+    .filter((edge) => edge.extensionId === args.kind?.extensionId)
+    .map((edge) => ({
+      panelId: edge.panel,
+      slot: args.slotName,
+      policy: args.policy,
+      required: required && slot.cardinality === "one",
+    }));
+};
+
+const panelPlacementFor = (
+  input: ResolveCompositionInput,
+  panel: ResolveCompositionInput["composition"]["panels"][number],
+) => {
+  const kind = input.composition.resourceKinds.find((candidate) => candidate.id === input.context.resourceKind);
+  const placements = panelPlacements(panel);
+  const resourcePlacement = placements.find((placement) => placement.resourceKind === input.context.resourceKind);
+  if (resourcePlacement && panel.extensionId === kind?.extensionId) return resourcePlacement;
+  if (panel.extensionId !== input.mode.extensionId) return undefined;
+  return placements.find((placement) => placement.resourceKind === undefined);
 };
 
 const collectCandidates = (
@@ -115,20 +119,34 @@ const collectCandidates = (
   recipe: CompositionModeRecipe | undefined,
   diagnostics: CompositionDiagnostic[],
 ) => {
-  const { composition, context } = input;
-  const kind = composition.resourceKinds.find((candidate) => candidate.id === context.resourceKind);
+  const kind = input.composition.resourceKinds.find((candidate) => candidate.id === input.context.resourceKind);
   const candidates: PlacementCandidate[] = [];
-  const validEdges = composition.resourcePanels.filter((edge) => isUsableEdge(input, kind, edge, diagnostics));
-
-  const overriddenPanels = new Set(Object.keys(recipe?.panels ?? {}));
+  const validEdges = input.composition.resourcePanels.filter((edge) => isUsableEdge(input, kind, edge, diagnostics));
+  const overrides = { ...(recipe?.panels ?? {}), ...(input.mode.modePanels ?? {}) };
+  const overriddenPanels = new Set(Object.keys(overrides));
 
   for (const [slotName, policy] of Object.entries(recipe?.slots ?? {})) {
     candidates.push(...slotCandidates({ diagnostics, kind, input, overriddenPanels, policy, slotName, validEdges }));
   }
 
-  for (const [panelId, policy] of Object.entries(recipe?.panels ?? {})) {
+  for (const panel of input.composition.panels) {
+    const base = panelPlacementFor(input, panel);
+    if (!base) continue;
+    const policy = overrides[panel.id] ?? base;
+    candidates.push({
+      panelId: panel.id,
+      policy,
+      base,
+      required: policy.required ?? base.required ?? false,
+    });
+  }
+
+  const known = new Set(candidates.map((candidate) => candidate.panelId));
+  for (const [panelId, policy] of Object.entries(overrides)) {
+    if (known.has(panelId)) continue;
     const edge = validEdges.find((candidate) => candidate.panel === panelId);
-    if (!edge) {
+    const panel = input.composition.panels.find((candidate) => candidate.id === panelId);
+    if (!panel || (recipe?.panels?.[panelId] && !edge)) {
       diagnostics.push({
         code: "extension_panel_missing",
         message: `Mode "${input.mode.id}" places panel "${panelId}" that is not registered for the resource`,
@@ -136,26 +154,18 @@ const collectCandidates = (
       });
       continue;
     }
-    candidates.push({ panelId, slot: edge.slot, policy, required: policy.required === true });
-  }
-
-  for (const [panelId, policy] of Object.entries(input.mode.modePanels ?? {})) {
-    if (!composition.panels.some((panel) => panel.id === panelId)) {
-      diagnostics.push({
-        code: "extension_panel_missing",
-        message: `Mode "${input.mode.id}" places unknown mode-wide panel "${panelId}"`,
-        panelId,
-      });
-      continue;
-    }
-    candidates.push({ panelId, policy, required: policy.required === true });
+    candidates.push({ panelId, slot: edge?.slot, policy, required: policy.required === true });
   }
 
   return { candidates, validEdges };
 };
 
-// Applies the panel-capability boundary: a recipe cannot expand a panel's supported
-// regions. Returns the resolved placement or undefined when the region is invalid.
+const allowedRegionsFor = (candidate: PlacementCandidate) => {
+  const baseRegions = candidate.base ? policyRegions(candidate.base) : policyRegions(candidate.policy);
+  if (!candidate.base || !candidate.policy.allowedRegions) return baseRegions;
+  return policyRegions(candidate.policy).filter((region) => baseRegions.includes(region));
+};
+
 const resolveCandidate = (
   input: ResolveCompositionInput,
   candidate: PlacementCandidate,
@@ -163,14 +173,11 @@ const resolveCandidate = (
 ): ResolvedCompositionPlacement | undefined => {
   const panel = input.composition.panels.find((definition) => definition.id === candidate.panelId);
   if (!panel) return undefined;
-  const allowed = intersectRegions(panel.supportedRegions, [
-    candidate.policy.region,
-    ...(candidate.policy.allowedRegions ?? []),
-  ]);
-  if (!allowed.includes(candidate.policy.region)) {
+  const allowedRegions = allowedRegionsFor(candidate);
+  if (!allowedRegions.includes(candidate.policy.region)) {
     diagnostics.push({
-      code: "extension_panel_region_unsupported",
-      message: `Panel "${candidate.panelId}" does not support region "${candidate.policy.region}"`,
+      code: "extension_panel_placement_unresolvable",
+      message: `Panel "${candidate.panelId}" cannot be placed in region "${candidate.policy.region}"`,
       panelId: candidate.panelId,
     });
     return undefined;
@@ -180,14 +187,11 @@ const resolveCandidate = (
     region: candidate.policy.region,
     slot: candidate.slot,
     required: candidate.required,
-    closable: !candidate.required,
-    allowedRegions: allowed,
+    allowedRegions,
     origin: candidate.required ? "required" : "default",
   };
 };
 
-// Resolves each candidate against its panel's capabilities. A required placement
-// that cannot resolve keeps the workbench usable through a safe main fallback.
 const resolveCandidates = (
   input: ResolveCompositionInput,
   candidates: readonly PlacementCandidate[],
@@ -202,9 +206,9 @@ const resolveCandidates = (
       if (!resolvedByPanel.has(resolved.panelId)) resolvedByPanel.set(resolved.panelId, resolved);
       continue;
     }
-    if (!candidate.required) continue;
-    const fallbackPanel = input.composition.panels.find((panel) => panel.supportedRegions.includes("main"));
-    if (fallbackPanel) requiredFallback = { panelId: fallbackPanel.id };
+    if (candidate.required && allowedRegionsFor(candidate).includes("main")) {
+      requiredFallback = { panelId: candidate.panelId };
+    }
   }
 
   return { requiredFallback, resolvedByPanel };
@@ -217,10 +221,6 @@ const persistedRegions = (persisted: NonNullable<ResolveCompositionInput["persis
     Boolean(entry[1]),
   );
 
-// Persisted user placements win over defaults: the user's region survives when the
-// panel allows it, and the persisted tab order is kept. Missing required structure is
-// restored afterwards without resetting optional user state. A scope with no
-// persisted layout seeds every resolved placement.
 const placeResolved = (
   input: ResolveCompositionInput,
   resolvedByPanel: ReadonlyMap<string, ResolvedCompositionPlacement>,
@@ -229,7 +229,6 @@ const placeResolved = (
   const regionOrder: Partial<Record<DockedCompositionRegion, string[]>> = {};
   const activePanelIds: Partial<Record<DockedCompositionRegion, string>> = {};
   const placed = new Set<string>();
-
   const place = (placement: ResolvedCompositionPlacement, region: DockedCompositionRegion) => {
     if (placed.has(placement.panelId)) return;
     placed.add(placement.panelId);
@@ -241,52 +240,43 @@ const placeResolved = (
     for (const resolved of resolvedByPanel.values()) place(resolved, resolved.region);
     return { activePanelIds, placed, placements, regionOrder };
   }
-
   for (const [region, state] of persistedRegions(input.persisted)) {
     for (const panelId of state.order) {
       const resolved = resolvedByPanel.get(panelId);
-      if (!resolved) continue;
-      place({ ...resolved, origin: "persisted" }, resolved.allowedRegions.includes(region) ? region : resolved.region);
+      if (resolved) {
+        place(
+          { ...resolved, origin: "persisted" },
+          resolved.allowedRegions.includes(region) ? region : resolved.region,
+        );
+      }
     }
     if (state.activePanelId && placed.has(state.activePanelId)) activePanelIds[region] = state.activePanelId;
   }
   for (const resolved of resolvedByPanel.values()) {
     if (resolved.required && !placed.has(resolved.panelId)) place(resolved, resolved.region);
   }
-
   return { activePanelIds, placed, placements, regionOrder };
 };
 
-// Resolves one effective layout for the active mode-resource context:
-//  1. confirm the mode accepts the resource kind;
-//  2. collect the kind's slots and valid resource-panel contributions;
-//  3. apply the mode-wide and resource placement recipes;
-//  4. keep only regions allowed by both panel capability and recipe;
-//  5. restore valid persisted placements and tab order;
-//  6. restore missing required placements;
-//  7. seed default placements only when no layout exists for the scope;
-//  8. expose remaining valid optional panels for Add Panel.
 export const resolveComposition = (input: ResolveCompositionInput): ResolvedComposition => {
   const diagnostics: CompositionDiagnostic[] = [];
-  const { context, mode } = input;
-
-  const recipe = context.resourceKind ? mode.resources?.[context.resourceKind] : undefined;
-  if (context.resourceKind && !recipe) {
+  const recipe = input.context.resourceKind ? input.mode.resources?.[input.context.resourceKind] : undefined;
+  if (input.context.resourceKind && !recipe) {
     diagnostics.push({
       code: "extension_mode_resource_unsupported",
-      message: `Mode "${mode.id}" does not accept resource kind "${context.resourceKind}"`,
+      message: `Mode "${input.mode.id}" does not accept resource kind "${input.context.resourceKind}"`,
     });
-    return { placements: [], regionOrder: {}, activePanelIds: {}, addablePanels: [], optionalPanels: [], diagnostics };
+    return { placements: [], regionOrder: {}, activePanelIds: {}, addablePanels: [], diagnostics };
   }
 
   const { candidates, validEdges } = collectCandidates(input, recipe, diagnostics);
   const { requiredFallback, resolvedByPanel } = resolveCandidates(input, candidates, diagnostics);
   const { activePanelIds, placed, placements, regionOrder } = placeResolved(input, resolvedByPanel);
-
   const addablePanels = Array.from(resolvedByPanel.values())
     .filter((panel) => !panel.required && !placed.has(panel.panelId))
     .map(({ panelId, region, allowedRegions }) => ({ panelId, region, allowedRegions }));
   const addablePanelIds = new Set(addablePanels.map((panel) => panel.panelId));
+
   for (const edge of validEdges) {
     if (placed.has(edge.panel) || addablePanelIds.has(edge.panel)) continue;
     const policy = recipe?.panels?.[edge.panel] ?? recipe?.slots?.[edge.slot];
@@ -297,14 +287,9 @@ export const resolveComposition = (input: ResolveCompositionInput): ResolvedComp
       diagnostics,
     );
     if (!resolved) continue;
-    addablePanels.push({
-      panelId: resolved.panelId,
-      region: resolved.region,
-      allowedRegions: resolved.allowedRegions,
-    });
+    addablePanels.push({ panelId: resolved.panelId, region: resolved.region, allowedRegions: resolved.allowedRegions });
     addablePanelIds.add(resolved.panelId);
   }
-  const optionalPanels = addablePanels.map((panel) => panel.panelId);
 
-  return { placements, regionOrder, activePanelIds, addablePanels, optionalPanels, diagnostics, requiredFallback };
+  return { placements, regionOrder, activePanelIds, addablePanels, diagnostics, requiredFallback };
 };

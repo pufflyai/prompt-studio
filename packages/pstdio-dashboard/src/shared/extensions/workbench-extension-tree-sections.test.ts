@@ -93,7 +93,7 @@ describe("dashboard workbench extension tree contributions", () => {
           id: "pstdio-planner.tickets",
           extensionId: "pstdio.planner",
           title: "Tickets",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           renderer: { kind: "kanban", id: "pstdio-planner.tickets" },
         },
       ],

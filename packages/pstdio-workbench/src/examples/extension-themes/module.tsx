@@ -130,7 +130,6 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
   id: "extension.manager",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: MANAGER_WIDGET_ID,
       title: "Extensions",
       region: "sidenav",

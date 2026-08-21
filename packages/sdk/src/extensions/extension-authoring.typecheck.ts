@@ -115,12 +115,12 @@ const extension = defineExtension({
   panels: {
     labSidenav: {
       title: "Lab sidenav",
-      supportedRegions: ["sidenav"],
+      show: { region: "sidenav" },
       webview: { entry: packageAsset("./lab-sidenav.tsx", import.meta.url) },
     },
     labOverview: {
       title: "Lab overview",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       webview: { entry: packageAsset("./lab-overview.tsx", import.meta.url) },
     },
   },
@@ -206,13 +206,13 @@ const compositionExtension = defineExtension({
   panels: {
     editor: {
       title: "Ticket editor",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
     },
     // A cross-extension contribution uses namespaced refresh events; local ones use typed refs.
     insights: {
       title: "Insights",
-      supportedRegions: ["side", "secondary"],
+      show: { region: "side", allowedRegions: ["side", "secondary"] },
       renderer: { kind: "controls", id: "insightControls" },
     },
   },
@@ -286,10 +286,10 @@ void navigationTarget;
 
 const invalidCompositionPanel: PanelContribution = {
   title: "Chrome",
-  supportedRegions: [
-    // @ts-expect-error composition panels accept only the four docked regions
-    "activity",
-  ],
+  // @ts-expect-error composition panels accept only the four docked regions
+  show: {
+    region: "activity",
+  },
   webview: { entry: packageAsset("./chrome.tsx", import.meta.url) },
 };
 void invalidCompositionPanel;

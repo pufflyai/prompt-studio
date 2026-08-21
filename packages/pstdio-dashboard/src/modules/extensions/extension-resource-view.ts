@@ -135,6 +135,7 @@ const openResourceCompanionViews = (
       ctx.layout.openPanel(widgetIdFor(companion), {
         resource: input.resource,
         region: companion.region,
+        role: companion.region === "main" ? "location" : "sub-panel",
         pinned: companion.pinned,
         title: companionViewTitle(companion, input.resource),
         strategy: { kind: "persistent" },

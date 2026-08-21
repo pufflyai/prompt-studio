@@ -76,7 +76,6 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
   });
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.dashboardSidenav,
       title: "Sidenav",
       region: "sidenav",

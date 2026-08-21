@@ -42,7 +42,6 @@ export const createRendererTypesExampleModule = (
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: reactWidgetId,
       title: "React renderer",
       region: "main",
@@ -50,7 +49,6 @@ export const createRendererTypesExampleModule = (
       singleton: true,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: bridgeWidgetId,
       title: "Bridge renderer",
       region: "main",

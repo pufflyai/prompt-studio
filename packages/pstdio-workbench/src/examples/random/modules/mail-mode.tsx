@@ -51,7 +51,6 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
     disposables.push(
       ctx.renderers.registerRenderer({ id: widget.id, render: widget.render }),
       ctx.layout.registerPanel({
-        closable: false,
         id: widget.id,
         title: widget.title,
         region: widget.region,
@@ -69,7 +68,6 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
       getChildren: () => [],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: "mail.navigation",
       title: mailMode.label,
       region: "main-left-menu",

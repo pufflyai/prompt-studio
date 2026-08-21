@@ -11,7 +11,6 @@ test("sessions mode preserves the previous Location's Session Sub Panels", async
   const session = createDashboardResource("session", "session-1", "Session one", "MessageCircle", "project-1");
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   workbench.layout.registerPanel({
-    closable: false,
     id: "dashboard.tickets",
     title: "Tickets",
     region: "main",

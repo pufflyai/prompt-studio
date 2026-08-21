@@ -87,7 +87,6 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
       ],
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: rendererId,
       title: "Service health",
       region: "main",

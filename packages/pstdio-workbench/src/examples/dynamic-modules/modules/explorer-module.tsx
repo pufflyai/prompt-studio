@@ -17,7 +17,6 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
     ctx.resources.registerKind({ kind: fileKind, label: "File", icon: "FileText" });
     ctx.renderers.registerRenderer({ id: explorerWidgetId, render: () => <FilePreviewWidget /> });
     ctx.layout.registerPanel({
-      closable: false,
       id: explorerWidgetId,
       title: "File preview",
       region: "main-left-menu",
@@ -50,7 +49,6 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
       getChildren: () => [],
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: explorerTreeId,
       title: "Explorer",
       region: "sidenav",

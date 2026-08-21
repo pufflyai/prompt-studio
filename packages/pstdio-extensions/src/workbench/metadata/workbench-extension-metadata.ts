@@ -20,6 +20,7 @@ import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
 type WorkbenchExtensionWebview = NonNullable<WorkbenchExtensionMetadata["panels"][number]["webview"]>;
+type PanelPlacement = Exclude<NonNullable<PanelContribution["show"]>, readonly unknown[]>;
 
 export interface ResolveWorkbenchExtensionWebviewInput {
   extensionId: string;
@@ -194,6 +195,17 @@ const toPanelBody = (
   };
 };
 
+const clonePanelPlacement = (placement: PanelPlacement) => ({
+  ...placement,
+  allowedRegions: placement.allowedRegions ? [...placement.allowedRegions] : undefined,
+});
+
+const clonePanelShow = (show: PanelContribution["show"]) => {
+  if (!show) return undefined;
+  if (Array.isArray(show)) return show.map(clonePanelPlacement);
+  return clonePanelPlacement(show as PanelPlacement);
+};
+
 const toPanelRecord = (
   input: CreateWorkbenchExtensionMetadataInput,
   panel: ExtensionRuntime["panels"][number],
@@ -225,7 +237,7 @@ const toPanelRecord = (
     extensionId: panel.extensionId,
     title: panel.contribution.title,
     icon: panel.contribution.icon,
-    supportedRegions: [...panel.contribution.supportedRegions],
+    show: clonePanelShow(panel.contribution.show),
     panelMenus: panelMenus.length > 0 ? panelMenus : undefined,
     ...body,
   };

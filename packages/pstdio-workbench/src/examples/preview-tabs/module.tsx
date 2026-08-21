@@ -49,7 +49,6 @@ export const createPreviewTabsExampleModule = () =>
           ctx.layout.openPanel("preview-tabs.workspace", { resource, strategy: { kind: "persistent" } }),
       });
       ctx.layout.registerPanel({
-        closable: false,
         id: "preview-tabs.workspace",
         title: "Workspace",
         region: "main",
@@ -67,7 +66,6 @@ export const createPreviewTabsExampleModule = () =>
           icon,
           region: "side",
           singleton: false,
-          closable: true,
           rendererId: id,
           tab: id === "preview-tabs.session" ? { customMenuRendererId: sessionMenuRendererId } : undefined,
         });

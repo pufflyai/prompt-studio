@@ -9,7 +9,6 @@ import { StartWidget } from "./components/start-widget";
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.start,
       title: "Start",
       region: "main",

@@ -54,13 +54,13 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
-      closable: true,
       mountStrategy: "keep-mounted",
       reuse: "none",
       regionSize: { defaultPx: 240, minPx: 128 },
       singleton: false,
       title: "Terminal",
     });
+    expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).not.toHaveProperty("closable");
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
       regionSize: { defaultPx: 240, minPx: 128 },
     });
@@ -210,7 +210,6 @@ describe("createWorkbenchTerminalModule", () => {
   test("the open command inherits the active workspace resource", async () => {
     const workbench = setup();
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.workspace",
       title: "Workspace",
       region: "main",
@@ -229,14 +228,12 @@ describe("createWorkbenchTerminalModule", () => {
   test("the open command prefers the active workspace over the primary workspace", async () => {
     const workbench = setup();
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",
       rendererId: "test.primary-workspace",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.active-workspace",
       title: "Active Workspace",
       region: "side",
@@ -256,14 +253,12 @@ describe("createWorkbenchTerminalModule", () => {
   test("the open command keeps the primary workspace when the active resource has no workspace path", async () => {
     const workbench = setup();
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",
       rendererId: "test.primary-workspace",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.active-session",
       title: "Active Session",
       region: "side",
@@ -283,7 +278,6 @@ describe("createWorkbenchTerminalModule", () => {
   test("the open command ignores command context resources without a workspace path", async () => {
     const workbench = setup();
     workbench.layout.registerPanel({
-      closable: false,
       id: "test.primary-workspace",
       title: "Primary Workspace",
       region: "main",

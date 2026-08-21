@@ -35,9 +35,12 @@ describe("pstdio planner extension contributions", () => {
     // drop the project chrome the user had.
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.ticket).toMatchObject({ surface: "primary" });
-    expect(extension.resourcePanels).toMatchObject({
-      ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
-      ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
+    expect(extension.resourcePanels).toBeUndefined();
+    expect(extension.panels?.ticketEditor?.show).toEqual({ for: "ticket", region: "main", required: true });
+    expect(extension.panels?.ticketFiles?.show).toEqual({
+      for: "ticket",
+      region: "sidenav",
+      required: true,
     });
   });
 
@@ -50,7 +53,7 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.panels?.ticketFiles).toMatchObject({
       title: { $l10n: "panels.ticketFiles.title", default: "Files" },
-      supportedRegions: ["sidenav"],
+      show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "ticketFiles" },
     });
     expect(extension.panels?.ticketFiles).not.toHaveProperty("target");
@@ -216,7 +219,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
     expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
     expect(extension.panels?.tickets).toMatchObject({
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "kanban", id: "tickets" },
     });
   });

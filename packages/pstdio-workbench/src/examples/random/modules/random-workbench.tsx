@@ -13,7 +13,6 @@ const registerRandomResources = (ctx: WorkbenchModuleContext) => {
 // since resetRegions() clears all placements on mode switch.
 const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: railWidgetId,
     title: "Mode rail",
     region: "activity",

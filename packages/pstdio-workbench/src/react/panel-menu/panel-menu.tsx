@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
-  matchesWorkbenchLocationEligibility,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
@@ -83,7 +83,7 @@ const useWorkbenchPanelMenu = (
       return contribution
         ? (panel === "side"
             ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : matchesWorkbenchLocationEligibility(contribution, locationResource, modeId, placement)) &&
+            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement)) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,

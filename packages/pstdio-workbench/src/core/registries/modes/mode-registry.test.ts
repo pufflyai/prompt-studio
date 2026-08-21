@@ -271,7 +271,6 @@ describe("mode panel layouts", () => {
       title: "Review",
       region: "main",
       rendererId: "review",
-      closable: false,
     });
     const established: string[] = [];
     const registry = createWorkbenchModeRegistry({
@@ -299,14 +298,12 @@ describe("mode panel layouts", () => {
       title: "Review",
       region: "main",
       rendererId: "review",
-      closable: false,
     });
     layout.registerPanel({
       id: "checks",
       title: "Checks",
       region: "secondary",
       rendererId: "checks",
-      closable: true,
       eligibleLocations: { modeIds: ["review"] },
     });
     const registry = createWorkbenchModeRegistry({
@@ -382,7 +379,6 @@ describe("mode panel layouts", () => {
       title: "Session",
       region: "side",
       rendererId: "sessions.chat",
-      role: "sub-panel",
     });
 
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
@@ -390,7 +386,7 @@ describe("mode panel layouts", () => {
     registry.registerMode({ id: "sessions", panels: ["main", "secondary", "side"], activate: () => undefined });
 
     registry.setActiveMode("project");
-    layout.openWidget("sessions.chat");
+    layout.openWidget("sessions.chat", { role: "sub-panel" });
     registry.setActiveMode("sessions");
 
     expect(layout.getLayout().regions.side.widgets).toHaveLength(1);

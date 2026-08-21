@@ -10,7 +10,6 @@ describe("Panel registration", () => {
       title: "Overview",
       region: "main",
       rendererId: "overview.renderer",
-      closable: false,
       panelMenus: [
         {
           id: "project.overview.tools",
@@ -25,20 +24,21 @@ describe("Panel registration", () => {
       title: "Terminal",
       region: "secondary",
       rendererId: "terminal.renderer",
-      closable: true,
     });
 
-    layout.openPanel("project.overview");
-    layout.openPanel("project.terminal");
+    const overview = layout.openPanel("project.overview");
+    const terminal = layout.openPanel("project.terminal", { closable: true });
 
-    expect(layout.getWidget("project.overview")).toMatchObject({ role: "content" });
+    expect(layout.getWidget("project.overview")).not.toHaveProperty("role");
+    expect(overview).toMatchObject({ closable: false });
     expect(layout.getWidget("project.overview.tools")).toMatchObject({
       panelMenuOwner: { level: "panel", contributionId: "project.overview" },
     });
     expect(layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({ contributionId: "project.overview.tools" }),
     ]);
-    expect(layout.getWidget("project.terminal")).toMatchObject({ role: "content", closable: true });
+    expect(layout.getWidget("project.terminal")).not.toHaveProperty("closable");
+    expect(terminal).toMatchObject({ closable: true });
   });
 
   test("treats an eligible resource-backed Panel as a Sub Panel", () => {
@@ -49,15 +49,15 @@ describe("Panel registration", () => {
       title: "Preview",
       region: "main",
       rendererId: "preview.renderer",
-      closable: true,
       resourceKinds: ["project"],
       eligibleLocations: {},
     });
 
-    expect(layout.getWidget("project.preview")).toMatchObject({
-      role: "sub-panel",
-      closable: true,
-    });
+    const preview = layout.openPanel("project.preview", { closable: true });
+
+    expect(layout.getWidget("project.preview")).not.toHaveProperty("role");
+    expect(preview).toMatchObject({ closable: true });
+    expect(layout.getLayout().regions.main.widgets[0]).toMatchObject({ role: "sub-panel" });
   });
 
   test("registers and opens menus declared by their Location Panel", () => {
@@ -81,21 +81,22 @@ describe("Panel registration", () => {
     });
 
     const notes = layout.openWidget("project.notes", {
+      role: "location",
       resource: { kind: "project", uri: "pstdio://project/alpha", label: "Alpha" },
     });
 
     expect(layout.getWidget("project.notes.outline")).toMatchObject({
       region: "main-left-menu",
       panelMenuOwner: { level: "panel", contributionId: "project.notes" },
-      role: "panel-menu",
     });
+    expect(layout.getWidget("project.notes.outline")).not.toHaveProperty("role");
     expect(layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({
         contributionId: "project.notes.outline",
         ownerResourceUri: "pstdio://project/alpha",
       }),
     ]);
-    expect(layout.getWidget("project.notes")?.closable).toBe(false);
+    expect(layout.getWidget("project.notes")).not.toHaveProperty("role");
     expect(notes.closable).toBe(false);
     expect(layout.getLayout().regions.main.activeWidgetId).toBe(notes.widgetId);
   });

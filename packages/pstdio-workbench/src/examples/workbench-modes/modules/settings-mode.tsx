@@ -5,7 +5,6 @@ import { activityBarWidgetId, settingsWidgetIds, workbenchModes } from "../mock-
 const setupSettingsMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
     ctx.layout.registerPanel({
-      closable: false,
       id: settingsWidgetIds.page,
       title: workbenchModes.settings.label,
       region: "main",

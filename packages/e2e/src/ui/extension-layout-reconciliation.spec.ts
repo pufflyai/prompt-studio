@@ -49,6 +49,8 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   const metadata = await fetchExtensionMetadata(request, project.id);
   const nativePanel = metadata.panels.find((panel) => !panel.webview);
   expect(nativePanel).toBeDefined();
+  const nativePanelShow = nativePanel!.show;
+  const nativePanelRegion = (Array.isArray(nativePanelShow) ? nativePanelShow[0]?.region : nativePanelShow?.region)!;
   const extension = metadata.extensions.find((candidate) => candidate.id === nativePanel!.extensionId);
   expect(extension).toBeDefined();
 
@@ -64,7 +66,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
       extensionId: nativePanel!.extensionId,
       modeIds: [],
       panelId: nativePanel!.id,
-      region: nativePanel!.supportedRegions[0],
+      region: nativePanelRegion,
       widgetId: legacyWidgetId,
     },
     {
@@ -130,7 +132,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
     .not.toBe(JSON.stringify(previousCompatibility));
   const migrated = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), layoutKey);
   expect(layoutWidgetIds(migrated).sort()).toEqual(["dashboard.unrelated", nativePanel!.id].sort());
-  const migratedPlacement = migrated.layout.regions[nativePanel!.supportedRegions[0]!].widgets.find(
+  const migratedPlacement = migrated.layout.regions[nativePanelRegion].widgets.find(
     (placement: { widgetId: string }) => placement.widgetId === nativePanel!.id,
   );
   expect(migratedPlacement).toMatchObject({
@@ -141,7 +143,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   expect(migrated.layout.activeWidgetId).toBe(nativePanel!.id);
   expect(migrated.layout.activeLocationWidgetId).toBe(nativePanel!.id);
   expect(migrated.layout.locationSubPanelSelections["resource://legacy"]).toEqual({
-    [nativePanel!.supportedRegions[0]!]: nativePanel!.id,
+    [nativePanelRegion]: nativePanel!.id,
   });
 
   const extensionName = extension!.displayName || extension!.name || extension!.id;

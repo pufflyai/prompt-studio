@@ -77,7 +77,6 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
         save: "save" in renderer ? renderer.save : undefined,
       });
       ctx.layout.registerPanel({
-        closable: true,
         id: renderer.panelId,
         title: renderer.title,
         region: "main",
@@ -85,7 +84,11 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
         singleton: true,
         eligibleLocations: {},
       });
-      ctx.layout.openPanel(renderer.panelId, { title: renderer.title, strategy: { kind: "persistent" } });
+      ctx.layout.openPanel(renderer.panelId, {
+        title: renderer.title,
+        closable: true,
+        strategy: { kind: "persistent" },
+      });
     }
   },
 });
@@ -104,7 +107,6 @@ export const createFileRendererErrorStoryModule = (): WorkbenchModuleContributio
       save: () => {},
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: panelId,
       title: "unavailable.md",
       region: "main",

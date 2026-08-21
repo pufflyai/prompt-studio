@@ -23,7 +23,6 @@ const createHostTerminalModule = () => ({
       title: "notes.md",
       region: "secondary",
       singleton: false,
-      closable: true,
       eligibleLocations: {},
       rendererId: notesRendererId,
     });

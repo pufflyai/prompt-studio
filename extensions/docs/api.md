@@ -27,7 +27,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.1"
+    "pstdio": "1.0.0-alpha.2"
   },
   "pstdio": {
     "scope": "user"
@@ -38,7 +38,7 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.1`, never a range: `^1.0.0-alpha.1` also
+  is in alpha this is a plain version such as `1.0.0-alpha.2`, never a range: `^1.0.0-alpha.2` also
   matches `1.0.0-alpha.2`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
@@ -199,8 +199,8 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `treeRenderers`, `fileRenderers`                  | Callback-backed native Workbench trees and file content.                                          |
 | `controlsRenderers`, `dataTableRenderers`         | Callback-backed native controls and tabular data.                                                  |
 | `kanbanRenderers`                                 | Callback-backed native boards and lists.                                                           |
-| `panels`                                          | Workbench panels backed by webviews or native renderer references; declare `supportedRegions`.     |
-| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and panel-to-slot bindings.                                |
+| `panels`                                          | Workbench panels with a webview or native renderer body and optional owned placement.              |
+| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and cross-extension panel-to-slot bindings.                |
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
 | `statusItems`                                     | Status-surface chrome rendered by the host; not part of docked layout.                             |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
@@ -388,15 +388,16 @@ Dashboard UI contributions are declarative:
 - menus attach commands to targets such as `workbench.nav.actions` or `workbench.nav.overflow`; command palette entries use the command's own `palette` field
 - tree items attach routes, commands, panels, resources, or links to area-tree targets such as `workbench.left.tree`
 - native renderers register Workbench trees, files, controls, tables, boards, and lists backed by callbacks
-- panels wrap webviews or native renderers and declare the docked regions they support
-- resource kinds declare domain resources and their named slots; resource panels bind panels to slots
-- modes declare placement recipes that arrange slots and known panels for accepted resource kinds
+- panels wrap webviews or native renderers and use `show` for default placement
+- resource kinds declare domain resources and named slots; resource panels bind only cross-extension panels to slots
+- modes declare placement overrides for slots and known panels in accepted resource kinds
 - status items contribute status-surface chrome
 - settings panels use webview package assets
 
 Native renderers are reusable contributions. Wrap one in a panel with `renderer`; that
-field is mutually exclusive with `webview`. Bind the panel to a resource kind slot with
-`resourcePanels`, and let the mode recipe place it.
+field is mutually exclusive with `webview`. Put placement for your own resource kind in
+the panel's `show` declaration. Use `resourcePanels` only when the resource kind belongs
+to another extension.
 
 ```ts
 export default defineExtension({
@@ -426,12 +427,9 @@ export default defineExtension({
   panels: {
     files: {
       title: "Files",
-      supportedRegions: ["sidenav"],
+      show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "files" },
     },
-  },
-  resourcePanels: {
-    files: { resourceKind: "ticket", panel: "files", slot: "navigation" },
   },
   modes: {
     ticket: {
@@ -440,12 +438,7 @@ export default defineExtension({
       icon: "FileText",
       panelRegions: ["main", "secondary", "side"],
       resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav", pinned: true },
-          },
-        },
+        ticket: {},
       },
     },
   },
@@ -456,11 +449,11 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
-Panel role comes from the slot it binds to:
+Panel role comes from the resolved placement:
 
 - the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
 - other slots hold supporting panels; a slot with `external: true` accepts panels from other extensions
-- a panel bound to no slot can still be placed by a mode's `modePanels` map or opened by a `treeItems` panel action
+- an owned panel uses `show`; a panel with no `show` can still be opened by a `treeItems` panel action or contributed to another extension's slot
 - a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
 
 Visibility can be limited with `when`:

@@ -21,14 +21,24 @@ export interface RegisterWorkbenchExtensionPanelInput {
 // Panels keep manifest declaration order until the user reorders them.
 export const declarationPriority = (declarationIndex = 0) => ({ priority: -declarationIndex });
 
-// The resource kinds a panel serves come from its resource-panel edges; the panel
-// capability itself no longer names resource kinds.
-export const panelResourceKinds = (panelId: string, resourcePanels: ExtensionResourcePanels | undefined) => {
-  const kinds = (resourcePanels ?? [])
-    .filter((edge) => edge.panel === panelId)
-    .map((edge) => edge.resourceKind)
-    .filter((kind, index, all) => all.indexOf(kind) === index);
+// A panel with an unscoped placement is available without a resource. Otherwise,
+// its own scoped placements and cross-extension edges define the kinds it serves.
+export const panelResourceKinds = (
+  panel: ExtensionPanelRecord,
+  resourcePanels: ExtensionResourcePanels | undefined,
+) => {
+  const show = panel.show ? (Array.isArray(panel.show) ? panel.show : [panel.show]) : [];
+  if (show.some((placement) => placement.for === undefined)) return undefined;
+  const kinds = [
+    ...show.flatMap((placement) => (placement.for ? [placement.for] : [])),
+    ...(resourcePanels ?? []).filter((edge) => edge.panel === panel.id).map((edge) => edge.resourceKind),
+  ].filter((kind, index, all) => all.indexOf(kind) === index);
   return kinds.length > 0 ? kinds : undefined;
+};
+
+const panelDefaultRegion = (panel: ExtensionPanelRecord) => {
+  const show = panel.show ? (Array.isArray(panel.show) ? panel.show : [panel.show]) : [];
+  return show[0]?.region ?? "main";
 };
 
 // Registers a metadata panel as a workbench widget. The widget's region is only the
@@ -45,11 +55,10 @@ export const toWorkbenchCompositionPanelContribution = (input: {
   id: input.panel.id,
   title: text(input.panel.title, input.panel.id),
   icon: input.panel.icon,
-  region: input.panel.supportedRegions[0] ?? "main",
-  closable: true,
+  region: panelDefaultRegion(input.panel),
   rendererId: input.rendererId,
   singleton: true,
-  resourceKinds: panelResourceKinds(input.panel.id, input.resourcePanels),
+  resourceKinds: panelResourceKinds(input.panel, input.resourcePanels),
   panelMenus: toWorkbenchPanelMenus(input.panel.panelMenus, input.menuDeclarationOffset),
   config: input.config,
   ...declarationPriority(input.declarationIndex),

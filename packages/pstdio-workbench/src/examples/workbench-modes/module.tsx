@@ -9,7 +9,6 @@ import { registerWorkspaceMode } from "./modules/workspace-mode";
 
 const registerActivityBar = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: activityBarWidgetId,
     title: "Mode switcher",
     region: "activity",

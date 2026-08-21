@@ -23,6 +23,7 @@ export interface ResourceKindContribution {
 }
 
 export interface ResourcePanelContribution {
+  /** Cross-extension binding into a slot owned by the target resource kind. */
   resourceKind: string;
   panel: string;
   slot: string;
@@ -34,6 +35,15 @@ export interface ModePlacementContribution {
   required?: boolean;
   defaultOpen?: boolean;
   pinned?: boolean;
+}
+
+export interface PanelPlacementContribution {
+  /** Resource kind this panel presents. Omit for a mode-wide panel. */
+  for?: string;
+  region: DockedWorkbenchRegion;
+  /** Regions a mode may move this panel to. Defaults to the declared region. */
+  allowedRegions?: readonly DockedWorkbenchRegion[];
+  required?: boolean;
 }
 
 export interface ModeResourceRecipeContribution {

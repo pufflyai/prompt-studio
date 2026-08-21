@@ -160,7 +160,6 @@ describe("createWorkspacesModule sidenav state", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     syncDashboardLayoutPersistenceScope(workbench);
     workbench.layout.registerPanel({
-      closable: true,
       id: "test.files",
       title: "Files",
       region: "side",

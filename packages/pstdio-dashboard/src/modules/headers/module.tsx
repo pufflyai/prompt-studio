@@ -4,7 +4,6 @@ import { ProjectHeader } from "../projects/components/project-header";
 
 const registerHeaders = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    closable: false,
     id: dashboardWidgetIds.projectHeader,
     title: "Project selector",
     region: "nav",

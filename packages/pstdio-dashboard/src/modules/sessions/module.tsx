@@ -29,7 +29,6 @@ import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
 const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.session,
       title: "Session",
       region: "main",

@@ -30,6 +30,7 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
       region,
       resource: widgetResource,
       title: widget.title,
+      closable: true,
       role: region === "main" ? "location" : "sub-panel",
       tabRetention: "persistent",
     });

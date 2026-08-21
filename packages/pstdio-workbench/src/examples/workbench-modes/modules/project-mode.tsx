@@ -25,7 +25,6 @@ const buildProjectTreeSections = () =>
 const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
     ctx.layout.registerPanel({
-      closable: false,
       id: projectWidgetIds.overview,
       title: "Project overview",
       region: "main",
@@ -34,7 +33,6 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
       resourceKinds: [projectResourceKind],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: projectWidgetIds.feed,
       title: "Activity feed",
       region: "secondary",
@@ -57,7 +55,6 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
       getChildren: () => [],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: "workbench-modes.project.navigation",
       title: workbenchModes.project.label,
       region: "sidenav",

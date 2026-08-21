@@ -678,6 +678,7 @@ describe("createHistoryController Sub Panel snapshots", () => {
     const workbench = createWorkbenchCore();
     registerSnapshotFixtures(workbench);
     const location = workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     workbench.layout.openWidget("snapshot.main.a");
@@ -697,6 +698,7 @@ describe("createHistoryController Sub Panel snapshots", () => {
     const workbench = createWorkbenchCore();
     registerSnapshotFixtures(workbench);
     workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     for (const region of ["main", "secondary", "side"] as const) {
@@ -732,12 +734,14 @@ describe("createHistoryController Sub Panel snapshots", () => {
     }
 
     const firstLocation = workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", id: "one", label: "One" },
     });
     for (const region of ["main", "secondary", "side"] as const) {
       workbench.layout.openWidget(`snapshot.${region}.owned`);
     }
     const secondLocation = workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:two", id: "two", label: "Two" },
     });
 
@@ -800,6 +804,7 @@ describe("createHistoryController history hydration", () => {
     first.history.setPersistenceScope("project-one");
     first.layout.setPersistenceScope("project-one");
     first.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     first.layout.openWidget("snapshot.main.a");
@@ -818,6 +823,7 @@ describe("createHistoryController history hydration", () => {
       canOpen: (resource) => resource.kind === "snapshot.location",
       open: async (resource) => {
         const location = second.layout.openPanel("snapshot.location", {
+          role: "location",
           resource,
           strategy: { kind: "replace-active" },
         });
@@ -859,6 +865,7 @@ describe("createHistoryController history hydration", () => {
       first.layout.setPersistenceScope(scope);
       first.history.setPersistenceScope(scope);
       first.layout.openWidget("snapshot.location", {
+        role: "location",
         resource: { kind: "snapshot.location", uri: `snapshot.location:${scope}`, label: scope },
       });
       first.layout.openWidget("snapshot.main.a");
@@ -877,6 +884,7 @@ describe("createHistoryController history hydration", () => {
       canOpen: (resource) => resource.kind === "snapshot.location",
       open: async (resource) => {
         const location = second.layout.openPanel("snapshot.location", {
+          role: "location",
           resource,
           strategy: { kind: "replace-active" },
         });
@@ -913,6 +921,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     registerSnapshotFixtures(first);
     first.history.setPersistenceScope("project-one");
     first.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     first.layout.openWidget("snapshot.main.a");
@@ -946,6 +955,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     first.layout.setPersistenceScope("project-one");
     first.history.setPersistenceScope("project-one");
     first.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     first.layout.openWidget("snapshot.main.a");
@@ -974,6 +984,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     registerSnapshotFixtures(first);
     first.history.setPersistenceScope("project-one");
     first.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     first.layout.openWidget("snapshot.main.a");
@@ -986,6 +997,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     second.history.setPersistenceScope("project-one");
 
     second.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     second.layout.openWidget("snapshot.main.b");
@@ -1013,6 +1025,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     workbench.layout.setPersistenceScope("project-one");
     workbench.history.setPersistenceScope("project-one");
     workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     workbench.layout.openWidget("snapshot.main.a");
@@ -1020,6 +1033,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     workbench.layout.setPersistenceScope("project-two");
     workbench.history.setPersistenceScope("project-two");
     workbench.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:two", label: "Two" },
     });
     workbench.layout.openWidget("snapshot.main.b");
@@ -1047,6 +1061,7 @@ describe("createHistoryController persisted Sub Panel snapshots", () => {
     registerSnapshotFixtures(first);
     first.history.setPersistenceScope("project-one");
     first.layout.openWidget("snapshot.location", {
+      role: "location",
       resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
     });
     const subPanel = first.layout.openWidget("snapshot.side.a");

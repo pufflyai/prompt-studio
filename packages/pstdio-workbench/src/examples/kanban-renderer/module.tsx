@@ -77,7 +77,6 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
     title: "Configure attributes",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: kanbanRendererStoryEditorWidgetId,
     config: { size: "lg", placement: "center", scrollBehavior: "inside" },
   });
@@ -125,7 +124,6 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
     registerSchemaEditor(ctx);
 
     ctx.layout.registerPanel({
-      closable: false,
       id: kanbanRendererStoryWidgetId,
       title: "Rows",
       region: "main",

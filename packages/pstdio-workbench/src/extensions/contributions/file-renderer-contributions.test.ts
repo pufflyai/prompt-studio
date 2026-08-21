@@ -45,21 +45,21 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
         {
           id: "lab.a",
           extensionId: "pstdio.lab",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           title: "Last",
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
           id: "lab.b",
           extensionId: "pstdio.lab",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           title: "Default",
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
         {
           id: "lab.c",
           extensionId: "pstdio.lab",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           title: "First",
           renderer: { kind: "file", id: "lab.ticketContent" },
         },
@@ -106,7 +106,7 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
         {
           id: "lab.ticketEditor",
           extensionId: "pstdio.lab",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           title: "Ticket",
           renderer: { kind: "file", id: "lab.ticketContent" },
           panelMenus: [
@@ -148,8 +148,8 @@ describe("registerWorkbenchExtensionFileRenderers", () => {
     expect(workbench.layout.getPanel("lab.ticketEditor")).toMatchObject({
       region: "main",
       rendererId: "lab.ticketContent",
-      resourceKinds: ["ticket"],
     });
+    expect(workbench.layout.getPanel("lab.ticketEditor")?.resourceKinds).toBeUndefined();
     expect(workbench.layout.getPanel("lab.ticketProperties")).toMatchObject({
       region: "main-right-menu",
       rendererId: "lab.ticketProperties",

@@ -91,7 +91,7 @@ export const metadataWithLabMode = {
     {
       id: "extension-lab.labSidenav",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["sidenav"],
+      show: { region: "sidenav" },
       title: "Lab",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-sidenav.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -102,7 +102,7 @@ export const metadataWithLabMode = {
     {
       id: "extension-lab.labOverview",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Lab overview",
       webview: {
         entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
@@ -178,14 +178,14 @@ export const metadataWithTickets = {
     {
       id: "pstdio-core-tickets.tickets",
       extensionId: "pstdio.pstdio-core-tickets",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Tickets",
       renderer: { kind: "kanban", id: "pstdio-core-tickets.tickets" },
     },
     {
       id: "pstdio-core-tickets.ticketEditor",
       extensionId: "pstdio.pstdio-core-tickets",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       title: "Ticket",
       webview: {
         entry: {
@@ -219,7 +219,7 @@ export const metadataWithTickets = {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
       title: "Files",
-      supportedRegions: ["sidenav"],
+      show: { region: "sidenav" },
       renderer: { kind: "tree", id: "pstdio-core-tickets.ticketFiles" },
     },
   ],

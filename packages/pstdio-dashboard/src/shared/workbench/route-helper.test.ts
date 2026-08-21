@@ -27,7 +27,6 @@ const setup = (): RouteContractHarness => {
     activate(ctx) {
       ctx.modes.registerMode({ id: MODE, label: "Route test", activate: () => undefined });
       ctx.layout.registerPanel({
-        closable: false,
         id: "route-test-root",
         title: "Root",
         region: "main",
@@ -36,7 +35,6 @@ const setup = (): RouteContractHarness => {
         resourceKinds: ["dashboard-view"],
       });
       ctx.layout.registerPanel({
-        closable: false,
         id: "route-test-detail",
         title: "Detail",
         region: "main",
@@ -103,7 +101,6 @@ describe("registerResourceRoute navigation state", () => {
       },
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "route-test-detail",
       title: "Detail",
       region: "main",
@@ -143,7 +140,6 @@ describe("registerResourceRoute navigation state", () => {
     workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
     workbench.modes.registerMode({ id: MODE, activate: () => undefined });
     workbench.layout.registerPanel({
-      closable: false,
       id: "route-test-detail",
       title: "Detail",
       region: "main",

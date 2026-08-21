@@ -27,7 +27,7 @@ test("opens a newly selected mode's declared Panel regions after dashboard scope
       {
         id: "extension-lab.reviewChecklist",
         extensionId: "pstdio.extension-lab",
-        supportedRegions: ["secondary" as const],
+        show: { region: "secondary" as const },
         title: "Review checklist",
         webview: {
           entry: {

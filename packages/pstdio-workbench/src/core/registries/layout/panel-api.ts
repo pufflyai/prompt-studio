@@ -44,6 +44,6 @@ export const toPanelInstance = (placement: WorkbenchWidgetPlacement): WorkbenchP
 });
 
 export const toPanelContribution = (widget: RegisteredWidgetContribution): WorkbenchPanelContribution => {
-  const { ownedPanelMenuIds: _ownedPanelMenuIds, role: _role, ...panel } = widget;
-  return { ...panel, closable: panel.closable === true };
+  const { closable: _closable, ownedPanelMenuIds: _ownedPanelMenuIds, ...panel } = widget;
+  return panel;
 };

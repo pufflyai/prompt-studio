@@ -155,16 +155,14 @@ const activateHistoryResource = (input: ActivateHistoryResourceInput) => {
   }
 
   if (placement?.resourceUri === resource.uri) layout.activateWidget(placement.widgetId);
-  else if (entry.contributionId && layout.getWidget(entry.contributionId)?.role === "location") {
+  else if (entry.contributionId && layout.getWidget(entry.contributionId)) {
     layout.openWidget(entry.contributionId, {
       resource,
+      role: "location",
       title: entry.title,
       replaceActive: Boolean(placement),
     });
   } else if (placement) layout.activateWidget(placement.widgetId);
-  else if (entry.contributionId && layout.getWidget(entry.contributionId)) {
-    layout.openWidget(entry.contributionId, { title: entry.title });
-  }
   restoreSelections(entry);
   return undefined;
 };
@@ -234,6 +232,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
             resource: last.closedSubPanel.resource,
             title: last.closedSubPanel.title,
             closable: true,
+            role: "sub-panel",
           });
         };
         if (pending instanceof Promise) void pending.then(reopenSubPanel);

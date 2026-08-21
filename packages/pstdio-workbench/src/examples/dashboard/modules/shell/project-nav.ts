@@ -80,7 +80,6 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
     getChildren: () => [],
   });
   ctx.layout.registerPanel({
-    closable: false,
     id: dashboardNavigationTreeViewId,
     title: "Acme",
     region: "sidenav",

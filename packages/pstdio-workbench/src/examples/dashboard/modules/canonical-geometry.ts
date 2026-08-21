@@ -15,21 +15,18 @@ export const createCanonicalGeometryModule = (): WorkbenchModuleContribution => 
     ctx.renderers.registerRenderer({ id: canonicalGeometryRendererId, render: () => null });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: canonicalGeometryWidgetIds.mainHeader,
       title: "Main Panel header",
       region: "main-header",
       rendererId: canonicalGeometryRendererId,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: canonicalGeometryWidgetIds.secondaryHeader,
       title: "Secondary Panel header",
       region: "secondary-header",
       rendererId: canonicalGeometryRendererId,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: canonicalGeometryWidgetIds.secondary,
       title: "Secondary Panel",
       region: "secondary",

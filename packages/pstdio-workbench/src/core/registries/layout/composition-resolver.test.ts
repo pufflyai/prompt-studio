@@ -16,38 +16,27 @@ const composition: WorkbenchComposition = {
     },
   ],
   panels: [
-    { id: "planner.editor", extensionId: "pstdio.planner", title: "Editor", supportedRegions: ["main"] },
-    { id: "planner.tree", extensionId: "pstdio.planner", title: "Tree", supportedRegions: ["sidenav"] },
-    {
-      id: "planner.properties",
-      extensionId: "pstdio.planner",
-      title: "Properties",
-      supportedRegions: ["side", "secondary"],
-    },
-    { id: "acme.insights", extensionId: "acme.insights", title: "Insights", supportedRegions: ["side", "secondary"] },
-  ],
-  resourcePanels: [
     {
       id: "planner.editor",
       extensionId: "pstdio.planner",
-      resourceKind: "planner.ticket",
-      panel: "planner.editor",
-      slot: "primary",
+      title: "Editor",
+      show: { resourceKind: "planner.ticket", region: "main", required: true },
     },
     {
       id: "planner.tree",
       extensionId: "pstdio.planner",
-      resourceKind: "planner.ticket",
-      panel: "planner.tree",
-      slot: "navigation",
+      title: "Tree",
+      show: { resourceKind: "planner.ticket", region: "sidenav", required: true },
     },
     {
       id: "planner.properties",
       extensionId: "pstdio.planner",
-      resourceKind: "planner.ticket",
-      panel: "planner.properties",
-      slot: "inspector",
+      title: "Properties",
+      show: { resourceKind: "planner.ticket", region: "side", allowedRegions: ["side", "secondary"] },
     },
+    { id: "acme.insights", extensionId: "acme.insights", title: "Insights" },
+  ],
+  resourcePanels: [
     {
       id: "acme.insights",
       extensionId: "acme.insights",
@@ -89,10 +78,9 @@ describe("composition resolver", () => {
     expect(result.regionOrder.side).toEqual(["planner.properties"]);
     expect(result.placements.find((placement) => placement.panelId === "planner.editor")).toMatchObject({
       required: true,
-      closable: false,
     });
     // An external contribution stays available through Add Panel until a mode names it.
-    expect(result.optionalPanels).toEqual(["acme.insights"]);
+    expect(result.addablePanels.map((panel) => panel.panelId)).toEqual(["acme.insights"]);
   });
 
   test("rejects a context whose mode does not accept the resource kind without resolving placements", () => {
@@ -161,7 +149,7 @@ describe("composition resolver", () => {
     expect(result.regionOrder.main).toEqual(["planner.editor"]);
     expect(result.placements.find((placement) => placement.panelId === "planner.editor")?.origin).toBe("required");
     expect(result.regionOrder.side ?? []).toEqual([]);
-    expect(result.optionalPanels).toEqual(["planner.properties", "acme.insights"]);
+    expect(result.addablePanels.map((panel) => panel.panelId)).toEqual(["planner.properties", "acme.insights"]);
   });
 
   test("omits invalid optional contributions and reports them without blocking valid panels", () => {
@@ -238,15 +226,13 @@ describe("composition resolver", () => {
         id: ticketMode.id,
         resources: {
           "planner.ticket": {
-            slots: {
-              primary: { region: "sidenav" as const, required: true },
-            },
+            panels: { "planner.editor": { region: "sidenav" as const, required: true } },
           },
         },
       },
     });
 
-    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_panel_region_unsupported");
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_panel_placement_unresolvable");
     expect(result.requiredFallback).toEqual({ panelId: "planner.editor" });
   });
 
@@ -279,7 +265,7 @@ describe("composition resolver", () => {
     });
 
     expect(result.regionOrder.sidenav).toEqual(["planner.tree"]);
-    expect(result.placements[0]).toMatchObject({ required: true, closable: false });
+    expect(result.placements[0]).toMatchObject({ required: true });
   });
 
   test("one resource resolves a distinct layout in each compatible mode", () => {
@@ -287,10 +273,9 @@ describe("composition resolver", () => {
       id: "lab.animation",
       resources: {
         "planner.ticket": {
-          slots: {
-            primary: { region: "main" as const, required: true },
-            navigation: { region: "sidenav" as const, required: true },
-            inspector: { region: "side" as const, allowedRegions: ["side", "secondary"] as const },
+          panels: {
+            "planner.tree": { region: "sidenav" as const, required: true },
+            "planner.properties": { region: "side" as const },
           },
         },
       },
@@ -299,20 +284,28 @@ describe("composition resolver", () => {
       id: "lab.sculpt",
       resources: {
         "planner.ticket": {
-          slots: {
-            primary: { region: "main" as const, required: true },
-            navigation: { region: "side" as const, required: true },
-            inspector: { region: "secondary" as const, allowedRegions: ["secondary", "side"] as const },
+          panels: {
+            "planner.tree": { region: "side" as const, required: true },
+            "planner.properties": { region: "secondary" as const },
           },
         },
       },
     };
 
-    // The navigation panel must support both regions the two modes place it in.
     const movable: WorkbenchComposition = {
       ...composition,
       panels: composition.panels.map((panel) =>
-        panel.id === "planner.tree" ? { ...panel, supportedRegions: ["sidenav", "side"] } : panel,
+        panel.id === "planner.tree"
+          ? {
+              ...panel,
+              show: {
+                resourceKind: "planner.ticket",
+                region: "sidenav",
+                allowedRegions: ["sidenav", "side"],
+                required: true,
+              },
+            }
+          : panel,
       ),
     };
     const first = resolve({
@@ -343,10 +336,10 @@ describe("composition resolver", () => {
 
     // The slot recipe places only the resource owner's panels.
     expect(bySlot.regionOrder.side).toEqual(["planner.properties"]);
-    expect(bySlot.optionalPanels).toEqual(["acme.insights"]);
+    expect(bySlot.addablePanels.map((panel) => panel.panelId)).toEqual(["acme.insights"]);
     // Naming the external panel in the recipe places it.
     expect(byName.regionOrder.side).toEqual(["planner.properties", "acme.insights"]);
-    expect(byName.optionalPanels).toEqual([]);
+    expect(byName.addablePanels).toEqual([]);
   });
 });
 
@@ -364,7 +357,92 @@ describe("composition Add Panel options", () => {
       persisted: { regions: { main: { order: [] } } },
     });
 
-    expect(result.optionalPanels).toEqual(["planner.editor"]);
+    expect(result.addablePanels.map((panel) => panel.panelId)).toEqual(["planner.editor"]);
     expect(result.addablePanels).toEqual([{ panelId: "planner.editor", region: "main", allowedRegions: ["main"] }]);
+  });
+});
+
+describe("panel-owned composition placement", () => {
+  const panelOwnedComposition = {
+    resourceKinds: [
+      {
+        id: "planner.ticket",
+        extensionId: "pstdio.planner",
+        surface: "primary",
+        slots: { inspector: { cardinality: "many", external: true } },
+      },
+    ],
+    panels: [
+      {
+        id: "planner.editor",
+        extensionId: "pstdio.planner",
+        title: "Editor",
+        show: {
+          resourceKind: "planner.ticket",
+          region: "main",
+          allowedRegions: ["main", "secondary"],
+          required: true,
+        },
+      },
+      {
+        id: "planner.properties",
+        extensionId: "pstdio.planner",
+        title: "Properties",
+        show: { resourceKind: "planner.ticket", region: "side" },
+      },
+    ],
+    resourcePanels: [],
+  } as unknown as WorkbenchComposition;
+
+  test("places panels for the owner's resource without resource-panel edges", () => {
+    const mode = {
+      id: "planner.mode",
+      extensionId: "pstdio.planner",
+      resources: { "planner.ticket": {} },
+    };
+    const result = resolveComposition({
+      context: { modeId: mode.id, resourceKind: "planner.ticket" },
+      mode,
+      composition: panelOwnedComposition,
+    });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.regionOrder.main).toEqual(["planner.editor"]);
+    expect(result.regionOrder.side).toEqual(["planner.properties"]);
+    expect(result.placements.find((placement) => placement.panelId === "planner.editor")?.required).toBe(true);
+  });
+
+  test("lets a mode move a panel only within the panel's allowed regions", () => {
+    const validMode = {
+      id: "planner.review",
+      extensionId: "pstdio.planner",
+      resources: {
+        "planner.ticket": { panels: { "planner.editor": { region: "secondary" as const } } },
+      },
+    };
+    const invalidMode = {
+      ...validMode,
+      id: "planner.side",
+      resources: {
+        "planner.ticket": { panels: { "planner.editor": { region: "side" as const } } },
+      },
+    };
+
+    const valid = resolveComposition({
+      context: { modeId: validMode.id, resourceKind: "planner.ticket" },
+      mode: validMode,
+      composition: panelOwnedComposition,
+    });
+    const invalid = resolveComposition({
+      context: { modeId: invalidMode.id, resourceKind: "planner.ticket" },
+      mode: invalidMode,
+      composition: panelOwnedComposition,
+    });
+
+    expect(valid.regionOrder.secondary).toEqual(["planner.editor"]);
+    expect(invalid.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "extension_panel_placement_unresolvable",
+    );
+    expect(invalid.placements.some((placement) => placement.panelId === "planner.editor")).toBe(false);
   });
 });

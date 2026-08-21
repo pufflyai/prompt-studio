@@ -95,6 +95,7 @@ export const openWorkbenchTerminal = (
     ...openInput,
     resource,
     title: openInput.title ?? getNextTerminalTitle(ctx),
+    closable: true,
     // Every terminal keeps its own live session, so each open is a real tab.
     strategy: { kind: "persistent" },
   });
@@ -123,7 +124,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         region: "secondary",
         singleton: false,
         reuse: "none",
-        closable: true,
         mountStrategy: "keep-mounted",
         rendererId: RENDERER_ID,
         openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
@@ -140,7 +140,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         title: "Terminal",
         region: "secondary",
         singleton: true,
-        closable: false,
         hiddenByDefault: true,
         rendererId: LAUNCHER_RENDERER_ID,
         regionSize: TERMINAL_PANEL_SIZE,

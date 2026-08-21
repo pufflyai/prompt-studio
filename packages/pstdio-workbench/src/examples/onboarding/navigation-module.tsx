@@ -237,7 +237,6 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: NAVIGATION_HOME_WIDGET_ID,
       title: "Navigation",
       region: "main",
@@ -248,13 +247,11 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       id: NAVIGATION_GUIDE_WIDGET_ID,
       title: "Navigation guide",
       region: "main",
-      closable: true,
       singleton: true,
       resourceKinds: [GUIDE_KIND],
       rendererId: NAVIGATION_GUIDE_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: NAVIGATION_TREE_ID,
       title: "Navigation",
       region: "sidenav",

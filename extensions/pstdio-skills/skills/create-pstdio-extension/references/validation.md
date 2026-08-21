@@ -50,12 +50,12 @@ Treat warnings as actionable. They do not block loading, but they describe behav
 
 Composition diagnostics to expect:
 
-- `extension_panel_contract_invalid`: a panel must declare at least one docked supported region.
+- `extension_panel_contract_invalid`: a panel's `show` value must be one valid placement or a non-empty list of valid placements.
 - `extension_resource_kind_missing`: a resource panel, mode, or hierarchy provider references an unknown resource kind.
 - `extension_resource_slot_missing`: a resource panel or mode references an unknown slot.
 - `extension_resource_slot_closed`: an external extension contributes to a closed slot.
 - `extension_panel_missing`: a resource panel or mode references an unknown panel.
-- `extension_panel_region_unsupported`: a mode places a panel outside its supported regions.
+- `extension_panel_placement_unresolvable`: a mode moves a panel outside the regions allowed by its declaration.
 - `extension_mode_resource_unsupported`: a recipe references a resource kind the mode does not accept, or a panel not registered for it.
 - `extension_placement_required_invalid`: `required` is set on a cardinality-many slot placement without naming a panel.
 - `extension_resource_primary_invalid`: a primary resource has zero or several primary location placements.

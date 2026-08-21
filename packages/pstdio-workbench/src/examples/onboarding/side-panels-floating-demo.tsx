@@ -92,7 +92,6 @@ export const registerFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionCont
   ctx.renderers.registerRenderer({ id: CHECKS_TAB_RENDERER_ID, render: () => <ChecksTab /> });
 
   ctx.layout.registerPanel({
-    closable: true,
     eligibleLocations: {},
     id: SESSION_WIDGET_ID,
     title: "Session A",
@@ -104,7 +103,6 @@ export const registerFloatingSidePanelDemo = (ctx: WorkbenchCoreContributionCont
     },
   });
   ctx.layout.registerPanel({
-    closable: true,
     eligibleLocations: {},
     id: CHECKS_WIDGET_ID,
     title: "Checks",

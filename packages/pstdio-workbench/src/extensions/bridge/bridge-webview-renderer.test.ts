@@ -7,7 +7,6 @@ const setupWebviewWidget = () => {
   const workbench = createWorkbenchCore();
 
   workbench.layout.registerPanel({
-    closable: false,
     id: "lab.page",
     title: "Lab page",
     region: "main",

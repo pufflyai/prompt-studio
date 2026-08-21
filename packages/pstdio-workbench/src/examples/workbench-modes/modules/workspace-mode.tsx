@@ -26,7 +26,6 @@ const MAIN_HEADER_WIDGET_ID = "workbench-modes.workspace.mainHeader";
 const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   const disposables: Disposable[] = [
     ctx.layout.registerPanel({
-      closable: false,
       id: MAIN_HEADER_WIDGET_ID,
       title: "Workspace mode header",
       region: "main-header",
@@ -34,7 +33,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       rendererId: MAIN_HEADER_WIDGET_ID,
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: workspaceWidgetIds.editor,
       title: "Editor",
       region: "main",
@@ -43,7 +41,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       resourceKinds: [workspaceResourceKind],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: workspaceWidgetIds.diff,
       title: "Diff",
       region: "main-right-menu",
@@ -71,7 +68,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       getChildren: () => [],
     }),
     ctx.layout.registerPanel({
-      closable: false,
       id: "workbench-modes.workspace.files",
       title: "Files",
       region: "main-left-menu",

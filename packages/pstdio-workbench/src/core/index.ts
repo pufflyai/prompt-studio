@@ -17,6 +17,12 @@ export type {
 } from "./controllers/command-palette/command-palette-controller";
 export { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 export type {
+  WorkbenchCompositionAddablePanel,
+  WorkbenchCompositionController,
+  WorkbenchCompositionRegionPanels,
+} from "./controllers/composition/composition-controller";
+export { createWorkbenchCompositionController } from "./controllers/composition/composition-controller";
+export type {
   CreateWorkbenchFocusControllerInput,
   WorkbenchFocusChangeListener,
   WorkbenchFocusController,
@@ -127,6 +133,7 @@ export type {
   CompositionModeDefinition,
   CompositionModeRecipe,
   CompositionPanelDefinition,
+  CompositionPanelPlacement,
   CompositionPlacementPolicy,
   CompositionResolutionContext,
   CompositionResourceKindDefinition,
@@ -192,12 +199,9 @@ export {
   allowsWorkbenchFloatingPanels,
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
-  isSubPanelEligible,
-  listEligibleSubPanels,
-  matchesWorkbenchLocationEligibility,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
-  matchesWorkbenchPanelPlacementLocation,
 } from "./registries/layout/panel-widget-eligibility";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {

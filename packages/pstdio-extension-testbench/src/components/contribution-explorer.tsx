@@ -223,7 +223,6 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
       onActivate: () => {
         if (!view && !workbench.layout.getPanel(widgetId)) {
           workbench.layout.registerPanel({
-            closable: false,
             id: widgetId,
             title,
             region: "main-left-menu",

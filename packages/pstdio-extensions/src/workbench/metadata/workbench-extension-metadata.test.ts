@@ -75,17 +75,17 @@ describe("createWorkbenchExtensionMetadata", () => {
           panels: {
             rows: {
               title: "Rows",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               renderer: { kind: "kanban", id: "rows" },
             },
             files: {
               title: "Files",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               renderer: { kind: "tree", id: "files" },
             },
             ticketPanel: {
               title: "Ticket",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               webview: { entry: webviewAsset("./ticket.tsx") },
             },
           },
@@ -118,7 +118,7 @@ describe("createWorkbenchExtensionMetadata", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "lab.ticketPanel",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           webview: expect.objectContaining({ moduleUrl: "/modules/lab.ticketPanel.js" }),
         }),
         expect.objectContaining({
@@ -409,7 +409,7 @@ describe("createWorkbenchExtensionMetadata Panel Menu owners", () => {
           panels: {
             notes: {
               title: "Notes",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               webview: { entry: webviewAsset("./notes.tsx") },
               panelMenus: {
                 tools: {
@@ -489,7 +489,7 @@ describe("createWorkbenchExtensionMetadata data table renderers", () => {
             },
           },
           panels: {
-            health: { title: "Health", supportedRegions: ["main"], renderer: { kind: "dataTable", id: "health" } },
+            health: { title: "Health", show: { region: "main" }, renderer: { kind: "dataTable", id: "health" } },
           },
         },
       },

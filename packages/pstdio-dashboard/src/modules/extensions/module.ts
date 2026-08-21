@@ -281,7 +281,6 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
       ctx.layout.registerPanel(
         {
-          closable: false,
           id: dashboardWidgetIds.extensionRoute,
           title: "Extension route",
           region: "main",

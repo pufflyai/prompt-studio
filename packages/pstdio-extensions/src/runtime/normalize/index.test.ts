@@ -290,7 +290,7 @@ describe("normalizeExtensionSources runtime records", () => {
         },
       },
       panels: {
-        health: { title: "Health", supportedRegions: ["main"], renderer: { kind: "dataTable", id: "health" } },
+        health: { title: "Health", show: { region: "main" }, renderer: { kind: "dataTable", id: "health" } },
       },
     });
 
@@ -417,7 +417,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         ticketFiles: {
           title: "Files",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           renderer: { kind: "tree", id: "files" },
         },
       },
@@ -443,7 +443,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       id: "planner.ticketFiles",
       contribution: {
         title: "Files",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "tree", id: "files" },
       },
     });
@@ -454,7 +454,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         ticketEditor: {
           title: "Ticket",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           webview: { entry: packageAsset("./editor.tsx", "file:///fake/planner/extension.ts") },
         },
       },
@@ -465,7 +465,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
     expect(runtime.panels).toEqual([
       expect.objectContaining({
         id: "planner.ticketEditor",
-        contribution: expect.objectContaining({ title: "Ticket", supportedRegions: ["main"] }),
+        contribution: expect.objectContaining({ title: "Ticket", show: { region: "main" } }),
       }),
     ]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain("extension_view_unreachable");
@@ -480,7 +480,7 @@ describe("normalizeExtensionSources tree and panel runtime records", () => {
       panels: {
         both: {
           title: "Both",
-          supportedRegions: ["main"],
+          show: { region: "main" },
           renderer: { kind: "tree", id: "files" },
           webview: { entry: packageAsset("./both.tsx", "file:///fake/planner/extension.ts") },
         },

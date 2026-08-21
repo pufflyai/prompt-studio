@@ -3,9 +3,8 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { createDefaultWorkbenchLayout, type RegisteredWidgetContribution } from "./layout-types";
 import {
   allowsWorkbenchFloatingPanels,
-  listEligibleSubPanels,
+  isWorkbenchPanelPlacementVisible,
   matchesWorkbenchPanelMenuOwner,
-  matchesWorkbenchPanelPlacementLocation,
 } from "./panel-widget-eligibility";
 
 const resource: ResourceRef = {
@@ -18,92 +17,12 @@ const widget = (overrides: Partial<RegisteredWidgetContribution>): RegisteredWid
   title: "Files",
   region: "main",
   rendererId: "files.renderer",
-  role: "sub-panel",
   singleton: true,
   reuse: "resource",
   source: "module",
   ownerId: "test",
   priority: 0,
   ...overrides,
-});
-
-describe("listEligibleSubPanels", () => {
-  test("uses destination, resource, and singleton state for one shared openability decision", () => {
-    const layout = createDefaultWorkbenchLayout();
-    layout.regions.main.widgets.push({
-      widgetId: "open-preview",
-      contributionId: "preview",
-      ownerResourceUri: resource.uri,
-    });
-
-    const widgets = [
-      widget({ id: "files", fallbackRegion: "side", resourceKinds: ["workspace"] }),
-      widget({ id: "tickets", resourceKinds: ["ticket"] }),
-      widget({ id: "preview", singleton: true }),
-      widget({ id: "terminal", region: "secondary", singleton: false, reuse: "none" }),
-      widget({ id: "unavailable", canOpen: () => false }),
-      widget({ id: "settings", role: "content" }),
-    ];
-
-    expect(listEligibleSubPanels({ widgets, layout, region: "main", resource }).map((item) => item.id)).toEqual([
-      "files",
-    ]);
-    expect(listEligibleSubPanels({ widgets, layout, region: "side", resource }).map((item) => item.id)).toEqual([
-      "files",
-    ]);
-    expect(listEligibleSubPanels({ widgets, layout, region: "secondary", resource }).map((item) => item.id)).toEqual([
-      "terminal",
-    ]);
-  });
-
-  test("requires widgets to opt into the Add panel menu", () => {
-    const widgets = [widget({ id: "workspaces" }), widget({ id: "settings", role: "content" })];
-
-    expect(
-      listEligibleSubPanels({ widgets, layout: createDefaultWorkbenchLayout(), region: "main" }).map((item) => item.id),
-    ).toEqual(["workspaces"]);
-  });
-
-  test("includes a composition panel when the active mode offers it", () => {
-    const panels = [
-      widget({ id: "overview", role: "content" }),
-      widget({ id: "artifacts", role: "content", resourceKinds: ["artifact"] }),
-    ];
-
-    expect(
-      listEligibleSubPanels({
-        addableWidgetIds: ["artifacts"],
-        widgets: panels,
-        layout: createDefaultWorkbenchLayout(),
-        region: "main",
-      }).map((item) => item.id),
-    ).toEqual(["artifacts"]);
-  });
-
-  test("matches explicit location owners", () => {
-    const widgets = [
-      widget({ id: "ticket-files", eligibleLocations: { resourceKinds: ["ticket"] } }),
-      widget({ id: "workspace-files", eligibleLocations: { resourceKinds: ["workspace"] } }),
-    ];
-
-    expect(
-      listEligibleSubPanels({ widgets, layout: createDefaultWorkbenchLayout(), region: "main", resource }),
-    ).toEqual([expect.objectContaining({ id: "workspace-files" })]);
-  });
-
-  test("allows one singleton Sub Panel placement in each Location", () => {
-    const layout = createDefaultWorkbenchLayout();
-    layout.regions.main.widgets.push({
-      widgetId: "files-alpha",
-      contributionId: "files",
-      role: "sub-panel",
-      ownerResourceUri: "workspace:alpha",
-    });
-
-    expect(listEligibleSubPanels({ widgets: [widget({})], layout, region: "main", resource })).toEqual([
-      expect.objectContaining({ id: "files" }),
-    ]);
-  });
 });
 
 describe("Location Panel presentation", () => {
@@ -119,7 +38,7 @@ describe("Location Panel presentation", () => {
     };
     const sessions = { kind: "dashboard-view", id: "sessions", uri: "dashboard:sessions" };
 
-    expect(matchesWorkbenchPanelPlacementLocation(contribution, sessions, "sessions", placement)).toBe(false);
+    expect(isWorkbenchPanelPlacementVisible(contribution, sessions, "sessions", placement)).toBe(false);
   });
 
   test("validates a resource-backed Sub Panel against its own resource and its Location separately", () => {
@@ -135,7 +54,7 @@ describe("Location Panel presentation", () => {
       resource: { kind: "note", uri: "note:alpha" },
     };
 
-    expect(matchesWorkbenchPanelPlacementLocation(contribution, resource, "workspace", placement)).toBe(true);
+    expect(isWorkbenchPanelPlacementVisible(contribution, resource, "workspace", placement)).toBe(true);
   });
 
   test("can keep a Side Panel placement eligible independently of its Location resource", () => {
@@ -155,7 +74,7 @@ describe("Location Panel presentation", () => {
     const ticket = { kind: "ticket", id: "beta", uri: "ticket:beta" };
 
     expect(
-      matchesWorkbenchPanelPlacementLocation(contribution, ticket, "workspace", placement, {
+      isWorkbenchPanelPlacementVisible(contribution, ticket, "workspace", placement, {
         ignoreResourceLocation: true,
       }),
     ).toBe(true);
@@ -169,10 +88,7 @@ describe("Location Panel presentation", () => {
     );
     layout.activeLocationWidgetId = "location";
     layout.regions.main.activeWidgetId = "location";
-    const widgets = [
-      widget({ id: "location", role: "location", floatingPanels: "hidden" }),
-      widget({ id: "notes", role: "sub-panel" }),
-    ];
+    const widgets = [widget({ id: "location", floatingPanels: "hidden" }), widget({ id: "notes" })];
 
     expect(allowsWorkbenchFloatingPanels(layout, widgets)).toBe(false);
 
@@ -183,7 +99,7 @@ describe("Location Panel presentation", () => {
 
 describe("matchesWorkbenchPanelMenuOwner", () => {
   const panelMenu = (owner: RegisteredWidgetContribution["panelMenuOwner"]): RegisteredWidgetContribution =>
-    widget({ id: "inspector", role: "panel-menu", region: "main-right-menu", panelMenuOwner: owner });
+    widget({ id: "inspector", region: "main-right-menu", panelMenuOwner: owner });
 
   test("shows menus only for the selected Panel or Sub Panel", () => {
     const location = { widgetId: "project", contributionId: "project.location", role: "location" as const };

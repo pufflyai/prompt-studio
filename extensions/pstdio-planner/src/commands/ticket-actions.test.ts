@@ -37,6 +37,9 @@ describe("runAttemptCommand", () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
     const storedTicket = await ticketsCollection(storage).get(ticket.id);
+    if (!storedTicket) {
+      throw new Error("Expected the created ticket to be stored");
+    }
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
 
@@ -307,6 +310,9 @@ describe("createWorkspaceCommand", () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
     const storedTicket = await ticketsCollection(storage).get(ticket.id);
+    if (!storedTicket) {
+      throw new Error("Expected the created ticket to be stored");
+    }
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
 

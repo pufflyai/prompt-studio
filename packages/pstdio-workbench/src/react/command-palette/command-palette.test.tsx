@@ -211,7 +211,6 @@ describe("createWorkbenchResourcePaletteEntries", () => {
       title: "Ticket",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
     workbench.resources.registerPresenter({
@@ -249,7 +248,6 @@ describe("createWorkbenchResourcePaletteEntries", () => {
       title: "Workspace",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
     workbench.resources.registerPresenter({

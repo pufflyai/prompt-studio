@@ -49,7 +49,6 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
     title: "Notifications",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.notificationsModal,
     config: {
       size: "lg",
@@ -81,6 +80,7 @@ export const createNotificationsModule = () =>
           execute: () =>
             ctx.layout.openPanel(dashboardWidgetIds.notificationsModal, {
               title: "Notifications",
+              closable: true,
             }),
         },
       );

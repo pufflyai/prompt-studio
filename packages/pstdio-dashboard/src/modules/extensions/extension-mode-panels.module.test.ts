@@ -31,13 +31,8 @@ const labMetadata = {
       modeId: "pstdio.extension-lab.lab",
       label: "Lab",
       panelRegions: ["main", "side"],
-      modePanels: {
-        "extension-lab.labOverview": { region: "main", required: true },
-        "extension-lab.labCams": { region: "main" },
-        "extension-lab.labArtifacts": { region: "main" },
-      },
       resources: {
-        "glass-lab-artifact": { slots: { inspector: { region: "side" } } },
+        "glass-lab-artifact": {},
       },
     },
   ],
@@ -53,14 +48,14 @@ const labMetadata = {
     {
       id: "extension-lab.labOverview",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["main"],
+      show: { region: "main", required: true },
       title: "Overview",
       webview: webview("overview"),
     },
     {
       id: "extension-lab.labCams",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["main", "side"],
+      show: { region: "main" },
       title: "Cams",
       webview: webview("cams"),
       panelMenus: [
@@ -77,7 +72,7 @@ const labMetadata = {
     {
       id: "extension-lab.labArtifacts",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["main", "secondary", "side"],
+      show: { region: "main" },
       title: "Artifacts",
       renderer: { kind: "dataTable", id: "extension-lab.glassLabArtifacts" },
       panelMenus: [
@@ -94,7 +89,7 @@ const labMetadata = {
     {
       id: "extension-lab.labArtifactDetail",
       extensionId: "pstdio.extension-lab",
-      supportedRegions: ["side"],
+      show: { for: "glass-lab-artifact", region: "side" },
       title: "Artifact",
       webview: webview("artifact"),
     },
@@ -108,15 +103,7 @@ const labMetadata = {
       queryHandlerId: "extension-lab.glass-lab-artifacts.query",
     },
   ],
-  resourcePanels: [
-    {
-      id: "extension-lab.labArtifactDetail",
-      extensionId: "pstdio.extension-lab",
-      resourceKind: "glass-lab-artifact",
-      panel: "extension-lab.labArtifactDetail",
-      slot: "inspector",
-    },
-  ],
+  resourcePanels: [],
 } satisfies DashboardExtensionMetadata;
 
 describe("extension mode-wide panels", () => {

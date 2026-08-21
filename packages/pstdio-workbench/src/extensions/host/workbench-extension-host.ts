@@ -32,6 +32,7 @@ import {
   createWorkbenchCompositionRegistry,
   listCompositionAddablePanels,
   reconcileCompositionLayout,
+  toPanelPlacements,
   type WorkbenchCompositionRegistry,
 } from "../contributions/composition-contributions";
 import { registerWorkbenchExtensionDataTableRenderers } from "../contributions/data-table-renderer-contributions";
@@ -417,7 +418,7 @@ const registerComposition = (input: RegisterWorkbenchExtensionContributionsInput
         extensionId: panel.extensionId,
         title: text(panel.title, panel.id),
         icon: panel.icon,
-        supportedRegions: panel.supportedRegions,
+        show: toPanelPlacements(panel.show),
       }),
     );
   }
@@ -436,6 +437,7 @@ const registerComposition = (input: RegisterWorkbenchExtensionContributionsInput
     disposables.push(
       registry.registerModeComposition({
         id: mode.modeId,
+        extensionId: mode.extensionId,
         resources: mode.resources,
         modePanels: mode.modePanels,
       }),

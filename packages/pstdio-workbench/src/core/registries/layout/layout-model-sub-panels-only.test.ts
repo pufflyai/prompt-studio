@@ -3,7 +3,6 @@ import { createLayoutModel } from "./layout-model";
 
 const registerBoard = (layout: ReturnType<typeof createLayoutModel>) => {
   layout.registerPanel({
-    closable: false,
     id: "board.host",
     title: "Board",
     region: "main",
@@ -12,7 +11,6 @@ const registerBoard = (layout: ReturnType<typeof createLayoutModel>) => {
     rendererId: "board.host",
   });
   layout.registerPanel({
-    closable: true,
     id: "board.columns",
     title: "Columns",
     region: "main",
@@ -22,7 +20,6 @@ const registerBoard = (layout: ReturnType<typeof createLayoutModel>) => {
     rendererId: "board.columns",
   });
   layout.registerPanel({
-    closable: true,
     id: "board.timeline",
     title: "Timeline",
     region: "main",

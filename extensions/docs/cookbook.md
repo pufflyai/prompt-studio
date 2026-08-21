@@ -22,7 +22,7 @@ This cookbook gives short recipes for the implemented extension API.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.1"
+    "pstdio": "1.0.0-alpha.2"
   },
   "type": "module",
   "dependencies": {
@@ -221,7 +221,7 @@ Omit `when.mode` when a route or command should stay visible in every active mod
 
 ## Compose A Resource Screen
 
-Declare the resource kind and its slots, wrap renderers in panels, bind panels to slots, and let a mode recipe place them.
+Declare the resource kind and its slots, then put each owned panel's default placement beside its body. Keep slot bindings for panels contributed by another extension.
 
 ```ts
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
@@ -239,18 +239,14 @@ export default defineExtension({
   panels: {
     ticketEditor: {
       title: "Ticket",
-      supportedRegions: ["main"],
+      show: { for: "ticket", region: "main", required: true },
       webview: { entry: packageAsset("./webviews/ticket-editor.tsx", import.meta.url) },
     },
     ticketFiles: {
       title: "Files",
-      supportedRegions: ["sidenav"],
+      show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "ticketFilesTree" },
     },
-  },
-  resourcePanels: {
-    ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
-    ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
   },
   modes: {
     ticket: {
@@ -259,12 +255,7 @@ export default defineExtension({
       icon: "FileText",
       panelRegions: ["main", "secondary", "side"],
       resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            navigation: { region: "sidenav", pinned: true },
-          },
-        },
+        ticket: {},
       },
     },
   },
@@ -273,7 +264,7 @@ export default defineExtension({
 
 Another extension can add an optional panel to the open `navigation` slot with `resourcePanels: { myPanel: { resourceKind: "planner.ticket", panel: "myPanel", slot: "navigation" } }`.
 
-A slot with cardinality `many` cannot take `required`. When one supporting panel must always stay open, name it in the recipe's `panels` map instead: `panels: { ticketFiles: { region: "sidenav", required: true } }`.
+An owned panel may declare `required` directly. A mode recipe can override that policy when it needs a different layout.
 
 ## Add Packaged Assets
 

@@ -49,7 +49,6 @@ describe("workbench modules", () => {
       surface: "primary",
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "dashboard.tickets",
       title: "Tickets",
       region: "main",
@@ -79,7 +78,6 @@ describe("workbench modules", () => {
 
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.layout.registerPanel({
-      closable: false,
       id: "board",
       title: "Board",
       region: "main",
@@ -119,7 +117,6 @@ describe("workbench modules", () => {
 
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.layout.registerPanel({
-      closable: false,
       id: "board",
       title: "Board",
       region: "main",
@@ -156,7 +153,6 @@ describe("workbench modules", () => {
     });
 
     workbench.layout.registerPanel({
-      closable: false,
       id: "workspace",
       title: "Workspace",
       region: "main",
@@ -188,7 +184,6 @@ describe("compound navigation rollback", () => {
       title: "Ticket",
       region: "main",
       rendererId: "test",
-      closable: false,
     });
     workbench.resources.registerPresenter({
       id: "ticket",

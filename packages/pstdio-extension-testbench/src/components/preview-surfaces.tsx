@@ -109,7 +109,6 @@ export const openPrimaryResource = (
     render: ({ instance }) => <PrimaryPanel bench={bench} resource={instance.resource} />,
   });
   workbench.layout.registerPanel({
-    closable: true,
     id: primaryWidgetId,
     title: "Preview",
     region: "main",
@@ -144,7 +143,6 @@ export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchL
   if (!renderer) return;
 
   workbench.layout.registerPanel({
-    closable: false,
     id: syntheticTreeWidgetId,
     title: text(renderer.title, renderer.id),
     region: "main-left-menu",

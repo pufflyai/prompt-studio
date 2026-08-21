@@ -19,21 +19,21 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         id: "inspector-a",
         extensionId: "acme.image-tools",
         title: "A",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "controls", id: "inspector" },
       },
       {
         id: "inspector-b",
         extensionId: "acme.image-tools",
         title: "B",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "controls", id: "inspector" },
       },
       {
         id: "inspector-c",
         extensionId: "acme.image-tools",
         title: "C",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "controls", id: "inspector" },
       },
     ] satisfies ControlsViewRecord[];
@@ -77,7 +77,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       id: "inspector-panel",
       extensionId: "acme.image-tools",
       title: "Inspector",
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "controls", id: "inspector" },
     } satisfies ControlsViewRecord;
 
@@ -110,13 +110,13 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     const renderer = workbench.renderers.getControlsRenderer("inspector");
     expect(renderer).toBeDefined();
 
-    // The panel widget falls back to its first supported region; the resource
-    // kinds it serves come from its resource-panel edges.
+    // The unscoped placement keeps the panel available outside its
+    // resource-panel edge.
     expect(workbench.layout.getPanel("inspector-panel")).toMatchObject({
       region: "main",
       rendererId: "inspector",
-      resourceKinds: ["image"],
     });
+    expect(workbench.layout.getPanel("inspector-panel")?.resourceKinds).toBeUndefined();
 
     const result = await renderer?.executeQuery();
     expect(result?.params).toHaveLength(1);

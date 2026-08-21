@@ -17,6 +17,7 @@ export {
   createWorkbenchCompositionRegistry,
   listCompositionAddablePanels,
   reconcileCompositionLayout,
+  toPanelPlacements,
   type WorkbenchCompositionRegistry,
 } from "./contributions/composition-contributions";
 export {

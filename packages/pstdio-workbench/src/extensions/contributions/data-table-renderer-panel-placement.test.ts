@@ -20,21 +20,21 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         id: "lab.first",
         extensionId: "pstdio.lab",
         title: "First",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
         id: "lab.default",
         extensionId: "pstdio.lab",
         title: "Default",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "dataTable", id: "lab.table" },
       },
       {
         id: "lab.last",
         extensionId: "pstdio.lab",
         title: "Last",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
@@ -114,7 +114,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         id: "lab.a",
         extensionId: "pstdio.lab",
         title: "Panel A",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {
@@ -131,7 +131,7 @@ describe("registerWorkbenchExtensionDataTableRenderers panel placement", () => {
         id: "lab.b",
         extensionId: "pstdio.lab",
         title: "Panel B",
-        supportedRegions: ["main"],
+        show: { region: "main" },
         renderer: { kind: "dataTable", id: "lab.table" },
         panelMenus: [
           {

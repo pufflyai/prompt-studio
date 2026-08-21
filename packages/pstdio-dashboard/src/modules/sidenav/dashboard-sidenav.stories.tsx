@@ -87,7 +87,6 @@ const createTicketsNavigationModule = () => ({
   activate(ctx: WorkbenchModuleContext) {
     ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "FileText" });
     ctx.layout.registerPanel({
-      closable: false,
       id: STORY_TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",

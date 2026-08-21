@@ -174,7 +174,6 @@ export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribut
       id: preferencesWidgetId,
       title: "Preference schemas",
       region: "main",
-      closable: false,
       rendererId: preferencesRendererId,
     });
 

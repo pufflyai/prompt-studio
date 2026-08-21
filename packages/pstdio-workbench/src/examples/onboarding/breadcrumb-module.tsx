@@ -148,7 +148,6 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: BREADCRUMB_TREE_ID,
       title: "Docs",
       region: "sidenav",
@@ -156,7 +155,6 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       rendererId: BREADCRUMB_TREE_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: DOCS_HOME_WIDGET_ID,
       title: "Docs",
       region: "main",
@@ -164,7 +162,6 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       rendererId: DOCS_HOME_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: SECTION_WIDGET_ID,
       title: "Section",
       region: "main",
@@ -172,7 +169,6 @@ export const createBreadcrumbModule = (): WorkbenchModuleContribution => ({
       rendererId: SECTION_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: PAGE_WIDGET_ID,
       title: "Page",
       region: "main",

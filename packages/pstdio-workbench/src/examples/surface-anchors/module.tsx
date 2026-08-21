@@ -90,35 +90,30 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     // Primary anchor (main) + its two menu projections and the two supporting
     // anchors (secondary = terminals, side = sessions).
     ctx.layout.registerPanel({
-      closable: false,
       id: widgetIds.workspace,
       title: "Workspace",
       region: "main",
       rendererId: widgetIds.workspace,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: widgetIds.concept,
       title: "Surface map",
       region: "main-left-menu",
       rendererId: widgetIds.concept,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: widgetIds.primaryVsGlobal,
       title: "Primary vs global",
       region: "main-right-menu",
       rendererId: widgetIds.primaryVsGlobal,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: widgetIds.session,
       title: "Session",
       region: "side",
       rendererId: widgetIds.session,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: widgetIds.terminal,
       title: "Terminal",
       region: "secondary",

@@ -24,9 +24,9 @@ metadata:
    - Use kanban renderers for Planner-style native dashboard lists or boards. Add a panel for the renderer, then point a `treeItems` panel action at it when it belongs in the project sidenav.
    - Use `fileRenderers` plus `panels` for native resource file content such as markdown, code, and image previews.
    - Use `treeRenderers` plus `panels` for native workbench trees such as resource files, outline, or navigation.
-   - A panel declares `supportedRegions` (the docked regions it can occupy) and exactly one body: a `webview` or one native `renderer` reference. A panel never places itself.
+   - A panel declares exactly one body and optional `show` placement for its extension's own resource kinds or mode.
    - Use `resourceKinds` to declare a domain resource type and its named slots. A slot is an extension point on the resource; `external: true` slots accept panels from other extensions. A resource kind keeps the plain name you give it, and that same name is the resource `type` your commands return, so pick a name no other extension will claim.
-   - Use `resourcePanels` to bind a panel to one resource kind slot. A bare panel id resolves inside your extension; use `<extension>.<id>` for another extension's panel. A resource kind reference works either way, so name the owner when the kind is not yours.
+   - Use `resourcePanels` only to bind a panel into a resource kind owned by another extension. A bare panel id resolves inside your extension. Name the resource kind owner with `<extension>.<id>`.
    - Use mode `resources` recipes to place slots and known panels into docked regions, with `required` and `allowedRegions` policy. Use `modePanels` for mode-wide panels and `defaultResource` to enter a mode without a compatible resource.
    - Use `statusItems` for status-surface chrome. Status content is not a panel and takes no part in docked layout.
    - Use routes plus `treeItems` for custom webview pages in the project sidenav, not for native resource detail screens. Route tree-item actions reference the route path, not the normalized route id.

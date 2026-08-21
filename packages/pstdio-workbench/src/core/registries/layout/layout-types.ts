@@ -115,7 +115,6 @@ export interface WidgetContribution {
   priority?: number;
   rendererId: string;
   openCommandId?: string;
-  role?: WorkbenchWidgetRole;
   eligibleLocations?: WorkbenchLocationEligibility;
   panelMenuOwner?: WorkbenchPanelMenuOwner;
   tab?: WorkbenchWidgetTab;
@@ -151,7 +150,6 @@ export interface WorkbenchPanelContribution {
   region: WorkbenchRegion;
   fallbackRegion?: WorkbenchRegion;
   rendererId: string;
-  closable: boolean;
   singleton?: boolean;
   reuse?: WorkbenchPanelReusePolicy;
   mountStrategy?: WorkbenchPanelMountStrategy;
@@ -173,14 +171,14 @@ export interface WorkbenchPanelContribution {
   panelMenus?: readonly WorkbenchPanelMenuDefinition[];
 }
 
-export type WorkbenchLocationContribution = Omit<WidgetContribution, "role"> & WorkbenchPanelMenusContribution;
+export type WorkbenchLocationContribution = WidgetContribution & WorkbenchPanelMenusContribution;
 
-export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
+export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion"> & {
   region: WorkbenchPanelRegion;
   fallbackRegion?: WorkbenchPanelRegion;
 } & WorkbenchPanelMenusContribution;
 
-export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion" | "role"> & {
+export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion"> & {
   region: WorkbenchPanelMenuRegion;
   fallbackRegion?: WorkbenchPanelMenuRegion;
 };
@@ -189,7 +187,6 @@ export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" |
   ownedPanelMenuIds?: readonly string[];
   singleton: boolean;
   reuse: WidgetReusePolicy;
-  role: WorkbenchWidgetRole;
 } & RegisteredContributionMetadata;
 
 export interface PlaceholderContribution {
@@ -294,7 +291,9 @@ export interface OpenWorkbenchPanelInput {
   resource?: ResourceRef;
   title?: string;
   region?: WorkbenchRegion;
+  role?: WorkbenchWidgetRole;
   pinned?: boolean;
+  closable?: boolean;
   mountStrategy?: WorkbenchPanelMountStrategy;
   hiddenByDefault?: boolean;
   tab?: WorkbenchPanelTab;

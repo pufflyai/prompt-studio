@@ -134,7 +134,13 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
     ctx.resources.registerPresenter({
       id: "history.example.ticket-presenter",
       canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: (resource) => ctx.layout.openPanel(TICKET_WIDGET_ID, { resource, title: resource.label ?? resource.uri }),
+      open: (resource) =>
+        ctx.layout.openPanel(TICKET_WIDGET_ID, {
+          resource,
+          title: resource.label ?? resource.uri,
+          closable: true,
+          role: "location",
+        }),
     });
 
     ctx.renderers.registerRenderer({
@@ -148,7 +154,6 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: HOME_WIDGET_ID,
       title: "History demo",
       region: "secondary",
@@ -161,7 +166,6 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
-      closable: true,
       singleton: true,
       rendererId: TICKET_RENDERER_ID,
       resourceKinds: [TICKET_KIND],

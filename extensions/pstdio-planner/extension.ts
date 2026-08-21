@@ -244,11 +244,6 @@ export default defineExtension({
     },
   },
 
-  resourcePanels: {
-    ticketEditor: { resourceKind: "ticket", panel: "ticketEditor", slot: "primary" },
-    ticketFiles: { resourceKind: "ticket", panel: "ticketFiles", slot: "navigation" },
-  },
-
   fileRenderers: {
     // Ticket editor, rendered natively by the host (no webview). Bound to the one
     // `ticket` resource; the files tree picks which document it shows.
@@ -264,12 +259,12 @@ export default defineExtension({
   panels: {
     tickets: {
       title: l10n("kanbanRenderers.tickets.title", "Tickets"),
-      supportedRegions: ["main"],
+      show: { region: "main" },
       renderer: { kind: "kanban", id: "tickets" },
     },
     ticketEditor: {
       title: l10n("panels.ticketEditor.title", "Ticket"),
-      supportedRegions: ["main"],
+      show: { for: "ticket", region: "main", required: true },
       renderer: { kind: "file", id: "ticketContent" },
       panelMenus: {
         properties: {
@@ -283,7 +278,7 @@ export default defineExtension({
     // rebinds the editor to the ticket resource with the chosen document metadata.
     ticketFiles: {
       title: l10n("panels.ticketFiles.title", "Files"),
-      supportedRegions: ["sidenav"],
+      show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "ticketFiles" },
     },
   },

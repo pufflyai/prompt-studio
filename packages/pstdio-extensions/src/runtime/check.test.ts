@@ -111,7 +111,7 @@ describe("checkExtensions", () => {
     expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
-  test("reports a panel without docked supported regions as an error", async () => {
+  test("reports a panel with an empty placement declaration as an error", async () => {
     const home = createTempHome();
     writeExtension(
       home,
@@ -120,7 +120,7 @@ describe("checkExtensions", () => {
         panels: {
           everywhere: {
             title: "Everywhere",
-            supportedRegions: [],
+            show: [],
             webview: { entry: "./panel.tsx" },
           },
         },
@@ -280,7 +280,7 @@ describe("checkExtensionHostCompatibility", () => {
           sourcePath: "/extension/extension.ts",
           contribution: {
             title: "Rows",
-            supportedRegions: ["main"],
+            show: { region: "main" },
             renderer: { kind: "dataTable", id: "rows" },
           },
         },

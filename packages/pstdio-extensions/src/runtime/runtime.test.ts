@@ -104,12 +104,12 @@ describe("loadExtensionRuntime", () => {
         panels: {
           content: {
             title: "Content",
-            supportedRegions: ["main"],
+            show: { region: "main" },
             webview: { entry: "./content.tsx" },
           },
           tickets: {
             title: "Tickets",
-            supportedRegions: ["main", "side"],
+            show: { region: "main", allowedRegions: ["main", "side"] },
             webview: { entry: "./tickets.tsx" },
           },
         },

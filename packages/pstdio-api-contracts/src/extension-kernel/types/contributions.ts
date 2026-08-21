@@ -8,10 +8,10 @@ import type {
 } from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
 import type {
-  DockedWorkbenchRegion,
   ModeDefaultResource,
   ModePlacementContribution,
   ModeResourceRecipeContribution,
+  PanelPlacementContribution,
 } from "./composition";
 import type { RendererCallback } from "./context";
 import type { JsonObject, JsonValue, Struct } from "./json";
@@ -142,8 +142,8 @@ export interface PanelContributionBase {
   title: Localizable<string>;
   /** Icon shown on the panel's tab and on resources opened for the panel. */
   icon?: string;
-  /** Docked regions this panel can occupy; the active mode recipe places it. */
-  supportedRegions: readonly DockedWorkbenchRegion[];
+  /** Default placement for resource kinds owned by this extension, or for its modes. */
+  show?: PanelPlacementContribution | readonly PanelPlacementContribution[];
   panelMenus?: Record<string, PanelMenuContribution>;
 }
 

@@ -110,7 +110,7 @@ describe("extension convention diagnostics", () => {
           panels: {
             "item-editor": {
               title: "Editor",
-              supportedRegions: ["main"],
+              show: { region: "main" },
               icon: "file-text",
               webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
             },

@@ -20,7 +20,6 @@ describe("installWorkbenchTreeRenderer", () => {
     const rendered = renderer?.render({
       workbench,
       panel: workbench.layout.registerPanel({
-        closable: false,
         id: "project.tree",
         title: "Project",
         region: "sidenav",

@@ -112,7 +112,6 @@ export const createThemePackExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-pack",
   activate(ctx) {
     ctx.layout.registerPanel({
-      closable: false,
       id: THEME_PACK_WIDGET_ID,
       title: "Theme Pack",
       region: "main",

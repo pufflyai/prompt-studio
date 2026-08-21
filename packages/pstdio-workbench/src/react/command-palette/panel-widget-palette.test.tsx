@@ -6,7 +6,6 @@ describe("createWorkbenchPanelWidgetPaletteEntries", () => {
   test("shares Panel eligibility with the header add menu", () => {
     const workbench = createWorkbenchCore();
     workbench.layout.registerPanel({
-      closable: false,
       id: "files",
       title: "Files",
       icon: "Folder",
@@ -16,7 +15,6 @@ describe("createWorkbenchPanelWidgetPaletteEntries", () => {
       eligibleLocations: {},
     });
     workbench.layout.registerPanel({
-      closable: false,
       id: "preview",
       title: "Preview",
       region: "main",

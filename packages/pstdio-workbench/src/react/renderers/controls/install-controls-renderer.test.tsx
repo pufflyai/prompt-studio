@@ -18,7 +18,6 @@ describe("installWorkbenchControlsRenderer", () => {
     const rendered = renderer?.render({
       workbench,
       panel: workbench.layout.registerPanel({
-        closable: false,
         id: "ticket.controls",
         title: "Ticket controls",
         region: "main-right-menu",

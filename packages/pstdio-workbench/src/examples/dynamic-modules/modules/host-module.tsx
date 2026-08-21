@@ -12,7 +12,6 @@ export const createDynamicModulesHostModule = (
   activate(ctx) {
     ctx.sidePanel.setMode("attached");
     ctx.layout.registerPanel({
-      closable: false,
       id: topControlsWidgetId,
       title: "Runtime modules",
       region: "nav",
@@ -20,7 +19,6 @@ export const createDynamicModulesHostModule = (
       rendererId: topControlsWidgetId,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: inventoryWidgetId,
       title: "Module inventory",
       region: "main",

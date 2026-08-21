@@ -144,7 +144,6 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: PANEL_WIDGET_ID,
       title: "Scope switcher",
       region: "main",
@@ -153,7 +152,6 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: SIDENAV_WIDGET_ID,
       title: "Project Sidenav",
       region: "sidenav",
@@ -162,7 +160,6 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: SECONDARY_WIDGET_ID,
       title: "Resource details",
       region: "secondary",

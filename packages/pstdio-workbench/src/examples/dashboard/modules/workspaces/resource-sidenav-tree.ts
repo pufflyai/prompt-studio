@@ -115,7 +115,6 @@ export const registerResourceSidenavTree = (ctx: WorkbenchModuleContext) => {
   });
   ctx.layout.registerPanel(
     {
-      closable: false,
       id: dashboardWidgetIds.ticketSidenav,
       title: "Resource sidenav",
       region: "sidenav",

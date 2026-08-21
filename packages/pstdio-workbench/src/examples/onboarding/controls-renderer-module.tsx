@@ -71,7 +71,6 @@ export const createControlsRendererModule = (): WorkbenchModuleContribution => (
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: CONTROLS_ID,
       title: "Card inspector",
       region: "main",
