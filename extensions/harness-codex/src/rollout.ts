@@ -17,6 +17,12 @@ type RolloutPayload = {
   output?: string;
 };
 
+interface RolloutState {
+  messages: SessionMessage[];
+  toolIndex: Map<string, number>;
+  nextId: (kind: string) => string;
+}
+
 export const codexSessionsRoot = () =>
   join(process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex"), "sessions");
 
@@ -69,75 +75,101 @@ const parseArguments = (raw: string | undefined) => {
   }
 };
 
-export const normalizeRollout = (content: string): SessionMessage[] => {
-  const messages: SessionMessage[] = [];
-  const toolIndex = new Map<string, number>();
-  let counter = 0;
+const parseRolloutLine = (line: string) => {
+  try {
+    const parsed = JSON.parse(line) as { type?: string; timestamp?: string; payload?: RolloutPayload };
+    if (parsed.type !== "response_item" || !parsed.payload) return undefined;
 
-  const nextId = (kind: string) => `rollout-${kind}-${counter++}`;
+    return { createdAt: parseTimestamp(parsed.timestamp), payload: parsed.payload };
+  } catch {
+    return undefined;
+  }
+};
+
+const appendMessage = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
+  if (payload.role !== "user" && payload.role !== "assistant") return;
+
+  const text = contentText(payload.content);
+  if (!text || isInjectedContext(text)) return;
+
+  state.messages.push({ id: state.nextId("text"), role: payload.role, parts: [{ type: "text", text }], createdAt });
+};
+
+const appendReasoning = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
+  const text = contentText(payload.summary);
+  if (!text) return;
+
+  state.messages.push({
+    id: state.nextId("reasoning"),
+    role: "assistant",
+    parts: [{ type: "reasoning", text }],
+    createdAt,
+  });
+};
+
+const appendFunctionCall = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
+  if (!payload.call_id) return;
+
+  const tool = payload.name ?? "unknown";
+  const part: ToolPart = {
+    type: "tool",
+    tool,
+    callId: payload.call_id,
+    actionType: classifyCodexTool(tool),
+    status: "pending",
+    state: { input: parseArguments(payload.arguments) },
+  };
+
+  state.toolIndex.set(payload.call_id, state.messages.length);
+  state.messages.push({ id: state.nextId("tool"), role: "assistant", parts: [part], createdAt });
+};
+
+const completeFunctionCall = (payload: RolloutPayload, state: RolloutState) => {
+  if (!payload.call_id) return;
+
+  const index = state.toolIndex.get(payload.call_id);
+  if (index === undefined) return;
+
+  const existingMessage = state.messages[index];
+  const existingPart = existingMessage.parts[0] as ToolPart;
+  state.messages[index] = {
+    ...existingMessage,
+    parts: [{ ...existingPart, status: "completed", state: { ...existingPart.state, output: payload.output } }],
+  };
+};
+
+const appendPayload = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
+  switch (payload.type) {
+    case "message":
+      appendMessage(payload, createdAt, state);
+      break;
+    case "reasoning":
+      appendReasoning(payload, createdAt, state);
+      break;
+    case "function_call":
+      appendFunctionCall(payload, createdAt, state);
+      break;
+    case "function_call_output":
+      completeFunctionCall(payload, state);
+      break;
+  }
+};
+
+export const normalizeRollout = (content: string): SessionMessage[] => {
+  let counter = 0;
+  const state: RolloutState = {
+    messages: [],
+    toolIndex: new Map(),
+    nextId: (kind) => `rollout-${kind}-${counter++}`,
+  };
 
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    let createdAt: number | undefined;
-    let payload: RolloutPayload | undefined;
-    try {
-      const parsed = JSON.parse(trimmed) as { type?: string; timestamp?: string; payload?: RolloutPayload };
-      if (parsed.type !== "response_item") continue;
-      createdAt = parseTimestamp(parsed.timestamp);
-      payload = parsed.payload;
-    } catch {
-      continue;
-    }
-
-    if (!payload) continue;
-
-    if (payload.type === "message") {
-      if (payload.role !== "user" && payload.role !== "assistant") continue;
-
-      const text = contentText(payload.content);
-      if (!text || isInjectedContext(text)) continue;
-
-      messages.push({ id: nextId("text"), role: payload.role, parts: [{ type: "text", text }], createdAt });
-      continue;
-    }
-
-    if (payload.type === "reasoning") {
-      const text = contentText(payload.summary);
-      if (!text) continue;
-
-      messages.push({ id: nextId("reasoning"), role: "assistant", parts: [{ type: "reasoning", text }], createdAt });
-      continue;
-    }
-
-    if (payload.type === "function_call" && payload.call_id) {
-      const tool = payload.name ?? "unknown";
-      const part: ToolPart = {
-        type: "tool",
-        tool,
-        callId: payload.call_id,
-        actionType: classifyCodexTool(tool),
-        status: "pending",
-        state: { input: parseArguments(payload.arguments) },
-      };
-
-      toolIndex.set(payload.call_id, messages.length);
-      messages.push({ id: nextId("tool"), role: "assistant", parts: [part], createdAt });
-      continue;
-    }
-
-    if (payload.type === "function_call_output" && payload.call_id) {
-      const index = toolIndex.get(payload.call_id);
-      if (index === undefined) continue;
-
-      const existing = messages[index].parts[0] as ToolPart;
-      messages[index] = {
-        ...messages[index],
-        parts: [{ ...existing, status: "completed", state: { ...existing.state, output: payload.output } }],
-      };
-    }
+    const item = parseRolloutLine(trimmed);
+    if (item) appendPayload(item.payload, item.createdAt, state);
   }
 
-  return messages;
+  return state.messages;
 };
