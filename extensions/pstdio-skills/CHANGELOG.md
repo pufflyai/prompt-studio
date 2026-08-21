@@ -1,5 +1,19 @@
 # Prompt Studio Skills
 
+## 0.3.2
+
+_2026-08-21_
+
+### Patch Changes
+
+- 8b7adf9: Teach the extension authoring skill the composition contracts: panels declare docked regions, resource kinds own slots, and modes place them through recipes
+- e2b8668: rewrite documentation, skills, and templates in plain technical English
+- de6a77b: Version the extension API as `1.0.0-alpha.1` and refuse extensions that declare a different version or a range.
+- b0457fc: Add explicit event-driven refresh contracts for native extension renderers.
+- 86f01d9: Remove unwired extension renderer surfaces and legacy navigation metadata.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`
+
 ## 0.3.1
 
 _2026-08-13_

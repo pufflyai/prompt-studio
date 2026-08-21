@@ -1,5 +1,34 @@
 # @pstdio/workbench
 
+## 0.6.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- 76b5f72: Add editable rich Markdown tables and native heading navigation.
+- b0457fc: Add explicit event-driven refresh contracts for native extension renderers.
+- fcd283d: Let panels place every native renderer through one renderer reference.
+- 86f01d9: Remove unwired extension renderer surfaces and legacy navigation metadata.
+
+### Patch Changes
+
+- 8b7adf9: Add the atomic workbench navigator: mode and resource commit together with one layout-scope rotation, incompatible modes restore their last or default compatible resource, and history replay uses the same transaction
+- e2b8668: rewrite documentation, skills, and templates in plain technical English
+- 8b7adf9: Make resource hierarchy traversal cycle-safe and keep breadcrumbs on the acyclic resource path
+- 8b7adf9: Add composition conformance fixtures: two Lab modes over one shared resource, a cross-extension inspector in the Planner ticket slot, and the tests that lock both in
+- 8b7adf9: Add the workbench composition resolver: one reconciliation pass restores required placements on every context activation, panel menus follow their owner panel, and layouts from older schema versions are discarded
+- 883e31b: Add explicit row activation callbacks for data table and Kanban renderers.
+- 70135ed: Restore closed optional composition panels from Add Panel.
+- b0457fc: Keep editor focus and selection across saves: the markdown editor no longer reports the initial content import as an edit, saves of unchanged content are skipped, refresh events during a save are treated as self-invalidation, and a reload only remounts the editor when the content actually changed.
+- 7cb9939: Replace renderer-owned command bindings with private callbacks.
+- 8b7adf9: Preserve editable file drafts, focus, and revision-aware refreshes across save and recovery.
+- 4dc237f: Share renderer invocation context contracts across first-party renderers.
+- b0457fc: Fix ticket view UX: enum dropdowns are portaled so panels no longer clip them, tree node resources share the host's canonical URIs so reopening a ticket from the sidenav keeps its properties menu, navigation entries render above the active resource's tree, and reopened documents mount from a content cache instead of a spinner.
+- 7c538c9: Unify extension navigation targets and placement strategies.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`, `@pstdio/ui@0.20.0`
+
 ## 0.5.0
 
 _2026-08-13_

@@ -1,5 +1,18 @@
 # @pstdio/ui
 
+## 0.20.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- 76b5f72: Add editable rich Markdown tables and native heading navigation.
+
+### Patch Changes
+
+- b0457fc: Keep editor focus and selection across saves: the markdown editor no longer reports the initial content import as an edit, saves of unchanged content are skipped, refresh events during a save are treated as self-invalidation, and a reload only remounts the editor when the content actually changed.
+- b0457fc: Fix ticket view UX: enum dropdowns are portaled so panels no longer clip them, tree node resources share the host's canonical URIs so reopening a ticket from the sidenav keeps its properties menu, navigation entries render above the active resource's tree, and reopened documents mount from a content cache instead of a spinner.
+
 ## 0.19.0
 
 _2026-08-13_

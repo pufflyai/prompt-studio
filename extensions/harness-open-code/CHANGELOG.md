@@ -1,5 +1,15 @@
 # harness-open-code
 
+## 0.3.6
+
+_2026-08-21_
+
+### Patch Changes
+
+- de6a77b: Version the extension API as `1.0.0-alpha.1` and refuse extensions that declare a different version or a range.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`
+
 ## 0.3.5
 
 _2026-08-13_

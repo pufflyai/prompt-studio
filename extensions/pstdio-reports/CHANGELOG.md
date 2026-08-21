@@ -1,5 +1,20 @@
 # pstdio-reports
 
+## 0.3.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- d34a989: Add stable report read and persistence contracts for implementation and review handoffs.
+
+### Patch Changes
+
+- e2b8668: rewrite documentation, skills, and templates in plain technical English
+- de6a77b: Version the extension API as `1.0.0-alpha.1` and refuse extensions that declare a different version or a range.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`
+
 ## 0.2.0
 
 _2026-08-13_

@@ -1,5 +1,26 @@
 # extension-lab
 
+## 0.8.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- b0457fc: Add explicit event-driven refresh contracts for native extension renderers.
+- fcd283d: Let panels place every native renderer through one renderer reference.
+
+### Patch Changes
+
+- 8b7adf9: Add composition conformance fixtures: two Lab modes over one shared resource, a cross-extension inspector in the Planner ticket slot, and the tests that lock both in
+- 883e31b: Add explicit row activation callbacks for data table and Kanban renderers.
+- de6a77b: Version the extension API as `1.0.0-alpha.1` and refuse extensions that declare a different version or a range.
+- 8b7adf9: Declare Planner and Extension Lab composition with resource kinds, slots, and mode recipes, and move the Lab status bar to a typed status item
+- 7cb9939: Replace renderer-owned command bindings with private callbacks.
+- 4dc237f: Share renderer invocation context contracts across first-party renderers.
+- 7c538c9: Unify extension navigation targets and placement strategies.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`, `@pstdio/ui@0.20.0`
+
 ## 0.7.2
 
 _2026-08-13_

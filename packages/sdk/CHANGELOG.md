@@ -1,5 +1,23 @@
 # @pstdio/sdk
 
+## 0.18.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- d34a989: Add workspace filtering to the session client for attempt orchestration.
+- 86f01d9: Remove unwired extension renderer surfaces and legacy navigation metadata.
+
+### Patch Changes
+
+- 8b7adf9: Add extension composition contracts: resource kinds with semantic slots, resource-panel contributions, plural mode recipes, navigation targets, hierarchy providers, one shared renderer base, and one reference rule with stable composition diagnostics
+- 883e31b: Add explicit row activation callbacks for data table and Kanban renderers.
+- 7cb9939: Replace renderer-owned command bindings with private callbacks.
+- 4dc237f: Share renderer invocation context contracts across first-party renderers.
+- 7c538c9: Unify extension navigation targets and placement strategies.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+
 ## 0.17.0
 
 _2026-08-13_

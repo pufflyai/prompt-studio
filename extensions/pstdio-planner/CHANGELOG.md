@@ -1,5 +1,32 @@
 # pstdio-planner
 
+## 0.11.0
+
+_2026-08-21_
+
+### Minor Changes
+
+- b0457fc: Add explicit event-driven refresh contracts for native extension renderers.
+- fcd283d: Let panels place every native renderer through one renderer reference.
+- d34a989: Add attempt-aware implementation and review workflows with immutable revision history and recovery.
+
+### Patch Changes
+
+- e2b8668: rewrite documentation, skills, and templates in plain technical English
+- 883e31b: Add explicit row activation callbacks for data table and Kanban renderers.
+- 62e813b: Keep ticket breadcrumbs in sync after creates and renames.
+- de6a77b: Version the extension API as `1.0.0-alpha.1` and refuse extensions that declare a different version or a range.
+- 8b7adf9: Declare Planner and Extension Lab composition with resource kinds, slots, and mode recipes, and move the Lab status bar to a typed status item
+- 8b7adf9: Open the Tickets browse-root resource from the planner tree item
+- 7cb9939: Replace renderer-owned command bindings with private callbacks.
+- 8b7adf9: Preserve editable file drafts, focus, and revision-aware refreshes across save and recovery.
+- 4dc237f: Share renderer invocation context contracts across first-party renderers.
+- fcd283d: Restore the Tickets breadcrumb root and let tree items opt out of the Extensions group with `group: null`.
+- 054f954: Add an archive-state filter to the ticket board.
+- 7c538c9: Unify extension navigation targets and placement strategies.
+- 62aedfb: Make composition the sole owner of panel placement and expose placement-aware panel queries.
+- Updated internal dependencies: `@pstdio/sdk@0.18.0`, `@pstdio/ui@0.20.0`
+
 ## 0.10.0
 
 _2026-08-13_
