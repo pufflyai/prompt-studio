@@ -3,8 +3,8 @@ import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor,
 import { horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
 import type {
-  RegisteredWidgetContribution,
   ResourceRef,
+  WorkbenchCompositionAddablePanel,
   WorkbenchCore,
   WorkbenchPanelRegion,
   WorkbenchWidgetPlacement,
@@ -19,7 +19,7 @@ interface SortableRegionTabListProps {
   panelRegion?: WorkbenchPanelRegion;
   placements: WorkbenchWidgetPlacement[];
   resource?: ResourceRef;
-  eligibleSubPanels: RegisteredWidgetContribution[];
+  eligibleSubPanels: readonly WorkbenchCompositionAddablePanel[];
   workbench: WorkbenchCore;
 }
 
@@ -78,7 +78,7 @@ export const SortableRegionTabList = (props: SortableRegionTabListProps) => {
               workbench={workbench}
               region={panelRegion}
               resource={resource}
-              widgets={eligibleSubPanels}
+              panels={eligibleSubPanels}
             />
           ) : null}
           {leadingActions}

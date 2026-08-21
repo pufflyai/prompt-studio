@@ -73,4 +73,21 @@ describe("workbench composition query", () => {
 
     expect(workbench.composition.panelsFor("secondary")).toEqual({ open: [], addable: [], closable: [] });
   });
+
+  test("does not offer a singleton Location that is already open for the active resource", () => {
+    const workbench = createWorkbenchCore();
+    const resource = { kind: "ticket", uri: "pstdio://ticket/PS-281", id: "PS-281" };
+    workbench.layout.registerPanel({
+      id: "ticket",
+      title: "Ticket",
+      region: "main",
+      rendererId: "ticket",
+      singleton: true,
+      eligibleLocations: { resourceKinds: ["ticket"] },
+    });
+
+    workbench.layout.openWidget("ticket", { region: "main", resource, role: "location" });
+
+    expect(workbench.composition.panelsFor("main").addable).toEqual([]);
+  });
 });

@@ -68,4 +68,18 @@ describe("openPanelWidget", () => {
 
     expect(workbench.layout.getLayout().regions.main.widgets[0]?.role).toBe("location");
   });
+
+  test("applies composition pinning when the user adds a panel", () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.registerPanel({ id: "timeline", title: "Timeline", region: "side", rendererId: "timeline" });
+
+    openPanelWidget({
+      workbench,
+      widget: workbench.layout.getWidget("timeline")!,
+      region: "side",
+      pinned: true,
+    });
+
+    expect(workbench.layout.listPanelInstances("side")[0]?.pinned).toBe(true);
+  });
 });

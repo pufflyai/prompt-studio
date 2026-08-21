@@ -57,8 +57,12 @@ const findReusablePlacement = (
           candidate.contributionId === widget.id &&
           // Pinned placements are structural chrome, not per-location content, so they are
           // reused across location switches instead of accumulating one instance per owner.
-          (candidate.pinned === true || candidate.ownerResourceUri === ownerResourceUri) &&
-          (!openInput.resource || candidate.resourceUri === openInput.resource.uri),
+          (candidate.pinned === true ||
+            (widget.singleton && candidate.ownerResourceUri === undefined) ||
+            candidate.ownerResourceUri === ownerResourceUri) &&
+          (!openInput.resource ||
+            (widget.singleton && candidate.resourceUri === undefined) ||
+            candidate.resourceUri === openInput.resource.uri),
       );
       if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
     }

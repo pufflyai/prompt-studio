@@ -96,6 +96,32 @@ describe("composition reconciliation", () => {
     expect(layout.regions.side.widgets[0]?.closable).toBe(true);
   });
 
+  test("applies the recipe pinned policy instead of pinning every seeded panel", () => {
+    const registry = setupRegistry();
+    registry.registerModeComposition({
+      id: "planner.pin-policy",
+      resources: {
+        "planner.ticket": {
+          panels: {
+            "planner.editor": { region: "main", required: true, pinned: true },
+            "planner.properties": { region: "side", pinned: false },
+          },
+        },
+      },
+    });
+    const ctx = setupWorkbench();
+
+    reconcileCompositionLayout(ctx, {
+      registry,
+      modeId: "planner.pin-policy",
+      resourceKind: "planner.ticket",
+      seeding: true,
+    });
+
+    expect(ctx.layout.getLayout().regions.main.widgets[0]?.pinned).toBe(true);
+    expect(ctx.layout.getLayout().regions.side.widgets[0]?.pinned).toBe(false);
+  });
+
   test("restores a missing required placement without reopening a closed optional panel", () => {
     const registry = setupRegistry();
     const ctx = setupWorkbench();
@@ -175,5 +201,6 @@ describe("composition reconciliation", () => {
     expect(ctx.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
       "planner.editor",
     ]);
+    expect(ctx.layout.getLayout().regions.main.widgets[0]?.role).toBe("location");
   });
 });

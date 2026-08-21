@@ -37,6 +37,8 @@ export interface CompositionPlacementPolicy {
   region: DockedCompositionRegion;
   allowedRegions?: readonly DockedCompositionRegion[];
   required?: boolean;
+  defaultOpen?: boolean;
+  pinned?: boolean;
 }
 
 export interface CompositionModeRecipe {
@@ -86,6 +88,8 @@ export interface ResolvedCompositionPlacement {
   region: DockedCompositionRegion;
   slot?: string;
   required: boolean;
+  defaultOpen: boolean;
+  pinned?: boolean;
   allowedRegions: readonly DockedCompositionRegion[];
   origin: "persisted" | "required" | "default";
 }
@@ -94,6 +98,7 @@ export interface ResolvedCompositionAddablePanel {
   panelId: string;
   region: DockedCompositionRegion;
   allowedRegions: readonly DockedCompositionRegion[];
+  pinned?: boolean;
 }
 
 export interface CompositionDiagnostic {

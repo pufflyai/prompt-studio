@@ -12,10 +12,13 @@ export interface ResourceEditorGroup {
 // mode recipe places in `main` is the editor; the others open alongside it bound to the
 // same resource. A kind the recipe places only in the Side Panel forms an inspector
 // group: it opens in place without a main editor.
-export const groupResourceEditorViews = (metadata: DashboardExtensionMetadata): ResourceEditorGroup[] =>
-  compositionResourceKinds(metadata)
+export const groupResourceEditorViews = (
+  metadata: DashboardExtensionMetadata,
+  options: { modeId?: string; resourceKinds?: readonly string[] } = {},
+): ResourceEditorGroup[] =>
+  (options.resourceKinds ?? compositionResourceKinds(metadata))
     .map((kind) => {
-      const bindings = resourcePanelBindings(metadata, kind);
+      const bindings = resourcePanelBindings(metadata, kind, options.modeId);
       const primary = bindings.find((binding) => binding.region === "main");
       if (primary) {
         return { kind, primary, companions: bindings.filter((binding) => binding !== primary) };

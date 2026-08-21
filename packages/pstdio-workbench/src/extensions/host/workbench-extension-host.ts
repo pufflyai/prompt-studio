@@ -7,6 +7,7 @@ import type {
   PreferencePropertySchema,
   PreferenceScope,
   PreferenceValue,
+  ResourceRef,
   WorkbenchCommandExecutionContext,
   WorkbenchModeActivationContext,
   WorkbenchModuleContext,
@@ -323,75 +324,117 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
   return disposables;
 };
 
-const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributionsInput) => {
-  const kindRecords = new Map<
-    string,
-    { surface: "primary" | "secondary" | "attached"; label?: string; icon?: string }
-  >();
-  for (const kind of input.metadata.resourceKinds ?? []) {
-    kindRecords.set(kind.id, {
+interface ResourceKindPresenterRecord {
+  extensionId?: string;
+  icon?: string;
+  label?: string;
+  surface: "primary" | "secondary" | "attached";
+}
+
+interface ResourcePresenterPanel {
+  edge?: NonNullable<WorkbenchExtensionMetadata["resourcePanels"]>[number];
+  panel: WorkbenchExtensionMetadata["panels"][number];
+  placement?: { for?: string; region: string };
+}
+
+const collectResourceKindPresenterRecords = (metadata: WorkbenchExtensionMetadata) => {
+  const records = new Map<string, ResourceKindPresenterRecord>();
+  for (const kind of metadata.resourceKinds ?? []) {
+    records.set(kind.id, {
       surface: kind.surface,
+      extensionId: kind.extensionId,
       label: kind.label ? text(kind.label, kind.id) : undefined,
       icon: kind.icon,
     });
   }
-  for (const renderer of input.metadata.kanbanRenderers ?? []) {
-    if (renderer.resourceKind && !kindRecords.has(renderer.resourceKind)) {
-      kindRecords.set(renderer.resourceKind, { surface: "primary" });
+  for (const renderer of metadata.kanbanRenderers ?? []) {
+    if (renderer.resourceKind && !records.has(renderer.resourceKind)) {
+      records.set(renderer.resourceKind, { surface: "primary" });
     }
   }
+  return records;
+};
 
-  const edges = input.metadata.resourcePanels ?? [];
-  const disposables: Disposable[] = [];
-  for (const [kind, record] of kindRecords) {
-    if (!input.workbench.resources.getKind(kind)) {
-      disposables.push(
-        input.workbench.resources.registerKind({
-          kind,
-          label: record.label ?? kind,
-          icon: record.icon ?? "FileText",
-          surface: record.surface,
-        }),
-      );
-    }
-    const kindEdges = edges.filter((edge) => edge.resourceKind === kind);
-    const panels = kindEdges
-      .map((edge) => ({ edge, panel: input.metadata.panels.find((candidate) => candidate.id === edge.panel) }))
-      .filter((entry): entry is { edge: (typeof kindEdges)[number]; panel: (typeof input.metadata.panels)[number] } =>
-        Boolean(entry.panel),
-      );
-    if (panels.length > 0) {
-      disposables.push(
-        input.workbench.resources.registerPresenter({
-          id: `workbench.extension.resource.${kind}`,
-          canOpen: (resource) => resource.kind === kind,
-          open: (resource) => {
-            // Reuse a placement where the composition resolver (or the user) put
-            // it; only unplaced panels fall back to their default region.
-            const placedRegion = (panelId: string) => {
-              const layout = input.workbench.layout.getLayout();
-              const dockedRegions = ["sidenav", "main", "secondary", "side"] as const;
-              return dockedRegions.find((region) =>
-                layout.regions[region].widgets.some((placement) => placement.contributionId === panelId),
-              );
-            };
-            const instances = panels.map(({ panel }) =>
-              input.workbench.layout.openPanel(panel.id, {
-                region: placedRegion(panel.id),
-                resource,
-                title: resource.label ?? resource.id ?? resource.uri,
-                strategy: { kind: "persistent" },
-              }),
-            );
-            const primaryIndex = panels.findIndex(({ edge }) => edge.slot === "primary");
-            return instances[primaryIndex >= 0 ? primaryIndex : 0]!;
-          },
-        }),
-      );
-    }
+const resourcePresenterPanels = (
+  metadata: WorkbenchExtensionMetadata,
+  kind: string,
+  ownerExtensionId: string | undefined,
+) => {
+  const edges = (metadata.resourcePanels ?? []).filter((edge) => edge.resourceKind === kind);
+  const panels: ResourcePresenterPanel[] = edges.flatMap((edge) => {
+    const panel = metadata.panels.find((candidate) => candidate.id === edge.panel);
+    return panel ? [{ edge, panel }] : [];
+  });
+  const edgePanelIds = new Set(panels.map(({ panel }) => panel.id));
+  for (const panel of metadata.panels) {
+    if (edgePanelIds.has(panel.id) || panel.extensionId !== ownerExtensionId) continue;
+    const placements = panel.show ? (Array.isArray(panel.show) ? panel.show : [panel.show]) : [];
+    const placement = placements.find((candidate) => candidate.for === kind);
+    if (placement) panels.push({ panel, placement });
   }
+  return panels;
+};
+
+const placedPanelRegion = (input: RegisterWorkbenchExtensionContributionsInput, panelId: string) => {
+  const layout = input.workbench.layout.getLayout();
+  const dockedRegions = ["sidenav", "main", "secondary", "side"] as const;
+  return dockedRegions.find((region) =>
+    layout.regions[region].widgets.some((placement) => placement.contributionId === panelId),
+  );
+};
+
+const openResourcePresenter = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  panels: readonly ResourcePresenterPanel[],
+  resource: ResourceRef,
+) => {
+  const instances = panels.map(({ panel }) =>
+    input.workbench.layout.openPanel(panel.id, {
+      region: placedPanelRegion(input, panel.id),
+      resource,
+      title: resource.label ?? resource.id ?? resource.uri,
+      strategy: { kind: "persistent" },
+    }),
+  );
+  const primaryIndex = panels.findIndex(
+    (entry) => entry.edge?.slot === "primary" || entry.placement?.region === "main",
+  );
+  return instances[primaryIndex >= 0 ? primaryIndex : 0]!;
+};
+
+const registerResourceKindPresenter = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  kind: string,
+  record: ResourceKindPresenterRecord,
+) => {
+  const disposables: Disposable[] = [];
+  if (!input.workbench.resources.getKind(kind)) {
+    disposables.push(
+      input.workbench.resources.registerKind({
+        kind,
+        label: record.label ?? kind,
+        icon: record.icon ?? "FileText",
+        surface: record.surface,
+      }),
+    );
+  }
+  const panels = resourcePresenterPanels(input.metadata, kind, record.extensionId);
+  if (panels.length === 0) return disposables;
+  disposables.push(
+    input.workbench.resources.registerPresenter({
+      id: `workbench.extension.resource.${kind}`,
+      canOpen: (resource) => resource.kind === kind,
+      // Reuse a placement where the composition resolver or the user put it.
+      open: (resource) => openResourcePresenter(input, panels, resource),
+    }),
+  );
   return disposables;
 };
+
+const registerResourcePresenters = (input: RegisterWorkbenchExtensionContributionsInput) =>
+  [...collectResourceKindPresenterRecords(input.metadata)].flatMap(([kind, record]) =>
+    registerResourceKindPresenter(input, kind, record),
+  );
 
 type WorkbenchExtensionModeRecord = WorkbenchExtensionMetadata["modes"][number];
 

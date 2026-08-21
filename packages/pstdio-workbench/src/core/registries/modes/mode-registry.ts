@@ -18,6 +18,7 @@ export interface WorkbenchModeAddablePanel {
   panelId: string;
   region: WorkbenchPanelRegion;
   allowedRegions?: readonly WorkbenchRegion[];
+  pinned?: boolean;
 }
 
 export interface WorkbenchModeAddablePanelContext {

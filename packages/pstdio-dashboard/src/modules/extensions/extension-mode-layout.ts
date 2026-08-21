@@ -78,7 +78,7 @@ const revealPlacedRegions = (ctx: WorkbenchModuleContext, regions: Iterable<Work
 // no resource and the resource presenter adds a second, bound copy beside it.
 const bindResourceSlotPlacements = (
   ctx: WorkbenchModuleContext,
-  input: { metadata: DashboardExtensionMetadata; resource: ResourceRef; widgetIds: readonly string[] },
+  input: { resource: ResourceRef; widgetIds: readonly string[] },
 ) => {
   const bind = (contributionId: string, title: string | undefined) => {
     for (const region of Object.values(ctx.layout.getLayout().regions)) {
@@ -88,14 +88,12 @@ const bindResourceSlotPlacements = (
     }
   };
 
-  for (const panel of input.metadata.panels) {
-    if (!input.widgetIds.includes(extensionViewWidgetIdFor(panel))) continue;
-    bind(extensionViewWidgetIdFor(panel), input.resource.label);
-    for (const menu of panel.panelMenus ?? []) {
-      bind(
-        extensionViewWidgetIdFor(menu),
-        menu.side === "left" ? input.resource.label : resolveLocalizableString(menu.title, menu.extensionId),
-      );
+  for (const widgetId of input.widgetIds) {
+    bind(widgetId, input.resource.label);
+    const panel = ctx.layout.getWidget(widgetId);
+    for (const menuId of panel?.ownedPanelMenuIds ?? []) {
+      const menu = ctx.layout.getWidget(menuId);
+      bind(menuId, menu?.region.endsWith("left-menu") ? input.resource.label : menu?.title);
     }
   }
 };
@@ -206,10 +204,24 @@ const registerExtensionModes = (input: {
       );
       const placements = resolved?.placements ?? [];
       if (resource) {
+        const resourcePanelWidgetIds = new Set(
+          metadata.panels
+            .filter((panel) => {
+              const show = panel.show ? (Array.isArray(panel.show) ? panel.show : [panel.show]) : [];
+              return (
+                show.some((placement) => placement.for === resource.kind) ||
+                (metadata.resourcePanels ?? []).some(
+                  (edge) => edge.resourceKind === resource.kind && edge.panel === panel.id,
+                )
+              );
+            })
+            .map(extensionViewWidgetIdFor),
+        );
         bindResourceSlotPlacements(modeCtx, {
-          metadata,
           resource,
-          widgetIds: placements.filter((placement) => placement.slot).map((placement) => placement.panelId),
+          widgetIds: placements
+            .filter((placement) => placement.slot || resourcePanelWidgetIds.has(placement.panelId))
+            .map((placement) => placement.panelId),
         });
       }
       revealPlacedRegions(

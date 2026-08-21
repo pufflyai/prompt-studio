@@ -1,7 +1,7 @@
 import { IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
-import type { RegisteredWidgetContribution, ResourceRef, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
+import type { ResourceRef, WorkbenchCompositionAddablePanel, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { openPanelWidget } from "./panel-widget-open";
@@ -10,33 +10,34 @@ interface WorkbenchPanelAddMenuProps {
   workbench: WorkbenchCore;
   region: WorkbenchPanelRegion;
   resource?: ResourceRef;
-  widgets: RegisteredWidgetContribution[];
+  panels: readonly WorkbenchCompositionAddablePanel[];
 }
 
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
-  const { region, resource, widgets, workbench } = props;
+  const { panels, region, resource, workbench } = props;
   const hydrating = useWorkbenchStore(workbench.history.store, (state) => state.hydrating);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const label = "Add panel";
-  if (widgets.length === 0) return null;
+  if (panels.length === 0) return null;
+
+  const openPanel = (panel: WorkbenchCompositionAddablePanel) =>
+    openPanelWidget({ workbench, widget: panel.contribution, region, resource, pinned: panel.pinned });
 
   const trigger = (
     <IconButton
-      ref={widgets.length > 1 ? triggerRef : undefined}
+      ref={panels.length > 1 ? triggerRef : undefined}
       size={PANEL_HEADER_CONTROL_SIZE}
       variant="ghost"
       aria-label={label}
       disabled={hydrating}
       flexShrink={0}
-      onClick={
-        widgets.length === 1 ? () => openPanelWidget({ workbench, widget: widgets[0], region, resource }) : undefined
-      }
+      onClick={panels.length === 1 ? () => openPanel(panels[0]) : undefined}
     >
       <WorkbenchIcon name="plus" size={13} />
     </IconButton>
   );
 
-  if (widgets.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
+  if (panels.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
     <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>
@@ -46,15 +47,22 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
       <Portal>
         <Menu.Positioner>
           <Menu.Content aria-label={label} minW="17.5rem" bg="bg">
-            {widgets.map((widget) => (
-              <Menu.Item key={widget.id} value={`widget:${widget.id}`} disabled={hydrating} asChild>
+            {panels.map((panel) => (
+              <Menu.Item
+                key={panel.contribution.id}
+                value={`widget:${panel.contribution.id}`}
+                disabled={hydrating}
+                asChild
+              >
                 <ListRow
                   asChild
                   variant="full-width"
-                  label={widget.title}
-                  icon={widget.icon ? <WorkbenchIcon name={widget.icon} size={14} /> : undefined}
+                  label={panel.contribution.title}
+                  icon={
+                    panel.contribution.icon ? <WorkbenchIcon name={panel.contribution.icon} size={14} /> : undefined
+                  }
                   disabled={hydrating}
-                  onActivate={() => openPanelWidget({ workbench, widget, region, resource })}
+                  onActivate={() => openPanel(panel)}
                 />
               </Menu.Item>
             ))}

@@ -187,6 +187,8 @@ const resolveCandidate = (
     region: candidate.policy.region,
     slot: candidate.slot,
     required: candidate.required,
+    defaultOpen: candidate.required || candidate.policy.defaultOpen !== false,
+    pinned: candidate.policy.pinned,
     allowedRegions,
     origin: candidate.required ? "required" : "default",
   };
@@ -215,11 +217,35 @@ const resolveCandidates = (
 };
 
 type PersistedRegionState = { order: readonly string[]; activePanelId?: string };
+type PlaceResolvedPanel = (placement: ResolvedCompositionPlacement, region: DockedCompositionRegion) => void;
 
 const persistedRegions = (persisted: NonNullable<ResolveCompositionInput["persisted"]>) =>
   Object.entries(persisted.regions).filter((entry): entry is [DockedCompositionRegion, PersistedRegionState] =>
     Boolean(entry[1]),
   );
+
+const placePersistedRegions = (input: {
+  activePanelIds: Partial<Record<DockedCompositionRegion, string>>;
+  persisted: NonNullable<ResolveCompositionInput["persisted"]>;
+  place: PlaceResolvedPanel;
+  placed: ReadonlySet<string>;
+  resolvedByPanel: ReadonlyMap<string, ResolvedCompositionPlacement>;
+}) => {
+  for (const [region, state] of persistedRegions(input.persisted)) {
+    for (const panelId of state.order) {
+      const resolved = input.resolvedByPanel.get(panelId);
+      if (resolved) {
+        input.place(
+          { ...resolved, origin: "persisted" },
+          resolved.allowedRegions.includes(region) ? region : resolved.region,
+        );
+      }
+    }
+    if (state.activePanelId && input.placed.has(state.activePanelId)) {
+      input.activePanelIds[region] = state.activePanelId;
+    }
+  }
+};
 
 const placeResolved = (
   input: ResolveCompositionInput,
@@ -237,21 +263,10 @@ const placeResolved = (
   };
 
   if (!input.persisted) {
-    for (const resolved of resolvedByPanel.values()) place(resolved, resolved.region);
+    for (const resolved of resolvedByPanel.values()) if (resolved.defaultOpen) place(resolved, resolved.region);
     return { activePanelIds, placed, placements, regionOrder };
   }
-  for (const [region, state] of persistedRegions(input.persisted)) {
-    for (const panelId of state.order) {
-      const resolved = resolvedByPanel.get(panelId);
-      if (resolved) {
-        place(
-          { ...resolved, origin: "persisted" },
-          resolved.allowedRegions.includes(region) ? region : resolved.region,
-        );
-      }
-    }
-    if (state.activePanelId && placed.has(state.activePanelId)) activePanelIds[region] = state.activePanelId;
-  }
+  placePersistedRegions({ activePanelIds, persisted: input.persisted, place, placed, resolvedByPanel });
   for (const resolved of resolvedByPanel.values()) {
     if (resolved.required && !placed.has(resolved.panelId)) place(resolved, resolved.region);
   }
@@ -274,7 +289,7 @@ export const resolveComposition = (input: ResolveCompositionInput): ResolvedComp
   const { activePanelIds, placed, placements, regionOrder } = placeResolved(input, resolvedByPanel);
   const addablePanels = Array.from(resolvedByPanel.values())
     .filter((panel) => !panel.required && !placed.has(panel.panelId))
-    .map(({ panelId, region, allowedRegions }) => ({ panelId, region, allowedRegions }));
+    .map(({ panelId, region, allowedRegions, pinned }) => ({ panelId, region, allowedRegions, pinned }));
   const addablePanelIds = new Set(addablePanels.map((panel) => panel.panelId));
 
   for (const edge of validEdges) {
@@ -287,7 +302,12 @@ export const resolveComposition = (input: ResolveCompositionInput): ResolvedComp
       diagnostics,
     );
     if (!resolved) continue;
-    addablePanels.push({ panelId: resolved.panelId, region: resolved.region, allowedRegions: resolved.allowedRegions });
+    addablePanels.push({
+      panelId: resolved.panelId,
+      region: resolved.region,
+      allowedRegions: resolved.allowedRegions,
+      pinned: resolved.pinned,
+    });
     addablePanelIds.add(resolved.panelId);
   }
 

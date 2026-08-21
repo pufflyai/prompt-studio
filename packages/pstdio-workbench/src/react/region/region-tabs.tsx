@@ -118,9 +118,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     workbenchRegionTabLeadingMenuPath(region),
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
-  const eligibleSubPanels = panelRegion
-    ? compositionPanels[panelRegion].addable.map((panel) => panel.contribution)
-    : [];
+  const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
   const hasAddAction = eligibleSubPanels.length > 0;
   const showTabs = shouldShowRegionTabs(visiblePlacements, {
     hasLeadingActions: leadingItems.length > 0,
@@ -191,7 +189,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
             workbench={workbench}
             region={panelRegion}
             resource={resource}
-            widgets={eligibleSubPanels}
+            panels={eligibleSubPanels}
           />
         ) : null}
         {leadingActions}

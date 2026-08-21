@@ -135,6 +135,27 @@ describe("matchesWorkbenchPanelMenuOwner", () => {
     ).toBe(false);
   });
 
+  test("matches a specifically owned menu to the panel's resolved Sub Panel role", () => {
+    const contribution = panelMenu({ level: "panel", contributionId: "lab.artifacts" });
+
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        subPanel: { widgetId: "artifacts", contributionId: "lab.artifacts", role: "sub-panel" },
+      }),
+    ).toBe(true);
+  });
+
+  test("hides a specifically owned Location menu while another Sub Panel is selected", () => {
+    const contribution = panelMenu({ level: "panel", contributionId: "project.location" });
+
+    expect(
+      matchesWorkbenchPanelMenuOwner(contribution, {
+        locationPanel: { widgetId: "project", contributionId: "project.location", role: "location" },
+        subPanel: { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
+      }),
+    ).toBe(false);
+  });
+
   test("shows Sub-Panel-owned menus only with their owning Sub Panel", () => {
     const contribution = panelMenu({ level: "sub-panel", contributionId: "notes" });
 

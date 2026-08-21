@@ -101,10 +101,11 @@ const metadataExtensionIds = (metadata: ResolvedWorkbenchExtensionMetadata) => {
 
 const registerSingleExtensionContributions = (
   input: Omit<RegisterExtensionContributionsInput, "onRegistrationError"> & {
+    allMetadata: ResolvedWorkbenchExtensionMetadata;
     compositionRegistry: WorkbenchCompositionRegistry;
   },
 ) => {
-  const { compositionRegistry, ctx, executeCommand, metadata, projectId } = input;
+  const { allMetadata, compositionRegistry, ctx, executeCommand, metadata, projectId } = input;
   const disposables: Disposable[] = [];
   try {
     const treeRendererMetadata = {
@@ -229,7 +230,13 @@ const registerSingleExtensionContributions = (
       ...registerExtensionModeContributions(ctx, metadata, projectId, executeCommand, compositionRegistry),
     );
     disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
-    disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
+    disposables.push(
+      ...registerExtensionResourceView(ctx, {
+        metadata: allMetadata,
+        projectId,
+        resourceKinds: (metadata.resourceKinds ?? []).map((kind) => kind.id),
+      }),
+    );
     disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
     disposables.push(
       registerWorkbenchExtensionRendererRefreshEvents({
@@ -259,6 +266,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     try {
       disposables.push(
         ...registerSingleExtensionContributions({
+          allMetadata: input.metadata,
           compositionRegistry,
           ctx: input.ctx,
           executeCommand: input.executeCommand,

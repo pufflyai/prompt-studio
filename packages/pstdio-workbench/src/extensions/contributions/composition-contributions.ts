@@ -32,6 +32,8 @@ interface DeclaredPanelPlacement {
   region: DockedCompositionRegion;
   allowedRegions?: readonly DockedCompositionRegion[];
   required?: boolean;
+  defaultOpen?: boolean;
+  pinned?: boolean;
 }
 
 export const toPanelPlacements = (show: DeclaredPanelPlacement | readonly DeclaredPanelPlacement[] | undefined) => {
@@ -138,7 +140,7 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
     ctx.layout.openWidget(placement.panelId, {
       region: placement.region,
       closable: !placement.required,
-      pinned: true,
+      pinned: placement.pinned,
       role: placementRole(placement.region),
     });
 
@@ -156,8 +158,8 @@ const applyPlacement = (ctx: CompositionReconcileContext, placement: ResolvedCom
   if (!existing) return;
   const role = placementRole(existingRegion);
   const closable = !placement.required;
-  if ((existing.closable ?? true) !== closable || existing.role !== role) {
-    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable, role });
+  if ((existing.closable ?? true) !== closable || existing.pinned !== placement.pinned || existing.role !== role) {
+    ctx.layout.updateWidgetPlacement(existing.widgetId, { closable, pinned: placement.pinned, role });
   }
 };
 
@@ -188,7 +190,7 @@ const reportRequiredFallback = (ctx: CompositionReconcileContext, modeId: string
   const placed = ctx.layout
     .getLayout()
     .regions.main.widgets.some((placement) => placement.contributionId === fallbackPanelId);
-  if (!placed) ctx.layout.openWidget(fallbackPanelId, { region: "main", pinned: true });
+  if (!placed) ctx.layout.openWidget(fallbackPanelId, { region: "main", pinned: true, role: "location" });
   ctx.notifications.show({
     id: notificationId,
     level: "error",

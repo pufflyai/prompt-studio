@@ -137,6 +137,7 @@ const openResourceCompanionViews = (
         region: companion.region,
         role: companion.region === "main" ? "location" : "sub-panel",
         pinned: companion.pinned,
+        closable: !companion.required,
         title: companionViewTitle(companion, input.resource),
         strategy: { kind: "persistent" },
       }),
@@ -157,6 +158,10 @@ const openResourceViewGroup = (
   const placement = ctx.layout.openPanel(widgetIdFor(input.group.primary), {
     strategy: input.openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
     resource: input.resource,
+    region: input.group.primary.region,
+    role: input.group.primary.region === "main" ? "location" : "sub-panel",
+    pinned: input.group.primary.pinned,
+    closable: !input.group.primary.required,
     title: input.resource.label,
   });
 
@@ -193,18 +198,29 @@ export const registerExtensionResourceView = (
   input: {
     metadata: DashboardExtensionMetadata;
     projectId: string;
+    resourceKinds?: readonly string[];
     executeCommand?: ExecuteDashboardExtensionCommand;
   },
 ) => {
   const disposables: Disposable[] = [];
   const executeCommand = input.executeCommand ?? executeExtensionCommand;
-  const groups = groupResourceEditorViews(input.metadata);
+  const groupOptions = { resourceKinds: input.resourceKinds };
+  const groups = groupResourceEditorViews(input.metadata, groupOptions);
   const groupByKind = new Map(groups.map((group) => [group.kind, group]));
-  const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
+  const allGroups = [undefined, ...input.metadata.modes.map((mode) => mode.modeId)].flatMap((modeId) =>
+    groupResourceEditorViews(input.metadata, { ...groupOptions, modeId }),
+  );
+  const managedCompanionWidgetIds = new Set(allGroups.flatMap((group) => group.companions.map(widgetIdFor)));
+  const groupForKind = (kind: string) =>
+    groupResourceEditorViews(input.metadata, {
+      modeId: ctx.modes.getActiveModeId(),
+      resourceKinds: [kind],
+    })[0] ?? groupByKind.get(kind);
 
-  for (const { kind, primary, companions } of groups) {
-    if (!primary) {
-      const inspector = companions.find((companion) => companion.region === "side");
+  for (const baseGroup of groups) {
+    const { kind } = baseGroup;
+    if (!baseGroup.primary) {
+      const inspector = baseGroup.companions.find((companion) => companion.region === "side");
       if (!ctx.resources.getKind(kind)) {
         disposables.push(
           ctx.resources.registerKind({
@@ -214,39 +230,33 @@ export const registerExtensionResourceView = (
           }),
         );
       }
-      disposables.push(
-        ctx.resources.registerPresenter({
-          id: `dashboard.extensions.resource-inspector.${kind}`,
-          priority: 1100,
-          canOpen: (resource) => resource.kind === kind,
-          open: (resource) => {
-            const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
-            removeManagedCompanions(ctx, managedCompanionWidgetIds, new Set(companions.map(widgetIdFor)));
-            return openResourceInspectorGroup(ctx, { companions, resource: selectedResource });
-          },
-        }),
-      );
-      continue;
     }
 
     disposables.push(
       ctx.resources.registerPresenter({
-        id: `dashboard.extensions.resource-view.${kind}`,
+        id: baseGroup.primary
+          ? `dashboard.extensions.resource-view.${kind}`
+          : `dashboard.extensions.resource-inspector.${kind}`,
         priority: 1100,
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
+          const group = groupForKind(kind);
+          if (!group) throw new Error(`No panel group registered for resource kind: ${kind}`);
           const expectedCompanionWidgetIds = new Set(
-            companions.filter((companion) => !isSidenavResourceTree(companion)).map(widgetIdFor),
+            group.companions.filter((companion) => !isSidenavResourceTree(companion)).map(widgetIdFor),
           );
           const selectedResource = withExtensionResourceContext(resource, { projectId: input.projectId });
+          removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
+          if (!group.primary) {
+            return openResourceInspectorGroup(ctx, { companions: group.companions, resource: selectedResource });
+          }
           // Opening a resource never infers a mode: it keeps the workbench the user is
           // in, so the project's own chrome stays put and the resource's panels land in
           // the regions they support.
           selectDashboardNavigationResource(ctx, selectedResource);
           setResourceBreadcrumb(ctx, selectedResource);
-          removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {
-            group: { kind, primary, companions },
+            group: { ...group, primary: group.primary },
             openInput,
             resource: selectedResource,
           });
@@ -276,14 +286,14 @@ export const registerExtensionResourceView = (
     current.icon = refreshed.icon;
     current.metadata = refreshed.metadata;
     setResourceBreadcrumb(ctx, current);
-    const group = groupByKind.get(current.kind);
+    const group = groupForKind(current.kind);
     if (group) updateResourceGroupTitles(ctx, group, current);
     ctx.lastResource.set(current);
   };
 
   disposables.push(
     ctx.onDidChangePrimaryResource((resource) => {
-      const group = resource ? groupByKind.get(resource.kind) : undefined;
+      const group = resource ? groupForKind(resource.kind) : undefined;
       activeResource = group ? resource : undefined;
 
       if (managedCompanionWidgetIds.size > 0) {
@@ -301,7 +311,7 @@ export const registerExtensionResourceView = (
   disposables.push({
     dispose: subscribeToExtensionCommandFeed((event) => {
       if (!activeResource || !event.outcome.ok) return;
-      const group = groupByKind.get(activeResource.kind);
+      const group = groupForKind(activeResource.kind);
       if (!group || !resourceGroupOwnsEvent(group, event)) return;
       if (outcomeValueId(event.outcome.value) !== activeResource.id) return;
 

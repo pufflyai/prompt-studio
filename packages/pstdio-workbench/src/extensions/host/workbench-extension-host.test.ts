@@ -166,6 +166,41 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 
+const registerOwnedShowForPresenter = async () => {
+  const workbench = createWorkbenchCore();
+  const showOnlyMetadata = {
+    ...metadata,
+    resourcePanels: [],
+    modes: [
+      {
+        ...metadata.modes[0],
+        resources: { ticket: { panels: { "lab.ticketPanel": { region: "main", required: true } } } },
+      },
+    ],
+    panels: metadata.panels.map((panel) =>
+      panel.id === "lab.ticketPanel" ? { ...panel, show: { for: "ticket", region: "main" as const } } : panel,
+    ),
+  } satisfies WorkbenchExtensionMetadata;
+
+  registerWorkbenchExtensionContributions({
+    executeCommand: async (commandId) => success(commandId, undefined),
+    metadata: showOnlyMetadata,
+    projectId: "project-1",
+    workbench,
+  });
+
+  await workbench.resources.openResource({
+    kind: "ticket",
+    uri: "workbench://ticket/T-1",
+    id: "T-1",
+    label: "T-1",
+  });
+
+  expect(workbench.layout.listPanelInstances("main")).toEqual([
+    expect.objectContaining({ panelId: "lab.ticketPanel", resourceUri: "workbench://ticket/T-1" }),
+  ]);
+};
+
 describe("registerWorkbenchExtensionContributions", () => {
   test("registers workbench-facing contributions and command-backed callbacks", async () => {
     const workbench = createWorkbenchCore();
@@ -274,6 +309,10 @@ describe("registerWorkbenchExtensionContributions", () => {
       "lab.ticketModal",
     ]);
     expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
+  });
+
+  test("registers a resource presenter for an owned show.for panel without a resourcePanels edge", async () => {
+    await registerOwnedShowForPresenter();
   });
 
   test("keeps webview command executions in the extension command response envelope", async () => {

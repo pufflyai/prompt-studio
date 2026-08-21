@@ -37,11 +37,14 @@ const isOpenSingleton = (
   widget: RegisteredWidgetContribution,
   placements: readonly WorkbenchWidgetPlacement[],
   resource: ResourceRef | undefined,
-) =>
-  widget.singleton &&
-  placements.some(
-    (placement) => placement.contributionId === widget.id && placement.ownerResourceUri === resource?.uri,
-  );
+) => {
+  if (!widget.singleton) return false;
+  return placements.some((placement) => {
+    if (placement.contributionId !== widget.id) return false;
+    const scopedResourceUri = placement.role === "location" ? placement.resourceUri : placement.ownerResourceUri;
+    return !scopedResourceUri || scopedResourceUri === resource?.uri;
+  });
+};
 
 const addModePanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;

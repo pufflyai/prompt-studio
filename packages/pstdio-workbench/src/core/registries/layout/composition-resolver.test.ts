@@ -360,6 +360,22 @@ describe("composition Add Panel options", () => {
     expect(result.addablePanels.map((panel) => panel.panelId)).toEqual(["planner.editor"]);
     expect(result.addablePanels).toEqual([{ panelId: "planner.editor", region: "main", allowedRegions: ["main"] }]);
   });
+
+  test("keeps default-closed panels out of the initial layout and preserves their pinned policy", () => {
+    const mode = {
+      id: "lab",
+      modePanels: {
+        "planner.editor": { region: "main" as const, defaultOpen: false, pinned: true },
+      },
+    };
+
+    const result = resolve({ context: { modeId: mode.id }, mode });
+
+    expect(result.placements).toEqual([]);
+    expect(result.addablePanels).toEqual([
+      { panelId: "planner.editor", region: "main", allowedRegions: ["main"], pinned: true },
+    ]);
+  });
 });
 
 describe("panel-owned composition placement", () => {

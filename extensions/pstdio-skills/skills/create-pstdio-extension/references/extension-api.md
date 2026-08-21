@@ -280,8 +280,8 @@ For an editable inspector/property panel, define a `controlsRenderers` renderer 
 callbacks. Nest the menu under its owning panel:
 `panelMenus: { properties: { title: "Properties", side: "right", renderer: { kind: "controls", id: "<id>" } } }`.
 The active owner instance determines when the menu is available, and it retains its attached or collapsed state.
-Bind the owning panel to its resource kind with a `resourcePanels` entry; omitting both
-`onValueChange` and `onApply` makes it read-only. Callback payloads must be JSON — commit file metadata or
+Bind the owning panel to its resource kind with `show.for`; omitting both
+`onValueChange` and `onApply` makes it read-only. Callback payloads must be JSON. Commit file metadata or
 data URLs, never live `File` objects.
 
 ## Harnesses

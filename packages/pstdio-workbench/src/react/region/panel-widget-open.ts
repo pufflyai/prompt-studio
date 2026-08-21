@@ -5,6 +5,7 @@ interface OpenPanelWidgetInput {
   widget: RegisteredWidgetContribution;
   region: WorkbenchPanelRegion;
   resource?: ResourceRef;
+  pinned?: boolean;
 }
 
 export const getPanelLabel = (region: WorkbenchPanelRegion) => {
@@ -14,7 +15,7 @@ export const getPanelLabel = (region: WorkbenchPanelRegion) => {
 };
 
 export const openPanelWidget = (input: OpenPanelWidgetInput) => {
-  const { region, resource, widget, workbench } = input;
+  const { pinned, region, resource, widget, workbench } = input;
 
   if (widget.openCommandId) {
     void workbench.commands.executeCommand(widget.openCommandId, undefined, {
@@ -31,6 +32,7 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
       resource: widgetResource,
       title: widget.title,
       closable: true,
+      pinned,
       role: region === "main" ? "location" : "sub-panel",
       tabRetention: "persistent",
     });
