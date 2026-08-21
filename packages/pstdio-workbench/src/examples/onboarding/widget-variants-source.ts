@@ -33,7 +33,6 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: LOCATION_PANEL_ID,
       title: "Widget variants",
       region: "main",
@@ -42,7 +41,6 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: true,
       id: SINGLETON_SUB_PANEL_ID,
       title: "Closable singleton",
       region: "main",
@@ -51,7 +49,6 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: true,
       id: NOTE_SUB_PANEL_ID,
       title: "Resource Sub Panel",
       region: "main",
@@ -62,7 +59,6 @@ export const createWidgetVariantsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: true,
       id: SCRATCH_SUB_PANEL_ID,
       title: "Scratch",
       region: "main",

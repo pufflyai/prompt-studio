@@ -1,32 +1,62 @@
 # Workbench API
 
-Use the package root for core contracts:
+`@pstdio/workbench` provides the headless workbench model. React hosts, extension
+hosts, persistence adapters, and tests use separate entry points.
 
 ```ts
 import {
   createWorkbenchCore,
   type ResourceRef,
   type WorkbenchModuleContribution,
-  type WorkbenchPanelInstance,
 } from "@pstdio/workbench";
 ```
 
-React hosts import from `@pstdio/workbench/react`, persistence adapters from
-`@pstdio/workbench/storage`, extension adapters from
-`@pstdio/workbench/extensions`, and test helpers from
-`@pstdio/workbench/testing`.
+## Package entry points
+
+| Entry point | Use it for |
+| --- | --- |
+| `@pstdio/workbench` | Core registries, controllers, contributions, resources, layout, and navigation. |
+| `@pstdio/workbench/react` | The React shell, providers, views, and store hooks. |
+| `@pstdio/workbench/storage` | Browser-backed persistence adapters. |
+| `@pstdio/workbench/extensions` | Mapping checked extension metadata into workbench contributions. |
+| `@pstdio/workbench/testing` | Test fixtures and helpers. |
+| `@pstdio/workbench/webview-runtime` | The runtime used inside extension webviews. |
 
 ## Mental model
 
-- **Resource** — stable domain identity such as a ticket, workspace, or settings page.
-- **Panel definition** — a registered renderer and its presentation defaults.
-- **Panel instance** — one open placement of a Panel definition.
-- **Location** — navigation state established from a Resource and its presenting Main Panel.
+- A **resource** is stable domain identity, such as a ticket or workspace.
+- A **panel definition** registers a renderer and presentation defaults.
+- A **panel instance** is one open placement of a panel definition.
+- A **location** is navigation state established from a resource and its presenting Main Panel.
+- **Composition** decides which panels are open, addable, closable, and where they may be placed for the active mode and resource.
 
-Panels are not declared as Locations. A successful Resource navigation creates
-the relationship at runtime.
+Panel definitions do not declare location or sub-panel roles. A resource navigation
+or resolved composition placement assigns the role at runtime.
+
+## Core services
+
+`createWorkbenchCore()` returns the shared service object. The main namespaces are:
+
+| Namespace | Responsibility |
+| --- | --- |
+| `layout` | Register panel definitions and manage concrete placements. |
+| `composition` | Query open, addable, and closable panels for a panel region. |
+| `renderers` | Register React, tree, file, table, controls, and board renderers. |
+| `resources` | Register resource kinds, providers, presenters, and hierarchy. |
+| `modes` | Register and activate workbench modes. |
+| `navigator`, `navigation`, `history`, `breadcrumbs`, `lastResource` | Open targets and maintain navigation state. |
+| `commands`, `keybindings`, `commandPalette`, `commandPaletteResources`, `context` | Register, find, and gate user actions. |
+| `shell`, `sidePanel`, `panels`, `focus` | Control visible workbench presentation. |
+| `preferences`, `settings`, `themes`, `fileIconThemes` | Configure appearance and settings. |
+| `notifications`, `terminal` | Show feedback and manage terminal sessions. |
+| `host` | Restore snapshots and change persistence scope. |
+
+The core also exposes `getPrimaryResource()` for the resource hosted by the Main
+Panel and `getActiveResource()` for the globally focused resource.
 
 ## Modules
+
+Group related contributions in a module:
 
 ```ts
 const ticketsModule: WorkbenchModuleContribution = {
@@ -39,12 +69,12 @@ const ticketsModule: WorkbenchModuleContribution = {
 workbench.registerModule(ticketsModule);
 ```
 
-The module context tracks registrations and subscriptions under the module
-owner. Disposing the module removes its contributions and open instances.
+The module context applies ownership metadata and tracks registrations. Disposing
+the module removes its contributions and open instances.
 
-## Panels
+## Panel definitions and instances
 
-Register every UI surface with `layout.registerPanel`:
+Register the capability to render a panel:
 
 ```ts
 ctx.layout.registerPanel({
@@ -52,26 +82,29 @@ ctx.layout.registerPanel({
   title: "Ticket",
   region: "main",
   rendererId: "tickets.editor.renderer",
-  closable: false,
   resourceKinds: ["ticket"],
 });
 ```
 
-Required fields are `id`, `title`, `region`, `rendererId`, and `closable`.
-Important optional fields include:
+Required fields are `id`, `title`, `region`, and `rendererId`. Common optional
+fields include:
 
 - `singleton` and `reuse` for instance reuse;
 - `mountStrategy` for renderer lifetime;
 - `resourceKinds` and `canOpen` for accepted renderer input;
-- `eligibleLocations` for supporting Panels;
-- `panelMenus` for nested left/right Panel Menus;
+- `eligibleLocations` for supporting panels;
+- `panelMenus` for nested left and right Panel Menus;
 - `fallbackRegion`, `regionSize`, `tab`, and `floatingPanels` for presentation.
 
-Open operations return the actual instance:
+`closable` and `role` are placement state. They are not panel registration fields.
+Composition supplies them for extension-owned layouts. A direct host open may set
+them explicitly:
 
 ```ts
 const panel = ctx.layout.openPanel("tickets.editor", {
   resource: ticket,
+  closable: false,
+  role: "location",
   strategy: { kind: "persistent" },
 });
 
@@ -80,6 +113,21 @@ ctx.layout.updatePanel(panel.instanceId, { title: "Updated title" });
 ctx.layout.closePanel(panel.instanceId);
 ```
 
+### Instance reuse and tab counts
+
+`singleton` and `reuse` control how many instances one panel definition can
+open:
+
+| Registration | Instance behavior |
+| --- | --- |
+| `singleton: true` | Reuses one instance. This is the default. A Sub Panel has one singleton per Location. |
+| `singleton: false`, `reuse: "resource"` | Keeps one instance per resource URI. This is the default reuse policy. |
+| `singleton: false`, `reuse: "none"` | Creates a new instance for every open call. |
+
+Use `strategy: { kind: "persistent" }` when several tabs must stay open. Without
+a strategy, an open in `main`, `secondary`, or `side` becomes a preview tab. A
+later preview may replace it.
+
 Open strategies are:
 
 - `{ kind: "persistent", position? }`
@@ -87,24 +135,39 @@ Open strategies are:
 - `{ kind: "replace-panel", instanceId }`
 - `{ kind: "preview", position? }`
 
-Without a strategy, an open into a tab-hosting region (`main`, `secondary`,
-`side`) lands as a preview tab that the next preview replaces. Pinned opens and
-opens into any other region are persistent. Ask for `{ kind: "persistent" }`
-when a tab must stay put.
+Without a strategy, an open into `main`, `secondary`, or `side` becomes a preview
+tab. The next preview replaces it. Pinned opens and opens into other regions are
+persistent.
 
-Panel definition IDs and Panel instance IDs are intentionally different.
-Mutation methods take the instance ID.
+Panel definition IDs and instance IDs are different. Mutation methods take the
+instance ID. Calling `layout.openPanel` directly is presentation-only; it does not
+create resource navigation, breadcrumbs, or history.
 
-Calling `layout.openPanel` directly is presentation-only. It does not change
-Location, breadcrumbs, history, or resource persistence scope.
+## Composition queries
 
-### Supporting Panels
+Use `composition.panelsFor()` to build region controls without reconstructing
+composition rules from layout state:
 
-Panels without `eligibleLocations` are full content Panels. They can present a
-Resource and become a Location when opened through `resources.openResource`.
+```ts
+const mainPanels = workbench.composition.panelsFor("main");
 
-`eligibleLocations` explicitly makes a Panel subordinate. A subordinate Panel is
-shown as supporting UI, usually a closable tab, for matching Locations:
+mainPanels.open; // current WorkbenchWidgetPlacement records
+mainPanels.addable; // closed optional panels available in this context
+mainPanels.closable; // contribution ids that the user may close
+```
+
+The accepted regions are `main`, `secondary`, and `side`. `sidenav` is a docked
+composition region, but it is not a tab-hosting `WorkbenchPanelRegion`, so it is
+not queried through this controller.
+
+The result follows the active mode and primary resource. If a mode hides a region,
+`addable` and `closable` are empty. Required composition placements are open and
+not closable. Closed optional placements appear in `addable`.
+
+## Supporting panels
+
+`eligibleLocations` marks a core panel as supporting UI and limits the locations
+where it is available:
 
 ```ts
 ctx.layout.registerPanel({
@@ -112,7 +175,6 @@ ctx.layout.registerPanel({
   title: "Terminal",
   region: "secondary",
   rendererId: "terminal.renderer",
-  closable: true,
   eligibleLocations: {
     resourceKinds: ["ticket"],
     modeIds: ["ticket"],
@@ -120,30 +182,11 @@ ctx.layout.registerPanel({
 });
 ```
 
-Eligibility can use `resourceKinds`, `resourceIds`, `modeIds`, or `canOpen`.
-The field controls availability and ownership only. `resourceKinds`,
-`closable`, and `region` never imply Location.
+Eligibility can use `resourceKinds`, `resourceIds`, `modeIds`, or `canOpen`. An
+empty object makes the panel supporting UI without adding a filter. Closability is
+still decided when the placement opens.
 
-An empty object is valid, but it has two effects: it makes the Panel subordinate
-and adds no eligibility constraints. That means the Panel is eligible in every
-matching location:
-
-```ts
-ctx.layout.registerPanel({
-  id: "tickets.notes",
-  title: "Notes",
-  region: "secondary",
-  rendererId: "notes.renderer",
-  closable: true,
-  eligibleLocations: {},
-});
-```
-
-Use `eligibleLocations` only when the Panel is intended to be supporting UI.
-
-### Panel Menus
-
-Menus are nested under their owner:
+Panel Menus are nested under their owner:
 
 ```ts
 ctx.layout.registerPanel({
@@ -151,7 +194,6 @@ ctx.layout.registerPanel({
   title: "Ticket",
   region: "main",
   rendererId: "tickets.editor.renderer",
-  closable: false,
   panelMenus: [
     {
       id: "tickets.properties",
@@ -163,107 +205,100 @@ ctx.layout.registerPanel({
 });
 ```
 
-The active owner instance controls which menu is visible. Registration,
-placement, resource ownership, and disposal follow the parent Panel.
-
-## Kanban renderers
-
-A kanban renderer is a Notion/Linear-style data workspace registered under
-`renderers`. It contributes an attribute schema, data via
-`executeQuery(state)`, row-mutation callbacks, and optional initial views. Each
-saved view captures filters and display settings; selection, scroll position,
-and collapsed groups remain transient.
-
-Like tree renderers, a kanban renderer auto-registers a Panel renderer with the
-same id. Register and open a Panel to place the workspace:
-
-```ts
-ctx.renderers.registerKanbanRenderer({
-  id: "tickets",
-  title: "Tickets",
-  resourceKind: "ticket",
-  attributes: [/* ... */],
-  defaultViews: [/* ... */],
-  defaultActiveViewId: "all",
-  executeQuery: ({ settings, filters }) => fetchRows(settings, filters),
-  onRowClick: (row) => {/* ... */},
-});
-
-ctx.layout.registerPanel({
-  id: "tickets",
-  title: "Tickets",
-  region: "main",
-  rendererId: "tickets",
-  closable: false,
-});
-
-ctx.layout.openPanel("tickets");
-```
+The active owner instance controls which Panel Menu is visible. Its registration,
+resource ownership, placement, and disposal follow the parent panel.
 
 ## Resources and navigation
 
 ```ts
 const ticket: ResourceRef = {
   kind: "ticket",
-  uri: "pstdio://ticket/example-ticket",
-  id: "example-ticket",
-  label: "Example ticket",
+  uri: "pstdio://ticket/PS-281",
+  id: "PS-281",
+  label: "PS-281",
 };
 
-ctx.resources.registerKind({
-  kind: "ticket",
-  label: "Ticket",
-  icon: "component",
-});
-
+ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "component" });
 ctx.resources.registerPresenter({
   id: "tickets.presenter",
   canOpen: (resource) => resource.kind === "ticket",
   open: (resource, input) =>
     ctx.layout.openPanel("tickets.editor", {
       resource,
-      strategy: input.replaceActive
-        ? { kind: "replace-active" }
-        : { kind: "persistent" },
+      strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
     }),
 });
 
-const locationPanel = await ctx.resources.openResource(ticket);
+await ctx.resources.openResource(ticket);
 ```
 
-A presenter's responsibility is narrow: open and return the Panel that presents
-the Resource. It does not decide whether that Panel is a Location or write
-navigation history. `openResource` chooses the highest-priority matching
-presenter and, after it succeeds, establishes the returned Panel as the
-Location. Navigation history and active-resource state follow that transaction.
+A presenter opens and returns the panel that presents the resource.
+`openResource()` then establishes that panel as the location and updates active
+resource state and history.
 
-Use `resources.registerProvider` for browse/search candidates and
+Use `resources.registerProvider` for browse and search candidates, and
 `resources.registerHierarchyProvider` for breadcrumb ancestry.
 
 ## Modes
 
-Modes register long-lived contributions in `activate`, seed default placements
-once per persistence scope in `seed`, and attach active behavior in `enter`.
+Modes register long-lived contributions in `activate`, seed defaults once for a
+new persistence scope, and repair required layout in `reconcile`:
 
 ```ts
 ctx.modes.registerMode({
   id: "review",
   label: "Review",
-  panels: ["main", "secondary"],
+  panels: ["main", "secondary", "side"],
   activate: () => undefined,
   seed(modeCtx) {
-    modeCtx.layout.openPanel("review.editor");
-    modeCtx.layout.openPanel("review.checks");
+    modeCtx.layout.openPanel("review.editor", { closable: false });
   },
 });
 ```
 
-The first Main Panel opened while seeding becomes the mode Location before
-later supporting Panels open.
+Extension hosts generate `seed`, `reconcile`, and `listAddablePanels` from the
+declarative composition metadata described below.
 
-## Shell and host boundaries
+## Extension panel placement
 
-Use `shell` for user-visible region presentation:
+Extension panels declare their default placement with `show`. Registration no
+longer uses `region`, `closable`, `resourceKind`, or `eligibleLocations`:
+
+```ts
+panels: {
+  outline: {
+    title: "Outline",
+    show: {
+      for: "ticket",
+      region: "sidenav",
+      allowedRegions: ["sidenav", "main"],
+      required: false,
+    },
+    renderer: { kind: "tree", id: "outlineTree" },
+  },
+}
+```
+
+`show` may be one placement or an array of placements for different owned
+resource kinds. `required: true` makes the resolved placement structural and
+non-closable. An optional placement can be closed and restored through Add Panel
+when it resolves to `main`, `secondary`, or `side`.
+
+A mode can move an owned panel through `resources.<kind>.panels`, or a mode-wide
+panel through `modePanels`. The destination must stay within the panel's declared
+`allowedRegions`. This includes moving a panel between `main` and `sidenav` when
+both regions are declared.
+
+Use `resourcePanels` only to bind a panel to a resource kind owned by another
+extension. The extension host normalizes all of these declarations and lets the
+composition resolver own placement and closability.
+
+See the [extension mode guide](../../../../extensions/docs/modes-and-layout.md)
+for full recipes and cross-extension slots.
+
+## Shell, persistence, and React
+
+Use `shell` for user-visible presentation:
 
 ```ts
 ctx.shell.setRegionOpen("secondary", true);
@@ -279,13 +314,15 @@ workbench.host.setPersistenceScope(scope, {
 });
 ```
 
-Module code should not restore raw layout snapshots or coordinate multiple
-stores. The host boundary changes resource scope atomically; the shell service
-changes presentation atomically.
+Render the core from the React entry point:
 
-## Extensions
+```tsx
+import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 
-Extension manifests use `panels` with the same fields: explicit `region` and
-`closable`, optional `resourceKind` and `eligibleLocations`, plus nested
-`panelMenus`. They do not declare `location`, `sub-panel`, or `panel-menu`
-roles. The host normalizes extension metadata through `registerPanel`.
+<WorkbenchThemeProvider>
+  <Workbench workbench={workbench} />
+</WorkbenchThemeProvider>;
+```
+
+The [Workbench Storybook](../../../../packages/pstdio-workbench/README.md) has a
+dedicated API section with live composition and placement examples.

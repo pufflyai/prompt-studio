@@ -22,7 +22,7 @@ const createHostTerminalModule = () => ({
       id: notesWidgetId,
       title: "notes.md",
       region: "secondary",
-      singleton: false,
+      singleton: true,
       eligibleLocations: {},
       rendererId: notesRendererId,
     });

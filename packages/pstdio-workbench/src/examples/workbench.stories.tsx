@@ -253,7 +253,7 @@ export const HostTerminal: Story = {
     const terminalTabsBefore = await canvas.findAllByRole("tab", { name: /Terminal \d+/ });
     const nextTerminalTitle = `Terminal ${terminalTabsBefore.length + 1}`;
 
-    await userEvent.click(await canvas.findByRole("button", { name: "New terminal" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Add panel" }));
 
     const newTerminalTab = await canvas.findByRole("tab", { name: new RegExp(nextTerminalTitle) });
     await expect(newTerminalTab).toHaveAttribute("aria-selected", "true");

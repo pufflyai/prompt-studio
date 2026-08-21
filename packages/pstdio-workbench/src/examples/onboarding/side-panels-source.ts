@@ -128,14 +128,12 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.registerPanel({
-      closable: false,
       id: PICKER_ID,
       title: "Resources",
       region: "sidenav",
       rendererId: PICKER_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: false,
       id: DETAIL_ID,
       title: "Detail",
       region: "main",
@@ -153,14 +151,12 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       ],
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: INSPECTOR_ID,
       title: "Inspector",
       region: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
     ctx.layout.registerPanel({
-      closable: true,
       id: ACTIVITY_ID,
       title: "Activity",
       region: "secondary",

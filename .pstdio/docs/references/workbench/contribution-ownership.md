@@ -62,8 +62,7 @@ const module = {
     ctx.layout.registerPanel({
       id: "project.settings",
       title: "Project settings",
-      region: "main"
-      closable: false,
+      region: "main",
       rendererId: "project.settings",
     });
   },

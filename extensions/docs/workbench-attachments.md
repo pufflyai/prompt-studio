@@ -45,7 +45,7 @@ export default defineExtension({
 
 Targets are closed and host-owned. A menu cannot target `workbench.left.tree`, and normal contributions cannot attach to bare mode-layout areas such as `workbench.left`.
 
-Panels are not attachments. A panel declares the docked regions it supports, and the active mode places it. See [Workbench panels](#workbench-panels). Command palette entries are declared on the command itself with `palette`, not with a menu target.
+Panels are not attachments. A panel's optional `show` value declares default placement and allowed movement for its extension's own resource or mode. The active mode can refine that placement. See [Workbench panels](#workbench-panels). Command palette entries are declared on the command itself with `palette`, not with a menu target.
 
 ## When Expressions
 
@@ -179,13 +179,34 @@ A panel declares its title, optional icon, exactly one body, and optional defaul
 panels: {
   ticketEditor: {
     title: "Ticket",
-    show: { for: "ticket", region: "main", required: true },
+    show: {
+      for: "ticket",
+      region: "main",
+      allowedRegions: ["main", "sidenav"],
+      required: true,
+    },
     webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
   },
 }
 ```
 
-Use `show.for` for a resource kind owned by the same extension. A slot is a named extension point for panels from other extensions:
+`show` accepts one placement or an array of placements. Use the array form when the same panel has a different default in more than one owned resource context:
+
+```ts
+show: [
+  { for: "ticket", region: "main", allowedRegions: ["main", "sidenav"], required: true },
+  { for: "project", region: "secondary", allowedRegions: ["secondary", "side"] },
+]
+```
+
+Each placement has these fields:
+
+- `for` scopes the default to a resource kind owned by the same extension. Omit it for a mode-wide default.
+- `region` is the default docked region: `sidenav`, `main`, `secondary`, or `side`.
+- `allowedRegions` lists the regions where the user or another mode may keep the panel. It defaults to only `region`.
+- `required: true` makes the placement structural and non-closable. Optional placements can be closed and later restored through Add Panel when they resolve to `main`, `secondary`, or `side`.
+
+A slot is a named extension point for panels from other extensions:
 
 ```ts
 resourceKinds: {
@@ -207,7 +228,7 @@ resourcePanels: {
 }
 ```
 
-The active mode's `resources` recipe may move owned panels and places cross-extension slots. See [Extension modes](./modes-and-layout.md).
+The active mode's `resources` recipe may move owned panels and place cross-extension slots. `modePanels` applies the same rules to mode-wide panels. A recipe can move a panel only within its declared `allowedRegions`. See [Extension modes](./modes-and-layout.md).
 
 ## Panel Placement
 

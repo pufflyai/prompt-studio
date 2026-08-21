@@ -1,0 +1,105 @@
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import * as ApiStories from "./api.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={ApiStories} name="API overview" parameters={{ layout: "padded" }} />
+
+# Workbench API
+
+The Workbench package separates panel definitions from their open instances. A
+definition says what the panel can render. Each call to `layout.openPanel()`
+returns a panel instance, which may be a new tab or an existing tab selected
+again.
+
+- `@pstdio/workbench` contains the core registries, controllers, contributions,
+  resources, layout, and navigation.
+- `@pstdio/workbench/react` contains the React shell, providers, views, and store
+  hooks.
+- `@pstdio/workbench/storage` contains browser persistence adapters.
+- `@pstdio/workbench/extensions` maps extension metadata into Workbench
+  contributions.
+- `@pstdio/workbench/testing` contains test fixtures and helpers.
+- `@pstdio/workbench/webview-runtime` contains the extension webview runtime.
+
+## Panel definitions, instances, and tabs
+
+`singleton` and `reuse` decide whether an open call creates a new instance.
+
+- `singleton: true` reuses one instance. This is the default. A Sub Panel has one
+  singleton per Location.
+- `singleton: false` with `reuse: "resource"` creates one instance per resource
+  URI. Reopening the same resource selects its tab.
+- `singleton: false` with `reuse: "none"` creates a new instance for every open
+  call.
+
+The three tab-hosting regions are `main`, `secondary`, and `side`. Use
+`strategy: { kind: "persistent" }` when several tabs must remain open. Without
+an explicit strategy, an open call creates a preview tab, and the next preview
+may replace it.
+
+### Singleton panel
+
+Opening this panel repeatedly returns the same instance ID. The open singleton
+is also removed from the region's `+` menu because there is no second tab to
+create.
+
+<Canvas of={ApiStories.SingletonPanel} sourceState="none" />
+
+<Source of={ApiStories.SingletonPanel} />
+
+### Multiple tabs by resource
+
+Set `singleton: false` and keep the default `reuse: "resource"` policy when one
+panel definition should open one tab per resource. Alpha and Beta have different
+URIs, so they have separate tabs. Reopening Alpha selects its existing tab.
+
+<Canvas of={ApiStories.ResourceTabs} sourceState="none" />
+
+<Source of={ApiStories.ResourceTabs} />
+
+### Multiple tabs without reuse
+
+Set `reuse: "none"` for terminals, scratch buffers, and other panels where every
+open call owns separate state. The panel ID stays the same, while every returned
+instance ID is different.
+
+<Canvas of={ApiStories.DuplicateTabs} sourceState="none" />
+
+<Source of={ApiStories.DuplicateTabs} />
+
+## Composition panel query
+
+`workbench.composition.panelsFor("main" | "secondary" | "side")` returns the
+panel controls for the active mode and resource.
+
+- `open` contains current placements.
+- `addable` contains optional closed panels that can open in the region.
+- `closable` contains contribution IDs that the user may close.
+
+The inspector above the workbench renders the live return value. It does not
+copy the composition rules into the React view.
+
+<Canvas of={ApiStories.CompositionPanelQuery} sourceState="none" />
+
+<Source of={ApiStories.CompositionPanelQuery} />
+
+## Extension panel placement
+
+An extension panel uses `show.region` for its default placement.
+`show.allowedRegions` limits user movement and mode overrides. `show.required`
+controls whether composition may close the panel.
+
+The story passes checked extension metadata to
+`registerWorkbenchExtensionContributions()`. Its controls move the same
+singleton panel between `main` and `sidenav`. Both regions are allowed, so the
+move keeps the same panel instance.
+
+<Canvas of={ApiStories.ExtensionPanelPlacement} sourceState="none" />
+
+<Source of={ApiStories.ExtensionPanelPlacement} />
+
+`sidenav` is a docked composition region. It does not host tabs, so it is not
+accepted by `composition.panelsFor()`.

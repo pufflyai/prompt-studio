@@ -59,4 +59,5 @@ See the [CLI command index](/product/cli/index) for the current core commands.
 Extension documentation follows the code that owns it:
 
 - [Extension authoring guides](../../extensions/docs/index.md) live under `extensions/docs/`.
+- [Workbench references](./references/workbench/index.md) cover the public package API, navigation, and contribution ownership.
 - Each first-party extension keeps its product guides in its own folder. See the [Planner extension](../../extensions/pstdio-planner/README.md).

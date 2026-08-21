@@ -78,12 +78,22 @@ export default defineExtension({
   panels: {
     ticketEditor: {
       title: "Ticket",
-      show: { for: "ticket", region: "main", required: true },
+      show: {
+        for: "ticket",
+        region: "main",
+        allowedRegions: ["main", "sidenav"],
+        required: true,
+      },
       webview: { entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
     },
     ticketFiles: {
       title: "Files",
-      show: { for: "ticket", region: "sidenav", required: true },
+      show: {
+        for: "ticket",
+        region: "sidenav",
+        allowedRegions: ["sidenav", "main"],
+        required: true,
+      },
       renderer: { kind: "tree", id: "ticketFilesTree" },
     },
   },
@@ -102,7 +112,7 @@ export default defineExtension({
 });
 ```
 
-Opening a ticket in this mode places the editor in `main` and pins the file tree in `sidenav`. A different mode can move either panel within its declared `allowedRegions`.
+Opening a ticket in this mode places the editor in `main` and pins the file tree in `sidenav`. A different mode can swap their placements because both declare `main` and `sidenav` in `allowedRegions`. The resulting primary-resource recipe must still have exactly one `main` placement. A mode cannot move a panel to an undeclared region.
 
 Another extension can bind its panel to the open `inspector` slot with `resourcePanels`. The ticket mode can then place that slot in `side` or `secondary`.
 

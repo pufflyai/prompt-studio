@@ -1,6 +1,6 @@
 # pstdio-workbench
 
-`pstdio-workbench` is the workbench composition layer for Prompt Studio. It provides a typed core for registering contributions and a React workbench for rendering those contributions.
+`pstdio-workbench` is the workbench composition layer for Prompt Studio. It provides a typed core for registering contributions and a React workbench for rendering those contributions. See the [Workbench reference](../../.pstdio/docs/references/workbench/index.md) for the full public API.
 
 ## Key concepts
 
@@ -22,6 +22,9 @@ Contributions are the workbench extension points. A module contributes capabilit
 - `@pstdio/workbench` exports the headless workbench core, registries, controllers, and contribution types.
 - `@pstdio/workbench/react` exports the React shell, view hosts, shared hooks, and `WorkbenchModuleHost` for syncing a dynamic module list into a core.
 - `@pstdio/workbench/storage` exports local-storage-backed layout and panel persistence adapters for hosts that want browser persistence with a namespace and scope.
+- `@pstdio/workbench/extensions` maps checked extension metadata into workbench contributions.
+- `@pstdio/workbench/testing` exports test fixtures and helpers.
+- `@pstdio/workbench/webview-runtime` exports the runtime used inside extension webviews.
 
 ## Layout contributions
 
@@ -35,6 +38,14 @@ Pin a renderer to a region as a panel, editor, dashboard, inspector, status item
 - Set `singleton: true` for one placement total, such as a tree, sidenav, or status view.
 - Non-singleton Panels default to `reuse: "resource"`: one placement per resource URI, with no-resource opens reusing the Panel placement.
 - Set `reuse: "none"` for scratch, untitled, or transient views where every open should create a new placement.
+
+`closable` and `role` belong to an open placement, not to panel registration. Extension composition derives both from `show` and the active mode recipe. Hosts that open a panel directly can set them in `layout.openPanel(...)`.
+
+### Composition
+
+`workbench.composition.panelsFor(region)` returns the open placements, closed optional panels that can be added, and contribution ids that can be closed for `main`, `secondary`, or `side`. Use it to build panel controls that follow the active mode and resource. `sidenav` participates in extension placement but is not a tab-hosting panel region, so it is not accepted by this query.
+
+See the `pstdio-workbench/API` Storybook section for live composition queries and an extension panel that moves between `main` and `sidenav`.
 
 #### Examples
 
@@ -61,8 +72,6 @@ Surface commands in the command palette, region headers, tree context menus, or 
 
 - [`hello-world`](src/examples/hello-world/module.tsx) adds a trailing menu item to the main header.
 - [`foundation`](src/examples/foundation/module.tsx) adds menu items to header paths.
-
----
 
 ## View contributions
 
@@ -128,8 +137,6 @@ A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table render
 
 - [`dashboard`](src/examples/dashboard/shared/resource-sync.ts) updates the breadcrumb trail when the open resource changes.
 - [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) keeps a three-level trail in sync with page navigation.
-
----
 
 A typical surface combines both layers: a **renderer** supplies the UI, a **Panel** places it in a region with optional `config`, and `layout.openPanel()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
 
@@ -283,26 +290,13 @@ Extension webviews never receive PTY handles. A webview with the `terminal.sessi
 - [`workbench-modes`](src/examples/workbench-modes/module.tsx) opens the host-owned terminal Panel with a scripted backend.
 - [`workbench.stories`](src/examples/workbench.stories.tsx) drives the `HostTerminal` story with `createScriptedTerminalBridge`.
 
----
-
 Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource presenter, Panel, renderer, tree renderer, commands, and menu items together.
-
-## Core
-
-The core is UI-independent. It is the source of truth that modules write to and the React workbench reads from.
-A host normally creates one core, registers modules into it, and renders `<Workbench workbench={workbench} />`.
 
 ## Nomenclature
 
-- **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
-- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (Panels, placeholders, menu items), renderers (Panel renderers and tree renderers), modes, navigation, notifications, and preferences.
-- **Controller**: a stateful part of the workbench exposed beside the registries, such as breadcrumbs, focus, history, or Panel state.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, Panel, renderer, tree renderer, mode, or KanbanView.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
-- **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench regions, command palette, panels, and session surface from the workbench core only.
-- **Region**: a named layout target. See the Regions Overview table below.
-- **Panel contribution**: a registered view definition in the layout registry. Panels declare a region, a `rendererId`, and optional renderer-owned `config`.
 - **Panel placement**: an opened instance of a Panel contribution in a region. Placements track active Panel, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a Panel renderer with the same id so Panels place trees through `layout.registerPanel`.
 - **Kanban renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a Panel renderer with the same id so Panels place the workspace through `layout.registerPanel`. The presentational layer is `<KanbanRenderer>` from `@pstdio/ui`.

@@ -46,7 +46,6 @@ ctx.layout.registerPanel({
   region: "main",
   rendererId: "tickets.editor.renderer",
   resourceKinds: ["ticket"],
-  closable: false,
   panelMenus: [
     {
       id: "tickets.properties",
@@ -62,14 +61,13 @@ ctx.layout.registerPanel({
   title: "Terminal",
   region: "secondary",
   rendererId: "terminal.renderer",
-  closable: true,
   eligibleLocations: { resourceKinds: ["ticket"] },
 });
 ```
 
 `resourceKinds` is renderer input: it says which Resources the Panel can present. It does not make the Panel a
-Location. `eligibleLocations` says the Panel is supporting content and limits the Locations that may own it. Neither
-`region` nor `closable` carries navigation meaning.
+Location. `eligibleLocations` says the Panel is supporting content and limits the Locations that may own it. `region`
+does not carry navigation meaning. Closability belongs to the open placement, not the registered Panel.
 
 Panel Menus are nested under their owning Panel through `panelMenus`. They follow the selected instance and never
 become tabs or Add-panel entries.
@@ -106,34 +104,35 @@ placements and selection, so returning to it restores the same tabs, menus, size
 
 <Canvas of={OnboardingStories.ResourcePanelRestore} />
 
-## Extensions use the same contract
+## Extension composition
 
-Extensions declare `panels`, not presentation roles:
+Extensions declare panel bodies and composition placement separately:
 
 ```ts
 panels: {
   ticket: {
     title: "Ticket",
-    region: "main",
-    closable: false,
-    resourceKind: "ticket",
+    show: { for: "ticket", region: "main", required: true },
     webview: { entry: packageAsset("./ticket.tsx", import.meta.url) },
     panelMenus: {
       properties: {
         title: "Properties",
         side: "right",
-        controlsRenderer: "ticketProperties",
+        renderer: { kind: "controls", id: "ticketProperties" },
       },
     },
   },
   report: {
     title: "Report",
-    region: "secondary",
-    closable: true,
-    eligibleLocations: { resourceKinds: ["ticket"] },
+    show: {
+      for: "ticket",
+      region: "secondary",
+      allowedRegions: ["secondary", "side"],
+    },
     webview: { entry: packageAsset("./report.tsx", import.meta.url) },
   },
 }
 ```
 
-The host normalizes this into the same `registerPanel` contract used by native modules.
+`required` makes the resolved placement non-closable. Optional placements can be closed and restored through Add
+Panel. A mode may move a panel only within its declared `allowedRegions`.
