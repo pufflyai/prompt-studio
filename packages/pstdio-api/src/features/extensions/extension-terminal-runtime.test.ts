@@ -149,11 +149,13 @@ describe("terminal supervisor", () => {
 
     expect(supervisor.activity()).toEqual([{ id: handle.id, label: "sh" }]);
 
-    await handle.kill();
+    // Interactive shells may ignore SIGTERM while they own a PTY. This test
+    // verifies activity cleanup, so use the unconditional cleanup signal.
+    await handle.kill("SIGKILL");
     expect(supervisor.activity()).toEqual([]);
     expect(records).toContainEqual({
       message: "terminal session kill",
-      metadata: { id: handle.id, signal: "SIGTERM" },
+      metadata: { id: handle.id, signal: "SIGKILL" },
     });
   });
 });
