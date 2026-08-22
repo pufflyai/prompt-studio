@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { resolveContainerPorts, resolveIsolatedBrowserTransport, resolveIsolatedHome } from "./dev-isolated";
+import {
+  resolveContainerPorts,
+  resolveIsolatedBrowserTransport,
+  resolveIsolatedDashboardUrl,
+  resolveIsolatedHome,
+} from "./dev-isolated";
 
 describe("isolated development paths", () => {
   test("keeps every named environment in an ignored repository-local home", () => {
@@ -22,8 +27,12 @@ describe("isolated development paths", () => {
 
   test("uses browser-reachable host ports for isolated terminal transport", () => {
     expect(resolveIsolatedBrowserTransport({ dashboard: 43001, api: 43002 })).toEqual({
-      PSTDIO_TERMINAL_ORIGINS: "http://localhost:43001",
-      PSTDIO_TERMINAL_WEBSOCKET_URL: "ws://localhost:43002/v1/terminal",
+      PSTDIO_TERMINAL_ORIGINS: "http://127.0.0.1:43001",
+      PSTDIO_TERMINAL_WEBSOCKET_URL: "ws://127.0.0.1:43002/v1/terminal",
     });
+  });
+
+  test("prints the authenticated loopback origin for isolated dashboards", () => {
+    expect(resolveIsolatedDashboardUrl(43001)).toBe("http://127.0.0.1:43001/");
   });
 });

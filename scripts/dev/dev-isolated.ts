@@ -15,6 +15,7 @@ const SERVICE = "prompt-studio";
 const CONTAINER_DASHBOARD_PORT = 5173;
 const CONTAINER_API_PORT = 19841;
 const SEEDED_PROJECT_NAME = "project";
+const ISOLATED_BROWSER_HOST = "127.0.0.1";
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -68,9 +69,11 @@ export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
 };
 
 export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
-  PSTDIO_TERMINAL_ORIGINS: `http://localhost:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
-  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://localhost:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
+  PSTDIO_TERMINAL_ORIGINS: `http://${ISOLATED_BROWSER_HOST}:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
+  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://${ISOLATED_BROWSER_HOST}:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
 });
+
+export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;
 
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
@@ -216,15 +219,16 @@ const main = async () => {
     : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
   const token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome) : undefined;
   const project = await waitForSeededProject(apiPort, token);
+  const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(
     resolve(pstdioHome, "..", "connection.json"),
-    `${JSON.stringify({ apiPort, dashboardUrl: `http://127.0.0.1:${port}/`, pstdioHome }, null, 2)}\n`,
+    `${JSON.stringify({ apiPort, dashboardUrl, pstdioHome }, null, 2)}\n`,
   );
   process.stdout.write(`\nStack:     ${projectName}\n`);
-  process.stdout.write(`Dashboard: http://localhost:${port}/\n`);
+  process.stdout.write(`Dashboard: ${dashboardUrl}\n`);
   if (desktopMode) process.stdout.write(`Desktop home: ${pstdioHome}\n`);
-  process.stdout.write(`Project:   http://localhost:${port}/projects/${project.id}/\n`);
-  process.stdout.write(`Sessions:  http://localhost:${port}/projects/${project.id}/sessions\n`);
+  process.stdout.write(`Project:   ${dashboardUrl}projects/${project.id}/\n`);
+  process.stdout.write(`Sessions:  ${dashboardUrl}projects/${project.id}/sessions\n`);
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);
   process.stdout.write(`Stop:      bun run dev:isolated -- --name ${projectName} --down\n`);
 };

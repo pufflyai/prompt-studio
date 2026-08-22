@@ -84,6 +84,25 @@ test("dashboard clears a saved project that no longer exists", async ({ page, re
     .toBeNull();
 });
 
+test("project picker stays open when the background is clicked", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  const firstProject = await createProjectViaApi(request, "First Project");
+  await createProjectViaApi(request, "Second Project");
+  await page.addInitScript((projectId) => {
+    window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, firstProject.id);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Switch project" }).click();
+
+  const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+  await expect(picker).toBeVisible();
+  await page.mouse.click(100, 100);
+
+  await expect(picker).toBeVisible();
+});
+
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);

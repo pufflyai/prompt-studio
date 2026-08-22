@@ -203,7 +203,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
       onInteractOutside={handleInteractOutside}
     >
       <Portal>
-        <Dialog.Backdrop position="fixed" inset="0" />
+        <Dialog.Backdrop position="fixed" inset="0" pointerEvents="auto" />
         <Dialog.Positioner position="fixed" inset="0" overflow="auto">
           <Dialog.Content
             position="relative"
