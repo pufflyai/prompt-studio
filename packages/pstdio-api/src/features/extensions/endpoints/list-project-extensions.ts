@@ -4,6 +4,7 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
+import { extensionMarketplace } from "../extension-marketplace";
 import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
@@ -47,10 +48,15 @@ export const listProjectExtensionsHandler = (
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const extensions = records.map(({ instance, installedSource }) =>
         toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
-          releaseUpgradesEnabled: deps.extensionUpgradeService?.enabled,
+          canUpgrade: deps.extensionUpgradeService?.canUpgrade(installedSource),
         }),
       );
-      return c.json({ extensions }, 200);
+      const installedNames = new Set(records.map(({ installedSource }) => installedSource.install_name));
+      const marketplace = extensionMarketplace.map((extension) => ({
+        ...extension,
+        installed: installedNames.has(extension.installName),
+      }));
+      return c.json({ extensions, marketplace }, 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

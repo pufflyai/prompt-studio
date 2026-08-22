@@ -10,30 +10,30 @@ const instance = {
 
 const installedSource = {
   id: "installed-1",
-  install_name: "extension-lab",
-  extension_id: "pstdio.extension-lab",
-  display_name: "Extension Lab",
+  install_name: "pstdio-planner",
+  extension_id: "pstdio.pstdio-planner",
+  display_name: "Prompt Studio Planner",
   source_hash: "old-hash",
   source_kind: "git",
-  source_path: "/home/user/.pstdio/extensions/extension-lab",
+  source_path: "/home/user/.pstdio/extensions/pstdio-planner",
 };
 
 const installed = {
-  installName: "extension-lab",
-  manifest: { name: "extension-lab" },
+  installName: "pstdio-planner",
+  manifest: { name: "pstdio-planner" },
   metadata: {
-    id: "pstdio.extension-lab",
-    name: "extension-lab",
-    displayName: "Extension Lab",
+    id: "pstdio.pstdio-planner",
+    name: "pstdio-planner",
+    displayName: "Prompt Studio Planner",
     version: "0.8.0",
   },
   source: {
     kind: "named" as const,
-    name: "extension-lab",
-    ref: "https://github.com/pufflyai/prompt-studio@commit#extensions/extension-lab",
+    name: "pstdio-planner",
+    ref: "https://github.com/pufflyai/prompt-studio@commit#extensions/pstdio-planner",
   },
   sourceHash: "new-hash",
-  targetPath: "/home/user/.pstdio/extensions/extension-lab",
+  targetPath: "/home/user/.pstdio/extensions/pstdio-planner",
 };
 
 describe("extension upgrade service", () => {
@@ -42,6 +42,10 @@ describe("extension upgrade service", () => {
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
     const service = createExtensionUpgradeService({
       extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
         getProjectExtensionInstance: async () => ({ instance, installedSource }) as never,
         registerInstalledSource,
       },
@@ -55,14 +59,14 @@ describe("extension upgrade service", () => {
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         force: true,
-        installName: "extension-lab",
+        installName: "pstdio-planner",
         ref: "pstdio@0.27.0",
-        source: "extension-lab",
+        source: "pstdio-planner",
       }),
     );
     expect(registerInstalledSource).toHaveBeenCalledWith(
       expect.objectContaining({
-        installName: "extension-lab",
+        installName: "pstdio-planner",
         sourceHash: "new-hash",
         sourceKind: "git",
       }),
@@ -74,10 +78,40 @@ describe("extension upgrade service", () => {
   test("refuses to replace a local source", async () => {
     const service = createExtensionUpgradeService({
       extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
         getProjectExtensionInstance: async () =>
           ({
             instance,
             installedSource: { ...installedSource, source_kind: "local_path" },
+          }) as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      installExtensionSource: async () => {
+        throw new Error("should not install");
+      },
+      releaseRef: "pstdio@0.27.0",
+      repoService: { listByProject: async () => [] },
+    });
+
+    expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
+  });
+
+  test("refuses a Git extension that is not in the marketplace", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () =>
+          ({
+            instance,
+            installedSource: { ...installedSource, install_name: "extension-lab" },
           }) as never,
         registerInstalledSource: async () => {
           throw new Error("should not register");

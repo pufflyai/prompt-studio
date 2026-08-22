@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add dashboard-managed extension upgrades and report incompatible extension API versions.
+Fetch default extensions from Git and add Marketplace install, reinstall, and incompatible-version updates.

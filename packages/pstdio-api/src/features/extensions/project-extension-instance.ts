@@ -60,7 +60,7 @@ export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
   diskSourceHash?: string | null,
-  options: { releaseUpgradesEnabled?: boolean } = {},
+  options: { canUpgrade?: boolean } = {},
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const incompatible = compatibilityError(installedSource);
@@ -81,7 +81,7 @@ export const toProjectExtensionInstance = (
     lastError: incompatible ?? ((installedSource.last_error_json ?? null) as Record<string, unknown> | null),
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
-    canUpgrade: options.releaseUpgradesEnabled === true && installedSource.source_kind === "git",
+    canUpgrade: options.canUpgrade === true,
     updateAvailable: Boolean(
       diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
     ),

@@ -1,17 +1,6 @@
 {
   "$comment": "Files that the pstdio CLI binary embeds (Bun --compile). 'globs' captures generated trees (vite output, drizzle migrations); 'files' is the curated allowlist for packaged runtime assets. The build script fails if any 'files' entry is missing or any file under 'noStraysIn' is not listed.",
-  "globs": [
-    "packages/pstdio-dashboard/dist/**",
-    "packages/pstdio-db/drizzle/**",
-    "packages/pstdio-db/vendor/**",
-    "extensions/harness-claude-code/**",
-    "extensions/harness-codex/**",
-    "extensions/harness-open-code/**",
-    "extensions/pstdio-base-themes/**",
-    "extensions/pstdio-planner/**",
-    "extensions/pstdio-reports/**",
-    "extensions/pstdio-skills/**"
-  ],
+  "globs": ["packages/pstdio-dashboard/dist/**", "packages/pstdio-db/drizzle/**", "packages/pstdio-db/vendor/**"],
   "files": [],
   "noStraysIn": ["packages/pstdio/files"],
   "platformBinaries": [

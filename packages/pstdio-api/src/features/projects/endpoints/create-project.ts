@@ -2,7 +2,11 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
-import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
+import {
+  installDefaultExtensions,
+  registerInstalledExtensionSources,
+  syncInstalledExtensionsForProject,
+} from "../../extensions/default-extensions";
 import { applyProjectHarnessSelection } from "../../harnesses/apply-harness-selection";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
@@ -62,10 +66,12 @@ const setupProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string
 
   if (installDefaults) {
     try {
-      await installDefaultExtensions({
+      const installed = await installDefaultExtensions({
         forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
         onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+        releaseRef: deps.extensionUpgradeService?.releaseRef,
       });
+      await registerInstalledExtensionSources(deps.extensionService, installed);
     } catch (error) {
       addWarning(createExtensionWarning("default extensions", error));
     }

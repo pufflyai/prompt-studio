@@ -59,6 +59,7 @@ export {
   type ReservedKeybindingPlatform,
   type ReservedKeybindingReason,
   readPackageManifest,
+  readPackageManifestMetadata,
   toCommandPaletteContributions,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";

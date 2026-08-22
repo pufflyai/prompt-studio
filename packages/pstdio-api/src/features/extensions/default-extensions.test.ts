@@ -61,26 +61,12 @@ const installed = {
   },
 };
 
-let previousEmbeddedFiles: readonly unknown[] | undefined;
-let embeddedFilesChanged = false;
-
-const setEmbeddedFiles = (value: readonly unknown[]) => {
-  (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [...value];
-};
-
-const useEmbeddedFiles = (value: readonly unknown[]) => {
-  if (!embeddedFilesChanged) previousEmbeddedFiles = globalThis.Bun.embeddedFiles;
-  embeddedFilesChanged = true;
-  setEmbeddedFiles(value);
-};
-
-const toEmbedded = (name: string, content: string) => ({
-  name,
-  size: content.length,
-  arrayBuffer: async () => new TextEncoder().encode(content).buffer,
-});
-
-const writeExtension = (dir: string, namespace: string, scope?: "repo" | "user") => {
+const writeExtension = (
+  dir: string,
+  namespace: string,
+  scope?: "repo" | "user",
+  apiVersion = EXTENSION_API_VERSION,
+) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -89,7 +75,7 @@ const writeExtension = (dir: string, namespace: string, scope?: "repo" | "user")
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: apiVersion },
       ...(scope ? { pstdio: { scope } } : {}),
     }),
   );
@@ -107,12 +93,6 @@ const writeInvalidExtension = (dir: string) => {
 };
 
 afterEach(() => {
-  if (embeddedFilesChanged) {
-    setEmbeddedFiles(previousEmbeddedFiles ?? []);
-  }
-
-  previousEmbeddedFiles = undefined;
-  embeddedFilesChanged = false;
   rmSync(join(tmpdir(), "pstdio-default-extensions"), { recursive: true, force: true });
 });
 
@@ -213,81 +193,67 @@ describe("installDefaultExtensions", () => {
     expect(calls.every((call) => call.force === true)).toBe(true);
   });
 
-  test("uses embedded source packages for named defaults when local sources are unavailable", async () => {
-    const extensionName = "bundled-planner";
-    useEmbeddedFiles([
-      toEmbedded(
-        `..\\..\\..\\extensions\\${extensionName}\\package.json`,
-        JSON.stringify({
-          name: extensionName,
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          engines: { pstdio: EXTENSION_API_VERSION },
-        }),
-      ),
-      toEmbedded(`..\\..\\..\\extensions\\${extensionName}\\extension.ts`, "export default {};"),
-    ]);
+  test("fetches named defaults from Git at the host release when local sources are unavailable", async () => {
+    const extensionName = "marketplace-planner";
+    const source = join(tmpdir(), "pstdio-default-extensions", extensionName);
+    writeExtension(source, extensionName);
 
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
       return { ...installed, installName: extensionName };
     });
-    const prepareSharedCheckout = mock(async () => {
-      throw new Error("should not prepare a named checkout");
-    });
+    const prepareNamedSource = mock(async () => ({
+      path: source,
+      ref: "https://github.com/pufflyai/prompt-studio@commit#extensions/marketplace-planner",
+    }));
+    const cleanup = mock();
+    const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
 
     await installDefaultExtensions({
       env: { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([extensionName]) },
       installExtensionSource,
       prepareSharedCheckout,
+      releaseRef: "pstdio@0.27.0",
     });
 
-    expect(prepareSharedCheckout).not.toHaveBeenCalled();
+    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], { ref: "pstdio@0.27.0" });
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
     expect(calls[0]).toMatchObject({
+      allowUnsupportedApiVersion: true,
       existsOk: true,
-      force: true,
-      installName: extensionName,
+      prepareNamedSource: expect.any(Function),
+      ref: "pstdio@0.27.0",
+      source: extensionName,
     });
-    expect(calls[0]?.skipInstall).toBeUndefined();
-    expect(String(calls[0]?.source)).toContain(join("pstdio-default-extensions", extensionName));
-    expect(existsSync(join(String(calls[0]?.source), "package.json"))).toBe(true);
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
-  test("supports non-forced source-mode default installs", async () => {
-    const extensionName = "bundled-harness";
-    useEmbeddedFiles([
-      toEmbedded(
-        `../../../extensions/${extensionName}/package.json`,
-        JSON.stringify({
-          name: extensionName,
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          engines: { pstdio: EXTENSION_API_VERSION },
-        }),
-      ),
-      toEmbedded(`../../../extensions/${extensionName}/extension.ts`, "export default {};"),
-    ]);
-
+  test("allows an explicit default ref for isolated upgrade testing", async () => {
+    const extensionName = "marketplace-harness";
+    const source = join(tmpdir(), "pstdio-default-extensions", extensionName);
+    writeExtension(source, extensionName);
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
       return { ...installed, installName: extensionName };
     });
+    const prepareNamedSource = mock(async () => ({ path: source, ref: "old-commit" }));
+    const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup: mock() }));
 
     await installDefaultExtensions({
-      env: { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([extensionName]) },
-      forceSourceDefaults: false,
+      config: { defaultExtensions: [{ source: extensionName, ref: "pstdio@0.26.2" }] },
       installExtensionSource,
+      prepareSharedCheckout,
+      releaseRef: "pstdio@0.27.0",
     });
 
+    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], { ref: "pstdio@0.26.2" });
     expect(calls[0]).toMatchObject({
+      allowUnsupportedApiVersion: true,
       existsOk: true,
-      force: false,
-      installName: extensionName,
+      ref: "pstdio@0.26.2",
+      source: extensionName,
     });
   });
 
@@ -315,10 +281,10 @@ describe("installDefaultExtensions", () => {
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"]);
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {});
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(calls[0]?.existsOk).toBe(true);
-    expect(calls[0]?.prepareNamedSource).toBe(prepareNamedSource);
+    expect(calls[0]?.prepareNamedSource).toEqual(expect.any(Function));
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
@@ -438,7 +404,7 @@ describe("syncInstalledExtensionsForProject", () => {
       expect(calls[0]?.installName).toBe("planner");
       expect(calls[0]?.name).toBe("planner");
       expect(calls[0]).not.toHaveProperty("defaultTemplates");
-      expect(calls[0]?.sourceKind).toBe("local_path");
+      expect(calls[0]).not.toHaveProperty("sourceKind");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -513,6 +479,38 @@ describe("syncInstalledExtensionsForProject", () => {
           sourcePath: join(root, "extension-lab"),
         },
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps an incompatible installed extension discoverable for dashboard recovery", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-incompatible-"));
+    writeExtension(join(root, "pstdio-planner"), "pstdio-planner", undefined, "1.0.0-alpha.1");
+    const calls: Array<Record<string, unknown>> = [];
+    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
+      calls.push(input);
+      return {};
+    });
+
+    try {
+      const synced = await syncInstalledExtensionsForProject({
+        extensionService: { syncInstalledSourceForProject },
+        extensionsRoot: root,
+        projectId: "project-1",
+      });
+
+      expect(synced).toEqual([
+        {
+          installName: "pstdio-planner",
+          sourceHash: expect.any(String),
+        },
+      ]);
+      expect(calls[0]).toMatchObject({
+        installName: "pstdio-planner",
+        manifest: { enginesPstdio: "1.0.0-alpha.1", version: "1.0.0" },
+        version: "1.0.0",
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

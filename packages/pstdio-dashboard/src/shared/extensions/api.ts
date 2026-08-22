@@ -2,6 +2,7 @@ import type {
   AttemptExtensionFixResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
+  InstallMarketplaceExtensionResponse,
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
@@ -31,6 +32,12 @@ export const executeExtensionCommand = (projectId: string, commandId: string, bo
 
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
+
+export const installMarketplaceExtension = (projectId: string, installName: string) =>
+  apiRequest<InstallMarketplaceExtensionResponse>(
+    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/install`,
+    { method: "POST" },
+  );
 
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {

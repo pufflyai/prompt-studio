@@ -247,6 +247,13 @@
       "counts": "{{installed}} installed · {{enabled}} enabled · {{failing}} failing",
       "searchPlaceholder": "Search extensions…",
       "installedGroup": "Installed · {{count}}",
+      "marketplace": {
+        "group": "Marketplace · {{count}}",
+        "allInstalled": "All marketplace extensions are installed.",
+        "install": "Install",
+        "installSucceeded": "{{name}} installed",
+        "installFailed": "Extension install failed"
+      },
       "noSearchResults": "No extensions match \"{{query}}\".",
       "noDescription": "No description provided.",
       "scope": {
@@ -282,10 +289,10 @@
         "failed": "Update refused"
       },
       "upgrade": {
-        "action": "Upgrade",
-        "succeeded": "Extension upgraded",
+        "action": "Update",
+        "succeeded": "Extension updated",
         "current": "Extension is already current",
-        "failed": "Extension upgrade failed"
+        "failed": "Extension update failed"
       },
       "automations": {
         "title": "Automations",

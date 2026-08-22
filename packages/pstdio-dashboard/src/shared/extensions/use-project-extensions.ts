@@ -8,6 +8,7 @@ import {
   executeExtensionCommand,
   getExtensionContributions,
   getProjectExtensionMetadata,
+  installMarketplaceExtension,
   listProjectExtensionSettings,
   listProjectExtensions,
   reloadProjectExtension,
@@ -64,6 +65,17 @@ export const useProjectExtensions = (projectId: string | undefined) => {
     queryKey: projectExtensionsQueryKey(projectId),
     queryFn: () => listProjectExtensions(projectId!),
     enabled: Boolean(projectId),
+  });
+};
+
+export const useInstallMarketplaceExtension = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ installName }: { installName: string }) => {
+      if (!projectId) throw new Error("Project id is required to install extensions.");
+      return installMarketplaceExtension(projectId, installName);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
   });
 };
 

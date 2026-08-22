@@ -354,6 +354,33 @@ describe("installExtensionSource API version gate", () => {
     expect(existsSync(join(pstdioHome, "extensions", "source-extension"))).toBe(false);
     expect(runCommand).not.toHaveBeenCalled();
   });
+
+  test("keeps an incompatible managed extension installed for dashboard recovery", async () => {
+    const source = join(root, "old-planner");
+    makeExtension(source, {
+      namespace: "pstdio-planner",
+      name: "Prompt Studio Planner",
+      engines: { pstdio: "1.0.0-alpha.1" },
+      version: "0.10.0",
+    });
+
+    const result = await installExtensionSource({
+      allowUnsupportedApiVersion: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      skipInstall: true,
+      source,
+    });
+
+    expect(result.metadata).toMatchObject({
+      enginesPstdio: "1.0.0-alpha.1",
+      name: "pstdio-planner",
+      version: "0.10.0",
+    });
+    expect(result.check.diagnostics).toEqual([
+      expect.objectContaining({ code: "extension_manifest_unsupported_api_version" }),
+    ]);
+    expect(existsSync(join(pstdioHome, "extensions", "old-planner", "package.json"))).toBe(true);
+  });
 });
 
 describe("installExtensionSource dependency reinstall", () => {

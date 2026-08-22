@@ -42,24 +42,24 @@ const createProject = async () => {
 };
 
 describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
-  test("installs and adopts the extension from the host release", async () => {
+  test("replaces an older marketplace extension with the version from the host release", async () => {
     const sourcePath = createTestExtensionSource({
       root: process.env.PSTDIO_HOME!,
-      name: "managed-extension",
-      displayName: "Managed Extension",
-      installName: "managed-extension",
+      name: "pstdio-planner",
+      displayName: "Prompt Studio Planner",
+      installName: "pstdio-planner",
       version: "1.0.0",
     });
     const loaded = await loadExtensionSource(sourcePath);
     const installExtensionSource = mock(async () => ({
       check: { errorCount: 0 },
-      installName: "managed-extension",
+      installName: "pstdio-planner",
       manifest: { ...loaded.manifest, version: "2.0.0" },
       metadata: { ...loaded.metadata, version: "2.0.0" },
       source: {
         kind: "named" as const,
-        name: "managed-extension",
-        ref: "https://github.com/pufflyai/prompt-studio@new-commit#extensions/managed-extension",
+        name: "pstdio-planner",
+        ref: "https://github.com/pufflyai/prompt-studio@new-commit#extensions/pstdio-planner",
       },
       sourceHash: "new-hash",
       targetPath: sourcePath,
@@ -77,14 +77,13 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
     const enabled = await handle.deps.extensionService.enableInstalledSourceForProject({
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
-      installName: "managed-extension",
+      installName: "pstdio-planner",
       manifest: loaded.manifest,
       name: loaded.metadata.name,
       projectId: project.id,
       sourceHash: hashExtensionSource(sourcePath),
       sourceKind: "git",
       sourcePath,
-      sourceRef: "https://github.com/pufflyai/prompt-studio@old-commit#extensions/managed-extension",
       version: "1.0.0",
     });
 
@@ -103,7 +102,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       },
     });
     expect(installExtensionSource).toHaveBeenCalledWith(
-      expect.objectContaining({ ref: "pstdio@0.27.0", source: "managed-extension" }),
+      expect.objectContaining({ ref: "pstdio@0.27.0", source: "pstdio-planner" }),
     );
   });
 });

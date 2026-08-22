@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { isMarketplaceExtension } from "../features/extensions/extension-marketplace";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
@@ -9,7 +11,7 @@ import type { createRepoService } from "./repo-service";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
-  "getProjectExtensionInstance" | "registerInstalledSource"
+  "enableInstalledSourceForProject" | "getInstalledSource" | "getProjectExtensionInstance" | "registerInstalledSource"
 >;
 
 type RepoService = Pick<ReturnType<typeof createRepoService>, "listByProject">;
@@ -36,27 +38,87 @@ const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: strin
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const enabled = Boolean(deps.releaseRef);
-  const canUpgrade = (source: { source_kind: string }) => enabled && source.source_kind === "git";
+  const canUpgrade = (source: { install_name: string; source_kind: string }) =>
+    enabled && source.source_kind === "git" && isMarketplaceExtension(source.install_name);
+
+  const assertMarketplaceInstall = (installName: string) => {
+    if (!deps.releaseRef) {
+      throw new ExtensionUpgradeUnavailableError("This Prompt Studio host does not provide a release extension ref.");
+    }
+    if (!isMarketplaceExtension(installName)) {
+      throw new ExtensionUpgradeUnavailableError(
+        `Extension is not available in the Prompt Studio marketplace: ${installName}`,
+      );
+    }
+  };
+
+  const enableExisting = async (
+    projectId: string,
+    source: NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>,
+  ) => {
+    const manifest = (source.manifest_json ?? {}) as Record<string, unknown>;
+    const name = typeof manifest.name === "string" ? manifest.name : source.install_name;
+    return deps.extensionService.enableInstalledSourceForProject({
+      displayName: source.display_name,
+      extensionId: source.extension_id,
+      installName: source.install_name,
+      manifest,
+      name,
+      projectId,
+      sourceHash: source.source_hash,
+      sourceKind: source.source_kind as "git" | "local_path" | "registry",
+      sourcePath: source.source_path,
+      sourceRef: source.source_ref,
+      version: source.version,
+    });
+  };
+
+  const installForRelease = async (installName: string) => {
+    assertMarketplaceInstall(installName);
+    return install({
+      source: installName,
+      installName,
+      force: true,
+      ref: deps.releaseRef,
+      reuseInstalledDependencies: true,
+    });
+  };
+
+  const installMarketplaceExtension = async (projectId: string, installName: string) => {
+    assertMarketplaceInstall(installName);
+    const existing = await deps.extensionService.getInstalledSource(installName);
+    if (existing && existsSync(join(existing.source_path, "package.json"))) {
+      return enableExisting(projectId, existing);
+    }
+
+    const installed = await installForRelease(installName);
+    return deps.extensionService.enableInstalledSourceForProject({
+      installName: installed.installName,
+      projectId,
+      ...toExtensionEnableInput(installed),
+    });
+  };
 
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    if (!deps.releaseRef) {
+    if (!deps.releaseRef)
       throw new ExtensionUpgradeUnavailableError("This Prompt Studio host does not provide a release extension ref.");
-    }
     if (!canUpgrade(existing.installedSource)) {
-      throw new ExtensionUpgradeUnavailableError("Only release-managed Git extensions can be upgraded.");
+      throw new ExtensionUpgradeUnavailableError("Only Git-backed marketplace extensions can be upgraded.");
     }
 
     const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
-    const installed = await install({
-      source: existing.installedSource.install_name,
-      installName: existing.installedSource.install_name,
-      force: true,
-      ref: deps.releaseRef,
-      reuseInstalledDependencies: true,
-      ...(repoPath ? { repoPath } : {}),
-    });
+    const installed = repoPath
+      ? await install({
+          source: existing.installedSource.install_name,
+          installName: existing.installedSource.install_name,
+          force: true,
+          ref: deps.releaseRef,
+          reuseInstalledDependencies: true,
+          repoPath,
+        })
+      : await installForRelease(existing.installedSource.install_name);
     const installedSource = await deps.extensionService.registerInstalledSource({
       installName: installed.installName,
       ...toExtensionEnableInput(installed),
@@ -69,5 +131,5 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     };
   };
 
-  return { canUpgrade, enabled, upgrade };
+  return { canUpgrade, enabled, installMarketplaceExtension, releaseRef: deps.releaseRef, upgrade };
 };

@@ -29,9 +29,9 @@ const installedSource = {
 };
 
 describe("toProjectExtensionInstance", () => {
-  test("marks release-managed Git sources as upgradable", () => {
+  test("uses the upgrade eligibility supplied by the upgrade service", () => {
     const result = toProjectExtensionInstance(instance, installedSource, "hash-1", {
-      releaseUpgradesEnabled: true,
+      canUpgrade: true,
     });
 
     expect(result.canUpgrade).toBe(true);
@@ -49,7 +49,7 @@ describe("toProjectExtensionInstance", () => {
         },
       },
       "hash-1",
-      { releaseUpgradesEnabled: true },
+      { canUpgrade: true },
     );
 
     expect(result.status).toBe("error");
@@ -60,9 +60,9 @@ describe("toProjectExtensionInstance", () => {
     expect(result.lastError?.message).toContain(EXTENSION_API_VERSION);
   });
 
-  test("does not offer release upgrades for local source", () => {
+  test("does not offer an upgrade when the upgrade service refuses it", () => {
     const result = toProjectExtensionInstance(instance, { ...installedSource, source_kind: "local_path" }, "hash-1", {
-      releaseUpgradesEnabled: true,
+      canUpgrade: false,
     });
 
     expect(result.canUpgrade).toBe(false);

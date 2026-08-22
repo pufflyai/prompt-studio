@@ -102,6 +102,15 @@ const diagnostics: ExtensionDiagnostic[] = [
   },
 ];
 
+const marketplace = [
+  {
+    installName: "pstdio-reports",
+    displayName: "Prompt Studio Reports",
+    description: "Workspace reports for agent handoffs.",
+    installed: false,
+  },
+];
+
 const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
@@ -115,6 +124,7 @@ type Story = StoryObj<typeof ExtensionsPanelView>;
 export const Populated: Story = {
   args: {
     extensions: installedExtensions,
+    marketplace,
     diagnostics,
     automations,
   },
@@ -123,6 +133,7 @@ export const Populated: Story = {
 export const UpdateAvailable: Story = {
   args: {
     extensions: installedExtensions.map((extension, index) => ({ ...extension, updateAvailable: index === 0 })),
+    marketplace,
     diagnostics,
     automations,
   },
@@ -131,6 +142,7 @@ export const UpdateAvailable: Story = {
 export const Empty: Story = {
   args: {
     extensions: [],
+    marketplace,
     diagnostics: [],
     automations: [],
   },
@@ -139,6 +151,7 @@ export const Empty: Story = {
 export const Mutating: Story = {
   args: {
     extensions: installedExtensions,
+    marketplace,
     diagnostics: [],
     automations,
     togglingInstanceId: "planner-instance",
@@ -148,6 +161,7 @@ export const Mutating: Story = {
 export const HealthPopoverOpen: Story = {
   args: {
     extensions: installedExtensions,
+    marketplace,
     diagnostics,
     automations,
   },

@@ -10,6 +10,7 @@ import {
   type PackageManifest,
   type ExtensionDiagnostic as RuntimeExtensionDiagnostic,
   readPackageManifest,
+  readPackageManifestMetadata,
 } from "pstdio-extensions";
 import { toKeybindingRecord } from "pstdio-extensions/workbench";
 import {
@@ -137,6 +138,31 @@ export const loadExtensionSource = async (sourcePath: string) => {
   }
 
   return toLoadedExtension(loaded, diagnostics);
+};
+
+export const readExtensionSourceMetadata = (sourcePath: string) => {
+  const { manifest, diagnostics } = readPackageManifestMetadata(sourcePath);
+  if (!manifest) {
+    const first = diagnostics[0];
+    throw new Error(first?.message ?? `Failed to read extension metadata at ${sourcePath}`);
+  }
+
+  const metadata: ExtensionMetadata = {
+    id: manifest.id,
+    name: manifest.name,
+    displayName: manifest.displayName ?? manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    enginesPstdio: manifest.enginesPstdio,
+    pstdio: manifest.pstdio,
+  };
+
+  return {
+    definition: {},
+    manifest: manifestSnapshot(metadata, {}),
+    metadata,
+    diagnostics,
+  } satisfies LoadedExtension;
 };
 
 const toLoadedExtension = (

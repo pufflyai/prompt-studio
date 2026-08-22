@@ -44,7 +44,7 @@ export const reloadProjectExtensionHandler = (
 
     return c.json(
       toProjectExtensionInstance(existing.instance, result.installedSource, undefined, {
-        releaseUpgradesEnabled: deps.extensionUpgradeService?.enabled,
+        canUpgrade: deps.extensionUpgradeService?.canUpgrade(result.installedSource),
       }),
       200,
     );
