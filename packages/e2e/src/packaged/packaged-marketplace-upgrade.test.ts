@@ -13,6 +13,10 @@ beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
 });
 
+const REQUIRE_BROWSER = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
+const browserAvailable = existsSync(chromium.executablePath());
+const browserTest = browserAvailable || REQUIRE_BROWSER ? test : test.skip;
+
 const runGit = (repo: string, args: string[]) => {
   const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || result.stdout);
@@ -61,8 +65,8 @@ const createMarketplaceRepository = (root: string) => {
   return repo;
 };
 
-test("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
-  expect(existsSync(chromium.executablePath())).toBe(true);
+browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
+  expect(browserAvailable).toBe(true);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-upgrade-"));
   const repository = createMarketplaceRepository(tempRoot);
   let child: ChildProcess | null = null;
