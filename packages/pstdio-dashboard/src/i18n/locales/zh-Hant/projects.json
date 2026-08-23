@@ -323,7 +323,7 @@
     "createFirstProject": "建立您的第一個專案",
     "agentLoadErrorBanner": {
       "title": "無法載入代理可用性",
-      "description": "無法檢查已安裝的代理。你可以先建立專案，稍後再新增代理。",
+      "description": "無法檢查已安裝的代理。您可以先建立專案，稍後再新增代理。",
       "retry": "重試"
     }
   },

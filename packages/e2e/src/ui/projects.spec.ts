@@ -119,7 +119,7 @@ const getProjectPickerModal = (page: Page) => page.getByTestId("project-picker-m
 const getCreateProjectDialog = (page: Page) =>
   page
     .getByRole("dialog")
-    .filter({ has: page.getByPlaceholder("Project name") })
+    .filter({ has: page.getByRole("button", { name: "Close Create project" }) })
     .last();
 
 const getFolderPickerDialog = (page: Page) =>
@@ -356,6 +356,10 @@ test.describe("Project creation", () => {
   test("creates a project when agent discovery fails", async ({ page }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
+    let releaseProjectRequest: (() => void) | undefined;
+    const projectRequestPending = new Promise<void>((resolve) => {
+      releaseProjectRequest = resolve;
+    });
 
     await bypassOnboarding(page);
     await mockAgentDiscoveryFailure(page);
@@ -365,6 +369,7 @@ test.describe("Project creation", () => {
         return;
       }
 
+      await projectRequestPending;
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -392,7 +397,7 @@ test.describe("Project creation", () => {
     await selectRepoFromFolderPicker(page, repoPath);
     await createProjectDialog.getByRole("button", { name: "Next", exact: true }).click();
 
-    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true });
+    const createProjectButton = createProjectDialog.getByRole("button", { name: "Create project", exact: true });
     await expect(createProjectButton).toBeEnabled();
 
     const createProjectRequest = page.waitForRequest(
@@ -402,6 +407,8 @@ test.describe("Project creation", () => {
       (request) => request.url().endsWith("/v1/projects/project-no-agents/repos") && request.method() === "POST",
     );
     await createProjectButton.click();
+    await expect(createProjectButton).toBeDisabled();
+    releaseProjectRequest?.();
     expect((await createProjectRequest).postDataJSON()).toEqual({ name: "No Agents Project", agents: [] });
     await createRepoRequest;
   });
