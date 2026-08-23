@@ -116,9 +116,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
             </Text>
           </Stack>
-          {extension.canUpgrade && !incompatible && (
+          {extension.canUpgrade && (
             <Button
-              variant="outline"
+              variant="solid"
               size="2xs"
               onClick={onUpgrade}
               loading={upgrading}
@@ -127,6 +127,19 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             >
               <ArrowUpCircle size={12} />
               {t("projectSettings.extensionsPanel.upgrade.action")}
+            </Button>
+          )}
+          {!extension.canUpgrade && extension.updateAvailable && (
+            <Button
+              variant="solid"
+              size="2xs"
+              onClick={onUpdate}
+              loading={updating}
+              data-testid="extension-update"
+              flexShrink="0"
+            >
+              <ArrowUpCircle size={12} />
+              {t("projectSettings.extensionsPanel.update.action")}
             </Button>
           )}
           <Switch
@@ -144,29 +157,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Text>
         )}
 
-        {extension.updateAvailable && (
-          <AlertMessage
-            status="info"
-            title={t("projectSettings.extensionsPanel.update.available")}
-            data-testid="extension-update-available"
-            endElement={
-              <Button
-                variant="outline"
-                size="2xs"
-                onClick={onUpdate}
-                loading={updating}
-                data-testid="extension-update"
-                flexShrink="0"
-              >
-                <ArrowUpCircle size={12} />
-                {t("projectSettings.extensionsPanel.update.action")}
-              </Button>
-            }
-          >
-            {t("projectSettings.extensionsPanel.update.description")}
-          </AlertMessage>
-        )}
-
         {failed && (
           <AlertMessage
             status="error"
@@ -177,19 +167,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             }
             data-testid="extension-detail-health"
             endElement={
-              incompatible && extension.canUpgrade ? (
-                <Button
-                  variant="outline"
-                  size="2xs"
-                  onClick={onUpgrade}
-                  loading={upgrading}
-                  data-testid="extension-incompatible-upgrade"
-                  flexShrink="0"
-                >
-                  <ArrowUpCircle size={12} />
-                  {t("projectSettings.extensionsPanel.upgrade.action")}
-                </Button>
-              ) : (
+              incompatible ? undefined : (
                 <HStack gap="xs" flexShrink="0">
                   <Button
                     variant="outline"

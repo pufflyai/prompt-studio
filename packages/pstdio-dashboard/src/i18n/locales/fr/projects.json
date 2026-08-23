@@ -228,7 +228,6 @@
       "empty": "Aucune extension installée pour ce projet.",
       "loadError": "Échec du chargement des extensions.",
       "title": "Extensions",
-      "counts": "{{installed}} installées · {{enabled}} activées · {{failing}} en échec",
       "searchPlaceholder": "Rechercher des extensions…",
       "installedGroup": "Installées · {{count}}",
       "noSearchResults": "Aucune extension ne correspond à \"{{query}}\".",
@@ -260,8 +259,6 @@
         "fixSessionFailed": "Échec du démarrage de la session de correction"
       },
       "update": {
-        "available": "Mise à jour disponible",
-        "description": "Une nouvelle source attend dans le dossier des extensions. Le projet continue d'utiliser la version adoptée jusqu'à ce que vous acceptiez la mise à jour.",
         "action": "Mettre à jour",
         "succeeded": "Extension mise à jour",
         "failed": "Mise à jour refusée"

@@ -96,8 +96,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visible = extensions.filter((extension) => matchesSearch(extension, search));
   const availableMarketplace = marketplace.filter((extension) => !extension.installed);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
-  const enabledCount = extensions.filter((extension) => extension.enabled).length;
-  const failingCount = extensions.filter((extension) => extension.status === "error").length;
   const installingNames = new Set(installingMarketplaceNames);
 
   return (
@@ -107,20 +105,17 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         paddingTop="lg"
         paddingBottom="md"
         gap="sm"
+        bg="bg"
         borderBottomWidth="1px"
         borderColor="border.subtle"
+        position="sticky"
+        top="0"
+        zIndex="1"
       >
         <HStack gap="md" alignItems="center">
-          <Stack gap="2xs" flex="1" minW="0">
-            <Text textStyle="heading/M">{t("projectSettings.extensionsPanel.title")}</Text>
-            <Text textStyle="label/XS" color="fg.subtle">
-              {t("projectSettings.extensionsPanel.counts", {
-                installed: extensions.length,
-                enabled: enabledCount,
-                failing: failingCount,
-              })}
-            </Text>
-          </Stack>
+          <Text textStyle="heading/M" flex="1" minW="0">
+            {t("projectSettings.extensionsPanel.title")}
+          </Text>
           <InputGroup startElement={<Search size={14} />} width="260px">
             <Input
               size="sm"

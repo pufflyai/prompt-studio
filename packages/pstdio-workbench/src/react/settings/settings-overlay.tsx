@@ -42,7 +42,7 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
   );
 
   return (
-    <Flex direction="column" position="absolute" inset="0" minH="0" minW="0">
+    <Flex direction="column" position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
       <Flex
         align="center"
         bg="bg.subtle"
@@ -60,7 +60,7 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
           {title}
         </Text>
       </Flex>
-      <Box flex="1" minH="0" minW="0" position="relative">
+      <Box flex="1" minH="0" minW="0" position="relative" overflow="hidden">
         <ResizableSplitLayout
           position="absolute"
           inset="0"

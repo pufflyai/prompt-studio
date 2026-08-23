@@ -18,7 +18,7 @@ const extension: ProjectExtensionInstance = {
   lastLoadedAt: "2026-08-04T09:14:00.000Z",
   enabled: true,
   config: {},
-  canUpgrade: true,
+  canUpgrade: false,
   updateAvailable: false,
 };
 
@@ -160,10 +160,17 @@ export const UpdateAvailable: Story = {
   },
 };
 
+export const UpgradeAvailable: Story = {
+  args: {
+    extension: { ...extension, canUpgrade: true },
+  },
+};
+
 export const IncompatibleApi: Story = {
   args: {
     extension: {
       ...extension,
+      canUpgrade: true,
       status: "error",
       lastError: {
         code: "extension_manifest_unsupported_api_version",

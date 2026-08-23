@@ -136,15 +136,6 @@ export const Populated: Story = {
   },
 };
 
-export const UpdateAvailable: Story = {
-  args: {
-    extensions: installedExtensions.map((extension, index) => ({ ...extension, updateAvailable: index === 0 })),
-    marketplace,
-    diagnostics,
-    automations,
-  },
-};
-
 export const Empty: Story = {
   args: {
     extensions: [],

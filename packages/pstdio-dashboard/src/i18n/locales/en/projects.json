@@ -244,7 +244,6 @@
       "empty": "No extensions installed for this project.",
       "loadError": "Failed to load extensions.",
       "title": "Extensions",
-      "counts": "{{installed}} installed · {{enabled}} enabled · {{failing}} failing",
       "searchPlaceholder": "Search extensions…",
       "installedGroup": "Installed · {{count}}",
       "marketplace": {
@@ -283,8 +282,6 @@
         "fixSessionFailed": "Failed to start fix session"
       },
       "update": {
-        "available": "Update available",
-        "description": "New source is waiting in the extensions root. The project keeps running the version it adopted until you take the update.",
         "action": "Update",
         "succeeded": "Extension updated",
         "failed": "Update refused"
