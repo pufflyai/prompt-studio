@@ -66,13 +66,19 @@ export const expectFoldersBeforeFiles = async (filesTree: Locator) => {
 export const moveEntryToFolder = async (page: Page, filesTree: Locator, sourcePath: string, folder: Locator) => {
   const source = filesTree.getByRole("option", { name: sourcePath }).locator("xpath=..");
   await expect(source).toHaveAttribute("draggable", "true");
+  await expect(folder).toBeVisible();
   const response = page.waitForResponse(
     (candidate) =>
       new URL(candidate.url()).pathname.endsWith("/entry") &&
       new URL(candidate.url()).searchParams.get("path") === sourcePath &&
       candidate.request().method() === "PATCH",
   );
-  await source.dragTo(folder);
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await source.dispatchEvent("dragstart", { dataTransfer });
+  await folder.dispatchEvent("dragover", { dataTransfer });
+  await folder.dispatchEvent("drop", { dataTransfer });
+  await source.dispatchEvent("dragend", { dataTransfer });
+  await dataTransfer.dispose();
   expect((await response).status()).toBe(204);
 };
 
