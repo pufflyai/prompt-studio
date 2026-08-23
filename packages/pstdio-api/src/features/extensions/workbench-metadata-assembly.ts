@@ -22,6 +22,40 @@ const toViewRecord = (record: {
   title: record.contribution.title as never,
 });
 
+const supplementalMetadata = (runtime: ExtensionRuntime) => ({
+  harnesses: runtime.harnesses.map((harness) => ({
+    id: harness.id,
+    localId: harness.localId,
+    extensionId: harness.extensionId,
+    label: harness.provider?.label,
+  })),
+  skills: runtime.skills.map(toViewRecord),
+  templates: runtime.templates.map(toViewRecord),
+  themes: [...runtime.themes, ...runtime.fileIconThemes].map((record) => ({
+    id: record.id,
+    localId: record.localId,
+    extensionId: record.extensionId,
+    title: record.title as never,
+  })),
+});
+
+export const assembleAvailableExtensionMetadata = (
+  deps: ExtensionWebviewMetadataDeps,
+  runtime: ExtensionRuntime,
+  source: { extensionId: string; installName: string },
+) => {
+  const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
+  return {
+    ...buildWorkbenchExtensionMetadata({
+      installNamesByExtensionId: new Map([[source.extensionId, source.installName]]),
+      runtime,
+      webviewCacheRoot,
+      webviewUrlIssuer: deps.extensionWebviewAccess,
+    }),
+    ...supplementalMetadata(runtime),
+  };
+};
+
 // The workbench metadata payload plus the dashboard-facing record groups
 // (automations with effective enablement, harnesses, skills, templates, themes).
 export const assembleWorkbenchMetadata = async (
@@ -44,21 +78,6 @@ export const assembleWorkbenchMetadata = async (
   );
   const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
   const automations = await buildAutomationRecords(deps, projectId, runtime, sources);
-  const harnesses = runtime.harnesses.map((harness) => ({
-    id: harness.id,
-    localId: harness.localId,
-    extensionId: harness.extensionId,
-    label: harness.provider?.label,
-  }));
-  const skills = runtime.skills.map(toViewRecord);
-  const templates = runtime.templates.map(toViewRecord);
-  // Theme records carry their title at the top level, unlike skills/templates.
-  const themes = [...runtime.themes, ...runtime.fileIconThemes].map((record) => ({
-    id: record.id,
-    localId: record.localId,
-    extensionId: record.extensionId,
-    title: record.title as never,
-  }));
 
   return {
     ...buildWorkbenchExtensionMetadata({
@@ -71,9 +90,6 @@ export const assembleWorkbenchMetadata = async (
       webviewCacheRoot,
     }),
     automations,
-    harnesses,
-    skills,
-    templates,
-    themes,
+    ...supplementalMetadata(runtime),
   };
 };

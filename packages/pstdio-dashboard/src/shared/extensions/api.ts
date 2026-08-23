@@ -18,6 +18,11 @@ export const getProjectExtensionMetadata = (projectId: string) =>
 export const getExtensionContributions = (projectId: string, instanceId: string) =>
   apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/${instanceId}/contributions`);
 
+export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
+  apiRequest<DashboardExtensionMetadata>(
+    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/contributions`,
+  );
+
 export const getProjectExtensionAppearance = (projectId: string) =>
   apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
 

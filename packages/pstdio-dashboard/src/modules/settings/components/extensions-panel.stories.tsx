@@ -109,6 +109,12 @@ const marketplace = [
     description: "Workspace reports for agent handoffs.",
     installed: false,
   },
+  {
+    installName: "pstdio-planner",
+    displayName: "Prompt Studio Planner",
+    description: "Tickets, managed attempts, reviews, and templates.",
+    installed: false,
+  },
 ];
 
 const meta: Meta<typeof ExtensionsPanelView> = {
@@ -155,6 +161,16 @@ export const Mutating: Story = {
     diagnostics: [],
     automations,
     togglingInstanceId: "planner-instance",
+  },
+};
+
+export const InstallingMultipleAvailableExtensions: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
   },
 };
 

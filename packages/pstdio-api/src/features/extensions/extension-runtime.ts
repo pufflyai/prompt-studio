@@ -140,6 +140,18 @@ export const loadExtensionSource = async (sourcePath: string) => {
   return toLoadedExtension(loaded, diagnostics);
 };
 
+export const loadExtensionSourceRuntime = async (sourcePath: string) => {
+  const diagnostics: RuntimeExtensionDiagnostic[] = [];
+  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
+
+  if (!source) {
+    const first = diagnostics[0];
+    throw new Error(first?.message ?? `Failed to load extension at ${sourcePath}`);
+  }
+
+  return normalizeExtensionSources([source], diagnostics, { repoRoots: [] });
+};
+
 export const readExtensionSourceMetadata = (sourcePath: string) => {
   const { manifest, diagnostics } = readPackageManifestMetadata(sourcePath);
   if (!manifest) {

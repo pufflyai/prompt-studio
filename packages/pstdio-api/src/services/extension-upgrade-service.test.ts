@@ -25,6 +25,7 @@ const installedSource = {
 };
 
 const installed = {
+  check: {} as never,
   installName: "pstdio-planner",
   manifest: { name: "pstdio-planner" },
   metadata: {
@@ -32,6 +33,7 @@ const installed = {
     name: "pstdio-planner",
     displayName: "Prompt Studio Planner",
     version: "0.8.0",
+    enginesPstdio: "1.0.0-alpha.2",
   },
   source: {
     kind: "named" as const,
@@ -167,6 +169,51 @@ describe("extension upgrade service", () => {
     );
     expect(result?.changed).toBe(true);
     expect(result?.instance.id).toBe(instance.id);
+  });
+
+  test("prepares one release-scoped preview for concurrent contribution reads", async () => {
+    let finishInstall: ((value: typeof installed) => void) | undefined;
+    const installExtensionSource = mock(
+      () =>
+        new Promise<typeof installed>((resolve) => {
+          finishInstall = resolve;
+        }),
+    );
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      installExtensionSource: installExtensionSource as never,
+      releaseRef: "pstdio@0.27.0",
+      repoService: { listByProject: async () => [] },
+    });
+
+    const first = service.prepareMarketplaceExtensionSource("pstdio-planner");
+    const second = service.prepareMarketplaceExtensionSource("pstdio-planner");
+
+    expect(installExtensionSource).toHaveBeenCalledTimes(1);
+    expect(installExtensionSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        env: expect.objectContaining({
+          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/pstdio%400.27.0"),
+        }),
+        force: true,
+        installName: "pstdio-planner",
+        ref: "pstdio@0.27.0",
+        source: "pstdio-planner",
+      }),
+    );
+
+    finishInstall?.(installed);
+    expect(await first).toBe(installed);
+    expect(await second).toBe(installed);
   });
 
   test("refuses to replace a local source", async () => {

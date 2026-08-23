@@ -1,16 +1,17 @@
-import { Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
-import { Download, Puzzle } from "lucide-react";
+import { ChevronRight, Download, Puzzle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
   installing: boolean;
   onInstall: () => void;
+  onOpen: () => void;
 }
 
 export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => {
-  const { extension, installing, onInstall } = props;
+  const { extension, installing, onInstall, onOpen } = props;
   const { t } = useTranslation("projects");
 
   return (
@@ -21,6 +22,15 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       paddingY="sm"
       borderBottomWidth="1px"
       borderColor="border.subtle"
+      cursor="pointer"
+      role="button"
+      tabIndex={0}
+      _hover={{ bg: "bg.subtle" }}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.currentTarget !== event.target) return;
+        if (event.key === "Enter" || event.key === " ") onOpen();
+      }}
     >
       <Flex
         alignItems="center"
@@ -52,12 +62,18 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
         variant="outline"
         size="2xs"
         loading={installing}
-        onClick={onInstall}
+        onClick={(event) => {
+          event.stopPropagation();
+          onInstall();
+        }}
         data-testid="marketplace-extension-install"
       >
         <Download size={12} />
         {t("projectSettings.extensionsPanel.marketplace.install")}
       </Button>
+      <Icon boxSize="4" color="fg.subtle" flexShrink="0">
+        <ChevronRight />
+      </Icon>
     </HStack>
   );
 };

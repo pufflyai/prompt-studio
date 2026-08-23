@@ -7,6 +7,7 @@ import {
   attemptExtensionFix,
   executeExtensionCommand,
   getExtensionContributions,
+  getMarketplaceExtensionContributions,
   getProjectExtensionMetadata,
   installMarketplaceExtension,
   listProjectExtensionSettings,
@@ -145,6 +146,17 @@ export const useExtensionContributions = (projectId: string | undefined, instanc
     queryKey: ["extension-contributions", projectId, instanceId],
     queryFn: () => getExtensionContributions(projectId!, instanceId!),
     enabled: Boolean(projectId && instanceId),
+  });
+};
+
+export const useMarketplaceExtensionContributions = (
+  projectId: string | undefined,
+  installName: string | undefined,
+) => {
+  return useQuery({
+    queryKey: ["marketplace-extension-contributions", projectId, installName],
+    queryFn: () => getMarketplaceExtensionContributions(projectId!, installName!),
+    enabled: Boolean(projectId && installName),
   });
 };
 

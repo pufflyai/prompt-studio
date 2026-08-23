@@ -3,7 +3,7 @@ import { installMarketplaceExtensionResponseSchema } from "pstdio-api-contracts"
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-service";
 import type { AppRouteHandler } from "../../../types";
-import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
+import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "../deps";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
@@ -48,7 +48,7 @@ export const installMarketplaceExtensionHandler = (
 
     try {
       const result = await marketplace.installMarketplaceExtension(projectId, installName);
-      await provisionProjectWorkspaces(deps, projectId);
+      scheduleProjectWorkspaceProvisioning(deps, projectId);
       return c.json(
         {
           extension: toProjectExtensionInstance(

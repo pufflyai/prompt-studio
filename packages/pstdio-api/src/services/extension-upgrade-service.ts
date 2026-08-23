@@ -6,6 +6,7 @@ import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
   PSTDIO_REPOSITORY_URL,
+  resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
 import type { createExtensionService } from "./extension-service";
@@ -85,6 +86,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const isManagedSource = (source: UpgradeSource) =>
     enabled && source.source_kind === "git" && isMarketplaceExtension(source.install_name);
   let releaseCommit: Promise<string> | undefined;
+  const previewSources = new Map<string, ReturnType<typeof install>>();
   const currentReleaseCommit = () => {
     if (!deps.releaseRef) return Promise.reject(new Error("No extension release ref is configured"));
     releaseCommit ??= (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(deps.releaseRef);
@@ -155,6 +157,32 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     return installed;
   };
 
+  const prepareMarketplaceExtensionSource = (installName: string) => {
+    assertMarketplaceInstall(installName);
+    const existing = previewSources.get(installName);
+    if (existing) return existing;
+
+    const previewHome = join(
+      resolvePstdioHome({ env: process.env }),
+      "cache",
+      "extension-catalog",
+      encodeURIComponent(deps.releaseRef!),
+    );
+    const preview = install({
+      env: { ...process.env, PSTDIO_HOME: previewHome },
+      source: installName,
+      installName,
+      force: true,
+      ref: deps.releaseRef,
+      reuseInstalledDependencies: true,
+    }).catch((error) => {
+      if (previewSources.get(installName) === preview) previewSources.delete(installName);
+      throw error;
+    });
+    previewSources.set(installName, preview);
+    return preview;
+  };
+
   const installMarketplaceExtension = async (projectId: string, installName: string) => {
     assertMarketplaceInstall(installName);
     const existing = await deps.extensionService.getInstalledSource(installName);
@@ -207,5 +235,12 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     };
   };
 
-  return { canUpgrade, enabled, installMarketplaceExtension, releaseRef: deps.releaseRef, upgrade };
+  return {
+    canUpgrade,
+    enabled,
+    installMarketplaceExtension,
+    prepareMarketplaceExtensionSource,
+    releaseRef: deps.releaseRef,
+    upgrade,
+  };
 };

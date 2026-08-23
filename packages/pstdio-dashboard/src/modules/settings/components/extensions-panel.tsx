@@ -12,11 +12,13 @@ import { useTranslation } from "react-i18next";
 import {
   useAttemptExtensionFix,
   useInstallMarketplaceExtension,
+  useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
   useProjectExtensions,
   useReloadProjectExtension,
   useSetProjectExtensionEnabled,
 } from "@/shared/extensions/use-project-extensions";
+import { AvailableExtensionDetail } from "./available-extension-detail";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import type { ExtensionHealthPopoverProps } from "./extension-health-popover";
 import { ExtensionListRow } from "./extension-list-row";
@@ -34,8 +36,9 @@ export interface ExtensionsPanelViewProps {
   togglingInstanceId?: string;
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
-  installingMarketplaceName?: string;
+  installingMarketplaceNames?: string[];
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
+  onOpenMarketplace?: (extension: MarketplaceExtension) => void;
   healthActions?: (
     extension: ProjectExtensionInstance,
   ) => Omit<ExtensionHealthPopoverProps, "extension" | "diagnostics">;
@@ -79,10 +82,11 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     diagnostics,
     automations,
     togglingInstanceId,
-    installingMarketplaceName,
+    installingMarketplaceNames = [],
     onToggle,
     onOpen,
     onInstallMarketplace,
+    onOpenMarketplace,
     healthActions,
   } = props;
   const { t } = useTranslation("projects");
@@ -94,6 +98,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
   const enabledCount = extensions.filter((extension) => extension.enabled).length;
   const failingCount = extensions.filter((extension) => extension.status === "error").length;
+  const installingNames = new Set(installingMarketplaceNames);
 
   return (
     <Stack gap="0" data-testid="extensions-panel">
@@ -182,8 +187,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <MarketplaceExtensionRow
           key={extension.installName}
           extension={extension}
-          installing={installingMarketplaceName === extension.installName}
+          installing={installingNames.has(extension.installName)}
           onInstall={() => onInstallMarketplace?.(extension)}
+          onOpen={() => onOpenMarketplace?.(extension)}
         />
       ))}
     </Stack>
@@ -200,6 +206,12 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const attemptFix = useAttemptExtensionFix(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  const [selectedMarketplaceName, setSelectedMarketplaceName] = useState<string | null>(null);
+  const [installingMarketplaceNames, setInstallingMarketplaceNames] = useState<string[]>([]);
+  const marketplaceContributions = useMarketplaceExtensionContributions(
+    projectId,
+    selectedMarketplaceName ?? undefined,
+  );
 
   if (extensionsQuery.isLoading) {
     return (
@@ -224,6 +236,29 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const extensions = extensionsQuery.data?.extensions ?? [];
   const marketplace = extensionsQuery.data?.marketplace ?? [];
   const selected = extensions.find((extension) => extension.id === selectedInstanceId);
+  const selectedMarketplace = marketplace.find(
+    (extension) => extension.installName === selectedMarketplaceName && !extension.installed,
+  );
+
+  const handleInstallMarketplace = async (extension: MarketplaceExtension) => {
+    setInstallingMarketplaceNames((current) => [...new Set([...current, extension.installName])]);
+    try {
+      await installMarketplace.mutateAsync({ installName: extension.installName });
+      toaster.create({
+        type: "success",
+        title: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
+      });
+      if (selectedMarketplaceName === extension.installName) setSelectedMarketplaceName(null);
+    } catch (error) {
+      toaster.create({
+        type: "error",
+        title: t("projectSettings.extensionsPanel.marketplace.installFailed"),
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setInstallingMarketplaceNames((current) => current.filter((name) => name !== extension.installName));
+    }
+  };
 
   if (selected) {
     return (
@@ -232,6 +267,22 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         extension={selected}
         metadata={metadataQuery.data}
         onBack={() => setSelectedInstanceId(null)}
+      />
+    );
+  }
+
+  if (selectedMarketplace) {
+    return (
+      <AvailableExtensionDetail
+        extension={selectedMarketplace}
+        metadata={marketplaceContributions.data}
+        contributionsError={
+          marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
+        }
+        loadingContributions={marketplaceContributions.isLoading}
+        installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
+        onBack={() => setSelectedMarketplaceName(null)}
+        onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
       />
     );
   }
@@ -277,27 +328,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       ),
   });
 
-  const handleInstallMarketplace = (extension: MarketplaceExtension) => {
-    installMarketplace.mutate(
-      { installName: extension.installName },
-      {
-        onSuccess: () => {
-          toaster.create({
-            type: "success",
-            title: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
-          });
-        },
-        onError: (error) => {
-          toaster.create({
-            type: "error",
-            title: t("projectSettings.extensionsPanel.marketplace.installFailed"),
-            description: error instanceof Error ? error.message : undefined,
-          });
-        },
-      },
-    );
-  };
-
   return (
     <ExtensionsPanelView
       extensions={extensions}
@@ -305,10 +335,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       diagnostics={metadataQuery.data?.diagnostics ?? []}
       automations={metadataQuery.data?.automations ?? []}
       togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
-      installingMarketplaceName={installMarketplace.isPending ? installMarketplace.variables?.installName : undefined}
+      installingMarketplaceNames={installingMarketplaceNames}
       onToggle={handleToggle}
       onOpen={(extension) => setSelectedInstanceId(extension.id)}
-      onInstallMarketplace={handleInstallMarketplace}
+      onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
+      onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
       healthActions={healthActions}
     />
   );

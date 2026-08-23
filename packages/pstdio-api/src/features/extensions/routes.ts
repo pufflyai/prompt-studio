@@ -44,6 +44,10 @@ import {
   getExtensionContributionsHandler,
   getExtensionContributionsRoute,
 } from "./endpoints/get-extension-contributions";
+import {
+  getMarketplaceExtensionContributionsHandler,
+  getMarketplaceExtensionContributionsRoute,
+} from "./endpoints/get-marketplace-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import {
   installMarketplaceExtensionHandler,
@@ -103,6 +107,7 @@ const registerProjectExtensionRoutes = (
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(installMarketplaceExtensionRoute, installMarketplaceExtensionHandler(deps));
+  routes.openapi(getMarketplaceExtensionContributionsRoute, getMarketplaceExtensionContributionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
   routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
