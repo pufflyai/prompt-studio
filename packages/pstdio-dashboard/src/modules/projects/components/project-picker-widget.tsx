@@ -157,12 +157,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
         ) : null
       }
       footerEnd={
-        <Button
-          variant="outline"
-          size="xs"
-          disabled={availability.isCreateProjectBlocked}
-          onClick={handleCreateProject}
-        >
+        <Button variant="outline" size="xs" onClick={handleCreateProject}>
           <Icon as={Plus} boxSize="14px" />
           {t("list.createProject")}
         </Button>

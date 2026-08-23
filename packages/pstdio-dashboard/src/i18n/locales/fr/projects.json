@@ -328,7 +328,7 @@
     "createFirstProject": "Créer votre premier projet",
     "agentLoadErrorBanner": {
       "title": "Impossible de charger la disponibilité des agents",
-      "description": "Nous n'avons pas pu vérifier les agents installés pour le moment. Réessayez pour continuer la création du projet.",
+      "description": "Nous n'avons pas pu vérifier les agents installés. Vous pouvez créer le projet et ajouter des agents plus tard.",
       "retry": "Réessayer"
     }
   },

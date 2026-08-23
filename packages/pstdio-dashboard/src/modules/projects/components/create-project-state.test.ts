@@ -39,22 +39,5 @@ describe("dashboard workbench create project state", () => {
     });
 
     expect(availability.hasNoAgents).toBe(true);
-    expect(availability.isCreateProjectBlocked).toBe(false);
-  });
-
-  test("blocks project creation while agents are loading or failed to load", () => {
-    const loading = resolveProjectCreationAvailability({
-      agentInfo: [],
-      isAgentsLoading: true,
-      isAgentsError: false,
-    });
-    const errored = resolveProjectCreationAvailability({
-      agentInfo: [],
-      isAgentsLoading: false,
-      isAgentsError: true,
-    });
-
-    expect(loading.isCreateProjectBlocked).toBe(true);
-    expect(errored.isCreateProjectBlocked).toBe(true);
   });
 });

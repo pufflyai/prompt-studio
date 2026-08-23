@@ -347,7 +347,7 @@
     "createFirstProject": "Create your first project",
     "agentLoadErrorBanner": {
       "title": "Unable to load agent availability",
-      "description": "We couldn't check installed agents right now. Retry to continue project creation.",
+      "description": "We couldn't check installed agents. You can create the project and add agents later.",
       "retry": "Retry"
     }
   },

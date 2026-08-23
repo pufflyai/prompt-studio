@@ -323,7 +323,7 @@
     "createFirstProject": "创建您的第一个项目",
     "agentLoadErrorBanner": {
       "title": "无法加载代理可用性",
-      "description": "我们暂时无法检查已安装代理。请重试后继续创建项目。",
+      "description": "无法检查已安装的代理。你可以先创建项目，稍后再添加代理。",
       "retry": "重试"
     }
   },

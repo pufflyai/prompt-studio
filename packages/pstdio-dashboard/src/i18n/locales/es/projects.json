@@ -328,7 +328,7 @@
     "createFirstProject": "Crear tu primer proyecto",
     "agentLoadErrorBanner": {
       "title": "No se pudo cargar la disponibilidad de agentes",
-      "description": "No pudimos verificar los agentes instalados en este momento. Reintenta para continuar con la creación del proyecto.",
+      "description": "No pudimos verificar los agentes instalados. Puedes crear el proyecto y añadir agentes más tarde.",
       "retry": "Reintentar"
     }
   },

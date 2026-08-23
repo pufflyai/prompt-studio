@@ -46,13 +46,10 @@ export const resolveProjectCreationAvailability = (input: AgentAvailabilityState
   const hasAvailableAgents = availableAgents.length > 0;
   const hasNoAgents = !input.isAgentsLoading && !input.isAgentsError && !hasAvailableAgents;
   const showAgentErrorBanner = input.isAgentsError;
-  // Missing agents no longer blocks creation; a project can be created and have agents added later.
-  const isCreateProjectBlocked = input.isAgentsLoading || showAgentErrorBanner;
 
   return {
     availableAgents,
     hasNoAgents,
     showAgentErrorBanner,
-    isCreateProjectBlocked,
   };
 };

@@ -165,12 +165,7 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
               <Button onClick={() => setStep(1)} variant="outline" disabled={isWorking}>
                 {t("projects:createProjectDialog.actions.back")}
               </Button>
-              <Button
-                onClick={handleSubmit}
-                loading={isWorking}
-                variant="primary"
-                disabled={availability.isCreateProjectBlocked}
-              >
+              <Button onClick={handleSubmit} loading={isWorking} variant="primary">
                 {t("projects:createProjectDialog.actions.create")}
               </Button>
             </>
