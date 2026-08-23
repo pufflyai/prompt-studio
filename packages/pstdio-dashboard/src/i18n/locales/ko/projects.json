@@ -242,6 +242,7 @@
       "health": {
         "triggerAriaLabel": "{{name}}의 문제 표시",
         "failedToLoad": "로드 실패",
+        "incompatibleVersions": "호환되지 않는 버전",
         "issues_one": "{{count}}개의 문제",
         "issues_other": "{{count}}개의 문제",
         "lastLoaded": "마지막 로드 {{time}}",

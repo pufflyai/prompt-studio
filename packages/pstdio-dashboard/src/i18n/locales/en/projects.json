@@ -270,6 +270,7 @@
       "health": {
         "triggerAriaLabel": "Show issues for {{name}}",
         "failedToLoad": "Failed to load",
+        "incompatibleVersions": "Incompatible versions",
         "issues_one": "{{count}} issue",
         "issues_other": "{{count}} issues",
         "lastLoaded": "Last loaded {{time}}",

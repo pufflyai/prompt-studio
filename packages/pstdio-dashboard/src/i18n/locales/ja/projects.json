@@ -242,6 +242,7 @@
       "health": {
         "triggerAriaLabel": "{{name}}の問題を表示",
         "failedToLoad": "読み込みに失敗しました",
+        "incompatibleVersions": "互換性のないバージョン",
         "issues_one": "{{count}}件の問題",
         "issues_other": "{{count}}件の問題",
         "lastLoaded": "最終読み込み {{time}}",

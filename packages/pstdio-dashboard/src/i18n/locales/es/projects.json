@@ -247,6 +247,7 @@
       "health": {
         "triggerAriaLabel": "Mostrar problemas de {{name}}",
         "failedToLoad": "Error al cargar",
+        "incompatibleVersions": "Versiones incompatibles",
         "issues_one": "{{count}} problema",
         "issues_other": "{{count}} problemas",
         "lastLoaded": "Última carga {{time}}",

@@ -242,6 +242,7 @@
       "health": {
         "triggerAriaLabel": "显示 {{name}} 的问题",
         "failedToLoad": "加载失败",
+        "incompatibleVersions": "版本不兼容",
         "issues_one": "{{count}} 个问题",
         "issues_other": "{{count}} 个问题",
         "lastLoaded": "上次加载于 {{time}}",

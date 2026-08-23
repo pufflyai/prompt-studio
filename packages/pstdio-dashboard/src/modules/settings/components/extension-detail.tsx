@@ -170,7 +170,11 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         {failed && (
           <AlertMessage
             status="error"
-            title={errorText(extension.lastError, "code") ?? t("projectSettings.extensionsPanel.status.error")}
+            title={
+              incompatible
+                ? t("projectSettings.extensionsPanel.health.incompatibleVersions")
+                : (errorText(extension.lastError, "code") ?? t("projectSettings.extensionsPanel.status.error"))
+            }
             data-testid="extension-detail-health"
             endElement={
               incompatible && extension.canUpgrade ? (

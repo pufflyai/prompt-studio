@@ -26,6 +26,11 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
   const failed = extension.status === "error";
   const issues = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
   const count = failed ? 1 + issues.length : issues.length;
+  const errorCode = errorText(extension.lastError, "code");
+  const errorTitle =
+    errorCode === "extension_manifest_unsupported_api_version"
+      ? t("projectSettings.extensionsPanel.health.incompatibleVersions")
+      : errorCode;
 
   if (count === 0) return null;
 
@@ -74,9 +79,9 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                 <Stack paddingX="md" paddingY="sm" gap="2xs">
                   {failed && (
                     <>
-                      {errorText(extension.lastError, "code") && (
+                      {errorTitle && (
                         <Text textStyle="label/XS" fontFamily="mono" color="fg.error">
-                          {errorText(extension.lastError, "code")}
+                          {errorTitle}
                         </Text>
                       )}
                       <Text textStyle="label/XS" color="fg.muted">
