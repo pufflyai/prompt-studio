@@ -1,5 +1,6 @@
 ---
 "pstdio": patch
+"@pstdio/workbench": patch
 ---
 
-Allow project creation when agent discovery fails
+Allow project creation without agents and keep project selection overlays required and blocking

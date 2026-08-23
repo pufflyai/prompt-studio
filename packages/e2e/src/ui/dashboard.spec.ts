@@ -61,6 +61,12 @@ test("dashboard keeps project selection open when no project is selected", async
   const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
   await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Switch project" })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Notifications", exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="status"]')).toHaveCount(0);
 
   await page.keyboard.press("Escape");
   await expect(projectPicker).toBeVisible();
@@ -85,6 +91,98 @@ test("dashboard keeps project selection open when no project is selected", async
 
   await page.reload();
   await expect(projectPicker).toBeVisible();
+});
+
+test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  const project = await createProjectViaApi(request, "Overlay Blocking Test");
+
+  await page.addInitScript((selectedProjectId) => {
+    window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+  }, project.id);
+  await page.goto("/");
+
+  const switchProject = page.getByRole("button", { name: "Switch project" });
+  const search = page.getByRole("option", { name: "Search", exact: true });
+  const notifications = page.getByRole("option", { name: "Notifications", exact: true });
+  await expect(switchProject).toBeVisible();
+  await expect(search).toBeVisible();
+  await expect(notifications).toBeVisible();
+
+  const activeModeBefore = await page.evaluate(() => {
+    const dashboardWindow = window as unknown as {
+      __pstdioDashboardWorkbench?: { modes: { getActiveModeId(): string | undefined } };
+    };
+    return dashboardWindow.__pstdioDashboardWorkbench?.modes.getActiveModeId();
+  });
+  await page.evaluate(() => {
+    const dashboardWindow = window as typeof window & { __overlayBackgroundClicks?: Record<string, number> };
+    dashboardWindow.__overlayBackgroundClicks = { search: 0, notifications: 0 };
+  });
+  await search.evaluate((element) => {
+    element.addEventListener("click", () => {
+      const dashboardWindow = window as typeof window & { __overlayBackgroundClicks?: Record<string, number> };
+      dashboardWindow.__overlayBackgroundClicks!.search += 1;
+    });
+  });
+  await notifications.evaluate((element) => {
+    element.addEventListener("click", () => {
+      const dashboardWindow = window as typeof window & { __overlayBackgroundClicks?: Record<string, number> };
+      dashboardWindow.__overlayBackgroundClicks!.notifications += 1;
+    });
+  });
+
+  const clickBehindProjectPicker = async (control: typeof search, counter: "search" | "notifications") => {
+    const controlBox = await control.boundingBox();
+    expect(controlBox).not.toBeNull();
+    await switchProject.click();
+
+    const projectPicker = page.getByRole("dialog").filter({ hasText: project.name });
+    const positioner = page.locator('[data-scope="dialog"][data-part="positioner"]').filter({ has: projectPicker });
+    const backdrop = page.locator('[data-scope="dialog"][data-part="backdrop"]');
+    await expect(projectPicker).toBeVisible();
+    await expect.poll(() => positioner.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
+    await expect
+      .poll(() => backdrop.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe("rgba(0, 0, 0, 0)");
+
+    await page.mouse.click(controlBox!.x + controlBox!.width / 2, controlBox!.y + controlBox!.height / 2);
+    await expect
+      .poll(() =>
+        page.evaluate((key) => {
+          const dashboardWindow = window as typeof window & {
+            __overlayBackgroundClicks?: Record<string, number>;
+          };
+          return dashboardWindow.__overlayBackgroundClicks?.[key];
+        }, counter),
+      )
+      .toBe(0);
+    await expect(projectPicker).not.toBeVisible();
+  };
+
+  await clickBehindProjectPicker(search, "search");
+  await clickBehindProjectPicker(notifications, "notifications");
+
+  expect(
+    await page.evaluate(() => {
+      const dashboardWindow = window as unknown as {
+        __pstdioDashboardWorkbench?: { modes: { getActiveModeId(): string | undefined } };
+      };
+      return dashboardWindow.__pstdioDashboardWorkbench?.modes.getActiveModeId();
+    }),
+  ).toBe(activeModeBefore);
+  await search.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const dashboardWindow = window as typeof window & {
+          __overlayBackgroundClicks?: Record<string, number>;
+        };
+        return dashboardWindow.__overlayBackgroundClicks?.search;
+      }),
+    )
+    .toBe(1);
 });
 
 test("dashboard selects the only project on first load", async ({ page, request }) => {

@@ -3,6 +3,7 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
+  workbenchRegions,
 } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
@@ -26,19 +27,38 @@ interface CreateProjectsModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
 
-const projectSelectionContentRegions = [
-  "sidenav",
-  "main-left-menu",
-  "main",
-  "main-right-menu",
-  "secondary",
-  "side-header",
-  "side",
-  "overlay",
-] as const;
+const projectSelectionOverlayWidgetIds = new Set<string>([
+  dashboardWidgetIds.projectPicker,
+  dashboardWidgetIds.createProject,
+]);
 
 const openRequiredProjectPicker = (layout: WorkbenchModuleContext["layout"]) =>
   layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+
+const seedProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"]) => {
+  for (const region of workbenchRegions) layout.clearRegion(region);
+  openRequiredProjectPicker(layout);
+};
+
+const reconcileProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"]) => {
+  for (const region of workbenchRegions) {
+    if (region !== "overlay") layout.clearRegion(region);
+  }
+
+  const overlay = layout.getLayout().regions.overlay;
+  const activeCreateProject = overlay.widgets.find(
+    (placement) =>
+      placement.widgetId === overlay.activeWidgetId && placement.contributionId === dashboardWidgetIds.createProject,
+  );
+  for (const placement of overlay.widgets) {
+    if (!projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
+      layout.removeWidgetPlacement(placement.widgetId);
+    }
+  }
+
+  openRequiredProjectPicker(layout);
+  if (activeCreateProject) layout.activateWidget(activeCreateProject.widgetId);
+};
 
 const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
@@ -75,11 +95,8 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
     label: "Projects",
     panels: [],
     activate: () => undefined,
-    seed(modeCtx) {
-      for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
-      openRequiredProjectPicker(modeCtx.layout);
-    },
-    reconcile: (modeCtx) => openRequiredProjectPicker(modeCtx.layout),
+    seed: (modeCtx) => seedProjectSelectionLayout(modeCtx.layout),
+    reconcile: (modeCtx) => reconcileProjectSelectionLayout(modeCtx.layout),
   });
 };
 

@@ -241,6 +241,7 @@ export {
   standardResourceIcons,
   workbenchCommandPaletteMenuPath,
   workbenchPanelRegions,
+  workbenchRegions,
   workbenchRegionTabAddMenuPath,
   workbenchRegionTabLeadingMenuPath,
   workbenchResourceIdContextKey,

@@ -12,6 +12,7 @@ export interface WorkbenchOverlayWidgetConfig {
   scrollBehavior?: "inside" | "outside";
   closeOnEscape?: boolean;
   closeOnInteractOutside?: boolean;
+  /** Controls dialog semantics. Every workbench overlay blocks background pointer input. */
   modal?: boolean;
   preventScroll?: boolean;
   trapFocus?: boolean;
@@ -204,7 +205,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     >
       <Portal>
         <Dialog.Backdrop position="fixed" inset="0" />
-        <Dialog.Positioner position="fixed" inset="0" overflow="auto">
+        <Dialog.Positioner position="fixed" inset="0" overflow="auto" pointerEvents="auto">
           <Dialog.Content
             position="relative"
             overflow="hidden"

@@ -13,6 +13,7 @@ import {
 
 const overlayConfig: WorkbenchOverlayWidgetConfig = {
   closeOnInteractOutside: false,
+  modal: false,
 };
 
 const isWorkbenchRegion = (value: unknown): value is (typeof workbenchRegions)[number] =>

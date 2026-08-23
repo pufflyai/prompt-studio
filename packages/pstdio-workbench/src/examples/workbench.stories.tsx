@@ -145,6 +145,25 @@ export const WorkbenchModesSettings: Story = {
 
 export const RegionMap: Story = {
   render: () => <WorkbenchStory workbench={regionMapWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const showOverlay = await canvas.findByRole("button", { name: "Show overlay" });
+    const backgroundControlBox = showOverlay.getBoundingClientRect();
+
+    await userEvent.click(showOverlay);
+
+    const dialog = await within(document.body).findByRole("dialog");
+    const positioner = dialog.closest('[data-scope="dialog"][data-part="positioner"]');
+    await expect(positioner).toHaveStyle({ pointerEvents: "auto" });
+    await expect(
+      document
+        .elementFromPoint(
+          backgroundControlBox.x + backgroundControlBox.width / 2,
+          backgroundControlBox.y + backgroundControlBox.height / 2,
+        )
+        ?.closest('[data-scope="dialog"][data-part="positioner"]'),
+    ).toBe(positioner);
+  },
 };
 
 // Demonstrates the resource-projected surface model: primary anchor + projections, the
