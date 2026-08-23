@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/blog-layout.astro
 title: Welcome to Prompt Studio!
-description: Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
+description: Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.
 released: "2026-04-24"
 category: Announcements
 image: /images/banner.png
@@ -30,7 +30,7 @@ Lately, my time to code has been limited. That forced me to think very carefully
 - outputs diverge from your intent
 - reviewing everything becomes tricky
 
-Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
+Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.
 
 It helps you manage fleets of agents (coding or otherwise) by:
 

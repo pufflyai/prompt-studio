@@ -96632,7 +96632,7 @@
               "fill": "$ds-fg",
               "textGrowth": "fixed-width",
               "width": 900,
-              "content": "Plan and delegate tasks to AI coding agents at scale.",
+              "content": "A workbench for you and your agents",
               "lineHeight": 1.32,
               "textAlign": "center",
               "fontFamily": "$font-heading",

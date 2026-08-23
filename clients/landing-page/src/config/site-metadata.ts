@@ -4,8 +4,7 @@ export const siteMetadata = {
   faviconSvgPath: "/images/favicon.svg",
   faviconPngPath: "/images/favicon-32x32.png",
   bannerPath: "/images/banner.png",
-  description:
-    "Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.",
+  description: "Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.",
   keywords: [
     "workbench for AI agents",
     "AI coding agent",

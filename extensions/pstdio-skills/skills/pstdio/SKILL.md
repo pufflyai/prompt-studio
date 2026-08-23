@@ -7,7 +7,7 @@ metadata:
 
 # Prompt Studio
 
-Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.
+Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.
 
 Use a dedicated skill for these tasks:
 

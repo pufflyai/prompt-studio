@@ -1,7 +1,7 @@
 <p align="center">
-  Prompt Studio (alpha)
+  Prompt Studio
 </p>
-<p align="center">Prompt Studio is a workbench where you and your agents can build and run custom tools for the way you work.</p>
+<p align="center">Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.</p>
 <p align="center">
  <a href="https://www.npmjs.com/package/pstdio"><img alt="npm" src="https://img.shields.io/npm/v/pstdio?style=flat-square" /></a>
   <a href="https://github.com/pufflyai/prompt-studio/actions/workflows/test-and-build.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/pufflyai/prompt-studio/test-and-build.yml?style=flat-square" /></a>
