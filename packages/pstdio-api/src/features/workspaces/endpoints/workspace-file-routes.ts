@@ -4,6 +4,7 @@ import {
   moveWorkspaceFileBodySchema,
   notFoundResponseSchema,
   workspaceFileContentSchema,
+  workspaceFileEntrySchema,
   workspaceFilePathQuerySchema,
   workspaceFilesResponseSchema,
   writeWorkspaceFileBodySchema,
@@ -97,6 +98,27 @@ export const createWorkspaceFileRoute = createRoute({
     404: errorResponse,
     409: errorResponse,
     413: errorResponse,
+    415: errorResponse,
+  },
+});
+
+export const createWorkspaceDirectoryRoute = createRoute({
+  method: "post",
+  path: "/workspaces/{id}/directory",
+  description: "Create a workspace directory.",
+  tags: ["Workspaces"],
+  request: {
+    params: z.object({ id: z.string() }).strict(),
+    query: workspaceFilePathQuerySchema,
+  },
+  responses: {
+    201: {
+      description: "Workspace directory created.",
+      content: { "application/json": { schema: workspaceFileEntrySchema } },
+    },
+    400: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
     415: errorResponse,
   },
 });

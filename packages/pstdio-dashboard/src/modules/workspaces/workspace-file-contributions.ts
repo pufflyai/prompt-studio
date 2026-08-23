@@ -35,6 +35,14 @@ export const createWorkspaceFile = async (ctx: WorkbenchModuleContext, resource:
   await ctx.resources.openResource(workspaceFileResource(resource, path), { replaceActive: true });
 };
 
+const createWorkspaceDirectory = async (ctx: WorkbenchModuleContext, resource: ResourceRef, path: string) => {
+  const workspaceId = workspaceIdOf(resource);
+  if (!workspaceId) throw new Error("Workspace details are missing.");
+  await getApiClient().workspaces.createDirectory(workspaceId, path);
+  await refreshWorkspaceFiles(ctx, workspaceId);
+  ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, true);
+};
+
 const moveWorkspaceFile = async (
   ctx: WorkbenchModuleContext,
   resource: ResourceRef,
@@ -91,7 +99,7 @@ export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource
 const registerWorkspaceFileTree = (
   ctx: WorkbenchModuleContext,
   treeActions: WorkspaceFileTreeActions,
-  pendingCreation: () => { workspaceId: string; parentPath: string } | undefined,
+  pendingCreation: () => { workspaceId: string; parentPath: string; type: "file" | "directory" } | undefined,
 ) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.workspaceFileTree,
@@ -153,12 +161,12 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
 };
 
 export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) => {
-  let pendingCreation: { workspaceId: string; parentPath: string } | undefined;
+  let pendingCreation: { workspaceId: string; parentPath: string; type: "file" | "directory" } | undefined;
   const treeActions: WorkspaceFileTreeActions = {
-    beginCreate: (resource, parentPath) => {
+    beginCreate: (resource, parentPath, type) => {
       const workspaceId = workspaceIdOf(resource);
       if (!workspaceId) throw new Error("Workspace details are missing.");
-      pendingCreation = { workspaceId, parentPath };
+      pendingCreation = { workspaceId, parentPath, type };
       if (parentPath) ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, parentPath, true);
       ctx.renderers.refresh(dashboardWidgetIds.workspaceFileTree);
     },
@@ -166,16 +174,17 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
       pendingCreation = undefined;
       ctx.renderers.refresh(dashboardWidgetIds.workspaceFileTree);
     },
-    commitCreate: async (resource, parentPath, rawName) => {
+    commitCreate: async (resource, parentPath, type, rawName) => {
       const name = rawName.trim();
       if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
-        throw new Error("Enter a file name without folders.");
+        throw new Error(`Enter a ${type === "directory" ? "folder" : "file"} name without folders.`);
       }
       const previousPendingCreation = pendingCreation;
       pendingCreation = undefined;
       try {
         const path = parentPath ? `${parentPath}/${name}` : name;
-        await createWorkspaceFile(ctx, resource, { path });
+        if (type === "directory") await createWorkspaceDirectory(ctx, resource, path);
+        else await createWorkspaceFile(ctx, resource, { path });
       } catch (error) {
         pendingCreation = previousPendingCreation;
         throw error;

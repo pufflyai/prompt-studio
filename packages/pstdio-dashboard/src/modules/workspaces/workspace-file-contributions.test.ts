@@ -23,8 +23,8 @@ const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef 
   metadata: { workspaceId: "workspace-1", workspaceType: "worktree", ...metadata },
 });
 
-const jsonResponse = (value: unknown) =>
-  new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
+const jsonResponse = (value: unknown, status = 200) =>
+  new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 
 beforeEach(() => {
   dashboardQueryClient.clear();
@@ -162,6 +162,9 @@ describe("workspace file operations", () => {
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
+      if (init?.method === "POST" && url.includes("/directory?")) {
+        return jsonResponse({ path: "generated", name: "generated", type: "directory" }, 201);
+      }
       if (init?.method === "POST") {
         return new Response(
           JSON.stringify({
@@ -203,7 +206,9 @@ describe("workspace file operations", () => {
 
     const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const createAction = sections[0]?.actions?.find((action) => action.id === "workspace-file.create");
+    const createFolderAction = sections[0]?.actions?.find((action) => action.id === "workspace-directory.create");
     expect(createAction?.params).toBeUndefined();
+    expect(createFolderAction?.params).toBeUndefined();
     await createAction?.run?.();
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
@@ -223,6 +228,19 @@ describe("workspace file operations", () => {
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
     expect(workbench.notifications.listNotifications()).toEqual([]);
 
+    await createFolderAction?.run?.();
+    const creatingFolderSections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, {
+      resource: workspace,
+    });
+    const inlineFolder = creatingFolderSections[0]?.nodes.find((node) => node.id === "workspace-directory:new:root") as
+      | (TreeNode & { inlineInput?: { onCommit(value: string): Promise<void> | void } })
+      | undefined;
+    expect(inlineFolder?.inlineInput).toEqual(expect.objectContaining({ ariaLabel: "New folder name" }));
+    await inlineFolder?.inlineInput?.onCommit("generated");
+    expect(calls).toContainEqual(
+      expect.objectContaining({ method: "POST", url: expect.stringContaining("/directory?path=generated") }),
+    );
+
     expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["docs", "README.md"]);
 
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
@@ -231,6 +249,7 @@ describe("workspace file operations", () => {
     expect(folder?.actions).toBeUndefined();
     expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual([
       "New file",
+      "New folder",
       "Copy path",
       "Copy relative path",
       "Delete folder",

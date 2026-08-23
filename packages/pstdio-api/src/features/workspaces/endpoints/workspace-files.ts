@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { resolveWorkspaceRoot } from "../resolve-workspace-root";
 import type {
+  createWorkspaceDirectoryRoute,
   createWorkspaceFileRoute,
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
@@ -12,6 +13,7 @@ import type {
 } from "./workspace-file-routes";
 
 export {
+  createWorkspaceDirectoryRoute,
   createWorkspaceFileRoute,
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
@@ -134,11 +136,26 @@ const mapFileError = (error: unknown) => {
   throw error;
 };
 
-const mapCreateFileError = (error: unknown) => {
+const mapWorkspaceMutationError = (error: unknown) => {
   if (error instanceof WorkspaceFileAccessError && error.code === "already-exists") {
     return { message: error.message, status: 409 as const };
   }
   return mapFileError(error);
+};
+
+const mapWorkspaceDirectoryError = (error: unknown) => {
+  if (error instanceof WorkspaceFileAccessError) {
+    if (error.code === "already-exists") return { message: error.message, status: 409 as const };
+    if (error.code === "not-found") return { message: error.message, status: 404 as const };
+    return { message: error.message, status: 415 as const };
+  }
+  if (error instanceof Error && error.message.includes("escapes mount root")) {
+    return { message: error.message, status: 400 as const };
+  }
+  if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+    return { message: "Workspace directory not found.", status: 404 as const };
+  }
+  throw error;
 };
 
 export const listWorkspaceFilesHandler = (
@@ -233,7 +250,26 @@ export const createWorkspaceFileHandler = (
       await context.mount.createTextFile(path, content, MAX_FILE_BYTES);
       return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 201);
     } catch (error) {
-      const mapped = mapCreateFileError(error);
+      const mapped = mapWorkspaceMutationError(error);
+      return c.json({ error: mapped.message }, mapped.status);
+    }
+  };
+};
+
+export const createWorkspaceDirectoryHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof createWorkspaceDirectoryRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { path } = c.req.valid("query");
+    const context = await resolveWorkspaceMount(deps, id);
+    if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
+
+    try {
+      await context.mount.createDirectory(path);
+      return c.json({ path, name: fileNameOf(path), type: "directory" as const }, 201);
+    } catch (error) {
+      const mapped = mapWorkspaceDirectoryError(error);
       return c.json({ error: mapped.message }, mapped.status);
     }
   };
@@ -251,7 +287,7 @@ export const moveWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHan
       await context.mount.moveFile(path, destinationPath);
       return c.body(null, 204);
     } catch (error) {
-      const mapped = mapCreateFileError(error);
+      const mapped = mapWorkspaceMutationError(error);
       return c.json({ error: mapped.message }, mapped.status);
     }
   };

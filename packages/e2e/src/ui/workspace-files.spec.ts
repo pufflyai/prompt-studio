@@ -1,83 +1,20 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import {
+  exerciseWorkspaceFileOperations,
+  expectFoldersBeforeFiles,
+  expectStandardFileSearch,
+  getResizeSeparatorColors,
+  openWorkspace,
+  prepareDashboard,
+} from "./helpers/workspace-files";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-
-const getResizeSeparatorColors = (separator: Locator) =>
-  separator.evaluate((element) => {
-    const probe = document.createElement("div");
-    probe.style.backgroundColor = "var(--chakra-colors-border)";
-    document.body.append(probe);
-    const expected = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    return { actual: getComputedStyle(element, "::before").backgroundColor, expected };
-  });
-
-const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
-  await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
-      localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${selectedProjectId}/values`,
-        JSON.stringify({
-          state: {
-            lastSelectedAgent: "pstdio.extension-lab.fake",
-            lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
-            lastSelectedBranches: [],
-            sessionModalState: "closed",
-            selectedSessionId: null,
-          },
-          version: 0,
-        }),
-      );
-    },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
-  );
-};
-
-const openWorkspace = async (page: Page, shorthand: string) => {
-  const row = page.getByRole("option").filter({ hasText: shorthand }).first();
-  await expect(row).toBeVisible({ timeout: 30_000 });
-  await row.getByText(shorthand, { exact: true }).click();
-};
-
-const expectStandardFileSearch = async (search: Locator) => {
-  const height = await search.evaluate((element) => element.closest("header")?.getBoundingClientRect().height);
-  expect(height).toBe(40);
-  await expect(search).toHaveCSS("border-top-width", "0px");
-  await expect(search).toHaveCSS("border-radius", "0px");
-  await expect(search).toHaveCSS("margin-left", "0px");
-  await expect(search).toHaveCSS("margin-right", "0px");
-};
-
-const expectFoldersBeforeFiles = async (filesTree: Locator) => {
-  const rootPaths = await filesTree
-    .getByRole("option")
-    .evaluateAll((rows) =>
-      rows
-        .filter((row) => row.getAttribute("aria-level") === "1")
-        .map((row) => row.getAttribute("data-tree-list-node-id")),
-    );
-  expect(rootPaths.indexOf("zzz-folder")).toBeLessThan(rootPaths.indexOf("LICENSE"));
-};
-
-const moveFileToFolder = async (page: Page, filesTree: Locator, fileName: string, folder: Locator) => {
-  const source = filesTree.getByRole("option", { name: fileName }).locator("xpath=..");
-  await expect(source).toHaveAttribute("draggable", "true");
-  const response = page.waitForResponse(
-    (candidate) => candidate.url().includes(`/file?path=${fileName}`) && candidate.request().method() === "PATCH",
-  );
-  await source.dragTo(folder.locator("xpath=.."));
-  expect((await response).status()).toBe(204);
-};
 
 test("PS-118 browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
@@ -220,59 +157,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await expect(page.locator(".monaco-editor")).toBeVisible();
 
     await search.fill("");
-    await moveFileToFolder(page, filesTree, "LICENSE", assets);
-    await expect.poll(() => existsSync(join(worktreePath, "assets/LICENSE"))).toBe(true);
-    await assets.click({ button: "right" });
-    await expect(page.getByRole("menuitem", { name: "New file" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toHaveCount(0);
-    await page.getByRole("menuitem", { name: "Copy path" }).click();
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(join(worktreePath, "assets"));
-    await assets.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Copy relative path" }).click();
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("assets");
-    await assets.click({ button: "right" });
-    await expect(page.getByRole("menuitem", { name: "Delete folder" })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await filesTree.getByText("Files", { exact: true }).hover();
-    await filesTree.getByRole("button", { name: "New file" }).first().click();
-    await expect(page.getByRole("dialog").filter({ hasText: "New file" })).toHaveCount(0);
-    const newFileInput = filesTree.getByRole("textbox", { name: "New file name" });
-    await newFileInput.fill("created.md");
-    const createResponse = page.waitForResponse(
-      (response) => response.url().includes("/file?path=created.md") && response.request().method() === "POST",
-    );
-    await newFileInput.press("Enter");
-    expect((await createResponse).status()).toBe(201);
-    await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(true);
-    await expect(page.locator(".monaco-editor")).toBeVisible();
-    await expect(page.getByText("Created created.md", { exact: true })).toHaveCount(0);
-
-    const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();
-    await expect(createdFile.getByText("A", { exact: true })).toBeVisible();
-    await expect(createdFile.getByRole("button", { name: "Resource actions" })).toHaveCount(0);
-    await createdFile.click({ button: "right" });
-    await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toHaveCount(0);
-    await page.getByRole("menuitem", { name: "Delete file" }).click();
-    const deleteDialog = page.getByRole("dialog").filter({ hasText: "Delete file" });
-    await expect(deleteDialog.getByText("Delete created.md? This action cannot be undone.")).toBeVisible();
-    const deleteResponse = page.waitForResponse(
-      (response) => response.url().includes("/entry?path=created.md") && response.request().method() === "DELETE",
-    );
-    await deleteDialog.getByRole("button", { name: "Delete file", exact: true }).click();
-    expect((await deleteResponse).status()).toBe(204);
-    await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(false);
-    await expect(page.getByText("Select a file", { exact: true })).toBeVisible();
-
-    await assets.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Delete folder" }).click();
-    const deleteFolderDialog = page.getByRole("dialog").filter({ hasText: "Delete folder" });
-    await expect(deleteFolderDialog.getByText("Delete assets? This action cannot be undone.")).toBeVisible();
-    const deleteFolderResponse = page.waitForResponse(
-      (response) => response.url().includes("/entry?path=assets") && response.request().method() === "DELETE",
-    );
-    await deleteFolderDialog.getByRole("button", { name: "Delete folder", exact: true }).click();
-    expect((await deleteFolderResponse).status()).toBe(204);
-    await expect.poll(() => existsSync(join(worktreePath, "assets"))).toBe(false);
+    await exerciseWorkspaceFileOperations({ page, filesTree, assets, worktreePath });
 
     const unsafe = await request.get(
       `${apiBase}/v1/workspaces/${attempt.workspace.id}/file?path=${encodeURIComponent("../README.md")}`,

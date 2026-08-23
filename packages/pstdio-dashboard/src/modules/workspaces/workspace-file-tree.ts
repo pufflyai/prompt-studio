@@ -20,6 +20,7 @@ import { absoluteWorkspaceEntryPath, workspaceDeleteResource, workspaceIdOf } fr
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
+const CREATE_WORKSPACE_DIRECTORY_ACTION = "workspace-directory.create";
 const COPY_WORKSPACE_ENTRY_PATH_ACTION = "workspace-entry.copy-path";
 const COPY_WORKSPACE_ENTRY_RELATIVE_PATH_ACTION = "workspace-entry.copy-relative-path";
 const DELETE_WORKSPACE_ENTRY_ACTION = "workspace-entry.delete";
@@ -33,15 +34,18 @@ interface DesktopWorkspaceFileApi {
 const desktopWorkspaceFileApi = () =>
   (globalThis as typeof globalThis & { promptStudioDesktop?: DesktopWorkspaceFileApi }).promptStudioDesktop;
 
-const createFileAction = (
+type WorkspaceEntryCreationType = "file" | "directory";
+
+const createEntryAction = (
   resource: ResourceRef,
-  beginCreate: (resource: ResourceRef, parentPath: string) => void,
+  beginCreate: (resource: ResourceRef, parentPath: string, type: WorkspaceEntryCreationType) => void,
+  type: WorkspaceEntryCreationType,
   parentPath = "",
 ): TreeAction => ({
-  id: CREATE_WORKSPACE_FILE_ACTION,
-  label: "New file",
-  icon: "FilePlus2",
-  run: () => beginCreate(resource, parentPath),
+  id: type === "directory" ? CREATE_WORKSPACE_DIRECTORY_ACTION : CREATE_WORKSPACE_FILE_ACTION,
+  label: type === "directory" ? "New folder" : "New file",
+  icon: type === "directory" ? "FolderPlus" : "FilePlus2",
+  run: () => beginCreate(resource, parentPath, type),
 });
 
 const deleteEntryAction = (
@@ -57,6 +61,7 @@ const deleteEntryAction = (
     ctx.layout.openPanel(dashboardWidgetIds.deleteWorkspaceEntry, {
       title: type === "directory" ? "Delete folder" : "Delete file",
       resource: workspaceDeleteResource(resource, path, type),
+      closable: true,
     });
   },
 });
@@ -106,20 +111,32 @@ const finderAvailable = async () => {
 };
 
 export interface WorkspaceFileTreeActions {
-  beginCreate(resource: ResourceRef, parentPath: string): void;
+  beginCreate(resource: ResourceRef, parentPath: string, type: WorkspaceEntryCreationType): void;
   cancelCreate(): void;
-  commitCreate(resource: ResourceRef, parentPath: string, name: string): Promise<void>;
+  commitCreate(
+    resource: ResourceRef,
+    parentPath: string,
+    type: WorkspaceEntryCreationType,
+    name: string,
+  ): Promise<void>;
   moveFile(resource: ResourceRef, sourcePath: string, parentPath: string): Promise<void>;
 }
 
-const inlineCreateNode = (resource: ResourceRef, parentPath: string, actions: WorkspaceFileTreeActions): TreeNode => ({
-  id: `workspace-file:new:${parentPath || "root"}`,
-  label: "New file",
-  icon: "File",
+const inlineCreateNode = (
+  resource: ResourceRef,
+  parentPath: string,
+  type: WorkspaceEntryCreationType,
+  actions: WorkspaceFileTreeActions,
+): TreeNode => ({
+  id: `workspace-${type}:new:${parentPath || "root"}`,
+  label: type === "directory" ? "New folder" : "New file",
+  icon: type === "directory" ? "Folder" : "File",
   inlineInput: {
-    ariaLabel: parentPath ? `New file name in ${parentPath}` : "New file name",
-    placeholder: "file-name",
-    onCommit: (name) => actions.commitCreate(resource, parentPath, name),
+    ariaLabel: parentPath
+      ? `New ${type === "directory" ? "folder" : "file"} name in ${parentPath}`
+      : `New ${type === "directory" ? "folder" : "file"} name`,
+    placeholder: type === "directory" ? "folder-name" : "file-name",
+    onCommit: (name) => actions.commitCreate(resource, parentPath, type, name),
     onCancel: actions.cancelCreate,
   },
 });
@@ -135,13 +152,16 @@ const fileNode = (
   const revealAction = options.revealInFinder ? [revealInFinderAction(resource, entry.path)] : [];
   const deleteAction = deleteEntryAction(ctx, resource, entry.path, entry.type);
   if (entry.type === "directory") {
-    const createAction = createFileAction(resource, actions.beginCreate, entry.path);
+    const createActions = [
+      createEntryAction(resource, actions.beginCreate, "file", entry.path),
+      createEntryAction(resource, actions.beginCreate, "directory", entry.path),
+    ];
     return {
       id: entry.path,
       label: entry.name,
       collapsible: true,
       canDrop: true,
-      contextMenuActions: [createAction, ...copyActions, ...revealAction, deleteAction],
+      contextMenuActions: [...createActions, ...copyActions, ...revealAction, deleteAction],
       showContextMenuTrigger: false,
     };
   }
@@ -166,7 +186,7 @@ export const loadWorkspaceFileEntries = async (
   ctx: WorkbenchModuleContext,
   context: TreeContext,
   actions: WorkspaceFileTreeActions,
-  pendingCreation: { workspaceId: string; parentPath: string } | undefined,
+  pendingCreation: { workspaceId: string; parentPath: string; type: WorkspaceEntryCreationType } | undefined,
   path = "",
 ) => {
   const resource = context.resource;
@@ -192,7 +212,7 @@ export const loadWorkspaceFileEntries = async (
     fileNode(ctx, resource, entry, actions, { change: changeByPath.get(entry.path), revealInFinder }),
   );
   if (pendingCreation?.workspaceId === workspaceId && pendingCreation.parentPath === path) {
-    nodes.unshift(inlineCreateNode(resource, path, actions));
+    nodes.unshift(inlineCreateNode(resource, path, pendingCreation.type, actions));
   }
   if (response.truncated) {
     nodes.push({
@@ -206,7 +226,10 @@ export const loadWorkspaceFileEntries = async (
     {
       id: "workspace-files",
       label: "Files",
-      actions: [createFileAction(resource, actions.beginCreate)],
+      actions: [
+        createEntryAction(resource, actions.beginCreate, "file"),
+        createEntryAction(resource, actions.beginCreate, "directory"),
+      ],
       collapsible: false,
       emptyState: {
         title: context.filter ? "No matching files" : "No files",

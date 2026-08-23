@@ -1,4 +1,4 @@
-import { link, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { link, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
 import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
 
@@ -225,6 +225,22 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
     } catch (error) {
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
         throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
+      }
+      throw error;
+    }
+  },
+
+  async createDirectory(path: string) {
+    const normalizedPath = await requireExistingParent(safeRoot, path);
+    if (await safeRoot.tryResolveExisting(normalizedPath)) {
+      throw new WorkspaceFileAccessError(`Workspace entry already exists: ${path}`, "already-exists");
+    }
+    const resolved = await safeRoot.resolveForWrite(normalizedPath);
+    try {
+      await mkdir(resolved.operationPath);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new WorkspaceFileAccessError(`Workspace entry already exists: ${path}`, "already-exists");
       }
       throw error;
     }

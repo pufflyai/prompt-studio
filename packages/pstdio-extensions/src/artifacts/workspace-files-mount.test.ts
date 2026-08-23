@@ -140,6 +140,19 @@ describe("createWorkspaceFilesMount browsing", () => {
     await expect(mount.deleteEntry("")).rejects.toThrow(/workspace root/i);
   });
 
+  test("creates one directory under an existing parent without replacing entries", async () => {
+    const root = createTempDir();
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "existing.txt"), "keep");
+    const mount = createWorkspaceFilesMount(root);
+
+    await mount.createDirectory("docs/generated");
+
+    expect(await mount.resolveEntryPath("docs/generated")).toMatchObject({ type: "directory" });
+    await expect(mount.createDirectory("existing.txt")).rejects.toThrow(/already exists/i);
+    await expect(mount.createDirectory("missing/generated")).rejects.toThrow(/not found/i);
+  });
+
   test("moves a file into a directory without replacing an existing file", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "docs"));

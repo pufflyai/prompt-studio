@@ -4,6 +4,7 @@ import {
   moveWorkspaceFileInputSchema,
   renameWorkspaceInputSchema,
   workspaceFileContentSchema,
+  workspaceFileEntrySchema,
   workspaceFilesResponseSchema,
   workspaceListItemSchema,
   workspaceSchema,
@@ -24,7 +25,7 @@ export const listWorkspaceFilesQuerySchema = z
 export const workspaceFilePathQuerySchema = z.object({ path: z.string().min(1) }).strict();
 export const writeWorkspaceFileBodySchema = writeWorkspaceFileInputSchema.strict();
 export const moveWorkspaceFileBodySchema = moveWorkspaceFileInputSchema.strict();
-export { workspaceFileContentSchema, workspaceFilesResponseSchema };
+export { workspaceFileContentSchema, workspaceFileEntrySchema, workspaceFilesResponseSchema };
 
 export const uploadStartupLogBodySchema = z.object({ content_base64: z.string() }).strict();
 export const notFoundResponseSchema = z.object({ error: z.string() });

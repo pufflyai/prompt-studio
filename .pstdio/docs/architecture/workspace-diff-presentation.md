@@ -8,8 +8,8 @@ Covers the workspace screen and diff summary badges:
 
 - Route: `/projects/:projectId/tickets/:ticketShorthand/workspaces/:workspaceShorthand`
 - Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`
-- File source: `GET /v1/workspaces/:id/files` and `GET` or `PUT /v1/workspaces/:id/file`
-- Renderers: workspace-owned `Files` and `Diffs` Main sub-panels
+- File source: workspace file, directory, and entry endpoints under `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
+- Renderers: workspace-owned `Files` and `Changes` Main sub-panels
 
 ## Where Users See Diffs
 
@@ -58,9 +58,13 @@ The Files flow uses the same workspace resource:
 2. `GET /v1/workspaces/:id/file?path=...` reads one existing text file or supported image.
 3. Editable text opens in Monaco. Opening does not format, change, or save the file.
 4. `PUT /v1/workspaces/:id/file?path=...` replaces an existing UTF-8 text file after an edit.
-5. A successful save invalidates file-list, selected-file, diff-files, diff-file, and diff-summary queries.
+5. `POST /v1/workspaces/:id/file?path=...` creates a file under an existing directory.
+6. `POST /v1/workspaces/:id/directory?path=...` creates a directory under an existing directory.
+7. `PATCH /v1/workspaces/:id/file?path=...` moves a file without replacing an existing destination.
+8. `DELETE /v1/workspaces/:id/entry?path=...` deletes a file or directory after confirmation.
+9. A successful mutation invalidates file-list, selected-file, diff-files, diff-file, and diff-summary queries.
 
-Workspace file paths are POSIX-style paths relative to the trusted workspace file root. A worktree workspace uses `workspace.worktree_path`. The default `current_branch` workspace uses the project's first server-linked repository. The shared mount rejects absolute, drive-letter, UNC, traversal, separator-confusion, null-byte, and symlink-escape paths. It skips `.git`, limits reads and writes to 1 MiB, and does not create missing files.
+Workspace file paths are POSIX-style paths relative to the trusted workspace file root. A worktree workspace uses `workspace.worktree_path`. The default `current_branch` workspace uses the project's first server-linked repository. The shared mount rejects absolute, drive-letter, UNC, traversal, separator-confusion, null-byte, and symlink-escape paths. It skips `.git`, limits reads and writes to 1 MiB, and requires the parent directory to exist before creating an entry.
 
 ## Backend Diff Generation
 

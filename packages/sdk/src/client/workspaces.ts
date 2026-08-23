@@ -7,6 +7,7 @@ import type {
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
   WorkspaceFileContent,
+  WorkspaceFileEntry,
   WorkspaceFilesResponse,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
@@ -20,6 +21,7 @@ export type WorkspaceClient = {
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   listFiles(workspaceId: string, input?: ListWorkspaceFilesInput): Promise<WorkspaceFilesResponse>;
+  createDirectory(workspaceId: string, path: string): Promise<WorkspaceFileEntry>;
   createFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
   writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
@@ -41,6 +43,12 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   readFile: (workspaceId, path) => {
     const params = new URLSearchParams({ path });
     return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`);
+  },
+  createDirectory: (workspaceId, path) => {
+    const params = new URLSearchParams({ path });
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/directory?${params.toString()}`, {
+      method: "POST",
+    });
   },
   createFile: (workspaceId, path, input) => {
     const params = new URLSearchParams({ path });

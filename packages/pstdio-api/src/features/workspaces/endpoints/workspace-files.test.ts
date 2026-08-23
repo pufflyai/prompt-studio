@@ -6,6 +6,8 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import {
+  createWorkspaceDirectoryHandler,
+  createWorkspaceDirectoryRoute,
   createWorkspaceFileHandler,
   createWorkspaceFileRoute,
   deleteWorkspaceEntryHandler,
@@ -42,6 +44,8 @@ const requestPath = (workspaceId: string, path: string) =>
   `/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`;
 const entryPath = (workspaceId: string, path: string) =>
   `/workspaces/${workspaceId}/entry?path=${encodeURIComponent(path)}`;
+const directoryPath = (workspaceId: string, path: string) =>
+  `/workspaces/${workspaceId}/directory?path=${encodeURIComponent(path)}`;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-"));
@@ -56,6 +60,7 @@ beforeEach(() => {
   app = new OpenAPIHono<AppBindings>();
   app.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
+  app.openapi(createWorkspaceDirectoryRoute, createWorkspaceDirectoryHandler(deps));
   app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   app.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
   app.openapi(moveWorkspaceFileRoute, moveWorkspaceFileHandler(deps));
@@ -205,6 +210,16 @@ describe("GET and PUT /workspaces/:id/file", () => {
 });
 
 describe("POST /workspaces/:id/file and DELETE /workspaces/:id/entry", () => {
+  test("creates an empty workspace directory", async () => {
+    mkdirSync(join(root, "docs"));
+
+    const response = await app.request(directoryPath("workspace-1", "docs/generated"), { method: "POST" });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ path: "docs/generated", name: "generated", type: "directory" });
+    expect(existsSync(join(root, "docs/generated"))).toBe(true);
+  });
+
   test("creates an empty text file and deletes it", async () => {
     mkdirSync(join(root, "docs"));
     const path = requestPath("workspace-1", "docs/new.md");

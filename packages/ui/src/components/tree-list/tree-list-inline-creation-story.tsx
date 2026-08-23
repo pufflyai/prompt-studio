@@ -4,8 +4,11 @@ import { useState } from "react";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
-export const TreeListInlineCreationStory = () => {
+export const TreeListInlineCreationStory = (props: { type?: "file" | "folder" }) => {
+  const { type = "file" } = props;
   const [createdName, setCreatedName] = useState<string>();
+  const label = type === "folder" ? "folder" : "file";
+  const icon = type === "folder" ? <Folder size={16} /> : <FileText size={16} />;
   const sections: TreeListSection[] = [
     {
       id: "files",
@@ -13,17 +16,17 @@ export const TreeListInlineCreationStory = () => {
       nodes: [
         { id: "docs", label: "docs", icon: <Folder size={16} /> },
         ...(createdName
-          ? [{ id: createdName, label: createdName, icon: <FileText size={16} /> }]
+          ? [{ id: createdName, label: createdName, icon }]
           : [
               {
-                id: "new-file",
-                label: "New file",
-                icon: <FileText size={16} />,
+                id: `new-${label}`,
+                label: `New ${label}`,
+                icon,
                 inlineInput: {
-                  ariaLabel: "New file name",
-                  placeholder: "file-name",
+                  ariaLabel: `New ${label} name`,
+                  placeholder: `${label}-name`,
                   onCommit: (value: string) => {
-                    if (!value) throw new Error("Enter a file name.");
+                    if (!value) throw new Error(`Enter a ${label} name.`);
                     setCreatedName(value);
                   },
                 },
@@ -39,7 +42,7 @@ export const TreeListInlineCreationStory = () => {
         <TreeList sections={sections} expandedSectionIds={["files"]} rowVariant="tree" />
       </Stack>
       <Text textStyle="label/XS" color="fg.muted">
-        Enter commits the file name. Escape or blur cancels creation.
+        Enter commits the {label} name. Escape or blur cancels creation.
       </Text>
     </Stack>
   );

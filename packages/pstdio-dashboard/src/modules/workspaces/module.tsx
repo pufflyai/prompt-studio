@@ -138,7 +138,6 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Delete entry",
     region: "overlay",
     singleton: true,
-    closable: true,
     rendererId: dashboardWidgetIds.deleteWorkspaceEntry,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });

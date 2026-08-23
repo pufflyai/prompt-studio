@@ -362,6 +362,10 @@ export const InlineFileCreation: Story = {
   render: () => <TreeListInlineCreationStory />,
 };
 
+export const InlineFolderCreation: Story = {
+  render: () => <TreeListInlineCreationStory type="folder" />,
+};
+
 export const ActionShortcuts: Story = {
   render: () => <ShortcutTreeStory />,
 };

@@ -21,7 +21,7 @@ describe("workspace file client", () => {
     ]);
   });
 
-  test("creates, reads, writes, moves, and deletes one encoded workspace path", async () => {
+  test("creates directories and creates, reads, writes, moves, and deletes one encoded workspace path", async () => {
     const calls: Array<{ path: string; options?: unknown }> = [];
     const request = ((path, options) => {
       calls.push({ path, options });
@@ -29,6 +29,7 @@ describe("workspace file client", () => {
     }) as RequestFn;
     const client = createWorkspaceClient(request);
 
+    await client.createDirectory("workspace 1", "docs/new folder");
     await client.createFile("workspace 1", "docs/read me.md", { content: "" });
     await client.readFile("workspace 1", "docs/read me.md");
     await client.writeFile("workspace 1", "docs/read me.md", { content: "updated" });
@@ -36,6 +37,10 @@ describe("workspace file client", () => {
     await client.deleteEntry("workspace 1", "docs/read me.md");
 
     expect(calls).toEqual([
+      {
+        path: "/v1/workspaces/workspace%201/directory?path=docs%2Fnew+folder",
+        options: { method: "POST" },
+      },
       {
         path: "/v1/workspaces/workspace%201/file?path=docs%2Fread+me.md",
         options: { method: "POST", body: { content: "" } },
