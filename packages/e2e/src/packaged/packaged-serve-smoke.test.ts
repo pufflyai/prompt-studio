@@ -234,7 +234,7 @@ describe("packaged pstdio — core default extensions", () => {
             expect.objectContaining({ enabled: true, installName: "harness-codex" }),
             expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
-            expect.objectContaining({ canUpgrade: true, enabled: true, installName: "pstdio-planner" }),
+            expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
           ]),
