@@ -27,9 +27,10 @@ export const TreeListInlineInputRow = (props: TreeListInlineInputRowProps) => {
     try {
       await input.onCommit(value.trim());
     } catch (cause) {
-      submittingRef.current = false;
       setError(cause instanceof Error ? cause.message : "Could not create file.");
       queueMicrotask(() => inputRef.current?.focus());
+    } finally {
+      submittingRef.current = false;
     }
   };
 

@@ -60,7 +60,7 @@ The Files flow uses the same workspace resource:
 4. `PUT /v1/workspaces/:id/file?path=...` replaces an existing UTF-8 text file after an edit.
 5. `POST /v1/workspaces/:id/file?path=...` creates a file under an existing directory.
 6. `POST /v1/workspaces/:id/directory?path=...` creates a directory under an existing directory.
-7. `PATCH /v1/workspaces/:id/file?path=...` moves a file without replacing an existing destination.
+7. `PATCH /v1/workspaces/:id/entry?path=...` moves a file without replacing an existing destination.
 8. `DELETE /v1/workspaces/:id/entry?path=...` deletes a file or directory after confirmation.
 9. A successful mutation invalidates file-list, selected-file, diff-files, diff-file, and diff-summary queries.
 
