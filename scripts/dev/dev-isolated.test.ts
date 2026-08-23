@@ -5,6 +5,7 @@ import {
   resolveIsolatedBrowserTransport,
   resolveIsolatedDashboardUrl,
   resolveIsolatedDefaultExtensions,
+  resolveIsolatedExtensionReleaseRef,
   resolveIsolatedHome,
 } from "./dev-isolated";
 
@@ -52,5 +53,17 @@ describe("isolated development paths", () => {
 
   test("keeps an explicit default extension configuration", () => {
     expect(resolveIsolatedDefaultExtensions("/repo", { PSTDIO_DEFAULT_EXTENSIONS: '["custom"]' })).toBe('["custom"]');
+  });
+
+  test("uses the Prompt Studio package release for marketplace installs", () => {
+    const readFile = (path: string) => {
+      expect(path).toBe(resolve("/repo/packages/pstdio/package.json"));
+      return JSON.stringify({ version: "0.27.0" });
+    };
+
+    expect(resolveIsolatedExtensionReleaseRef("/repo", {}, readFile)).toBe("pstdio@0.27.0");
+    expect(
+      resolveIsolatedExtensionReleaseRef("/repo", { PSTDIO_EXTENSION_RELEASE_REF: "feature/extensions" }, readFile),
+    ).toBe("feature/extensions");
   });
 });

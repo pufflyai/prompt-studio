@@ -100,12 +100,26 @@ export const resolveIsolatedDefaultExtensions = (
     ],
   });
 
+export const resolveIsolatedExtensionReleaseRef = (
+  repoRoot: string,
+  env: Record<string, string | undefined> = process.env,
+  readFile: (path: string) => string = (path) => readFileSync(path, "utf8"),
+) => {
+  if (env.PSTDIO_EXTENSION_RELEASE_REF) return env.PSTDIO_EXTENSION_RELEASE_REF;
+  const manifest = JSON.parse(readFile(resolve(repoRoot, "packages/pstdio/package.json"))) as { version?: unknown };
+  if (typeof manifest.version !== "string" || !manifest.version) {
+    throw new Error("packages/pstdio/package.json does not provide a version");
+  }
+  return `pstdio@${manifest.version}`;
+};
+
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
   HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
   PSTDIO_DEFAULT_EXTENSIONS: resolveIsolatedDefaultExtensions(repoRoot),
+  PSTDIO_EXTENSION_RELEASE_REF: resolveIsolatedExtensionReleaseRef(repoRoot),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
   ...resolveIsolatedBrowserTransport(hostPorts),
   ...(hostPorts

@@ -8,8 +8,10 @@ export default defineExtension({
         group: "Local Example",
         label: "Say hello from the local example",
       },
-      async run() {
-        return { message: "The repo-local extension is running." };
+      async run(ctx) {
+        const message = "The repo-local extension is running.";
+        await ctx.notify.toast({ message, title: "Local Example", type: "info" });
+        return { message };
       },
     },
   },

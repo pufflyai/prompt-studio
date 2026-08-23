@@ -106,6 +106,9 @@ const resolveExtensionWebviewBuilds = (value: boolean | undefined) => {
   return process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS !== "0";
 };
 
+const resolveExtensionReleaseRef = (configured: string | undefined) =>
+  configured ?? process.env.PSTDIO_EXTENSION_RELEASE_REF;
+
 const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
   if (status === "completed") return sessionEvents.succeeded;
@@ -284,7 +287,7 @@ const wireExtensionRuntimeServices = async (input: {
   const extensionUpgradeService = createExtensionUpgradeService({
     extensionService,
     installExtensionSource: options.installExtensionSource,
-    releaseRef: options.extensionReleaseRef,
+    releaseRef: resolveExtensionReleaseRef(options.extensionReleaseRef),
     repoService,
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({

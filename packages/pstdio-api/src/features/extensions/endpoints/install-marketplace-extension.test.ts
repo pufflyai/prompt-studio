@@ -12,13 +12,16 @@ type AppHandle = Awaited<ReturnType<typeof createApp>>;
 let handle: AppHandle;
 let tempRoot: string;
 let previousDefaultExtensions: string | undefined;
+let previousExtensionReleaseRef: string | undefined;
 let previousPstdioHome: string | undefined;
 
 beforeEach(() => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-install-test-"));
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  previousExtensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF;
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_EXTENSION_RELEASE_REF = "pstdio@0.27.0";
   process.env.PSTDIO_HOME = join(tempRoot, "home");
 });
 
@@ -26,6 +29,8 @@ afterEach(async () => {
   await handle?.close();
   if (previousDefaultExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
   else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  if (previousExtensionReleaseRef === undefined) delete process.env.PSTDIO_EXTENSION_RELEASE_REF;
+  else process.env.PSTDIO_EXTENSION_RELEASE_REF = previousExtensionReleaseRef;
   if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousPstdioHome;
   rmSync(tempRoot, { recursive: true, force: true });
@@ -59,7 +64,6 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
 
     handle = await createApp({
       dbPath: ":memory:",
-      extensionReleaseRef: "pstdio@0.27.0",
       filesRoot: resolveTestFilesRoot(),
       installExtensionSource,
       storagePath: join(tempRoot, "storage"),
