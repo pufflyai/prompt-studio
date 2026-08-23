@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Fetch default extensions from Git, add Marketplace installs and upgrades, and only offer upgrades when a newer release source exists.
+Fetch default extensions from Git, add Marketplace installs and upgrades, only offer upgrades for newer release sources, and seed isolation with a repo-local example.

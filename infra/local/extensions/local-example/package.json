@@ -1,0 +1,19 @@
+{
+  "name": "local-example",
+  "version": "0.1.0",
+  "displayName": "Local Example",
+  "description": "A repo-local extension seeded by the isolated development environment.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "1.0.0-alpha.2"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@pstdio/sdk": "^0.18.0"
+  }
+}

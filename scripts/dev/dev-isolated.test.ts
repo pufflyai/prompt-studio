@@ -4,6 +4,7 @@ import {
   resolveContainerPorts,
   resolveIsolatedBrowserTransport,
   resolveIsolatedDashboardUrl,
+  resolveIsolatedDefaultExtensions,
   resolveIsolatedHome,
 } from "./dev-isolated";
 
@@ -34,5 +35,22 @@ describe("isolated development paths", () => {
 
   test("prints the authenticated loopback origin for isolated dashboards", () => {
     expect(resolveIsolatedDashboardUrl(43001)).toBe("http://127.0.0.1:43001/");
+  });
+
+  test("seeds a repo-local extension beside the release extensions", () => {
+    const config = JSON.parse(resolveIsolatedDefaultExtensions("/repo", {})) as {
+      defaultExtensions: Array<string | { installName: string; skipInstall: boolean; source: string }>;
+    };
+
+    expect(config.defaultExtensions).toContain("pstdio-planner");
+    expect(config.defaultExtensions).toContainEqual({
+      installName: "local-example",
+      skipInstall: true,
+      source: resolve("/repo/infra/local/extensions/local-example"),
+    });
+  });
+
+  test("keeps an explicit default extension configuration", () => {
+    expect(resolveIsolatedDefaultExtensions("/repo", { PSTDIO_DEFAULT_EXTENSIONS: '["custom"]' })).toBe('["custom"]');
   });
 });

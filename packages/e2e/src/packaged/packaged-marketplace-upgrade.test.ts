@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { buildBinary } from "./packaged-helpers";
@@ -16,6 +16,7 @@ beforeAll(() => {
 const REQUIRE_BROWSER = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
 const browserAvailable = existsSync(chromium.executablePath());
 const browserTest = browserAvailable || REQUIRE_BROWSER ? test : test.skip;
+const localExampleSource = resolve(import.meta.dirname, "../../../../infra/local/extensions/local-example");
 
 const runGit = (repo: string, args: string[]) => {
   const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
@@ -65,10 +66,23 @@ const createMarketplaceRepository = (root: string) => {
   return repo;
 };
 
+const createProjectRepository = (root: string) => {
+  const repo = join(root, "project-repo");
+  mkdirSync(repo, { recursive: true });
+  runGit(repo, ["init"]);
+  runGit(repo, ["config", "user.email", "e2e@prompt.studio"]);
+  runGit(repo, ["config", "user.name", "Prompt Studio E2E"]);
+  writeFileSync(join(repo, "README.md"), "# Marketplace upgrade project\n");
+  runGit(repo, ["add", "."]);
+  runGit(repo, ["commit", "-m", "seed project"]);
+  return repo;
+};
+
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
   expect(browserAvailable).toBe(true);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-upgrade-"));
   const repository = createMarketplaceRepository(tempRoot);
+  const projectRepository = createProjectRepository(tempRoot);
   let child: ChildProcess | null = null;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
@@ -79,7 +93,10 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       GIT_CONFIG_KEY_0: `url.file://${repository}.insteadOf`,
       GIT_CONFIG_VALUE_0: "https://github.com/pufflyai/prompt-studio",
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-        defaultExtensions: [{ source: "pstdio-planner", ref: "pstdio@0.26.2", skipInstall: true }],
+        defaultExtensions: [
+          { source: "pstdio-planner", ref: "pstdio@0.26.2", skipInstall: true },
+          { source: localExampleSource, installName: "local-example", skipInstall: true },
+        ],
       }),
     });
     child = started.child;
@@ -96,15 +113,37 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     };
     expect(project.extension_warnings).toBeUndefined();
 
+    const registerRepoResponse = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
+      body: JSON.stringify({ name: "project-repo", path: projectRepository }),
+      headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(registerRepoResponse.status, await registerRepoResponse.text()).toBe(201);
+
     const extensionsResponse = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
       headers: runtimeAuthorization(started.descriptor),
     });
     expect(extensionsResponse.status).toBe(200);
     const extensions = (await extensionsResponse.json()) as {
-      extensions: Array<{ installName: string; version: string | null }>;
+      extensions: Array<{
+        canUpgrade: boolean;
+        installName: string;
+        scope: "global" | "repo";
+        status: string;
+        version: string | null;
+      }>;
     };
     expect(extensions.extensions).toEqual(
-      expect.arrayContaining([expect.objectContaining({ installName: "pstdio-planner", version: "0.10.0" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ installName: "pstdio-planner", version: "0.10.0" }),
+        expect.objectContaining({
+          canUpgrade: false,
+          installName: "local-example",
+          scope: "repo",
+          status: "loaded",
+          version: "0.1.0",
+        }),
+      ]),
     );
 
     browser = await chromium.launch({ headless: true });
@@ -135,6 +174,18 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     expect((await updateResponse).status()).toBe(200);
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.11.0");
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
+
+    await page.getByTestId("extension-detail-back").click();
+    const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
+    await localRow.waitFor();
+    await localRow.click();
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.1.0");
+    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-update")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
+
+    await page.getByTestId("extension-detail-back").click();
+    await installedRow.click();
 
     await page.getByTestId("extension-delete").click();
     const dialog = page.getByRole("dialog").last();

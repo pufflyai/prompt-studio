@@ -16,6 +16,15 @@ const CONTAINER_DASHBOARD_PORT = 5173;
 const CONTAINER_API_PORT = 19841;
 const SEEDED_PROJECT_NAME = "project";
 const ISOLATED_BROWSER_HOST = "127.0.0.1";
+const SEEDED_RELEASE_EXTENSIONS = [
+  "harness-claude-code",
+  "harness-codex",
+  "harness-open-code",
+  "pstdio-base-themes",
+  "pstdio-planner",
+  "pstdio-skills",
+  "extension-lab",
+];
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -75,11 +84,28 @@ export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
 
 export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;
 
+export const resolveIsolatedDefaultExtensions = (
+  repoRoot: string,
+  env: Record<string, string | undefined> = process.env,
+) =>
+  env.PSTDIO_DEFAULT_EXTENSIONS ??
+  JSON.stringify({
+    defaultExtensions: [
+      ...SEEDED_RELEASE_EXTENSIONS,
+      {
+        source: resolve(repoRoot, "infra/local/extensions/local-example"),
+        installName: "local-example",
+        skipInstall: true,
+      },
+    ],
+  });
+
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
   HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
+  PSTDIO_DEFAULT_EXTENSIONS: resolveIsolatedDefaultExtensions(repoRoot),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
   ...resolveIsolatedBrowserTransport(hostPorts),
   ...(hostPorts
