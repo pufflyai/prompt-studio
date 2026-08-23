@@ -64,6 +64,27 @@ test("dashboard keeps project selection open when no project is selected", async
 
   await page.keyboard.press("Escape");
   await expect(projectPicker).toBeVisible();
+
+  await page.evaluate(() => {
+    const dashboardWindow = window as unknown as {
+      __pstdioDashboardWorkbench?: {
+        layout: {
+          getLayout(): { regions: { overlay: { widgets: { contributionId: string; widgetId: string }[] } } };
+          removeWidgetPlacement(widgetId: string): void;
+        };
+      };
+    };
+    const workbench = dashboardWindow.__pstdioDashboardWorkbench;
+    const placement = workbench?.layout
+      .getLayout()
+      .regions.overlay.widgets.find((widget) => widget.contributionId === "dashboard-workbench.project-picker");
+    if (!workbench || !placement) throw new Error("Project picker is not open");
+    workbench.layout.removeWidgetPlacement(placement.widgetId);
+  });
+  await expect(projectPicker).not.toBeVisible();
+
+  await page.reload();
+  await expect(projectPicker).toBeVisible();
 });
 
 test("dashboard selects the only project on first load", async ({ page, request }) => {

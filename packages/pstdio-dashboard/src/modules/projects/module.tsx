@@ -37,6 +37,9 @@ const projectSelectionContentRegions = [
   "overlay",
 ] as const;
 
+const openRequiredProjectPicker = (layout: WorkbenchModuleContext["layout"]) =>
+  layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+
 const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
     id: dashboardWidgetIds.projectPicker,
@@ -74,8 +77,9 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
     activate: () => undefined,
     seed(modeCtx) {
       for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
-      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+      openRequiredProjectPicker(modeCtx.layout);
     },
+    reconcile: (modeCtx) => openRequiredProjectPicker(modeCtx.layout),
   });
 };
 

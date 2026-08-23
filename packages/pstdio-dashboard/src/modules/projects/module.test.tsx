@@ -7,20 +7,44 @@ import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createProjectsModule } from "./module";
 
-describe("createProjectsModule", () => {
+const findProjectPicker = (workbench: ReturnType<typeof createWorkbenchCore>) =>
+  workbench.layout
+    .getLayout()
+    .regions.overlay.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.projectPicker);
+
+describe("required project selection", () => {
   test("keeps project selection open when no project is selected", () => {
     const workbench = createWorkbenchCore();
     workbench.registerModule(createProjectsModule());
 
     workbench.modes.setActiveMode("project-selection");
 
-    const projectPicker = workbench.layout
-      .getLayout()
-      .regions.overlay.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.projectPicker);
-
-    expect(projectPicker?.closable).toBe(false);
+    expect(findProjectPicker(workbench)?.closable).toBe(false);
   });
 
+  test("restores required project selection from a saved layout where it was closed", () => {
+    const snapshots = new Map<string | undefined, WorkbenchSnapshot>();
+    const persistence = {
+      getSnapshot: (scope) => snapshots.get(scope),
+      setSnapshot: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
+    } satisfies WorkbenchPersistenceAdapter;
+    const previousWorkbench = createWorkbenchCore({ persistence });
+    previousWorkbench.registerModule(createProjectsModule());
+    previousWorkbench.modes.setActiveMode("project-selection");
+
+    const previousProjectPicker = findProjectPicker(previousWorkbench);
+    expect(previousProjectPicker).toBeDefined();
+    previousWorkbench.layout.removeWidgetPlacement(previousProjectPicker!.widgetId);
+
+    const restoredWorkbench = createWorkbenchCore({ persistence });
+    restoredWorkbench.registerModule(createProjectsModule());
+    restoredWorkbench.modes.setActiveMode("project-selection");
+
+    expect(findProjectPicker(restoredWorkbench)?.closable).toBe(false);
+  });
+});
+
+describe("createProjectsModule", () => {
   test("updates the selection without forcing a landing resource (bootstrap owns landing)", async () => {
     const workbench = createWorkbenchCore();
 
