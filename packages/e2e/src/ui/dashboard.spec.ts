@@ -52,6 +52,20 @@ test("dashboard loads successfully", async ({ page }) => {
   await expect(page.locator("text=Not found")).not.toBeVisible();
 });
 
+test("dashboard keeps project selection open when no project is selected", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+
+  await page.goto("/");
+
+  const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
+  await expect(projectPicker).toBeVisible();
+  await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(projectPicker).toBeVisible();
+});
+
 test("dashboard selects the only project on first load", async ({ page, request }) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);

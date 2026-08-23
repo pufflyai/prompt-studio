@@ -8,6 +8,19 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createProjectsModule } from "./module";
 
 describe("createProjectsModule", () => {
+  test("keeps project selection open when no project is selected", () => {
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createProjectsModule());
+
+    workbench.modes.setActiveMode("project-selection");
+
+    const projectPicker = workbench.layout
+      .getLayout()
+      .regions.overlay.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.projectPicker);
+
+    expect(projectPicker?.closable).toBe(false);
+  });
+
   test("updates the selection without forcing a landing resource (bootstrap owns landing)", async () => {
     const workbench = createWorkbenchCore();
 

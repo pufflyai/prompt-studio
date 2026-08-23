@@ -74,7 +74,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
     activate: () => undefined,
     seed(modeCtx) {
       for (const region of projectSelectionContentRegions) modeCtx.layout.clearRegion(region);
-      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true });
+      modeCtx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
     },
   });
 };
