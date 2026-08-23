@@ -63,13 +63,16 @@ export const expectFoldersBeforeFiles = async (filesTree: Locator) => {
   expect(rootPaths.indexOf("zzz-folder")).toBeLessThan(rootPaths.indexOf("LICENSE"));
 };
 
-export const moveFileToFolder = async (page: Page, filesTree: Locator, fileName: string, folder: Locator) => {
-  const source = filesTree.getByRole("option", { name: fileName }).locator("xpath=..");
+export const moveEntryToFolder = async (page: Page, filesTree: Locator, sourcePath: string, folder: Locator) => {
+  const source = filesTree.getByRole("option", { name: sourcePath }).locator("xpath=..");
   await expect(source).toHaveAttribute("draggable", "true");
   const response = page.waitForResponse(
-    (candidate) => candidate.url().includes(`/file?path=${fileName}`) && candidate.request().method() === "PATCH",
+    (candidate) =>
+      new URL(candidate.url()).pathname.endsWith("/entry") &&
+      new URL(candidate.url()).searchParams.get("path") === sourcePath &&
+      candidate.request().method() === "PATCH",
   );
-  await source.dragTo(folder.locator("xpath=.."));
+  await source.dragTo(folder);
   expect((await response).status()).toBe(204);
 };
 
@@ -80,8 +83,9 @@ export const exerciseWorkspaceFileOperations = async (input: {
   worktreePath: string;
 }) => {
   const { page, filesTree, assets, worktreePath } = input;
-  await moveFileToFolder(page, filesTree, "LICENSE", assets);
+  await moveEntryToFolder(page, filesTree, "LICENSE", assets);
   await expect.poll(() => existsSync(join(worktreePath, "assets/LICENSE"))).toBe(true);
+  await expect(page.getByLabel("File path assets/LICENSE")).toBeVisible();
   await assets.click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "New file" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "New folder" })).toBeVisible();
@@ -105,7 +109,34 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await newFolderInput.press("Enter");
   expect((await createFolderResponse).status()).toBe(201);
   await expect.poll(() => existsSync(join(worktreePath, "generated"))).toBe(true);
-  await expect(filesTree.getByRole("option", { name: "generated" })).toBeVisible();
+  const generatedFolder = filesTree.getByRole("option", { name: "generated" });
+  await expect(generatedFolder).toBeVisible();
+
+  await moveEntryToFolder(page, filesTree, "zzz-folder", generatedFolder);
+  await expect.poll(() => existsSync(join(worktreePath, "generated/zzz-folder/keep.txt"))).toBe(true);
+  const movedFolder = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder"]');
+  await expect(movedFolder).toBeVisible();
+  await movedFolder.getByText("zzz-folder", { exact: true }).click();
+  const nestedFile = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder/keep.txt"]');
+  await nestedFile.click();
+  await expect(page.getByLabel("File path generated/zzz-folder/keep.txt")).toBeVisible();
+
+  await generatedFolder.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  const renameFolderDialog = page.getByRole("dialog").filter({ hasText: "Rename" });
+  const folderName = renameFolderDialog.getByRole("textbox");
+  await expect(folderName).toHaveValue("generated");
+  await folderName.fill("generated-renamed");
+  const renameFolderResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/entry") &&
+      new URL(response.url()).searchParams.get("path") === "generated" &&
+      response.request().method() === "PATCH",
+  );
+  await renameFolderDialog.getByRole("button", { name: "Rename" }).click();
+  expect((await renameFolderResponse).status()).toBe(204);
+  await expect.poll(() => existsSync(join(worktreePath, "generated-renamed/zzz-folder/keep.txt"))).toBe(true);
+  await expect(page.getByLabel("File path generated-renamed/zzz-folder/keep.txt")).toBeVisible();
 
   await filesTree.getByText("Files", { exact: true }).hover();
   await filesTree.getByRole("button", { name: "New file" }).first().click();
@@ -126,15 +157,33 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await expect(createdFile.getByRole("button", { name: "Resource actions" })).toHaveCount(0);
   await createdFile.click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  const renameFileDialog = page.getByRole("dialog").filter({ hasText: "Rename" });
+  const fileName = renameFileDialog.getByRole("textbox");
+  await expect(fileName).toHaveValue("created.md");
+  await fileName.fill("renamed.md");
+  const renameFileResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/entry") &&
+      new URL(response.url()).searchParams.get("path") === "created.md" &&
+      response.request().method() === "PATCH",
+  );
+  await renameFileDialog.getByRole("button", { name: "Rename" }).click();
+  expect((await renameFileResponse).status()).toBe(204);
+  await expect.poll(() => existsSync(join(worktreePath, "renamed.md"))).toBe(true);
+  await expect(page.getByLabel("File path renamed.md")).toBeVisible();
+
+  const renamedFile = page.getByRole("option").filter({ hasText: "renamed.md" }).first();
+  await renamedFile.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete file" }).click();
   const deleteDialog = page.getByRole("dialog").filter({ hasText: "Delete file" });
-  await expect(deleteDialog.getByText("Delete created.md? This action cannot be undone.")).toBeVisible();
+  await expect(deleteDialog.getByText("Delete renamed.md? This action cannot be undone.")).toBeVisible();
   const deleteResponse = page.waitForResponse(
-    (response) => response.url().includes("/entry?path=created.md") && response.request().method() === "DELETE",
+    (response) => response.url().includes("/entry?path=renamed.md") && response.request().method() === "DELETE",
   );
   await deleteDialog.getByRole("button", { name: "Delete file", exact: true }).click();
   expect((await deleteResponse).status()).toBe(204);
-  await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(false);
+  await expect.poll(() => existsSync(join(worktreePath, "renamed.md"))).toBe(false);
   await expect(page.getByText("Select a file", { exact: true })).toBeVisible();
 
   await assets.click({ button: "right" });

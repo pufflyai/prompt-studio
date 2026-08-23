@@ -31,8 +31,8 @@ import {
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
   listWorkspaceFilesRoute,
-  moveWorkspaceFileHandler,
-  moveWorkspaceFileRoute,
+  moveWorkspaceEntryHandler,
+  moveWorkspaceEntryRoute,
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./endpoints/workspace-files";
@@ -54,7 +54,7 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(createWorkspaceDirectoryRoute, createWorkspaceDirectoryHandler(deps));
   routes.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
   routes.openapi(writeWorkspaceFileRoute, writeWorkspaceFileHandler(deps));
-  routes.openapi(moveWorkspaceFileRoute, moveWorkspaceFileHandler(deps));
+  routes.openapi(moveWorkspaceEntryRoute, moveWorkspaceEntryHandler(deps));
   routes.openapi(deleteWorkspaceEntryRoute, deleteWorkspaceEntryHandler(deps));
   routes.openapi(deleteWorkspaceRoute, deleteWorkspaceHandler(deps));
   routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));

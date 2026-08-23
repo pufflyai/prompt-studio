@@ -43,27 +43,69 @@ const createWorkspaceDirectory = async (ctx: WorkbenchModuleContext, resource: R
   ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, true);
 };
 
-const moveWorkspaceFile = async (
+const remapEntryPath = (path: string | undefined, sourcePath: string, destinationPath: string) => {
+  if (path === sourcePath) return destinationPath;
+  if (path?.startsWith(`${sourcePath}/`)) return `${destinationPath}${path.slice(sourcePath.length)}`;
+  return path;
+};
+
+const moveWorkspaceEntry = async (
   ctx: WorkbenchModuleContext,
   resource: ResourceRef,
   sourcePath: string,
-  parentPath: string,
+  destinationPath: string,
 ) => {
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
-  const fileName = sourcePath.split("/").at(-1);
-  if (!fileName) throw new Error("Workspace file path is missing.");
-  const destinationPath = parentPath ? `${parentPath}/${fileName}` : fileName;
   if (destinationPath === sourcePath) return;
-  const selected = ctx.renderers.getTreeState(dashboardWidgetIds.workspaceFileTree).selectedNodeId === sourcePath;
+  const treeState = ctx.renderers.getTreeState(dashboardWidgetIds.workspaceFileTree);
+  const selectedPath = remapEntryPath(treeState.selectedNodeId, sourcePath, destinationPath);
+  const activePath = workspaceMetadataString(ctx.getPrimaryResource(), "workspaceFilePath");
+  const movedActivePath = remapEntryPath(activePath, sourcePath, destinationPath);
+  const expandedSourcePaths = treeState.expandedNodeIds.filter(
+    (path) => path === sourcePath || path.startsWith(`${sourcePath}/`),
+  );
+  const movedExpandedPaths = expandedSourcePaths
+    .map((path) => remapEntryPath(path, sourcePath, destinationPath))
+    .filter((path): path is string => Boolean(path));
 
-  await getApiClient().workspaces.moveFile(workspaceId, sourcePath, destinationPath);
-  dashboardQueryClient.removeQueries({ queryKey: workspaceFileQueryOptions(workspaceId, sourcePath).queryKey });
-  if (parentPath) ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, parentPath, true);
+  await getApiClient().workspaces.moveEntry(workspaceId, sourcePath, destinationPath);
+  dashboardQueryClient.removeQueries({
+    predicate: (query) => {
+      const [scope, queryWorkspaceId, kind, queryPath] = query.queryKey;
+      return (
+        scope === "workspace-files" &&
+        queryWorkspaceId === workspaceId &&
+        kind === "file" &&
+        typeof queryPath === "string" &&
+        (queryPath === sourcePath || queryPath.startsWith(`${sourcePath}/`))
+      );
+    },
+  });
+  const parentPath = destinationPath.split("/").slice(0, -1).join("/");
+  if (parentPath) movedExpandedPaths.push(parentPath);
   await refreshWorkspaceFiles(ctx, workspaceId);
-  if (!selected) return;
-  ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceFileTree, destinationPath);
-  await ctx.resources.openResource(workspaceFileResource(resource, destinationPath), { replaceActive: true });
+  for (const path of expandedSourcePaths) {
+    ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, false);
+  }
+  for (const path of new Set(movedExpandedPaths)) {
+    ctx.renderers.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, true);
+  }
+  if (selectedPath !== treeState.selectedNodeId) {
+    ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceFileTree, selectedPath);
+  }
+  if (movedActivePath !== activePath && movedActivePath) {
+    await ctx.resources.openResource(workspaceFileResource(resource, movedActivePath), { replaceActive: true });
+  }
+};
+
+const entryNameArg = (rawArgs: unknown, type: "file" | "directory") => {
+  const value = (rawArgs as { name?: unknown } | undefined)?.name;
+  const name = typeof value === "string" ? value.trim() : "";
+  if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+    throw new Error(`Enter a ${type === "directory" ? "folder" : "file"} name without folders.`);
+  }
+  return name;
 };
 
 export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
@@ -118,7 +160,11 @@ const registerWorkspaceFileTree = (
       ),
     moveNode: (source, target, context) => {
       if (!context.resource || !source.canDrag || (target && !target.canDrop)) return;
-      return treeActions.moveFile(context.resource, source.id, target?.id ?? "");
+      const parentPath = target?.id ?? "";
+      const name = source.id.split("/").at(-1);
+      if (!name) return;
+      const destinationPath = parentPath ? `${parentPath}/${name}` : name;
+      return treeActions.moveEntry(context.resource, source.id, destinationPath);
     },
   });
 };
@@ -175,10 +221,7 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
       ctx.renderers.refresh(dashboardWidgetIds.workspaceFileTree);
     },
     commitCreate: async (resource, parentPath, type, rawName) => {
-      const name = rawName.trim();
-      if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
-        throw new Error(`Enter a ${type === "directory" ? "folder" : "file"} name without folders.`);
-      }
+      const name = entryNameArg({ name: rawName }, type);
       const previousPendingCreation = pendingCreation;
       pendingCreation = undefined;
       try {
@@ -190,7 +233,14 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
         throw error;
       }
     },
-    moveFile: (resource, sourcePath, parentPath) => moveWorkspaceFile(ctx, resource, sourcePath, parentPath),
+    moveEntry: (resource, sourcePath, destinationPath) =>
+      moveWorkspaceEntry(ctx, resource, sourcePath, destinationPath),
+    renameEntry: (resource, sourcePath, type, rawArgs) => {
+      const name = entryNameArg(rawArgs, type);
+      const parentPath = sourcePath.split("/").slice(0, -1).join("/");
+      const destinationPath = parentPath ? `${parentPath}/${name}` : name;
+      return moveWorkspaceEntry(ctx, resource, sourcePath, destinationPath);
+    },
   };
 
   ctx.commands.registerCommand(

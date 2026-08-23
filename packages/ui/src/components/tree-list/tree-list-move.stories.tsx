@@ -1,6 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { FileText } from "lucide-react";
+import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
@@ -14,7 +14,8 @@ export default meta;
 type Story = StoryObj<typeof TreeList>;
 
 const MovableFilesStory = () => {
-  const [parent, setParent] = useState<"" | "docs">("");
+  const [fileParent, setFileParent] = useState<"" | "docs">("");
+  const [folderParent, setFolderParent] = useState<"" | "docs">("");
   const file = {
     id: "README.md",
     label: "README.md",
@@ -28,11 +29,29 @@ const MovableFilesStory = () => {
         {
           id: "docs",
           label: "docs",
+          icon: <Folder size={14} />,
           isContainer: true,
           canDrop: true,
-          children: parent === "docs" ? [file] : [],
+          children: [
+            ...(folderParent === "docs"
+              ? [
+                  {
+                    id: "src",
+                    label: "src",
+                    icon: <Folder size={14} />,
+                    isContainer: true,
+                    canDrag: true,
+                    canDrop: true,
+                  },
+                ]
+              : []),
+            ...(fileParent === "docs" ? [file] : []),
+          ],
         },
-        ...(parent ? [] : [file]),
+        ...(folderParent
+          ? []
+          : [{ id: "src", label: "src", icon: <Folder size={14} />, isContainer: true, canDrag: true, canDrop: true }]),
+        ...(fileParent ? [] : [file]),
       ],
     },
   ];
@@ -40,13 +59,17 @@ const MovableFilesStory = () => {
   return (
     <Stack maxW="20rem" h="16rem" borderWidth="1px" gap="0">
       <Text p="xs" textStyle="label/S/regular" color="fg.muted">
-        Drag README.md onto docs or the empty tree background.
+        Drag README.md or src onto docs or the empty tree background.
       </Text>
       <TreeList
         sections={sections}
         expandedNodeIds={["docs"]}
         rowVariant="tree"
-        onMoveNode={(_sourceNodeId, targetNodeId) => setParent(targetNodeId === "docs" ? "docs" : "")}
+        onMoveNode={(sourceNodeId, targetNodeId) => {
+          const parent = targetNodeId === "docs" ? "docs" : "";
+          if (sourceNodeId === "src") setFolderParent(parent);
+          else setFileParent(parent);
+        }}
       />
     </Stack>
   );

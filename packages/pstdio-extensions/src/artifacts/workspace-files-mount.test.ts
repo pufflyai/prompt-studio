@@ -153,18 +153,24 @@ describe("createWorkspaceFilesMount browsing", () => {
     await expect(mount.createDirectory("missing/generated")).rejects.toThrow(/not found/i);
   });
 
-  test("moves a file into a directory without replacing an existing file", async () => {
+  test("moves and renames files and directories without replacing existing entries", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "docs"));
+    mkdirSync(join(root, "source/nested"), { recursive: true });
     writeFileSync(join(root, "notes.txt"), "notes");
     writeFileSync(join(root, "docs/existing.txt"), "keep");
+    writeFileSync(join(root, "source/nested/file.txt"), "nested");
     const mount = createWorkspaceFilesMount(root);
 
-    await mount.moveFile("notes.txt", "docs/notes.txt");
+    await mount.moveEntry("notes.txt", "docs/renamed.txt");
+    await mount.moveEntry("source", "docs/source-renamed");
 
     expect(existsSync(join(root, "notes.txt"))).toBe(false);
-    expect(readFileSync(join(root, "docs/notes.txt"), "utf8")).toBe("notes");
-    await expect(mount.moveFile("docs/notes.txt", "docs/existing.txt")).rejects.toThrow(/already exists/i);
+    expect(readFileSync(join(root, "docs/renamed.txt"), "utf8")).toBe("notes");
+    expect(existsSync(join(root, "source"))).toBe(false);
+    expect(readFileSync(join(root, "docs/source-renamed/nested/file.txt"), "utf8")).toBe("nested");
+    await expect(mount.moveEntry("docs/renamed.txt", "docs/existing.txt")).rejects.toThrow(/already exists/i);
+    await expect(mount.moveEntry("docs", "docs/source-renamed/docs")).rejects.toThrow(/inside itself/i);
     expect(readFileSync(join(root, "docs/existing.txt"), "utf8")).toBe("keep");
   });
 });

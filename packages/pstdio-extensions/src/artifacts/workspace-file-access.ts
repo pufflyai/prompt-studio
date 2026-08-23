@@ -1,4 +1,4 @@
-import { link, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
 import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
 
@@ -26,9 +26,9 @@ export interface WorkspaceMountResolvedEntry {
 }
 
 export class WorkspaceFileAccessError extends Error {
-  readonly code: "already-exists" | "not-found" | "not-file" | "too-large";
+  readonly code: "already-exists" | "invalid-target" | "not-found" | "not-file" | "too-large";
 
-  constructor(message: string, code: "already-exists" | "not-found" | "not-file" | "too-large") {
+  constructor(message: string, code: "already-exists" | "invalid-target" | "not-found" | "not-file" | "too-large") {
     super(message);
     this.name = "WorkspaceFileAccessError";
     this.code = code;
@@ -134,6 +134,17 @@ const requireExistingParent = async (safeRoot: SafeFileRoot, path: string) => {
     throw error;
   }
   return normalizedPath;
+};
+
+const throwWorkspaceMoveError = (error: unknown, destinationPath: string) => {
+  const code = error instanceof Error && "code" in error ? (error as NodeJS.ErrnoException).code : undefined;
+  if (code === "EEXIST" || code === "ENOTEMPTY") {
+    throw new WorkspaceFileAccessError(`Workspace entry already exists: ${destinationPath}`, "already-exists");
+  }
+  if (code === "EINVAL") {
+    throw new WorkspaceFileAccessError("A workspace directory cannot be moved inside itself.", "invalid-target");
+  }
+  throw error;
 };
 
 interface WorkspaceSearchContext {
@@ -246,26 +257,29 @@ export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
     }
   },
 
-  async moveFile(sourcePath: string, destinationPath: string) {
+  async moveEntry(sourcePath: string, destinationPath: string) {
     const normalizedSource = normalizeMountRelativePath(sourcePath);
     const normalizedDestination = await requireExistingParent(safeRoot, destinationPath);
     if (rejectsGitMetadata(normalizedSource) || rejectsGitMetadata(normalizedDestination)) {
       throw new WorkspaceFileAccessError("Git metadata cannot be moved.", "not-file");
     }
-    const { resolved: source } = await requireExistingFile(safeRoot, normalizedSource);
+    const { entryStats, resolved: source } = await requireExistingEntry(safeRoot, normalizedSource);
+    if (!source.relativePath) {
+      throw new WorkspaceFileAccessError("The workspace root cannot be moved.", "invalid-target");
+    }
+    if (normalizedDestination === normalizedSource) return;
+    if (entryStats.isDirectory() && normalizedDestination.startsWith(`${normalizedSource}/`)) {
+      throw new WorkspaceFileAccessError("A workspace directory cannot be moved inside itself.", "invalid-target");
+    }
     if (await safeRoot.tryResolveExisting(normalizedDestination)) {
-      throw new WorkspaceFileAccessError(`Workspace file already exists: ${destinationPath}`, "already-exists");
+      throw new WorkspaceFileAccessError(`Workspace entry already exists: ${destinationPath}`, "already-exists");
     }
     const destination = await safeRoot.resolveForWrite(normalizedDestination);
     try {
-      await link(source.operationPath, destination.operationPath);
+      await rename(source.operationPath, destination.operationPath);
     } catch (error) {
-      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
-        throw new WorkspaceFileAccessError(`Workspace file already exists: ${destinationPath}`, "already-exists");
-      }
-      throw error;
+      throwWorkspaceMoveError(error, destinationPath);
     }
-    await unlink(source.operationPath);
   },
 
   async deleteEntry(path: string) {

@@ -33,7 +33,7 @@ describe("workspace file client", () => {
     await client.createFile("workspace 1", "docs/read me.md", { content: "" });
     await client.readFile("workspace 1", "docs/read me.md");
     await client.writeFile("workspace 1", "docs/read me.md", { content: "updated" });
-    await client.moveFile("workspace 1", "docs/read me.md", "archive/read me.md");
+    await client.moveEntry("workspace 1", "docs/read me.md", "archive/read me.md");
     await client.deleteEntry("workspace 1", "docs/read me.md");
 
     expect(calls).toEqual([
@@ -54,7 +54,7 @@ describe("workspace file client", () => {
         options: { method: "PUT", body: { content: "updated" } },
       },
       {
-        path: "/v1/workspaces/workspace%201/file?path=docs%2Fread+me.md",
+        path: "/v1/workspaces/workspace%201/entry?path=docs%2Fread+me.md",
         options: { method: "PATCH", body: { destination_path: "archive/read me.md" } },
       },
       {

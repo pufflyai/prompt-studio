@@ -3,6 +3,7 @@ import type {
   ListWorkspaceActivityInput as ContractListWorkspaceActivityInput,
   ListWorkspaceActivityResponse as ContractListWorkspaceActivityResponse,
   ListWorkspaceFilesInput as ContractListWorkspaceFilesInput,
+  MoveWorkspaceEntryInput as ContractMoveWorkspaceEntryInput,
   RemoveWorktreeResponse as ContractRemoveWorktreeResponse,
   RenameWorkspaceInput as ContractRenameWorkspaceInput,
   WorkspaceFileContent as ContractWorkspaceFileContent,
@@ -17,6 +18,7 @@ export type ListWorkspaceActivityResponse = ContractListWorkspaceActivityRespons
 export type RemoveWorktreeResponse = ContractRemoveWorktreeResponse;
 export type RenameWorkspaceInput = ContractRenameWorkspaceInput;
 export type ListWorkspaceFilesInput = ContractListWorkspaceFilesInput;
+export type MoveWorkspaceEntryInput = ContractMoveWorkspaceEntryInput;
 export type WorkspaceFileContent = ContractWorkspaceFileContent;
 export type WorkspaceFileEntry = ContractWorkspaceFileEntry;
 export type WorkspaceFilesResponse = ContractWorkspaceFilesResponse;

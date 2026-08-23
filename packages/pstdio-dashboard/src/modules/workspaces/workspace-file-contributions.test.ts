@@ -8,10 +8,6 @@ import { createWorkspacesModule } from "./module";
 const originalFetch = globalThis.fetch;
 const runtime = globalThis as typeof globalThis & {
   __PSTDIO_CONFIG__?: { apiBaseUrl?: string };
-  promptStudioDesktop?: {
-    getAppInfo(): Promise<{ platform: string }>;
-    revealInFinder(path: string): Promise<void>;
-  };
 };
 let apiBaseUrlId = 0;
 
@@ -36,7 +32,6 @@ afterEach(() => {
   dashboardQueryClient.clear();
   globalThis.fetch = originalFetch;
   delete runtime.__PSTDIO_CONFIG__;
-  delete runtime.promptStudioDesktop;
 });
 
 describe("workspace file contributions", () => {
@@ -191,6 +186,7 @@ describe("workspace file operations", () => {
         workspace_id: "workspace-1",
         path: "",
         entries: [
+          { path: "archive", name: "archive", type: "directory" },
           { path: "docs", name: "docs", type: "directory" },
           { path: "README.md", name: "README.md", type: "file", size: 8 },
         ],
@@ -241,15 +237,18 @@ describe("workspace file operations", () => {
       expect.objectContaining({ method: "POST", url: expect.stringContaining("/directory?path=generated") }),
     );
 
-    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["docs", "README.md"]);
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["archive", "docs", "README.md"]);
 
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
+    const archive = sections[0]?.nodes.find((node) => node.id === "archive");
     expect(folder?.iconElement).toBeUndefined();
+    expect(folder?.canDrag).toBe(true);
     expect(folder?.canDrop).toBe(true);
     expect(folder?.actions).toBeUndefined();
     expect(folder?.contextMenuActions?.map((action) => action.label)).toEqual([
       "New file",
       "New folder",
+      "Rename",
       "Copy path",
       "Copy relative path",
       "Delete folder",
@@ -261,6 +260,7 @@ describe("workspace file operations", () => {
     expect(file?.endContent).toMatchObject({ props: { change: "modified" } });
     expect(file?.actions).toBeUndefined();
     expect(file?.contextMenuActions?.map((action) => action.label)).toEqual([
+      "Rename",
       "Copy path",
       "Copy relative path",
       "Delete file",
@@ -268,12 +268,43 @@ describe("workspace file operations", () => {
     expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
 
     const treeRenderer = workbench.renderers.getTreeRenderer(dashboardWidgetIds.workspaceFileTree);
-    if (!file || !folder) throw new Error("Expected file and folder nodes.");
+    if (!file || !folder || !archive) throw new Error("Expected file and folder nodes.");
     await treeRenderer?.moveNode?.(file, folder, { resource: workspace });
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
         body: '{"destination_path":"docs/README.md"}',
+      }),
+    );
+    await treeRenderer?.moveNode?.(folder, archive, { resource: workspace });
+    expect(calls).toContainEqual(
+      expect.objectContaining({
+        method: "PATCH",
+        body: '{"destination_path":"archive/docs"}',
+      }),
+    );
+
+    const renameFile = file.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
+    expect(renameFile).toMatchObject({
+      args: { name: "README.md" },
+      params: { name: { type: "text", label: "File name", required: true } },
+      submitLabel: "Rename",
+    });
+    await renameFile?.run?.({ name: "README-renamed.md" });
+    expect(calls).toContainEqual(
+      expect.objectContaining({
+        method: "PATCH",
+        body: '{"destination_path":"README-renamed.md"}',
+      }),
+    );
+
+    const renameFolder = folder.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
+    expect(renameFolder?.params).toEqual({ name: { type: "text", label: "Folder name", required: true } });
+    await renameFolder?.run?.({ name: "docs-renamed" });
+    expect(calls).toContainEqual(
+      expect.objectContaining({
+        method: "PATCH",
+        body: '{"destination_path":"docs-renamed"}',
       }),
     );
 
@@ -294,37 +325,5 @@ describe("workspace file operations", () => {
           widget.resource?.metadata?.workspaceDeleteType === "directory",
       );
     expect(folderConfirmation?.resource?.metadata?.workspaceDeletePath).toBe("docs");
-  });
-});
-
-describe("workspace Finder action", () => {
-  test("offers Finder reveal only through the macOS desktop bridge", async () => {
-    const revealedPaths: string[] = [];
-    runtime.promptStudioDesktop = {
-      getAppInfo: async () => ({ platform: "darwin" }),
-      revealInFinder: async (path) => {
-        revealedPaths.push(path);
-      },
-    };
-    globalThis.fetch = mock(async (input: string | URL | Request) => {
-      if (String(input).includes("/diff-files?")) return jsonResponse({ workspace_id: "workspace-1", files: [] });
-      return jsonResponse({
-        workspace_id: "workspace-1",
-        path: "",
-        entries: [{ path: "README.md", name: "README.md", type: "file", size: 8 }],
-        truncated: false,
-      });
-    }) as unknown as typeof fetch;
-    const workbench = createWorkbenchCore();
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const workspace = workspaceResource({ workspacePath: "/repo/worktree", workspaceView: "files" });
-
-    const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
-    const reveal = sections[0]?.nodes[0]?.contextMenuActions?.find((action) => action.id === "workspace-entry.reveal");
-    await reveal?.run?.();
-
-    expect(reveal?.label).toBe("Reveal in Finder");
-    expect(revealedPaths).toEqual(["/repo/worktree/README.md"]);
   });
 });

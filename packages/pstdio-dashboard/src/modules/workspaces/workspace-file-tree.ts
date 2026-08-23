@@ -21,6 +21,7 @@ import { absoluteWorkspaceEntryPath, workspaceDeleteResource, workspaceIdOf } fr
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
 const CREATE_WORKSPACE_DIRECTORY_ACTION = "workspace-directory.create";
+const RENAME_WORKSPACE_ENTRY_ACTION = "workspace-entry.rename";
 const COPY_WORKSPACE_ENTRY_PATH_ACTION = "workspace-entry.copy-path";
 const COPY_WORKSPACE_ENTRY_RELATIVE_PATH_ACTION = "workspace-entry.copy-relative-path";
 const DELETE_WORKSPACE_ENTRY_ACTION = "workspace-entry.delete";
@@ -64,6 +65,28 @@ const deleteEntryAction = (
       closable: true,
     });
   },
+});
+
+const renameEntryAction = (
+  resource: ResourceRef,
+  path: string,
+  name: string,
+  type: "file" | "directory",
+  actions: WorkspaceFileTreeActions,
+): TreeAction => ({
+  id: RENAME_WORKSPACE_ENTRY_ACTION,
+  label: "Rename",
+  icon: "Pencil",
+  args: { name },
+  params: {
+    name: {
+      type: "text",
+      label: type === "directory" ? "Folder name" : "File name",
+      required: true,
+    },
+  },
+  submitLabel: "Rename",
+  run: (args) => actions.renameEntry(resource, path, type, args),
 });
 
 const copyPathAction = (ctx: WorkbenchModuleContext, resource: ResourceRef, path: string): TreeAction => ({
@@ -119,7 +142,8 @@ export interface WorkspaceFileTreeActions {
     type: WorkspaceEntryCreationType,
     name: string,
   ): Promise<void>;
-  moveFile(resource: ResourceRef, sourcePath: string, parentPath: string): Promise<void>;
+  moveEntry(resource: ResourceRef, sourcePath: string, destinationPath: string): Promise<void>;
+  renameEntry(resource: ResourceRef, path: string, type: WorkspaceEntryCreationType, args: unknown): Promise<void>;
 }
 
 const inlineCreateNode = (
@@ -149,6 +173,7 @@ const fileNode = (
   options: { change?: string; revealInFinder: boolean },
 ): TreeNode => {
   const copyActions = [copyPathAction(ctx, resource, entry.path), copyRelativePathAction(ctx, entry.path)];
+  const renameAction = renameEntryAction(resource, entry.path, entry.name, entry.type, actions);
   const revealAction = options.revealInFinder ? [revealInFinderAction(resource, entry.path)] : [];
   const deleteAction = deleteEntryAction(ctx, resource, entry.path, entry.type);
   if (entry.type === "directory") {
@@ -160,8 +185,9 @@ const fileNode = (
       id: entry.path,
       label: entry.name,
       collapsible: true,
+      canDrag: true,
       canDrop: true,
-      contextMenuActions: [...createActions, ...copyActions, ...revealAction, deleteAction],
+      contextMenuActions: [...createActions, renameAction, ...copyActions, ...revealAction, deleteAction],
       showContextMenuTrigger: false,
     };
   }
@@ -172,7 +198,7 @@ const fileNode = (
     iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name }),
     endContent: options.change ? createElement(WorkspaceFileChangeBadge, { change: options.change }) : undefined,
     target: { kind: "command", commandId: OPEN_WORKSPACE_FILE_COMMAND, args: { path: entry.path } },
-    contextMenuActions: [...copyActions, ...revealAction, deleteAction],
+    contextMenuActions: [renameAction, ...copyActions, ...revealAction, deleteAction],
     showContextMenuTrigger: false,
     canDrag: true,
   };

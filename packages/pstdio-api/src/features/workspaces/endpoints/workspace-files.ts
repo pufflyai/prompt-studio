@@ -8,7 +8,7 @@ import type {
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
-  moveWorkspaceFileRoute,
+  moveWorkspaceEntryRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -18,7 +18,7 @@ export {
   deleteWorkspaceEntryRoute,
   getWorkspaceFileRoute,
   listWorkspaceFilesRoute,
-  moveWorkspaceFileRoute,
+  moveWorkspaceEntryRoute,
   writeWorkspaceFileRoute,
 } from "./workspace-file-routes";
 
@@ -139,6 +139,9 @@ const mapFileError = (error: unknown) => {
 const mapWorkspaceMutationError = (error: unknown) => {
   if (error instanceof WorkspaceFileAccessError && error.code === "already-exists") {
     return { message: error.message, status: 409 as const };
+  }
+  if (error instanceof WorkspaceFileAccessError && error.code === "invalid-target") {
+    return { message: error.message, status: 400 as const };
   }
   return mapFileError(error);
 };
@@ -275,7 +278,9 @@ export const createWorkspaceDirectoryHandler = (
   };
 };
 
-export const moveWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof moveWorkspaceFileRoute> => {
+export const moveWorkspaceEntryHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof moveWorkspaceEntryRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
@@ -284,7 +289,7 @@ export const moveWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHan
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      await context.mount.moveFile(path, destinationPath);
+      await context.mount.moveEntry(path, destinationPath);
       return c.body(null, 204);
     } catch (error) {
       const mapped = mapWorkspaceMutationError(error);
