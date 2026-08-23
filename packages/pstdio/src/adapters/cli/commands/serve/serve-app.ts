@@ -1,4 +1,5 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
+import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
 import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
@@ -122,7 +123,10 @@ const createRequestHandler = (
 
   return async (request: Request, server: object) => {
     const pathname = new URL(request.url).pathname;
-    if (isApiPath(pathname)) return (await appReady).app.fetch(request, server);
+    if (isApiPath(pathname)) {
+      disableExtensionMutationTimeout(request, server);
+      return (await appReady).app.fetch(request, server);
+    }
 
     // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
     const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);

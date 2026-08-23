@@ -164,16 +164,18 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner" });
     await installedRow.waitFor();
     await installedRow.click();
-    await page.getByTestId("extension-incompatible-upgrade").waitFor();
+    await page.getByTestId("extension-upgrade").waitFor();
+    await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.10.0");
 
     const updateResponse = page.waitForResponse(
       (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
     );
-    await page.getByTestId("extension-incompatible-upgrade").click();
+    await page.getByTestId("extension-upgrade").click();
     expect((await updateResponse).status()).toBe(200);
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.11.0");
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
 
     await page.getByTestId("extension-detail-back").click();
     const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
@@ -182,6 +184,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.1.0");
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-update")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
 
     await page.getByTestId("extension-detail-back").click();

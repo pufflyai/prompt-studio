@@ -7,6 +7,7 @@
     "./dto": "./src/dto.ts",
     "./extensions/install-extension-source": "./src/features/extensions/install-extension-source.ts",
     "./extensions/extension-development": "./src/features/extensions/extension-development.ts",
+    "./extensions/extension-request-timeout": "./src/features/extensions/extension-request-timeout.ts",
     "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts",
     "./runtime": "./src/features/runtime/routes.ts"
   },
