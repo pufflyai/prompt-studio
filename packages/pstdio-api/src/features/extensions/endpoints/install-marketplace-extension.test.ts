@@ -50,7 +50,7 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
         source: {
           kind: "named" as const,
           name: "pstdio-planner",
-          ref: "https://github.com/pufflyai/prompt-studio@current#extensions/pstdio-planner",
+          ref: `https://github.com/pufflyai/prompt-studio@${"b".repeat(40)}#extensions/pstdio-planner`,
         },
         sourceHash: hashExtensionSource(sourcePath),
         targetPath: sourcePath,
@@ -84,7 +84,7 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
     expect(firstInstall.status).toBe(200);
     const first = await firstInstall.json();
     expect(first.extension).toMatchObject({
-      canUpgrade: true,
+      canUpgrade: false,
       enabled: true,
       installName: "pstdio-planner",
       version: "0.11.0",

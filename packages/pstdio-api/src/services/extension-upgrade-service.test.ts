@@ -1,5 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createExtensionUpgradeService, ExtensionUpgradeUnavailableError } from "./extension-upgrade-service";
+import { namedSourceRef } from "../features/extensions/install-extension-source";
+import {
+  createExtensionUpgradeService,
+  ExtensionUpgradeUnavailableError,
+  resolveExtensionReleaseCommit,
+} from "./extension-upgrade-service";
 
 const instance = {
   id: "instance-1",
@@ -16,6 +21,7 @@ const installedSource = {
   source_hash: "old-hash",
   source_kind: "git",
   source_path: "/home/user/.pstdio/extensions/pstdio-planner",
+  source_ref: "https://github.com/pufflyai/prompt-studio@old-commit#extensions/pstdio-planner",
 };
 
 const installed = {
@@ -37,6 +43,94 @@ const installed = {
 };
 
 describe("extension upgrade service", () => {
+  test("resolves an annotated release tag to its commit", async () => {
+    const releaseCommit = "b".repeat(40);
+    const run = mock(async () => ({
+      exitCode: 0,
+      stderr: "",
+      stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
+    }));
+
+    expect(await resolveExtensionReleaseCommit("pstdio@0.27.0", run)).toBe(releaseCommit);
+  });
+
+  test("does not offer an upgrade when the installed source matches the host release", async () => {
+    const releaseCommit = "a".repeat(40);
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      releaseRef: releaseCommit,
+      repoService: { listByProject: async () => [] },
+    });
+
+    const result = await service.canUpgrade({
+      ...installedSource,
+      source_ref: namedSourceRef(releaseCommit, installedSource.install_name),
+    });
+
+    expect(result).toBe(false);
+  });
+
+  test("compares the installed commit with a symbolic host release once", async () => {
+    const releaseCommit = "b".repeat(40);
+    const resolveReleaseCommit = mock(async () => releaseCommit);
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      releaseRef: "pstdio@0.27.0",
+      resolveReleaseCommit,
+      repoService: { listByProject: async () => [] },
+    });
+    const currentSource = {
+      ...installedSource,
+      source_ref: namedSourceRef(releaseCommit, installedSource.install_name),
+    };
+
+    expect(await service.canUpgrade(currentSource)).toBe(false);
+    expect(await service.canUpgrade(currentSource)).toBe(false);
+    expect(resolveReleaseCommit).toHaveBeenCalledTimes(1);
+  });
+
+  test("offers an upgrade when the installed commit is older than the host release", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      releaseRef: "c".repeat(40),
+      repoService: { listByProject: async () => [] },
+    });
+
+    expect(
+      await service.canUpgrade({
+        ...installedSource,
+        source_ref: namedSourceRef("d".repeat(40), installedSource.install_name),
+      }),
+    ).toBe(true);
+  });
+
   test("replaces a named extension with the source from the host release", async () => {
     const installExtensionSource = mock(async () => installed as never);
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);

@@ -46,10 +46,12 @@ export const listProjectExtensionsHandler = (
       // The sync pass already hashed every folder on disk; compare against what the project adopted.
       const diskHashes = new Map(synced.map((entry) => [entry.installName, entry.sourceHash]));
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
-      const extensions = records.map(({ instance, installedSource }) =>
-        toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
-          canUpgrade: deps.extensionUpgradeService?.canUpgrade(installedSource),
-        }),
+      const extensions = await Promise.all(
+        records.map(async ({ instance, installedSource }) =>
+          toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
+            canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+          }),
+        ),
       );
       const installedNames = new Set(records.map(({ installedSource }) => installedSource.install_name));
       const marketplace = extensionMarketplace.map((extension) => ({

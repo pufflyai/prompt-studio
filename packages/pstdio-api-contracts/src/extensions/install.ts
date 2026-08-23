@@ -39,7 +39,7 @@ export const projectExtensionInstanceSchema = z.object({
   lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
-  /** The API can replace this Git-backed marketplace source with the extension from the running Prompt Studio release. */
+  /** A newer source is available for this Git-backed marketplace extension in the running Prompt Studio release. */
   canUpgrade: z.boolean(),
   /** New source is waiting in the extensions root. The project keeps running the adopted version until a person takes it. */
   updateAvailable: z.boolean(),

@@ -59,7 +59,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       source: {
         kind: "named" as const,
         name: "pstdio-planner",
-        ref: "https://github.com/pufflyai/prompt-studio@new-commit#extensions/pstdio-planner",
+        ref: `https://github.com/pufflyai/prompt-studio@${"b".repeat(40)}#extensions/pstdio-planner`,
       },
       sourceHash: "new-hash",
       targetPath: sourcePath,
@@ -95,7 +95,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
     expect(await response.json()).toMatchObject({
       changed: true,
       extension: {
-        canUpgrade: true,
+        canUpgrade: false,
         id: enabled.instance.id,
         status: "loaded",
         version: "2.0.0",

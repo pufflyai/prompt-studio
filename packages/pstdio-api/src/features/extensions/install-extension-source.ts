@@ -35,7 +35,7 @@ import { linkUsableNodeModules } from "./install-extension-source-node-modules";
 
 export { checkExtensionsRoot, formatExtensionsCheck };
 
-const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
+export const PSTDIO_REPOSITORY_URL = "https://github.com/pufflyai/prompt-studio";
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
 export class ExtensionAlreadyInstalledError extends Error {
@@ -246,10 +246,10 @@ const cloneRepoSparse = async (
   const tempParent = dirname(checkoutPath);
   const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
   if (ref) cloneArgs.push("--branch", ref);
-  const clone = await run("git", [...cloneArgs, DEFAULT_REPO_URL, checkoutPath], { cwd: tempParent });
+  const clone = await run("git", [...cloneArgs, PSTDIO_REPOSITORY_URL, checkoutPath], { cwd: tempParent });
   if (clone.exitCode !== 0) {
     const detail = clone.stderr.trim() || clone.stdout.trim();
-    throw new Error(`Failed to clone ${DEFAULT_REPO_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
+    throw new Error(`Failed to clone ${PSTDIO_REPOSITORY_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
   }
 
   const sparse = await run("git", ["sparse-checkout", "set", ...paths], { cwd: checkoutPath });
@@ -265,7 +265,7 @@ const cloneRepoSparse = async (
   return head.stdout.trim();
 };
 
-export const namedSourceRef = (commit: string, name: string) => `${DEFAULT_REPO_URL}@${commit}#extensions/${name}`;
+export const namedSourceRef = (commit: string, name: string) => `${PSTDIO_REPOSITORY_URL}@${commit}#extensions/${name}`;
 
 const prepareNamedSource = async (name: string, tempDir: string, ref?: string) => {
   const checkoutPath = join(tempDir, "prompt-studio");

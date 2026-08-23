@@ -54,7 +54,7 @@ export const setProjectExtensionEnabledHandler = (
 
     return c.json(
       toProjectExtensionInstance(updated, existing.installedSource, undefined, {
-        canUpgrade: deps.extensionUpgradeService?.canUpgrade(existing.installedSource),
+        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(existing.installedSource),
       }),
       200,
     );

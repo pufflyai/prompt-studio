@@ -56,7 +56,7 @@ export const installMarketplaceExtensionHandler = (
             result.installedSource,
             result.installedSource.source_hash,
             {
-              canUpgrade: marketplace.canUpgrade(result.installedSource),
+              canUpgrade: await marketplace.canUpgrade(result.installedSource),
             },
           ),
         },
