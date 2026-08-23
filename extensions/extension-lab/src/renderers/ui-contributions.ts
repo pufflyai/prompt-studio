@@ -75,16 +75,6 @@ export const labResourceKinds = {
   },
 } satisfies NonNullable<ExtensionDefinition["resourceKinds"]>;
 
-export const labResourcePanels = {
-  // A cross-extension contribution: the Lab adds an inspector to the Planner's
-  // open ticket slot without owning the ticket resource or its modes.
-  ticketInsights: {
-    resourceKind: "pstdio-planner.ticket",
-    panel: "labArtifacts",
-    slot: "inspector",
-  },
-} satisfies NonNullable<ExtensionDefinition["resourcePanels"]>;
-
 // The status bar is chrome, not a docked panel: the host renders it in the status
 // surface for the Lab mode and it takes no part in persisted layout.
 export const createLabStatusItems = (baseUrl: string) =>

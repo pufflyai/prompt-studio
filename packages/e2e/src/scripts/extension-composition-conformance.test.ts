@@ -3,9 +3,8 @@ import { dirname, join, resolve } from "node:path";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 
 // Cross-layer conformance for the shipped composition fixtures: the Planner owns the
-// ticket resource, the Extension Lab owns its own resources and contributes an
-// inspector into the Planner's open ticket slot. These are the PS-255 scenario
-// fixtures, so a regression in either manifest fails here instead of in a browser.
+// ticket resource, while the Extension Lab owns only its own resources. A regression
+// in either manifest fails here instead of in a browser.
 
 const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "../../../..");
 const plannerPath = join(repoRoot, "extensions/pstdio-planner");
@@ -30,22 +29,7 @@ describe("shipped extension composition", () => {
       ["glass-lab-artifact", "pstdio.extension-lab"],
       ["blend-project", "pstdio.extension-lab"],
     ]);
-  });
-
-  test("resolves the Lab's cross-extension inspector into the Planner ticket slot", async () => {
-    const runtime = await loadRuntime([plannerPath, labPath]);
-
-    // The Lab writes the namespaced spelling `pstdio-planner.ticket`; it resolves to the
-    // Planner's declared kind.
-    const external = runtime.resourcePanels.find((edge) => edge.id === "extension-lab.ticketInsights");
-    expect(external).toMatchObject({
-      resourceKindId: "ticket",
-      panelId: "extension-lab.labArtifacts",
-      slotId: "inspector",
-    });
-    // Only cross-extension relationships use resourcePanels. The Planner owns its
-    // editor placement directly on the panel contribution.
-    expect(runtime.resourcePanels.map((edge) => edge.id)).toEqual(["extension-lab.ticketInsights"]);
+    expect(runtime.resourcePanels).toEqual([]);
     expect(runtime.panels.find((panel) => panel.id === "pstdio-planner.ticketEditor")?.contribution.show).toEqual({
       for: "ticket",
       region: "main",
@@ -53,13 +37,11 @@ describe("shipped extension composition", () => {
     });
   });
 
-  test("produces the same records and no diagnostics when source order is reversed", async () => {
-    const forward = await loadRuntime([plannerPath, labPath]);
-    const reversed = await loadRuntime([labPath, plannerPath]);
+  test("normalizes Extension Lab without Planner or missing contribution diagnostics", async () => {
+    const runtime = await loadRuntime([labPath]);
 
-    expect(reversed.diagnostics).toEqual([]);
-    const ids = (runtime: typeof forward) => runtime.resourcePanels.map((edge) => edge.id).sort();
-    expect(ids(reversed)).toEqual(ids(forward));
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.resourcePanels).toEqual([]);
   });
 
   test("arranges one shared resource differently in the Animation and Sculpt modes", async () => {

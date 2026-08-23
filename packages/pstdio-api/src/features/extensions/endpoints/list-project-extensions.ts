@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import { listProjectExtensionsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
@@ -46,14 +47,15 @@ export const listProjectExtensionsHandler = (
       // The sync pass already hashed every folder on disk; compare against what the project adopted.
       const diskHashes = new Map(synced.map((entry) => [entry.installName, entry.sourceHash]));
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
+      const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
       const extensions = await Promise.all(
-        records.map(async ({ instance, installedSource }) =>
+        installedRecords.map(async ({ instance, installedSource }) =>
           toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
             canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
           }),
         ),
       );
-      const installedNames = new Set(records.map(({ installedSource }) => installedSource.install_name));
+      const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));
       const marketplace = extensionMarketplace.map((extension) => ({
         ...extension,
         installed: installedNames.has(extension.installName),

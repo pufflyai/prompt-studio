@@ -147,11 +147,7 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.resourceKinds?.["glass-lab-artifact"]?.slots).not.toHaveProperty("primary");
     expect(extension.resourcePanels).not.toHaveProperty("labArtifactDetail");
-    expect(extension.resourcePanels?.ticketInsights).toMatchObject({
-      resourceKind: "pstdio-planner.ticket",
-      panel: "labArtifacts",
-      slot: "inspector",
-    });
+    expect(extension.resourcePanels).toBeUndefined();
   });
 
   test("keeps the remaining lab surfaces", () => {

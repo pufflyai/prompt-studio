@@ -93,6 +93,15 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
       installName: "pstdio-planner",
       version: "0.11.0",
     });
+    await handle.deps.extensionStorageService.setCollectionItem({
+      collection: "tickets",
+      extension_instance_id: first.extension.id,
+      item_id: "PS-1",
+      project_id: project.id,
+      scope_id: project.id,
+      scope_type: "project",
+      value_json: { title: "Keep me" },
+    });
 
     const remove = await handle.app.request(`/v1/projects/${project.id}/extensions/${first.extension.id}`, {
       method: "DELETE",
@@ -105,6 +114,16 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
 
     const reinstall = await install();
     expect(reinstall.status).toBe(200);
+    const reinstalled = await reinstall.json();
+    expect(reinstalled.extension.id).toBe(first.extension.id);
+    expect(
+      await handle.deps.extensionStorageService.listCollection({
+        collection: "tickets",
+        extension_instance_id: first.extension.id,
+        scope_id: project.id,
+        scope_type: "project",
+      }),
+    ).toHaveLength(1);
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(installExtensionSource).toHaveBeenLastCalledWith(
       expect.objectContaining({

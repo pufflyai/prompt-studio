@@ -248,8 +248,8 @@
       "searchPlaceholder": "Search extensions…",
       "installedGroup": "Installed · {{count}}",
       "marketplace": {
-        "group": "Marketplace · {{count}}",
-        "allInstalled": "All marketplace extensions are installed.",
+        "group": "Available · {{count}}",
+        "allInstalled": "All available extensions are installed.",
         "install": "Install",
         "installSucceeded": "{{name}} installed",
         "installFailed": "Extension install failed"
