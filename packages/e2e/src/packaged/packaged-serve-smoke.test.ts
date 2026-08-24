@@ -197,12 +197,6 @@ describe("packaged pstdio — core default extensions", () => {
 
       try {
         const npmConfigPath = join(tempRoot, ".npmrc");
-        const registry = await startLocalWorkspaceRegistry({
-          configPath: npmConfigPath,
-          outputRoot: tempRoot,
-          packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
-        });
-        closeRegistry = registry.close;
         const started = await startPackagedServe(tempRoot, {
           NPM_CONFIG_USERCONFIG: npmConfigPath,
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
@@ -213,6 +207,12 @@ describe("packaged pstdio — core default extensions", () => {
           }),
         });
         child = started.child;
+        const registry = await startLocalWorkspaceRegistry({
+          configPath: npmConfigPath,
+          outputRoot: tempRoot,
+          packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
+        });
+        closeRegistry = registry.close;
 
         const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
           method: "POST",
