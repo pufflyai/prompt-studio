@@ -36,8 +36,6 @@ export const runAttemptCommand = defineCommand({
     ...ticketActionParams,
     repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
-    expectedBaseWorkspaceId: params.text({ label: "Expected base workspace", required: false }),
-    expectedBaseHeadSha: params.text({ label: "Expected base commit", required: false }),
   },
   async run(ctx) {
     const { agent } = ctx.params;
@@ -76,14 +74,6 @@ export const runAttemptCommand = defineCommand({
         }
         return readiness;
       }
-      if (
-        (ctx.params.expectedBaseWorkspaceId !== undefined &&
-          ctx.params.expectedBaseWorkspaceId !== (readiness.baseWorkspaceId ?? "")) ||
-        (ctx.params.expectedBaseHeadSha !== undefined && ctx.params.expectedBaseHeadSha !== readiness.baseHeadSha)
-      ) {
-        return { decision: "wait" as const, reason: "stale-base" as const, dependencyIds: [] };
-      }
-
       const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx, readiness.baseHeadSha);
       const attemptAnchor: ResourceAnchor = {
         type: "planner-attempt",
