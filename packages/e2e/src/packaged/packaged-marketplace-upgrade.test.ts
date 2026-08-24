@@ -1,7 +1,7 @@
 import { beforeAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
@@ -17,6 +17,12 @@ const REQUIRE_BROWSER = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
 const browserAvailable = existsSync(chromium.executablePath());
 const browserTest = browserAvailable || REQUIRE_BROWSER ? test : test.skip;
 const localExampleSource = resolve(import.meta.dirname, "../../../../infra/local/extensions/local-example");
+const localExampleVersion = JSON.parse(readFileSync(join(localExampleSource, "package.json"), "utf8")) as {
+  version: string;
+};
+const cliPackage = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../../pstdio/package.json"), "utf8")) as {
+  version: string;
+};
 
 const runGit = (repo: string, args: string[]) => {
   const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
@@ -62,7 +68,7 @@ const createMarketplaceRepository = (root: string) => {
   writePlanner(repo, "0.11.0", EXTENSION_API_VERSION);
   runGit(repo, ["add", "."]);
   runGit(repo, ["commit", "-m", "current planner"]);
-  runGit(repo, ["tag", "pstdio@0.27.0"]);
+  runGit(repo, ["tag", `pstdio@${cliPackage.version}`]);
   return repo;
 };
 
@@ -141,7 +147,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
           installName: "local-example",
           scope: "repo",
           status: "loaded",
-          version: "0.1.0",
+          version: localExampleVersion.version,
         }),
       ]),
     );
@@ -181,7 +187,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
     await localRow.waitFor();
     await localRow.click();
-    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.1.0");
+    await expectPage(page.getByTestId("extension-detail")).toContainText(`v${localExampleVersion.version}`);
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-update")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);

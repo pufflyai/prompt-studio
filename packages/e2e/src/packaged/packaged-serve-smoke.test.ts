@@ -14,6 +14,15 @@ const SMOKE_TEST_TIMEOUT = 30_000;
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
+const CORE_DEFAULT_EXTENSION_NAMES = [
+  "harness-claude-code",
+  "harness-codex",
+  "harness-open-code",
+  "pstdio-base-themes",
+  "pstdio-planner",
+  "pstdio-reports",
+  "pstdio-skills",
+];
 
 beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) {
@@ -197,15 +206,10 @@ describe("packaged pstdio — core default extensions", () => {
         const started = await startPackagedServe(tempRoot, {
           NPM_CONFIG_USERCONFIG: npmConfigPath,
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: [
-              "harness-claude-code",
-              "harness-codex",
-              "harness-open-code",
-              "pstdio-base-themes",
-              "pstdio-planner",
-              "pstdio-reports",
-              "pstdio-skills",
-            ],
+            defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
+              installName,
+              source: join(REPO_ROOT, "extensions", installName),
+            })),
           }),
         });
         child = started.child;
