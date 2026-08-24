@@ -112,6 +112,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "openLogs",
       "quitApp",
       "retryRuntime",
+      "revealInFinder",
     ]);
     expect(
       await electronApp.evaluate(({ BrowserWindow }) =>

@@ -88,11 +88,20 @@ bun run dev
 
 ### Default first-party extensions
 
-The API installs a configured list of default extensions. Each package uses `pstdio.scope` in `package.json` to select the user extension root or the linked repository's extension root. A default entry can name a published extension or a local folder. Use a local folder during development to install from `extensions/<name>` instead of GitHub.
+The API installs a configured list of default extensions. Packaged hosts fetch named defaults from the
+Prompt Studio Git tag paired with the running host release. Source checkouts use the local
+`extensions/<name>` folders so extension development stays local-first. Each package uses
+`pstdio.scope` in `package.json` to select the user extension root or the linked repository's extension
+root.
 
 The default list is:
 
+- `harness-claude-code`
+- `harness-codex`
+- `harness-open-code`
+- `pstdio-base-themes`
 - `pstdio-planner`
+- `pstdio-reports`
 - `pstdio-skills`
 
 Default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
@@ -106,6 +115,7 @@ type DefaultExtensionEntry =
   | {
       source: string; // named extension OR local folder path
       installName?: string; // override install folder name (== --name)
+      ref?: string; // override the host release tag, mainly for isolated validation
       skipInstall?: boolean; // skip bun install (== --skip-install)
       force?: boolean; // replace existing install (== --force)
     };
@@ -116,6 +126,9 @@ type DefaultExtensionsConfig = {
 ```
 
 Resolution rule (same as the CLI): if `source` starts with `./`, `../`, `/`, or `~/` it is a local path; otherwise it is a named extension resolved against `https://github.com/pufflyai/prompt-studio` at `extensions/<name>`.
+
+The dashboard lists the built-in catalog under Marketplace. An uninstalled entry stays there so the
+user can install it again from the host release.
 
 Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. `bun run pstdio:local:add-dev` uses the following value to install from the monorepo:
 

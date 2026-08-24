@@ -44,7 +44,15 @@ import {
   getExtensionContributionsHandler,
   getExtensionContributionsRoute,
 } from "./endpoints/get-extension-contributions";
+import {
+  getMarketplaceExtensionContributionsHandler,
+  getMarketplaceExtensionContributionsRoute,
+} from "./endpoints/get-marketplace-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
+import {
+  installMarketplaceExtensionHandler,
+  installMarketplaceExtensionRoute,
+} from "./endpoints/install-marketplace-extension";
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
@@ -65,6 +73,7 @@ import {
   updateInstalledExtensionTemplateHandler,
   updateInstalledExtensionTemplateRoute,
 } from "./endpoints/update-installed-extension-template";
+import { upgradeProjectExtensionHandler, upgradeProjectExtensionRoute } from "./endpoints/upgrade-project-extension";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -97,10 +106,13 @@ const registerProjectExtensionRoutes = (
   deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
+  routes.openapi(installMarketplaceExtensionRoute, installMarketplaceExtensionHandler(deps));
+  routes.openapi(getMarketplaceExtensionContributionsRoute, getMarketplaceExtensionContributionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
   routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
   routes.openapi(reloadProjectExtensionRoute, reloadProjectExtensionHandler(deps));
+  routes.openapi(upgradeProjectExtensionRoute, upgradeProjectExtensionHandler(deps));
   routes.openapi(attemptFixProjectExtensionRoute, attemptFixProjectExtensionHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
 };

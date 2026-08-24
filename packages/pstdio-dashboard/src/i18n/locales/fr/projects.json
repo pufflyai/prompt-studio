@@ -228,7 +228,6 @@
       "empty": "Aucune extension installée pour ce projet.",
       "loadError": "Échec du chargement des extensions.",
       "title": "Extensions",
-      "counts": "{{installed}} installées · {{enabled}} activées · {{failing}} en échec",
       "searchPlaceholder": "Rechercher des extensions…",
       "installedGroup": "Installées · {{count}}",
       "noSearchResults": "Aucune extension ne correspond à \"{{query}}\".",
@@ -247,6 +246,7 @@
       "health": {
         "triggerAriaLabel": "Afficher les problèmes de {{name}}",
         "failedToLoad": "Échec du chargement",
+        "incompatibleVersions": "Versions incompatibles",
         "issues_one": "{{count}} problème",
         "issues_other": "{{count}} problèmes",
         "lastLoaded": "Dernier chargement {{time}}",
@@ -259,8 +259,6 @@
         "fixSessionFailed": "Échec du démarrage de la session de correction"
       },
       "update": {
-        "available": "Mise à jour disponible",
-        "description": "Une nouvelle source attend dans le dossier des extensions. Le projet continue d'utiliser la version adoptée jusqu'à ce que vous acceptiez la mise à jour.",
         "action": "Mettre à jour",
         "succeeded": "Extension mise à jour",
         "failed": "Mise à jour refusée"

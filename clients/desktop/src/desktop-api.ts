@@ -12,6 +12,7 @@ export interface PromptStudioDesktopApi {
   getStartupState: () => Promise<DesktopState>;
   retryRuntime: () => Promise<void>;
   openLogs: () => Promise<void>;
+  revealInFinder: (path: string) => Promise<void>;
   copyDiagnostics: () => Promise<void>;
   quitApp: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ export const DESKTOP_CHANNELS = {
   startupState: "pstdio:desktop:startup-state",
   retryRuntime: "pstdio:desktop:retry-runtime",
   openLogs: "pstdio:desktop:open-logs",
+  revealInFinder: "pstdio:desktop:reveal-in-finder",
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
   quitApp: "pstdio:desktop:quit-app",
 } as const;

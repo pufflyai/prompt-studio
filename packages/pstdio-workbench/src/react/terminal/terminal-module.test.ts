@@ -321,4 +321,28 @@ describe("restored terminal selection", () => {
 
     expect(secondary.activeWidgetId).toBe(restoredTerminal?.widgetId);
   });
+
+  test("restores a real terminal when a later persistence scope loads the hidden launcher as active", async () => {
+    let scopedLayout: WorkbenchLayout | undefined;
+    const source = createWorkbenchCore();
+    source.registerModule(createWorkbenchTerminalModule());
+    await source.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+    source.layout.setRegionActiveWidget("secondary", WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+    scopedLayout = structuredClone(source.layout.getLayout());
+
+    const workbench = createWorkbenchCore({
+      layoutPersistence: {
+        getLayout: (scope) => (scope === "project" ? scopedLayout : undefined),
+        setLayout: () => undefined,
+      },
+    });
+    workbench.registerModule(createWorkbenchTerminalModule());
+    workbench.layout.setPersistenceScope("project");
+
+    const secondary = workbench.layout.getLayout().regions.secondary;
+    const restoredTerminal = secondary.widgets.find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
+    expect(secondary.activeWidgetId).toBe(restoredTerminal?.widgetId);
+  });
 });

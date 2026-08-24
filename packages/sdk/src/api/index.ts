@@ -35,15 +35,18 @@ export type {
   ExtensionSettingValueRecord,
   ExtensionTreeItemContribution,
   ExtensionTreeRendererRecord,
+  InstallMarketplaceExtensionResponse,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   ListExtensionSettingsResponse,
   ListProjectExtensionsResponse,
   LocalizableString,
+  MarketplaceExtension,
   ProjectExtensionInstance,
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
+  UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
@@ -76,4 +79,13 @@ export type {
   TerminalSessionRequest,
   TerminalSessionResult,
 } from "./terminal";
-export type { CreateWorkspaceInput, RemoveWorktreeResponse, RenameWorkspaceInput } from "./workspaces";
+export type {
+  CreateWorkspaceInput,
+  ListWorkspaceFilesInput,
+  RemoveWorktreeResponse,
+  RenameWorkspaceInput,
+  WorkspaceFileContent,
+  WorkspaceFileEntry,
+  WorkspaceFilesResponse,
+  WriteWorkspaceFileInput,
+} from "./workspaces";

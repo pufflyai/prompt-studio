@@ -28,19 +28,6 @@ const footerJustifyContent = (hasFooterStart: boolean, hasFooterEnd: boolean) =>
   return "flex-start";
 };
 
-const searchInputChromeProps = {
-  bg: "transparent",
-  border: "0",
-  borderColor: "transparent",
-  borderRadius: "0",
-  boxShadow: "none",
-  transition: "none",
-  _hover: { bg: "transparent", borderColor: "transparent" },
-  _active: { bg: "transparent", borderColor: "transparent" },
-  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-} as const;
-
 export const SearchModalContent = (props: SearchModalContentProps) => {
   const {
     children,
@@ -76,7 +63,7 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
             autoFocus={searchAutoFocus}
             mx="xs"
             h="3rem"
-            {...searchInputChromeProps}
+            variant="borderless"
             onChange={(event) => onSearchChange(event.target.value)}
             onKeyDown={onSearchKeyDown}
           />

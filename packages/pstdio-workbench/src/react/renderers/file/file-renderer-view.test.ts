@@ -11,11 +11,11 @@ describe("file renderer loaded state", () => {
   test("does not treat content loaded for one renderer as current for another renderer", () => {
     const markdownLoadKey = createFileRendererLoadKey({
       fileRendererId: "file-renderer.story.markdown",
-      resourceUri: undefined,
+      resource: undefined,
     });
     const codeLoadKey = createFileRendererLoadKey({
       fileRendererId: "file-renderer.story.code",
-      resourceUri: undefined,
+      resource: undefined,
     });
 
     expect(isCurrentLoadedFile({ loadKey: markdownLoadKey }, codeLoadKey)).toBe(false);
@@ -24,13 +24,19 @@ describe("file renderer loaded state", () => {
   test("treats two documents selected through resource metadata as different documents", () => {
     const bodyLoadKey = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
-      resourceUri: "dashboard-workbench://ticket/ticket-1",
-      resourceMetadata: { documentId: "ticket-body" },
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/ticket-1",
+        metadata: { documentId: "ticket-body" },
+      },
     });
     const fileLoadKey = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
-      resourceUri: "dashboard-workbench://ticket/ticket-1",
-      resourceMetadata: { documentId: "file-1" },
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/ticket-1",
+        metadata: { documentId: "file-1" },
+      },
     });
 
     expect(isCurrentLoadedFile({ loadKey: bodyLoadKey }, fileLoadKey)).toBe(false);
@@ -39,13 +45,19 @@ describe("file renderer loaded state", () => {
   test("keeps one document stable when unrelated metadata is reordered", () => {
     const first = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
-      resourceUri: "dashboard-workbench://ticket/ticket-1",
-      resourceMetadata: { documentId: "file-1", projectId: "proj-1" },
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/ticket-1",
+        metadata: { documentId: "file-1", nested: { projectId: "proj-1", workspaceId: "workspace-1" } },
+      },
     });
     const second = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
-      resourceUri: "dashboard-workbench://ticket/ticket-1",
-      resourceMetadata: { projectId: "proj-1", documentId: "file-1" },
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/ticket-1",
+        metadata: { nested: { workspaceId: "workspace-1", projectId: "proj-1" }, documentId: "file-1" },
+      },
     });
 
     expect(isCurrentLoadedFile({ loadKey: first }, second)).toBe(true);

@@ -1,7 +1,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { getExtensionApiVersionError } from "pstdio-extensions";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
-import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
+import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 
 type InstalledExtensionDiscoveryDeps = {
@@ -68,9 +69,15 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
     try {
       loaded = await load(sourcePath);
     } catch (error) {
-      deps.onLoadFailure?.({ error, installName: entry.name, sourcePath });
-      // User-edited installed sources can become invalid; project creation should still sync healthy extensions.
-      continue;
+      try {
+        const metadataOnly = readExtensionSourceMetadata(sourcePath);
+        if (!getExtensionApiVersionError(metadataOnly.metadata.name, metadataOnly.metadata.enginesPstdio)) throw error;
+        loaded = metadataOnly;
+      } catch {
+        deps.onLoadFailure?.({ error, installName: entry.name, sourcePath });
+        // User-edited installed sources can become invalid; project creation should still sync healthy extensions.
+        continue;
+      }
     }
 
     presentSourcePaths.push(sourcePath);
@@ -104,7 +111,6 @@ const syncSnapshotForProject = async (
     await deps.extensionService.syncInstalledSourceForProject({
       ...extension,
       projectId: deps.projectId,
-      sourceKind: "local_path",
     });
     // The hash of the folder as it is on disk, which the caller compares against the adopted hash.
     synced.push({ installName: extension.installName, sourceHash: extension.sourceHash ?? null });

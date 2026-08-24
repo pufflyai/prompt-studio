@@ -134,15 +134,23 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
     placement,
   );
   // A sub-panels-only Location presents no content of its own: hand the active
-  // slot to its first Sub Panel as soon as one exists.
+  // slot to its first Sub Panel as soon as one exists. A restored selection has
+  // already been applied above and remains the active Sub Panel when valid.
   if (input.getWidget(placement.contributionId)?.subPanelsOnly) {
-    const subPanel = input
-      .getLayout()
-      .regions.main.widgets.find(
-        (candidate) =>
-          candidate.role === "sub-panel" &&
-          (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
-      );
+    const main = input.getLayout().regions.main;
+    const activeSubPanel = main.widgets.find(
+      (candidate) =>
+        candidate.widgetId === main.activeWidgetId &&
+        candidate.role === "sub-panel" &&
+        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
+    );
+    if (activeSubPanel) return input.panelMethods.getActivePanel("main")!;
+
+    const subPanel = main.widgets.find(
+      (candidate) =>
+        candidate.role === "sub-panel" &&
+        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
+    );
     if (subPanel) return input.panelMethods.activatePanel(subPanel.widgetId);
   }
   return input.panelMethods.getActivePanel("main")!;

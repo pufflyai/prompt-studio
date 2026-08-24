@@ -211,6 +211,10 @@ const bootstrap = async () => {
     getState: () => state,
     retryRuntime: startRuntime,
     openLogs: () => shell.showItemInFolder(resolveDefaultLogPath()),
+    revealInFinder: (path) => {
+      if (process.platform !== "darwin") throw new Error("Reveal in Finder is only available on macOS.");
+      shell.showItemInFolder(path);
+    },
     copyDiagnostics: () => {
       const runtime = runtimeManager.runtime?.descriptor;
       clipboard.writeText(

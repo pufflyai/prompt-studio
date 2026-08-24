@@ -1,4 +1,5 @@
 import { apiWebSocket, createApp } from "pstdio-api/app";
+import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
 import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
@@ -73,7 +74,12 @@ const reportStartupError = (error: Error) => {
 
 const defaultDeps: ServeAppDeps = {
   createApp: async (runtimeHost, onDatabaseLockAcquired) =>
-    createApp({ filesRoot: await resolveFilesRoot(), onDatabaseLockAcquired, runtimeHost }),
+    createApp({
+      filesRoot: await resolveFilesRoot(),
+      onDatabaseLockAcquired,
+      runtimeHost,
+      extensionReleaseRef: `pstdio@${CLI_VERSION}`,
+    }),
   injectConfig,
   isCompiledBinary,
   loadEmbeddedAssets,
@@ -117,7 +123,10 @@ const createRequestHandler = (
 
   return async (request: Request, server: object) => {
     const pathname = new URL(request.url).pathname;
-    if (isApiPath(pathname)) return (await appReady).app.fetch(request, server);
+    if (isApiPath(pathname)) {
+      disableExtensionMutationTimeout(request, server);
+      return (await appReady).app.fetch(request, server);
+    }
 
     // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
     const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);

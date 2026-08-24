@@ -15,6 +15,16 @@ const SERVICE = "prompt-studio";
 const CONTAINER_DASHBOARD_PORT = 5173;
 const CONTAINER_API_PORT = 19841;
 const SEEDED_PROJECT_NAME = "project";
+const ISOLATED_BROWSER_HOST = "127.0.0.1";
+const SEEDED_RELEASE_EXTENSIONS = [
+  "harness-claude-code",
+  "harness-codex",
+  "harness-open-code",
+  "pstdio-base-themes",
+  "pstdio-planner",
+  "pstdio-skills",
+  "extension-lab",
+];
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -68,15 +78,48 @@ export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
 };
 
 export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
-  PSTDIO_TERMINAL_ORIGINS: `http://localhost:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
-  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://localhost:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
+  PSTDIO_TERMINAL_ORIGINS: `http://${ISOLATED_BROWSER_HOST}:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
+  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://${ISOLATED_BROWSER_HOST}:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
 });
+
+export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;
+
+export const resolveIsolatedDefaultExtensions = (
+  repoRoot: string,
+  env: Record<string, string | undefined> = process.env,
+) =>
+  env.PSTDIO_DEFAULT_EXTENSIONS ??
+  JSON.stringify({
+    defaultExtensions: [
+      ...SEEDED_RELEASE_EXTENSIONS,
+      {
+        source: resolve(repoRoot, "infra/local/extensions/local-example"),
+        installName: "local-example",
+        skipInstall: true,
+      },
+    ],
+  });
+
+export const resolveIsolatedExtensionReleaseRef = (
+  repoRoot: string,
+  env: Record<string, string | undefined> = process.env,
+  readFile: (path: string) => string = (path) => readFileSync(path, "utf8"),
+) => {
+  if (env.PSTDIO_EXTENSION_RELEASE_REF) return env.PSTDIO_EXTENSION_RELEASE_REF;
+  const manifest = JSON.parse(readFile(resolve(repoRoot, "packages/pstdio/package.json"))) as { version?: unknown };
+  if (typeof manifest.version !== "string" || !manifest.version) {
+    throw new Error("packages/pstdio/package.json does not provide a version");
+  }
+  return `pstdio@${manifest.version}`;
+};
 
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
   HOST_WORKTREE: repoRoot,
   HOST_GIT_COMMON_DIR: resolveGitCommonDir(repoRoot),
   HOST_PSTDIO_HOME: resolveIsolatedHome(repoRoot, projectName),
+  PSTDIO_DEFAULT_EXTENSIONS: resolveIsolatedDefaultExtensions(repoRoot),
+  PSTDIO_EXTENSION_RELEASE_REF: resolveIsolatedExtensionReleaseRef(repoRoot),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
   ...resolveIsolatedBrowserTransport(hostPorts),
   ...(hostPorts
@@ -216,15 +259,16 @@ const main = async () => {
     : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
   const token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome) : undefined;
   const project = await waitForSeededProject(apiPort, token);
+  const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(
     resolve(pstdioHome, "..", "connection.json"),
-    `${JSON.stringify({ apiPort, dashboardUrl: `http://127.0.0.1:${port}/`, pstdioHome }, null, 2)}\n`,
+    `${JSON.stringify({ apiPort, dashboardUrl, pstdioHome }, null, 2)}\n`,
   );
   process.stdout.write(`\nStack:     ${projectName}\n`);
-  process.stdout.write(`Dashboard: http://localhost:${port}/\n`);
+  process.stdout.write(`Dashboard: ${dashboardUrl}\n`);
   if (desktopMode) process.stdout.write(`Desktop home: ${pstdioHome}\n`);
-  process.stdout.write(`Project:   http://localhost:${port}/projects/${project.id}/\n`);
-  process.stdout.write(`Sessions:  http://localhost:${port}/projects/${project.id}/sessions\n`);
+  process.stdout.write(`Project:   ${dashboardUrl}projects/${project.id}/\n`);
+  process.stdout.write(`Sessions:  ${dashboardUrl}projects/${project.id}/sessions\n`);
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);
   process.stdout.write(`Stop:      bun run dev:isolated -- --name ${projectName} --down\n`);
 };

@@ -12,6 +12,11 @@ export {
   readPackageAssetText,
   resolvePackageAsset,
   resolvePackageAssetPath,
+  WorkspaceFileAccessError,
+  type WorkspaceMountEntry,
+  type WorkspaceMountFile,
+  type WorkspaceMountResolvedEntry,
+  type WorkspaceMountSearchResult,
 } from "./artifacts";
 
 export {
@@ -40,6 +45,7 @@ export {
   findReservedKeybindingConflict,
   findReservedKeybindingConflicts,
   formatCheckReport,
+  getExtensionApiVersionError,
   type HostCommandExecuteInput,
   keybindingDedupeEntries,
   type LoadExtensionRuntimeInput,
@@ -58,6 +64,7 @@ export {
   type ReservedKeybindingPlatform,
   type ReservedKeybindingReason,
   readPackageManifest,
+  readPackageManifestMetadata,
   toCommandPaletteContributions,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";

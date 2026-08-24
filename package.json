@@ -55,6 +55,7 @@
     "clients/*",
     "packages/*",
     "extensions/*",
+    "infra/local/extensions/*",
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-planner-loops",
     "scripts"

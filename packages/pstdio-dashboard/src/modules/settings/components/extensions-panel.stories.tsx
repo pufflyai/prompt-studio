@@ -23,6 +23,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     lastLoadedAt: "2026-08-04T09:14:00.000Z",
     enabled: true,
     config: {},
+    canUpgrade: true,
     updateAvailable: false,
   },
   {
@@ -45,6 +46,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     },
     enabled: true,
     config: {},
+    canUpgrade: false,
     updateAvailable: false,
   },
   {
@@ -62,6 +64,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     status: "disabled",
     enabled: false,
     config: {},
+    canUpgrade: true,
     updateAvailable: false,
   },
 ];
@@ -99,6 +102,21 @@ const diagnostics: ExtensionDiagnostic[] = [
   },
 ];
 
+const marketplace = [
+  {
+    installName: "pstdio-reports",
+    displayName: "Prompt Studio Reports",
+    description: "Workspace reports for agent handoffs.",
+    installed: false,
+  },
+  {
+    installName: "pstdio-planner",
+    displayName: "Prompt Studio Planner",
+    description: "Tickets, managed attempts, reviews, and templates.",
+    installed: false,
+  },
+];
+
 const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
@@ -112,14 +130,7 @@ type Story = StoryObj<typeof ExtensionsPanelView>;
 export const Populated: Story = {
   args: {
     extensions: installedExtensions,
-    diagnostics,
-    automations,
-  },
-};
-
-export const UpdateAvailable: Story = {
-  args: {
-    extensions: installedExtensions.map((extension, index) => ({ ...extension, updateAvailable: index === 0 })),
+    marketplace,
     diagnostics,
     automations,
   },
@@ -128,6 +139,7 @@ export const UpdateAvailable: Story = {
 export const Empty: Story = {
   args: {
     extensions: [],
+    marketplace,
     diagnostics: [],
     automations: [],
   },
@@ -136,15 +148,27 @@ export const Empty: Story = {
 export const Mutating: Story = {
   args: {
     extensions: installedExtensions,
+    marketplace,
     diagnostics: [],
     automations,
     togglingInstanceId: "planner-instance",
   },
 };
 
+export const InstallingMultipleAvailableExtensions: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
+  },
+};
+
 export const HealthPopoverOpen: Story = {
   args: {
     extensions: installedExtensions,
+    marketplace,
     diagnostics,
     automations,
   },

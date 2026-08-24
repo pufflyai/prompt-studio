@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
+import { TreeListInlineCreationStory } from "./tree-list-inline-creation-story";
 import { applyTreeListOrder } from "./tree-list-order-filter";
 import { useTreeListVisibilityStore, type VisibilityOverride } from "./tree-list-visibility.store";
 import { buildTreeVisibilityMenuActions, filterVisibleSections } from "./tree-list-visibility-filter";
@@ -355,6 +356,14 @@ export const SectionedNavigation: Story = {
 
 export const FileTree: Story = {
   render: () => <FileTreeStory />,
+};
+
+export const InlineFileCreation: Story = {
+  render: () => <TreeListInlineCreationStory />,
+};
+
+export const InlineFolderCreation: Story = {
+  render: () => <TreeListInlineCreationStory type="folder" />,
 };
 
 export const ActionShortcuts: Story = {

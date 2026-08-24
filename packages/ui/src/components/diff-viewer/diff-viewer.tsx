@@ -105,7 +105,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
   const resolvedSelectedPath =
     selectedPath ?? defaultSelectedPath ?? resolveSelectedPath(filteredDiffPaths, filteredFilePaths);
   const hasDiffs = filteredDiffs.length > 0;
-  const emptyDiffTitle = normalizedSearchQuery ? "No matching diffs" : "No changes";
+  const emptyDiffTitle = normalizedSearchQuery ? "No matching changes" : "No changes";
   const showDiffEmptyState = !loading && !hasDiffs;
   const totalDiff = sumDiffStats(filteredDiffs);
   const hasExpandableItems = folderIds.length > 0 || filteredDiffs.length > 0;
@@ -203,7 +203,6 @@ export const DiffViewer = (props: DiffViewerProps) => {
         minW="0"
         resizablePanel={
           <FileListPanel
-            title="Changed files"
             paths={filteredFilePaths}
             selectedPath={resolvedSelectedPath}
             viewMode={viewMode}

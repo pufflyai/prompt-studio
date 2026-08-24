@@ -1,13 +1,15 @@
-interface WorkspaceForkPointDiffInput {
+import type { WorkspaceDiffMode } from "../data/workspace-queries";
+
+interface WorkspaceDiffInput {
   resourceId?: string;
   metadata?: Record<string, unknown>;
 }
 
-export const resolveWorkspaceForkPointDiffWorkspaceId = (input: WorkspaceForkPointDiffInput) => {
-  if (input.metadata?.workspaceType === "current_branch") return undefined;
-
+export const resolveWorkspaceDiffRequest = (input: WorkspaceDiffInput) => {
   const metadataWorkspaceId = input.metadata?.workspaceId;
-  if (typeof metadataWorkspaceId === "string") return metadataWorkspaceId;
+  const workspaceId = typeof metadataWorkspaceId === "string" ? metadataWorkspaceId : input.resourceId;
+  if (!workspaceId) return undefined;
 
-  return input.resourceId;
+  const mode: WorkspaceDiffMode = input.metadata?.workspaceType === "current_branch" ? "current" : "fork_point";
+  return { workspaceId, mode };
 };

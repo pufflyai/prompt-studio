@@ -87,9 +87,20 @@ const shouldWaitForExtensions = (ctx: Parameters<WorkbenchModuleContribution["ac
   !isExtensionsReadyForSelectedProject(ctx) &&
   (isExtensionRestoreResource(resource) || !canOpenResource(ctx, resource));
 
+const shouldWaitForHistoryExtensions = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  if (!hasHistoryForSelectedProject(ctx) || isExtensionsReadyForSelectedProject(ctx)) return false;
+
+  const history = ctx.history.store.getState();
+  const entry = history.entries[history.cursor];
+  if (!entry) return false;
+  if (entry.resource) return shouldWaitForExtensions(ctx, entry.resource);
+  if (entry.modeId && !ctx.modes.getMode(entry.modeId)) return true;
+  return Boolean(entry.contributionId && !ctx.layout.getWidget(entry.contributionId));
+};
+
 const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   if (!hasHistoryForSelectedProject(ctx)) return "empty" as const;
-  if (!isExtensionsReadyForSelectedProject(ctx)) return "pending" as const;
+  if (shouldWaitForHistoryExtensions(ctx)) return "pending" as const;
   return ctx.history.restore() ? ("restored" as const) : ("empty" as const);
 };
 
@@ -169,7 +180,7 @@ const openSelectedProjectLandingWhenReady = (
 
   open();
   const lastResource = ctx.lastResource.get();
-  const shouldWaitForHistory = hasHistoryForSelectedProject(ctx) && !isExtensionsReadyForSelectedProject(ctx);
+  const shouldWaitForHistory = shouldWaitForHistoryExtensions(ctx);
   if (!lastResource && !shouldWaitForHistory) return undefined;
 
   const shouldWaitForSyncedResource = lastResource ? isWaitingForSyncedResource(lastResource) : false;

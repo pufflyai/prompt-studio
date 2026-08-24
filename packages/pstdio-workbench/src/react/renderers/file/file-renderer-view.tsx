@@ -1,4 +1,4 @@
-import { Button, Center, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   FileRendererContent,
@@ -22,6 +22,7 @@ import {
 } from "./file-renderer-edit-state";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
+import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -81,11 +82,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const resource = props.placement?.resource;
   const sectionNavigation = getFileSectionNavigation(resource);
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
-  const loadKey = createFileRendererLoadKey({
-    fileRendererId: contribution.id,
-    resourceUri: resource?.uri,
-    resourceMetadata: resource?.metadata,
-  });
+  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
@@ -127,9 +124,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   // Contribution refresh re-registers an identical contribution as a new
   // object, and a save that changes the document title produces a new resource
-  // object with a fresh label. Identity is the contribution id plus the
-  // resource URI (both inside loadKey); callbacks read the latest objects
-  // through refs so neither replacement resets an open editor.
+  // object with a fresh label. The load key uses resource values instead of
+  // object identity, while callbacks read the latest objects through refs.
   const contributionRef = useRef(contribution);
   const resourceRef = useRef(resource);
   useEffect(() => {
@@ -269,7 +265,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     );
   }
 
-  const isEditable = Boolean(contribution.save) && !currentLoaded.dataUrl;
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
@@ -285,16 +280,26 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   };
 
   return (
-    <FileRendererContentView
-      content={currentLoaded}
-      editorKey={editorKey}
-      errorNotice={errorNotice}
-      isEditable={isEditable}
-      onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
-      onChange={handleChange}
-      rendererRef={rendererRef}
-      sectionNavigation={editorSectionNavigation}
-      title={contribution.title}
-    />
+    <Flex direction="column" h="full" minH="0" bg="bg">
+      {currentLoaded.filePath ? (
+        <FileRendererPathHeader
+          fileName={currentLoaded.fileName ?? currentLoaded.filePath}
+          filePath={currentLoaded.filePath}
+        />
+      ) : null}
+      <Box flex="1" minH="0">
+        <FileRendererContentView
+          content={currentLoaded}
+          editorKey={editorKey}
+          errorNotice={errorNotice}
+          contributionCanSave={Boolean(contribution.save)}
+          onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
+          onChange={handleChange}
+          rendererRef={rendererRef}
+          sectionNavigation={editorSectionNavigation}
+          title={contribution.title}
+        />
+      </Box>
+    </Flex>
   );
 };

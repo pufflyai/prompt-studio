@@ -8,6 +8,7 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   getStartupState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.startupState),
   retryRuntime: () => ipcRenderer.invoke(DESKTOP_CHANNELS.retryRuntime),
   openLogs: () => ipcRenderer.invoke(DESKTOP_CHANNELS.openLogs),
+  revealInFinder: (path: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.revealInFinder, path),
   copyDiagnostics: () => ipcRenderer.invoke(DESKTOP_CHANNELS.copyDiagnostics),
   quitApp: () => ipcRenderer.invoke(DESKTOP_CHANNELS.quitApp),
 });

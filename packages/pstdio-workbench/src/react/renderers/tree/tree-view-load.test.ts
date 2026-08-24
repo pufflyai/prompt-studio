@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createTreeRendererRegistry, createWorkbenchRendererRegistry } from "../../../core";
-import { expandDefaultTreeSections, loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
+import {
+  expandDefaultTreeSections,
+  loadExpandedTreeChildren,
+  loadTreeData,
+  shouldShowTreeLoading,
+} from "./tree-view-load";
 
 const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
@@ -49,6 +54,33 @@ describe("loadTreeData", () => {
     registration.dispose();
 
     await expect(loadTreeData(trees, "workbench.navigation")).resolves.toBeNull();
+  });
+});
+
+describe("loadExpandedTreeChildren", () => {
+  test("reloads every expanded lazy folder without collapsing it", async () => {
+    const trees = createTrees();
+    const resource = { kind: "workspace", uri: "pstdio://workspaces/one", label: "one" };
+
+    trees.registerTreeRenderer({
+      id: "workspace.files",
+      title: "Files",
+      getBody: () => [{ id: "files", nodes: [{ id: "src", label: "src", collapsible: true }] }],
+      getChildren: (node) =>
+        node.id === "src"
+          ? [{ id: "src/components", label: "components", collapsible: true }]
+          : [{ id: "src/components/button.tsx", label: "button.tsx" }],
+    });
+
+    const data = await loadTreeData(trees, "workspace.files", { resource });
+    if (!data) throw new Error("Expected tree data.");
+
+    await expect(
+      loadExpandedTreeChildren(trees, "workspace.files", data, ["src", "src/components"], { resource }),
+    ).resolves.toEqual({
+      src: [{ id: "src/components", label: "components", collapsible: true }],
+      "src/components": [{ id: "src/components/button.tsx", label: "button.tsx" }],
+    });
   });
 });
 

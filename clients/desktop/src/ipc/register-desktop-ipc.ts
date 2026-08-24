@@ -1,3 +1,4 @@
+import { isAbsolute } from "node:path";
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
@@ -12,6 +13,7 @@ type DesktopIpcOptions = {
   ipcMain: IpcMain;
   lifecycleUrl: string;
   openLogs: () => void;
+  revealInFinder: (path: string) => void;
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
   runtimeOrigin: () => string | null;
@@ -49,6 +51,10 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.startupState, options.getState);
   handle(DESKTOP_CHANNELS.retryRuntime, options.retryRuntime);
   handle(DESKTOP_CHANNELS.openLogs, options.openLogs);
+  handle(DESKTOP_CHANNELS.revealInFinder, (path) => {
+    if (typeof path !== "string" || !isAbsolute(path)) throw new Error("A valid absolute path is required.");
+    options.revealInFinder(path);
+  });
   handle(DESKTOP_CHANNELS.copyDiagnostics, options.copyDiagnostics);
   handle(DESKTOP_CHANNELS.quitApp, options.quitApp);
 

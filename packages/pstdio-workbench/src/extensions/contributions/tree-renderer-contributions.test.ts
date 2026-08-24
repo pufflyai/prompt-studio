@@ -45,6 +45,8 @@ const metadata = {
       title: "Files",
       icon: "Files",
       resourceKind: "ticket",
+      searchable: true,
+      searchPlaceholder: "Search files",
       bodyHandlerId: "lab.files.body",
       childrenHandlerId: "lab.files.children",
       footerHandlerId: "lab.files.footer",
@@ -138,6 +140,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       id: "lab.files",
       title: "Files",
       icon: "Files",
+      searchable: true,
+      searchPlaceholder: "Search files",
     });
     expect(workbench.layout.getPanel("lab.ticketFiles")).toMatchObject({
       region: "main",

@@ -32,6 +32,7 @@ beforeAll(async () => {
     storagePath: join(tempRoot, "storage"),
     filesRoot: resolveTestFilesRoot(),
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
+    extensionReleaseRef: "pstdio@0.27.0",
   });
   app = handle.app;
 });
@@ -68,6 +69,8 @@ const seedInstance = async (
     displayName: string;
     installName: string;
     enabled?: boolean;
+    enginesPstdio?: string;
+    sourceKind?: "git" | "local_path";
     version?: string | null;
   },
 ) => {
@@ -76,9 +79,15 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    manifest: {
+      id: fields.extensionId,
+      name: fields.name,
+      displayName: fields.displayName,
+      ...(fields.enginesPstdio ? { enginesPstdio: fields.enginesPstdio } : {}),
+    },
     name: fields.name,
     sourcePath,
+    sourceKind: fields.sourceKind,
     version: fields.version ?? null,
   });
 
@@ -86,10 +95,16 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    manifest: {
+      id: fields.extensionId,
+      name: fields.name,
+      displayName: fields.displayName,
+      ...(fields.enginesPstdio ? { enginesPstdio: fields.enginesPstdio } : {}),
+    },
     name: fields.name,
     projectId,
     sourcePath: installedSource.source_path,
+    sourceKind: fields.sourceKind,
     version: fields.version ?? null,
   });
 
@@ -245,6 +260,74 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       name: "discovered-extension",
       projectId: project.id,
     });
+  });
+
+  test("reports an incompatible adopted extension as an error", async () => {
+    const project = await createProject("Incompatible Extension Project");
+    const seeded = await seedInstance(project.id, {
+      name: "incompatible-extension",
+      extensionId: "test.incompatible-extension",
+      displayName: "Incompatible Extension",
+      installName: "incompatible-extension-source",
+      enginesPstdio: "1.0.0-alpha.1",
+      sourceKind: "git",
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const row = body.extensions.find((entry: { id: string }) => entry.id === seeded.instanceId);
+
+    expect(row).toMatchObject({
+      canUpgrade: false,
+      status: "error",
+      lastError: { code: "extension_manifest_unsupported_api_version" },
+    });
+  });
+
+  test("keeps a local-first core extension under local source control", async () => {
+    const project = await createProject("Incompatible Core Extension Project");
+    const seeded = await seedInstance(project.id, {
+      name: "pstdio-planner",
+      extensionId: "pstdio.pstdio-planner",
+      displayName: "Prompt Studio Planner",
+      installName: "pstdio-planner",
+      enginesPstdio: "1.0.0-alpha.1",
+      sourceKind: "local_path",
+      version: "0.10.0",
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const row = body.extensions.find((entry: { id: string }) => entry.id === seeded.instanceId);
+
+    expect(row).toMatchObject({
+      canUpgrade: false,
+      installName: "pstdio-planner",
+      status: "error",
+      version: "0.10.0",
+    });
+  });
+
+  test("lists uninstalled core extensions in the marketplace", async () => {
+    const project = await createProject("Extension Marketplace Project");
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.marketplace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          displayName: "Prompt Studio Planner",
+          installName: "pstdio-planner",
+          installed: false,
+        }),
+      ]),
+    );
   });
 
   test("syncs globally installed extensions when a project extension list is requested", async () => {

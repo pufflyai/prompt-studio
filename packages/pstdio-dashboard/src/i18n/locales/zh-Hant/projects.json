@@ -223,7 +223,6 @@
       "empty": "此專案未安裝任何擴充功能。",
       "loadError": "載入擴充功能失敗。",
       "title": "擴充功能",
-      "counts": "{{installed}} 個已安裝 · {{enabled}} 個已啟用 · {{failing}} 個失敗",
       "searchPlaceholder": "搜尋擴充功能…",
       "installedGroup": "已安裝 · {{count}}",
       "noSearchResults": "沒有符合\"{{query}}\"的擴充功能。",
@@ -242,6 +241,7 @@
       "health": {
         "triggerAriaLabel": "顯示 {{name}} 的問題",
         "failedToLoad": "載入失敗",
+        "incompatibleVersions": "版本不相容",
         "issues_one": "{{count}} 個問題",
         "issues_other": "{{count}} 個問題",
         "lastLoaded": "上次載入於 {{time}}",
@@ -254,8 +254,6 @@
         "fixSessionFailed": "啟動修復工作階段失敗"
       },
       "update": {
-        "available": "有可用更新",
-        "description": "擴充目錄中有新的原始碼。在你接受更新之前，專案會繼續執行已採用的版本。",
         "action": "更新",
         "succeeded": "擴充功能已更新",
         "failed": "更新遭拒絕"

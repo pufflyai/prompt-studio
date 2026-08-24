@@ -7,7 +7,9 @@ import {
   attemptExtensionFix,
   executeExtensionCommand,
   getExtensionContributions,
+  getMarketplaceExtensionContributions,
   getProjectExtensionMetadata,
+  installMarketplaceExtension,
   listProjectExtensionSettings,
   listProjectExtensions,
   reloadProjectExtension,
@@ -15,6 +17,7 @@ import {
   setProjectExtensionEnabled,
   uninstallProjectExtension,
   updateProjectExtensionSetting,
+  upgradeProjectExtension,
 } from "./api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
@@ -66,6 +69,17 @@ export const useProjectExtensions = (projectId: string | undefined) => {
   });
 };
 
+export const useInstallMarketplaceExtension = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ installName }: { installName: string }) => {
+      if (!projectId) throw new Error("Project id is required to install extensions.");
+      return installMarketplaceExtension(projectId, installName);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
 export const useSetProjectExtensionEnabled = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -107,6 +121,17 @@ export const useReloadProjectExtension = (projectId: string | undefined) => {
   });
 };
 
+export const useUpgradeProjectExtension = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ instanceId }: { instanceId: string }) => {
+      if (!projectId) throw new Error("Project id is required to upgrade extensions.");
+      return upgradeProjectExtension(projectId, instanceId);
+    },
+    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+  });
+};
+
 export const useAttemptExtensionFix = (projectId: string | undefined) => {
   return useMutation({
     mutationFn: ({ instanceId }: { instanceId: string }) => {
@@ -121,6 +146,17 @@ export const useExtensionContributions = (projectId: string | undefined, instanc
     queryKey: ["extension-contributions", projectId, instanceId],
     queryFn: () => getExtensionContributions(projectId!, instanceId!),
     enabled: Boolean(projectId && instanceId),
+  });
+};
+
+export const useMarketplaceExtensionContributions = (
+  projectId: string | undefined,
+  installName: string | undefined,
+) => {
+  return useQuery({
+    queryKey: ["marketplace-extension-contributions", projectId, installName],
+    queryFn: () => getMarketplaceExtensionContributions(projectId!, installName!),
+    enabled: Boolean(projectId && installName),
   });
 };
 

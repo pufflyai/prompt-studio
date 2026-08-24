@@ -37,9 +37,11 @@ export {
 } from "./normalize/reserved-keybindings";
 export {
   type ExtensionLoadScope,
+  getExtensionApiVersionError,
   type PackageManifest,
   type ReadPackageManifestResult,
   readPackageManifest,
+  readPackageManifestMetadata,
 } from "./package-manifest";
 export { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 export {

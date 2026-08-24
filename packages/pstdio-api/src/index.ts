@@ -1,5 +1,6 @@
 import { apiWebSocket, createApp } from "./app";
 import { resolveApiFilesRoot } from "./default-files-root";
+import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
 
 const { app, close } = await createApp({
@@ -30,6 +31,7 @@ process.on("unhandledRejection", (err) => {
 
 export default {
   fetch(request: Request, server: Bun.Server<unknown>) {
+    disableExtensionMutationTimeout(request, server);
     return app.fetch(request, server);
   },
   websocket: apiWebSocket,

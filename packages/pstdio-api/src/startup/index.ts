@@ -1,6 +1,7 @@
 import type { RouteDeps } from "../features/deps";
 import {
   installDefaultExtensions,
+  registerInstalledExtensionSources,
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
@@ -14,9 +15,11 @@ interface StartupTaskOptions {
   recoverQueuedSessions?: () => Promise<void>;
 }
 
-const ensureDefaultExtensionsInstalled = async () => {
+const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
+  if ((await deps.projectService.list()).length > 0) return;
+
   try {
-    await installDefaultExtensions({
+    const installed = await installDefaultExtensions({
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName, source }) => {
         apiLogger.warn(
@@ -29,7 +32,9 @@ const ensureDefaultExtensionsInstalled = async () => {
           "Default extension install failed during startup",
         );
       },
+      releaseRef: deps.extensionUpgradeService.releaseRef,
     });
+    await registerInstalledExtensionSources(deps.extensionService, installed);
   } catch (err) {
     apiLogger.warn(
       { err, event: "startup.default_extension_install.error" },
@@ -39,7 +44,7 @@ const ensureDefaultExtensionsInstalled = async () => {
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  await ensureDefaultExtensionsInstalled();
+  await ensureDefaultExtensionsInstalled(deps);
   await options?.recoverQueuedSessions?.();
   await resolveOrphanedSessions(deps, signal);
   await ensureProjectReposScaffolded(deps);

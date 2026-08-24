@@ -244,9 +244,15 @@
       "empty": "No extensions installed for this project.",
       "loadError": "Failed to load extensions.",
       "title": "Extensions",
-      "counts": "{{installed}} installed · {{enabled}} enabled · {{failing}} failing",
       "searchPlaceholder": "Search extensions…",
       "installedGroup": "Installed · {{count}}",
+      "marketplace": {
+        "group": "Available · {{count}}",
+        "allInstalled": "All available extensions are installed.",
+        "install": "Install",
+        "installSucceeded": "{{name}} installed",
+        "installFailed": "Extension install failed"
+      },
       "noSearchResults": "No extensions match \"{{query}}\".",
       "noDescription": "No description provided.",
       "scope": {
@@ -263,6 +269,7 @@
       "health": {
         "triggerAriaLabel": "Show issues for {{name}}",
         "failedToLoad": "Failed to load",
+        "incompatibleVersions": "Incompatible versions",
         "issues_one": "{{count}} issue",
         "issues_other": "{{count}} issues",
         "lastLoaded": "Last loaded {{time}}",
@@ -275,11 +282,15 @@
         "fixSessionFailed": "Failed to start fix session"
       },
       "update": {
-        "available": "Update available",
-        "description": "New source is waiting in the extensions root. The project keeps running the version it adopted until you take the update.",
         "action": "Update",
         "succeeded": "Extension updated",
         "failed": "Update refused"
+      },
+      "upgrade": {
+        "action": "Update",
+        "succeeded": "Extension updated",
+        "current": "Extension is already current",
+        "failed": "Extension update failed"
       },
       "automations": {
         "title": "Automations",

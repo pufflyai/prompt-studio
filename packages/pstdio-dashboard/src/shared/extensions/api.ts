@@ -2,9 +2,11 @@ import type {
   AttemptExtensionFixResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
+  InstallMarketplaceExtensionResponse,
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
+  UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
@@ -15,6 +17,11 @@ export const getProjectExtensionMetadata = (projectId: string) =>
 
 export const getExtensionContributions = (projectId: string, instanceId: string) =>
   apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/${instanceId}/contributions`);
+
+export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
+  apiRequest<DashboardExtensionMetadata>(
+    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/contributions`,
+  );
 
 export const getProjectExtensionAppearance = (projectId: string) =>
   apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
@@ -30,6 +37,12 @@ export const executeExtensionCommand = (projectId: string, commandId: string, bo
 
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
+
+export const installMarketplaceExtension = (projectId: string, installName: string) =>
+  apiRequest<InstallMarketplaceExtensionResponse>(
+    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/install`,
+    { method: "POST" },
+  );
 
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {
@@ -50,6 +63,11 @@ export const setExtensionAutomationEnabled = (
 
 export const reloadProjectExtension = (projectId: string, instanceId: string) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}/reload`, {
+    method: "POST",
+  });
+
+export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
+  apiRequest<UpgradeProjectExtensionResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
     method: "POST",
   });
 

@@ -1,15 +1,16 @@
 import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
+import { EmptyState } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import type { ReactNode, RefObject } from "react";
 import type { FileRendererContent } from "../../../core";
-import { codeLanguageFor, pickFileKind } from "./file-kind";
+import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 
 interface FileRendererContentViewProps {
   content: FileRendererContent;
   editorKey: string;
   errorNotice: ReactNode;
-  isEditable: boolean;
+  contributionCanSave: boolean;
   onActiveSectionChange?: (sectionId: string | null) => void;
   onChange: (value: string) => void;
   rendererRef: RefObject<HTMLDivElement | null>;
@@ -25,16 +26,30 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     content,
     editorKey,
     errorNotice,
-    isEditable,
+    contributionCanSave,
     onActiveSectionChange,
     onChange,
     rendererRef,
     sectionNavigation,
     title,
   } = props;
-  const kind = pickFileKind(content.fileName, content.mimeType);
+  const presentation = resolveFileRendererPresentation(content, contributionCanSave);
 
-  if (kind === "image") {
+  if (presentation.kind === "empty") {
+    return (
+      <Flex direction="column" h="full" minH="0" bg="bg">
+        {errorNotice}
+        <EmptyState
+          flex="1"
+          minH="0"
+          title={content.emptyState?.title ?? "Select a file"}
+          description={content.emptyState?.description}
+        />
+      </Flex>
+    );
+  }
+
+  if (presentation.kind === "image") {
     if (!content.dataUrl) {
       return (
         <Center h="full" minH="0" bg="bg" p="md">
@@ -52,18 +67,18 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     );
   }
 
-  if (kind === "code") {
+  if (presentation.kind === "code") {
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
         {errorNotice}
         <Box flex="1" minH="0">
           <CodeEditor
             key={editorKey}
-            language={codeLanguageFor(content.fileName)}
+            language={presentation.language}
             defaultCode={content.content ?? ""}
-            isEditable={isEditable}
+            isEditable={presentation.isEditable}
             showLineNumbers
-            onChange={isEditable ? onChange : undefined}
+            onChange={presentation.isEditable ? onChange : undefined}
           />
         </Box>
       </Flex>
@@ -77,11 +92,11 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
         <MarkdownEditor
           key={editorKey}
           defaultState={content.content ?? ""}
-          isEditable={isEditable}
+          isEditable={presentation.isEditable}
           sectionNavigation={sectionNavigation}
-          placeholder={isEditable ? (content.placeholder ?? "Write…") : undefined}
+          placeholder={presentation.isEditable ? (content.placeholder ?? "Write…") : undefined}
           onActiveSectionChange={onActiveSectionChange}
-          onChange={isEditable ? onChange : undefined}
+          onChange={presentation.isEditable ? onChange : undefined}
         />
       </Box>
     </Flex>

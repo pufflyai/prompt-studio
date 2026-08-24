@@ -44,6 +44,47 @@ export const removeWorktreeResponseSchema = z.object({
   removed: z.boolean(),
 });
 
+export const workspaceFileEntrySchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  type: z.enum(["file", "directory"]),
+  size: z.number().int().nonnegative().optional(),
+  modified_at: z.string().optional(),
+});
+
+export const workspaceFilesResponseSchema = z.object({
+  workspace_id: z.string(),
+  path: z.string(),
+  entries: z.array(workspaceFileEntrySchema),
+  truncated: z.boolean(),
+});
+
+export const workspaceFileContentSchema = z.object({
+  workspace_id: z.string(),
+  path: z.string(),
+  file_name: z.string(),
+  mime_type: z.string().optional(),
+  size: z.number().int().nonnegative(),
+  encoding: z.enum(["utf8", "base64"]),
+  content: z.string().optional(),
+  data_url: z.string().optional(),
+  editable: z.boolean(),
+});
+
+export const writeWorkspaceFileInputSchema = z.object({
+  content: z.string(),
+});
+
+export const moveWorkspaceEntryInputSchema = z.object({
+  destination_path: z.string().min(1),
+});
+
+export const listWorkspaceFilesInputSchema = z.object({
+  path: z.string().optional(),
+  query: z.string().optional(),
+  limit: z.number().int().positive().max(500).optional(),
+});
+
 export const listWorkspaceActivityInputSchema = listActivityInputSchema;
 export const listWorkspaceActivityResponseSchema = listActivityResponseSchema;
 
@@ -52,5 +93,11 @@ export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 export type RenameWorkspaceInput = z.infer<typeof renameWorkspaceInputSchema>;
 export type RemoveWorktreeResponse = z.infer<typeof removeWorktreeResponseSchema>;
+export type WorkspaceFileEntry = z.infer<typeof workspaceFileEntrySchema>;
+export type WorkspaceFilesResponse = z.infer<typeof workspaceFilesResponseSchema>;
+export type WorkspaceFileContent = z.infer<typeof workspaceFileContentSchema>;
+export type WriteWorkspaceFileInput = z.infer<typeof writeWorkspaceFileInputSchema>;
+export type MoveWorkspaceEntryInput = z.infer<typeof moveWorkspaceEntryInputSchema>;
+export type ListWorkspaceFilesInput = z.infer<typeof listWorkspaceFilesInputSchema>;
 export type ListWorkspaceActivityInput = z.infer<typeof listWorkspaceActivityInputSchema>;
 export type ListWorkspaceActivityResponse = z.infer<typeof listWorkspaceActivityResponseSchema>;

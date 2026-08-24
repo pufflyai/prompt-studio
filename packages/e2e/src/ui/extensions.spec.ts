@@ -285,7 +285,8 @@ test("extension detail toggles automations and retries load errors", async ({ pa
     // healthy and the change is offered as an update instead.
     writeAutomationExtension({ broken: true, installName });
     await page.reload();
-    await expect(page.getByTestId("extension-update-available")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("extension-update")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("extension-update-available")).toHaveCount(0);
     await expect(page.getByTestId("extension-detail-health")).toHaveCount(0);
 
     // Taking the broken update validates it, refuses it, and reports the error state.
@@ -355,7 +356,6 @@ test("dashboard-wb discovers extension root additions and offers source edits as
     // The edit is an offer. The row keeps the adopted description until the update is taken.
     await page.reload();
     await expect(row).toContainText("Initial hot reload extension.");
-    await expect(row.getByTestId("extension-update-marker")).toBeVisible({ timeout: 10_000 });
 
     await row.click();
     const takenUpdate = page.waitForResponse(

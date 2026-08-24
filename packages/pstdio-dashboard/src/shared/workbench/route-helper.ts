@@ -50,9 +50,8 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContext, input: Regist
         region,
         title: input.title?.(resource) ?? resource.label,
       });
-      input.afterOpen?.({ resource, placement });
-
       return placement;
     },
+    afterOpen: (resource, placement) => input.afterOpen?.({ resource, placement }),
   });
 };

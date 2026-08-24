@@ -1,4 +1,5 @@
 import type { ProjectExtensionInstance } from "pstdio-api-contracts";
+import { getExtensionApiVersionError } from "pstdio-extensions";
 
 type InstanceLike = {
   id: string;
@@ -14,6 +15,7 @@ type InstalledSourceLike = {
   extension_id: string;
   display_name: string;
   source_path: string;
+  source_kind: string;
   version: string | null;
   manifest_json: unknown;
   source_hash: string | null;
@@ -23,6 +25,21 @@ type InstalledSourceLike = {
 };
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
+
+const compatibilityError = (installedSource: InstalledSourceLike) => {
+  const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
+  const name = optionalString(manifest.name) ?? installedSource.install_name;
+  const declared = optionalString(manifest.enginesPstdio);
+  if (!declared) return null;
+
+  const message = getExtensionApiVersionError(name, declared);
+  return message
+    ? {
+        code: "extension_manifest_unsupported_api_version",
+        message,
+      }
+    : null;
+};
 
 // Mirrors repoExtensionsRoot: repo-local sources always live under `<repo>/.pstdio/extensions/`.
 const sourceScope = (sourcePath: string) =>
@@ -43,8 +60,10 @@ export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
   diskSourceHash?: string | null,
+  options: { canUpgrade?: boolean } = {},
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
+  const incompatible = compatibilityError(installedSource);
   return {
     id: instance.id,
     projectId: instance.scope_id,
@@ -57,11 +76,12 @@ export const toProjectExtensionInstance = (
     description: optionalString(manifest.description),
     sourcePath: installedSource.source_path,
     scope: sourceScope(installedSource.source_path),
-    status: installedSource.status,
+    status: incompatible ? "error" : installedSource.status,
     lastLoadedAt: installedSource.last_loaded_at,
-    lastError: (installedSource.last_error_json ?? null) as Record<string, unknown> | null,
+    lastError: incompatible ?? ((installedSource.last_error_json ?? null) as Record<string, unknown> | null),
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
+    canUpgrade: options.canUpgrade === true,
     updateAvailable: Boolean(
       diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
     ),

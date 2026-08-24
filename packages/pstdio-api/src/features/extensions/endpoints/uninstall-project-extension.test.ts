@@ -240,7 +240,7 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
       collection: "tickets",
     });
 
-  test("preserves user data by default and retains a disabled instance", async () => {
+  test("preserves user data without listing the removed extension as installed", async () => {
     const project = await createProject("Uninstall Keep Data");
     const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
     await seedTicket(project.id, instanceId);
@@ -254,6 +254,10 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     const instance = await handle.deps.extensionInstancesService.get(instanceId);
     expect(instance?.enabled).toBe(false);
     expect(await handle.deps.extensionService.getInstalledSource(installName)).not.toBeNull();
+
+    const listRes = await app.request(`/v1/projects/${project.id}/extensions`);
+    const list = await listRes.json();
+    expect(list.extensions.find((entry: { id: string }) => entry.id === instanceId)).toBeUndefined();
   });
 
   test("deletes user data and the instance when deleteUserData=true", async () => {

@@ -11,6 +11,39 @@ export interface LoadedTreeData {
   footer: TreeNode[];
 }
 
+const listTreeNodes = (data: LoadedTreeData) => [
+  ...data.header,
+  ...data.body.flatMap((section) => section.nodes),
+  ...data.footer,
+];
+
+export const loadExpandedTreeChildren = async (
+  trees: TreeRendererRegistry,
+  treeId: string,
+  data: LoadedTreeData,
+  expandedNodeIds: string[],
+  ctx: TreeContext = {},
+) => {
+  const expanded = new Set(expandedNodeIds);
+  const visited = new Set<string>();
+  const childrenByNodeId: Record<string, TreeNode[]> = {};
+
+  const loadNodes = async (nodes: TreeNode[]) => {
+    await Promise.all(
+      nodes.map(async (node) => {
+        if (!expanded.has(node.id) || visited.has(node.id)) return;
+        visited.add(node.id);
+        const children = node.children ?? (await trees.getChildren(treeId, node, ctx));
+        if (!node.children) childrenByNodeId[node.id] = children;
+        await loadNodes(children);
+      }),
+    );
+  };
+
+  await loadNodes(listTreeNodes(data));
+  return childrenByNodeId;
+};
+
 // A tree reloads whenever the open resource changes (e.g. selecting a different
 // sidenav item) or a refresh fires. Only show the loading state before a tree has
 // produced any content; reloads keep the current content so the sidenav never

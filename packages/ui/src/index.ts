@@ -67,6 +67,7 @@ export type {
   TreeListAction,
   TreeListActionContext,
   TreeListActionMenuItem,
+  TreeListInlineInput,
   TreeListLinkComponent,
   TreeListNavigateEvent,
   TreeListNavigationIntent,

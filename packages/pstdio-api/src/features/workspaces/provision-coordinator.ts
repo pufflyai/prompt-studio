@@ -162,7 +162,7 @@ const reprovisionWorkspace = async (
 // the `ready` re-fire, since background setup already ran when the workspace was created.
 // Per-workspace failures are isolated (the bad one is marked `setup_error`), not thrown,
 // so one workspace cannot block the rest of the re-sync.
-export const provisionProjectWorkspaces = async (
+const runProjectWorkspaceProvisioning = async (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
@@ -180,4 +180,35 @@ export const provisionProjectWorkspaces = async (
     const repoPaths = workspace.worktree_path ? [repos[0].path] : repos.map((repo) => repo.path);
     await reprovisionWorkspace(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPaths }, hooks);
   }
+};
+
+const projectProvisionQueues = new Map<string, Promise<void>>();
+
+// Extension installs may finish together, but their provision hooks write the same agent folders.
+// Keep that final materialization single-writer per project while source downloads stay concurrent.
+export const provisionProjectWorkspaces = (
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  hooks: WorkspaceProvisioningHooks = defaultHooks(),
+) => {
+  const previous = projectProvisionQueues.get(projectId) ?? Promise.resolve();
+  const queued = previous.catch(() => undefined).then(() => runProjectWorkspaceProvisioning(deps, projectId, hooks));
+  projectProvisionQueues.set(projectId, queued);
+
+  return queued.finally(() => {
+    if (projectProvisionQueues.get(projectId) === queued) projectProvisionQueues.delete(projectId);
+  });
+};
+
+export const scheduleProjectWorkspaceProvisioning = (
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  hooks: WorkspaceProvisioningHooks = defaultHooks(),
+) => {
+  void provisionProjectWorkspaces(deps, projectId, hooks).catch((err) => {
+    apiLogger.warn(
+      { err, event: "workspace.project_provision_failed", project_id: projectId },
+      "Project workspace provisioning failed",
+    );
+  });
 };

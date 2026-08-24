@@ -92,9 +92,10 @@ export interface ResourcePresenter {
   priority?: number;
   canOpen(resource: ResourceRef): boolean;
   open(resource: ResourceRef, input: OpenResourceInput): WorkbenchPanelInstance | Promise<WorkbenchPanelInstance>;
+  afterOpen?(resource: ResourceRef, instance: WorkbenchPanelInstance, input: OpenResourceInput): void;
 }
 
-type ResolvedResourcePresenter = Required<ResourcePresenter>;
+type ResolvedResourcePresenter = Omit<ResourcePresenter, "priority"> & { priority: number };
 
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
@@ -320,6 +321,7 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         const opened = presenter.open(resource, input);
         result = isPromiseLike(opened) ? ((await opened) as WorkbenchPanelInstance) : opened;
         result = establishLocation?.(result) ?? result;
+        presenter.afterOpen?.(resource, result, input);
       } finally {
         openingResourceDepth -= 1;
       }

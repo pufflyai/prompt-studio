@@ -173,7 +173,7 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
 // every alpha bump while looking like a gate.
 const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
 
-const apiVersionError = (name: string, declared: string) => {
+export const getExtensionApiVersionError = (name: string, declared: string) => {
   if (declared === EXTENSION_API_VERSION) return null;
 
   if (isVersionRange(declared)) {
@@ -183,7 +183,7 @@ const apiVersionError = (name: string, declared: string) => {
   return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. Update Prompt Studio, or install a build of the extension for this version.`;
 };
 
-export const readPackageManifest = (packageDir: string): ReadPackageManifestResult => {
+export const readPackageManifestMetadata = (packageDir: string): ReadPackageManifestResult => {
   const diagnostics: ExtensionDiagnostic[] = [];
   const packagePath = join(packageDir, "package.json");
 
@@ -253,18 +253,6 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
   if (!entryPath) return { manifest: null, entryPath: null, diagnostics };
 
-  const versionError = apiVersionError(name as string, enginesPstdio as string);
-  if (versionError) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_unsupported_api_version",
-        message: versionError,
-        sourcePath: packagePath,
-      }),
-    );
-    return { manifest: null, entryPath: null, diagnostics };
-  }
-
   const displayName = typeof raw.displayName === "string" && raw.displayName.length > 0 ? raw.displayName : undefined;
   const description = typeof raw.description === "string" && raw.description.length > 0 ? raw.description : undefined;
 
@@ -281,4 +269,25 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
   };
 
   return { manifest, entryPath, diagnostics };
+};
+
+export const readPackageManifest = (packageDir: string): ReadPackageManifestResult => {
+  const result = readPackageManifestMetadata(packageDir);
+  if (!result.manifest) return result;
+
+  const versionError = getExtensionApiVersionError(result.manifest.name, result.manifest.enginesPstdio);
+  if (!versionError) return result;
+
+  return {
+    manifest: null,
+    entryPath: null,
+    diagnostics: [
+      ...result.diagnostics,
+      createDiagnostic({
+        code: "extension_manifest_unsupported_api_version",
+        message: versionError,
+        sourcePath: join(packageDir, "package.json"),
+      }),
+    ],
+  };
 };

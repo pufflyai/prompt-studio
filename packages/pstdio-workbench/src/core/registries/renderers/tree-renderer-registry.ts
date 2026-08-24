@@ -31,6 +31,14 @@ export interface TreeAction {
 
 export type TreeNodeRowVariant = "empty-state";
 
+export interface TreeNodeInlineInput {
+  ariaLabel: string;
+  defaultValue?: string;
+  placeholder?: string;
+  onCommit(value: string): Promise<void> | void;
+  onCancel?(): void;
+}
+
 export interface TreeNode {
   id: string;
   label: string;
@@ -44,11 +52,13 @@ export interface TreeNode {
   target?: NavigationTarget;
   /** Visual row variant for non-data rows such as placeholders. */
   rowVariant?: TreeNodeRowVariant;
+  inlineInput?: TreeNodeInlineInput;
   actions?: TreeAction[];
   contextMenuActions?: TreeAction[];
   contextMenuPath?: MenuPath;
   menuPath?: MenuPath;
   menuPlacement?: "top-start" | "top-end" | "bottom-start" | "bottom-end" | "right-start" | "left-start";
+  showContextMenuTrigger?: boolean;
   collapsible?: boolean;
   disabled?: boolean;
   children?: TreeNode[];
@@ -59,6 +69,10 @@ export interface TreeNode {
   canHide?: boolean;
   /** When false, the node stays fixed within its Sidenav group. */
   canReorder?: boolean;
+  /** Allow this node to be moved to another tree location. */
+  canDrag?: boolean;
+  /** Allow movable nodes to be dropped on this node. */
+  canDrop?: boolean;
 }
 
 export interface TreeSectionEmptyState {
@@ -85,6 +99,8 @@ export interface TreeRendererContribution {
   id: string;
   title: string;
   icon?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
@@ -92,6 +108,7 @@ export interface TreeRendererContribution {
   getHeader?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getFooter?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
+  moveNode?(source: TreeNode, target: TreeNode | undefined, ctx: TreeContext): Promise<void> | void;
 }
 
 export interface RegisteredTreeRendererContribution extends TreeRendererContribution, RegisteredContributionMetadata {}

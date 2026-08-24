@@ -223,7 +223,6 @@
       "empty": "このプロジェクトにはインストール済みの拡張機能がありません。",
       "loadError": "拡張機能の読み込みに失敗しました。",
       "title": "拡張機能",
-      "counts": "{{installed}}件インストール済み · {{enabled}}件有効 · {{failing}}件失敗",
       "searchPlaceholder": "拡張機能を検索…",
       "installedGroup": "インストール済み · {{count}}",
       "noSearchResults": "\"{{query}}\"に一致する拡張機能はありません。",
@@ -242,6 +241,7 @@
       "health": {
         "triggerAriaLabel": "{{name}}の問題を表示",
         "failedToLoad": "読み込みに失敗しました",
+        "incompatibleVersions": "互換性のないバージョン",
         "issues_one": "{{count}}件の問題",
         "issues_other": "{{count}}件の問題",
         "lastLoaded": "最終読み込み {{time}}",
@@ -254,8 +254,6 @@
         "fixSessionFailed": "修正セッションの開始に失敗しました"
       },
       "update": {
-        "available": "更新があります",
-        "description": "拡張機能フォルダーに新しいソースがあります。更新を適用するまで、プロジェクトは現在のバージョンを使い続けます。",
         "action": "更新",
         "succeeded": "拡張機能を更新しました",
         "failed": "更新は拒否されました"

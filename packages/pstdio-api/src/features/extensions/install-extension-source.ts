@@ -12,7 +12,7 @@ import {
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
-import { readPackageManifest } from "pstdio-extensions";
+import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
@@ -21,7 +21,7 @@ import {
   type ExtensionMetadata,
   formatExtensionsCheck,
   hashExtensionSource,
-  loadExtensionSource,
+  readExtensionSourceMetadata,
 } from "./extension-runtime";
 import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
 import {
@@ -35,7 +35,7 @@ import { linkUsableNodeModules } from "./install-extension-source-node-modules";
 
 export { checkExtensionsRoot, formatExtensionsCheck };
 
-const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
+export const PSTDIO_REPOSITORY_URL = "https://github.com/pufflyai/prompt-studio";
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
 export class ExtensionAlreadyInstalledError extends Error {
@@ -49,6 +49,8 @@ export class ExtensionAlreadyInstalledError extends Error {
 }
 
 export type InstallExtensionSourceInput = {
+  /** Keep a managed source installed so the dashboard can repair it after an extension API change. */
+  allowUnsupportedApiVersion?: boolean;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   existsOk?: boolean;
   force?: boolean;
@@ -244,10 +246,10 @@ const cloneRepoSparse = async (
   const tempParent = dirname(checkoutPath);
   const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
   if (ref) cloneArgs.push("--branch", ref);
-  const clone = await run("git", [...cloneArgs, DEFAULT_REPO_URL, checkoutPath], { cwd: tempParent });
+  const clone = await run("git", [...cloneArgs, PSTDIO_REPOSITORY_URL, checkoutPath], { cwd: tempParent });
   if (clone.exitCode !== 0) {
     const detail = clone.stderr.trim() || clone.stdout.trim();
-    throw new Error(`Failed to clone ${DEFAULT_REPO_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
+    throw new Error(`Failed to clone ${PSTDIO_REPOSITORY_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
   }
 
   const sparse = await run("git", ["sparse-checkout", "set", ...paths], { cwd: checkoutPath });
@@ -263,7 +265,7 @@ const cloneRepoSparse = async (
   return head.stdout.trim();
 };
 
-export const namedSourceRef = (commit: string, name: string) => `${DEFAULT_REPO_URL}@${commit}#extensions/${name}`;
+export const namedSourceRef = (commit: string, name: string) => `${PSTDIO_REPOSITORY_URL}@${commit}#extensions/${name}`;
 
 const prepareNamedSource = async (name: string, tempDir: string, ref?: string) => {
   const checkoutPath = join(tempDir, "prompt-studio");
@@ -336,8 +338,9 @@ const failIfInvalidSource = (sourcePath: string) => {
   }
 };
 
-const sourceScope = (sourcePath: string) => {
-  const { manifest, diagnostics } = readPackageManifest(sourcePath);
+const sourceScope = (sourcePath: string, allowUnsupportedApiVersion: boolean) => {
+  const readManifest = allowUnsupportedApiVersion ? readPackageManifestMetadata : readPackageManifest;
+  const { manifest, diagnostics } = readManifest(sourcePath);
   if (!manifest) {
     const first = diagnostics[0];
     throw new Error(first?.message ?? `Extension validation failed: ${sourcePath}`);
@@ -346,7 +349,7 @@ const sourceScope = (sourcePath: string) => {
 };
 
 const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: string, sourcePath: string) => {
-  const { manifest, scope } = sourceScope(sourcePath);
+  const { manifest, scope } = sourceScope(sourcePath, input.allowUnsupportedApiVersion === true);
   if (scope === "repo") {
     if (!input.repoPath) {
       throw new Error(
@@ -357,6 +360,39 @@ const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: s
   }
 
   return join(pstdioHome, "extensions");
+};
+
+const validatePreparedInstall = async (
+  installPath: string,
+  extensionsRoot: string,
+  allowUnsupportedApiVersion: boolean,
+) => {
+  const { check, loaded: compatibleSource } = await checkExtensionSource(installPath, extensionsRoot);
+  const unsupportedApiOnly =
+    check.errorCount > 0 &&
+    check.diagnostics
+      .filter((diagnostic) => diagnostic.severity === "error")
+      .every((diagnostic) => diagnostic.code === "extension_manifest_unsupported_api_version");
+  const keepForRecovery = allowUnsupportedApiVersion && unsupportedApiOnly;
+  if (check.errorCount > 0 && !keepForRecovery) {
+    throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+  }
+
+  const loaded = compatibleSource ?? (keepForRecovery ? readExtensionSourceMetadata(installPath) : null);
+  if (!loaded) throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+
+  if (keepForRecovery && check.extensions.length === 0) {
+    check.extensions.push({
+      id: loaded.metadata.id,
+      name: loaded.metadata.name,
+      displayName: loaded.metadata.displayName,
+      sourcePath: installPath,
+      version: loaded.metadata.version,
+      description: loaded.metadata.description,
+    });
+  }
+
+  return { check, loaded };
 };
 
 export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
@@ -398,11 +434,11 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       targetPath,
     });
 
-    const loaded = await loadExtensionSource(installPath);
-    const { check } = await checkExtensionSource(installPath, extensionsRoot);
-    if (check.errorCount > 0) {
-      throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
-    }
+    const { check, loaded } = await validatePreparedInstall(
+      installPath,
+      extensionsRoot,
+      input.allowUnsupportedApiVersion === true,
+    );
 
     if (installPath !== targetPath) {
       const preserveDependencies = linkedInstalledDependencies;

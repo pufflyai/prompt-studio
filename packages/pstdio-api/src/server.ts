@@ -1,5 +1,6 @@
 import { apiWebSocket, createApp } from "./app";
 import { resolveApiFilesRoot } from "./default-files-root";
+import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
 
 const port = Number(process.env.PORT ?? "19840");
@@ -36,7 +37,10 @@ const startServer = async () => {
     });
 
     Bun.serve({
-      fetch: app.fetch,
+      fetch: (request, server) => {
+        disableExtensionMutationTimeout(request, server);
+        return app.fetch(request, server);
+      },
       idleTimeout: 20,
       port,
       websocket: apiWebSocket,

@@ -228,7 +228,6 @@
       "empty": "No hay extensiones instaladas para este proyecto.",
       "loadError": "Error al cargar las extensiones.",
       "title": "Extensiones",
-      "counts": "{{installed}} instaladas · {{enabled}} habilitadas · {{failing}} con fallos",
       "searchPlaceholder": "Buscar extensiones…",
       "installedGroup": "Instaladas · {{count}}",
       "noSearchResults": "Ninguna extensión coincide con \"{{query}}\".",
@@ -247,6 +246,7 @@
       "health": {
         "triggerAriaLabel": "Mostrar problemas de {{name}}",
         "failedToLoad": "Error al cargar",
+        "incompatibleVersions": "Versiones incompatibles",
         "issues_one": "{{count}} problema",
         "issues_other": "{{count}} problemas",
         "lastLoaded": "Última carga {{time}}",
@@ -259,8 +259,6 @@
         "fixSessionFailed": "Error al iniciar la sesión de corrección"
       },
       "update": {
-        "available": "Actualización disponible",
-        "description": "Hay código nuevo esperando en la carpeta de extensiones. El proyecto sigue usando la versión adoptada hasta que aceptes la actualización.",
         "action": "Actualizar",
         "succeeded": "Extensión actualizada",
         "failed": "Actualización rechazada"

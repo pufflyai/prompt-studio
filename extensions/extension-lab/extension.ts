@@ -14,7 +14,6 @@ import {
   labDataTableRenderers,
   labModes,
   labResourceKinds,
-  labResourcePanels,
   labTreeItems,
   labTreeRenderers,
 } from "./src/renderers/ui-contributions";
@@ -35,7 +34,6 @@ const extension = defineExtension({
 
   modes: labModes,
   resourceKinds: labResourceKinds,
-  resourcePanels: labResourcePanels,
   panels: createLabPanels(import.meta.url),
   statusItems: createLabStatusItems(import.meta.url),
   routes: createLabRoutes(import.meta.url),

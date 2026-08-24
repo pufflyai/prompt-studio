@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList } from "@pstdio/ui";
-import { useEffect, useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
@@ -11,15 +11,17 @@ import type {
 } from "../../../core";
 import { getAnchorResource } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
-import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+import { TreeParamsDialog } from "./tree-params-dialog";
 import { TreeViewBody } from "./tree-view-body";
-import { expandDefaultTreeSections, loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
+import { createMoveTreeNode } from "./tree-view-move";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
+import { TreeViewSearch } from "./tree-view-search";
+import { useTreeData } from "./use-tree-data";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
@@ -74,26 +76,6 @@ const useSidenavContextActions = (
   );
 };
 
-interface TreeParamsDialogProps {
-  request: TreeActionParamsRequest | null;
-  renderParamField?: CommandParamFieldRenderer;
-  onClose: () => void;
-}
-
-const TreeParamsDialog = (props: TreeParamsDialogProps) => {
-  const { request, renderParamField, onClose } = props;
-  return (
-    <CommandParamsDialog
-      request={request?.request ?? null}
-      renderParamField={renderParamField}
-      onClose={onClose}
-      onRun={async ({ args }) => {
-        await request?.run(args);
-      }}
-    />
-  );
-};
-
 interface TreeNavigationContext {
   workbench: WorkbenchCore;
   treeViewId: string;
@@ -121,44 +103,38 @@ const navigateTreeNode = (
     .catch(context.onOpenResourceError);
 };
 
-const useTreeData = (workbench: WorkbenchCore, treeViewId: string, resource?: ResourceRef, viewId?: string) => {
-  const [header, setHeader] = useState<TreeNode[]>([]);
-  const [body, setBody] = useState<TreeViewSection[]>([]);
-  const [footer, setFooter] = useState<TreeNode[]>([]);
-  const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
-  const [loading, setLoading] = useState(true);
-  const loadedTreeIdRef = useRef<string | null>(null);
-  const loadRevisionRef = useRef(0);
+interface ToggleTreeNodeContext {
+  workbench: WorkbenchCore;
+  treeViewId: string;
+  resource?: ResourceRef;
+  viewId?: string;
+  body: TreeViewSection[];
+  header: TreeNode[];
+  footer: TreeNode[];
+  childrenByNodeId: Record<string, TreeNode[]>;
+  expandedNodeIds: string[];
+  setChildrenByNodeId: Dispatch<SetStateAction<Record<string, TreeNode[]>>>;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    expandDefaultTreeSections(workbench.renderers, treeViewId);
+const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string) => {
+  const node =
+    findNodeInSections(context.body, nodeId, context.childrenByNodeId) ??
+    findNodeInSections(
+      [regionSection(HEADER_SECTION_ID, context.header), regionSection(FOOTER_SECTION_ID, context.footer)],
+      nodeId,
+      context.childrenByNodeId,
+    );
+  if (!node) return;
 
-    const loadTree = () => {
-      const loadRevision = ++loadRevisionRef.current;
-      if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
-      void loadTreeData(workbench.renderers, treeViewId, { resource, viewId }).then((data) => {
-        if (cancelled || loadRevision !== loadRevisionRef.current) return;
-        loadedTreeIdRef.current = treeViewId;
-        setHeader(data?.header ?? []);
-        setBody(data?.body ?? []);
-        setFooter(data?.footer ?? []);
-        setChildrenByNodeId({});
-        setLoading(false);
-      });
-    };
+  const expanded = context.expandedNodeIds.includes(nodeId);
+  context.workbench.renderers.setNodeExpanded(context.treeViewId, nodeId, !expanded);
+  if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
 
-    loadTree();
-    const disposable = workbench.renderers.onDidRefresh((event) => {
-      if (event.treeId === treeViewId) loadTree();
+  void context.workbench.renderers
+    .getChildren(context.treeViewId, node, { resource: context.resource, viewId: context.viewId })
+    .then((children) => {
+      context.setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
     });
-    return () => {
-      cancelled = true;
-      disposable.dispose();
-    };
-  }, [resource, viewId, workbench, treeViewId]);
-
-  return { body, childrenByNodeId, footer, header, loading, setChildrenByNodeId };
 };
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
@@ -174,14 +150,16 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
+  const [filter, setFilter] = useState("");
   const treeState =
     useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
-  const { body, childrenByNodeId, footer, header, loading, setChildrenByNodeId } = useTreeData(
+  const { body, childrenByNodeId, error, footer, header, loading, setChildrenByNodeId } = useTreeData(
     workbench,
     treeViewId,
     resource,
     viewId,
+    treeRenderer?.searchable ? filter.trim() || undefined : undefined,
   );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
 
@@ -233,33 +211,33 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     );
   }
 
-  const toggleNode = (nodeId: string) => {
-    const node =
-      findNodeInSections(body, nodeId, childrenByNodeId) ??
-      findNodeInSections(
-        [regionSection(HEADER_SECTION_ID, header), regionSection(FOOTER_SECTION_ID, footer)],
-        nodeId,
-        childrenByNodeId,
-      );
-    if (!node) return;
-
-    const expanded = treeState.expandedNodeIds.includes(nodeId);
-
-    workbench.renderers.setNodeExpanded(treeViewId, nodeId, !expanded);
-
-    if (expanded || childrenByNodeId[nodeId]) return;
-    if (node.children) return;
-
-    void workbench.renderers.getChildren(treeViewId, node, { resource, viewId }).then((children) => {
-      setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
-    });
-  };
+  const toggleNode = createToggleTreeNode({
+    workbench,
+    treeViewId,
+    resource,
+    viewId,
+    body,
+    header,
+    footer,
+    childrenByNodeId,
+    expandedNodeIds: treeState.expandedNodeIds,
+    setChildrenByNodeId,
+  });
 
   const toggleSection = (sectionId: string) => {
     const expanded = treeState.expandedSectionIds.includes(sectionId);
 
     workbench.renderers.setSectionExpanded(treeViewId, sectionId, !expanded);
   };
+  const moveNode = createMoveTreeNode({
+    workbench,
+    renderer: treeRenderer,
+    resource,
+    viewId,
+    sections: body,
+    childrenByNodeId,
+    onError: onOpenResourceError,
+  });
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
 
@@ -301,6 +279,12 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           />
         </Flex>
       ) : null}
+      <TreeViewSearch
+        visible={!loading && Boolean(treeRenderer.searchable)}
+        placeholder={treeRenderer.searchPlaceholder}
+        value={filter}
+        onChange={setFilter}
+      />
       <ScrollArea
         flex="1"
         minH="0"
@@ -316,6 +300,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       >
         <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
           <TreeViewBody
+            error={error}
             loading={loading}
             moduleLoading={treeState.loading}
             sections={visibleSections}
@@ -330,6 +315,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             onToggleNode={toggleNode}
             onReorderSections={onReorderSections}
             onReorderNodes={onReorderNodes}
+            onMoveNode={moveNode}
             onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
           />
         </Box>

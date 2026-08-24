@@ -70,7 +70,12 @@ describe("createWorkbenchExtensionMetadata", () => {
             },
           },
           treeRenderers: {
-            files: { title: "Files", body: async () => [] },
+            files: {
+              title: "Files",
+              searchable: true,
+              searchPlaceholder: "Search files",
+              body: async () => [],
+            },
           },
           panels: {
             rows: {
@@ -140,6 +145,11 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.kanbanRenderers?.[0]).toMatchObject({
       id: "lab.rows",
       queryHandlerId: "lab.rows.kanban.query",
+    });
+    expect(metadata.treeRenderers?.[0]).toMatchObject({
+      id: "lab.files",
+      searchable: true,
+      searchPlaceholder: "Search files",
     });
     expect(metadata.treeItems?.[0]).toMatchObject({
       id: "lab.rows",

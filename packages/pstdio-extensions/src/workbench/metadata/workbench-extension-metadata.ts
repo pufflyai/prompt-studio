@@ -406,6 +406,8 @@ const toTreeRendererRecord = (
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
     icon: renderer.contribution.icon,
+    searchable: renderer.contribution.searchable,
+    searchPlaceholder: renderer.contribution.searchPlaceholder,
     bodyHandlerId: handlers.bodyHandlerId,
     refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
     childrenHandlerId: handlers.childrenHandlerId,

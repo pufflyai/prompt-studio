@@ -14,6 +14,7 @@ const TreeViewSkeleton = () => (
 );
 
 interface TreeViewBodyProps {
+  error?: string | null;
   loading: boolean;
   moduleLoading?: boolean;
   sections: TreeListSection[];
@@ -28,11 +29,13 @@ interface TreeViewBodyProps {
   onToggleNode: (nodeId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
 }
 
 export const TreeViewBody = (props: TreeViewBodyProps) => {
   const {
+    error,
     loading,
     moduleLoading,
     sections,
@@ -47,9 +50,11 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onToggleNode,
     onReorderSections,
     onReorderNodes,
+    onMoveNode,
     onNavigate,
   } = props;
 
+  if (error) return <EmptyState title="Could not load files" description={error} />;
   if (loading) return null;
   if (moduleLoading) return <TreeViewSkeleton />;
 
@@ -76,6 +81,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       onToggleNode={onToggleNode}
       onReorderSections={onReorderSections}
       onReorderNodes={onReorderNodes}
+      onMoveNode={onMoveNode}
       onNavigate={onNavigate}
     />
   );

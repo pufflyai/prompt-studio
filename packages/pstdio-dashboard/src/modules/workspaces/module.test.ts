@@ -47,7 +47,30 @@ describe("createWorkspacesModule", () => {
     expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.dashboardSidenav,
     ]);
-    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspaceDiffs);
+    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      dashboardWidgetIds.workspaceFiles,
+      dashboardWidgetIds.workspace,
+      dashboardWidgetIds.workspaceDiffs,
+    ]);
+    expect(
+      workbench.layout
+        .getLayout()
+        .regions.main.widgets.filter(
+          (widget) =>
+            widget.contributionId === dashboardWidgetIds.workspaceFiles ||
+            widget.contributionId === dashboardWidgetIds.workspaceDiffs,
+        )
+        .map((widget) => widget.title),
+    ).toEqual(["Files", "Changes"]);
+    expect(workbench.layout.getPanel(dashboardWidgetIds.workspaceDiffs)?.icon).toBe("FileDiff");
+    expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([
+      expect.objectContaining({
+        contributionId: dashboardWidgetIds.workspaceFileTree,
+        ownerResourceUri: workspace.uri,
+        resource: workspace,
+      }),
+    ]);
     expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
@@ -59,6 +82,34 @@ describe("createWorkspacesModule", () => {
       .map((node) => node.id);
     expect(sidenavNodeIds).not.toContain(workspace.uri);
     expect(sidenavNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
+  });
+
+  test("opens same-URI workspace file metadata in Files without changing workspace ownership", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceShorthand: "PS-307_A1",
+    });
+    const fileResource = {
+      ...workspace,
+      metadata: { ...workspace.metadata, workspaceView: "files", workspaceFilePath: "src/index.ts" },
+    };
+
+    workbench.registerModule(createSidenavModule());
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+    await workbench.resources.openResource(fileResource, { replaceActive: true });
+
+    const layout = workbench.layout.getLayout();
+    expect(layout.regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspaceFiles);
+    expect(layout.activeResourceUri).toBe(workspace.uri);
+    expect(
+      layout.regions.main.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.workspaceFiles)
+        ?.resource,
+    ).toEqual(fileResource);
+    expect(layout.regions["main-left-menu"].widgets[0]?.resource).toEqual(fileResource);
   });
 
   test("lists workspaces of the selected project as command panel resources", () => {

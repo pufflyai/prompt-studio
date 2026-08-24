@@ -12,7 +12,8 @@ services:
       IS_SANDBOX: "1"
       PSTDIO_DISABLE_API_AUTO_START: "1"
       PSTDIO_DISABLE_EMBED_MANIFEST: "1"
-      PSTDIO_DEFAULT_EXTENSIONS: '["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]'
+      PSTDIO_DEFAULT_EXTENSIONS: '${PSTDIO_DEFAULT_EXTENSIONS:-["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]}'
+      PSTDIO_EXTENSION_RELEASE_REF: ${PSTDIO_EXTENSION_RELEASE_REF:?PSTDIO_EXTENSION_RELEASE_REF is required}
       PSTDIO_HOME: ${HOST_PSTDIO_HOME:?HOST_PSTDIO_HOME is required}
       PSTDIO_DESKTOP_FLOW: ${PSTDIO_DESKTOP_FLOW:-0}
       PSTDIO_TERMINAL_ORIGINS: ${PSTDIO_TERMINAL_ORIGINS:?PSTDIO_TERMINAL_ORIGINS is required}

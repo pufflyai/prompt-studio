@@ -200,6 +200,35 @@ describe("createResourceRegistry", () => {
     await expect(resources.openResource(resource, { replaceActive: true })).resolves.toEqual(panelInstance("true"));
   });
 
+  test("runs presenter completion after establishing the Location and before ending the open transaction", async () => {
+    const events: string[] = [];
+    const resources = createResourceRegistry({
+      establishLocation: (instance) => {
+        events.push(`establish:${instance.instanceId}`);
+        return { ...instance, title: "Established" };
+      },
+    });
+    const resource = { kind: "workspace", uri: "pstdio://workspace/a" };
+
+    resources.registerKind({ kind: "workspace", label: "Workspace" });
+    resources.registerPresenter({
+      id: "workspace",
+      canOpen: ({ kind }) => kind === "workspace",
+      open: () => {
+        events.push(`open:${resources.isOpeningResource()}`);
+        return panelInstance("workspace");
+      },
+      afterOpen: (_resource, instance) => {
+        events.push(`after:${instance.title}:${resources.isOpeningResource()}`);
+      },
+    });
+    resources.onDidOpenResource(() => events.push(`listener:${resources.isOpeningResource()}`));
+
+    await resources.openResource(resource);
+
+    expect(events).toEqual(["open:true", "establish:workspace", "after:Established:true", "listener:false"]);
+  });
+
   test("fails clearly when no presenter can handle a known resource", async () => {
     const resources = createResourceRegistry();
 

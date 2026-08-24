@@ -4,6 +4,7 @@ import {
   type ProvisionCoordinatorDeps,
   provisionProjectWorkspaces,
   runWorkspaceProvisioning,
+  scheduleProjectWorkspaceProvisioning,
   type WorkspaceProvisioningHooks,
 } from "./provision-coordinator";
 
@@ -127,6 +128,67 @@ describe("runWorkspaceProvisioning", () => {
 });
 
 describe("provisionProjectWorkspaces", () => {
+  test("schedules derived workspace sync without holding the caller open", async () => {
+    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const { deps } = makeDeps(row);
+    let releaseProvision: (() => void) | undefined;
+    let finishProvision: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+      releaseProvision = resolve;
+    });
+    const finished = new Promise<void>((resolve) => {
+      finishProvision = resolve;
+    });
+    const hooks: WorkspaceProvisioningHooks = {
+      fireProvision: (async () => {
+        await blocked;
+        finishProvision?.();
+        return { delivered: 1 };
+      }) as WorkspaceProvisioningHooks["fireProvision"],
+      fireReadyAsync: (() => {}) as WorkspaceProvisioningHooks["fireReadyAsync"],
+      ensureConfig: async () => {},
+    };
+
+    expect(scheduleProjectWorkspaceProvisioning(deps, "p1", hooks)).toBeUndefined();
+
+    releaseProvision?.();
+    await finished;
+  });
+
+  test("serializes concurrent reprovisioning for the same project", async () => {
+    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const { deps } = makeDeps(row);
+    const events: string[] = [];
+    let releaseFirst: (() => void) | undefined;
+    const firstBlocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let call = 0;
+    const hooks: WorkspaceProvisioningHooks = {
+      fireProvision: (async () => {
+        call += 1;
+        const current = call;
+        events.push(`start:${current}`);
+        if (current === 1) await firstBlocked;
+        events.push(`finish:${current}`);
+        return { delivered: 1 };
+      }) as WorkspaceProvisioningHooks["fireProvision"],
+      fireReadyAsync: (() => {}) as WorkspaceProvisioningHooks["fireReadyAsync"],
+      ensureConfig: async () => {},
+    };
+
+    const first = provisionProjectWorkspaces(deps, "p1", hooks);
+    while (events.length === 0) await Promise.resolve();
+    const second = provisionProjectWorkspaces(deps, "p1", hooks);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(events).toEqual(["start:1"]);
+
+    releaseFirst?.();
+    await Promise.all([first, second]);
+    expect(events).toEqual(["start:1", "finish:1", "start:2", "finish:2"]);
+  });
+
   test("records setup_error when a reprovision throws after setting initializing", async () => {
     const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
     const { deps, calls } = makeDeps(row);

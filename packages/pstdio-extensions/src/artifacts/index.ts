@@ -10,3 +10,10 @@ export {
   resolvePackageAssetPath,
 } from "./package-assets";
 export { normalizeArtifactMountPath, normalizeCliPath } from "./path-normalization";
+export {
+  WorkspaceFileAccessError,
+  type WorkspaceMountEntry,
+  type WorkspaceMountFile,
+  type WorkspaceMountResolvedEntry,
+  type WorkspaceMountSearchResult,
+} from "./workspace-file-access";

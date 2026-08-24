@@ -1,4 +1,4 @@
-import { Badge, Box, HStack, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { Box, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import { FileText, Search } from "lucide-react";
 import { useRef } from "react";
 import { Header } from "@/components/layout/header";
@@ -7,10 +7,10 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import type { TreeListNode } from "../tree-list/tree-list.types";
 import { buildChangedFilesTree } from "./build-changed-files-tree";
+import { FileChangeBadge } from "./file-change-badge";
 import type { ChangedFilesViewMode, ChangedFileTreeNode, FileIconInfo } from "./types";
 
 interface FileListPanelProps {
-  title: string;
   paths: string[];
   selectedPath: string | null;
   viewMode: ChangedFilesViewMode;
@@ -22,41 +22,6 @@ interface FileListPanelProps {
   resolveFileIcon?: (path: string, options?: { isFolder?: boolean; isExpanded?: boolean }) => FileIconInfo | undefined;
   changeByPath?: Map<string, string>;
 }
-
-const changeLabels: Record<string, string> = {
-  added: "A",
-  copied: "C",
-  deleted: "D",
-  modified: "U",
-  permissionChange: "M",
-  renamed: "R",
-};
-
-const changeColors: Record<string, string> = {
-  added: "green",
-  copied: "purple",
-  deleted: "red",
-  modified: "blue",
-  permissionChange: "yellow",
-  renamed: "orange",
-};
-
-const changeSemanticStyles: Record<string, { color: string; backgroundColor: string }> = {
-  added: { color: "fg.success", backgroundColor: "bg.success" },
-  deleted: { color: "fg.error", backgroundColor: "bg.error" },
-};
-
-const filterInputChromeProps = {
-  bg: "transparent",
-  border: "0",
-  borderColor: "transparent",
-  borderRadius: "0",
-  boxShadow: "none",
-  _hover: { borderColor: "transparent" },
-  _active: { borderColor: "transparent" },
-  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
-} as const;
 
 const getFilePathParts = (filePath: string) => {
   const lastSlashIndex = filePath.lastIndexOf("/");
@@ -108,20 +73,12 @@ const toTreeListNodes = (input: {
     const filePath = node.id.replace(/^file:/, "");
     const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="16px" />, color: "fg.subtle" };
     const change = changeByPath?.get(filePath);
-    const changeBadgeProps = change
-      ? (changeSemanticStyles[change] ?? { colorPalette: changeColors[change] ?? "gray" })
-      : {};
-
     return {
       id: node.id,
       label: renderFileLabel(node, viewMode, filePath),
       icon: fileIcon.icon,
       iconColor: fileIcon.color,
-      endContent: change ? (
-        <Badge size="xs" variant="subtle" flexShrink={0} {...changeBadgeProps}>
-          {changeLabels[change] ?? change}
-        </Badge>
-      ) : undefined,
+      endContent: change ? <FileChangeBadge change={change} /> : undefined,
       onActivate: () => onSelectPath(filePath),
     };
   });
@@ -129,7 +86,6 @@ const toTreeListNodes = (input: {
 
 export const FileListPanel = (props: FileListPanelProps) => {
   const {
-    title,
     paths,
     selectedPath,
     viewMode,
@@ -148,28 +104,18 @@ export const FileListPanel = (props: FileListPanelProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden" bg="bg">
-      <Header variant="main" justifyContent="space-between" borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
-        <HStack gap="2xs" minW="0">
-          <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-            {title}
-          </Text>
-          <Badge size="sm" variant="number" flexShrink={0} colorPalette="gray">
-            {paths.length}
-          </Badge>
-        </HStack>
-      </Header>
-      <Stack gap="xs" borderBottomWidth="1px" bg="bg">
+      <Header flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
         <InputGroup startElement={<Search size={14} />}>
           <Input
             size="sm"
-            mx="xs"
-            placeholder="Filter files"
+            variant="borderless"
+            aria-label="Search files"
+            placeholder="Search files"
             value={searchQuery}
-            {...filterInputChromeProps}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>
-      </Stack>
+      </Header>
       <ScrollArea
         flex="1"
         minH="0"

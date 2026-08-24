@@ -18,6 +18,7 @@ const extension: ProjectExtensionInstance = {
   lastLoadedAt: "2026-08-04T09:14:00.000Z",
   enabled: true,
   config: {},
+  canUpgrade: false,
   updateAvailable: false,
 };
 
@@ -122,6 +123,7 @@ const meta: Meta<typeof ExtensionDetail> = {
     onChangeSetting: noop,
     onRetry: noop,
     onUpdate: noop,
+    onUpgrade: noop,
     onAttemptFix: noop,
     onUninstall: noop,
   },
@@ -158,16 +160,22 @@ export const UpdateAvailable: Story = {
   },
 };
 
-export const UpdateRefused: Story = {
+export const UpgradeAvailable: Story = {
+  args: {
+    extension: { ...extension, canUpgrade: true },
+  },
+};
+
+export const IncompatibleApi: Story = {
   args: {
     extension: {
       ...extension,
-      updateAvailable: true,
+      canUpgrade: true,
       status: "error",
       lastError: {
-        code: "extension_reload_failed",
+        code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.2 but this host provides 1.0.0-alpha.1. Update Prompt Studio, or install a build of the extension for this version.',
+          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.1 but this host provides 1.0.0-alpha.2. Update Prompt Studio, or install a build of the extension for this version.',
       },
     },
   },

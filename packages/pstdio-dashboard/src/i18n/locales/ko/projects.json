@@ -223,7 +223,6 @@
       "empty": "이 프로젝트에 설치된 확장이 없습니다.",
       "loadError": "확장을 불러오지 못했습니다.",
       "title": "확장",
-      "counts": "{{installed}}개 설치됨 · {{enabled}}개 활성화됨 · {{failing}}개 실패",
       "searchPlaceholder": "확장 검색…",
       "installedGroup": "설치됨 · {{count}}",
       "noSearchResults": "\"{{query}}\"과(와) 일치하는 확장이 없습니다.",
@@ -242,6 +241,7 @@
       "health": {
         "triggerAriaLabel": "{{name}}의 문제 표시",
         "failedToLoad": "로드 실패",
+        "incompatibleVersions": "호환되지 않는 버전",
         "issues_one": "{{count}}개의 문제",
         "issues_other": "{{count}}개의 문제",
         "lastLoaded": "마지막 로드 {{time}}",
@@ -254,8 +254,6 @@
         "fixSessionFailed": "수정 세션 시작에 실패했습니다"
       },
       "update": {
-        "available": "업데이트 있음",
-        "description": "확장 폴더에 새 소스가 있습니다. 업데이트를 적용할 때까지 프로젝트는 현재 버전을 계속 사용합니다.",
         "action": "업데이트",
         "succeeded": "확장을 업데이트했습니다",
         "failed": "업데이트가 거부되었습니다"

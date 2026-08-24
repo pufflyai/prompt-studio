@@ -48,6 +48,24 @@ export const inputRecipe = defineRecipe({
           borderColor: interactiveBorderColor,
         },
       },
+      borderless: {
+        bg: "transparent",
+        border: "0",
+        borderColor: "transparent",
+        borderRadius: "0",
+        boxShadow: "none",
+        transition: "none",
+        _hover: { bg: "transparent", borderColor: "transparent" },
+        _active: { bg: "transparent", borderColor: "transparent" },
+        _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+        _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+        "&:is(:hover, [data-hover])": {
+          borderColor: "transparent",
+        },
+        "&:is(:active, [data-active])": {
+          borderColor: "transparent",
+        },
+      },
     },
     size: {
       "2xs": {

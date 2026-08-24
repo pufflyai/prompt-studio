@@ -1,9 +1,11 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
-import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
+import { TreeListBackground } from "./tree-list-background";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
+import { TreeListMoveSurface } from "./tree-list-move-surface";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 import { TreeListSortable } from "./tree-list-sortable";
@@ -43,6 +45,8 @@ interface TreeListProps {
   draggable?: boolean;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  /** Move a node onto another node, or onto the tree root when the target is omitted. */
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   // When set, right-clicking the empty back area of the tree (everything not
   // covered by an item row) opens this menu. Item rows keep their own
   // right-click behaviour — the menu lives on a layer behind them.
@@ -65,6 +69,7 @@ interface RenderVirtualRowInput {
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
 }
 
 const renderVirtualRow = (input: RenderVirtualRowInput) => {
@@ -81,6 +86,7 @@ const renderVirtualRow = (input: RenderVirtualRowInput) => {
     onToggleSection,
     onToggleNode,
     onSectionContextMenu,
+    onMoveNode,
   } = input;
 
   if (row.kind === "section-header") {
@@ -114,6 +120,7 @@ const renderVirtualRow = (input: RenderVirtualRowInput) => {
       onFocus={() => onRowFocus(row.node.id)}
       onNavigate={onNavigate}
       onToggleNode={onToggleNode}
+      onMoveNode={onMoveNode}
     />
   );
 };
@@ -135,6 +142,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
     onToggleSection,
     onToggleNode,
     onSectionContextMenu,
+    onMoveNode,
     scrollRef,
   } = props;
 
@@ -195,6 +203,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
               onToggleSection,
               onToggleNode,
               onSectionContextMenu,
+              onMoveNode,
             })}
           </Box>
         );
@@ -217,6 +226,7 @@ const StackTreeList = (props: TreeListProps) => {
     onToggleSection,
     onToggleNode,
     onSectionContextMenu,
+    onMoveNode,
     virtualize,
     scrollRef,
   } = props;
@@ -271,6 +281,7 @@ const StackTreeList = (props: TreeListProps) => {
                   onToggleSection,
                   onToggleNode,
                   onSectionContextMenu,
+                  onMoveNode,
                 })}
               </Box>
             ))}
@@ -278,31 +289,6 @@ const StackTreeList = (props: TreeListProps) => {
         );
       })}
     </Stack>
-  );
-};
-
-interface TreeListBackgroundProps {
-  actions: ResourceContextAction[];
-  children: ReactNode;
-}
-
-// Renders the right-click target as a layer behind the rows so empty back-area
-// clicks open the menu while item rows (painted above) keep their own handling.
-// `flex` lets the layer grow to fill a flex-column host (e.g. a scroll area);
-// `minH=full` covers definite-height hosts. Either way the absolute child fills
-// the wrapper, so the whole back area is right-clickable, not just the rows.
-const TreeListBackground = (props: TreeListBackgroundProps) => {
-  const { actions, children } = props;
-
-  return (
-    <Box position="relative" flex="1 0 auto" minH="full" w="full" minW="0" maxW="full">
-      <ResourceContextMenu actions={actions} closeOnSelect={false}>
-        <Box position="absolute" inset="0" zIndex={0} aria-hidden data-tree-list-background="true" />
-      </ResourceContextMenu>
-      <Box position="relative" zIndex={1} w="full" minW="0" maxW="full">
-        {children}
-      </Box>
-    </Box>
   );
 };
 
@@ -327,11 +313,7 @@ export const TreeList = (props: TreeListProps) => {
   ) : (
     <StackTreeList {...props} />
   );
-  const paddedContent = (
-    <Box p="xs" w="full" minW="0" maxW="full">
-      {content}
-    </Box>
-  );
+  const paddedContent = <TreeListMoveSurface onMoveNode={props.onMoveNode}>{content}</TreeListMoveSurface>;
 
   if (!props.backgroundContextActions || props.backgroundContextActions.length === 0) {
     return paddedContent;

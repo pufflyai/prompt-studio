@@ -1,14 +1,15 @@
-import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
-import { readPackageManifest } from "pstdio-extensions";
-import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { existsSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, isAbsolute, join, resolve } from "node:path";
+import { readPackageManifestMetadata } from "pstdio-extensions";
+import { extensionMarketplace } from "./extension-marketplace";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
   isLocalExtensionSource,
+  toExtensionEnableInput,
 } from "./install-extension-source";
 
 export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects } from "./installed-extension-sync";
@@ -18,6 +19,7 @@ export type DefaultExtensionEntry =
   | {
       force?: boolean;
       installName?: string;
+      ref?: string;
       skipInstall?: boolean;
       source: string;
     };
@@ -27,15 +29,7 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: [
-    "harness-claude-code",
-    "harness-codex",
-    "harness-open-code",
-    "pstdio-base-themes",
-    "pstdio-planner",
-    "pstdio-reports",
-    "pstdio-skills",
-  ],
+  defaultExtensions: extensionMarketplace.map((extension) => extension.installName),
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
@@ -62,70 +56,31 @@ export const resolveDefaultExtensionsConfig = (env: Record<string, string | unde
   }
 };
 
-const toInstallInput = (entry: DefaultExtensionEntry): InstallExtensionSourceInput => {
-  if (typeof entry === "string") return { source: entry };
+const entryRef = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? undefined : entry.ref);
+
+const toInstallInput = (entry: DefaultExtensionEntry, releaseRef?: string): InstallExtensionSourceInput => {
+  const source = sourceFor(entry);
+  const local = isLocalExtensionSource(source);
+  const ref = local ? entryRef(entry) : (entryRef(entry) ?? releaseRef);
+  if (typeof entry === "string") return { allowUnsupportedApiVersion: true, source: entry, ref };
   return {
     source: entry.source,
     installName: entry.installName,
+    ref,
     skipInstall: entry.skipInstall,
     force: entry.force,
+    ...(!local ? { allowUnsupportedApiVersion: true } : {}),
   };
 };
 
 const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? entry : entry.source);
-
-type EmbeddedFile = Blob & { name: string };
-
-const EMBEDDED_EXTENSIONS_PREFIX = "../../../extensions/";
-
-const getEmbeddedFiles = () => {
-  try {
-    const files = (Bun as Record<string, unknown>).embeddedFiles;
-    if (Array.isArray(files)) return files as EmbeddedFile[];
-  } catch {
-    // Bun.embeddedFiles is only available in compiled runtimes and tests that fake it.
-  }
-  return [];
-};
-
-const normalizeEmbeddedRelativePath = (relativePath: string) =>
-  relativePath.endsWith(".") ? relativePath.slice(0, -1) : relativePath;
-
-const embeddedExtensionFiles = (name: string) => {
-  const prefix = `${EMBEDDED_EXTENSIONS_PREFIX}${name}/`;
-  return {
-    files: getEmbeddedFiles().filter((file) => normalizeEmbeddedFileName(file.name).startsWith(prefix)),
-    prefix,
-  };
-};
-
-const extractEmbeddedDefaultExtension = async (name: string) => {
-  const { files, prefix } = embeddedExtensionFiles(name);
-  if (files.length === 0) return null;
-
-  const targetDir = join(tmpdir(), "pstdio-default-extensions", name);
-  rmSync(targetDir, { recursive: true, force: true });
-
-  for (const file of files) {
-    const relativePath = normalizeEmbeddedRelativePath(normalizeEmbeddedFileName(file.name).slice(prefix.length));
-    const targetPath = join(targetDir, relativePath);
-    mkdirSync(dirname(targetPath), { recursive: true });
-    writeFileSync(targetPath, new Uint8Array(await file.arrayBuffer()));
-  }
-
-  return targetDir;
-};
 
 const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry, force: boolean): Promise<DefaultExtensionEntry> => {
   if (typeof entry !== "string") return entry;
 
   const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
   if (existsSync(localSource)) return { source: localSource, installName: entry, force, skipInstall: true };
-
-  const bundledSource = await extractEmbeddedDefaultExtension(entry);
-  if (!bundledSource) return entry;
-
-  return { source: bundledSource, installName: entry, force };
+  return entry;
 };
 
 type InstallDefaultExtensionsDeps = {
@@ -135,6 +90,7 @@ type InstallDefaultExtensionsDeps = {
   installExtensionSource?: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+  releaseRef?: string;
 };
 
 let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
@@ -173,12 +129,46 @@ const readDefaultScope = (sourcePath: string) => {
     throw new Error(`Extension source folder not found: ${sourcePath}`);
   }
 
-  const { manifest, diagnostics } = readPackageManifest(sourcePath);
+  const { manifest, diagnostics } = readPackageManifestMetadata(sourcePath);
   if (!manifest) {
     const first = diagnostics[0];
     throw new Error(first?.message ?? `Default extension validation failed: ${sourcePath}`);
   }
   return manifest.pstdio?.scope ?? "user";
+};
+
+type SharedCheckout = Awaited<ReturnType<typeof createSharedNamedSourceCheckout>>;
+
+const prepareDefaultCheckouts = async (
+  entries: DefaultExtensionEntry[],
+  input: {
+    prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+    releaseRef?: string;
+  },
+) => {
+  const namedByRef = new Map<string | undefined, string[]>();
+  for (const entry of entries) {
+    const source = sourceFor(entry);
+    if (isLocalExtensionSource(source)) continue;
+    const ref = entryRef(entry) ?? input.releaseRef;
+    namedByRef.set(ref, [...(namedByRef.get(ref) ?? []), source]);
+  }
+
+  const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
+  const sharedByRef = new Map<string | undefined, SharedCheckout>();
+  for (const [ref, names] of namedByRef) {
+    sharedByRef.set(ref, await prepareShared(names, ref ? { ref } : {}));
+  }
+  return sharedByRef;
+};
+
+const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>, releaseRef?: string) => {
+  const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref) => {
+    const shared = sharedByRef.get(ref ?? releaseRef);
+    if (!shared) throw new Error(`No prepared checkout for extension: ${name}`);
+    return shared.prepareNamedSource(name, "", ref);
+  };
+  return prepareNamedSource;
 };
 
 const withResolvedDefaultEntries = async <T>(
@@ -187,6 +177,7 @@ const withResolvedDefaultEntries = async <T>(
     forceSourceDefaults?: boolean;
     onEntryFailure?: (failure: { entry: DefaultExtensionEntry; error: unknown; source: string }) => void;
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+    releaseRef?: string;
     sourceMode?: boolean;
   },
   fn: (
@@ -199,9 +190,8 @@ const withResolvedDefaultEntries = async <T>(
         input.config.defaultExtensions.map((entry) => sourceModeDefaultEntry(entry, input.forceSourceDefaults ?? true)),
       )
     : input.config.defaultExtensions;
-  const namedNames = entries.map(sourceFor).filter((source) => !isLocalExtensionSource(source));
-  const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
-  const shared = namedNames.length > 0 ? await prepareShared(namedNames) : null;
+  const sharedByRef = await prepareDefaultCheckouts(entries, input);
+  const prepareNamedSource = createPreparedSourceResolver(sharedByRef, input.releaseRef);
 
   try {
     const resolved: ResolvedDefaultEntry[] = [];
@@ -210,7 +200,7 @@ const withResolvedDefaultEntries = async <T>(
       try {
         const sourcePath = isLocalExtensionSource(source)
           ? resolveLocalSource(source)
-          : (await shared?.prepareNamedSource(source, ""))?.path;
+          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef)).path;
         if (!sourcePath) continue;
 
         resolved.push({
@@ -225,9 +215,9 @@ const withResolvedDefaultEntries = async <T>(
       }
     }
 
-    return await fn(resolved, shared?.prepareNamedSource);
+    return await fn(resolved, sharedByRef.size > 0 ? prepareNamedSource : undefined);
   } finally {
-    shared?.cleanup();
+    for (const shared of sharedByRef.values()) shared.cleanup();
   }
 };
 
@@ -258,6 +248,7 @@ const runDefaultExtensionInstall = async (
         : undefined,
       prepareSharedCheckout: deps.prepareSharedCheckout,
       forceSourceDefaults: deps.forceSourceDefaults,
+      releaseRef: deps.releaseRef,
       sourceMode: context.sourceMode,
     },
     async (entries, prepareNamedSource) => {
@@ -266,7 +257,7 @@ const runDefaultExtensionInstall = async (
         try {
           installed.push(
             await install({
-              ...toInstallInput(resolved.entry),
+              ...toInstallInput(resolved.entry, deps.releaseRef),
               env: context.env,
               existsOk: true,
               prepareNamedSource,
@@ -291,6 +282,31 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
     sourceMode: !deps.config,
   };
   return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context));
+};
+
+export const registerInstalledExtensionSources = async (
+  extensionService: {
+    registerInstalledSource: (input: {
+      displayName: string;
+      extensionId: string;
+      installName: string;
+      manifest: Record<string, unknown>;
+      name: string;
+      sourceHash: string;
+      sourceKind: "git" | "local_path";
+      sourcePath: string;
+      sourceRef: string | null;
+      version: string | null;
+    }) => Promise<unknown>;
+  },
+  installed: InstalledExtensionSource[],
+) => {
+  for (const extension of installed) {
+    await extensionService.registerInstalledSource({
+      installName: extension.installName,
+      ...toExtensionEnableInput(extension),
+    });
+  }
 };
 
 type InstallRepoDefaultExtensionsInput = {

@@ -1,4 +1,4 @@
-import { DiffEditor, Editor } from "@monaco-editor/react";
+import { DiffEditor, Editor, type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
 import { useThemePreference } from "../../utils/theme-preference";
@@ -67,6 +67,16 @@ const useApplyEditorTheme = (editorTheme: MonacoThemeData) => {
   };
 };
 
+export const configureCodeEditor = (editor: Parameters<OnMount>[0], monaco: Parameters<OnMount>[1]) => {
+  monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+    jsx: monaco.languages.typescript.JsxEmit.React,
+  });
+
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
+    await editor.getAction("editor.action.formatDocument")?.run();
+  });
+};
+
 interface CodeEditorProps {
   language: string;
   defaultCode?: string;
@@ -120,21 +130,9 @@ export const CodeEditor = (props: CodeEditorProps) => {
       beforeMount={(monaco) => {
         applyEditorTheme(monaco);
       }}
-      onMount={async (editor, monaco) => {
+      onMount={(editor, monaco) => {
         applyEditorTheme(monaco);
-
-        // Add JSX support
-        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-          jsx: monaco.languages.typescript.JsxEmit.React,
-        });
-
-        // Format on cmd+s
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
-          await editor.getAction("editor.action.formatDocument")?.run();
-        });
-
-        // Run format on the initial value
-        await editor.getAction("editor.action.formatDocument")?.run();
+        configureCodeEditor(editor, monaco);
       }}
     />
   );

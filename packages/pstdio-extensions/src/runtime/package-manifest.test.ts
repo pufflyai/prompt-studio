@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { readPackageManifest } from "./package-manifest";
+import { readPackageManifest, readPackageManifestMetadata } from "./package-manifest";
 
 const tempDirs: string[] = [];
 
@@ -116,6 +116,26 @@ describe("readPackageManifest", () => {
     ]);
     expect(result.diagnostics[0]?.message).toContain("1.0.0-alpha.999");
     expect(result.diagnostics[0]?.message).toContain(EXTENSION_API_VERSION);
+  });
+
+  test("reads metadata for an extension built for a different API version without loading it", () => {
+    const dir = createPackage({
+      name: "old-extension",
+      version: "0.10.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "1.0.0-alpha.1" },
+    });
+
+    const result = readPackageManifestMetadata(dir);
+
+    expect(result.manifest).toMatchObject({
+      enginesPstdio: "1.0.0-alpha.1",
+      name: "old-extension",
+      version: "0.10.0",
+    });
+    expect(result.entryPath).toBe(join(dir, "extension.ts"));
+    expect(result.diagnostics).toEqual([]);
   });
 
   test("rejects a range while the API is in alpha", () => {

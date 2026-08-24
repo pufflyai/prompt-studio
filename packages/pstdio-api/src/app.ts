@@ -38,6 +38,7 @@ import { createExtensionScheduler } from "./features/extensions/extension-schedu
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
+import type { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
@@ -53,6 +54,7 @@ import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createExtensionService } from "./services/extension-service";
+import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
@@ -81,6 +83,8 @@ interface AppOptions {
   /** Test seam: overrides the extension-backed harness registry. */
   harnessRegistry?: HarnessRegistryService;
   runtimeHost?: RuntimeHost;
+  extensionReleaseRef?: string;
+  installExtensionSource?: typeof installExtensionSource;
   terminalOrigins?: string[];
   onDatabaseLockAcquired?: () => void;
 }
@@ -101,6 +105,9 @@ const resolveExtensionWebviewBuilds = (value: boolean | undefined) => {
   if (value !== undefined) return value;
   return process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS !== "0";
 };
+
+const resolveExtensionReleaseRef = (configured: string | undefined) =>
+  configured ?? process.env.PSTDIO_EXTENSION_RELEASE_REF;
 
 const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
@@ -277,6 +284,12 @@ const wireExtensionRuntimeServices = async (input: {
     },
     projectService,
   });
+  const extensionUpgradeService = createExtensionUpgradeService({
+    extensionService,
+    installExtensionSource: options.installExtensionSource,
+    releaseRef: resolveExtensionReleaseRef(options.extensionReleaseRef),
+    repoService,
+  });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
     projectService,
@@ -314,6 +327,7 @@ const wireExtensionRuntimeServices = async (input: {
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionService,
+    extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents: () => {
       unsubscribeRepoLinkRefresh();
@@ -365,16 +379,22 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
     workspaceService,
   } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
-  const { extensionRuntime, extensionRuntimeCatalog, extensionService, harnessRegistry, unsubscribeExtensionEvents } =
-    await wireExtensionRuntimeServices({
-      db,
-      eventBus,
-      extensionInstancesService,
-      installedExtensionSourcesService,
-      options,
-      projectService,
-      repoService,
-    });
+  const {
+    extensionRuntime,
+    extensionRuntimeCatalog,
+    extensionService,
+    extensionUpgradeService,
+    harnessRegistry,
+    unsubscribeExtensionEvents,
+  } = await wireExtensionRuntimeServices({
+    db,
+    eventBus,
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    options,
+    projectService,
+    repoService,
+  });
   const templateService = createTemplateService({
     extensionRuntimeCatalog,
     extensionTemplatePreferencesDBService,
@@ -468,6 +488,7 @@ export const createApp = async (options: AppOptions) => {
     extensionRuntimeCatalog,
     extensionSettingsDBService,
     extensionService,
+    extensionUpgradeService,
     extensionSettingsService,
     extensionStorageService,
     syncService,

@@ -75,6 +75,14 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - Choosing **Update** in the extension panel validates the source on disk and adopts it. If the source
   is refused, for example because it targets a different `engines.pstdio`, the previously adopted
   version keeps running and the update stays on offer.
+- A Git-backed Marketplace extension shows **Update** in its detail view. Update fetches the extension
+  from the running Prompt Studio release, validates it in staging, replaces the installed source, and
+  adopts it. Local-path extensions do not show this action because their source belongs to the user.
+- Prompt Studio's default extensions are Marketplace entries. Packaged hosts fetch them from the Git
+  release paired with the host. Removing one leaves its Marketplace entry available for reinstall.
+- An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
+  extension list and detail view. The error names both API versions and offers Update when the host
+  owns the source.
 - Editing an installed folder still rebuilds that extension's webview assets, so an open webview
   updates while you work. Only its contributions wait for the update, because those are what the
   project agreed to run.
