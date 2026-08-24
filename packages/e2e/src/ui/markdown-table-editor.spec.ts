@@ -59,6 +59,7 @@ test.describe("markdown table editor storybook", () => {
 
   test("uses contextual table controls and keeps every change undoable", async ({ page }) => {
     await page.goto(storyUrl(baseUrl, difficultTableStoryId));
+    await waitForStoryPlayback(page);
 
     const emittedMarkdown = page.locator("textarea[readonly]");
     const rows = page.locator("table:visible tbody tr[data-document-row]");
