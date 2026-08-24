@@ -1,5 +1,11 @@
 import type { Param, ParamValue, SelectionOption } from "@pstdio/ui";
-import type { CommandParamEntry, CommandParamValue } from "./command-palette-params";
+import {
+  type CommandParamEntry,
+  type CommandParamValue,
+  createCommandFilesParamValue,
+  isCommandFilesParamValue,
+  isFileUploadValue,
+} from "./command-palette-params";
 
 const asText = (value: CommandParamValue) => (typeof value === "string" ? value : "");
 
@@ -29,6 +35,16 @@ export const buildCommandParam = (entry: CommandParamEntry, value: CommandParamV
   if (entry.type === "number") return { ...base, type: "number", defaultValue: Number(asText(value)) };
 
   if (entry.type === "markdown") return { ...base, type: "markdown", defaultValue: asText(value) };
+
+  if (entry.type === "files") {
+    return {
+      ...base,
+      type: "fileUpload",
+      defaultValue: isCommandFilesParamValue(value) ? value.uploads : [],
+      accept: entry.accept,
+      multiple: entry.multiple,
+    };
+  }
 
   if (entry.type === "multi-select") {
     return {
@@ -62,8 +78,11 @@ export const buildCommandParam = (entry: CommandParamEntry, value: CommandParamV
 };
 
 /** Narrows an editor value back to what a command param can carry. */
-export const readCommandParamValue = (value: ParamValue): CommandParamValue => {
+export const readCommandParamValue = (value: ParamValue, entry?: CommandParamEntry): CommandParamValue => {
   if (typeof value === "boolean") return value;
+  if (entry?.type === "files") {
+    return createCommandFilesParamValue({ uploads: Array.isArray(value) ? value.filter(isFileUploadValue) : [] });
+  }
   if (Array.isArray(value)) return value.map(String);
   return String(value ?? "");
 };

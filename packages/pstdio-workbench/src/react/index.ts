@@ -6,7 +6,15 @@ export type {
 export { createWorkbenchRendererRegistry } from "../core";
 export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
-export type { CommandParamEntry, CommandParamValue } from "./command-palette/command-palette-params";
+export type {
+  CommandFilesParamValue,
+  CommandParamEntry,
+  CommandParamValue,
+} from "./command-palette/command-palette-params";
+export {
+  createCommandFilesParamValue,
+  isCommandFilesParamValue,
+} from "./command-palette/command-palette-params";
 export { commandParamName, readCommandParamValue } from "./command-palette/command-param-descriptors";
 export type {
   CommandParamFieldProps,

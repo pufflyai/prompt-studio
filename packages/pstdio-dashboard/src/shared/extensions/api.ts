@@ -35,6 +35,16 @@ export const executeExtensionCommand = (projectId: string, commandId: string, bo
     },
   );
 
+export const uploadExtensionCommandFile = async (projectId: string, commandId: string, file: File) =>
+  apiRequest<{ id: string }>(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/files`, {
+    method: "POST",
+    body: await file.arrayBuffer(),
+    headers: {
+      "content-type": file.type || "application/octet-stream",
+      "x-file-name": encodeURIComponent(file.name),
+    },
+  });
+
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
 

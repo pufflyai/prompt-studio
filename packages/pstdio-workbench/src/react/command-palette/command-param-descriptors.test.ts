@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandParamEntry } from "./command-palette-params";
+import { createCommandFilesParamValue } from "./command-palette-params";
 import { buildCommandParam, commandParamName, readCommandParamValue } from "./command-param-descriptors";
 
 const entry = (overrides: Partial<CommandParamEntry> & { key: string; type: string }): CommandParamEntry => ({
@@ -28,6 +29,12 @@ describe("command param descriptors", () => {
       type: "text",
       singleLine: false,
     });
+    expect(
+      buildCommandParam(
+        entry({ key: "files", type: "files", accept: ".csv", multiple: false }),
+        createCommandFilesParamValue(),
+      ),
+    ).toMatchObject({ type: "fileUpload", accept: ".csv", multiple: false, defaultValue: [] });
   });
 
   test("renders selections from declared options and clears when optional", () => {
@@ -90,5 +97,15 @@ describe("command param descriptors", () => {
     expect(readCommandParamValue(3)).toBe("3");
     expect(readCommandParamValue(["a", "b"])).toEqual(["a", "b"]);
     expect(readCommandParamValue(null)).toBe("");
+  });
+
+  test("preserves selected browser files instead of stringifying them", () => {
+    const file = new File(["first"], "first.csv", { type: "text/csv" });
+    const uploads = [{ id: "first", file, status: "queued" as const }];
+
+    expect(readCommandParamValue(uploads, entry({ key: "files", type: "files" }))).toEqual({
+      refs: [],
+      uploads,
+    });
   });
 });

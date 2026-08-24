@@ -93,6 +93,7 @@ const createMenuItem = (input: {
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: slot.group ?? contribution.group,
+    args: contribution.params,
     overflowLabel: slot.overflowLabel,
     order: contributionOrder(contribution, index),
     when,
@@ -112,6 +113,7 @@ const createPaletteItem = (input: {
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: contribution.group,
+    args: contribution.params,
     order: contributionOrder(contribution, index),
   } satisfies MenuItem;
 };

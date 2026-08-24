@@ -37,6 +37,8 @@ export interface CommandParamDescriptor {
   options?: CommandParamOption[];
   templateType?: string;
   resourceType?: string;
+  accept?: string;
+  multiple?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -53,6 +55,11 @@ export interface Command {
 }
 
 export interface CommandHandler<TArgs = unknown, TResult = unknown> {
+  prepareArgs?(
+    args: TArgs,
+    context?: WorkbenchCommandExecutionContext,
+    onArgsChange?: (args: TArgs) => void,
+  ): TArgs | Promise<TArgs>;
   execute(args: TArgs, context?: WorkbenchCommandExecutionContext): TResult | Promise<TResult>;
   isEnabled?(args: TArgs): boolean;
   isVisible?(args: TArgs): boolean;
@@ -80,6 +87,12 @@ export interface CommandRegistry {
   isCommandEnabled(id: string, args?: unknown): boolean;
   isCommandVisible(id: string, args?: unknown): boolean;
   isCommandToggled(id: string, args?: unknown): boolean;
+  prepareCommandArgs(
+    id: string,
+    args: unknown,
+    context?: WorkbenchCommandExecutionContext,
+    onArgsChange?: (args: unknown) => void,
+  ): Promise<unknown>;
   executeCommand(id: string, args?: unknown, context?: WorkbenchCommandExecutionContext): Promise<unknown>;
   onDidExecuteError(listener: WorkbenchCommandExecutionErrorListener): Disposable;
 }
@@ -149,6 +162,11 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
 
     isCommandToggled(id, args) {
       return requireCommand(id).handler.isToggled?.(args) ?? false;
+    },
+
+    async prepareCommandArgs(id, args, context, onArgsChange) {
+      const prepare = requireCommand(id).handler.prepareArgs;
+      return prepare ? prepare(args, context, onArgsChange) : args;
     },
 
     async executeCommand(id, args, context) {

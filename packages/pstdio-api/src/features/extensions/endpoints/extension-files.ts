@@ -1,9 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
+import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
+import { findEnabledSource } from "../command-environment/types";
 import type { ExtensionsRouteDeps } from "../deps";
-
-const MAX_EXTENSION_FILE_UPLOAD_BYTES = 25 * 1024 * 1024;
+import {
+  readExtensionFileUpload,
+  resolveExtensionFileScope,
+  storeExtensionFile,
+  toExtensionBlobRef,
+} from "./extension-file-storage";
 
 const errorSchema = z.object({ error: z.string() });
 const extensionFileScopeQuerySchema = z
@@ -17,6 +23,13 @@ const extensionFileParamsSchema = z
   .object({
     projectId: z.string(),
     extensionInstanceId: z.string(),
+  })
+  .strict();
+
+const extensionCommandFileParamsSchema = z
+  .object({
+    projectId: z.string(),
+    commandId: z.string(),
   })
   .strict();
 
@@ -35,6 +48,37 @@ const extensionBlobRefSchema = z.object({
   url: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+export const uploadExtensionCommandFileRoute = createRoute({
+  method: "post",
+  path: "/projects/{projectId}/extensions/commands/{commandId}/files",
+  description: "Upload a file owned by the enabled extension that registered a command.",
+  tags: ["Extensions"],
+  request: {
+    params: extensionCommandFileParamsSchema,
+    body: {
+      content: {
+        "application/octet-stream": {
+          schema: z.string().openapi({ type: "string", format: "binary" }),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "Extension command file uploaded.",
+      content: { "application/json": { schema: extensionBlobRefSchema } },
+    },
+    404: {
+      description: "Project or enabled command not found.",
+      content: { "application/json": { schema: errorSchema } },
+    },
+    413: {
+      description: "Upload too large.",
+      content: { "application/json": { schema: errorSchema } },
+    },
+  },
 });
 
 export const uploadExtensionFileRoute = createRoute({
@@ -81,7 +125,11 @@ export const listExtensionFilesRoute = createRoute({
   responses: {
     200: {
       description: "Extension files.",
-      content: { "application/json": { schema: z.object({ files: z.array(extensionBlobRefSchema) }) } },
+      content: {
+        "application/json": {
+          schema: z.object({ files: z.array(extensionBlobRefSchema) }),
+        },
+      },
     },
     404: {
       description: "Extension instance not found.",
@@ -131,40 +179,6 @@ export const deleteExtensionFileRoute = createRoute({
   },
 });
 
-type FileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["extensionFileService"]["getOwnedFile"]>>>;
-
-const resolveScope = (projectId: string, query: { scope_type?: string; scope_id?: string }) => {
-  const scopeType = query.scope_type ?? "project";
-  return {
-    scope_type: scopeType,
-    scope_id: query.scope_id ?? (scopeType === "project" ? projectId : null),
-  };
-};
-
-const fileUrl = (projectId: string, extensionInstanceId: string, fileId: string) =>
-  `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files/${encodeURIComponent(fileId)}/content`;
-
-const toBlobRef = (projectId: string, extensionInstanceId: string, file: FileRow) => ({
-  id: file.id,
-  name: file.file_name,
-  mimeType: file.mime_type,
-  size: file.size_bytes,
-  hash: file.hash,
-  url: fileUrl(projectId, extensionInstanceId, file.id),
-  createdAt: file.created_at,
-  updatedAt: file.updated_at,
-});
-
-const readUploadName = (headers: Headers) => {
-  const name = headers.get("x-file-name")?.trim();
-  if (!name) return "attachment";
-  try {
-    return decodeURIComponent(name);
-  } catch {
-    return name;
-  }
-};
-
 const matchesEtag = (header: string | null, hash: string | null) => {
   if (!header || !hash) return false;
   return header
@@ -176,6 +190,41 @@ const matchesEtag = (header: string | null, hash: string | null) => {
 const isMissingFileError = (error: unknown) =>
   typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 
+export const uploadExtensionCommandFileHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof uploadExtensionCommandFileRoute> => {
+  return async (c) => {
+    const { commandId, projectId } = c.req.valid("param");
+
+    try {
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+      const command =
+        snapshot.runtime.commands.find((candidate) => candidate.id === commandId) ??
+        snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+      const enabledSource = command ? findEnabledSource(snapshot.enabledSources, command.extensionId) : undefined;
+      if (!enabledSource) return c.json({ error: `Extension command not found: ${commandId}` }, 404);
+
+      const data = await readExtensionFileUpload(c.req);
+      if (!data) return c.json({ error: "Extension file upload exceeds the maximum size." }, 413);
+
+      const file = await storeExtensionFile(deps, {
+        data,
+        extensionInstanceId: enabledSource.instance.id,
+        headers: c.req.raw.headers,
+        projectId,
+        scopeId: projectId,
+        scopeType: "project",
+      });
+      if (!file) return c.json({ error: `Extension command not found: ${commandId}` }, 404);
+
+      return c.json(toExtensionBlobRef(projectId, enabledSource.instance.id, file), 201);
+    } catch (error) {
+      if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
+      throw error;
+    }
+  };
+};
+
 export const uploadExtensionFileHandler = (
   deps: ExtensionsRouteDeps,
 ): AppRouteHandler<typeof uploadExtensionFileRoute> => {
@@ -183,24 +232,21 @@ export const uploadExtensionFileHandler = (
     const { extensionInstanceId, projectId } = c.req.valid("param");
     const query = c.req.valid("query");
 
-    const data = Buffer.from(await c.req.arrayBuffer());
-    if (data.byteLength > MAX_EXTENSION_FILE_UPLOAD_BYTES) {
-      return c.json({ error: "Extension file upload exceeds the maximum size." }, 413);
-    }
+    const data = await readExtensionFileUpload(c.req);
+    if (!data) return c.json({ error: "Extension file upload exceeds the maximum size." }, 413);
 
-    const scope = resolveScope(projectId, query);
-    const file = await deps.extensionFileService.upload({
-      project_id: projectId,
-      extension_instance_id: extensionInstanceId,
-      scope_type: scope.scope_type,
-      scope_id: scope.scope_id,
-      file_name: readUploadName(c.req.raw.headers),
+    const scope = resolveExtensionFileScope(projectId, query);
+    const file = await storeExtensionFile(deps, {
       data,
-      mime_type: c.req.raw.headers.get("content-type"),
+      extensionInstanceId,
+      headers: c.req.raw.headers,
+      projectId,
+      scopeId: scope.scope_id,
+      scopeType: scope.scope_type,
     });
     if (!file) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
-    return c.json(toBlobRef(projectId, extensionInstanceId, file), 201);
+    return c.json(toExtensionBlobRef(projectId, extensionInstanceId, file), 201);
   };
 };
 
@@ -211,7 +257,7 @@ export const listExtensionFilesHandler = (
     const { extensionInstanceId, projectId } = c.req.valid("param");
     const query = c.req.valid("query");
 
-    const scope = resolveScope(projectId, query);
+    const scope = resolveExtensionFileScope(projectId, query);
     const files = await deps.extensionFileService.list({
       project_id: projectId,
       extension_instance_id: extensionInstanceId,
@@ -220,7 +266,12 @@ export const listExtensionFilesHandler = (
     });
     if (!files) return c.json({ error: `Extension instance not found: ${extensionInstanceId}` }, 404);
 
-    return c.json({ files: files.map((file) => toBlobRef(projectId, extensionInstanceId, file)) }, 200);
+    return c.json(
+      {
+        files: files.map((file) => toExtensionBlobRef(projectId, extensionInstanceId, file)),
+      },
+      200,
+    );
   };
 };
 

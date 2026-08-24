@@ -97,6 +97,22 @@ describe("workbench extension contribution mapping", () => {
     expect(registrations[0]?.command.params).toEqual({ agent: { type: "harness", label: "Agent" } });
   });
 
+  test("carries contributed preset params into the parameter dialog args", () => {
+    const parameterizedMetadata = {
+      ...metadata,
+      menuContributions: [{ ...metadata.menuContributions[0], params: { files: ["existing-ref"] } }],
+    } satisfies WorkbenchExtensionMetadata;
+
+    const registrations = buildWorkbenchExtensionMenuRegistrations({
+      metadata: parameterizedMetadata,
+      menuSlotsById: new Map([
+        ["project.headerPrimary", { menuPath: ["project", "header", "primary"], group: "primary" }],
+      ]),
+    });
+
+    expect(registrations[0]?.menuItem.args).toEqual({ files: ["existing-ref"] });
+  });
+
   test("lists route entries without legacy navigation grouping", () => {
     const entries = buildWorkbenchExtensionRouteEntries({
       metadata,

@@ -1,6 +1,12 @@
+import type { FileUploadValue } from "@pstdio/ui";
 import type { CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
 
-export type CommandParamValue = string | boolean | string[] | undefined;
+export interface CommandFilesParamValue {
+  refs: string[];
+  uploads: FileUploadValue[];
+}
+
+export type CommandParamValue = string | boolean | string[] | CommandFilesParamValue | undefined;
 
 export interface CommandParamEntry extends CommandParamDescriptor {
   key: string;
@@ -17,6 +23,36 @@ const humanize = (value: string) => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const isFileUploadValue = (value: unknown): value is FileUploadValue => {
+  if (!isRecord(value) || !isRecord(value.file)) return false;
+  return typeof value.id === "string" && typeof value.file.name === "string" && typeof value.status === "string";
+};
+
+export const isCommandFilesParamValue = (value: unknown): value is CommandFilesParamValue =>
+  isRecord(value) &&
+  Array.isArray(value.refs) &&
+  value.refs.every((ref) => typeof ref === "string") &&
+  Array.isArray(value.uploads) &&
+  value.uploads.every(isFileUploadValue);
+
+export const createCommandFilesParamValue = (input: Partial<CommandFilesParamValue> = {}): CommandFilesParamValue => ({
+  refs: [...(input.refs ?? [])],
+  uploads: [...(input.uploads ?? [])],
+});
+
+const commandFilesParamValue = (raw: unknown, multiple: boolean | undefined) => {
+  const value = isCommandFilesParamValue(raw)
+    ? createCommandFilesParamValue(raw)
+    : createCommandFilesParamValue({
+        refs: Array.isArray(raw) ? raw.filter((item): item is string => typeof item === "string") : [],
+        uploads: Array.isArray(raw) ? raw.filter(isFileUploadValue) : [],
+      });
+
+  if (multiple !== false) return value;
+  if (value.uploads[0]) return createCommandFilesParamValue({ uploads: [value.uploads[0]] });
+  return createCommandFilesParamValue({ refs: value.refs.slice(0, 1) });
+};
 
 const stringifyEditableValue = (value: unknown) => {
   if (value === undefined || value === null) return "";
@@ -85,6 +121,10 @@ export const buildCommandParamInitialValues = (
       values[entry.key] = raw === undefined ? undefined : raw === true || raw === "true";
       continue;
     }
+    if (entry.type === "files") {
+      values[entry.key] = commandFilesParamValue(raw, entry.multiple);
+      continue;
+    }
     if (entry.type === "multi-select") {
       values[entry.key] = Array.isArray(raw) ? raw.map(String) : [];
       continue;
@@ -95,8 +135,10 @@ export const buildCommandParamInitialValues = (
   return values;
 };
 
-const isEmptyValue = (value: CommandParamValue) =>
-  value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+const isEmptyValue = (value: CommandParamValue) => {
+  if (isCommandFilesParamValue(value)) return value.refs.length === 0 && value.uploads.length === 0;
+  return value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+};
 
 const parseJsonValue = (entry: CommandParamEntry, value: CommandParamValue) => {
   if (typeof value !== "string") return value;
@@ -114,6 +156,7 @@ const normalizeValue = (entry: CommandParamEntry, value: CommandParamValue) => {
     return numberValue;
   }
   if (entry.type === "boolean") return value === true || value === "true";
+  if (entry.type === "files") return isCommandFilesParamValue(value) ? value : createCommandFilesParamValue();
   if (entry.type === "json" || entry.type === "resource" || entry.type === "repo" || entry.type === "harness") {
     return parseJsonValue(entry, value);
   }

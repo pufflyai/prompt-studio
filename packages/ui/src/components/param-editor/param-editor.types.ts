@@ -232,6 +232,8 @@ export interface FileUploadValue {
   id: string;
   file: File;
   status: FileUploadStatus;
+  /** Host-owned upload ref. Set after the selected file reaches storage. */
+  ref?: string;
   progress?: number;
   error?: string;
 }

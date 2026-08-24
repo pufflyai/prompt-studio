@@ -31,7 +31,21 @@ const writeExtension = (name: string) => {
       engines: { pstdio: EXTENSION_API_VERSION },
     }),
   );
-  writeFileSync(join(extensionRoot, "extension.ts"), "export default {};");
+  writeFileSync(
+    join(extensionRoot, "extension.ts"),
+    `export default {
+      commands: {
+        "read-upload": {
+          title: "Read upload",
+          params: { files: { type: "files", required: true } },
+          run: async (ctx) => {
+            const bytes = await ctx.storage.files.getBytes(ctx.params.files[0]);
+            return { text: new TextDecoder().decode(bytes) };
+          },
+        },
+      },
+    };`,
+  );
   return extensionRoot;
 };
 
@@ -75,6 +89,16 @@ const uploadFile = (instanceId: string) =>
     body: "hello attachment",
   });
 
+const uploadCommandFile = (targetProjectId: string, commandId: string, body: BodyInit = "hello command upload") =>
+  app.request(`/v1/projects/${targetProjectId}/extensions/commands/${commandId}/files`, {
+    method: "POST",
+    headers: {
+      "content-type": "text/csv",
+      "x-file-name": encodeURIComponent("data.csv"),
+    },
+    body,
+  });
+
 beforeEach(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-files-test-"));
   previousPstdioHome = process.env.PSTDIO_HOME;
@@ -112,6 +136,66 @@ afterEach(async () => {
 });
 
 describe("extension file endpoints", () => {
+  test("uploads a command file to its enabled extension owner and exposes its bytes to the command", async () => {
+    const uploadResponse = await uploadCommandFile(projectId, "lab.read-upload");
+
+    expect(uploadResponse.status).toBe(201);
+    const uploaded = (await uploadResponse.json()) as {
+      id: string;
+      mimeType: string;
+      name: string;
+      size: number;
+      url: string;
+    };
+    expect(uploaded).toMatchObject({
+      mimeType: "text/csv",
+      name: "data.csv",
+      size: Buffer.byteLength("hello command upload"),
+    });
+    expect(uploaded.url).toContain(`/extensions/${labInstanceId}/files/${uploaded.id}/content`);
+
+    const executed = (await createJson(`/v1/projects/${projectId}/extensions/commands/lab.read-upload/execute`, {
+      params: { files: [uploaded.id] },
+    })) as { outcome: { ok: boolean; status: string; value: { text: string } } };
+    expect(executed.outcome).toEqual({ ok: true, status: "success", value: { text: "hello command upload" } });
+  });
+
+  test("rejects command uploads for unknown commands", async () => {
+    const response = await uploadCommandFile(projectId, "lab.unknown");
+
+    expect(response.status).toBe(404);
+  });
+
+  test("rejects command uploads after the owning extension is disabled", async () => {
+    const disabled = await app.request(`/v1/projects/${projectId}/extensions/${labInstanceId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disabled.status).toBe(200);
+
+    const response = await uploadCommandFile(projectId, "lab.read-upload");
+
+    expect(response.status).toBe(404);
+  });
+
+  test("does not resolve a command from another project", async () => {
+    const project = await createJson("/v1/projects", {
+      name: "Foreign Files Project",
+      agents: [testHarnessId("opencode")],
+    });
+
+    const response = await uploadCommandFile(project.id, "lab.read-upload");
+
+    expect(response.status).toBe(404);
+  });
+
+  test("applies the extension file size limit to command uploads", async () => {
+    const response = await uploadCommandFile(projectId, "lab.read-upload", Buffer.alloc(25 * 1024 * 1024 + 1));
+
+    expect(response.status).toBe(413);
+  });
+
   test("uploads, lists, and downloads files owned by an extension scope", async () => {
     const uploadResponse = await uploadFile(labInstanceId);
 

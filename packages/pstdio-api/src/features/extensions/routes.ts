@@ -19,6 +19,8 @@ import {
   getExtensionFileContentRoute,
   listExtensionFilesHandler,
   listExtensionFilesRoute,
+  uploadExtensionCommandFileHandler,
+  uploadExtensionCommandFileRoute,
   uploadExtensionFileHandler,
   uploadExtensionFileRoute,
 } from "./endpoints/extension-files";
@@ -95,6 +97,7 @@ const registerExtensionWorkbenchRoutes = (
 };
 
 const registerExtensionFileRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
+  routes.openapi(uploadExtensionCommandFileRoute, uploadExtensionCommandFileHandler(deps));
   routes.openapi(uploadExtensionFileRoute, uploadExtensionFileHandler(deps));
   routes.openapi(listExtensionFilesRoute, listExtensionFilesHandler(deps));
   routes.openapi(getExtensionFileContentRoute, getExtensionFileContentHandler(deps));
