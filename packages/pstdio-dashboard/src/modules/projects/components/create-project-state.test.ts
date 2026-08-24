@@ -31,13 +31,32 @@ describe("dashboard workbench create project state", () => {
     expect(canSubmitAgentSelection(reselected)).toBe(true);
   });
 
-  test("does not block project creation when no agents are installed", () => {
+  test("orders detected harnesses before undetected harnesses", () => {
     const availability = resolveProjectCreationAvailability({
-      agentInfo: [],
+      agentInfo: [
+        { id: "missing", name: "Missing", availability: { type: "NOT_FOUND" } },
+        { id: "codex", name: "Codex", availability: { type: "INSTALLED" } },
+        { id: "other", name: "Other", availability: { type: "NOT_FOUND" } },
+        { id: "claude-code", name: "Claude Code", availability: { type: "INSTALLED" } },
+      ],
       isAgentsLoading: false,
       isAgentsError: false,
     });
 
-    expect(availability.hasNoAgents).toBe(true);
+    expect(availability.detectedHarnesses.map((harness) => harness.id)).toEqual(["codex", "claude-code"]);
+    expect(availability.undetectedHarnesses.map((harness) => harness.id)).toEqual(["missing", "other"]);
+    expect(availability.harnesses.map((harness) => harness.id)).toEqual(["codex", "claude-code", "missing", "other"]);
+    expect(availability.shouldSelectHarness).toBe(true);
+  });
+
+  test("skips harness selection when no harness is detected", () => {
+    const availability = resolveProjectCreationAvailability({
+      agentInfo: [{ id: "missing", name: "Missing", availability: { type: "NOT_FOUND" } }],
+      isAgentsLoading: false,
+      isAgentsError: false,
+    });
+
+    expect(availability.detectedHarnesses).toEqual([]);
+    expect(availability.shouldSelectHarness).toBe(false);
   });
 });

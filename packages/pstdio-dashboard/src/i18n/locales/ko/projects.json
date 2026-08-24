@@ -109,11 +109,11 @@
       "back": "뒤로",
       "create": "프로젝트 만들기"
     },
-    "agents": {
-      "title": "에이전트 선택",
-      "description": "이 프로젝트에서 사용할 에이전트를 선택하세요.",
-      "selectAtLeastOne": "최소 한 개의 에이전트를 선택하세요.",
-      "noAgentsHint": "아직 설치된 에이전트가 없습니다. 지금 프로젝트를 만들고 나중에 설정 > Agents에서 에이전트를 추가할 수 있습니다."
+    "harnesses": {
+      "title": "하니스 선택",
+      "description": "이 프로젝트에서 사용할 하니스를 선택하세요.",
+      "selectAtLeastOne": "최소 한 개의 하니스를 선택하세요.",
+      "notDetectedWarning": "이 하니스가 감지되지 않았습니다. 설치될 때까지 작동하지 않을 수 있습니다."
     },
     "folderPicker": {
       "title": "리포지토리 선택",

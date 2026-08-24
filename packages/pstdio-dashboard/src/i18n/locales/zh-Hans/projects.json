@@ -109,11 +109,11 @@
       "back": "返回",
       "create": "创建项目"
     },
-    "agents": {
-      "title": "选择代理",
-      "description": "选择要在此项目中启用的代理。",
-      "selectAtLeastOne": "请至少选择一个代理。",
-      "noAgentsHint": "尚未安装任何代理。你可以现在创建项目，稍后在 设置 > Agents 中添加代理。"
+    "harnesses": {
+      "title": "选择 Harness",
+      "description": "选择要为此项目启用的 Harness。",
+      "selectAtLeastOne": "请至少选择一个 Harness。",
+      "notDetectedWarning": "未检测到此 Harness。安装前可能无法正常工作。"
     },
     "folderPicker": {
       "title": "选择仓库",

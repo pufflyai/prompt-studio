@@ -109,11 +109,11 @@
       "back": "返回",
       "create": "建立專案"
     },
-    "agents": {
-      "title": "選擇代理",
-      "description": "選擇要在此專案中啟用的代理。",
-      "selectAtLeastOne": "請至少選擇一個代理。",
-      "noAgentsHint": "尚未安裝任何代理。你可以現在建立專案，稍後在 設定 > Agents 中新增代理。"
+    "harnesses": {
+      "title": "選擇 Harness",
+      "description": "選擇要為此專案啟用的 Harness。",
+      "selectAtLeastOne": "請至少選擇一個 Harness。",
+      "notDetectedWarning": "未偵測到此 Harness。安裝前可能無法正常運作。"
     },
     "folderPicker": {
       "title": "選擇儲存庫",

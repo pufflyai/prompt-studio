@@ -34,9 +34,10 @@ describe("required project selection", () => {
     expect(findProjectPicker(workbench)?.closable).toBe(false);
   });
 
-  test("shows only the required project picker when entering project selection", () => {
+  test("keeps the project selector and required picker when entering project selection", () => {
     const workbench = createWorkbenchCore();
     for (const region of workbenchRegions) registerAndOpenTestPanel(workbench, region);
+    registerAndOpenTestPanel(workbench, "nav", dashboardWidgetIds.projectHeader);
     workbench.registerModule(createProjectsModule());
 
     workbench.modes.setActiveMode("project-selection");
@@ -45,6 +46,8 @@ describe("required project selection", () => {
       const placements = workbench.layout.getLayout().regions[region].widgets;
       if (region === "overlay") {
         expect(placements.map((placement) => placement.contributionId)).toEqual([dashboardWidgetIds.projectPicker]);
+      } else if (region === "nav") {
+        expect(placements.map((placement) => placement.contributionId)).toEqual([dashboardWidgetIds.projectHeader]);
       } else {
         expect(placements).toEqual([]);
       }
@@ -79,6 +82,7 @@ describe("required project selection", () => {
       setSnapshot: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
     } satisfies WorkbenchPersistenceAdapter;
     const previousWorkbench = createWorkbenchCore({ persistence });
+    registerAndOpenTestPanel(previousWorkbench, "nav", dashboardWidgetIds.projectHeader);
     registerAndOpenTestPanel(previousWorkbench, "nav", "test.stale-nav");
     registerAndOpenTestPanel(previousWorkbench, "status", "test.stale-status");
     registerAndOpenTestPanel(previousWorkbench, "overlay", "test.stale-overlay");
@@ -99,6 +103,12 @@ describe("required project selection", () => {
     previousWorkbench.layout.activateWidget(previousCreateProject!.widgetId);
 
     const restoredWorkbench = createWorkbenchCore({ persistence });
+    restoredWorkbench.layout.registerPanel({
+      id: dashboardWidgetIds.projectHeader,
+      title: dashboardWidgetIds.projectHeader,
+      region: "nav",
+      rendererId: "noop",
+    });
     restoredWorkbench.layout.registerPanel({
       id: "test.saved-nav",
       title: "test.saved-nav",
@@ -121,7 +131,12 @@ describe("required project selection", () => {
     restoredWorkbench.modes.setActiveMode("project-selection");
 
     for (const region of workbenchRegions.filter((region) => region !== "overlay")) {
-      expect(restoredWorkbench.layout.getLayout().regions[region].widgets).toEqual([]);
+      const placements = restoredWorkbench.layout.getLayout().regions[region].widgets;
+      if (region === "nav") {
+        expect(placements.map((placement) => placement.contributionId)).toEqual([dashboardWidgetIds.projectHeader]);
+      } else {
+        expect(placements).toEqual([]);
+      }
     }
     expect(
       restoredWorkbench.layout.getLayout().regions.overlay.widgets.map((placement) => placement.contributionId),

@@ -35,8 +35,15 @@ const projectSelectionOverlayWidgetIds = new Set<string>([
 const openRequiredProjectPicker = (layout: WorkbenchModuleContext["layout"]) =>
   layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
 
+const restoreProjectHeader = (layout: WorkbenchModuleContext["layout"]) => {
+  if (layout.getPanel(dashboardWidgetIds.projectHeader)) {
+    layout.openPanel(dashboardWidgetIds.projectHeader, { pinned: true });
+  }
+};
+
 const seedProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"]) => {
   for (const region of workbenchRegions) layout.clearRegion(region);
+  restoreProjectHeader(layout);
   openRequiredProjectPicker(layout);
 };
 
@@ -44,6 +51,7 @@ const reconcileProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"
   for (const region of workbenchRegions) {
     if (region !== "overlay") layout.clearRegion(region);
   }
+  restoreProjectHeader(layout);
 
   const overlay = layout.getLayout().regions.overlay;
   const activeCreateProject = overlay.widgets.find(

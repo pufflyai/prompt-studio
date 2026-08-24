@@ -16,7 +16,7 @@ import {
   resolveRepoName,
   toggleAgentSelection,
 } from "./create-project-state";
-import { AgentsStep, ProjectBasicsStep } from "./create-project-steps";
+import { HarnessesStep, ProjectBasicsStep } from "./create-project-steps";
 import { RepoPickerDialog } from "./repo-picker-dialog";
 
 const emptyAgentInfo: AgentInfo[] = [];
@@ -52,7 +52,6 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
     isAgentsError: agentsQuery.isError,
   });
   const isWorking = createProjectMutation.isPending;
-  const hasAvailableAgents = availability.availableAgents.length > 0;
 
   useEffect(() => {
     const nextAvailability = resolveProjectCreationAvailability({
@@ -60,18 +59,12 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
       isAgentsLoading: agentsQuery.isLoading,
       isAgentsError: agentsQuery.isError,
     });
-    setSelectedAgentIds(resolveInitialSelectedAgentIds(nextAvailability.availableAgents));
+    setSelectedAgentIds(resolveInitialSelectedAgentIds(nextAvailability.detectedHarnesses));
   }, [agentInfo, agentsQuery.isError, agentsQuery.isLoading]);
-
-  const handleNext = () => {
-    setTouched(true);
-    if (hasProjectBasicsErrors({ name, repositories })) return;
-    setStep(2);
-  };
 
   const handleSubmit = async () => {
     setAgentsTouched(true);
-    if (hasAvailableAgents && !canSubmitAgentSelection(selectedAgentIds)) return;
+    if (availability.shouldSelectHarness && !canSubmitAgentSelection(selectedAgentIds)) return;
 
     try {
       const project = await createProjectMutation.mutateAsync({
@@ -85,6 +78,16 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
       const message = createError instanceof Error ? createError.message : "Unable to create project.";
       toaster.create({ type: "error", title: t("projects:list.createProjectFailed"), description: message });
     }
+  };
+
+  const handleNext = () => {
+    setTouched(true);
+    if (hasProjectBasicsErrors({ name, repositories })) return;
+    if (availability.shouldSelectHarness) {
+      setStep(2);
+      return;
+    }
+    void handleSubmit();
   };
 
   const handleRepoSelected = (path: string | null) => {
@@ -137,13 +140,12 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
             onRemoveRepository={handleRemoveRepo}
           />
         ) : (
-          <AgentsStep
-            availableAgents={availability.availableAgents}
+          <HarnessesStep
+            harnesses={availability.harnesses}
             selectedAgentIds={selectedAgentIds}
-            hasAgentError={agentsTouched && hasAvailableAgents && selectedAgentIds.length === 0}
+            hasAgentError={agentsTouched && availability.shouldSelectHarness && selectedAgentIds.length === 0}
             isWorking={isWorking}
             isAgentsLoading={agentsQuery.isLoading}
-            showNoAgents={availability.hasNoAgents}
             showAgentError={availability.showAgentErrorBanner}
             onAgentToggle={(agentId) => setSelectedAgentIds((current) => toggleAgentSelection(current, agentId))}
           />
@@ -156,8 +158,10 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
               <Button onClick={() => closeCurrentPlacement(input)} variant="outline">
                 {t("common:buttons.cancel")}
               </Button>
-              <Button onClick={handleNext} variant="primary">
-                {t("projects:createProjectDialog.actions.next")}
+              <Button onClick={handleNext} variant="primary" disabled={agentsQuery.isLoading} loading={isWorking}>
+                {agentsQuery.isLoading || availability.shouldSelectHarness
+                  ? t("projects:createProjectDialog.actions.next")
+                  : t("projects:createProjectDialog.actions.create")}
               </Button>
             </>
           ) : (

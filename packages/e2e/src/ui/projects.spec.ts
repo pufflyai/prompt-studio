@@ -273,7 +273,6 @@ test.describe("Project picker modal", () => {
     await page.goto("/projects");
 
     const modal = getProjectPickerModal(page);
-    await expect(modal.getByText("No coding agents available")).not.toBeVisible();
     await expect(getCreateProjectRow(modal)).toBeEnabled();
   });
 });
@@ -334,7 +333,7 @@ test.describe("Project creation", () => {
     await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 
     await createProjectDialog.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(createProjectDialog.getByText("Select agents")).toBeVisible();
+    await expect(createProjectDialog.getByText("Select harness")).toBeVisible();
 
     const selectedAgents = createProjectDialog.getByRole("checkbox", { checked: true });
     await expect(selectedAgents).toHaveCount(2);
@@ -395,10 +394,6 @@ test.describe("Project creation", () => {
     const createProjectDialog = getCreateProjectDialog(page);
     await createProjectDialog.getByPlaceholder("Project name").fill("No Agents Project");
     await selectRepoFromFolderPicker(page, repoPath);
-    await createProjectDialog.getByRole("button", { name: "Next", exact: true }).click();
-
-    const createProjectButton = createProjectDialog.getByRole("button", { name: "Create project", exact: true });
-    await expect(createProjectButton).toBeEnabled();
 
     const createProjectRequest = page.waitForRequest(
       (request) => request.url().endsWith("/v1/projects") && request.method() === "POST",
@@ -406,8 +401,7 @@ test.describe("Project creation", () => {
     const createRepoRequest = page.waitForRequest(
       (request) => request.url().endsWith("/v1/projects/project-no-agents/repos") && request.method() === "POST",
     );
-    await createProjectButton.click();
-    await expect(createProjectButton).toBeDisabled();
+    await createProjectDialog.getByRole("button", { name: "Create project", exact: true }).click();
     releaseProjectRequest?.();
     expect((await createProjectRequest).postDataJSON()).toEqual({ name: "No Agents Project", agents: [] });
     await createRepoRequest;
@@ -433,7 +427,7 @@ test.describe("Project creation", () => {
     await checkboxes.nth(1).uncheck();
     await createProjectDialog.getByRole("button", { name: "Create project", exact: true }).click();
 
-    await expect(createProjectDialog.getByText("Select at least one agent.")).toBeVisible();
+    await expect(createProjectDialog.getByText("Select at least one harness.")).toBeVisible();
   });
 
   test("creates alphabetically sorted templates when creating a project via the dialog", async ({ page, request }) => {

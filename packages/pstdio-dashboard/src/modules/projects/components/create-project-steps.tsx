@@ -2,6 +2,7 @@ import { Button, Icon as ChakraIcon, IconButton, Input, Stack, Text } from "@cha
 import { ListRow } from "@pstdio/ui";
 import { FolderOpen, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { AgentInfo } from "@/shared/agents/agent-types";
 import type { DraftRepository } from "./create-project-state";
 
 interface ProjectBasicsStepProps {
@@ -15,13 +16,12 @@ interface ProjectBasicsStepProps {
   onRemoveRepository: (path: string) => void;
 }
 
-interface AgentsStepProps {
-  availableAgents: { id: string; name: string }[];
+interface HarnessesStepProps {
+  harnesses: AgentInfo[];
   selectedAgentIds: string[];
   hasAgentError: boolean;
   isWorking: boolean;
   isAgentsLoading: boolean;
-  showNoAgents: boolean;
   showAgentError: boolean;
   onAgentToggle: (agentId: string) => void;
 }
@@ -107,35 +107,22 @@ export const ProjectBasicsStep = (props: ProjectBasicsStepProps) => {
   );
 };
 
-export const AgentsStep = (props: AgentsStepProps) => {
-  const {
-    availableAgents,
-    selectedAgentIds,
-    hasAgentError,
-    isWorking,
-    isAgentsLoading,
-    showNoAgents,
-    showAgentError,
-    onAgentToggle,
-  } = props;
+export const HarnessesStep = (props: HarnessesStepProps) => {
+  const { harnesses, selectedAgentIds, hasAgentError, isWorking, isAgentsLoading, showAgentError, onAgentToggle } =
+    props;
   const { t } = useTranslation("projects");
 
   return (
     <Stack gap="sm">
       <Stack gap="2xs">
-        <Text textStyle="label/L/medium">{t("createProjectDialog.agents.title")}</Text>
+        <Text textStyle="label/L/medium">{t("createProjectDialog.harnesses.title")}</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("createProjectDialog.agents.description")}
+          {t("createProjectDialog.harnesses.description")}
         </Text>
       </Stack>
       {isAgentsLoading ? (
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           {t("chatInput.agent.loading")}
-        </Text>
-      ) : null}
-      {showNoAgents ? (
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("createProjectDialog.agents.noAgentsHint")}
         </Text>
       ) : null}
       {showAgentError ? (
@@ -144,13 +131,14 @@ export const AgentsStep = (props: AgentsStepProps) => {
         </Text>
       ) : null}
       <Stack gap="xs">
-        {availableAgents.map((agent) => {
-          const checked = selectedAgentIds.includes(agent.id);
+        {harnesses.map((harness) => {
+          const checked = selectedAgentIds.includes(harness.id);
+          const wasDetected = harness.availability.type === "INSTALLED";
 
           return (
             <Stack
               as="label"
-              key={agent.id}
+              key={harness.id}
               direction="row"
               gap="sm"
               align="center"
@@ -160,12 +148,22 @@ export const AgentsStep = (props: AgentsStepProps) => {
               py="sm"
               cursor="pointer"
             >
-              <input type="checkbox" checked={checked} onChange={() => onAgentToggle(agent.id)} disabled={isWorking} />
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => onAgentToggle(harness.id)}
+                disabled={isWorking}
+              />
               <Stack gap="0" flex="1">
-                <Text textStyle="label/M/medium">{agent.name}</Text>
+                <Text textStyle="label/M/medium">{harness.name}</Text>
                 <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                  {agent.id}
+                  {harness.id}
                 </Text>
+                {!wasDetected ? (
+                  <Text textStyle="paragraph/XS/regular" color="fg.warning">
+                    {t("createProjectDialog.harnesses.notDetectedWarning")}
+                  </Text>
+                ) : null}
               </Stack>
             </Stack>
           );
@@ -173,7 +171,7 @@ export const AgentsStep = (props: AgentsStepProps) => {
       </Stack>
       {hasAgentError ? (
         <Text textStyle="label/XS/regular" color="red.500">
-          {t("createProjectDialog.agents.selectAtLeastOne")}
+          {t("createProjectDialog.harnesses.selectAtLeastOne")}
         </Text>
       ) : null}
     </Stack>

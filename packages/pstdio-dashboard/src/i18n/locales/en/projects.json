@@ -110,11 +110,11 @@
       "back": "Back",
       "create": "Create project"
     },
-    "agents": {
-      "title": "Select agents",
-      "description": "Choose which agents to enable for this project.",
-      "selectAtLeastOne": "Select at least one agent.",
-      "noAgentsHint": "No agents are installed yet. You can create the project now and add agents later in Settings > Agents."
+    "harnesses": {
+      "title": "Select harness",
+      "description": "Choose which harnesses to enable for this project.",
+      "selectAtLeastOne": "Select at least one harness.",
+      "notDetectedWarning": "This harness was not detected. It may not work until it is installed."
     },
     "folderPicker": {
       "title": "Select repository",

@@ -109,11 +109,11 @@
       "back": "Retour",
       "create": "Créer un projet"
     },
-    "agents": {
-      "title": "Sélectionner les agents",
-      "description": "Choisissez les agents à activer pour ce projet.",
-      "selectAtLeastOne": "Sélectionnez au moins un agent.",
-      "noAgentsHint": "Aucun agent n'est encore installé. Vous pouvez créer le projet maintenant et ajouter des agents plus tard dans Paramètres > Agents."
+    "harnesses": {
+      "title": "Sélectionner un harness",
+      "description": "Choisissez les harnesses à activer pour ce projet.",
+      "selectAtLeastOne": "Sélectionnez au moins un harness.",
+      "notDetectedWarning": "Ce harness n'a pas été détecté. Il peut ne pas fonctionner tant qu'il n'est pas installé."
     },
     "folderPicker": {
       "title": "Sélectionner un dépôt",
