@@ -158,6 +158,8 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
         }, counter),
       )
       .toBe(0);
+    await expect(projectPicker).toBeVisible();
+    await projectPicker.getByRole("button", { name: "Close Projects" }).click();
     await expect(projectPicker).not.toBeVisible();
   };
 
