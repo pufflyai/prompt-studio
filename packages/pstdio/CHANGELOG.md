@@ -1,5 +1,23 @@
 # pstdio
 
+## 0.28.0
+
+_2026-08-24_
+
+### Minor Changes
+
+- 88e89b2: Add workspace file browsing, stable Monaco editing, file and folder actions, drag-to-move entries, file icons, live change badges, current and fork-point Changes views, and macOS Finder reveal.
+- c257623: Fetch default extensions from Git, add concurrent Available installs with contribution details and upgrades, preserve data across clean reinstalls, and seed isolation with a repo-local notification example.
+
+### Patch Changes
+
+- b6ab04a: Use the new Prompt Studio slogan in product metadata and the built-in Prompt Studio skill.
+- c257623: Show a readable label when an extension uses an incompatible API version.
+- 4f0094a: Allow project creation without detected harnesses, preserve project selection controls, and block input behind overlays
+- dd7fa91: Support extension command file parameters through the parameter editor, workbench upload preparation, and command-scoped API storage.
+- c257623: Prevent project picker backdrop clicks from reaching the page and print authenticated isolated dashboard URLs.
+- c257623: Keep the settings overlay fixed while panel content scrolls, and keep the Extensions toolbar visible without overview counts.
+
 ## 0.27.0
 
 _2026-08-21_

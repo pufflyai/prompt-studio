@@ -1,5 +1,14 @@
 # harness-codex
 
+## 0.2.7
+
+_2026-08-24_
+
+### Patch Changes
+
+- 45be68f: Refactor Codex rollout parsing to meet the enforced complexity limit.
+- Updated internal dependencies: `@pstdio/sdk@0.19.0`
+
 ## 0.2.6
 
 _2026-08-21_

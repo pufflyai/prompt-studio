@@ -1,5 +1,14 @@
 # pstdio-planner
 
+## 0.11.1
+
+_2026-08-24_
+
+### Patch Changes
+
+- 0c95890: Hide internal base guards from Run attempt.
+- Updated internal dependencies: `@pstdio/ui@0.20.1`, `@pstdio/sdk@0.19.0`
+
 ## 0.11.0
 
 _2026-08-21_

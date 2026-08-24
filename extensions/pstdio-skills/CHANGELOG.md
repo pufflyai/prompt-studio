@@ -1,5 +1,14 @@
 # Prompt Studio Skills
 
+## 0.3.3
+
+_2026-08-24_
+
+### Patch Changes
+
+- b6ab04a: Use the new Prompt Studio slogan in product metadata and the built-in Prompt Studio skill.
+- Updated internal dependencies: `@pstdio/sdk@0.19.0`
+
 ## 0.3.2
 
 _2026-08-21_

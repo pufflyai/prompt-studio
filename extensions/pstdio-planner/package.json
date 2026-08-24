@@ -1,6 +1,6 @@
 {
   "name": "pstdio-planner",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "displayName": "Prompt Studio Planner",
   "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",
@@ -17,8 +17,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.18.0",
-    "@pstdio/ui": "0.20.0",
+    "@pstdio/sdk": "^0.19.0",
+    "@pstdio/ui": "0.20.1",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.556.0",
     "react": "^19.0.0",

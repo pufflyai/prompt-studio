@@ -1,5 +1,21 @@
 # @pstdio/workbench
 
+## 0.7.0
+
+_2026-08-24_
+
+### Minor Changes
+
+- 88e89b2: Add workspace file browsing, stable Monaco editing, file and folder actions, drag-to-move entries, file icons, live change badges, current and fork-point Changes views, and macOS Finder reveal.
+
+### Patch Changes
+
+- 4f0094a: Allow project creation without detected harnesses, preserve project selection controls, and block input behind overlays
+- dd7fa91: Support extension command file parameters through the parameter editor, workbench upload preparation, and command-scoped API storage.
+- c257623: Prevent project picker backdrop clicks from reaching the page and print authenticated isolated dashboard URLs.
+- c257623: Keep the settings overlay fixed while panel content scrolls, and keep the Extensions toolbar visible without overview counts.
+- Updated internal dependencies: `@pstdio/ui@0.20.1`, `@pstdio/sdk@0.19.0`
+
 ## 0.6.0
 
 _2026-08-21_

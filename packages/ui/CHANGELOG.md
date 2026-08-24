@@ -1,5 +1,14 @@
 # @pstdio/ui
 
+## 0.20.1
+
+_2026-08-24_
+
+### Patch Changes
+
+- dd7fa91: Support extension command file parameters through the parameter editor, workbench upload preparation, and command-scoped API storage.
+- 88e89b2: Add workspace file browsing, stable Monaco editing, file and folder actions, drag-to-move entries, file icons, live change badges, current and fork-point Changes views, and macOS Finder reveal.
+
 ## 0.20.0
 
 _2026-08-21_

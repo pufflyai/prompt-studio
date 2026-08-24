@@ -1,5 +1,14 @@
 # extension-lab
 
+## 0.8.1
+
+_2026-08-24_
+
+### Patch Changes
+
+- c257623: Remove the Planner ticket resource dependency.
+- Updated internal dependencies: `@pstdio/ui@0.20.1`, `@pstdio/sdk@0.19.0`
+
 ## 0.8.0
 
 _2026-08-21_
