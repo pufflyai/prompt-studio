@@ -42,13 +42,13 @@ describe("review-tickets automation", () => {
   });
 
   test("does not re-review approved revisions or tickets waiting for a human", async () => {
-    const { ctx, calls } = makeAutomationContext({
+    const { ctx, calls, activities, logs } = makeAutomationContext({
       tickets: [
         makeTicket({
           id: "t1",
           shorthand: "T1",
           statusId: "in-review",
-          tagIds: ["default-human-requested-true"],
+          tagIds: ["default-awaiting-input-true"],
         }),
         makeTicket({ id: "t2", shorthand: "T2", statusId: "in-review" }),
       ],
@@ -72,6 +72,8 @@ describe("review-tickets automation", () => {
 
     expect(result).toMatchObject({ reviewed: null });
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
+    expect(activities).toEqual([]);
+    expect(logs.at(-1)?.message).toContain("no review-ready attempt revision");
   });
 
   test("reconciles a running review without starting another round", async () => {

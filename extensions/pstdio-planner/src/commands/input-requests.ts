@@ -1,31 +1,33 @@
 import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { humanRequestsCollection, readAttempt } from "../data/attempt-storage";
-import type { AttemptRecord, AttemptState, HumanRequestReason, HumanRequestRecord } from "../data/attempt-types";
+import { inputRequestsCollection, readAttempt } from "../data/attempt-storage";
+import type { AttemptRecord, AttemptState, InputRequestReason, InputRequestRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { seedDefaultTags } from "../data/seed";
+import { plannerTicketsChanged } from "../events";
+import { notifyInputRequested, resolveInputRequestNotification } from "../planner-notifications";
 
-const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
+const AWAITING_INPUT_OPTION_ID = "default-awaiting-input-true";
 
-interface RequestHumanInput {
+interface RequestInput {
   ticket: string;
   workspaceId?: string;
   revision?: number;
   sessionId?: string;
-  reason: HumanRequestReason;
+  reason: InputRequestReason;
   question: string;
   expectedAction: string;
   expectedTicketStatusId: string;
   expectedAttemptState?: AttemptState;
 }
 
-const addHumanRequestedFlag = async (ctx: Pick<CommandContext, "storage">, ticketId: string) => {
+const addAwaitingInputFlag = async (ctx: Pick<CommandContext, "storage">, ticketId: string) => {
   const tags = await seedDefaultTags(ctx.storage);
   const flag = tags
-    .find((tag) => tag.id === "default-human-requested")
-    ?.options.find((option) => option.id === HUMAN_REQUESTED_OPTION_ID);
-  if (!flag) throw new Error("The required Human Requested workflow flag is unavailable.");
+    .find((tag) => tag.id === "default-awaiting-input")
+    ?.options.find((option) => option.id === AWAITING_INPUT_OPTION_ID);
+  if (!flag) throw new Error("The required Awaiting Input workflow flag is unavailable.");
   const ticket = await ticketsCollection(ctx.storage).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${ticketId}"`);
   if ((ticket.tagIds ?? []).includes(flag.id)) return ticket;
@@ -34,7 +36,7 @@ const addHumanRequestedFlag = async (ctx: Pick<CommandContext, "storage">, ticke
   return next;
 };
 
-const requestKeyMatches = (request: HumanRequestRecord, input: RequestHumanInput, ticketId: string) =>
+const requestKeyMatches = (request: InputRequestRecord, input: RequestInput, ticketId: string) =>
   request.state === "open" &&
   request.ticketId === ticketId &&
   request.reason === input.reason &&
@@ -56,7 +58,7 @@ const ticketAnchor = (
     metadata: { shorthand: ticket.shorthand },
   }) satisfies ResourceAnchor;
 
-const readExpectedAttempt = async (ctx: CommandContext, input: RequestHumanInput, ticketId: string) => {
+const readExpectedAttempt = async (ctx: CommandContext, input: RequestInput, ticketId: string) => {
   if (!input.workspaceId || !input.expectedAttemptState) return null;
   const attempt = await readAttempt(ctx.storage, input.workspaceId);
   if (!attempt || attempt.ticketId !== ticketId || attempt.state !== input.expectedAttemptState) {
@@ -100,19 +102,24 @@ const canReuseSession = (
   return ownsImplementation || sessionOwnsReview(attempt, session, revision);
 };
 
-export const requestHuman = async (ctx: CommandContext, input: RequestHumanInput) => {
+export const requestInput = async (ctx: CommandContext, input: RequestInput) => {
   const ticket = await findTicket(ctx.storage, input.ticket);
   if (!ticket) throw new Error(`Unknown ticket "${input.ticket}"`);
   if (ticket.statusId !== input.expectedTicketStatusId) throw new Error("Ticket status changed before the handoff.");
   const attempt = await readExpectedAttempt(ctx, input, ticket.id);
 
-  const requests = humanRequestsCollection(ctx.storage);
+  const requests = inputRequestsCollection(ctx.storage);
   const existing = (await requests.list()).find((request) => requestKeyMatches(request, input, ticket.id));
-  if (existing) return existing;
+  if (existing) {
+    await addAwaitingInputFlag(ctx, ticket.id);
+    await notifyInputRequested(ctx, ticket, existing);
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    return existing;
+  }
 
   const requestId = crypto.randomUUID();
   const requestAnchor: ResourceAnchor = {
-    type: "planner-human-request",
+    type: "planner-input-request",
     id: requestId,
     label: input.reason,
     metadata: { ticketId: ticket.id, requestId, phase: "other" },
@@ -120,19 +127,22 @@ export const requestHuman = async (ctx: CommandContext, input: RequestHumanInput
   const relatedSession = input.sessionId ? await ctx.sessions.get(input.sessionId) : null;
   const reusableSession =
     relatedSession && canReuseSession(relatedSession, ticket.id, attempt, input.revision) ? relatedSession : null;
+  if (input.reason === "refinement-ready" && !reusableSession) {
+    throw new Error("Refinement handoffs require the existing ticket refinement session.");
+  }
   let sessionId = reusableSession?.id ?? null;
   if (sessionId) {
     await ctx.sessions.addAnchors(sessionId, [requestAnchor]);
   } else {
     const session = await ctx.sessions.create({
-      title: `Human input needed: ${ticket.shorthand}`,
+      title: `Input needed: ${ticket.shorthand}`,
       prompt: input.question,
       anchors: [ticketAnchor(ctx, ticket), requestAnchor],
     });
     sessionId = session.id;
   }
 
-  const record: HumanRequestRecord = {
+  const record: InputRequestRecord = {
     id: requestId,
     ticketId: ticket.id,
     workspaceId: input.workspaceId ?? null,
@@ -149,23 +159,26 @@ export const requestHuman = async (ctx: CommandContext, input: RequestHumanInput
     resolution: null,
   };
   await requests.put(record.id, record);
-  await addHumanRequestedFlag(ctx, ticket.id);
-  if (reusableSession) {
+  await addAwaitingInputFlag(ctx, ticket.id);
+  if (reusableSession && input.reason !== "refinement-ready") {
     await ctx.sessions.followup({
       sessionId,
       prompt: `${input.question}\n\nExpected action: ${input.expectedAction}\nRequest: ${record.id}`,
     });
   }
+  await notifyInputRequested(ctx, ticket, record);
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
   return record;
 };
 
-const humanRequestReasons: HumanRequestReason[] = [
+const inputRequestReasons: InputRequestReason[] = [
   "approved-revision",
   "ambiguous-dependency-attempt",
   "divergent-dependency-attempts",
   "dependency-cycle",
   "dependency-missing",
   "implementation-disconnected",
+  "refinement-ready",
   "review-disconnected",
   "workspace-adoption-required",
 ];
@@ -180,8 +193,8 @@ const attemptStates: AttemptState[] = [
   "abandoned",
 ];
 
-export const requestHumanCommand = defineCommand({
-  title: "Request human input",
+export const requestInputCommand = defineCommand({
+  title: "Request input",
   cli: true,
   params: {
     ticket: params.text({ required: true }),
@@ -190,7 +203,7 @@ export const requestHumanCommand = defineCommand({
     sessionId: params.text(),
     reason: params.select({
       required: true,
-      options: humanRequestReasons.map((reason) => ({ label: reason, value: reason })),
+      options: inputRequestReasons.map((reason) => ({ label: reason, value: reason })),
     }),
     question: params.longText({ required: true }),
     expectedAction: params.longText({ required: true }),
@@ -200,12 +213,43 @@ export const requestHumanCommand = defineCommand({
     }),
   },
   async run(ctx) {
-    return requestHuman(ctx, ctx.params as RequestHumanInput);
+    return requestInput(ctx, ctx.params as RequestInput);
   },
 });
 
-export const resolveHumanRequestCommand = defineCommand({
-  title: "Resolve human request",
+const inputRequestStates: InputRequestRecord["state"][] = ["open", "resolved"];
+
+export const listInputRequestsCommand = defineCommand({
+  title: "List input requests",
+  cli: true,
+  params: {
+    ticket: params.text(),
+    state: params.select({
+      options: inputRequestStates.map((state) => ({ label: state, value: state })),
+    }),
+  },
+  async run(ctx) {
+    const ticket = ctx.params.ticket ? await findTicket(ctx.storage, ctx.params.ticket) : null;
+    if (ctx.params.ticket && !ticket) throw new Error(`Unknown ticket "${ctx.params.ticket}"`);
+    return (await inputRequestsCollection(ctx.storage).list())
+      .filter((request) => !ticket || request.ticketId === ticket.id)
+      .filter((request) => !ctx.params.state || request.state === ctx.params.state)
+      .map((request) => ({
+        id: request.id,
+        ticketId: request.ticketId,
+        question: request.question,
+        expectedAction: request.expectedAction,
+        state: request.state,
+        sessionId: request.sessionId,
+        relatedSessionId: request.relatedSessionId,
+        workspaceId: request.workspaceId,
+        revision: request.revision,
+      }));
+  },
+});
+
+export const resolveInputRequestCommand = defineCommand({
+  title: "Resolve input request",
   cli: true,
   params: {
     requestId: params.text({ required: true }),
@@ -214,12 +258,12 @@ export const resolveHumanRequestCommand = defineCommand({
   },
   async run(ctx) {
     if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
-      throw new Error("Automation cannot resolve a human request.");
+      throw new Error("Automation cannot resolve an input request.");
     }
-    const requests = humanRequestsCollection(ctx.storage);
+    const requests = inputRequestsCollection(ctx.storage);
     const request = await requests.get(ctx.params.requestId);
-    if (!request || request.state !== "open") throw new Error(`Unknown open human request "${ctx.params.requestId}"`);
-    const resolved: HumanRequestRecord = {
+    if (!request || request.state !== "open") throw new Error(`Unknown open input request "${ctx.params.requestId}"`);
+    const resolved: InputRequestRecord = {
       ...request,
       state: "resolved",
       resolvedAt: new Date().toISOString(),
@@ -236,11 +280,13 @@ export const resolveHumanRequestCommand = defineCommand({
       if (ticket) {
         await ticketsCollection(ctx.storage).put(ticket.id, {
           ...ticket,
-          tagIds: (ticket.tagIds ?? []).filter((id) => id !== HUMAN_REQUESTED_OPTION_ID),
+          tagIds: (ticket.tagIds ?? []).filter((id) => id !== AWAITING_INPUT_OPTION_ID),
           updatedAt: new Date().toISOString(),
         });
       }
     }
+    await resolveInputRequestNotification(ctx, resolved.id);
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: request.ticketId });
     return resolved;
   },
 });

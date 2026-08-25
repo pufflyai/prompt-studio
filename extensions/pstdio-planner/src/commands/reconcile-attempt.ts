@@ -10,7 +10,7 @@ import {
 } from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
-import { requestHuman } from "./human-requests";
+import { requestInput } from "./input-requests";
 
 const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
 
@@ -49,7 +49,7 @@ const blockAttempt = async (
   await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
   const ticket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
-  await requestHuman(ctx, {
+  await requestInput(ctx, {
     ticket: attempt.ticketId,
     workspaceId: attempt.workspaceId,
     revision: attempt.revisions.at(-1)?.revision,

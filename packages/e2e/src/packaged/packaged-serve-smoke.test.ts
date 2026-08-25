@@ -277,6 +277,9 @@ describe("packaged pstdio — core default extensions", () => {
         });
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        expect(metadata.commands).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: "pstdio-planner.list-input-requests" })]),
+        );
         const webview = metadata.settingsPanels.find((panel) => panel.webview)?.webview;
         expect(webview?.runtimeUrl).toBeTruthy();
 

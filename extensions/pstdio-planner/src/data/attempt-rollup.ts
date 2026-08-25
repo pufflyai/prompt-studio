@@ -2,12 +2,12 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { listAttempts } from "./attempt-storage";
 import { statusesCollection, ticketsCollection } from "./collections";
 
-const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
+const AWAITING_INPUT_OPTION_ID = "default-awaiting-input-true";
 
 export const rollUpAttemptTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
   const ticket = await ticketsCollection(storage).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${ticketId}"`);
-  if ((ticket.tagIds ?? []).includes(HUMAN_REQUESTED_OPTION_ID)) return ticket;
+  if ((ticket.tagIds ?? []).includes(AWAITING_INPUT_OPTION_ID)) return ticket;
 
   const statuses = await statusesCollection(storage).list();
   const statusId = (name: string) =>

@@ -1,5 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
-import { recordAutomationActivity } from "../automation-run";
+import { logAutomationNoop, recordAutomationActivity } from "../automation-run";
 import { executePlanner, planner } from "../planner-client";
 
 const AUTOMATION = "stuck-work-sweep";
@@ -24,7 +24,7 @@ export const stuckWorkSweepCommand = defineCommand({
         decision: result.decision,
       });
     }
-    if (decisions.length === 0) await recordAutomationActivity(ctx, AUTOMATION, "no managed attempts to reconcile");
+    if (decisions.length === 0) logAutomationNoop(ctx, AUTOMATION, "no managed attempts to reconcile");
     return { ran: true, decisions };
   },
 });

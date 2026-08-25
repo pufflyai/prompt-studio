@@ -3,7 +3,7 @@ import type {
   AttemptLaunchClaim,
   AttemptRecord,
   AttemptTimelineEvent,
-  HumanRequestRecord,
+  InputRequestRecord,
   ReviewComment,
   ReviewLaunchClaim,
   ReviewThread,
@@ -15,7 +15,7 @@ export const ATTEMPT_EVENTS_COLLECTION = "planner-attempt-events";
 export const REVIEW_THREADS_COLLECTION = "planner-review-threads";
 export const REVIEW_COMMENTS_COLLECTION = "planner-review-comments";
 export const ATTEMPT_SELECTIONS_COLLECTION = "planner-attempt-selections";
-export const HUMAN_REQUESTS_COLLECTION = "planner-human-requests";
+export const INPUT_REQUESTS_COLLECTION = "planner-input-requests";
 export const LAUNCH_CLAIMS_COLLECTION = "planner-attempt-launch-claims";
 export const REVIEW_LAUNCH_CLAIMS_COLLECTION = "planner-review-launch-claims";
 
@@ -34,8 +34,8 @@ export const reviewCommentsCollection = (storage: ExtensionStorageApi) =>
 export const attemptSelectionsCollection = (storage: ExtensionStorageApi) =>
   storage.collection<TicketAttemptSelection>(ATTEMPT_SELECTIONS_COLLECTION);
 
-export const humanRequestsCollection = (storage: ExtensionStorageApi) =>
-  storage.collection<HumanRequestRecord>(HUMAN_REQUESTS_COLLECTION);
+export const inputRequestsCollection = (storage: ExtensionStorageApi) =>
+  storage.collection<InputRequestRecord>(INPUT_REQUESTS_COLLECTION);
 
 export const launchClaimsCollection = (storage: ExtensionStorageApi) =>
   storage.collection<AttemptLaunchClaim>(LAUNCH_CLAIMS_COLLECTION);

@@ -1,5 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
-import { recordAutomationActivity } from "../automation-run";
+import { logAutomationNoop, recordAutomationActivity } from "../automation-run";
 import { executePlanner, planner } from "../planner-client";
 import { automatable, byPriorityThenCreatedAt, statusIdByNames } from "../selection";
 
@@ -21,7 +21,7 @@ export const implementTicketsCommand = defineCommand({
       .filter((ticket) => ticket.statusId === readyId)
       .sort(byPriorityThenCreatedAt(tags));
     if (selected.length === 0) {
-      await recordAutomationActivity(ctx, AUTOMATION, "no eligible TODO ticket");
+      logAutomationNoop(ctx, AUTOMATION, "no eligible TODO ticket");
       return { ran: true, implemented: [], waits: [] };
     }
 

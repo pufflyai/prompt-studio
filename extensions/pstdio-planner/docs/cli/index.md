@@ -52,8 +52,9 @@ pst pstdio-planner dismiss-review
 pst pstdio-planner read-review-thread
 pst pstdio-planner read-attempt-history
 pst pstdio-planner select-attempt
-pst pstdio-planner request-human
-pst pstdio-planner resolve-human-request
+pst pstdio-planner request-input
+pst pstdio-planner resolve-input-request
+pst pstdio-planner list-input-requests
 pst pstdio-planner list-attempts
 pst pstdio-planner reconcile-attempt
 pst pstdio-planner run-attempt
@@ -61,3 +62,5 @@ pst pstdio-planner runReview
 ```
 
 Use `--help` on any path before calling workflow commands directly. Their parameters are meant for agent and automation flows and can include revision IDs, report IDs, and expected state versions.
+
+`list-input-requests` accepts optional `ticket` and `state` filters. Resolve an open request with its id, a resolution, and the completed action. Scheduled, automation, and event commands cannot resolve requests.

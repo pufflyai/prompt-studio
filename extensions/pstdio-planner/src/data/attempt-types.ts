@@ -99,7 +99,7 @@ export interface TicketAttemptSelection {
   ticketId: string;
   workspaceId: string;
   selectedBy: ActorRef;
-  humanRequestId: string | null;
+  inputRequestId: string | null;
   selectedAt: string;
 }
 
@@ -117,24 +117,25 @@ export interface ReviewLaunchClaim {
   createdAt: string;
 }
 
-export type HumanRequestReason =
+export type InputRequestReason =
   | "approved-revision"
   | "ambiguous-dependency-attempt"
   | "divergent-dependency-attempts"
   | "dependency-cycle"
   | "dependency-missing"
   | "implementation-disconnected"
+  | "refinement-ready"
   | "review-disconnected"
   | "workspace-adoption-required";
 
-export interface HumanRequestRecord {
+export interface InputRequestRecord {
   id: string;
   ticketId: string;
   workspaceId: string | null;
   revision: number | null;
   sessionId: string;
   relatedSessionId: string | null;
-  reason: HumanRequestReason;
+  reason: InputRequestReason;
   question: string;
   expectedAction: string;
   state: "open" | "resolved";

@@ -30,7 +30,7 @@ describe("stuck-work-sweep automation", () => {
   });
 
   test("does not infer work from ticket status when no managed attempt exists", async () => {
-    const { ctx, calls, activities } = makeAutomationContext({
+    const { ctx, calls, activities, logs } = makeAutomationContext({
       tickets: [makeTicket({ id: "t1", shorthand: "T1", statusId: "in-progress" })],
     });
 
@@ -38,6 +38,7 @@ describe("stuck-work-sweep automation", () => {
 
     expect(result.decisions).toEqual([]);
     expect(callsTo(calls, "pstdio-planner.reconcile-attempt")).toEqual([]);
-    expect(activities.at(-1)?.message).toContain("no managed attempts");
+    expect(activities).toEqual([]);
+    expect(logs.at(-1)?.message).toContain("no managed attempts");
   });
 });

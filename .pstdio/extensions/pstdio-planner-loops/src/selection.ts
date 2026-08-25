@@ -11,23 +11,23 @@ export const statusIdByNames = (statuses: PlannerStatus[], names: string[]) => {
   return null;
 };
 
-export const HUMAN_REQUESTED_TAG_ID = "default-human-requested";
-export const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
+export const AWAITING_INPUT_TAG_ID = "default-awaiting-input";
+export const AWAITING_INPUT_OPTION_ID = "default-awaiting-input-true";
 
-export const humanRequestedTag = (tags: PlannerTag[]) => tags.find((tag) => tag.id === HUMAN_REQUESTED_TAG_ID) ?? null;
+export const awaitingInputTag = (tags: PlannerTag[]) => tags.find((tag) => tag.id === AWAITING_INPUT_TAG_ID) ?? null;
 
-export const hasHumanRequested = (ticket: PlannerTicket, tags: PlannerTag[]) => {
-  const tag = humanRequestedTag(tags);
+export const isAwaitingInput = (ticket: PlannerTicket, tags: PlannerTag[]) => {
+  const tag = awaitingInputTag(tags);
   if (!tag) return false;
   return (
-    tag.options.some((option) => option.id === HUMAN_REQUESTED_OPTION_ID) &&
-    (ticket.tagIds ?? []).includes(HUMAN_REQUESTED_OPTION_ID)
+    tag.options.some((option) => option.id === AWAITING_INPUT_OPTION_ID) &&
+    (ticket.tagIds ?? []).includes(AWAITING_INPUT_OPTION_ID)
   );
 };
 
 // Automation only touches real board tickets; drafts are still being authored.
 export const automatable = (tickets: PlannerTicket[], tags: PlannerTag[]) =>
-  tickets.filter((ticket) => !ticket.draft && !hasHumanRequested(ticket, tags));
+  tickets.filter((ticket) => !ticket.draft && !isAwaitingInput(ticket, tags));
 
 export const byUpdatedAtAsc = (a: PlannerTicket, b: PlannerTicket) => a.updatedAt.localeCompare(b.updatedAt);
 

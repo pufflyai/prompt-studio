@@ -1,11 +1,11 @@
 import { defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/attempt-storage";
-import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
+import type { AttemptLaunchClaim, AttemptRecord, InputRequestReason } from "../data/attempt-types";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { loadAttemptReadiness } from "./attempt-readiness";
-import { requestHuman } from "./human-requests";
+import { requestInput } from "./input-requests";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -15,7 +15,7 @@ import {
   workspaceModeParam,
 } from "./ticket-actions";
 
-const humanReadinessReasons = new Set<HumanRequestReason>([
+const inputReadinessReasons = new Set<InputRequestReason>([
   "ambiguous-dependency-attempt",
   "divergent-dependency-attempts",
   "dependency-cycle",
@@ -62,10 +62,10 @@ export const runAttemptCommand = defineCommand({
       const { readiness } = await loadAttemptReadiness(ctx, ticketRef);
       if (readiness.decision === "wait") {
         const storedTicket = await findTicket(ctx.storage, ticketRef);
-        if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
-          await requestHuman(ctx, {
+        if (storedTicket?.statusId && inputReadinessReasons.has(readiness.reason as InputRequestReason)) {
+          await requestInput(ctx, {
             ticket: storedTicket.id,
-            reason: readiness.reason as HumanRequestReason,
+            reason: readiness.reason as InputRequestReason,
             question: `${storedTicket.shorthand} cannot start because ${readiness.reason}. Dependencies: ${readiness.dependencyIds.join(", ") || "none"}.`,
             expectedAction:
               "Repair the dependency graph or select the intended dependency attempt, then resolve this request.",

@@ -76,7 +76,7 @@ describe("reconcileAttemptCommand", () => {
     expect(fixture.followups).toEqual([expect.objectContaining({ sessionId: "implementation-1" })]);
   });
 
-  test("blocks only the attempt and requests a human after the second disconnect", async () => {
+  test("blocks only the attempt and requests input after the second disconnect", async () => {
     const attempt = { ...baseAttempt("implementing"), implementationDisconnectRetries: 1 };
     const fixture = await setup(attempt, { "implementation-1": "disconnected" });
 
@@ -88,9 +88,7 @@ describe("reconcileAttemptCommand", () => {
       sessionId: "implementation-1",
       retryCount: 1,
     });
-    expect((await ticketsCollection(fixture.storage).get("ticket-1"))?.tagIds).toContain(
-      "default-human-requested-true",
-    );
+    expect((await ticketsCollection(fixture.storage).get("ticket-1"))?.tagIds).toContain("default-awaiting-input-true");
   });
 
   test("creates a linked review round when retrying a disconnected review", async () => {

@@ -31,10 +31,10 @@ export const DEFAULT_TAGS: PlannerTag[] = [
     ],
   },
   {
-    id: "default-human-requested",
+    id: "default-awaiting-input",
     name: "Flags",
     sortOrder: 3,
-    options: [{ id: "default-human-requested-true", name: "Human Requested", sortOrder: 0 }],
+    options: [{ id: "default-awaiting-input-true", name: "Awaiting Input", sortOrder: 0 }],
   },
 ];
 
@@ -107,6 +107,7 @@ export interface PlannerFixtureState {
 export const makeAutomationContext = (state: PlannerFixtureState) => {
   const calls: Array<{ commandId: string; params: Record<string, unknown> }> = [];
   const activities: Array<{ message: string; metadata?: Record<string, unknown> }> = [];
+  const logs: Array<{ message: string; metadata?: Record<string, unknown> }> = [];
   const statuses = state.statuses ?? DEFAULT_STATUSES;
   const tags = state.tags ?? DEFAULT_TAGS;
   let createdSessions = 0;
@@ -185,6 +186,11 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
         return setAttribute(params as { rowId: string; attributeId: string; value: string });
       case "pstdio-planner.refine-ticket":
         return { id: `refine-session-${++createdSessions}` };
+      case "pstdio-planner.request-input": {
+        const ticket = findTicket(params.ticket as string);
+        if (ticket) ticket.tagIds = [...(ticket.tagIds ?? []), "default-awaiting-input-true"];
+        return { id: `input-request-${ticket?.id ?? "missing"}` };
+      }
       case "pstdio-planner.run-attempt":
         return runAttempt(params);
       case "pstdio-planner.runReview":
@@ -212,6 +218,11 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
         return { id: `activity-${activities.length}` };
       },
     },
+    logger: {
+      info: (message: string, metadata?: Record<string, unknown>) => {
+        logs.push({ message, metadata });
+      },
+    },
     sessions: { get: async (id: string) => state.sessionsById?.[id] ?? null },
     commands: {
       execute: async (ref: { id: string } | string, invocation: { params?: Record<string, unknown> }) => {
@@ -223,7 +234,7 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
     },
   } as unknown as AutomationContext;
 
-  return { ctx, calls, activities };
+  return { ctx, calls, activities, logs };
 };
 
 export const callsTo = (calls: Array<{ commandId: string; params: Record<string, unknown> }>, commandId: string) =>

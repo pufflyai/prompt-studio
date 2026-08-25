@@ -7,6 +7,7 @@ import {
   TICKET_ARCHIVE_STATE_ACTIVE,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./src/data/mappers";
+import { migrateInputRequestNames } from "./src/data/migrate-input-request-names";
 import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
@@ -289,7 +290,7 @@ export default defineExtension({
       icon: "Files",
       body: (ctx, input) => runRendererCommand(plannerCommands["ticket-files.tree.body"], input)(ctx),
       refreshEvents: [plannerTicketsChanged],
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "input-requests", "sessions"],
     },
   },
 
@@ -301,6 +302,8 @@ export default defineExtension({
 
   async migrate(ctx) {
     await cleanupLegacyWorkspaceStatus(ctx.storage);
+    await migrateInputRequestNames(ctx.storage);
+    await seedDefaultTags(ctx.storage);
   },
 
   templateTypes: {

@@ -1,10 +1,10 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
 import {
   type AutomationContext,
-  addHumanRequested,
   clearPendingRun,
   isSessionLive,
   listPendingRuns,
+  logAutomationNoop,
   moveTicketIfStillIn,
   recordAutomationActivity,
   savePendingRun,
@@ -34,7 +34,16 @@ const reconcilePendingRefinements = async (ctx: AutomationContext, backlogId: st
         fromStatusId: backlogId,
         toStatusId: readyId,
       });
-      if (moved) await addHumanRequested(ctx, run.ticketId);
+      if (moved) {
+        await executePlanner(ctx, planner.requestInput, {
+          ticket: run.ticketId,
+          sessionId: run.sessionId,
+          reason: "refinement-ready",
+          question: `${run.ticketId} finished refinement and is ready to read.`,
+          expectedAction: "Read the refined ticket, then resolve this input request.",
+          expectedTicketStatusId: readyId,
+        });
+      }
       await recordAutomationActivity(ctx, AUTOMATION, `refinement completed for ${run.ticketId}`, { moved, ...run });
     } else {
       await recordAutomationActivity(ctx, AUTOMATION, `refinement did not complete for ${run.ticketId}`, {
@@ -61,7 +70,7 @@ export const refineTicketsCommand = defineCommand({
 
     const running = await reconcilePendingRefinements(ctx, backlogId, readyId);
     if (running > 0) {
-      await recordAutomationActivity(ctx, AUTOMATION, `skipped selection: ${running} refinement(s) still running`);
+      logAutomationNoop(ctx, AUTOMATION, `skipped selection: ${running} refinement(s) still running`);
       return { ran: true, refined: null, running };
     }
 
@@ -70,7 +79,7 @@ export const refineTicketsCommand = defineCommand({
       .filter((ticket) => ticket.statusId === backlogId)
       .sort(byUpdatedAtAsc)[0];
     if (!candidate) {
-      await recordAutomationActivity(ctx, AUTOMATION, "no eligible Backlog ticket");
+      logAutomationNoop(ctx, AUTOMATION, "no eligible Backlog ticket");
       return { ran: true, refined: null, running: 0 };
     }
 
