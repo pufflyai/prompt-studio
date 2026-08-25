@@ -151097,6 +151097,2860 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "b3oPl3",
+      "x": 39641,
+      "y": -11572,
+      "name": "Resource Activity Feeds · Exploration",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 2200,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "qS4Us",
+          "name": "Exploration Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "lT1gp",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "RESOURCE ACTIVITY · EXPLORATION",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "d6hzvm",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "The feed belongs to the resource",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "R9JN1",
+              "name": "Summary",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 1460,
+              "content": "A resource feed mixes compact system events with authored messages. These three directions keep the ticket as the owner while testing how much document context should remain visible.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "bgCK1",
+              "name": "Principles",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "fCCTQ",
+                  "type": "ref",
+                  "ref": "Tboo4",
+                  "name": "Principle · Append-only",
+                  "descendants": {
+                    "L109Bg": {
+                      "content": "Append-only"
+                    }
+                  }
+                },
+                {
+                  "id": "E3plsG",
+                  "type": "ref",
+                  "ref": "Tboo4",
+                  "name": "Principle · Events + messages",
+                  "descendants": {
+                    "L109Bg": {
+                      "content": "Events + messages"
+                    }
+                  }
+                },
+                {
+                  "id": "Cw258",
+                  "type": "ref",
+                  "ref": "Tboo4",
+                  "name": "Principle · Resource-scoped",
+                  "descendants": {
+                    "L109Bg": {
+                      "content": "Resource-scoped"
+                    }
+                  }
+                },
+                {
+                  "id": "SviIN",
+                  "type": "ref",
+                  "ref": "Tboo4",
+                  "name": "Principle · Related resources",
+                  "descendants": {
+                    "L109Bg": {
+                      "content": "Related resources"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "E1jZEm",
+          "name": "Concepts",
+          "width": "fill_container",
+          "gap": 36,
+          "children": [
+            {
+              "type": "frame",
+              "id": "iARvH",
+              "name": "Concept · Inline",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Bw66S",
+                  "name": "Concept · Inline Header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "V6fGMb",
+                      "name": "Concept · Inline Kicker",
+                      "fill": "$ds-info",
+                      "content": "1 · INLINE AFTER CONTENT",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "g4ANf",
+                      "name": "Concept · Inline Title",
+                      "fill": "$ds-fg",
+                      "content": "Inline after content",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WX6s8",
+                      "name": "Concept · Inline Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The ticket reads like one continuous document. Activity starts after the markdown and keeps the resource relationship obvious.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WqOi3",
+                  "name": "Concept · Inline Mockup",
+                  "width": "fill_container",
+                  "height": 760,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Q73xy",
+                      "name": "Inline Toolbar",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "kHJpb",
+                          "name": "Inline Resource Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "component",
+                          "library": "lucide",
+                          "fill": "$ds-review"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h9l9x",
+                          "name": "Inline Breadcrumb",
+                          "fill": "$ds-fg-muted",
+                          "content": "Tickets / PS-276",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "N4XZgJ",
+                          "name": "Inline Toolbar Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "Si20e",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Inline More",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "ellipsis"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sxyzc",
+                      "name": "Inline Resource Document",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "layout": "vertical",
+                      "gap": 18,
+                      "padding": [
+                        18,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "h3YFS",
+                          "name": "Inline Markdown Content",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "FAeSW",
+                              "name": "Inline Ticket Heading",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w7i5w",
+                                  "name": "Inline Ticket Title",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "PS-276 Resource activity feeds",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 19,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "id": "I6Ugx7",
+                                  "type": "ref",
+                                  "ref": "dbK8Z",
+                                  "name": "Inline Status",
+                                  "theme": {
+                                    "badge": "review"
+                                  },
+                                  "descendants": {
+                                    "ohhQY": {
+                                      "enabled": false
+                                    },
+                                    "FaaBK": {
+                                      "content": "Backlog"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Do4et",
+                              "name": "Inline Ticket Intro",
+                              "fill": "$ds-fg-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Add a resource-owned history below the ticket document. Show meaningful system events and messages that need a response.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "WDpWR",
+                              "name": "Inline Scope Label",
+                              "fill": "$ds-fg",
+                              "content": "Scope",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wlnVL",
+                              "name": "Inline Scope · Record refinement and workspace milestones",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "aRm4B",
+                                  "name": "Inline Scope Icon · Record refinement and workspace milestones",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$ds-success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "tCyyu",
+                                  "name": "Inline Scope Text · Record refinement and workspace milestones",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Record refinement and workspace milestones",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "w1BKAv",
+                              "name": "Inline Scope · Show input requests as authored messages",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "XAt09",
+                                  "name": "Inline Scope Icon · Show input requests as authored messages",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$ds-success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ifVA0",
+                                  "name": "Inline Scope Text · Show input requests as authored messages",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show input requests as authored messages",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "pMsWs",
+                          "name": "Inline Content Divider",
+                          "fill": "$ds-border",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S9SHa",
+                          "name": "Inline Activity Feed",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 13,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mzrXI",
+                              "name": "Inline Activity Header",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "NF3un",
+                                  "name": "Inline Activity Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "activity",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iAkTQ",
+                                  "name": "Inline Activity Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Activity",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cidAV",
+                                  "name": "Inline Activity Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OCZR5",
+                              "name": "Today Divider",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "t6RCE",
+                                  "name": "Today Label",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "TODAY",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 10,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "id": "q0epAC",
+                                  "name": "Today Line",
+                                  "fill": "$ds-border",
+                                  "width": "fill_container",
+                                  "height": 1
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SUsUy",
+                              "name": "Refinement Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "JXbYx",
+                                  "name": "Refinement Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "UlXoX",
+                                      "name": "Refinement Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "sparkles",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "sQjhR",
+                                  "name": "Refinement Copy",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "EOGbz",
+                                      "name": "Refinement Meta",
+                                      "width": "fill_container",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "tDUoC",
+                                          "name": "Refinement Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "System Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "s2MkG",
+                                          "name": "Refinement Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:42",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "d1jQcC",
+                                      "name": "Refinement Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Started refinement session · Refine PS-276",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "U8wcC",
+                              "name": "Workspace Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "V4pDz",
+                                  "name": "Workspace Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "YX9b8",
+                                      "name": "Workspace Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "git-branch",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "XZUNp",
+                                  "name": "Workspace Copy",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "DZbqT",
+                                      "name": "Workspace Meta",
+                                      "width": "fill_container",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "vis9S",
+                                          "name": "Workspace Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "System Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "xGD5G",
+                                          "name": "Workspace Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:46",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "FLs4i",
+                                      "name": "Workspace Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Created workspace · PS-276_A1",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zJtqr",
+                              "name": "Input Request Row",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Q93vS",
+                                  "name": "Input Request Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-warning-subtle",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-warning-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "TlGiB",
+                                      "name": "Input Request Bell",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "bell",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "PrBHL",
+                                  "name": "Input Request Message",
+                                  "width": "fill_container",
+                                  "fill": "$ds-warning-subtle",
+                                  "cornerRadius": 8,
+                                  "stroke": "$ds-warning-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 9,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "gjR78",
+                                      "name": "Input Request Meta",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "zlSJh",
+                                          "name": "Input Request Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Planner Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "id": "fsCOY",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Awaiting Input Badge",
+                                          "theme": {
+                                            "badge": "default"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "fill": "$ds-warning"
+                                            },
+                                            "FaaBK": {
+                                              "content": "Awaiting input",
+                                              "fill": "$ds-warning"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "MlHa2",
+                                      "name": "Input Request Question",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Which workspace should be treated as canonical?",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "tdFfl",
+                                      "name": "Input Request Expected Action",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Choose PS-276_A1 or the current branch before the next attempt starts.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "P4nnG",
+                                      "name": "Input Request Actions",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "id": "qxtSi",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Open Session",
+                                          "theme": {
+                                            "btn": "outline",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "icon": "message-circle"
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Open session"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "bFxmi",
+                                          "name": "Input Request Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:48",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "I70qW",
+                              "name": "Resolved Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "gvyrb",
+                                  "name": "Resolved Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "WGawT",
+                                      "name": "Resolved Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "circle-check",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "W1ADXV",
+                                  "name": "Resolved Copy",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "rjknV",
+                                      "name": "Resolved Meta",
+                                      "width": "fill_container",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "s3kH0",
+                                          "name": "Resolved Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Alex",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "PW8i4",
+                                          "name": "Resolved Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "11:03",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "xUqn3",
+                                      "name": "Resolved Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Resolved the input request",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LosXh",
+              "name": "Concept · Tab",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ogTyC",
+                  "name": "Concept · Tab Header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "M2uD1q",
+                      "name": "Concept · Tab Kicker",
+                      "fill": "$ds-info",
+                      "content": "2 · DEDICATED ACTIVITY TAB",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "A8pZXF",
+                      "name": "Concept · Tab Title",
+                      "fill": "$ds-fg",
+                      "content": "Dedicated Activity tab",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "U0nM5i",
+                      "name": "Concept · Tab Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Activity gets the whole primary region. Scanning improves, but the ticket content disappears while the feed is open.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d4QJ6",
+                  "name": "Concept · Tab Mockup",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 760,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uyDpw",
+                      "name": "Tab Toolbar",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "L280J",
+                          "name": "Tab Resource Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "component",
+                          "library": "lucide",
+                          "fill": "$ds-review"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vtuWq",
+                          "name": "Tab Breadcrumb",
+                          "fill": "$ds-fg-muted",
+                          "content": "Tickets / PS-276",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pUCdr",
+                          "name": "Tab Toolbar Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "o5FJcN",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Tab More",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "ellipsis"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V9EVEH",
+                      "name": "Resource Tabs",
+                      "width": "fill_container",
+                      "height": 38,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 4,
+                      "padding": [
+                        5,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "VSdXl",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Content Tab",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "default",
+                            "tab-status": "none"
+                          },
+                          "height": 28,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "file-text"
+                            },
+                            "k9XlqC": {
+                              "content": "Content"
+                            },
+                            "g1LJJh": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "S5BGR",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Activity Tab",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "active",
+                            "tab-status": "none"
+                          },
+                          "height": 28,
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "activity"
+                            },
+                            "k9XlqC": {
+                              "content": "Activity"
+                            },
+                            "g1LJJh": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vxrtQ",
+                      "name": "Activity Tab Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": [
+                        18,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CS61E",
+                          "name": "Inline Activity Header",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "bmFVJ",
+                              "name": "Inline Activity Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "activity",
+                              "library": "lucide",
+                              "fill": "$ds-fg"
+                            },
+                            {
+                              "type": "text",
+                              "id": "XqtaL",
+                              "name": "Inline Activity Title",
+                              "fill": "$ds-fg",
+                              "content": "Activity",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eqCKD",
+                              "name": "Inline Activity Spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xaffe",
+                          "name": "Today Divider",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "z0f8a",
+                              "name": "Today Label",
+                              "fill": "$ds-fg-subtle",
+                              "content": "TODAY",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 10,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "kB2ZQ",
+                              "name": "Today Line",
+                              "fill": "$ds-border",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sSQcW",
+                          "name": "Activity Tab Feed",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "zcLER",
+                              "name": "Tab Refinement Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "q5CZdV",
+                                  "name": "Tab Refinement Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "zFmy6",
+                                      "name": "Tab Refinement Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "sparkles",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "DbwrM",
+                                  "name": "Tab Refinement Content",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "SdiLq",
+                                      "name": "Tab Refinement Meta",
+                                      "width": "fill_container",
+                                      "gap": 7,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Dbcl4",
+                                          "name": "Tab Refinement Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Planner Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "a2Py5",
+                                          "name": "Tab Refinement Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:42",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "dyUaG",
+                                      "name": "Tab Refinement Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Started a refinement session",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "H2P7Ak",
+                                      "type": "ref",
+                                      "ref": "Tboo4",
+                                      "name": "Tab Refinement Related",
+                                      "width": "fit_content",
+                                      "x": 0,
+                                      "y": 40,
+                                      "descendants": {
+                                        "L109Bg": {
+                                          "content": "Refine PS-276"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iWehV",
+                              "name": "Tab Workspace Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "CY5QN",
+                                  "name": "Tab Workspace Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "XZkbM",
+                                      "name": "Tab Workspace Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "git-branch",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YzVVF",
+                                  "name": "Tab Workspace Content",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "kQ7vY",
+                                      "name": "Tab Workspace Meta",
+                                      "width": "fill_container",
+                                      "gap": 7,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "WRz4m",
+                                          "name": "Tab Workspace Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "System Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Ueqww",
+                                          "name": "Tab Workspace Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:46",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Bg2XE",
+                                      "name": "Tab Workspace Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Created a worktree-backed workspace",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "YT3vT",
+                                      "type": "ref",
+                                      "ref": "Tboo4",
+                                      "name": "Tab Workspace Related",
+                                      "width": "fit_content",
+                                      "descendants": {
+                                        "L109Bg": {
+                                          "content": "PS-276_A1"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "msZBU",
+                              "name": "Tab Input Request",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "hbOjH",
+                                  "name": "Tab Input Request Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-warning-subtle",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-warning-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "DzH2L",
+                                      "name": "Tab Input Request Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "bell",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ZdNtn",
+                                  "name": "Tab Input Request Message",
+                                  "width": "fill_container",
+                                  "fill": "$ds-warning-subtle",
+                                  "cornerRadius": 8,
+                                  "stroke": "$ds-warning-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 9,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "vjgbR",
+                                      "name": "Tab Input Request Header",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "i8f3YA",
+                                          "name": "Tab Input Request Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Planner Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "v4VRxv",
+                                          "name": "Tab Input Request Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:48",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "uZeQR",
+                                          "name": "Tab Input Request Header Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "oa4f5",
+                                          "name": "Tab Awaiting Bell",
+                                          "width": 13,
+                                          "height": 13,
+                                          "icon": "bell",
+                                          "library": "lucide",
+                                          "fill": "$ds-warning"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "VIMuf",
+                                          "name": "Tab Awaiting Label",
+                                          "fill": "$ds-warning",
+                                          "content": "Awaiting input",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "aqb5S",
+                                      "name": "Tab Input Request Question",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Which workspace should be treated as canonical?",
+                                      "lineHeight": 1.45,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "NTp5b",
+                                      "name": "Tab Input Request Detail",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Choose PS-276_A1 or the current branch before the next attempt starts.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "uGu5D",
+                                      "name": "Tab Input Request Actions",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "children": [
+                                        {
+                                          "id": "pDaSw",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Tab Open Session",
+                                          "theme": {
+                                            "btn": "outline",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "icon": "message-circle"
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Open session"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "VxEUH",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Tab Open Ticket",
+                                          "theme": {
+                                            "btn": "ghost",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "icon": "component"
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Open ticket"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "V1VvM",
+                              "name": "Tab Review Event",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "sPMzR",
+                                  "name": "Tab Review Icon",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "sHaDo",
+                                      "name": "Tab Review Glyph",
+                                      "width": 13,
+                                      "height": 13,
+                                      "icon": "scan-search",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YfYrV",
+                                  "name": "Tab Review Content",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "fv5GQ",
+                                      "name": "Tab Review Meta",
+                                      "width": "fill_container",
+                                      "gap": 7,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "KtsWy",
+                                          "name": "Tab Review Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Review Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "dm3PF",
+                                          "name": "Tab Review Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "11:18",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "I0Q4gV",
+                                      "name": "Tab Review Summary",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Submitted review results with two requested changes",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "DXrY9",
+                                      "type": "ref",
+                                      "ref": "Tboo4",
+                                      "name": "Tab Review Related",
+                                      "width": "fit_content",
+                                      "descendants": {
+                                        "L109Bg": {
+                                          "content": "Review session"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "X3olIW",
+                          "name": "Activity Tab Footer",
+                          "width": "fill_container",
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "id": "MOGo2",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Load Older Activity",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "chevron-down"
+                                },
+                                "Hf4GT": {
+                                  "content": "Load older activity"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "B0C51k",
+              "name": "Concept · Panel Menu",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "rRJlr",
+                  "name": "Concept · Panel Menu Header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zygf0",
+                      "name": "Concept · Panel Menu Kicker",
+                      "fill": "$ds-info",
+                      "content": "3 · ACTIVITY PANEL MENU",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "hOnKl",
+                      "name": "Concept · Panel Menu Title",
+                      "fill": "$ds-fg",
+                      "content": "Activity panel menu",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FUgt4",
+                      "name": "Concept · Panel Menu Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The document stays visible while the activity feed opens from the editor's right-side menu. It follows the selected ticket and stays out of the tab bar.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d0cWS",
+                  "name": "Concept · Panel Menu Mockup",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 760,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UOhSL",
+                      "name": "Panel Menu Toolbar",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Rlpfg",
+                          "name": "Panel Menu Resource Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "component",
+                          "library": "lucide",
+                          "fill": "$ds-review"
+                        },
+                        {
+                          "type": "text",
+                          "id": "pHdqQ",
+                          "name": "Panel Menu Breadcrumb",
+                          "fill": "$ds-fg-muted",
+                          "content": "Tickets / PS-276",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l6gDt",
+                          "name": "Panel Menu Toolbar Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "id": "tpRI6",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Panel Menu Activity Toggle",
+                          "theme": {
+                            "btn": "subtle",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "activity"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MYDGd",
+                      "name": "Panel Menu Main",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mgMWQ",
+                          "name": "Panel Menu Document Pane",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "$ds-bg",
+                          "layout": "vertical",
+                          "gap": 18,
+                          "padding": [
+                            20,
+                            22
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "B6TGdb",
+                              "name": "Panel Menu Ticket Heading",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 7,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "l8ICF",
+                                  "name": "Panel Menu Ticket ID",
+                                  "fill": "$ds-review",
+                                  "content": "PS-276",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 10,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fmK98",
+                                  "name": "Panel Menu Ticket Title",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Resource activity feeds",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jfEyI",
+                                  "name": "Panel Menu Ticket Intro",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Give every supported resource a durable activity history without making the renderer own the data.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "YYIxa",
+                              "name": "Panel Menu Document · Goals",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "r3wGC",
+                                  "name": "Panel Menu Document Heading · Goals",
+                                  "fill": "$ds-fg",
+                                  "content": "Goals",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eyZUT",
+                                  "name": "Panel Menu Document Body · Goals",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show meaningful events and messages below or beside the resource content.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SkCP5",
+                              "name": "Panel Menu Document · System rule",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cDPdC",
+                                  "name": "Panel Menu Document Heading · System rule",
+                                  "fill": "$ds-fg",
+                                  "content": "System rule",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wdo4S",
+                                  "name": "Panel Menu Document Body · System rule",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "The domain record owns current state. Activity explains what happened.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "u0wh3G",
+                              "name": "Panel Menu Document · Acceptance",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "e17Jxu",
+                                  "name": "Panel Menu Document Heading · Acceptance",
+                                  "fill": "$ds-fg",
+                                  "content": "Acceptance",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "PbQ8I",
+                                  "name": "Panel Menu Document Body · Acceptance",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Feed errors never block editing, and related resources open through the workbench.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "mHwD3",
+                          "name": "Resource Activity Panel Menu",
+                          "width": 292,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "left": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Rct8k",
+                              "name": "Resource Activity Panel Menu Body",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "gap": 14,
+                              "padding": [
+                                14,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ijd5k",
+                                  "name": "Inline Activity Header",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "cskGa",
+                                      "name": "Inline Activity Icon",
+                                      "width": 15,
+                                      "height": 15,
+                                      "icon": "activity",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "fGsvS",
+                                      "name": "Inline Activity Title",
+                                      "fill": "$ds-fg",
+                                      "content": "Activity",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 15,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "IUlzw",
+                                      "name": "Inline Activity Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "iQGfj",
+                                  "name": "Today Divider",
+                                  "width": "fill_container",
+                                  "gap": 10,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "r3F9WC",
+                                      "name": "Today Label",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "TODAY",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 10,
+                                      "fontWeight": "600",
+                                      "letterSpacing": 1
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "id": "UHUV7",
+                                      "name": "Today Line",
+                                      "fill": "$ds-border",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "V601E",
+                                  "name": "Panel Menu Refinement Compact Event",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "HQU6Q",
+                                      "name": "Panel Menu Refinement Compact Icon",
+                                      "width": 24,
+                                      "height": 24,
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "stroke": "$ds-border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "x6w4U3",
+                                          "name": "Panel Menu Refinement Compact Glyph",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "sparkles",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "b0MIc",
+                                      "name": "Panel Menu Refinement Compact Copy",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 3,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "D5sB65",
+                                          "name": "Panel Menu Refinement Compact Title",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Planner Agent",
+                                          "lineHeight": 1.35,
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 11,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "y4llhw",
+                                          "name": "Panel Menu Refinement Compact Detail",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Started refinement · Refine PS-276",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "L0nDA",
+                                          "name": "Panel Menu Refinement Compact Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:42",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 9,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cVH3b",
+                                  "name": "Panel Menu Workspace Compact Event",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "d6aLqE",
+                                      "name": "Panel Menu Workspace Compact Icon",
+                                      "width": 24,
+                                      "height": 24,
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "stroke": "$ds-border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "fkPZL",
+                                          "name": "Panel Menu Workspace Compact Glyph",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "git-branch",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Xolby",
+                                      "name": "Panel Menu Workspace Compact Copy",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 3,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "EPUqo",
+                                          "name": "Panel Menu Workspace Compact Title",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "System Agent",
+                                          "lineHeight": 1.35,
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 11,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hVoyV",
+                                          "name": "Panel Menu Workspace Compact Detail",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Created workspace · PS-276_A1",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "NJSE5",
+                                          "name": "Panel Menu Workspace Compact Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "10:46",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 9,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "MVzjf",
+                                  "name": "Panel Menu Input Request Row",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 7,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "xm8g5",
+                                      "name": "Panel Menu Input Request Label",
+                                      "width": "fill_container",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "TvPb6",
+                                          "name": "Panel Menu Input Bell",
+                                          "width": 13,
+                                          "height": 13,
+                                          "icon": "bell",
+                                          "library": "lucide",
+                                          "fill": "$ds-warning"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "R9Yaux",
+                                          "name": "Panel Menu Input Status",
+                                          "fill": "$ds-warning",
+                                          "content": "Awaiting input",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 10,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "SbpjS",
+                                      "name": "Panel Menu Input Request Message",
+                                      "width": "fill_container",
+                                      "fill": "$ds-warning-subtle",
+                                      "cornerRadius": 8,
+                                      "stroke": "$ds-warning-border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "gap": 8,
+                                      "padding": 10,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "T31oh",
+                                          "name": "Panel Menu Input Request Actor",
+                                          "fill": "$ds-fg",
+                                          "content": "Planner Agent",
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 11,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "y7wAnO",
+                                          "name": "Panel Menu Input Request Question",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Which workspace should be treated as canonical?",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "F9QeTg",
+                                          "name": "Panel Menu Input Request Detail",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Choose before the next attempt starts.",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "poVaH",
+                                          "type": "ref",
+                                          "ref": "c24zV7",
+                                          "name": "Panel Menu Open Session",
+                                          "width": "fill_container",
+                                          "theme": {
+                                            "btn": "outline",
+                                            "size": "xs"
+                                          },
+                                          "descendants": {
+                                            "DsEVd": {
+                                              "icon": "message-circle"
+                                            },
+                                            "Hf4GT": {
+                                              "content": "Open session"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "n4Hwct",
+                                  "name": "Panel Menu Review Compact Event",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "n4pMH",
+                                      "name": "Panel Menu Review Compact Icon",
+                                      "width": 24,
+                                      "height": 24,
+                                      "fill": "$ds-surface",
+                                      "cornerRadius": 999,
+                                      "stroke": "$ds-border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "UGfFW",
+                                          "name": "Panel Menu Review Compact Glyph",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "scan-search",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "O6ItMA",
+                                      "name": "Panel Menu Review Compact Copy",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 3,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "HqUjg",
+                                          "name": "Panel Menu Review Compact Title",
+                                          "fill": "$ds-fg",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Review Agent",
+                                          "lineHeight": 1.35,
+                                          "fontFamily": "$font-heading",
+                                          "fontSize": 11,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "CA6QK",
+                                          "name": "Panel Menu Review Compact Detail",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Submitted two requested changes",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 10,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "aLxLv",
+                                          "name": "Panel Menu Review Compact Time",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "11:18",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 9,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "x0MafQ",
+          "name": "Recommendation Notes",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "MNgeM",
+              "name": "Recommendation",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 22,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ZB80g",
+                  "name": "Recommendation Title",
+                  "fill": "$ds-fg",
+                  "content": "Recommended: inline, owned by the resource",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "y0kV9X",
+                  "name": "Recommendation Body",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Use the inline direction for ticket-like resources. The resource kind opts in, the host loads the feed, and the markdown renderer remains responsible only for content.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hB4XP",
+              "name": "Shared Behavior",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 22,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dgGGx",
+                  "name": "Shared Behavior Title",
+                  "fill": "$ds-fg",
+                  "content": "Rules shared by every direction",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "lkKxV",
+                  "name": "Shared Behavior Body",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Newest activity appears first. Messages may contain markdown. Related resources open through the workbench. Loading or feed errors never block the resource content.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "shvHR",
+      "x": 22702,
+      "y": -715,
+      "name": "Notification center · Modal exploration",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1600,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "VOaoL",
+          "name": "Exploration header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            52,
+            72,
+            40,
+            72
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "MI89x",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "NOTIFICATION CENTER",
+              "fontFamily": "$font-heading",
+              "fontSize": 11,
+              "fontWeight": "600",
+              "letterSpacing": 1.4
+            },
+            {
+              "type": "text",
+              "id": "j1OZW",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "Current modal with optional long content",
+              "fontFamily": "$font-heading",
+              "fontSize": 34,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "wrMmi",
+              "name": "Description",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The list follows the current dashboard implementation. A notification may attach long content, which opens in a reader state inside the same modal.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "dDhdU",
+          "name": "Header divider",
+          "fill": "$ds-border",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "UMQqp",
+          "name": "Exploration body",
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            40,
+            72,
+            56,
+            72
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "XzutZ",
+              "name": "Notification center modal states",
+              "context": "The first state mirrors the current dashboard NotificationCenter: a centered large modal, search input, grouped compact list rows, row actions, dismiss action, and pending-count footer. Long content is optional and separate from the notification body. An attachment chip opens a reader state inside the same modal shell. The reader owns its own scroll region and keeps notification actions in the footer.",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 12,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "U1hgiC",
+                  "name": "Card Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hkS7E",
+                      "name": "Title",
+                      "fill": "$ds-fg",
+                      "content": "Notification center modal states",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P9UGX8",
+                      "name": "Implementation tags",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "FTr6F",
+                          "type": "ref",
+                          "ref": "Tboo4",
+                          "name": "SearchModalContent",
+                          "descendants": {
+                            "L109Bg": {
+                              "content": "SearchModalContent"
+                            }
+                          }
+                        },
+                        {
+                          "id": "u2eRG",
+                          "type": "ref",
+                          "ref": "Tboo4",
+                          "name": "ListRow",
+                          "descendants": {
+                            "L109Bg": {
+                              "content": "ListRow"
+                            }
+                          }
+                        },
+                        {
+                          "id": "ED3GB",
+                          "type": "ref",
+                          "ref": "Tboo4",
+                          "name": "LongContentAttachment",
+                          "descendants": {
+                            "L109Bg": {
+                              "content": "LongContentAttachment"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Tz4ve",
+                  "name": "Modal state comparison",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ux7AF",
+                      "name": "Current notification list state",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "H1RBs",
+                          "name": "Current state label",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "c3fzN4",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Current implementation",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "id": "afL7G",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Current badge",
+                              "theme": {
+                                "badge": "info"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "List"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "isPUJ",
+                          "name": "Notification center · Current list",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 540,
+                          "fill": "$ds-bg",
+                          "cornerRadius": "$overlay-radius",
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZXaKt",
+                      "name": "Attached content reader state",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VC71n",
+                          "name": "Reader state label",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tGGLO",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Optional attached content",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "id": "J2ROIi",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Proposed badge",
+                              "theme": {
+                                "badge": "review"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Reader"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GUNAr",
+                          "name": "Notification center · Attached content reader",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 540,
+                          "fill": "$ds-bg",
+                          "cornerRadius": "$overlay-radius",
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

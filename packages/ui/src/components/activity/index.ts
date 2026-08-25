@@ -4,6 +4,7 @@ import { ActivityComposer } from "./activity-composer";
 import { ActivityEvent } from "./activity-event";
 import { ActivityFeed, ActivityHeader, ActivityRoot } from "./activity-root";
 import { ActivityTimeline } from "./activity-timeline";
+import { ResourceActivityFeed } from "./resource-activity-feed";
 
 export type { ActivityActor } from "./activity.types";
 export type { ActivityAvatarProps } from "./activity-avatar";
@@ -12,6 +13,17 @@ export type { ActivityComposerProps } from "./activity-composer";
 export type { ActivityEventProps } from "./activity-event";
 export type { ActivityFeedProps, ActivityHeaderProps, ActivityRootProps } from "./activity-root";
 export type { ActivityTimelineProps } from "./activity-timeline";
+export type {
+  ResourceActivityFeedAction,
+  ResourceActivityFeedAttention,
+  ResourceActivityFeedEventItem,
+  ResourceActivityFeedItem,
+  ResourceActivityFeedMessageItem,
+  ResourceActivityFeedProps,
+  ResourceActivityFeedSize,
+  ResourceActivityIconName,
+  ResourceActivityRelatedResource,
+} from "./resource-activity-feed";
 
 export {
   ActivityAvatar,
@@ -23,6 +35,7 @@ export {
   ActivityReply,
   ActivityRoot,
   ActivityTimeline,
+  ResourceActivityFeed,
 };
 
 export const Activity = {

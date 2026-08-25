@@ -1,18 +1,31 @@
-import type { HTMLChakraProps } from "@chakra-ui/react";
-import { Box, HStack, Stack, Text } from "@chakra-ui/react";
+import type { HTMLChakraProps, RecipeVariantProps } from "@chakra-ui/react";
+import { Box, createSlotRecipeContext, HStack, Stack, Text } from "@chakra-ui/react";
 import { Children, type ReactNode } from "react";
 
+import { activityCommentSlotRecipe as recipe } from "@/theme/recipes/activity-comment";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 
+const { withContext, withProvider } = createSlotRecipeContext({ recipe });
+
+type ActivityCommentVariantProps = RecipeVariantProps<typeof recipe>;
+
 interface ActivityCommentHeaderProps {
   actor: ActivityActor;
+  icon?: ReactNode;
+  iconColor?: string;
+  iconBackground?: string;
   timestamp?: ReactNode;
   actions?: ReactNode;
 }
 
-export interface ActivityCommentProps extends Omit<HTMLChakraProps<"article">, "title"> {
+interface ActivityCommentRootProps extends HTMLChakraProps<"article">, ActivityCommentVariantProps {}
+
+export interface ActivityCommentProps extends Omit<ActivityCommentRootProps, "title"> {
   actor: ActivityActor;
+  icon?: ReactNode;
+  iconColor?: string;
+  iconBackground?: string;
   timestamp?: ReactNode;
   actions?: ReactNode;
   replies?: ReactNode;
@@ -32,11 +45,11 @@ const TimestampSeparator = () => (
 );
 
 const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
-  const { actor, timestamp, actions } = props;
+  const { actor, icon, iconColor, iconBackground, timestamp, actions } = props;
 
   return (
     <HStack gap="xs" alignItems="center" minW="0">
-      <ActivityAvatar actor={actor} />
+      <ActivityAvatar actor={actor} icon={icon} color={iconColor} background={iconBackground} />
       <Text textStyle="label/S/medium" color="fg" truncate>
         {actor.name}
       </Text>
@@ -54,6 +67,10 @@ const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
     </HStack>
   );
 };
+
+const ActivityCommentRoot = withProvider<HTMLDivElement, ActivityCommentRootProps>("article", "root");
+const ActivityCommentBody = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "body");
+const ActivityCommentContent = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "content");
 
 export const ActivityReply = (props: ActivityReplyProps) => {
   const { actor, timestamp, actions, children, ...rootProps } = props;
@@ -73,26 +90,23 @@ export const ActivityReply = (props: ActivityReplyProps) => {
 };
 
 export const ActivityComment = (props: ActivityCommentProps) => {
-  const { actor, timestamp, actions, replies, composer, children, ...rootProps } = props;
+  const { actor, icon, iconColor, iconBackground, timestamp, actions, replies, composer, children, ...rootProps } =
+    props;
   const hasReplies = Children.count(replies) > 0;
 
   return (
-    <Box
-      as="article"
-      width="full"
-      borderWidth="1px"
-      borderColor="border.subtle"
-      borderRadius="xs"
-      background="bg"
-      overflow="hidden"
-      {...rootProps}
-    >
-      <Stack gap="sm" padding="md">
-        <ActivityCommentHeader actor={actor} timestamp={timestamp} actions={actions} />
-        <Text as="div" textStyle="label/S/regular" color="fg" overflowWrap="anywhere" whiteSpace="pre-wrap">
-          {children}
-        </Text>
-      </Stack>
+    <ActivityCommentRoot {...rootProps}>
+      <ActivityCommentBody>
+        <ActivityCommentHeader
+          actor={actor}
+          icon={icon}
+          iconColor={iconColor}
+          iconBackground={iconBackground}
+          timestamp={timestamp}
+          actions={actions}
+        />
+        <ActivityCommentContent>{children}</ActivityCommentContent>
+      </ActivityCommentBody>
       {hasReplies ? (
         <Box borderTopWidth="1px" borderColor="border.subtle">
           {replies}
@@ -103,6 +117,6 @@ export const ActivityComment = (props: ActivityCommentProps) => {
           {composer}
         </Box>
       ) : null}
-    </Box>
+    </ActivityCommentRoot>
   );
 };
