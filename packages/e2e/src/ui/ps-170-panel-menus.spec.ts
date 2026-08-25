@@ -176,9 +176,16 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Draft Session" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  const updateResponse = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
+    data: { default_agent_id: "pstdio.extension-lab.fake" },
+  });
+  expect(updateResponse.ok()).toBe(true);
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem(
+      `pstdio-dashboard:command-params:recent-harness:${projectId}`,
+      JSON.stringify({ harnessId: "pstdio.extension-lab.fake" }),
+    );
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
