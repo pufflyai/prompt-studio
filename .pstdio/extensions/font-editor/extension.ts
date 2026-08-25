@@ -3,10 +3,10 @@ import { fontCommands } from "./src/commands/font-commands";
 
 const extension = defineExtension({
   commands: fontCommands,
-  routes: {
+  panels: {
     fontEditor: {
-      path: "font-editor",
-      label: l10n("routes.fontEditor.label", "Font editor"),
+      title: l10n("panels.fontEditor.title", "Font editor"),
+      show: { region: "main" },
       webview: {
         entry: packageAsset("./src/views/main.tsx", import.meta.url),
         capabilities: ["commands.execute", "notification.show"],
@@ -17,8 +17,9 @@ const extension = defineExtension({
     fontEditor: {
       target: "workbench.left.tree",
       group: "Tools",
-      label: l10n("routes.fontEditor.label", "Font editor"),
+      label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
+      when: { mode: "project" },
       action: { kind: "view", viewId: "fontEditor" },
     },
   },

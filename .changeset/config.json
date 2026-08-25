@@ -12,6 +12,7 @@
     "@pstdio/landing-page",
     "e2e",
     "font-editor",
+    "local-example",
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",

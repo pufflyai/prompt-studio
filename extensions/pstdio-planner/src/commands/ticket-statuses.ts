@@ -49,6 +49,10 @@ export const createTicketStatusCommand = defineCommand({
 
 export const updateTicketStatusCommand = defineCommand({
   title: "Update ticket status",
+  cli: {
+    globalAliases: [["statuses", "update"]],
+    examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+  },
   params: {
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
@@ -100,6 +104,10 @@ export const setDefaultTicketStatusCommand = defineCommand({
 
 export const reorderTicketStatusesCommand = defineCommand({
   title: "Reorder ticket statuses",
+  cli: {
+    globalAliases: [["statuses", "reorder"]],
+    examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+  },
   params: {
     statusIds: params.json<string[]>(),
   },

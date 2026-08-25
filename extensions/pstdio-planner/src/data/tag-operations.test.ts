@@ -9,6 +9,7 @@ import {
   readTicketTags,
   setTicketTags,
   updateTagOption,
+  updateTicketTag,
 } from "./tag-operations";
 import type { StoredTicket } from "./types";
 
@@ -63,6 +64,17 @@ describe("tag operations", () => {
     const { tags: after } = await readTicketTags(storage);
     const stored = after[0]!.options.find((option) => option.id === created.id);
     expect(stored).toMatchObject({ icon: "bug", description: "A bug", name: "Blocker", color: "red" });
+  });
+
+  test("updateTicketTag persists a new sort order", async () => {
+    const storage = createMemoryStorage();
+    const { tags } = await readTicketTags(storage);
+    const flags = tags.at(-1)!;
+
+    await updateTicketTag({ storage, tagId: flags.id, sortOrder: 1 });
+
+    const { tags: after } = await readTicketTags(storage);
+    expect(after.find((tag) => tag.id === flags.id)?.sortOrder).toBe(1);
   });
 
   test("updateTagOption persists a new sort order for reordering", async () => {

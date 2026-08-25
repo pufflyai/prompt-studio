@@ -1,8 +1,8 @@
 {
   "name": "pstdio-dev",
   "version": "0.1.0",
-  "displayName": "pstdio Dev",
-  "description": "Repo-local pstdio worktree setup: bootstrap, install dependencies, and build.",
+  "displayName": "Prompt Studio Dev",
+  "description": "Prepare Prompt Studio worktrees, control isolated development stacks, and discover high-impact issues.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
