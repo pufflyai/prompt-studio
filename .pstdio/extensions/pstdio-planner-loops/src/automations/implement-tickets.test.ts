@@ -24,14 +24,14 @@ describe("implement-tickets automation", () => {
     expect(callsTo(calls, "pstdio-planner.run-attempt").map((call) => call.params.ticket)).toEqual(["T2", "T3", "T1"]);
   });
 
-  test("skips tickets carrying the stable Human Requested flag", async () => {
+  test("skips tickets carrying the stable Awaiting Input flag", async () => {
     const { ctx } = makeAutomationContext({
       tickets: [
         makeTicket({
           id: "t1",
           shorthand: "T1",
           statusId: "ready",
-          tagIds: ["default-human-requested-true"],
+          tagIds: ["default-awaiting-input-true"],
         }),
         makeTicket({ id: "t2", shorthand: "T2", statusId: "ready" }),
       ],
@@ -58,13 +58,14 @@ describe("implement-tickets automation", () => {
   });
 
   test("no-ops when nothing is eligible", async () => {
-    const { ctx, activities } = makeAutomationContext({
+    const { ctx, activities, logs } = makeAutomationContext({
       tickets: [makeTicket({ id: "t1", statusId: "backlog" })],
     });
 
     const result = await run(ctx as never);
 
     expect(result).toMatchObject({ implemented: [] });
-    expect(activities.at(-1)?.message).toContain("no eligible TODO ticket");
+    expect(activities).toEqual([]);
+    expect(logs.at(-1)?.message).toContain("no eligible TODO ticket");
   });
 });

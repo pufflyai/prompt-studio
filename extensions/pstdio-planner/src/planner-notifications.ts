@@ -1,4 +1,5 @@
 import type { CreateNotificationInput, ResourceAnchor } from "@pstdio/sdk/extensions";
+import type { InputRequestRecord } from "./data/attempt-types";
 import type { StoredTicket } from "./data/types";
 
 type PlannerNotificationInput = Omit<CreateNotificationInput, "projectId">;
@@ -27,6 +28,8 @@ export const ticketNotificationDedupeKey = (ticket: StoredTicket | string, reaso
   const shorthand = typeof ticket === "string" ? ticket : ticket.shorthand;
   return `pstdio-planner:ticket:${shorthand}:${reason}`;
 };
+
+export const inputRequestNotificationDedupeKey = (requestId: string) => `pstdio-planner:input-request:${requestId}`;
 
 export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
   ({
@@ -82,8 +85,46 @@ export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, se
   });
 };
 
+export const notifyInputRequested = (ctx: NotifyActionContext, ticket: StoredTicket, request: InputRequestRecord) => {
+  const ticketTarget = ticketAnchor(ctx, ticket);
+  const sessionTarget: ResourceAnchor = {
+    type: "session",
+    id: request.sessionId,
+    projectId: ctx.projectId,
+    extensionId: ctx.extensionId,
+  };
+  return notifyAction(ctx, {
+    title: `Awaiting input: ${ticket.shorthand}`,
+    body: request.question,
+    kind: "blocked",
+    priority: "high",
+    target: ticketTarget,
+    related: [sessionTarget],
+    dedupeKey: inputRequestNotificationDedupeKey(request.id),
+    actions: [
+      {
+        id: "open-session",
+        label: "Open session",
+        kind: "open-resource",
+        resource: sessionTarget,
+        primary: true,
+      },
+      { id: "open-ticket", label: "Open ticket", kind: "open-resource", resource: ticketTarget },
+    ],
+    metadata: {
+      ticketId: ticket.id,
+      ticketShorthand: ticket.shorthand,
+      inputRequestId: request.id,
+      sessionId: request.sessionId,
+    },
+  });
+};
+
 export const resolveProposalRefinedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "proposal-refined"), status: "done" });
 
 export const resolveBlockedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "blocked"), status: "done" });
+
+export const resolveInputRequestNotification = (ctx: NotifyResolveContext, requestId: string) =>
+  notifyResolve(ctx, { dedupeKey: inputRequestNotificationDedupeKey(requestId), status: "done" });

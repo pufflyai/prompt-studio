@@ -162,25 +162,25 @@ export const DEFAULT_TAGS: TagSeed[] = [
       option("default-complexity-complex", "Complex", "red", 2, "level-xhigh"),
     ],
   }),
-  () => HUMAN_REQUESTED_TAG(),
+  () => AWAITING_INPUT_TAG(),
 ];
 
 // Durable automation interrupt: loops skip tagged tickets and never clear the tag.
-export const HUMAN_REQUESTED_TAG: TagSeed = () => ({
-  id: "default-human-requested",
+export const AWAITING_INPUT_TAG: TagSeed = () => ({
+  id: "default-awaiting-input",
   name: "Flags",
   type: "multi_select",
   sortOrder: 3,
-  options: [option("default-human-requested-true", "Human Requested", "purple", 0, "eye")],
+  options: [option("default-awaiting-input-true", "Awaiting Input", "orange", 0, "bell")],
 });
 
 // The stable workflow identity is authoritative. Display names may be customized,
-// but deleting the tag or its required option would silently disable human handoffs.
-const ensureHumanRequestedTag = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
-  const required = HUMAN_REQUESTED_TAG();
+// but deleting the tag or its required option would silently disable input handoffs.
+const ensureAwaitingInputTag = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
+  const required = AWAITING_INPUT_TAG();
   const current = existing.find((candidate) => candidate.id === required.id);
   if (!current) return [...existing, await putTag(storage, required)];
-  if (current.options.some((candidate) => candidate.id === "default-human-requested-true")) return existing;
+  if (current.options.some((candidate) => candidate.id === "default-awaiting-input-true")) return existing;
 
   const repaired = { ...current, options: [...current.options, required.options[0]!] };
   await putTag(storage, repaired);
@@ -199,7 +199,7 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
-      return ensureHumanRequestedTag(storage, existing);
+      return ensureAwaitingInputTag(storage, existing);
     }
 
     await Promise.all(DEFAULT_TAGS.map((seed) => putTag(storage, seed())));

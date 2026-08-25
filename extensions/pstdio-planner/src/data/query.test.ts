@@ -112,7 +112,7 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
-      "default-human-requested",
+      "default-awaiting-input",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       archived: "active",

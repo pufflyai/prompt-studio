@@ -330,7 +330,6 @@ export const listTicketFilesTreeCommand = defineCommand({
       statusesById,
     });
     const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
-
     // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
     // to its workspaces. The ticket shows the whole conversation history either way.
     const workspaceSessions = (

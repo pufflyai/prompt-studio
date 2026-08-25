@@ -106,14 +106,19 @@ describe("seedDefaultTags", () => {
 
     await seedDefaultTags(storage);
 
-    const humanRequested = (await tagsCollection(storage).list()).find((tag) => tag.id === "default-human-requested");
-    expect(humanRequested).toMatchObject({ name: "Flags", type: "multi_select", sortOrder: 3 });
-    expect(humanRequested?.options).toEqual([
-      expect.objectContaining({ id: "default-human-requested-true", name: "Human Requested", icon: "eye" }),
+    const awaitingInput = (await tagsCollection(storage).list()).find((tag) => tag.id === "default-awaiting-input");
+    expect(awaitingInput).toMatchObject({ name: "Flags", type: "multi_select", sortOrder: 3 });
+    expect(awaitingInput?.options).toEqual([
+      expect.objectContaining({
+        id: "default-awaiting-input-true",
+        name: "Awaiting Input",
+        color: "orange",
+        icon: "bell",
+      }),
     ]);
   });
 
-  test("backfills human_requested into projects with customized tags", async () => {
+  test("backfills Awaiting Input into projects with customized tags", async () => {
     const storage = createMemoryStorage();
     await tagsCollection(storage).put("custom-tag", {
       id: "custom-tag",
@@ -125,19 +130,19 @@ describe("seedDefaultTags", () => {
 
     const seeded = await seedDefaultTags(storage);
 
-    expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
+    expect(seeded.map((tag) => tag.id)).toContain("default-awaiting-input");
     expect(seeded.map((tag) => tag.id)).toContain("custom-tag");
     expect(seeded.map((tag) => tag.id)).not.toContain("default-priority");
   });
 
-  test("restores the required Human Requested workflow tag after deletion", async () => {
+  test("restores the required Awaiting Input workflow tag after deletion", async () => {
     const storage = createMemoryStorage();
     await seedDefaultTags(storage);
 
-    await tagsCollection(storage).delete("default-human-requested");
+    await tagsCollection(storage).delete("default-awaiting-input");
     const seeded = await seedDefaultTags(storage);
 
-    expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
+    expect(seeded.map((tag) => tag.id)).toContain("default-awaiting-input");
   });
 
   test("completes a partial default seed before the seeded marker is written", async () => {
@@ -152,7 +157,7 @@ describe("seedDefaultTags", () => {
       "default-priority",
       "default-type",
       "default-complexity",
-      "default-human-requested",
+      "default-awaiting-input",
     ]);
   });
 

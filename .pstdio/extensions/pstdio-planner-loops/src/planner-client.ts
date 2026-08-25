@@ -81,6 +81,17 @@ export const planner = {
     "pstdio-planner.set-ticket-attribute",
   ),
   refineTicket: commandRef<{ ticket: string }, { id: string }>("pstdio-planner.refine-ticket"),
+  requestInput: commandRef<
+    {
+      ticket: string;
+      sessionId: string;
+      reason: "refinement-ready";
+      question: string;
+      expectedAction: string;
+      expectedTicketStatusId: string;
+    },
+    { id: string }
+  >("pstdio-planner.request-input"),
   runAttempt: commandRef<
     { ticket: string },
     | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }

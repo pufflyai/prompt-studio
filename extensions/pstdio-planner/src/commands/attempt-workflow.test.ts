@@ -238,7 +238,7 @@ describe("attempt workflow commands", () => {
     expect(JSON.stringify(history.events)).not.toContain("Preserve the workflow invariant");
   });
 
-  test("approves one exact revision and creates an anchored human handoff", async () => {
+  test("approves one exact revision and creates an anchored input handoff", async () => {
     const fixture = await setup();
     const started = await submitRevisionAndStartReview(fixture);
 
@@ -258,11 +258,11 @@ describe("attempt workflow commands", () => {
     expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("approved");
     const ticket = await ticketsCollection(fixture.storage).get("ticket-1");
     expect(ticket?.statusId).toBe("in-review");
-    expect(ticket?.tagIds).toContain("default-human-requested-true");
+    expect(ticket?.tagIds).toContain("default-awaiting-input-true");
     expect(fixture.addedAnchors).toEqual([
       expect.objectContaining({
         sessionId: "implementation-1",
-        anchors: [expect.objectContaining({ type: "planner-human-request" })],
+        anchors: [expect.objectContaining({ type: "planner-input-request" })],
       }),
     ]);
     await expect(runReviewCommand.run(fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(

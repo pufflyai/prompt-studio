@@ -5,14 +5,14 @@ import { refineTicketsCommand } from "./refine-tickets";
 const run = (ctx: Parameters<typeof refineTicketsCommand.run>[0]) => refineTicketsCommand.run(ctx);
 
 describe("refine-tickets automation", () => {
-  test("refines the oldest-updated Backlog ticket without Human Requested", async () => {
+  test("refines the oldest-updated Backlog ticket without Awaiting Input", async () => {
     const { ctx, calls } = makeAutomationContext({
       tickets: [
         makeTicket({ id: "t1", updatedAt: "2026-06-03T00:00:00.000Z" }),
         makeTicket({
           id: "t2",
           updatedAt: "2026-06-01T00:00:00.000Z",
-          tagIds: ["default-human-requested-true"],
+          tagIds: ["default-awaiting-input-true"],
         }),
         makeTicket({ id: "t3", updatedAt: "2026-06-02T00:00:00.000Z" }),
         makeTicket({ id: "t4", statusId: "ready", updatedAt: "2026-05-01T00:00:00.000Z" }),
@@ -28,10 +28,10 @@ describe("refine-tickets automation", () => {
   });
 
   test("skips drafts and reports a no-op when nothing is eligible", async () => {
-    const { ctx, calls, activities } = makeAutomationContext({
+    const { ctx, calls, activities, logs } = makeAutomationContext({
       tickets: [
         makeTicket({ id: "t1", draft: true }),
-        makeTicket({ id: "t2", tagIds: ["default-human-requested-true"] }),
+        makeTicket({ id: "t2", tagIds: ["default-awaiting-input-true"] }),
       ],
     });
 
@@ -39,7 +39,8 @@ describe("refine-tickets automation", () => {
 
     expect(result).toMatchObject({ ran: true, refined: null });
     expect(callsTo(calls, "pstdio-planner.refine-ticket")).toEqual([]);
-    expect(activities.at(-1)?.message).toContain("no eligible Backlog ticket");
+    expect(activities).toEqual([]);
+    expect(logs.at(-1)?.message).toContain("no eligible Backlog ticket");
   });
 
   test("does not start another refinement while one is still running", async () => {
@@ -47,26 +48,48 @@ describe("refine-tickets automation", () => {
       tickets: [makeTicket({ id: "t1" }), makeTicket({ id: "t2" })],
       sessionsById: { "refine-session-1": { id: "refine-session-1", status: "in_progress" } },
     };
-    const { ctx, calls } = makeAutomationContext(state);
+    const { ctx, calls, activities, logs } = makeAutomationContext(state);
 
     await run(ctx as never);
+    const activityCount = activities.length;
     const second = await run(ctx as never);
 
     expect(second).toMatchObject({ ran: true, refined: null, running: 1 });
     expect(callsTo(calls, "pstdio-planner.refine-ticket")).toHaveLength(1);
+    expect(activities).toHaveLength(activityCount);
+    expect(logs.at(-1)?.message).toContain("skipped selection: 1 refinement(s) still running");
   });
 
-  test("moves the ticket to TODO and adds Human Requested when refinement completes", async () => {
+  test("moves the ticket to TODO and files an input request when refinement completes", async () => {
     const state = {
       tickets: [makeTicket({ id: "t1" })],
       sessionsById: { "refine-session-1": { id: "refine-session-1", status: "completed" } },
     };
-    const { ctx } = makeAutomationContext(state);
+    const { ctx, calls } = makeAutomationContext(state);
 
     await run(ctx as never); // starts the refinement
     await run(ctx as never); // reconciles the completed session
 
-    expect(state.tickets[0]).toMatchObject({ statusId: "ready", tagIds: ["default-human-requested-true"] });
+    expect(state.tickets[0]).toMatchObject({ statusId: "ready" });
+    expect(callsTo(calls, "pstdio-planner.request-input")).toEqual([
+      {
+        commandId: "pstdio-planner.request-input",
+        params: {
+          ticket: "t1",
+          sessionId: "refine-session-1",
+          reason: "refinement-ready",
+          question: "t1 finished refinement and is ready to read.",
+          expectedAction: "Read the refined ticket, then resolve this input request.",
+          expectedTicketStatusId: "ready",
+        },
+      },
+    ]);
+    expect(callsTo(calls, "pstdio-planner.set-ticket-attribute")).toEqual([
+      {
+        commandId: "pstdio-planner.set-ticket-attribute",
+        params: { rowId: "t1", attributeId: "status", value: "ready" },
+      },
+    ]);
   });
 
   test("leaves a failed refinement in Backlog and re-picks it on a later tick", async () => {

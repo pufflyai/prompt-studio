@@ -6,7 +6,7 @@ import {
   appendAttemptEvent,
   attemptEventsCollection,
   attemptSelectionsCollection,
-  humanRequestsCollection,
+  inputRequestsCollection,
   putAttempt,
   readAttempt,
   reviewCommentsCollection,
@@ -187,7 +187,7 @@ export const selectAttemptCommand = defineCommand({
   params: {
     ticket: params.text({ required: true }),
     workspaceId: params.text({ required: true }),
-    humanRequestId: params.text(),
+    inputRequestId: params.text(),
   },
   async run(ctx) {
     if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
@@ -197,17 +197,17 @@ export const selectAttemptCommand = defineCommand({
     const attempt = await readAttempt(ctx.storage, ctx.params.workspaceId);
     if (!ticket || !attempt || attempt.ticketId !== ticket.id)
       throw new Error("Workspace is not an attempt for this ticket.");
-    if (ctx.params.humanRequestId) {
-      const request = await humanRequestsCollection(ctx.storage).get(ctx.params.humanRequestId);
+    if (ctx.params.inputRequestId) {
+      const request = await inputRequestsCollection(ctx.storage).get(ctx.params.inputRequestId);
       if (!request || request.ticketId !== ticket.id || request.state !== "open") {
-        throw new Error("The human request does not match this ticket.");
+        throw new Error("The input request does not match this ticket.");
       }
     }
     const selection = {
       ticketId: ticket.id,
       workspaceId: attempt.workspaceId,
       selectedBy: actorFromSource(ctx.source, ctx.invocationId),
-      humanRequestId: ctx.params.humanRequestId ?? null,
+      inputRequestId: ctx.params.inputRequestId ?? null,
       selectedAt: new Date().toISOString(),
     };
     await attemptSelectionsCollection(ctx.storage).put(ticket.id, selection);
@@ -221,7 +221,7 @@ export const selectAttemptCommand = defineCommand({
       reviewId: null,
       threadId: null,
       commitSha: attempt.revisions.at(-1)?.headSha ?? null,
-      metadata: { humanRequestId: selection.humanRequestId },
+      metadata: { inputRequestId: selection.inputRequestId },
     });
     return selection;
   },

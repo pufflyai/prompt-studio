@@ -36,7 +36,7 @@ The planner extension contributes ticket resource views:
 
 - `ticketEditor` for the markdown body, editable ticket files, and image
   attachment previews.
-- `ticketFiles` for the native files/workspaces tree.
+- `ticketFiles` for the native files, workspaces, and sessions tree.
 - `ticketProperties` for planner-owned ticket properties.
 
 The dashboard workbench provides hosting, command execution, resource
@@ -74,7 +74,7 @@ navigation, and synced core host rows. It does not own ticket data.
 2. The planner `ticketEditor` view loads the ticket via
    `pstdio-planner.get-ticket`.
 3. The planner `ticketFiles` tree lists the ticket body, editable files, image
-   attachments, and linked workspaces.
+   attachments, linked workspaces, and sessions.
 4. Selecting an editable file opens it in the planner editor.
 5. Selecting an image attachment fetches bytes through
    `pstdio-planner.read-ticket-attachment` and renders a read-only preview.
@@ -97,7 +97,7 @@ navigation, and synced core host rows. It does not own ticket data.
 | Surface              | Purpose                                      |
 | -------------------- | -------------------------------------------- |
 | `ticketEditor` view  | Planner-owned ticket body/file/preview view. |
-| `ticketFiles` tree   | Planner-owned files and linked workspaces.   |
+| `ticketFiles` tree   | Files, workspaces, and sessions.             |
 | `ticketProperties`   | Planner-owned ticket properties.             |
 
 ### Header Actions

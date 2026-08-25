@@ -27,7 +27,9 @@ const waitFor = async (condition: () => Promise<boolean> | boolean, timeoutMs = 
   throw new Error(`Condition not met within ${timeoutMs}ms`);
 };
 
-const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) => {
+const writeScheduledExtension = (
+  options: { activityMessage?: string; fail?: boolean; scheduleDisabled?: boolean } = {},
+) => {
   const root = createTempRoot();
   mkdirSync(root, { recursive: true });
   writeFileSync(
@@ -56,6 +58,8 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
                 metadata: ctx.invocation.metadata,
                 params: ctx.params,
               });
+              ${options.activityMessage ? `await ctx.activity.record({ message: ${JSON.stringify(options.activityMessage)} });` : ""}
+              ${options.fail ? 'throw new Error("scheduled command failed");' : ""}
             },
           },
         },
@@ -76,7 +80,11 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
 
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
-const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) => {
+const createDeps = (
+  sourcePath: string,
+  automationPreferences: AutomationPreferenceRow[] = [],
+  effects: { activities?: unknown[]; notifications?: unknown[] } = {},
+) => {
   const extensionService = {
     listEnabledSourcesForProject: async () => [
       {
@@ -119,10 +127,21 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
       setCollectionItem: async () => {},
       deleteCollectionItem: async () => {},
     },
-    activityEventsService: {},
+    activityEventsService: {
+      create: async (input: unknown) => {
+        effects.activities?.push(input);
+        return { id: `activity-${effects.activities?.length ?? 1}` };
+      },
+    },
     fileService: {},
     repoService,
     sessionService: {},
+    notificationService: {
+      create: async (input: unknown) => {
+        effects.notifications?.push(input);
+        return input;
+      },
+    },
     workspaceService: {},
   } as never;
 };
@@ -168,6 +187,95 @@ describe("createExtensionScheduler", () => {
         scheduledFor: "2026-05-18T07:56:00.000Z",
       },
     });
+  });
+
+  test("raises one info notification when a scheduled command records activity", async () => {
+    const sourcePath = writeScheduledExtension({ activityMessage: "started implementation for PS-42" });
+    const state = { calls: [] as unknown[] };
+    const activities: unknown[] = [];
+    const notifications: unknown[] = [];
+    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    const cron = createTestCronDriver();
+    const scheduler = createExtensionScheduler({
+      deps: createDeps(sourcePath, [], { activities, notifications }),
+      listProjectIds: async () => ["project-1"],
+      watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
+      now: () => new Date("2026-05-18T07:56:15.000Z"),
+      cron: cron.factory,
+    });
+    schedulers.push(scheduler);
+
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
+    await waitFor(() => notifications.length === 1);
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        projectId: "project-1",
+        title: "Scheduled run active: Heartbeat",
+        body: expect.stringContaining("started implementation for PS-42"),
+        kind: "info",
+        dedupeKey: "extension-schedule:project-1:lab.heartbeat",
+        metadata: expect.objectContaining({
+          scheduleTitle: "Heartbeat",
+          extensionName: "lab",
+          activityCount: 1,
+        }),
+      }),
+    ]);
+  });
+
+  test("keeps quiet scheduled commands silent", async () => {
+    const sourcePath = writeScheduledExtension();
+    const state = { calls: [] as unknown[] };
+    const notifications: unknown[] = [];
+    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    const cron = createTestCronDriver();
+    const scheduler = createExtensionScheduler({
+      deps: createDeps(sourcePath, [], { notifications }),
+      listProjectIds: async () => ["project-1"],
+      watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
+      now: () => new Date("2026-05-18T07:56:15.000Z"),
+      cron: cron.factory,
+    });
+    schedulers.push(scheduler);
+
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
+    await waitFor(() => state.calls.length === 1);
+    await Bun.sleep(25);
+
+    expect(notifications).toEqual([]);
+  });
+
+  test("raises one failed notification when a scheduled command fails after recording activity", async () => {
+    const sourcePath = writeScheduledExtension({ activityMessage: "started work", fail: true });
+    const state = { calls: [] as unknown[] };
+    const notifications: unknown[] = [];
+    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    const cron = createTestCronDriver();
+    const scheduler = createExtensionScheduler({
+      deps: createDeps(sourcePath, [], { notifications }),
+      listProjectIds: async () => ["project-1"],
+      watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
+      now: () => new Date("2026-05-18T07:56:15.000Z"),
+      cron: cron.factory,
+    });
+    schedulers.push(scheduler);
+
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
+    await waitFor(() => notifications.length === 1);
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        projectId: "project-1",
+        title: "Scheduled run failed: Heartbeat",
+        body: expect.stringContaining("started work"),
+        kind: "failed",
+        dedupeKey: "extension-schedule:project-1:lab.heartbeat",
+      }),
+    ]);
   });
 
   test("skips schedules the user disabled via automation preferences", async () => {

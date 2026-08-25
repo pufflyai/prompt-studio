@@ -12,7 +12,7 @@ import {
 import type { AttemptReview, ReviewComment, ReviewThread } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { readReport, workspaceHead } from "./change-requests";
-import { requestHuman } from "./human-requests";
+import { requestInput } from "./input-requests";
 
 interface ReviewFinding {
   path?: string;
@@ -230,7 +230,7 @@ export const submitReviewCommand = defineCommand({
     } else if (result === "passed") {
       const currentTicket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
       if (!currentTicket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
-      await requestHuman(ctx, {
+      await requestInput(ctx, {
         ticket: attempt.ticketId,
         workspaceId: attempt.workspaceId,
         revision: revision.revision,

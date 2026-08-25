@@ -15,8 +15,8 @@ import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
-import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 import { implementTicketCommand } from "./implement-ticket";
+import { listInputRequestsCommand, requestInputCommand, resolveInputRequestCommand } from "./input-requests";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketsCommand } from "./list-tickets";
@@ -88,8 +88,9 @@ export const plannerCommands = {
   "read-review-thread": readReviewThreadCommand,
   "read-attempt-history": readAttemptHistoryCommand,
   "select-attempt": selectAttemptCommand,
-  "request-human": requestHumanCommand,
-  "resolve-human-request": resolveHumanRequestCommand,
+  "request-input": requestInputCommand,
+  "list-input-requests": listInputRequestsCommand,
+  "resolve-input-request": resolveInputRequestCommand,
   "list-attempts": listAttemptsCommand,
   "reconcile-attempt": reconcileAttemptCommand,
   "run-attempt": runAttemptCommand,

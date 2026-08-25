@@ -1,5 +1,5 @@
 import type { ExtensionLoggerApi, JsonObject, Localizable } from "pstdio-api-contracts/extension-kernel";
-import { createCommandRunner } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createCommandRunner } from "pstdio-extensions";
 import {
   type CronFactory,
   createFileWatermarkStore,
@@ -75,6 +75,50 @@ const outcomeError = (input: { commandId: string; reason?: string; status?: stri
     `Extension schedule command "${input.commandId}" failed: ${input.reason ?? input.status ?? "unknown error"}`,
   );
 
+type ScheduledActivity = Parameters<CommandRunnerEnvironment["activity"]["record"]>[0];
+
+const activitySummary = (activities: ScheduledActivity[]) =>
+  activities.length > 0 ? activities.map((activity) => activity.message).join("\n") : "No activity was recorded.";
+
+const scheduleNotificationDedupeKey = (projectId: string, scheduleId: string) =>
+  `extension-schedule:${projectId}:${scheduleId}`;
+
+const notifyScheduledRun = async (
+  deps: ExtensionsRouteDeps,
+  input: {
+    activities: ScheduledActivity[];
+    error?: Error;
+    extensionName: string;
+    projectId: string;
+    scheduleId: string;
+    scheduleTitle: string;
+    sourceExtensionId?: string;
+  },
+) => {
+  const failed = Boolean(input.error);
+  const summary = activitySummary(input.activities);
+  const errorDetail = input.error ? `\n\nError: ${input.error.message}` : "";
+  await deps.notificationService.create({
+    projectId: input.projectId,
+    title: `Scheduled run ${failed ? "failed" : "active"}: ${input.scheduleTitle}`,
+    body: `${input.extensionName}\n\n${summary}${errorDetail}`,
+    kind: failed ? "failed" : "info",
+    priority: failed ? "high" : "normal",
+    source: "schedule",
+    origin: "extension",
+    sourceExtensionId: input.sourceExtensionId,
+    actorType: "system",
+    dedupeKey: scheduleNotificationDedupeKey(input.projectId, input.scheduleId),
+    metadata: {
+      scheduleId: input.scheduleId,
+      scheduleTitle: input.scheduleTitle,
+      extensionName: input.extensionName,
+      activityCount: input.activities.length,
+      activitySummary: summary,
+    },
+  });
+};
+
 export const createExtensionScheduler = (input: Input) => {
   const scheduler = createScheduler({
     now: input.now,
@@ -133,10 +177,11 @@ export const createExtensionScheduler = (input: Input) => {
       const instanceId = instanceIdsByExtensionId(snapshot.enabledSources).get(schedule.extensionId);
       if (!isAutomationEnabled(schedule, instanceId, preferences)) return;
 
+      const activities: ScheduledActivity[] = [];
       const runner = createCommandRunner(snapshot.runtime, {
         logger: input.extensionLogger ?? extensionLogger,
-        buildEnvironment: (ids) =>
-          createCommandEnvironment(input.deps, snapshot.enabledSources, {
+        buildEnvironment: (ids) => {
+          const environment = createCommandEnvironment(input.deps, snapshot.enabledSources, {
             extensionId: ids.extensionId,
             name: ids.name,
             project: snapshot.project,
@@ -144,21 +189,51 @@ export const createExtensionScheduler = (input: Input) => {
             repo: ids.repo,
             workspaceDir: ids.workspaceDir,
             settings: snapshot.runtime.settings,
-          }),
+          });
+          return {
+            ...environment,
+            activity: {
+              record: async (activity) => {
+                const recorded = await environment.activity.record(activity);
+                activities.push(activity);
+                return recorded;
+              },
+            },
+          };
+        },
       });
 
-      const outcome = await runner.execute({
-        commandId: schedule.commandId,
+      const notificationInput = {
+        activities,
+        extensionName: meta.extensionName,
         projectId: meta.projectId,
-        params: (schedule.params ?? {}) as JsonObject,
-        repo: await resolveScheduleRepo(input.deps, meta.projectId, schedule.repoId),
-        source: "schedule",
-        metadata: scheduleMetadata(schedule, ctx),
-      });
+        scheduleId: schedule.id,
+        scheduleTitle: scheduleTitle(schedule.title),
+        sourceExtensionId: snapshot.enabledSources.find(
+          (source) => source.installedSource.extension_id === schedule.extensionId,
+        )?.installedSource.id,
+      };
 
-      if (!outcome.ok) {
-        throw outcomeError({ commandId: schedule.commandId, reason: outcome.reason, status: outcome.status });
+      try {
+        const outcome = await runner.execute({
+          commandId: schedule.commandId,
+          projectId: meta.projectId,
+          params: (schedule.params ?? {}) as JsonObject,
+          repo: await resolveScheduleRepo(input.deps, meta.projectId, schedule.repoId),
+          source: "schedule",
+          metadata: scheduleMetadata(schedule, ctx),
+        });
+
+        if (!outcome.ok) {
+          throw outcomeError({ commandId: schedule.commandId, reason: outcome.reason, status: outcome.status });
+        }
+      } catch (error) {
+        const failure = error instanceof Error ? error : new Error(String(error));
+        await notifyScheduledRun(input.deps, { ...notificationInput, error: failure });
+        throw failure;
       }
+
+      if (activities.length > 0) await notifyScheduledRun(input.deps, notificationInput);
     },
   });
 

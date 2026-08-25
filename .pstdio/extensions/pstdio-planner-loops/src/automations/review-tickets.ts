@@ -1,5 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
-import { recordAutomationActivity } from "../automation-run";
+import { logAutomationNoop, recordAutomationActivity } from "../automation-run";
 import { executePlanner, planner } from "../planner-client";
 import { automatable } from "../selection";
 
@@ -30,7 +30,7 @@ export const reviewTicketsCommand = defineCommand({
       .filter((attempt) => attempt.state === "review_ready" && eligibleTicketIds.has(attempt.ticketId))
       .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))[0];
     if (!candidate) {
-      await recordAutomationActivity(ctx, AUTOMATION, "no review-ready attempt revision");
+      logAutomationNoop(ctx, AUTOMATION, "no review-ready attempt revision");
       return { ran: true, reviewed: null, reconciled };
     }
 

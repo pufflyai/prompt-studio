@@ -1,9 +1,10 @@
-import type { ExtensionActivityApi, ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
+import type { ExtensionActivityApi, ExtensionLoggerApi, ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
 import { executePlanner, type PlannerContext, planner } from "./planner-client";
 
 export interface AutomationContext extends PlannerContext {
   storage: ExtensionStorageApi;
   activity: ExtensionActivityApi;
+  logger: ExtensionLoggerApi;
   sessions: { get(id: string): Promise<{ id: string; status?: string } | null> };
 }
 
@@ -16,6 +17,13 @@ export const recordAutomationActivity = (
   message: string,
   metadata: JsonObject = {},
 ) => ctx.activity.record({ message: `[${automation}] ${message}`, metadata: { automation, ...metadata } });
+
+export const logAutomationNoop = (
+  ctx: AutomationContext,
+  automation: string,
+  message: string,
+  metadata: JsonObject = {},
+) => ctx.logger.info(`[${automation}] ${message}`, { automation, ...metadata });
 
 // One in-flight agent run per ticket per automation, persisted so concurrent or restarted
 // ticks reconcile the same run instead of starting a duplicate. Best-effort only —
@@ -55,21 +63,6 @@ export const moveTicketIfStillIn = async (
     rowId: ticket.id,
     attributeId: "status",
     value: input.toStatusId,
-  });
-  return true;
-};
-
-// Automation adds the stable Human Requested flag to hand work back to a human; it never clears it.
-export const addHumanRequested = async (ctx: AutomationContext, ticketId: string) => {
-  const { tags } = await executePlanner(ctx, planner.readTags, {});
-  const tag = tags.find((candidate) => candidate.id === "default-human-requested");
-  const option = tag?.options.find((candidate) => candidate.id === "default-human-requested-true");
-  if (!tag || !option) return false;
-
-  await executePlanner(ctx, planner.setTicketAttribute, {
-    rowId: ticketId,
-    attributeId: tag.id,
-    value: option.id,
   });
   return true;
 };
