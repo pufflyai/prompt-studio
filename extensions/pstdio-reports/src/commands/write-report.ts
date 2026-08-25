@@ -11,8 +11,7 @@ import {
 } from "../data/draft-storage";
 import { resolveReportName, resolveWorkspace } from "../data/resolve";
 
-const resolveTemplateBody = async (ctx: CommandContext<{ template?: string }>) => {
-  const name = ctx.params.template;
+const resolveTemplateBody = async (ctx: CommandContext, name: string | undefined) => {
   if (!name) {
     throw new Error(`Report template is required. Available templates: ${reportTemplateNames.join(", ")}`);
   }
@@ -59,12 +58,12 @@ export const writeReportCommand = defineCommand({
     template: params.template({ label: "Template", type: "report", required: false }),
     source: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const kind = ctx.params.kind ?? "report";
-    const directoryName = resolveReportName(ctx.params.name, kind);
-    const templateBody = await resolveTemplateBody(ctx);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, ctx.params.workspace);
+    const kind = commandParams.kind ?? "report";
+    const directoryName = resolveReportName(commandParams.name, kind);
+    const templateBody = await resolveTemplateBody(ctx, commandParams.template);
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
     const { name, path, filesPath } = await resolveAvailableReport(ctx, repoFiles, workspaceShorthand, directoryName);
 
     const now = new Date().toISOString();
@@ -75,7 +74,7 @@ export const writeReportCommand = defineCommand({
       name,
       directoryName,
       kind,
-      source: ctx.params.source ?? null,
+      source: commandParams.source ?? null,
       body: templateBody,
       files: [],
       draft: true,

@@ -48,10 +48,10 @@ export const saveTicketCommand = defineCommand({
     id: params.text({ required: true }),
     status: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const raw = await readTicketMarkdown(repoFiles, ticket.shorthand);
     if (raw === null) throw new Error(`No local ticket file for ${ticket.shorthand}`);
@@ -60,7 +60,7 @@ export const saveTicketCommand = defineCommand({
     const content = stripFrontmatter(raw).replace(/^\n+/, "");
 
     const statusId =
-      ctx.params.status !== undefined ? await resolveStatusId(ctx.storage, ctx.params.status) : ticket.statusId;
+      commandParams.status !== undefined ? await resolveStatusId(ctx.storage, commandParams.status) : ticket.statusId;
     const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticket.tagIds ?? []);
     const dependsOn = await resolveDependencyIds(
       ctx.storage,

@@ -1,6 +1,15 @@
 import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
+import { archiveTicketColumnAction } from "./src/commands/archive-ticket";
+import { getTicketContent } from "./src/commands/get-ticket-content";
+import { queryTickets } from "./src/commands/query-tickets";
+import { reorderTicket } from "./src/commands/reorder-ticket";
+import { saveTicketContent } from "./src/commands/save-ticket-content";
+import { setTicketAttribute } from "./src/commands/set-ticket-attribute";
+import { listTicketFilesTree } from "./src/commands/ticket-files";
+import { queryTicketProperties } from "./src/commands/ticket-properties/query";
+import { updateTicketProperty } from "./src/commands/ticket-properties/update";
 import { cleanupLegacyWorkspaceStatus } from "./src/data/cleanup-legacy-workspace-status";
 import {
   buildTicketAttributes,
@@ -13,7 +22,6 @@ import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link"
 import { plannerTicketsChanged } from "./src/events";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
-import { runRendererCommand } from "./src/renderers/run-renderer-command";
 
 export default defineExtension({
   settings: {
@@ -116,8 +124,8 @@ export default defineExtension({
   controlsRenderers: {
     ticketProperties: {
       title: l10n("controls.ticketProperties.title", "Properties"),
-      query: (ctx, input) => runRendererCommand(plannerCommands["ticket-properties.query"], input)(ctx),
-      onValueChange: (ctx, input) => runRendererCommand(plannerCommands["ticket-properties.update"], input)(ctx),
+      query: (ctx, input) => queryTicketProperties(ctx, input.renderer.resource),
+      onValueChange: (ctx, input) => updateTicketProperty(ctx, input.renderer.resource, input),
       refreshEvents: [plannerTicketsChanged],
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
@@ -127,13 +135,13 @@ export default defineExtension({
       title: l10n("kanbanRenderers.tickets.title", "Tickets"),
       resourceKind: "ticket",
       attributes: buildTicketAttributes([]),
-      query: (ctx, input) => runRendererCommand(plannerCommands["query-tickets"], input)(ctx),
+      query: queryTickets,
       refreshEvents: [plannerTicketsChanged],
       onRowActivate: (_ctx, { row }) =>
         row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
-      onAttributeChange: (ctx, input) => runRendererCommand(plannerCommands["set-ticket-attribute"], input)(ctx),
-      onReorder: (ctx, input) => runRendererCommand(plannerCommands["reorder-ticket"], input)(ctx),
-      onColumnAction: (ctx, input) => runRendererCommand(plannerCommands["ticket-column-action"], input)(ctx),
+      onAttributeChange: setTicketAttribute,
+      onReorder: reorderTicket,
+      onColumnAction: archiveTicketColumnAction,
       defaultFilters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
@@ -250,9 +258,9 @@ export default defineExtension({
     ticketContent: {
       title: l10n("fileRenderers.ticketContent.title", "Ticket"),
       resourceKind: "ticket",
-      load: (ctx, input) => runRendererCommand(plannerCommands["get-ticket-content"], input)(ctx),
+      load: (ctx, input) => getTicketContent(ctx, { resource: input.renderer.resource }),
       refreshEvents: [plannerTicketsChanged],
-      save: (ctx, input) => runRendererCommand(plannerCommands["save-ticket-content"], input)(ctx),
+      save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
     },
   },
 
@@ -287,7 +295,7 @@ export default defineExtension({
     ticketFiles: {
       title: l10n("treeRenderers.ticketFiles.title", "Files"),
       icon: "Files",
-      body: (ctx, input) => runRendererCommand(plannerCommands["ticket-files.tree.body"], input)(ctx),
+      body: listTicketFilesTree,
       refreshEvents: [plannerTicketsChanged],
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     },

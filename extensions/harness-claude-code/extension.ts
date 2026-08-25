@@ -10,7 +10,7 @@ export default defineExtension({
     // so Claude Code never reads a half-copied .claude/skills dir.
     provision: {
       eventId: "workspace.provision",
-      async handler(ctx) {
+      async handler(ctx, _payload) {
         const skills = (await ctx.skills?.list?.()) ?? [];
         const files = skills.flatMap((skill) =>
           skill.files.map((file) => ({ path: `${skill.name}/${file.path}`, content: file.content })),

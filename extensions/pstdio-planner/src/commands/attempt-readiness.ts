@@ -4,10 +4,12 @@ import { attemptSelectionsCollection, listAttempts } from "../data/attempt-stora
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 
-type ReadinessContext = Pick<
-  CommandContext<{ ticket?: string; repoId?: string; repo?: { repoId: string; branch?: string } }>,
-  "params" | "process" | "repos" | "sessions" | "settings" | "storage" | "repo"
->;
+type ReadinessContext = Pick<CommandContext, "process" | "repos" | "sessions" | "settings" | "storage" | "repo">;
+
+interface ReadinessParams {
+  repoId?: string;
+  repo?: { repoId: string; branch?: string };
+}
 
 const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) => {
   const result = await ctx.process.run({ command: ["git", "-C", repoPath, ...args] });
@@ -15,7 +17,11 @@ const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) =
   return result.stdout.trim();
 };
 
-export const loadAttemptReadiness = async (ctx: ReadinessContext, ticketRef: string) => {
+export const loadAttemptReadiness = async (
+  ctx: ReadinessContext,
+  ticketRef: string,
+  commandParams: ReadinessParams,
+) => {
   const [storedTickets, attempts, selections, statuses, repos] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
@@ -33,7 +39,7 @@ export const loadAttemptReadiness = async (ctx: ReadinessContext, ticketRef: str
   };
   const tickets = storedTarget ? storedTickets : [...storedTickets, target];
   const repo =
-    repos.find((candidate) => candidate.repoId === (ctx.params.repoId ?? ctx.params.repo?.repoId)) ??
+    repos.find((candidate) => candidate.repoId === (commandParams.repoId ?? commandParams.repo?.repoId)) ??
     ctx.repo ??
     repos.find((candidate) => candidate.role === "default") ??
     repos[0];
@@ -49,7 +55,7 @@ export const loadAttemptReadiness = async (ctx: ReadinessContext, ticketRef: str
   const settings = await ctx.settings.all();
   const configuredCapacity = settings["automation.maxInProgress"];
   const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
-  const mainHeadSha = await runGit(ctx, repo.path, ["rev-parse", ctx.params.repo?.branch ?? "HEAD"]);
+  const mainHeadSha = await runGit(ctx, repo.path, ["rev-parse", commandParams.repo?.branch ?? "HEAD"]);
   const doneStatusIds = new Set(
     statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
   );
@@ -84,7 +90,7 @@ export const attemptReadinessCommand = defineCommand({
     ticket: params.text({ label: "Ticket", required: true }),
     repoId: params.text({ label: "Repository", required: false }),
   },
-  async run(ctx) {
-    return (await loadAttemptReadiness(ctx, ctx.params.ticket)).readiness;
+  async run(ctx, commandParams) {
+    return (await loadAttemptReadiness(ctx, commandParams.ticket, commandParams)).readiness;
   },
 });

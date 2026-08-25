@@ -35,27 +35,29 @@ describe("font editor extension", () => {
 
   test("routes dashboard invocations through the default repository", async () => {
     const calls: unknown[] = [];
-    const result = await extension.commands?.inspect?.run({
-      params: {},
-      repos: {
-        getDefault: async () => ({
-          projectId: "project-1",
-          repoId: "repo-1",
-          path: "/repo",
-          role: "default",
-        }),
-      },
-      commands: {
-        execute: async (command: string, invocation: unknown) => {
-          calls.push({ command, invocation });
-          return {
-            ok: true,
-            status: "success",
-            value: { family: "prompt-studio-icons", glyphs: [] },
-          };
+    const result = await extension.commands?.inspect?.run(
+      {
+        repos: {
+          getDefault: async () => ({
+            projectId: "project-1",
+            repoId: "repo-1",
+            path: "/repo",
+            role: "default",
+          }),
         },
-      },
-    } as never);
+        commands: {
+          execute: async (command: string, invocation: unknown) => {
+            calls.push({ command, invocation });
+            return {
+              ok: true,
+              status: "success",
+              value: { family: "prompt-studio-icons", glyphs: [] },
+            };
+          },
+        },
+      } as never,
+      {},
+    );
 
     expect(result).toEqual({ family: "prompt-studio-icons", glyphs: [] });
     expect(calls).toEqual([
@@ -77,27 +79,29 @@ describe("font editor extension", () => {
 
     expect(command?.params).toHaveProperty("svg");
 
-    await command?.run({
-      params: { name: "square", svg },
-      repos: {
-        getDefault: async () => ({
-          projectId: "project-1",
-          repoId: "repo-1",
-          path: "/repo",
-          role: "default",
-        }),
-      },
-      commands: {
-        execute: async (commandId: string, invocation: unknown) => {
-          calls.push({ commandId, invocation });
-          return {
-            ok: true,
-            status: "success",
-            value: { glyphCount: 221 },
-          };
+    await command?.run(
+      {
+        repos: {
+          getDefault: async () => ({
+            projectId: "project-1",
+            repoId: "repo-1",
+            path: "/repo",
+            role: "default",
+          }),
         },
-      },
-    } as never);
+        commands: {
+          execute: async (commandId: string, invocation: unknown) => {
+            calls.push({ commandId, invocation });
+            return {
+              ok: true,
+              status: "success",
+              value: { glyphCount: 221 },
+            };
+          },
+        },
+      } as never,
+      { name: "square", svg },
+    );
 
     expect(calls).toEqual([
       {

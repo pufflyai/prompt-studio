@@ -41,8 +41,8 @@ export const browserOpenCommand = (url: string, platform = process.platform as s
   return ["xdg-open", url];
 };
 
-const workspaceIdFrom = (ctx: { params: { workspaceId?: string }; resource?: { type: string; id: string } }) => {
-  const workspaceId = ctx.params.workspaceId?.trim();
+const workspaceIdFrom = (ctx: { resource?: { type: string; id: string } }, commandParams: { workspaceId?: string }) => {
+  const workspaceId = commandParams.workspaceId?.trim();
   if (workspaceId) return workspaceId;
   if (ctx.resource?.type !== "workspace") throw new Error("Workspace is required.");
   return ctx.resource.id;
@@ -52,7 +52,7 @@ export default defineExtension({
   commands: {
     "issues.discoverHighImpact": defineCommand({
       title: "Discover high-impact issues",
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         const session = await ctx.sessions.create({
           title: "Discover high-impact issues",
           prompt: HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT,
@@ -74,8 +74,8 @@ export default defineExtension({
       params: {
         workspaceId: params.text({ label: "Workspace ID", required: false }),
       },
-      async run(ctx) {
-        const workspaceId = workspaceIdFrom(ctx);
+      async run(ctx, commandParams) {
+        const workspaceId = workspaceIdFrom(ctx, commandParams);
         const workspace = await ctx.workspaces.get(workspaceId);
         const worktreePath = workspace?.worktree_path?.trim();
         if (!worktreePath) throw new Error("Workspace worktree path is required.");
@@ -101,8 +101,8 @@ export default defineExtension({
       params: {
         workspaceId: params.text({ label: "Workspace ID", required: false }),
       },
-      async run(ctx) {
-        const workspaceId = workspaceIdFrom(ctx);
+      async run(ctx, commandParams) {
+        const workspaceId = workspaceIdFrom(ctx, commandParams);
         const workspace = await ctx.workspaces.get(workspaceId);
         const worktreePath = workspace?.worktree_path?.trim();
         if (!worktreePath) throw new Error("Workspace worktree path is required.");
@@ -135,8 +135,8 @@ export default defineExtension({
       params: {
         workspaceId: params.text({ label: "Workspace ID", required: false }),
       },
-      async run(ctx) {
-        const workspaceId = workspaceIdFrom(ctx);
+      async run(ctx, commandParams) {
+        const workspaceId = workspaceIdFrom(ctx, commandParams);
         const workspace = await ctx.workspaces.get(workspaceId);
         const worktreePath = workspace?.worktree_path?.trim();
         if (!worktreePath) throw new Error("Workspace worktree path is required.");

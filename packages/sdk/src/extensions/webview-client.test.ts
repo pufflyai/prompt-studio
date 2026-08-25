@@ -7,15 +7,15 @@ import { createWebviewClient } from "./webview-client";
 const commands = {
   "ticketStatus.read": defineCommand({
     title: "Read ticket statuses",
-    async run() {
+    async run(_ctx, _commandParams) {
       return { statuses: ["todo"] };
     },
   }),
   "ticketStatus.create": defineCommand({
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
-    async run(ctx) {
-      return { id: ctx.params.label };
+    async run(_ctx, commandParams) {
+      return { id: commandParams.label };
     },
   }),
 };

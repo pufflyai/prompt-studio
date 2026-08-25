@@ -3,11 +3,13 @@ import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptReview } from "../data/attempt-types";
 
-const workspaceIdFrom = (ctx: {
-  params: { workspaceId?: string };
-  resource?: { type: string; id: string; metadata?: Record<string, unknown> };
-}) => {
-  const workspaceId = ctx.params.workspaceId?.trim();
+const workspaceIdFrom = (
+  ctx: {
+    resource?: { type: string; id: string; metadata?: Record<string, unknown> };
+  },
+  commandParams: { workspaceId?: string },
+) => {
+  const workspaceId = commandParams.workspaceId?.trim();
   if (workspaceId) return workspaceId;
   if (ctx.resource?.type !== "workspace") throw new Error("Workspace is required.");
   const metadataId = ctx.resource.metadata?.workspaceId;
@@ -31,16 +33,16 @@ export const runReviewCommand = defineCommand({
     manual: params.boolean({ label: "Manual review", required: false }),
     harness: params.harness({ label: "Harness", required: false }),
   },
-  async run(ctx) {
-    const workspaceId = workspaceIdFrom(ctx);
+  async run(ctx, commandParams) {
+    const workspaceId = workspaceIdFrom(ctx, commandParams);
     const attempt = await readAttempt(ctx.storage, workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${workspaceId}"`);
     const revision = attempt.revisions.at(-1);
     if (!revision) throw new Error("The attempt has no submitted revision.");
-    if (ctx.params.expectedRevision !== undefined && ctx.params.expectedRevision !== revision.revision) {
+    if (commandParams.expectedRevision !== undefined && commandParams.expectedRevision !== revision.revision) {
       throw new Error("Attempt revision changed before review started.");
     }
-    if (attempt.state !== "review_ready" && !(ctx.params.manual && attempt.state === "approved")) {
+    if (attempt.state !== "review_ready" && !(commandParams.manual && attempt.state === "approved")) {
       throw new Error("The attempt revision is not ready for review.");
     }
 
@@ -49,7 +51,7 @@ export const runReviewCommand = defineCommand({
     const claimId = `${workspaceId}:${revision.revision}`;
     const claims = reviewLaunchClaimsCollection(ctx.storage);
     if (
-      !ctx.params.manual &&
+      !commandParams.manual &&
       !(await claims.createIfAbsent(claimId, {
         workspaceId,
         revision: revision.revision,
@@ -103,7 +105,7 @@ export const runReviewCommand = defineCommand({
         workspaceId,
         title: `Code review: ${attempt.ticketShorthand} revision ${revision.revision}`,
         anchors,
-        harness: ctx.params.harness,
+        harness: commandParams.harness,
         template: "review-code",
         vars: {
           ticket: attempt.ticketShorthand,
@@ -130,7 +132,7 @@ export const runReviewCommand = defineCommand({
         reviewId,
         threadId: null,
         commitSha: revision.headSha,
-        metadata: { manual: Boolean(ctx.params.manual) },
+        metadata: { manual: Boolean(commandParams.manual) },
       });
       return { review, session };
     } catch (error) {
@@ -142,7 +144,7 @@ export const runReviewCommand = defineCommand({
           : candidate,
       );
       await putAttempt(ctx.storage, { ...attempt, revisions, updatedAt: review.completedAt });
-      if (!ctx.params.manual) await claims.delete(claimId);
+      if (!commandParams.manual) await claims.delete(claimId);
       throw error;
     }
   },

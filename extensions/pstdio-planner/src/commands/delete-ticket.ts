@@ -15,8 +15,8 @@ export const deleteTicketCommand = defineCommand({
       placement: "last",
     },
   ],
-  async run(ctx) {
-    const ref = ticketRefFromCommandContext(ctx);
+  async run(ctx, commandParams) {
+    const ref = ticketRefFromCommandContext(ctx, commandParams);
     const id = (await findTicket(ctx.storage, ref))?.id ?? ref;
     await ticketsCollection(ctx.storage).delete(id);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: id });

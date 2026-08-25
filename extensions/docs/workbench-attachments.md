@@ -22,7 +22,7 @@ export default defineExtension({
           when: { mode: "project" },
         },
       ],
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         return { target: ctx.attachment?.target, projectId: ctx.projectId };
       },
     },
@@ -84,7 +84,7 @@ export default defineExtension({
           when: { resourceType: ["ticket"] },
         },
       ],
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         return { ticket: ctx.attachment?.resource?.id ?? ctx.resource?.id };
       },
     },

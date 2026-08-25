@@ -56,9 +56,9 @@ const createFilesExtension = () => {
             },
           },
           palette: { label: "Inspect uploaded files", group: "Files" },
-          async run(ctx: any) {
+          async run(ctx: any, commandParams: any) {
             const files = await Promise.all(
-              ctx.params.files.map(async (id: string) => ({
+              commandParams.files.map(async (id: string) => ({
                 id,
                 text: new TextDecoder().decode(await ctx.storage.files.getBytes(id)),
               })),

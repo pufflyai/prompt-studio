@@ -9,16 +9,16 @@ export const attachTicketFileCommand = defineCommand({
     ticketId: params.text({ required: true }),
     ref: params.json<StoredTicketAttachment, { required: true }>({ required: true }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const collection = ticketsCollection(ctx.storage);
-    const existing = await collection.get(ctx.params.ticketId);
+    const existing = await collection.get(commandParams.ticketId);
     if (!existing) return null;
 
     const next = {
       ...existing,
       attachments: [
-        ...(existing.attachments ?? []).filter((attachment) => attachment.id !== ctx.params.ref.id),
-        ctx.params.ref,
+        ...(existing.attachments ?? []).filter((attachment) => attachment.id !== commandParams.ref.id),
+        commandParams.ref,
       ],
       updatedAt: new Date().toISOString(),
     };
@@ -34,14 +34,14 @@ export const detachTicketFileCommand = defineCommand({
     ticketId: params.text({ required: true }),
     fileId: params.text({ required: true }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const collection = ticketsCollection(ctx.storage);
-    const existing = await collection.get(ctx.params.ticketId);
+    const existing = await collection.get(commandParams.ticketId);
     if (!existing) return null;
 
     const next = {
       ...existing,
-      attachments: (existing.attachments ?? []).filter((attachment) => attachment.id !== ctx.params.fileId),
+      attachments: (existing.attachments ?? []).filter((attachment) => attachment.id !== commandParams.fileId),
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { putTicket } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicket } from "../data/types";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { readTicketsCommand } from "./read-tickets";
 
 const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
@@ -28,7 +28,7 @@ describe("readTicketsCommand", () => {
     await putTicket(storage, makeTicket({ shorthand: "T-archived", archived: true, sortOrder: 1 }));
     await putTicket(storage, makeTicket({ shorthand: "T-early", draft: true, sortOrder: 0 }));
 
-    const result = await readTicketsCommand.run(makeCommandContext({ storage, params: {} }));
+    const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
 
     expect(result.map((ticket) => ticket.shorthand)).toEqual(["T-early", "T-late"]);
     expect(result[0]).toMatchObject({

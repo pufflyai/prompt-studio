@@ -47,8 +47,8 @@ export default defineExtension({
       params: {
         title: params.text({ label: "Title", required: true }),
       },
-      async run(ctx) {
-        return { title: ctx.params.title };
+      async run(_ctx, commandParams) {
+        return { title: commandParams.title };
       },
     },
   },
@@ -74,7 +74,7 @@ export default defineExtension({
           when: { resourceType: ["ticket"] },
         },
       ],
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         return { ticket: ctx.resource?.id };
       },
     },
@@ -93,11 +93,11 @@ export default defineExtension({
   middlewares: {
     requireReviewReadyChecks: {
       command: workspaceCommands.setAttemptStatus,
-      async handler(ctx) {
-        if (ctx.params.status !== "review-ready")
+      async handler(ctx, commandParams) {
+        if (commandParams.status !== "review-ready")
           return ctx.commands.continue();
 
-        const workspace = await ctx.workspaces.get(ctx.params.workspaceId);
+        const workspace = await ctx.workspaces.get(commandParams.workspaceId);
         if (!workspace?.worktree_path) return ctx.commands.continue();
 
         const result = await ctx.process.run({
@@ -171,7 +171,7 @@ export default defineExtension({
   commands: {
     publish: {
       title: "Publish",
-      async run() {
+      async run(_ctx, _commandParams) {
         return { published: true };
       },
     },
@@ -231,15 +231,15 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 export const commands = {
   "ticketStatus.read": defineCommand({
     title: "Read ticket statuses",
-    async run() {
+    async run(_ctx, _commandParams) {
       return { statuses: [] as { id: string; name: string }[] };
     },
   }),
   "ticketStatus.create": defineCommand({
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
-    async run(ctx) {
-      return { id: ctx.params.label };
+    async run(_ctx, commandParams) {
+      return { id: commandParams.label };
     },
   }),
 };

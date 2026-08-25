@@ -14,10 +14,10 @@ export const deleteReportCommand = defineCommand({
     workspace: params.text(),
     name: params.text({ required: true }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, ctx.params.workspace);
-    const name = ctx.params.name;
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
+    const name = commandParams.name;
     assertSafeReportName(name);
     const report = await findReport(ctx.storage, workspaceShorthand, name);
     if (!report) throw new Error(`Unknown report "${name}" in workspace "${workspaceShorthand}"`);

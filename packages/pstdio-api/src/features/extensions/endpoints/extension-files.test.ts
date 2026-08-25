@@ -38,8 +38,8 @@ const writeExtension = (name: string) => {
         "read-upload": {
           title: "Read upload",
           params: { files: { type: "files", required: true } },
-          run: async (ctx) => {
-            const bytes = await ctx.storage.files.getBytes(ctx.params.files[0]);
+          run: async (ctx, commandParams) => {
+            const bytes = await ctx.storage.files.getBytes(commandParams.files[0]);
             return { text: new TextDecoder().decode(bytes) };
           },
         },

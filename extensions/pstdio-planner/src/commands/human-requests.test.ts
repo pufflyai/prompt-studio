@@ -3,7 +3,7 @@ import { humanRequestsCollection, putAttempt } from "../data/attempt-storage";
 import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultTags } from "../data/seed";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 
 const timestamp = "2026-08-18T09:00:00.000Z";
@@ -72,7 +72,7 @@ describe("human request commands", () => {
     const storage = await setup();
     const creates: Array<Record<string, unknown>> = [];
     const context = () =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: {
           ticket: "PS-1",
@@ -93,8 +93,8 @@ describe("human request commands", () => {
         },
       });
 
-    const first = await requestHumanCommand.run(context() as never);
-    const second = await requestHumanCommand.run(context() as never);
+    const first = await requestHumanCommand.run(...context());
+    const second = await requestHumanCommand.run(...context());
 
     expect(second.id).toBe(first.id);
     expect(creates).toHaveLength(1);
@@ -115,7 +115,7 @@ describe("human request commands", () => {
     const creates: unknown[] = [];
     const followups: unknown[] = [];
     const result = await requestHumanCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: {
           ticket: "PS-1",
@@ -146,7 +146,7 @@ describe("human request commands", () => {
             },
           } as never,
         },
-      }) as never,
+      }),
     );
 
     expect(result).toMatchObject({ sessionId: "coordination-1", relatedSessionId: "unrelated-session" });
@@ -157,7 +157,7 @@ describe("human request commands", () => {
   test("only an agent or human clears the flag after the last open request", async () => {
     const storage = await setup();
     const requestContext = (reason: "dependency-cycle" | "dependency-missing") =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: {
           ticket: "PS-1",
@@ -179,21 +179,21 @@ describe("human request commands", () => {
           } as never,
         },
       });
-    const first = await requestHumanCommand.run(requestContext("dependency-cycle") as never);
-    const second = await requestHumanCommand.run(requestContext("dependency-missing") as never);
+    const first = await requestHumanCommand.run(...requestContext("dependency-cycle"));
+    const second = await requestHumanCommand.run(...requestContext("dependency-missing"));
     const resolveContext = (requestId: string, source: "automation" | "cli") =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: { requestId, resolution: "Chosen", completedAction: "Applied the choice" },
         overrides: { source, invocationId: "agent-1" },
       });
 
-    await expect(resolveHumanRequestCommand.run(resolveContext(first.id, "automation") as never)).rejects.toThrow(
+    await expect(resolveHumanRequestCommand.run(...resolveContext(first.id, "automation"))).rejects.toThrow(
       "Automation cannot resolve",
     );
-    await resolveHumanRequestCommand.run(resolveContext(first.id, "cli") as never);
+    await resolveHumanRequestCommand.run(...resolveContext(first.id, "cli"));
     expect((await ticketsCollection(storage).get("ticket-1"))?.tagIds).toContain("default-human-requested-true");
-    await resolveHumanRequestCommand.run(resolveContext(second.id, "cli") as never);
+    await resolveHumanRequestCommand.run(...resolveContext(second.id, "cli"));
     expect((await ticketsCollection(storage).get("ticket-1"))?.tagIds).not.toContain("default-human-requested-true");
   });
 });

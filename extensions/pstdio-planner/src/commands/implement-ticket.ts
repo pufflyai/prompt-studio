@@ -11,15 +11,15 @@ export const implementTicketCommand = defineCommand({
     id: params.text({ required: true }),
     agent: params.harness({ label: "Model" }),
   },
-  async run(ctx) {
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+  async run(ctx, commandParams) {
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     await moveTicketToInProgress(ctx.storage, ticket.id);
 
     return ctx.sessions.create({
       title: `Implement ticket: ${ticket.shorthand}`,
-      ...(ctx.params.agent ? { harness: ctx.params.agent } : {}),
+      ...(commandParams.agent ? { harness: commandParams.agent } : {}),
       template: "implement-ticket",
       vars: { ticket: ticket.id },
     });

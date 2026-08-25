@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createTicketFileCommand, listTicketFilesTreeCommand, renameTicketFileCommand } from "./ticket-files";
 
 describe("ticket files tree selection commands", () => {
   test("creates a ticket file from the selected ticket resource without a ticketId param", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
 
     const file = await createTicketFileCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { name: "notes.md" },
         overrides: { resource: { type: "ticket", id: ticket.id, label: ticket.shorthand } },
@@ -23,13 +23,13 @@ describe("ticket files tree selection commands", () => {
 
   test("keeps the current file extension when renaming a ticket file", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const file = await createTicketFileCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
 
     await renameTicketFileCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, fileId: file.id, name: "summary" } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, fileId: file.id, name: "summary" } }),
     );
 
     const stored = await ticketsCollection(storage).get(ticket.id);
@@ -40,7 +40,7 @@ describe("ticket files tree selection commands", () => {
     const storage = createMemoryStorage();
 
     const body = await listTicketFilesTreeCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: {
           renderer: { rendererId: "pstdio-planner.ticketFiles" },

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { callsTo, makeAttempt, makeAutomationContext, makeTicket } from "../automation-context.fixture";
 import { implementTicketsCommand } from "./implement-tickets";
 
-const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx);
+const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx, {});
 
 describe("implement-tickets automation", () => {
   test("asks Planner to start Todo tickets by priority until live attempt capacity is full", async () => {

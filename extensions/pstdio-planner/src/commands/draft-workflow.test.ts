@@ -4,7 +4,7 @@ import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { pullTicketCommand } from "./pull-ticket";
 import { createMemoryRepoFiles } from "./repo-files.fixture";
@@ -24,7 +24,7 @@ describe("draft workflow", () => {
     const { storage, repoFiles } = await setup();
 
     const result = await writeTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "Fix login", status: "TODO", tags: ["High"] },
         overrides: { repoFiles },
@@ -49,7 +49,7 @@ describe("draft workflow", () => {
     const { storage, repoFiles } = await setup();
 
     const result = await writeTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "Fix login" },
         overrides: {
@@ -71,7 +71,7 @@ describe("draft workflow", () => {
     const { storage, repoFiles } = await setup();
 
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Original" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Original" }, overrides: { repoFiles } }),
     );
 
     // Simulate the user editing the body and adding a ticket file locally.
@@ -93,7 +93,7 @@ describe("draft workflow", () => {
     repoFiles.files.set(`${ticketFilesDir(shorthand)}/notes.md`, "extra notes");
 
     const result = await saveTicketCommand.run(
-      makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
     );
 
     expect(result.files).toBe(1);
@@ -111,10 +111,10 @@ describe("draft workflow", () => {
     const { storage, repoFiles } = await setup();
 
     const { shorthand: dependencyShorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Dependency" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Dependency" }, overrides: { repoFiles } }),
     );
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Blocked ticket" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Blocked ticket" }, overrides: { repoFiles } }),
     );
 
     repoFiles.files.set(
@@ -130,7 +130,7 @@ describe("draft workflow", () => {
       ].join("\n"),
     );
 
-    await saveTicketCommand.run(makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
+    await saveTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
 
     const tickets = await ticketsCollection(storage).list();
     const dependency = tickets.find((ticket) => ticket.shorthand === dependencyShorthand)!;
@@ -141,7 +141,7 @@ describe("draft workflow", () => {
   test("save tolerates empty parent_id/blocked_reason frontmatter", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Lonely ticket" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Lonely ticket" }, overrides: { repoFiles } }),
     );
 
     // Some writers emit empty quoted scalars for absent fields; saving must not
@@ -161,7 +161,7 @@ describe("draft workflow", () => {
       ].join("\n"),
     );
 
-    await saveTicketCommand.run(makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
+    await saveTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
 
     const [saved] = await ticketsCollection(storage).list();
     expect(saved.draft).toBe(false);
@@ -172,7 +172,7 @@ describe("draft workflow", () => {
   test("pull materializes a stored ticket and its files into the working tree", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
     await ticketsCollection(storage).put(stored.id, {
@@ -183,7 +183,7 @@ describe("draft workflow", () => {
     // Clear the working tree so pull has to recreate everything.
     repoFiles.files.clear();
     const result = (await pullTicketCommand.run(
-      makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
     )) as { skipped: boolean };
 
     expect(result.skipped).toBe(false);
@@ -196,12 +196,12 @@ describe("draft workflow", () => {
   test("pull without force does not clobber local edits", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
     );
     repoFiles.files.set(ticketMarkdownPath(shorthand), "local edits");
 
     const result = (await pullTicketCommand.run(
-      makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
     )) as { skipped: boolean };
 
     expect(result.skipped).toBe(true);
@@ -211,7 +211,7 @@ describe("draft workflow", () => {
   test("files compares stored files against the local files directory", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
     await ticketsCollection(storage).put(stored.id, {
@@ -221,7 +221,7 @@ describe("draft workflow", () => {
     repoFiles.files.set(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
 
     const rows = await listTicketFilesCommand.run(
-      makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
     );
 
     expect(rows).toEqual([

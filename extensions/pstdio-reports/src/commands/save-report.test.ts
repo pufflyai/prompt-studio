@@ -3,7 +3,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { REPORTS_COLLECTION } from "../data/collections";
 import { reportFilesDir } from "../data/draft-storage";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createMemoryRepoFiles } from "./repo-files.fixture";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
@@ -38,7 +38,7 @@ describe("save report", () => {
     const storage = createMemoryStorage();
     const repoFiles = createMemoryRepoFiles();
     await writeReportCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { workspace: "PS-116_A1", kind: "review", template: "review" },
         overrides: { repoFiles },
@@ -48,7 +48,7 @@ describe("save report", () => {
 
     await expect(
       saveReportCommand.run(
-        makeCommandContext({
+        ...makeCommandArgs({
           storage: failReportPutAndBlobDeletes(storage),
           params: { workspace: "PS-116_A1", name: "review" },
           overrides: { repoFiles },

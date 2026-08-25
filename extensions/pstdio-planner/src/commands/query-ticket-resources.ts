@@ -11,8 +11,8 @@ const matchesQuery = (haystack: string, query: string) => {
 // palette items that open the ticket resource when selected.
 export const queryTicketResourcesCommand = defineCommand({
   title: "Query ticket palette resources",
-  async run(ctx) {
-    const params = ctx.params as { query?: string; limit?: number };
+  async run(ctx, commandParams) {
+    const params = commandParams as { query?: string; limit?: number };
     const query = params.query ?? "";
     const { rows } = await runTicketsQuery({ storage: ctx.storage, projectId: ctx.projectId });
 

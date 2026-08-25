@@ -17,7 +17,7 @@ describe("stuck-work-sweep automation", () => {
       },
     });
 
-    const result = await stuckWorkSweepCommand.run(ctx as never);
+    const result = await stuckWorkSweepCommand.run(ctx as never, {});
 
     expect(result.decisions).toEqual([
       { ticket: "T1", workspaceId: "workspace-1", decision: "implementation-retried" },
@@ -34,7 +34,7 @@ describe("stuck-work-sweep automation", () => {
       tickets: [makeTicket({ id: "t1", shorthand: "T1", statusId: "in-progress" })],
     });
 
-    const result = await stuckWorkSweepCommand.run(ctx as never);
+    const result = await stuckWorkSweepCommand.run(ctx as never, {});
 
     expect(result.decisions).toEqual([]);
     expect(callsTo(calls, "pstdio-planner.reconcile-attempt")).toEqual([]);

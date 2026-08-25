@@ -19,7 +19,7 @@ export const runMiddlewareChain = async (
     const ctx = await buildCtx(invocation, mw);
     let result: CommandMiddlewareResult;
     try {
-      result = (await mw.handler(ctx)) as CommandMiddlewareResult;
+      result = (await mw.handler(ctx, invocation.params)) as CommandMiddlewareResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {

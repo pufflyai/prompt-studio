@@ -40,9 +40,9 @@ const extension = defineExtension({
         ticket: params.text({ required: true }),
         harness: params.harness({ required: false }),
       },
-      async run(ctx) {
-        const ticket: string = ctx.params.ticket;
-        const harness: { harnessId: string; model?: string } | undefined = ctx.params.harness;
+      async run(ctx, commandParams) {
+        const ticket: string = commandParams.ticket;
+        const harness: { harnessId: string; model?: string } | undefined = commandParams.harness;
         const enabled: boolean | undefined = await ctx.settings.get("counter.enabled");
         const tone: string | undefined = await ctx.settings.get("greeting.tone");
         const session = await ctx.sessions.create({ title: "Inspect ticket", prompt: ticket });
@@ -58,8 +58,11 @@ const extension = defineExtension({
         void sessionStatus;
 
         // @ts-expect-error optional params must be checked before use
-        const requiredHarness: { harnessId: string } = ctx.params.harness;
+        const requiredHarness: { harnessId: string } = commandParams.harness;
         void requiredHarness;
+
+        // @ts-expect-error command params are not stored on the context
+        void ctx.params;
 
         // @ts-expect-error unknown declared setting keys are rejected
         await ctx.settings.get("counter.missing");
@@ -73,8 +76,8 @@ const extension = defineExtension({
       params: {
         workspaceId: params.text({ required: true }),
       },
-      async run(ctx) {
-        const workspace = await ctx.workspaces.get(ctx.params.workspaceId);
+      async run(ctx, commandParams) {
+        const workspace = await ctx.workspaces.get(commandParams.workspaceId);
         const workspaceByShorthand = await ctx.workspaces.getByShorthand("PS-1_A1");
         const worktreePath: string | null | undefined = workspace?.worktree_path;
         const shorthandWorktreePath: string | null | undefined = workspaceByShorthand?.worktree_path;

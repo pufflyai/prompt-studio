@@ -14,7 +14,7 @@ import { ticketsCollection } from "../data/collections";
 import { readReport, workspaceHead } from "./change-requests";
 import { requestHuman } from "./human-requests";
 
-interface ReviewFinding {
+export interface ReviewFinding {
   path?: string;
   startLine?: number;
   endLine?: number;
@@ -140,27 +140,27 @@ export const submitReviewCommand = defineCommand({
     expectedRevision: params.number({ required: true }),
     threads: params.json<ReviewFinding[]>(),
   },
-  async run(ctx) {
-    if (ctx.params.verdict !== "passed" && ctx.params.verdict !== "changes_requested") {
-      throw new Error(`Unknown review verdict "${ctx.params.verdict}"`);
+  async run(ctx, commandParams) {
+    if (commandParams.verdict !== "passed" && commandParams.verdict !== "changes_requested") {
+      throw new Error(`Unknown review verdict "${commandParams.verdict}"`);
     }
-    const reviewFindings = validateReviewFindings(ctx.params.threads, ctx.params.verdict);
-    const attempt = await readAttempt(ctx.storage, ctx.params.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${ctx.params.workspaceId}"`);
-    const revision = attempt.revisions.find((candidate) => candidate.revision === ctx.params.expectedRevision);
+    const reviewFindings = validateReviewFindings(commandParams.threads, commandParams.verdict);
+    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+    const revision = attempt.revisions.find((candidate) => candidate.revision === commandParams.expectedRevision);
     if (!revision || revision !== attempt.revisions.at(-1))
       throw new Error("Attempt revision changed before review submission.");
-    const review = revision.reviews.find((candidate) => candidate.id === ctx.params.reviewId);
-    const reviewSessionId = ctx.params.reviewSessionId ?? ctx.params.sessionId;
+    const review = revision.reviews.find((candidate) => candidate.id === commandParams.reviewId);
+    const reviewSessionId = commandParams.reviewSessionId ?? commandParams.sessionId;
     if (!reviewSessionId || !review || review.state !== "started" || review.sessionId !== reviewSessionId) {
       throw new Error("The review session does not own this review round.");
     }
     const head = await workspaceHead(ctx, attempt.workspaceId);
-    if (head !== revision.headSha || head !== ctx.params.reviewedHeadSha) {
+    if (head !== revision.headSha || head !== commandParams.reviewedHeadSha) {
       throw new Error("Workspace HEAD changed before review submission.");
     }
-    const report = await readReport(ctx, ctx.params.reviewReportId);
-    if (report.id !== ctx.params.reviewReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
+    const report = await readReport(ctx, commandParams.reviewReportId);
+    if (report.id !== commandParams.reviewReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
       throw new Error("The saved review report does not belong to this workspace.");
     }
 
@@ -168,8 +168,8 @@ export const submitReviewCommand = defineCommand({
     const submitted: AttemptReview = {
       ...review,
       state: "submitted" as const,
-      reportId: ctx.params.reviewReportId,
-      verdict: ctx.params.verdict,
+      reportId: commandParams.reviewReportId,
+      verdict: commandParams.verdict,
       completedAt,
     };
     const nextRevision = {
@@ -206,11 +206,11 @@ export const submitReviewCommand = defineCommand({
       reviewId: submitted.id,
       threadId: null,
       commitSha: revision.headSha,
-      metadata: { verdict: ctx.params.verdict },
+      metadata: { verdict: commandParams.verdict },
     });
     await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
 
-    if (ctx.params.verdict === "changes_requested") {
+    if (commandParams.verdict === "changes_requested") {
       await ctx.sessions.followup({
         sessionId: attempt.implementationSessionId,
         prompt: `Review ${review.id} requested changes for ${attempt.workspaceShorthand} at ${revision.headSha}. Read report ${submitted.reportId} and address its findings.`,

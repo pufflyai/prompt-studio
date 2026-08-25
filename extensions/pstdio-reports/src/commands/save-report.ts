@@ -68,10 +68,10 @@ export const saveReportCommand = defineCommand({
     workspace: params.text(),
     name: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, ctx.params.workspace);
-    let name = ctx.params.name;
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
+    let name = commandParams.name;
 
     if (!name) {
       const reports = (await reportsCollection(ctx.storage).list()).filter(

@@ -35,6 +35,17 @@
         "typescript": "^6.0.2",
       },
     },
+    ".pstdio/extensions/pstdio-dev": {
+      "name": "pstdio-dev",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.20.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.13",
+        "typescript": "6.0.2",
+      },
+    },
     ".pstdio/extensions/pstdio-planner-loops": {
       "name": "pstdio-planner-loops",
       "version": "0.1.0",
@@ -3750,6 +3761,8 @@
     "pstdio-dashboard": ["pstdio-dashboard@workspace:packages/pstdio-dashboard"],
 
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
+
+    "pstdio-dev": ["pstdio-dev@workspace:.pstdio/extensions/pstdio-dev"],
 
     "pstdio-extension-testbench": ["pstdio-extension-testbench@workspace:packages/pstdio-extension-testbench"],
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { callsTo, makeAutomationContext, makeTicket } from "../automation-context.fixture";
 import { refineTicketsCommand } from "./refine-tickets";
 
-const run = (ctx: Parameters<typeof refineTicketsCommand.run>[0]) => refineTicketsCommand.run(ctx);
+const run = (ctx: Parameters<typeof refineTicketsCommand.run>[0]) => refineTicketsCommand.run(ctx, {});
 
 describe("refine-tickets automation", () => {
   test("refines the oldest-updated Backlog ticket without Human Requested", async () => {

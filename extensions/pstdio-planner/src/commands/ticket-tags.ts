@@ -17,7 +17,7 @@ import {
 export const readTicketTagsCommand = defineCommand({
   title: "Read ticket tags",
   cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return readTicketTags(ctx.storage);
   },
 });
@@ -29,9 +29,9 @@ export const createTicketTagCommand = defineCommand({
     name: params.text({ label: "Name", required: true }),
     type: params.text({ label: "Type", required: false }),
   },
-  async run(ctx) {
-    const type = ctx.params.type === "multi_select" ? "multi_select" : "single_select";
-    return createTicketTag({ storage: ctx.storage, name: ctx.params.name, type });
+  async run(ctx, commandParams) {
+    const type = commandParams.type === "multi_select" ? "multi_select" : "single_select";
+    return createTicketTag({ storage: ctx.storage, name: commandParams.name, type });
   },
 });
 
@@ -42,10 +42,10 @@ export const updateTicketTagCommand = defineCommand({
     name: params.text({ label: "Name", required: false }),
     type: params.text({ label: "Type", required: false }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const type =
-      ctx.params.type === "multi_select" || ctx.params.type === "single_select" ? ctx.params.type : undefined;
-    return updateTicketTag({ storage: ctx.storage, tagId: ctx.params.tagId, name: ctx.params.name, type });
+      commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
+    return updateTicketTag({ storage: ctx.storage, tagId: commandParams.tagId, name: commandParams.name, type });
   },
 });
 
@@ -56,8 +56,8 @@ export const deleteTicketTagCommand = defineCommand({
     tagId: params.text({ label: "Tag", required: false }),
     tag: params.text({ label: "Tag name", required: false }),
   },
-  async run(ctx) {
-    const tagId = ctx.params.tagId ?? (await resolveTagId(ctx.storage, ctx.params.tag ?? ""));
+  async run(ctx, commandParams) {
+    const tagId = commandParams.tagId ?? (await resolveTagId(ctx.storage, commandParams.tag ?? ""));
     return deleteTicketTag({ storage: ctx.storage, tagId });
   },
 });
@@ -71,14 +71,14 @@ export const createTagOptionCommand = defineCommand({
     icon: params.text({ label: "Icon", required: false }),
     description: params.text({ label: "Description", required: false }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     return createTagOption({
       storage: ctx.storage,
-      tagId: ctx.params.tagId,
-      name: ctx.params.name,
-      color: ctx.params.color,
-      icon: ctx.params.icon,
-      description: ctx.params.description,
+      tagId: commandParams.tagId,
+      name: commandParams.name,
+      color: commandParams.color,
+      icon: commandParams.icon,
+      description: commandParams.description,
     });
   },
 });
@@ -94,16 +94,16 @@ export const updateTagOptionCommand = defineCommand({
     icon: params.text({ label: "Icon", required: false }),
     description: params.text({ label: "Description", required: false }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     return updateTagOption({
       storage: ctx.storage,
-      tagId: ctx.params.tagId,
-      optionId: ctx.params.optionId,
-      name: ctx.params.name,
-      color: ctx.params.color,
-      sortOrder: ctx.params.sortOrder,
-      icon: ctx.params.icon,
-      description: ctx.params.description,
+      tagId: commandParams.tagId,
+      optionId: commandParams.optionId,
+      name: commandParams.name,
+      color: commandParams.color,
+      sortOrder: commandParams.sortOrder,
+      icon: commandParams.icon,
+      description: commandParams.description,
     });
   },
 });
@@ -114,8 +114,8 @@ export const deleteTagOptionCommand = defineCommand({
     tagId: params.text({ label: "Tag", required: true }),
     optionId: params.text({ label: "Option", required: true }),
   },
-  async run(ctx) {
-    return deleteTagOption({ storage: ctx.storage, tagId: ctx.params.tagId, optionId: ctx.params.optionId });
+  async run(ctx, commandParams) {
+    return deleteTagOption({ storage: ctx.storage, tagId: commandParams.tagId, optionId: commandParams.optionId });
   },
 });
 
@@ -129,17 +129,17 @@ export const applyTicketTagDraftCommand = defineCommand({
     optionsToUpdate: params.json<TagDraftOptionUpdate[]>(),
     optionIdsToDelete: params.json<string[]>(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const type =
-      ctx.params.type === "multi_select" || ctx.params.type === "single_select" ? ctx.params.type : undefined;
+      commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
     return applyTagDraft({
       storage: ctx.storage,
-      tagId: ctx.params.tagId,
-      name: ctx.params.name,
+      tagId: commandParams.tagId,
+      name: commandParams.name,
       type,
-      optionsToCreate: ctx.params.optionsToCreate ?? [],
-      optionsToUpdate: ctx.params.optionsToUpdate ?? [],
-      optionIdsToDelete: ctx.params.optionIdsToDelete ?? [],
+      optionsToCreate: commandParams.optionsToCreate ?? [],
+      optionsToUpdate: commandParams.optionsToUpdate ?? [],
+      optionIdsToDelete: commandParams.optionIdsToDelete ?? [],
     });
   },
 });
@@ -150,7 +150,7 @@ export const setTicketTagsCommand = defineCommand({
     rowId: params.text({ label: "Ticket", required: true }),
     tagIds: params.json<string[]>(),
   },
-  async run(ctx) {
-    return setTicketTags({ storage: ctx.storage, ticketId: ctx.params.rowId, tagIds: ctx.params.tagIds ?? [] });
+  async run(ctx, commandParams) {
+    return setTicketTags({ storage: ctx.storage, ticketId: commandParams.rowId, tagIds: commandParams.tagIds ?? [] });
   },
 });

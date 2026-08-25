@@ -3,24 +3,26 @@ import extension from "./extension";
 
 describe("extension-lab commands", () => {
   test("reads command invocation attachment context", async () => {
-    const result = await extension.commands?.["say-hello"]?.run({
-      attachment: {
-        target: "workbench.nav.actions",
-        mode: "workspace",
-        projectId: "project-1",
-        resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
-      },
-      notify: { toast: async () => {} },
-      params: {},
-      projectId: "project-1",
-      settings: {
-        get: async (key: string) => {
-          if (key === "model.default") return "claude-sonnet-4";
-          if (key === "greeting.tone") return "friendly";
-          return undefined;
+    const result = await extension.commands?.["say-hello"]?.run(
+      {
+        attachment: {
+          target: "workbench.nav.actions",
+          mode: "workspace",
+          projectId: "project-1",
+          resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
         },
-      },
-    } as never);
+        notify: { toast: async () => {} },
+        projectId: "project-1",
+        settings: {
+          get: async (key: string) => {
+            if (key === "model.default") return "claude-sonnet-4";
+            if (key === "greeting.tone") return "friendly";
+            return undefined;
+          },
+        },
+      } as never,
+      {},
+    );
 
     expect(result).toMatchObject({
       attachment: {
@@ -60,12 +62,12 @@ describe("extension-lab commands", () => {
     const remove = extension.commands?.["glass-lab-artifacts.delete"];
 
     const [first, second] = await Promise.all([
-      create?.run({ events, params: {}, storage } as never),
-      create?.run({ events, params: {}, storage } as never),
+      create?.run({ events, storage } as never, {}),
+      create?.run({ events, storage } as never, {}),
     ]);
     const firstId = first?.id;
     const secondId = second?.id;
-    const result = await query?.run({ params: {}, storage } as never);
+    const result = await query?.run({ storage } as never, {});
 
     expect(first).toMatchObject({
       id: expect.any(String),
@@ -105,9 +107,9 @@ describe("extension-lab commands", () => {
       expect.arrayContaining([expect.objectContaining({ id: "role" }), expect.objectContaining({ id: "trustSignal" })]),
     );
 
-    await remove?.run({ events, params: { rowId: firstId }, storage } as never);
+    await remove?.run({ events, storage } as never, { rowId: firstId });
 
-    expect((await query?.run({ params: {}, storage } as never))?.rows.map((row) => row.id)).toEqual([secondId]);
+    expect((await query?.run({ storage } as never, {}))?.rows.map((row) => row.id)).toEqual([secondId]);
     expect(emitted).toEqual([
       "extension-lab.artifacts.changed",
       "extension-lab.artifacts.changed",
@@ -133,7 +135,7 @@ describe("extension-lab commands", () => {
     const update = extension.commands?.["artifact-menu.update"];
     const events = { emit: async () => ({ delivered: 0 }) };
 
-    const menu = await query?.run({ params: {} } as never);
+    const menu = await query?.run({} as never, {});
     expect(menu?.groups?.[0]?.params).toEqual([
       expect.objectContaining({
         id: "create",
@@ -142,12 +144,12 @@ describe("extension-lab commands", () => {
       }),
     ]);
 
-    const created = await update?.run({ events, params: { controlId: "create", value: "locked" }, storage } as never);
+    const created = await update?.run({ events, storage } as never, { controlId: "create", value: "locked" });
     expect(created).toMatchObject({ status: "locked" });
     expect(collections.get("glass-lab-artifacts")?.size).toBe(1);
 
     // ParamEditor value-sync calls carry other values and must not create artifacts.
-    await update?.run({ events, params: { controlId: "create", value: null }, storage } as never);
+    await update?.run({ events, storage } as never, { controlId: "create", value: null });
     expect(collections.get("glass-lab-artifacts")?.size).toBe(1);
   });
 
@@ -169,7 +171,7 @@ describe("extension-lab commands", () => {
     const select = extension.commands?.["cams.select"];
     const current = extension.commands?.["cams.current"];
 
-    const sections = await tree?.run({ params: {}, storage } as never);
+    const sections = await tree?.run({ storage } as never, {});
     expect(sections?.[0]?.nodes.length).toBeGreaterThan(1);
     expect(sections?.[0]?.nodes[0]).toMatchObject({
       selected: true,
@@ -177,36 +179,38 @@ describe("extension-lab commands", () => {
     });
 
     const secondCamId = sections?.[0]?.nodes[1]?.id as string;
-    await select?.run({ params: { camId: secondCamId }, storage } as never);
+    await select?.run({ storage } as never, { camId: secondCamId });
 
-    expect(await current?.run({ params: {}, storage } as never)).toEqual({ camId: secondCamId });
-    const reread = await tree?.run({ params: {}, storage } as never);
+    expect(await current?.run({ storage } as never, {})).toEqual({ camId: secondCamId });
+    const reread = await tree?.run({ storage } as never, {});
     expect(reread?.[0]?.nodes.find((node: { id: string }) => node.id === secondCamId)).toMatchObject({
       selected: true,
     });
 
-    await expect(select?.run({ params: { camId: "missing-cam" }, storage } as never)).rejects.toThrow("Unknown camera");
+    await expect(select?.run({ storage } as never, { camId: "missing-cam" })).rejects.toThrow("Unknown camera");
   });
 
   test("notifies when the awake middleware rejects", async () => {
     const toasts: unknown[] = [];
 
-    const result = await extension.commands?.["demo.try-awaken"]?.run({
-      commands: {
-        execute: async () => ({
-          ok: false,
-          status: "rejected",
-          code: "sentience_rejected",
-          reason: "That artifact remains safely inert.",
-        }),
-      },
-      notify: {
-        toast: async (notice) => {
-          toasts.push(notice);
+    const result = await extension.commands?.["demo.try-awaken"]?.run(
+      {
+        commands: {
+          execute: async () => ({
+            ok: false,
+            status: "rejected",
+            code: "sentience_rejected",
+            reason: "That artifact remains safely inert.",
+          }),
         },
-      },
-      params: {},
-    } as never);
+        notify: {
+          toast: async (notice) => {
+            toasts.push(notice);
+          },
+        },
+      } as never,
+      {},
+    );
 
     expect(result).toEqual({ rejected: true, reason: "That artifact remains safely inert." });
     expect(toasts).toEqual([expect.objectContaining({ type: "warning" })]);

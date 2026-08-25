@@ -39,9 +39,9 @@ const writeCommandExtension = (root: string) => {
           title: "Bump lab counter",
           cli: { globalAliases: [["counter", "bump"]] },
           params: { amount: { type: "number", defaultValue: 1 } },
-          async run(ctx) {
+          async run(ctx, commandParams) {
             const current = await ctx.storage.get("counter") ?? 0;
-            const amount = ctx.params.amount ?? 1;
+            const amount = commandParams.amount ?? 1;
             const next = current + amount;
             await ctx.storage.set("counter", next);
             await ctx.events.emit("lab.counter.changed", { counter: next });
@@ -57,7 +57,7 @@ const writeCommandExtension = (root: string) => {
         "counter.read": {
           title: "Read lab counter",
           cli: true,
-          async run(ctx) {
+          async run(ctx, commandParams) {
             return { counter: await ctx.storage.get("counter") ?? 0 };
           },
         },
@@ -75,7 +75,7 @@ const writeCommandExtension = (root: string) => {
         },
         loop: {
           title: "Loop",
-          async run(ctx) {
+          async run(ctx, commandParams) {
             return ctx.commands.execute("lab.loop", { params: {} });
           },
         },
@@ -83,8 +83,8 @@ const writeCommandExtension = (root: string) => {
       middlewares: {
         rejectSentience: {
           commandId: "lab.awaken",
-          async handler(ctx) {
-            if (String(ctx.params.title ?? "").toLowerCase().includes("consciousness")) {
+          async handler(ctx, commandParams) {
+            if (String(commandParams.title ?? "").toLowerCase().includes("consciousness")) {
               return ctx.commands.reject({ code: "sentience_rejected", reason: "refusing sentience" });
             }
           },

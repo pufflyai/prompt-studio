@@ -6,8 +6,8 @@ export const awakenCommand = defineCommand({
   title: "Awaken",
   description: "Internal target used to demo middleware rejection.",
   params: { title: params.text() },
-  async run(ctx) {
-    const { title = "anonymous" } = ctx.params;
+  async run(ctx, commandParams) {
+    const { title = "anonymous" } = commandParams;
     await ctx.notify.toast({
       type: "info",
       title: "Awakened",
@@ -30,7 +30,7 @@ export const tryAwakenCommand = defineCommand({
       when: LAB_ROUTE_HEADER_WHEN,
     },
   ],
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     const outcome = await ctx.commands.execute(labAwakenCommand, {
       params: { title: "Gain consciousness" },
     });
@@ -63,7 +63,7 @@ export const workspaceOnlyCommand = defineCommand({
       when: { mode: "workspace" },
     },
   ],
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return {
       mode: ctx.attachment?.mode,
       resource: ctx.attachment?.resource,

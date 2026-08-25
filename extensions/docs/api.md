@@ -141,8 +141,8 @@ export default defineExtension({
       params: {
         title: params.text({ label: "Title" }),
       },
-      async run(ctx) {
-        return { created: true, title: ctx.params.title };
+      async run(_ctx, commandParams) {
+        return { created: true, title: commandParams.title };
       },
     },
   },
@@ -291,8 +291,8 @@ export default defineExtension({
       params: {
         version: params.text({ label: "Version" }),
       },
-      async run(ctx) {
-        return { ok: true, version: ctx.params.version };
+      async run(_ctx, commandParams) {
+        return { ok: true, version: commandParams.version };
       },
     },
   },
@@ -325,7 +325,7 @@ export default defineExtension({
   commands: {
     preview: {
       title: "Preview",
-      async run() {
+      async run(_ctx, _commandParams) {
         return { opened: true };
       },
     },
@@ -353,8 +353,8 @@ export default defineExtension({
   middlewares: {
     requireTitle: {
       commandId: "planner.tickets.create",
-      async handler(ctx) {
-        if (!ctx.params.title) {
+      async handler(ctx, commandParams) {
+        if (!commandParams.title) {
           return ctx.commands.reject({
             code: "missing_title",
             reason: "Title is required",

@@ -30,7 +30,7 @@ describe("review-tickets automation", () => {
       ],
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({ reviewed: "T1", workspaceId: "workspace-old" });
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([
@@ -68,7 +68,7 @@ describe("review-tickets automation", () => {
       ],
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({ reviewed: null });
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
@@ -88,7 +88,7 @@ describe("review-tickets automation", () => {
       reconcileDecisions: { "workspace-1": "active" },
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({
       reviewed: null,

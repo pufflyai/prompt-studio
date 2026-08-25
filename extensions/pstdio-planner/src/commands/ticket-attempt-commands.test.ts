@@ -3,7 +3,7 @@ import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/co
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 
@@ -60,7 +60,7 @@ describe("implementTicketCommand", () => {
       },
     });
 
-    const result = await implementTicketCommand.run(ctx);
+    const result = await implementTicketCommand.run(ctx, ctx.invocation.params);
 
     expect(result).toEqual(createSessionResource());
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
@@ -77,7 +77,7 @@ describe("ticket workspace listing", () => {
   };
 
   const listContext = (storage: ReturnType<typeof createMemoryStorage>, id: string) =>
-    makeCommandContext({
+    makeCommandArgs({
       storage,
       params: { id },
       overrides: {
@@ -98,7 +98,7 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorkspacesCommand.run(listContext(storage, ticket.shorthand));
+    const rows = await ticketWorkspacesCommand.run(...listContext(storage, ticket.shorthand));
     expect(rows).toEqual([
       { id: "w1", workspace: "T-1_A1", branch: "b1", path: "/wt/1", active: true },
       { id: "w2", workspace: "T-1_A2", branch: "b2", path: "", active: false },
@@ -109,7 +109,7 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorktreesListCommand.run(listContext(storage, ticket.shorthand));
+    const rows = await ticketWorktreesListCommand.run(...listContext(storage, ticket.shorthand));
     expect(rows.map((row) => row.workspace)).toEqual(["T-1_A1"]);
   });
 });

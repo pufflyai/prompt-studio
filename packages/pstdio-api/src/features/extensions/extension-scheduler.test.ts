@@ -50,11 +50,11 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
         commands: {
           heartbeat: {
             title: "Heartbeat",
-            async run(ctx) {
+            async run(ctx, commandParams) {
               state.calls.push({
                 source: ctx.source,
                 metadata: ctx.invocation.metadata,
-                params: ctx.params,
+                params: commandParams,
               });
             },
           },

@@ -5,8 +5,8 @@ export const rejectSentientAwakeningMiddleware = defineMiddleware({
   get command() {
     return labAwakenCommand;
   },
-  async handler(ctx) {
-    const title = String(ctx.params.title ?? "");
+  async handler(ctx, commandParams) {
+    const title = String(commandParams.title ?? "");
     if (title.toLowerCase().includes("consciousness")) {
       return ctx.commands.reject({
         code: "sentience_rejected",

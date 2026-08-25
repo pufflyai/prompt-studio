@@ -339,20 +339,20 @@ export interface CommandContext<
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
-  params: TParams;
 }
 
 export type CommandMiddlewareContext<TParams extends Struct = Struct> = CommandContext<TParams>;
 
 export type CommandMiddlewareHandler<TParams extends Struct = Struct> = (
   ctx: CommandMiddlewareContext<TParams>,
+  params: TParams,
 ) => MaybePromise<CommandMiddlewareResult<TParams>>;
 
 export type CommandRunHandler<
   TParams extends Struct = Struct,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
-> = (ctx: CommandContext<TParams, TSettings>) => MaybePromise<TResult>;
+> = (ctx: CommandContext<TParams, TSettings>, params: TParams) => MaybePromise<TResult>;
 
 export type RendererCallback<
   TInput extends Struct = Struct,

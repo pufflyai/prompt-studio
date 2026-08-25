@@ -1,15 +1,7 @@
 import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdio/sdk/extensions";
-import { labCommands } from "../commands";
+import { listCams } from "../commands/cams-commands";
+import { queryArtifactMenu, queryGlassLabArtifacts, updateArtifactMenu } from "../commands/glass-lab-artifacts-command";
 import { labArtifactsChanged } from "../events";
-
-const runLabCommand =
-  <TContext, TResult, TParams extends object>(command: { run: (ctx: TContext) => TResult }, params: TParams) =>
-  (ctx: unknown) =>
-    command.run({
-      ...(ctx as Record<string, unknown>),
-      params,
-      resource: (params as { resource?: unknown }).resource,
-    } as TContext);
 
 export const labModes = {
   lab: {
@@ -218,7 +210,7 @@ export const labDataTableRenderers = {
   glassLabArtifacts: {
     title: "Artifacts",
     resourceKind: "glass-lab-artifact",
-    query: (ctx, input) => runLabCommand(labCommands["glass-lab-artifacts.query"], input)(ctx),
+    query: queryGlassLabArtifacts,
     refreshEvents: [labArtifactsChanged],
     onRowActivate: (_ctx, { row }) =>
       row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
@@ -240,7 +232,7 @@ export const labTreeRenderers = {
   labCams: {
     title: l10n("treeRenderers.labCams.title", "Cameras"),
     icon: "cctv",
-    body: (ctx, input) => runLabCommand(labCommands["cams.tree"], input)(ctx),
+    body: listCams,
     defaultExpandedSectionIds: ["cameras"],
   },
 } satisfies NonNullable<ExtensionDefinition["treeRenderers"]>;
@@ -248,8 +240,8 @@ export const labTreeRenderers = {
 export const labControlsRenderers = {
   labArtifactCreate: {
     title: l10n("controls.labArtifactCreate.title", "Create artifacts"),
-    query: (ctx, input) => runLabCommand(labCommands["artifact-menu.query"], input)(ctx),
-    onValueChange: (ctx, input) => runLabCommand(labCommands["artifact-menu.update"], input)(ctx),
+    query: queryArtifactMenu,
+    onValueChange: updateArtifactMenu,
     refreshEvents: [labArtifactsChanged],
     defaultValues: {},
   },

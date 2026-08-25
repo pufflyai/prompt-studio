@@ -1,4 +1,4 @@
-import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
 import { plannerTicketsChanged } from "../events";
@@ -48,6 +48,25 @@ export const applyTicketAttribute = async (input: {
   return next;
 };
 
+export const setTicketAttribute = async (
+  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  input: { rowId: string; attributeId: string; value?: unknown },
+) => {
+  const value =
+    typeof input.value === "string" ||
+    (Array.isArray(input.value) && input.value.every((item) => typeof item === "string"))
+      ? input.value
+      : undefined;
+  const ticket = await applyTicketAttribute({
+    storage: ctx.storage,
+    rowId: input.rowId,
+    attributeId: input.attributeId,
+    value,
+  });
+  if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+  return ticket;
+};
+
 // Backs the board's inline attribute edits and drag-between-columns.
 export const setTicketAttributeCommand = defineCommand({
   title: "Set ticket attribute",
@@ -56,14 +75,5 @@ export const setTicketAttributeCommand = defineCommand({
     attributeId: params.text({ required: true }),
     value: params.json<string | string[]>(),
   },
-  async run(ctx) {
-    const ticket = await applyTicketAttribute({
-      storage: ctx.storage,
-      rowId: ctx.params.rowId,
-      attributeId: ctx.params.attributeId,
-      value: ctx.params.value,
-    });
-    if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
-    return ticket;
-  },
+  run: setTicketAttribute,
 });

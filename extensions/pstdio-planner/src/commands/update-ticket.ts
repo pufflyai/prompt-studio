@@ -26,26 +26,30 @@ export const updateTicketCommand = defineCommand({
     unlinkParent: params.boolean(),
     blockedReason: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const collection = ticketsCollection(ctx.storage);
-    const existing = await findTicket(ctx.storage, ctx.params.id);
-    if (!existing) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+    const existing = await findTicket(ctx.storage, commandParams.id);
+    if (!existing) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const statusId =
-      ctx.params.status !== undefined ? await resolveStatusId(ctx.storage, ctx.params.status) : ctx.params.statusId;
+      commandParams.status !== undefined
+        ? await resolveStatusId(ctx.storage, commandParams.status)
+        : commandParams.statusId;
     const tagIds =
-      ctx.params.tags !== undefined ? await resolveTagOptionIds(ctx.storage, ctx.params.tags) : ctx.params.tagIds;
-    const parentId = await resolveParentUpdate(ctx.storage, ctx.params.parent, ctx.params.unlinkParent);
+      commandParams.tags !== undefined
+        ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
+        : commandParams.tagIds;
+    const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
 
     const next = {
       ...existing,
-      ...(ctx.params.content !== undefined
-        ? { content: ctx.params.content, title: deriveTitle(ctx.params.content) }
+      ...(commandParams.content !== undefined
+        ? { content: commandParams.content, title: deriveTitle(commandParams.content) }
         : {}),
       ...(statusId !== undefined ? { statusId: statusId || null } : {}),
       ...(tagIds !== undefined ? { tagIds } : {}),
       ...(parentId !== undefined ? { parentId } : {}),
-      ...(ctx.params.blockedReason !== undefined ? { blockedReason: ctx.params.blockedReason || null } : {}),
+      ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);

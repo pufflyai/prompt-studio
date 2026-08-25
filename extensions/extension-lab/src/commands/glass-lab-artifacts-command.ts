@@ -1,4 +1,11 @@
-import { defineCommand, type ExtensionStorageApi, l10n, params } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  type ExtensionContextBase,
+  type ExtensionStorageApi,
+  type JsonValue,
+  l10n,
+  params,
+} from "@pstdio/sdk/extensions";
 import { labArtifactsChanged } from "../events";
 
 const resourceKind = "glass-lab-artifact";
@@ -60,29 +67,31 @@ const columns = [
   { id: "status", label: "Status", stat: { type: "top-values" as const } },
 ];
 
+export const queryGlassLabArtifacts = async (ctx: Pick<ExtensionContextBase, "storage">, _input: object) => {
+  const artifacts = await artifactsCollection(ctx.storage).list();
+  return {
+    rows: artifacts.map((artifact) => ({
+      id: artifact.id,
+      values: {
+        artifact: artifact.title,
+        role: artifact.role,
+        trustSignal: artifact.trustSignal,
+        status: artifact.status,
+      },
+      resource: artifactResource(artifact),
+    })),
+    columns,
+  };
+};
+
 export const queryGlassLabArtifactsCommand = defineCommand({
   title: l10n("commands.glassLabArtifacts.query.title", "Query Glass Lab artifacts"),
-  async run(ctx) {
-    const artifacts = await artifactsCollection(ctx.storage).list();
-    return {
-      rows: artifacts.map((artifact) => ({
-        id: artifact.id,
-        values: {
-          artifact: artifact.title,
-          role: artifact.role,
-          trustSignal: artifact.trustSignal,
-          status: artifact.status,
-        },
-        resource: artifactResource(artifact),
-      })),
-      columns,
-    };
-  },
+  run: queryGlassLabArtifacts,
 });
 
 export const createGlassLabArtifactCommand = defineCommand({
   title: l10n("commands.glassLabArtifacts.create.title", "Create random Glass Lab artifact"),
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     const artifact = createRandomArtifact();
     await artifactsCollection(ctx.storage).put(artifact.id, artifact);
     await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });
@@ -90,32 +99,54 @@ export const createGlassLabArtifactCommand = defineCommand({
   },
 });
 
-export const queryArtifactMenuCommand = defineCommand({
-  title: l10n("commands.artifactMenu.query.title", "Query the artifact creation menu"),
-  async run() {
-    return {
-      groups: [
+export const queryArtifactMenu = async (_ctx: ExtensionContextBase, _input: object) => ({
+  groups: [
+    {
+      id: "create",
+      title: "Catalog intake",
+      description: "Create Glass Lab artifacts without leaving the table.",
+      params: [
         {
           id: "create",
-          title: "Catalog intake",
-          description: "Create Glass Lab artifacts without leaving the table.",
-          params: [
-            {
-              id: "create",
-              name: "New artifact",
-              type: "actions",
-              options: [
-                { id: "random", name: "Random artifact" },
-                { id: "locked", name: "Locked artifact" },
-              ],
-            },
+          name: "New artifact",
+          type: "actions",
+          options: [
+            { id: "random", name: "Random artifact" },
+            { id: "locked", name: "Locked artifact" },
           ],
         },
       ],
-      values: {},
-    };
-  },
+    },
+  ],
+  values: {},
 });
+
+export const queryArtifactMenuCommand = defineCommand({
+  title: l10n("commands.artifactMenu.query.title", "Query the artifact creation menu"),
+  run: queryArtifactMenu,
+});
+
+interface ArtifactMenuUpdateInput {
+  controlId: string;
+  value?: JsonValue;
+}
+
+export const updateArtifactMenu = async (
+  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  input: ArtifactMenuUpdateInput,
+) => {
+  // The ParamEditor issues extra update calls (value syncs) beyond the action
+  // click, so only the two known action values may create an artifact.
+  if (input.controlId !== "create") return { value: input.value };
+  if (input.value !== "random" && input.value !== "locked") return { value: input.value };
+  const artifact =
+    input.value === "locked"
+      ? createRandomArtifact({ status: "locked", summary: "Locked on intake by the Create artifacts menu." })
+      : createRandomArtifact();
+  await artifactsCollection(ctx.storage).put(artifact.id, artifact);
+  await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });
+  return artifact;
+};
 
 export const updateArtifactMenuCommand = defineCommand({
   title: l10n("commands.artifactMenu.update.title", "Create an artifact from the menu"),
@@ -123,27 +154,15 @@ export const updateArtifactMenuCommand = defineCommand({
     controlId: params.text({ required: true }),
     value: params.json<string>(),
   },
-  async run(ctx) {
-    // The ParamEditor issues extra update calls (value syncs) beyond the action
-    // click, so only the two known action values may create an artifact.
-    if (ctx.params.controlId !== "create") return { value: ctx.params.value };
-    if (ctx.params.value !== "random" && ctx.params.value !== "locked") return { value: ctx.params.value };
-    const artifact =
-      ctx.params.value === "locked"
-        ? createRandomArtifact({ status: "locked", summary: "Locked on intake by the Create artifacts menu." })
-        : createRandomArtifact();
-    await artifactsCollection(ctx.storage).put(artifact.id, artifact);
-    await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });
-    return artifact;
-  },
+  run: updateArtifactMenu,
 });
 
 export const deleteGlassLabArtifactCommand = defineCommand({
   title: l10n("commands.glassLabArtifacts.delete.title", "Delete Glass Lab artifact"),
   params: { rowId: params.text({ required: true }) },
-  async run(ctx) {
-    await artifactsCollection(ctx.storage).delete(ctx.params.rowId);
-    await ctx.events.emit(labArtifactsChanged, { artifactId: ctx.params.rowId });
-    return { id: ctx.params.rowId };
+  async run(ctx, commandParams) {
+    await artifactsCollection(ctx.storage).delete(commandParams.rowId);
+    await ctx.events.emit(labArtifactsChanged, { artifactId: commandParams.rowId });
+    return { id: commandParams.rowId };
   },
 });

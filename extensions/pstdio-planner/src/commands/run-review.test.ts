@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { putAttempt } from "../data/attempt-storage";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { runReviewCommand } from "./run-review";
 
 describe("runReviewCommand", () => {
@@ -36,7 +36,7 @@ describe("runReviewCommand", () => {
     });
 
     await runReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { workspaceId: "workspace-1" },
         overrides: {
@@ -100,7 +100,7 @@ describe("runReviewCommand", () => {
     });
     let createCount = 0;
     const context = () =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: { workspaceId: "workspace-1" },
         overrides: {
@@ -110,7 +110,7 @@ describe("runReviewCommand", () => {
         },
       });
 
-    const results = await Promise.allSettled([runReviewCommand.run(context()), runReviewCommand.run(context())]);
+    const results = await Promise.allSettled([runReviewCommand.run(...context()), runReviewCommand.run(...context())]);
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(createCount).toBe(1);

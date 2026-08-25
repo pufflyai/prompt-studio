@@ -142,7 +142,7 @@ export const registerCommands = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_command",
-          message: `Command "${commandId}" must define title and run(ctx)`,
+          message: `Command "${commandId}" must define title and run(ctx, params)`,
           extensionId: ext.id,
           commandId,
           sourcePath: source.sourcePath,

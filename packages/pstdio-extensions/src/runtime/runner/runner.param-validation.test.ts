@@ -71,7 +71,7 @@ describe("createCommandRunner: param validation", () => {
     expect(handlerRan).toBe(false);
   });
 
-  test("accepts valid params and exposes them to the handler", async () => {
+  test("accepts valid params and passes them as the handler payload", async () => {
     let observed: unknown;
 
     const runner = makeRunner({
@@ -79,9 +79,9 @@ describe("createCommandRunner: param validation", () => {
         bump: {
           title: "Bump",
           params: { amount: params.number({ required: true }) },
-          async run(ctx) {
-            observed = ctx.params;
-            return ctx.params;
+          async run(ctx, commandParams) {
+            observed = { commandParams, contextHasParams: "params" in ctx };
+            return commandParams;
           },
         },
       },
@@ -90,7 +90,7 @@ describe("createCommandRunner: param validation", () => {
     const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: { amount: 2 } });
 
     expect(outcome.ok).toBe(true);
-    expect(observed).toEqual({ amount: 2 });
+    expect(observed).toEqual({ commandParams: { amount: 2 }, contextHasParams: false });
   });
 
   test("omitting an optional param succeeds", async () => {
@@ -99,8 +99,8 @@ describe("createCommandRunner: param validation", () => {
         bump: {
           title: "Bump",
           params: { note: params.text() },
-          async run(ctx) {
-            return ctx.params;
+          async run(_ctx, commandParams) {
+            return commandParams;
           },
         },
       },
@@ -191,9 +191,9 @@ describe("createCommandRunner: param validation", () => {
         bump: {
           title: "Bump",
           params: { amount: params.number({ required: true }) },
-          async run(ctx) {
-            observed = ctx.params;
-            return ctx.params;
+          async run(_ctx, commandParams) {
+            observed = commandParams;
+            return commandParams;
           },
         },
       },
@@ -218,8 +218,8 @@ describe("createCommandRunner: param validation", () => {
       commands: {
         passthrough: {
           title: "Passthrough",
-          async run(ctx) {
-            return ctx.params;
+          async run(_ctx, commandParams) {
+            return commandParams;
           },
         },
       },

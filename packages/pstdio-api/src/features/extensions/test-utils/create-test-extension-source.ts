@@ -43,7 +43,7 @@ export const createTestScheduledExtensionSource = (fields: {
     join(sourcePath, "extension.ts"),
     `export default {
   commands: {
-    heartbeat: { title: "Heartbeat", async run() {} },
+    heartbeat: { title: "Heartbeat", async run(_ctx, _params) {} },
   },
   schedules: {
     heartbeat: {

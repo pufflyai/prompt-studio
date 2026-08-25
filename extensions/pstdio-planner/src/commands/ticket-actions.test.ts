@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 import {
@@ -35,7 +35,7 @@ describe("runAttemptCommand", () => {
 
   test("creates an anchored workspace and session with the ticket shorthand in the prompt", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const storedTicket = await ticketsCollection(storage).get(ticket.id);
     if (!storedTicket) {
       throw new Error("Expected the created ticket to be stored");
@@ -44,7 +44,7 @@ describe("runAttemptCommand", () => {
     const sessions: unknown[] = [];
 
     const result = await runAttemptCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { rowId: ticket.id },
         overrides: {
@@ -140,7 +140,7 @@ describe("runAttemptCommand", () => {
     const sessions: unknown[] = [];
 
     await runAttemptCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage: createMemoryStorage(),
         params: {
           ticket: "PS-304",
@@ -212,11 +212,11 @@ describe("runAttemptCommand", () => {
 describe("runAttemptCommand guarded launches", () => {
   test("falls back to the row id when the ticket param is empty", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const workspaces: unknown[] = [];
 
     await runAttemptCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { ticket: "", rowId: ticket.id },
         overrides: {
@@ -264,14 +264,14 @@ describe("runAttemptCommand guarded launches", () => {
 
   test("creates at most one attempt for concurrent launch decisions", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     let releaseWorkspace!: () => void;
     const workspaceGate = new Promise<void>((resolve) => {
       releaseWorkspace = resolve;
     });
     let creates = 0;
     const context = () =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: { ticket: ticket.shorthand },
         overrides: {
@@ -286,7 +286,7 @@ describe("runAttemptCommand guarded launches", () => {
         },
       });
 
-    const pending = Promise.all([runAttemptCommand.run(context()), runAttemptCommand.run(context())]);
+    const pending = Promise.all([runAttemptCommand.run(...context()), runAttemptCommand.run(...context())]);
     await Promise.resolve();
     releaseWorkspace();
     const results = await pending;
@@ -308,7 +308,7 @@ describe("createWorkspaceCommand", () => {
 
   test("creates an anchored workspace for the ticket without starting a session", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const storedTicket = await ticketsCollection(storage).get(ticket.id);
     if (!storedTicket) {
       throw new Error("Expected the created ticket to be stored");
@@ -317,7 +317,7 @@ describe("createWorkspaceCommand", () => {
     const sessions: unknown[] = [];
 
     const result = await createWorkspaceCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { rowId: ticket.id },
         overrides: {
@@ -373,14 +373,14 @@ describe("createWorkspaceCommand", () => {
 
   test("stores ticket ancestry on created workspace anchors", async () => {
     const storage = createMemoryStorage();
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
     const child = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
     );
     const workspaces: unknown[] = [];
 
     await createWorkspaceCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { rowId: child.id },
         overrides: {
@@ -426,11 +426,11 @@ describe("createWorkspaceCommand", () => {
 describe("proposal notifications", () => {
   test("refine ticket starts refinement without emitting a proposal review notification", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Proposal" } }));
     const notifications: unknown[] = [];
 
     await refineTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { ticket: ticket.shorthand },
         overrides: {
@@ -450,11 +450,11 @@ describe("proposal notifications", () => {
 
   test("proposal refined emits a proposal review notification", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Proposal" } }));
     const notifications: unknown[] = [];
 
     await proposalRefinedCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.shorthand },
         overrides: {
@@ -482,11 +482,11 @@ describe("proposal notifications", () => {
 
   test("approve proposal resolves the proposal notification", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Proposal" } }));
     const resolutions: unknown[] = [];
 
     await approveProposalCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { ticket: ticket.shorthand },
         overrides: {
@@ -509,7 +509,7 @@ describe("breakIntoSubTicketsCommand", () => {
     const sessions: unknown[] = [];
 
     await breakIntoSubTicketsCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage: createMemoryStorage(),
         params: {
           rowId: "ticket-1",

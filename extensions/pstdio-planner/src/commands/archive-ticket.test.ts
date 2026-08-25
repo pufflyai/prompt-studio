@@ -3,7 +3,7 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicket } from "../data/types";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 
 const now = "2026-06-08T10:00:00.000Z";
 
@@ -60,7 +60,7 @@ describe("archive ticket", () => {
     ];
 
     const result = (await archiveTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: "T-1" },
         overrides: {
@@ -91,7 +91,7 @@ describe("archive ticket", () => {
     let commandResolved = false;
     const command = Promise.resolve(
       archiveTicketCommand.run!(
-        makeCommandContext({
+        ...makeCommandArgs({
           storage,
           params: { id: "T-1" },
           overrides: {
@@ -138,7 +138,7 @@ describe("archive ticket", () => {
     ];
 
     const result = (await archiveTicketColumnActionCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { columnId: "done", actionId: "archive_all" },
         overrides: {
@@ -170,7 +170,7 @@ describe("archive ticket", () => {
     let commandResolved = false;
     const command = Promise.resolve(
       archiveTicketColumnActionCommand.run(
-        makeCommandContext({
+        ...makeCommandArgs({
           storage,
           params: { columnId: "default-done", actionId: "archive_all" },
           overrides: {
@@ -210,7 +210,7 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     const result = (await archiveTicketColumnActionCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { columnId: "default-done", actionId: "archive_all" },
         overrides: {
@@ -253,7 +253,7 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     const result = (await archiveTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: "T-1" },
         overrides: {

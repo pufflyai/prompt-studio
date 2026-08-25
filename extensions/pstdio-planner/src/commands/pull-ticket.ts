@@ -36,13 +36,13 @@ export const pullTicketCommand = defineCommand({
     id: params.text(),
     force: params.boolean(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const force = ctx.params.force ?? false;
+    const force = commandParams.force ?? false;
 
-    if (ctx.params.id !== undefined) {
-      const ticket = await findTicket(ctx.storage, ctx.params.id);
-      if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+    if (commandParams.id !== undefined) {
+      const ticket = await findTicket(ctx.storage, commandParams.id);
+      if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
       return pullTicket({ storage: ctx.storage, repoFiles, ticket, force });
     }
 

@@ -20,35 +20,36 @@ export const writeTicketCommand = defineCommand({
     userPrompt: params.text(),
     parent: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
     const existing = await ticketsCollection(ctx.storage).list();
     const statuses = await seedDefaultStatuses(ctx.storage);
-    if (ctx.params.tags !== undefined) await seedDefaultTags(ctx.storage);
+    if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
 
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { shorthand, sortOrder } = allocateTicketIdentity(ctx.project.shorthand, existing);
 
     const statusId =
-      ctx.params.status !== undefined
-        ? await resolveStatusId(ctx.storage, ctx.params.status)
+      commandParams.status !== undefined
+        ? await resolveStatusId(ctx.storage, commandParams.status)
         : (defaultStatus?.id ?? null);
-    const tagIds = ctx.params.tags !== undefined ? await resolveTagOptionIds(ctx.storage, ctx.params.tags) : [];
-    const parentId = ctx.params.parent !== undefined ? await resolveTicketId(ctx.storage, ctx.params.parent) : null;
+    const tagIds = commandParams.tags !== undefined ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : [];
+    const parentId =
+      commandParams.parent !== undefined ? await resolveTicketId(ctx.storage, commandParams.parent) : null;
 
     const ticket = await putTicket(ctx.storage, {
       id: crypto.randomUUID(),
       shorthand,
-      title: ctx.params.title,
-      content: `# ${ctx.params.title}\n`,
+      title: commandParams.title,
+      content: `# ${commandParams.title}\n`,
       statusId,
       tagIds,
       attachments: [],
       parentId,
       dependsOn: [],
       blockedReason: null,
-      userPrompt: ctx.params.userPrompt ?? null,
+      userPrompt: commandParams.userPrompt ?? null,
       parallelizable: null,
       draft: true,
       archived: false,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
@@ -14,10 +14,10 @@ const treeParams = (ticket: { id: string; shorthand: string }) => ({
 describe("ticket files tree empty sections", () => {
   test("renders single disabled rows for empty files, workspaces, and sessions sections", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
 
     const sections = await listTicketFilesTreeCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: treeParams(ticket),
         overrides: { workspaces: { list: async () => [] } },
@@ -63,13 +63,13 @@ describe("ticket files tree empty sections", () => {
 describe("ticket files tree workspace metadata", () => {
   test("adds workspace metadata to ticket-linked workspace resource nodes", async () => {
     const storage = createMemoryStorage();
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
     const ticket = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
     );
 
     const sections = await listTicketFilesTreeCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: treeParams(ticket),
         overrides: {

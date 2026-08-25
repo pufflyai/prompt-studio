@@ -8,7 +8,7 @@ describe("defineExtension", () => {
       commands: {
         hello: {
           title: "Hello",
-          async run() {
+          async run(_ctx, _commandParams) {
             return { ok: true };
           },
         },
@@ -23,7 +23,7 @@ describe("defineExtension", () => {
       hooks: {
         provision: {
           event: workspaceEvents.provision,
-          async handler(ctx) {
+          async handler(ctx, _payload) {
             await ctx.workspaceFiles?.syncDir(".claude/skills", []);
           },
         },

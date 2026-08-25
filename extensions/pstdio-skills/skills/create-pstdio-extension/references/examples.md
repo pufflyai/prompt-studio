@@ -18,14 +18,14 @@ export default defineExtension({
       params: {
         version: params.text({ label: "Version", required: true }),
       },
-      async run(ctx) {
+      async run(ctx, commandParams) {
         await ctx.notify.toast({
           type: "info",
           title: "Release",
-          message: `Preparing ${ctx.params.version}`,
+          message: `Preparing ${commandParams.version}`,
         });
 
-        return { version: ctx.params.version };
+        return { version: commandParams.version };
       },
     },
   },
@@ -48,16 +48,16 @@ export default defineExtension({
       params: {
         version: params.text({ required: true }),
       },
-      async run(ctx) {
-        return { published: true, version: ctx.params.version };
+      async run(_ctx, commandParams) {
+        return { published: true, version: commandParams.version };
       },
     },
   },
   middlewares: {
     requireSemver: {
       command: publishCommand,
-      async handler(ctx) {
-        if (!/^\d+\.\d+\.\d+$/.test(ctx.params.version)) {
+      async handler(ctx, commandParams) {
+        if (!/^\d+\.\d+\.\d+$/.test(commandParams.version)) {
           return ctx.commands.reject({
             code: "invalid_version",
             reason: "Version must be a semver string.",
@@ -102,7 +102,7 @@ export default defineExtension({
   hooks: {
     provision: {
       event: workspaceEvents.provision,
-      async handler(ctx) {
+      async handler(ctx, _event) {
         const skills = (await ctx.skills?.list?.()) ?? [];
         const files = skills.flatMap((skill) =>
           skill.files.map((file) => ({ path: `${skill.name}/${file.path}`, content: file.content })),
@@ -133,7 +133,7 @@ export default defineExtension({
   commands: {
     heartbeat: {
       title: "Heartbeat",
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         ctx.logger.info("Planner heartbeat", { projectId: ctx.projectId });
         return { ok: true };
       },
@@ -187,7 +187,7 @@ export default defineExtension({
   commands: {
     "reports.write": {
       title: "Write report",
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         await ctx.artifacts.mount("reports").writeText("latest.txt", "done\n");
         return { path: "latest.txt" };
       },

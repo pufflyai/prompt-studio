@@ -14,7 +14,7 @@ export const sayHelloCommand = defineCommand({
       when: LAB_ROUTE_HEADER_WHEN,
     },
   ],
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     const model = await ctx.settings.get("model.default");
     const tone = await ctx.settings.get("greeting.tone");
     const attachment = ctx.attachment;

@@ -32,9 +32,10 @@ const nonEmptyText = (value: string | undefined) => {
 };
 
 export const resolveTicket = (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "attachment" | "params" | "resource">,
+  ctx: Pick<CommandContext, "attachment" | "resource">,
+  commandParams: { ticket?: string; rowId?: string },
 ) => {
-  const ticket = nonEmptyText(ctx.params.ticket) ?? nonEmptyText(ctx.params.rowId);
+  const ticket = nonEmptyText(commandParams.ticket) ?? nonEmptyText(commandParams.rowId);
   if (ticket) return ticket;
 
   if (ctx.resource?.type === "ticket") return ctx.resource.id;
@@ -103,12 +104,18 @@ export const createAnchoredWorkspace = async (
       repo?: { repoId: string; branch?: string };
       mode?: string;
     }>,
-    "extensionId" | "params" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
+    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
+  commandParams: {
+    ticket?: string;
+    rowId?: string;
+    repo?: { repoId: string; branch?: string };
+    mode?: string;
+  },
   base?: string,
 ) => {
-  const { mode, repo } = ctx.params;
-  const ticketRef = resolveTicket(ctx);
+  const { mode, repo } = commandParams;
+  const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
   const attemptMode = mode === "current_branch" ? mode : "worktree";
   const workspace = await ctx.workspaces.create({
@@ -139,8 +146,8 @@ export const createWorkspaceCommand = defineCommand({
     repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
   },
-  async run(ctx) {
-    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx);
+  async run(ctx, commandParams) {
+    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);
 
     return {
       mode,
@@ -165,9 +172,9 @@ export const refineTicketCommand = defineCommand({
     template: params.template({ label: "Template", type: "ticket", required: false }),
     context: params.longText({ label: "Additional context", required: false }),
   },
-  async run(ctx) {
-    const { agent, context, template } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent, context, template } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
     const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
@@ -193,9 +200,9 @@ export const proposalRefinedCommand = defineCommand({
   params: {
     id: params.text({ label: "Ticket", required: true }),
   },
-  async run(ctx) {
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+  async run(ctx, commandParams) {
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     await notifyProposalRefined(ctx, ticket);
     return { ticket, notified: true };
   },
@@ -206,8 +213,8 @@ export const approveProposalCommand = defineCommand({
   params: {
     ticket: selectedTicketParams.ticket,
   },
-  async run(ctx) {
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const ticketRef = resolveTicket(ctx, commandParams);
     const ticket = await findTicket(ctx.storage, ticketRef);
     if (!ticket) throw new Error(`Unknown ticket "${ticketRef}"`);
     await resolveProposalRefinedNotification(ctx, ticket);
@@ -228,9 +235,9 @@ export const breakIntoSubTicketsCommand = defineCommand({
     ...ticketActionParams,
     template: params.template({ label: "Template", type: "ticket", required: false }),
   },
-  async run(ctx) {
-    const { agent, template } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent, template } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
 
     return ctx.sessions.create({

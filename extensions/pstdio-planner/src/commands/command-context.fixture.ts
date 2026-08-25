@@ -27,7 +27,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     storage,
     projectId,
     project: { id: projectId, name: "Test Project", shorthand: "T" },
-    params,
+    invocation: { params },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     events: { emit: async () => ({ delivered: 0 }) },
     workspaces: { list: async () => [] },
@@ -44,3 +44,6 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
     ...overrides,
   }) as unknown as CommandContext<TParams>;
+
+export const makeCommandArgs = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) =>
+  [makeCommandContext(input), input.params] as const;

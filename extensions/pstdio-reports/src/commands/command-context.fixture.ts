@@ -38,7 +38,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     storage,
     projectId,
     project: { id: projectId, name: "Test Project", shorthand: "T" },
-    params,
+    invocation: { params },
     events: { emit: async () => ({ delivered: 0 }) },
     templates: { get: async (name: string) => (name === "review" ? reviewTemplate : null) },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
@@ -46,3 +46,6 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     sessions: { list: async () => [] },
     ...overrides,
   }) as unknown as CommandContext<TParams>;
+
+export const makeCommandArgs = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) =>
+  [makeCommandContext(input), input.params] as const;

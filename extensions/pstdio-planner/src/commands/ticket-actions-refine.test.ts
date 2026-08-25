@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { refineTicketCommand } from "./ticket-actions";
 
@@ -16,7 +16,7 @@ describe("refineTicketCommand", () => {
     const sessions: unknown[] = [];
 
     await refineTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage: createMemoryStorage(),
         params: { context: "Tighten the acceptance criteria." },
         overrides: {
@@ -56,11 +56,11 @@ describe("refineTicketCommand", () => {
 
   test("uses the ticket shorthand when setup receives a stored ticket id", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const sessions: unknown[] = [];
 
     await refineTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: {
           ticket: ticket.id,

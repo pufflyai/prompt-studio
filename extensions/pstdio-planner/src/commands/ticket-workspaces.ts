@@ -19,8 +19,8 @@ export const ticketWorkspacesCommand = defineCommand({
   title: "List ticket workspaces",
   cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+  async run(ctx, commandParams) {
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const rows = [];
     for (const ws of workspaces) {
       const sessions = await ctx.sessions.listByWorkspace(ws.id);
@@ -42,8 +42,8 @@ export const ticketWorktreesListCommand = defineCommand({
   title: "List ticket worktrees",
   cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+  async run(ctx, commandParams) {
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     return workspaces
       .filter((ws) => ws.worktree_path)
       .map((ws) => ({
@@ -63,11 +63,11 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
     examples: ["pstdio tickets worktrees remove-all --id PS-1"],
   },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoPath = ctx.repo?.path;
     if (!repoPath) throw new Error("This command must be run inside a project repository.");
 
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const worktrees = workspaces.filter((ws) => ws.worktree_path);
 
     let removed = 0;

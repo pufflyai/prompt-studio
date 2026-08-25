@@ -155,7 +155,6 @@ export const createContextFactory = (
       commandId,
       invocationId,
       invocation,
-      params: invocation.params,
       resource: invocation.resource,
       attachment: invocation.attachment,
       slot: invocation.slot,

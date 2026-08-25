@@ -37,9 +37,9 @@ export const runAttemptCommand = defineCommand({
     repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
   },
-  async run(ctx) {
-    const { agent } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const ticketIdentity = await resolveTicketIdentity(ctx, ticketRef);
     const claims = launchClaimsCollection(ctx.storage);
     const now = new Date();
@@ -59,7 +59,7 @@ export const runAttemptCommand = defineCommand({
     }
 
     try {
-      const { readiness } = await loadAttemptReadiness(ctx, ticketRef);
+      const { readiness } = await loadAttemptReadiness(ctx, ticketRef, commandParams);
       if (readiness.decision === "wait") {
         const storedTicket = await findTicket(ctx.storage, ticketRef);
         if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
@@ -74,7 +74,11 @@ export const runAttemptCommand = defineCommand({
         }
         return readiness;
       }
-      const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx, readiness.baseHeadSha);
+      const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
+        ctx,
+        commandParams,
+        readiness.baseHeadSha,
+      );
       const attemptAnchor: ResourceAnchor = {
         type: "planner-attempt",
         id: workspace.id,

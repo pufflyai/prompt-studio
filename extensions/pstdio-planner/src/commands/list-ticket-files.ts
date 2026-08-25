@@ -9,10 +9,10 @@ export const listTicketFilesCommand = defineCommand({
   title: "List ticket files",
   cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const stored = new Set((ticket.files ?? []).map((file) => file.name));
     const local = new Set(

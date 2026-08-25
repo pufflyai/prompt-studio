@@ -1,4 +1,11 @@
-import { defineCommand, type ExtensionStorageApi, type ExtensionWorkspace, l10n, params } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  type ExtensionContextBase,
+  type ExtensionStorageApi,
+  type ExtensionWorkspace,
+  l10n,
+  params,
+} from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
@@ -85,8 +92,8 @@ export const archiveTicketCommand = defineCommand({
       placement: "last",
     },
   ],
-  async run(ctx) {
-    const existing = await findTicket(ctx.storage, ticketRefFromCommandContext(ctx));
+  async run(ctx, commandParams) {
+    const existing = await findTicket(ctx.storage, ticketRefFromCommandContext(ctx, commandParams));
     if (!existing) return null;
 
     const [next] = await persistArchivedTickets(ctx, [existing]);
@@ -102,26 +109,31 @@ export const archiveTicketCommand = defineCommand({
   },
 });
 
+export const archiveTicketColumnAction = async (
+  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces">,
+  input: { columnId: string; actionId: string },
+) => {
+  if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archived: [] };
+
+  const tickets = (await ticketsCollection(ctx.storage).list()).filter(
+    (ticket) => !ticket.archived && ticket.statusId === input.columnId,
+  );
+  const archived = await persistArchivedTickets(ctx, tickets);
+
+  // Fire-and-forget: return as soon as tickets are persisted so the board refresh
+  // fires immediately. Linked workspaces are sync'd to the dashboard, so their UI
+  // updates as the cascade completes; failures surface via a persistent notification.
+  void archiveLinkedWorkspacesSafely(ctx, archived);
+  await ctx.events.emit(plannerTicketsChanged, {});
+
+  return { archived };
+};
+
 export const archiveTicketColumnActionCommand = defineCommand({
   title: "Run ticket column action",
   params: {
     columnId: params.text({ required: true }),
     actionId: params.text({ required: true }),
   },
-  async run(ctx) {
-    if (ctx.params.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archived: [] };
-
-    const tickets = (await ticketsCollection(ctx.storage).list()).filter(
-      (ticket) => !ticket.archived && ticket.statusId === ctx.params.columnId,
-    );
-    const archived = await persistArchivedTickets(ctx, tickets);
-
-    // Fire-and-forget: return as soon as tickets are persisted so the board refresh
-    // fires immediately. Linked workspaces are sync'd to the dashboard, so their UI
-    // updates as the cascade completes; failures surface via a persistent notification.
-    void archiveLinkedWorkspacesSafely(ctx, archived);
-    await ctx.events.emit(plannerTicketsChanged, {});
-
-    return { archived };
-  },
+  run: archiveTicketColumnAction,
 });

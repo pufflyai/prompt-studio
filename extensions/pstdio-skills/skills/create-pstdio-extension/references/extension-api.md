@@ -57,8 +57,8 @@ export default defineExtension({
       params: {
         title: params.text({ label: "Title", required: true }),
       },
-      async run(ctx) {
-        return { title: ctx.params.title };
+      async run(_ctx, commandParams) {
+        return { title: commandParams.title };
       },
     },
   },
@@ -255,7 +255,7 @@ export default defineExtension({
   commands: {
     updateTicket: {
       title: "Update ticket",
-      async run(ctx) {
+      async run(ctx, _commandParams) {
         // Persist the update first.
         await ctx.events.emit(ticketsChanged, { ticketId: "ticket-1" });
       },

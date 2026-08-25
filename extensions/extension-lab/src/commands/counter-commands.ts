@@ -14,8 +14,8 @@ export const bumpCounterCommand = defineCommand({
     },
   ],
   params: { amount: params.number({ defaultValue: 1 }) },
-  async run(ctx) {
-    const { amount = 1 } = ctx.params;
+  async run(ctx, commandParams) {
+    const { amount = 1 } = commandParams;
     const enabled = ((await ctx.settings.get("counter.enabled")) ?? true) as boolean;
     const current = (await ctx.storage.get<number>(COUNTER_STORAGE_KEY)) ?? 0;
     if (!enabled) return { counter: current, enabled };
@@ -29,7 +29,7 @@ export const bumpCounterCommand = defineCommand({
 export const readCounterCommand = defineCommand({
   title: l10n("commands.counter.read.title", "Read lab counter"),
   cli: true,
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return { counter: (await ctx.storage.get<number>(COUNTER_STORAGE_KEY)) ?? 0 };
   },
 });
@@ -46,7 +46,7 @@ export const resetCounterCommand = defineCommand({
       when: LAB_ROUTE_HEADER_WHEN,
     },
   ],
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     await ctx.storage.set(COUNTER_STORAGE_KEY, 0);
     return { counter: 0 };
   },

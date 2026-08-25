@@ -50,16 +50,18 @@ describe("createCommandRunner: middleware", () => {
       commands: {
         echo: {
           title: "Echo",
-          async run(ctx) {
-            observed = ctx.params;
-            return ctx.params;
+          async run(_ctx, commandParams) {
+            observed = commandParams;
+            return commandParams;
           },
         },
       },
       middlewares: {
         rewrite: {
           commandId: "lab.echo",
-          async handler(ctx) {
+          async handler(ctx, commandParams) {
+            expect(commandParams).toEqual({ original: true });
+            expect("params" in ctx).toBe(false);
             return ctx.commands.patchParams({ extra: "added" });
           },
         },

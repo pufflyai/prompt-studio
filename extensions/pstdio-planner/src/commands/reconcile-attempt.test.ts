@@ -69,7 +69,7 @@ describe("reconcileAttemptCommand", () => {
   test("resumes the same implementation session once after a disconnect", async () => {
     const fixture = await setup(baseAttempt("implementing"), { "implementation-1": "disconnected" });
 
-    const result = await reconcileAttemptCommand.run(fixture.ctx);
+    const result = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(result.decision).toBe("implementation-retried");
     expect((await readAttempt(fixture.storage, "workspace-1"))?.implementationDisconnectRetries).toBe(1);
@@ -80,7 +80,7 @@ describe("reconcileAttemptCommand", () => {
     const attempt = { ...baseAttempt("implementing"), implementationDisconnectRetries: 1 };
     const fixture = await setup(attempt, { "implementation-1": "disconnected" });
 
-    const result = await reconcileAttemptCommand.run(fixture.ctx);
+    const result = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(result.decision).toBe("blocked");
     expect((await readAttempt(fixture.storage, "workspace-1"))?.blocker).toMatchObject({
@@ -121,7 +121,7 @@ describe("reconcileAttemptCommand", () => {
     ];
     const fixture = await setup(attempt, { "review-session-1": "disconnected" });
 
-    const result = await reconcileAttemptCommand.run(fixture.ctx);
+    const result = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(result.decision).toBe("review-retried");
     const reviews = (await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews ?? [];
@@ -189,14 +189,16 @@ describe("reconcileAttemptCommand", () => {
         anchors_json: (input as { anchors?: [] }).anchors ?? [],
       }));
 
-    await expect(reconcileAttemptCommand.run(fixture.ctx)).rejects.toThrow("transient attempt persistence failure");
+    await expect(reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params)).rejects.toThrow(
+      "transient attempt persistence failure",
+    );
     expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews.at(-1)).toMatchObject({
       sessionId: null,
       state: "started",
       supersedesReviewId: "review-1",
     });
 
-    const reconciled = await reconcileAttemptCommand.run(fixture.ctx);
+    const reconciled = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(reconciled.decision).toBe("review-reattached");
     expect(fixture.sessions).toHaveLength(1);
@@ -239,8 +241,8 @@ describe("reconcileAttemptCommand", () => {
       createdAt: "2026-08-18T11:00:00.000Z",
     });
 
-    const reconciled = await reconcileAttemptCommand.run(fixture.ctx);
-    const restarted = await runReviewCommand.run(fixture.ctx);
+    const reconciled = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
+    const restarted = await runReviewCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(reconciled.decision).toBe("review-missing-verdict");
     expect(restarted.review.state).toBe("started");
@@ -283,9 +285,9 @@ describe("reconcileAttemptCommand", () => {
       createdAt: "2026-08-18T11:00:00.000Z",
     });
 
-    const retried = await reconcileAttemptCommand.run(fixture.ctx);
-    const reconciled = await reconcileAttemptCommand.run(fixture.ctx);
-    const restarted = await runReviewCommand.run(fixture.ctx);
+    const retried = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
+    const reconciled = await reconcileAttemptCommand.run(fixture.ctx, fixture.ctx.invocation.params);
+    const restarted = await runReviewCommand.run(fixture.ctx, fixture.ctx.invocation.params);
 
     expect(retried.decision).toBe("review-retried");
     expect(reconciled.decision).toBe("review-missing-verdict");

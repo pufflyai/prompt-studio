@@ -84,18 +84,23 @@ export const submitChangeRequestCommand = defineCommand({
       ],
     }),
   },
-  async run(ctx) {
-    const attempt = await readAttempt(ctx.storage, ctx.params.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${ctx.params.workspaceId}"`);
-    const implementationSessionId = ctx.params.implementationSessionId ?? ctx.params.sessionId;
+  async run(ctx, commandParams) {
+    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+    const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
     if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
       throw new Error("The implementation session does not own this attempt.");
     }
-    if (attempt.state !== ctx.params.expectedAttemptState) throw new Error("Attempt state changed before submission.");
+    if (attempt.state !== commandParams.expectedAttemptState)
+      throw new Error("Attempt state changed before submission.");
     const currentHead = await workspaceHead(ctx, attempt.workspaceId);
-    if (currentHead !== ctx.params.headSha) throw new Error("Workspace HEAD changed before submission.");
-    const report = await readReport(ctx, ctx.params.changeRequestReportId);
-    if (report.id !== ctx.params.changeRequestReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
+    if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
+    const report = await readReport(ctx, commandParams.changeRequestReportId);
+    if (
+      report.id !== commandParams.changeRequestReportId ||
+      report.workspaceId !== attempt.workspaceId ||
+      report.draft
+    ) {
       throw new Error("The saved change request report does not belong to this workspace.");
     }
 
@@ -103,7 +108,7 @@ export const submitChangeRequestCommand = defineCommand({
     const revisions = appendRevision(attempt.revisions, {
       baseSha: attempt.base.headSha,
       headSha: currentHead,
-      changeRequestReportId: ctx.params.changeRequestReportId,
+      changeRequestReportId: commandParams.changeRequestReportId,
       submittedAt: timestamp,
       submittedBy: actorFromSource(ctx.source, ctx.invocationId),
     });

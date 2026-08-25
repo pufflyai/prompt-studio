@@ -8,7 +8,7 @@ const AUTOMATION = "review-tickets";
 export const reviewTicketsCommand = defineCommand({
   title: "Review ready attempt revisions",
   cli: true,
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     const attempts = await executePlanner(ctx, planner.listAttempts, {});
     const reconciled = [];
     for (const attempt of attempts.filter((candidate) => candidate.state === "reviewing")) {

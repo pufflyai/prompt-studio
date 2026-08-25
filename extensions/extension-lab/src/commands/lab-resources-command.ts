@@ -30,8 +30,8 @@ const matchesQuery = (slide: SlideResource, query: string) => {
 export const queryLabResourcesCommand = defineCommand({
   title: "Query lab palette resources",
   description: "Returns demo slide resources for the command palette resource provider.",
-  async run(ctx) {
-    const params = ctx.params as { query?: string; limit?: number };
+  async run(_ctx, commandParams) {
+    const params = commandParams as { query?: string; limit?: number };
     const query = params.query ?? "";
     const limit = params.limit ?? slides.length;
 
@@ -58,8 +58,8 @@ export const queryLabResourcesCommand = defineCommand({
 export const openLabResourceCommand = defineCommand({
   title: "Open lab palette resource",
   description: "Invoked when a lab slide is selected from the command palette.",
-  async run(ctx) {
-    const label = (ctx.params as { label?: string }).label ?? "slide";
+  async run(ctx, commandParams) {
+    const label = (commandParams as { label?: string }).label ?? "slide";
     await ctx.notify.toast({ type: "info", title: "Opened slide", message: label });
     return { opened: true, label };
   },

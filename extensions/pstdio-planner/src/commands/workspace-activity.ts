@@ -16,8 +16,8 @@ export const workspaceActivityCommand = defineCommand({
   params: {
     workspaceId: params.text({ label: "Workspace", required: true }),
   },
-  async run(ctx) {
-    const sessions = (await ctx.sessions.listByWorkspace(ctx.params.workspaceId)).map((session) => {
+  async run(ctx, commandParams) {
+    const sessions = (await ctx.sessions.listByWorkspace(commandParams.workspaceId)).map((session) => {
       const anchors = (session.anchors_json ?? []) as ResourceAnchor[];
       return {
         id: session.id,

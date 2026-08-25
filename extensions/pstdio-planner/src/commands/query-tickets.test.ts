@@ -41,7 +41,7 @@ describe("queryTicketsCommand", () => {
       params: { filters: { archived: ["archived"] } },
     });
 
-    const result = await queryTicketsCommand.run(ctx);
+    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
 
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
@@ -73,7 +73,7 @@ describe("queryTicketsCommand", () => {
       },
     });
 
-    const result = await queryTicketsCommand.run(ctx);
+    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
 
     expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
       { id: "workspace-2", session: { id: "session-latest", status: "in_progress" } },
@@ -94,7 +94,7 @@ describe("queryTicketsCommand", () => {
       },
     });
 
-    const result = await queryTicketsCommand.run(ctx);
+    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
 
     expect(result.rows[0]?.attributes.workspaceItems).toEqual([
       {

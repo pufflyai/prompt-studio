@@ -53,7 +53,7 @@ type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema exten
 
 /**
  * A command exposed by an extension. The `params` schema (typed via `params.*`) drives
- * the inferred shape of `ctx.params` in `run`.
+ * the inferred shape of the second argument passed to `run`.
  */
 export interface CommandDefinition<
   TSchema extends ParamObjectSchema | undefined = ParamObjectSchema | undefined,

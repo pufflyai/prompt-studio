@@ -9,14 +9,15 @@ import type {
 /**
  * Define a single command outside an extension's object literal. Use this when commands
  * grow large enough to split into separate files, or when you need to share a command
- * shape across extensions. The `params` schema drives the inferred shape of `ctx.params`.
+ * shape across extensions. The `params` schema drives the inferred shape of the
+ * handler's second argument.
  *
  * @example
  *   export const sayHello = defineCommand({
  *     title: "Say hello",
  *     params: { name: params.text({ required: true }) },
- *     async run(ctx) {
- *       ctx.params.name; // string
+ *     async run(ctx, commandParams) {
+ *       commandParams.name; // string
  *     },
  *   });
  */

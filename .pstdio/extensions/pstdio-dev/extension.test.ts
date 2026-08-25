@@ -5,14 +5,17 @@ describe("pstdio dev extension", () => {
   test("schedules evidence-gated high-impact issue discovery at noon", async () => {
     const sessions: unknown[] = [];
 
-    const result = await extension.commands?.["issues.discoverHighImpact"]?.run({
-      sessions: {
-        create: async (input: unknown) => {
-          sessions.push(input);
-          return { type: "session", id: "session-1", title: "Discover high-impact issues", status: "in_progress" };
+    const result = await extension.commands?.["issues.discoverHighImpact"]?.run(
+      {
+        sessions: {
+          create: async (input: unknown) => {
+            sessions.push(input);
+            return { type: "session", id: "session-1", title: "Discover high-impact issues", status: "in_progress" };
+          },
         },
-      },
-    } as never);
+      } as never,
+      {},
+    );
 
     expect(extension.schedules?.dailyIssueDiscovery).toMatchObject({
       title: "Daily high-impact issue discovery",
@@ -44,19 +47,21 @@ describe("pstdio dev extension", () => {
   test("opens the selected workspace worktree in VS Code", async () => {
     const spawned: unknown[] = [];
 
-    await extension.commands?.["workspace.openInVscode"]?.run({
-      params: {},
-      resource: { type: "workspace", id: "workspace-1" },
-      workspaces: {
-        get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
-      },
-      process: {
-        spawnDetached: async (input: unknown) => {
-          spawned.push(input);
-          return { pid: 123 };
+    await extension.commands?.["workspace.openInVscode"]?.run(
+      {
+        resource: { type: "workspace", id: "workspace-1" },
+        workspaces: {
+          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
         },
-      },
-    } as never);
+        process: {
+          spawnDetached: async (input: unknown) => {
+            spawned.push(input);
+            return { pid: 123 };
+          },
+        },
+      } as never,
+      {},
+    );
 
     expect(extension.commands?.["workspace.openInVscode"]?.menus).toEqual([
       {
@@ -73,27 +78,29 @@ describe("pstdio dev extension", () => {
   test("opens the selected workspace through the isolated dev stack", async () => {
     const calls: unknown[] = [];
 
-    const result = await extension.commands?.["workspace.openInIsolation"]?.run({
-      params: {},
-      resource: { type: "workspace", id: "workspace-1" },
-      workspaces: {
-        get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
-      },
-      process: {
-        runOrThrow: async (input: unknown) => {
-          calls.push({ kind: "run", input });
-          return {
-            exitCode: 0,
-            stdout: "\nStack:     pstdio-workspace-1\nDashboard: http://localhost:49152/\n",
-            stderr: "",
-          };
+    const result = await extension.commands?.["workspace.openInIsolation"]?.run(
+      {
+        resource: { type: "workspace", id: "workspace-1" },
+        workspaces: {
+          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
         },
-        spawnDetached: async (input: unknown) => {
-          calls.push({ kind: "spawn", input });
-          return { pid: 456 };
+        process: {
+          runOrThrow: async (input: unknown) => {
+            calls.push({ kind: "run", input });
+            return {
+              exitCode: 0,
+              stdout: "\nStack:     pstdio-workspace-1\nDashboard: http://localhost:49152/\n",
+              stderr: "",
+            };
+          },
+          spawnDetached: async (input: unknown) => {
+            calls.push({ kind: "spawn", input });
+            return { pid: 456 };
+          },
         },
-      },
-    } as never);
+      } as never,
+      {},
+    );
 
     expect(extension.commands?.["workspace.openInIsolation"]?.menus).toEqual([
       {
@@ -128,19 +135,21 @@ describe("pstdio dev extension", () => {
   test("stops the selected workspace isolated dev stack", async () => {
     const calls: unknown[] = [];
 
-    const result = await extension.commands?.["workspace.stopIsolation"]?.run({
-      params: {},
-      resource: { type: "workspace", id: "workspace-1" },
-      workspaces: {
-        get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
-      },
-      process: {
-        runOrThrow: async (input: unknown) => {
-          calls.push(input);
-          return { exitCode: 0, stdout: "", stderr: "" };
+    const result = await extension.commands?.["workspace.stopIsolation"]?.run(
+      {
+        resource: { type: "workspace", id: "workspace-1" },
+        workspaces: {
+          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
         },
-      },
-    } as never);
+        process: {
+          runOrThrow: async (input: unknown) => {
+            calls.push(input);
+            return { exitCode: 0, stdout: "", stderr: "" };
+          },
+        },
+      } as never,
+      {},
+    );
 
     expect(extension.commands?.["workspace.stopIsolation"]?.menus).toEqual([
       {

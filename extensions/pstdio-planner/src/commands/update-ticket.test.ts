@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
 import { updateTicketCommand } from "./update-ticket";
@@ -10,10 +10,10 @@ import { updateTicketCommand } from "./update-ticket";
 describe("get/update ticket commands", () => {
   test("getTicket returns the stored ticket or null", async () => {
     const storage = createMemoryStorage();
-    const created = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "X" } }));
+    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
 
-    const found = await getTicketCommand.run(makeCommandContext({ storage, params: { id: created.id } }));
-    const missing = await getTicketCommand.run(makeCommandContext({ storage, params: { id: "nope" } }));
+    const found = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: created.id } }));
+    const missing = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: "nope" } }));
 
     expect(found?.id).toBe(created.id);
     expect(missing).toBeNull();
@@ -22,12 +22,12 @@ describe("get/update ticket commands", () => {
   test("updateTicket re-derives the title from the saved content", async () => {
     const storage = createMemoryStorage();
     const created = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { content: "# Original\n\nold" } }),
+      ...makeCommandArgs({ storage, params: { content: "# Original\n\nold" } }),
     );
     expect(created.title).toBe("Original");
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: created.id, content: "# Renamed\n\nnew body" } }),
+      ...makeCommandArgs({ storage, params: { id: created.id, content: "# Renamed\n\nnew body" } }),
     );
 
     expect(updated?.content).toBe("# Renamed\n\nnew body");
@@ -40,7 +40,7 @@ describe("get/update ticket commands", () => {
   test("updateTicket throws for an unknown ticket", async () => {
     const storage = createMemoryStorage();
     await expect(
-      updateTicketCommand.run(makeCommandContext({ storage, params: { id: "missing", content: "x" } })),
+      updateTicketCommand.run(...makeCommandArgs({ storage, params: { id: "missing", content: "x" } })),
     ).rejects.toThrow(/Unknown ticket "missing"/);
   });
 });
@@ -50,11 +50,11 @@ describe("updateTicket server-side resolution", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     await seedDefaultTags(storage);
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
-    const child = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Child" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
+    const child = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Child" } }));
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: child.shorthand, status: "In Progress", tags: ["High"], parent: parent.shorthand },
       }),
@@ -68,14 +68,14 @@ describe("updateTicket server-side resolution", () => {
   test("unlinks the parent and sets a blocked reason", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
     const child = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
     );
     expect(child.parentId).toBe(parent.id);
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: child.id, unlinkParent: true, blockedReason: "waiting on infra" } }),
+      ...makeCommandArgs({ storage, params: { id: child.id, unlinkParent: true, blockedReason: "waiting on infra" } }),
     );
 
     expect(updated?.parentId).toBeNull();
@@ -85,7 +85,7 @@ describe("updateTicket server-side resolution", () => {
   test("emits and resolves blocked ticket notifications", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Blocked" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Blocked" } }));
     const notifications: unknown[] = [];
     const resolutions: unknown[] = [];
     const overrides = {
@@ -102,10 +102,10 @@ describe("updateTicket server-side resolution", () => {
     };
 
     await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: ticket.id, blockedReason: "need credentials" }, overrides }),
+      ...makeCommandArgs({ storage, params: { id: ticket.id, blockedReason: "need credentials" }, overrides }),
     );
     await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: ticket.id, status: "In Progress", blockedReason: "" }, overrides }),
+      ...makeCommandArgs({ storage, params: { id: ticket.id, status: "In Progress", blockedReason: "" }, overrides }),
     );
 
     expect(notifications).toEqual([
@@ -121,11 +121,11 @@ describe("updateTicket server-side resolution", () => {
   test("returns the saved ticket when blocked notification creation fails", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Blocked" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Blocked" } }));
     const toasts: unknown[] = [];
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.id, blockedReason: "need credentials" },
         overrides: {
@@ -157,10 +157,10 @@ describe("updateTicket server-side resolution", () => {
   test("returns the saved ticket even when the warning toast itself fails", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Blocked" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Blocked" } }));
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.id, blockedReason: "need credentials" },
         overrides: {
@@ -185,10 +185,10 @@ describe("updateTicket server-side resolution", () => {
   test("throws when the status name is unknown", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "X" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
 
     await expect(
-      updateTicketCommand.run(makeCommandContext({ storage, params: { id: ticket.id, status: "ghost" } })),
+      updateTicketCommand.run(...makeCommandArgs({ storage, params: { id: ticket.id, status: "ghost" } })),
     ).rejects.toThrow(/Unknown status/);
   });
 });

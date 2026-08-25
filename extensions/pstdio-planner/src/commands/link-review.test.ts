@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { linkReviewCommand } from "./link-review";
 
 describe("link review command", () => {
   test("stores GitHub pull request metadata", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Add feature" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
 
     const updated = await linkReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.shorthand, url: "https://github.com/org/repo/pull/456" },
       }),
@@ -35,10 +35,10 @@ describe("link review command", () => {
 
   test("stores GitLab merge request metadata", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Add feature" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
 
     const updated = await linkReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.id, url: "https://gitlab.com/org/repo/-/merge_requests/456", title: "Review changes" },
       }),
@@ -55,10 +55,10 @@ describe("link review command", () => {
 
   test("stores unknown URLs as generic review links", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Add feature" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
 
     const updated = await linkReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.shorthand, url: "https://example.com/reviews/abc" },
       }),
@@ -75,16 +75,16 @@ describe("link review command", () => {
 
   test("appends multiple review links", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Add feature" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
 
     await linkReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.id, url: "https://github.com/org/repo/pull/456" },
       }),
     );
     const updated = await linkReviewCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { id: ticket.id, url: "https://gitlab.com/org/repo/-/merge_requests/789" },
       }),
@@ -98,7 +98,7 @@ describe("link review command", () => {
 
     await expect(
       linkReviewCommand.run(
-        makeCommandContext({
+        ...makeCommandArgs({
           storage,
           params: { id: "missing", url: "https://github.com/org/repo/pull/456" },
         }),

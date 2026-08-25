@@ -43,14 +43,14 @@ const inRepository = async <TResult>(
 
 const inspectInternal = defineCommand({
   title: "Inspect font",
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return inspectRepositoryFont(requireRepoFiles(ctx));
   },
 });
 
 const previewInternal = defineCommand({
   title: "Load font preview",
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return previewRepositoryFont(requireRepoFiles(ctx));
   },
 });
@@ -77,11 +77,11 @@ const readSvg = async (ctx: ExtensionContextBase, input: { svg?: string; svgPath
 const addInternal = defineCommand({
   title: "Add SVG glyph",
   params: addParams,
-  async run(ctx) {
+  async run(ctx, commandParams) {
     return addRepositoryGlyph(requireRepoFiles(ctx), {
-      name: ctx.params.name,
-      svg: await readSvg(ctx, ctx.params),
-      codepoint: ctx.params.codepoint,
+      name: commandParams.name,
+      svg: await readSvg(ctx, commandParams),
+      codepoint: commandParams.codepoint,
     });
   },
 });
@@ -92,8 +92,8 @@ const renameInternal = defineCommand({
     ...glyphParams,
     name: params.text({ required: true, label: "New name" }),
   },
-  async run(ctx) {
-    return renameRepositoryGlyph(requireRepoFiles(ctx), ctx.params.glyph, ctx.params.name);
+  async run(ctx, commandParams) {
+    return renameRepositoryGlyph(requireRepoFiles(ctx), commandParams.glyph, commandParams.name);
   },
 });
 
@@ -103,16 +103,16 @@ const codepointInternal = defineCommand({
     ...glyphParams,
     codepoint: params.text({ required: true, label: "Codepoint" }),
   },
-  async run(ctx) {
-    return setRepositoryGlyphCodepoint(requireRepoFiles(ctx), ctx.params.glyph, ctx.params.codepoint);
+  async run(ctx, commandParams) {
+    return setRepositoryGlyphCodepoint(requireRepoFiles(ctx), commandParams.glyph, commandParams.codepoint);
   },
 });
 
 const removeInternal = defineCommand({
   title: "Remove glyph",
   params: glyphParams,
-  async run(ctx) {
-    return removeRepositoryGlyph(requireRepoFiles(ctx), ctx.params.glyph);
+  async run(ctx, commandParams) {
+    return removeRepositoryGlyph(requireRepoFiles(ctx), commandParams.glyph);
   },
 });
 
@@ -132,7 +132,7 @@ const definedValues = (value: Record<string, string | undefined>) =>
 
 const configGetInternal = defineCommand({
   title: "Get font editor configuration",
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return readRepositoryConfig(requireRepoFiles(ctx));
   },
 });
@@ -140,21 +140,21 @@ const configGetInternal = defineCommand({
 const configSetInternal = defineCommand({
   title: "Set font editor configuration",
   params: configPatchParams,
-  async run(ctx) {
-    return updateRepositoryConfig(requireRepoFiles(ctx), definedValues(ctx.params));
+  async run(ctx, commandParams) {
+    return updateRepositoryConfig(requireRepoFiles(ctx), definedValues(commandParams));
   },
 });
 
 const buildInternal = defineCommand({
   title: "Build font",
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return buildRepositoryFont(requireRepoFiles(ctx));
   },
 });
 
 const verifyInternal = defineCommand({
   title: "Verify font",
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return verifyRepositoryFont(requireRepoFiles(ctx));
   },
 });
@@ -164,7 +164,7 @@ export const fontCommands = {
     title: "Inspect font",
     description: "List font metadata and glyph mappings.",
     cli: true,
-    async run(ctx) {
+    async run(ctx, _commandParams) {
       return inRepository(ctx, "font-editor.internal.inspect", {}, inspectRepositoryFont);
     },
   }),
@@ -172,7 +172,7 @@ export const fontCommands = {
     title: "Load font preview",
     description: "Return the canonical TTF as a browser-safe data URL.",
     cli: true,
-    async run(ctx) {
+    async run(ctx, _commandParams) {
       return inRepository(ctx, "font-editor.internal.preview", {}, previewRepositoryFont);
     },
   }),
@@ -181,15 +181,15 @@ export const fontCommands = {
     description: "Add one SVG path to the icon font and regenerate every output.",
     cli: true,
     params: addParams,
-    async run(ctx) {
+    async run(ctx, commandParams) {
       if (ctx.repoFiles) {
         return addRepositoryGlyph(ctx.repoFiles, {
-          name: ctx.params.name,
-          svg: await readSvg(ctx, ctx.params),
-          codepoint: ctx.params.codepoint,
+          name: commandParams.name,
+          svg: await readSvg(ctx, commandParams),
+          codepoint: commandParams.codepoint,
         });
       }
-      return inRepository(ctx, "font-editor.internal.glyph.add", definedValues(ctx.params), async () => {
+      return inRepository(ctx, "font-editor.internal.glyph.add", definedValues(commandParams), async () => {
         throw new Error("Unreachable");
       });
     },
@@ -199,8 +199,8 @@ export const fontCommands = {
     description: "Rename a glyph without changing its contours.",
     cli: true,
     params: renameInternal.params,
-    async run(ctx) {
-      const values = { glyph: ctx.params.glyph, name: ctx.params.name };
+    async run(ctx, commandParams) {
+      const values = { glyph: commandParams.glyph, name: commandParams.name };
       return inRepository(ctx, "font-editor.internal.glyph.rename", values, (mount) =>
         renameRepositoryGlyph(mount, values.glyph, values.name),
       );
@@ -211,8 +211,8 @@ export const fontCommands = {
     description: "Move a glyph to an unused Unicode codepoint.",
     cli: true,
     params: codepointInternal.params,
-    async run(ctx) {
-      const values = { glyph: ctx.params.glyph, codepoint: ctx.params.codepoint };
+    async run(ctx, commandParams) {
+      const values = { glyph: commandParams.glyph, codepoint: commandParams.codepoint };
       return inRepository(ctx, "font-editor.internal.glyph.codepoint", values, (mount) =>
         setRepositoryGlyphCodepoint(mount, values.glyph, values.codepoint),
       );
@@ -223,8 +223,8 @@ export const fontCommands = {
     description: "Remove a glyph and regenerate every output.",
     cli: true,
     params: glyphParams,
-    async run(ctx) {
-      const values = { glyph: ctx.params.glyph };
+    async run(ctx, commandParams) {
+      const values = { glyph: commandParams.glyph };
       return inRepository(ctx, "font-editor.internal.glyph.remove", values, (mount) =>
         removeRepositoryGlyph(mount, values.glyph),
       );
@@ -233,7 +233,7 @@ export const fontCommands = {
   "config.get": defineCommand({
     title: "Get font editor configuration",
     cli: true,
-    async run(ctx) {
+    async run(ctx, _commandParams) {
       return inRepository(ctx, "font-editor.internal.config.get", {}, readRepositoryConfig);
     },
   }),
@@ -242,8 +242,8 @@ export const fontCommands = {
     description: "Update settings and rebuild verified outputs.",
     cli: true,
     params: configPatchParams,
-    async run(ctx) {
-      const values = definedValues(ctx.params);
+    async run(ctx, commandParams) {
+      const values = definedValues(commandParams);
       return inRepository(ctx, "font-editor.internal.config.set", values, (mount) =>
         updateRepositoryConfig(mount, values),
       );
@@ -253,7 +253,7 @@ export const fontCommands = {
     title: "Build font",
     description: "Regenerate and verify every font and CSS output.",
     cli: true,
-    async run(ctx) {
+    async run(ctx, _commandParams) {
       return inRepository(ctx, "font-editor.internal.build", {}, buildRepositoryFont);
     },
   }),
@@ -261,7 +261,7 @@ export const fontCommands = {
     title: "Verify font",
     description: "Verify generated formats and CSS against the canonical TTF.",
     cli: true,
-    async run(ctx) {
+    async run(ctx, _commandParams) {
       return inRepository(ctx, "font-editor.internal.verify", {}, verifyRepositoryFont);
     },
   }),
