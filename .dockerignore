@@ -8,6 +8,9 @@
 !.pstdio/extensions/font-editor/
 .pstdio/extensions/font-editor/*
 !.pstdio/extensions/font-editor/package.json
+!.pstdio/extensions/pstdio-dev/
+.pstdio/extensions/pstdio-dev/*
+!.pstdio/extensions/pstdio-dev/package.json
 !.pstdio/extensions/pstdio-planner-loops/
 .pstdio/extensions/pstdio-planner-loops/*
 !.pstdio/extensions/pstdio-planner-loops/package.json
