@@ -17,7 +17,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.19.0",
+    "@pstdio/sdk": "^0.20.0",
     "@pstdio/ui": "^0.20.1",
     "fonteditor-core": "^2.6.3",
     "pako": "^2.1.0",

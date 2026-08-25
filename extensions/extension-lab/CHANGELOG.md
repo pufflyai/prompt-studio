@@ -1,5 +1,13 @@
 # extension-lab
 
+## 0.8.2
+
+_2026-08-25_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.20.0`
+
 ## 0.8.1
 
 _2026-08-24_

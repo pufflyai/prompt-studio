@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.3.4
+
+_2026-08-25_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.20.0`
+
 ## 0.3.3
 
 _2026-08-24_

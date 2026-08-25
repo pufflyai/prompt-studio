@@ -1,5 +1,13 @@
 # @pstdio/sdk
 
+## 0.20.0
+
+_2026-08-25_
+
+### Minor Changes
+
+- 8db7aa1: Add a typed webview client (`createWebviewClient`) with react-query hooks to the SDK and expose the owning extension id to webview guests.
+
 ## 0.19.0
 
 _2026-08-24_

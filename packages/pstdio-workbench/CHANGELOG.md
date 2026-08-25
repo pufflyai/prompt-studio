@@ -1,5 +1,13 @@
 # @pstdio/workbench
 
+## 0.7.1
+
+_2026-08-25_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.20.0`
+
 ## 0.7.0
 
 _2026-08-24_
