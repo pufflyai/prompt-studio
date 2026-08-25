@@ -11,6 +11,15 @@ export type {
   ActivityReplyProps,
   ActivityRootProps,
   ActivityTimelineProps,
+  ResourceActivityFeedAction,
+  ResourceActivityFeedAttention,
+  ResourceActivityFeedEventItem,
+  ResourceActivityFeedItem,
+  ResourceActivityFeedMessageItem,
+  ResourceActivityFeedProps,
+  ResourceActivityFeedSize,
+  ResourceActivityIconName,
+  ResourceActivityRelatedResource,
 } from "@/components/activity";
 export {
   Activity,
@@ -23,6 +32,7 @@ export {
   ActivityReply,
   ActivityRoot,
   ActivityTimeline,
+  ResourceActivityFeed,
 } from "@/components/activity";
 // Curated design-system groups (see components/<group>/index.ts).
 export * from "@/components/command-palette";
