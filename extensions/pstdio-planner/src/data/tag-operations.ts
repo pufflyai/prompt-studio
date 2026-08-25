@@ -37,9 +37,15 @@ export const updateTicketTag = async (input: {
   tagId: string;
   name?: string;
   type?: StoredTag["type"];
+  sortOrder?: number;
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
-  return putTag(input.storage, { ...tag, name: input.name ?? tag.name, type: input.type ?? tag.type });
+  return putTag(input.storage, {
+    ...tag,
+    name: input.name ?? tag.name,
+    type: input.type ?? tag.type,
+    sortOrder: input.sortOrder ?? tag.sortOrder,
+  });
 };
 
 // Removing a tag also strips its option ids from every ticket so no ticket points

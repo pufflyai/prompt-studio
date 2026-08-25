@@ -37,15 +37,26 @@ export const createTicketTagCommand = defineCommand({
 
 export const updateTicketTagCommand = defineCommand({
   title: "Update ticket tag",
+  cli: {
+    globalAliases: [["tags", "update"]],
+    examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
     name: params.text({ label: "Name", required: false }),
     type: params.text({ label: "Type", required: false }),
+    sortOrder: params.number({ label: "Sort order", required: false }),
   },
   async run(ctx) {
     const type =
       ctx.params.type === "multi_select" || ctx.params.type === "single_select" ? ctx.params.type : undefined;
-    return updateTicketTag({ storage: ctx.storage, tagId: ctx.params.tagId, name: ctx.params.name, type });
+    return updateTicketTag({
+      storage: ctx.storage,
+      tagId: ctx.params.tagId,
+      name: ctx.params.name,
+      type,
+      sortOrder: ctx.params.sortOrder,
+    });
   },
 });
 
@@ -64,6 +75,10 @@ export const deleteTicketTagCommand = defineCommand({
 
 export const createTagOptionCommand = defineCommand({
   title: "Create tag option",
+  cli: {
+    globalAliases: [["tags", "options", "create"]],
+    examples: ["pstdio tags options create --tag-id default-priority --name Urgent --color red"],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
     name: params.text({ label: "Name", required: true }),
@@ -85,6 +100,10 @@ export const createTagOptionCommand = defineCommand({
 
 export const updateTagOptionCommand = defineCommand({
   title: "Update tag option",
+  cli: {
+    globalAliases: [["tags", "options", "update"]],
+    examples: ["pstdio tags options update --tag-id default-priority --option-id default-priority-urgent --color red"],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
     optionId: params.text({ label: "Option", required: true }),
@@ -110,6 +129,10 @@ export const updateTagOptionCommand = defineCommand({
 
 export const deleteTagOptionCommand = defineCommand({
   title: "Delete tag option",
+  cli: {
+    globalAliases: [["tags", "options", "delete"]],
+    examples: ["pstdio tags options delete --tag-id default-priority --option-id default-priority-urgent"],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
     optionId: params.text({ label: "Option", required: true }),
@@ -121,6 +144,12 @@ export const deleteTagOptionCommand = defineCommand({
 
 export const applyTicketTagDraftCommand = defineCommand({
   title: "Apply ticket tag draft",
+  cli: {
+    globalAliases: [["tags", "apply-draft"]],
+    examples: [
+      "pstdio tags apply-draft --tag-id default-priority --options-to-update '[]' --options-to-create '[]' --option-ids-to-delete '[]'",
+    ],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
     name: params.text({ label: "Name", required: false }),

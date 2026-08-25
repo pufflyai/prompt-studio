@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import extension, { browserOpenCommand } from "./extension";
 
-describe("pstdio dev extension", () => {
+describe("Prompt Studio Dev extension", () => {
   test("schedules evidence-gated high-impact issue discovery at noon", async () => {
     const sessions: unknown[] = [];
 

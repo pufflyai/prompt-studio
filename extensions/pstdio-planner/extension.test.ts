@@ -85,6 +85,36 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
+  test("exposes manual planner settings commands through the CLI", () => {
+    expect(extension.commands?.["ticketStatus.update"]?.cli).toEqual({
+      globalAliases: [["statuses", "update"]],
+      examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+    });
+    expect(extension.commands?.["ticketStatus.reorder"]?.cli).toEqual({
+      globalAliases: [["statuses", "reorder"]],
+      examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+    });
+    expect(extension.commands?.["ticketTag.update"]).toMatchObject({
+      cli: {
+        globalAliases: [["tags", "update"]],
+        examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
+      },
+      params: { sortOrder: { type: "number" } },
+    });
+    expect(extension.commands?.["ticketTag.createOption"]?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "create"]],
+    });
+    expect(extension.commands?.["ticketTag.updateOption"]?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "update"]],
+    });
+    expect(extension.commands?.["ticketTag.deleteOption"]?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "delete"]],
+    });
+    expect(extension.commands?.["ticketTag.applyDraft"]?.cli).toMatchObject({
+      globalAliases: [["tags", "apply-draft"]],
+    });
+  });
+
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");
     expect(extension.translations).toEqual({

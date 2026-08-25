@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import extension from "./extension";
 
 describe("font editor extension", () => {
-  test("contributes the editor route, tree item, commands, and agent skill", () => {
-    expect(extension.routes?.fontEditor).toMatchObject({
-      path: "font-editor",
+  test("contributes the editor panel, tree item, commands, and agent skill", () => {
+    expect(extension.panels?.fontEditor).toMatchObject({
+      show: { region: "main" },
       webview: {
         entry: { path: "./src/views/main.tsx" },
         capabilities: ["commands.execute", "notification.show"],
@@ -12,7 +12,7 @@ describe("font editor extension", () => {
     });
     expect(extension.treeItems?.fontEditor).toMatchObject({
       target: "workbench.left.tree",
-      action: { kind: "route", route: "font-editor" },
+      action: { kind: "panel", panel: "fontEditor" },
     });
     expect(extension.skills?.fontEditor).toMatchObject({
       source: { path: "./skills/font-editor" },

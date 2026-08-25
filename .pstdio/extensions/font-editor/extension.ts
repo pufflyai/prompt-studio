@@ -3,10 +3,12 @@ import { fontCommands } from "./src/commands/font-commands";
 
 const extension = defineExtension({
   commands: fontCommands,
-  routes: {
+  // PS-214 will give routes and panels one view identity. Until then, the panel
+  // form keeps host-owned project tools available beside the editor.
+  panels: {
     fontEditor: {
-      path: "font-editor",
-      label: l10n("routes.fontEditor.label", "Font editor"),
+      title: l10n("panels.fontEditor.title", "Font editor"),
+      show: { region: "main" },
       webview: {
         entry: packageAsset("./src/views/main.tsx", import.meta.url),
         capabilities: ["commands.execute", "notification.show"],
@@ -17,9 +19,10 @@ const extension = defineExtension({
     fontEditor: {
       target: "workbench.left.tree",
       group: "Tools",
-      label: l10n("routes.fontEditor.label", "Font editor"),
+      label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
-      action: { kind: "route", route: "font-editor" },
+      when: { mode: "project" },
+      action: { kind: "panel", panel: "fontEditor" },
     },
   },
   artifactMounts: {
