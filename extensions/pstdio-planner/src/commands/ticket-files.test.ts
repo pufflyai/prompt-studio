@@ -51,7 +51,7 @@ describe("ticket files tree commands", () => {
       }),
     );
 
-    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "input-requests", "sessions"]);
+    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
 
     // The ticket body is its own header-less entry, selected by default.
     expect(body[0]).toEqual({
@@ -101,19 +101,6 @@ describe("ticket files tree commands", () => {
       },
     ]);
     expect(body[3]).toMatchObject({
-      id: "input-requests",
-      label: "Input requests",
-      nodes: [
-        {
-          id: "input-requests-empty",
-          label: "No input requests",
-          icon: "Bell",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
-    expect(body[4]).toMatchObject({
       id: "sessions",
       label: "Sessions",
       nodes: [

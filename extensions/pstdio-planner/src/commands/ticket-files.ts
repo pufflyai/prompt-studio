@@ -20,7 +20,6 @@ import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
-import { buildInputRequestsSection } from "./ticket-input-requests-tree";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 
@@ -331,12 +330,6 @@ export const listTicketFilesTreeCommand = defineCommand({
       statusesById,
     });
     const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
-    const inputRequestsSection = await buildInputRequestsSection({
-      storage: ctx.storage,
-      projectId: ctx.projectId,
-      ticketId: ticket.id,
-    });
-
     // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
     // to its workspaces. The ticket shows the whole conversation history either way.
     const workspaceSessions = (
@@ -353,7 +346,6 @@ export const listTicketFilesTreeCommand = defineCommand({
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
-      inputRequestsSection,
       sessionsSection,
     ];
   },

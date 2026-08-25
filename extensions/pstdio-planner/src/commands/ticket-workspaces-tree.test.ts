@@ -60,13 +60,7 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual([
-      "ticket",
-      "files",
-      "workspaces",
-      "input-requests",
-      "sessions",
-    ]);
+    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
     expect(sections[2]).toEqual({
       id: "workspaces",
       label: "Workspaces",
@@ -190,13 +184,7 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual([
-      "ticket",
-      "files",
-      "workspaces",
-      "input-requests",
-      "sessions",
-    ]);
+    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
     expect(sections[2]).toMatchObject({
       id: "workspaces",
       label: "Workspaces",

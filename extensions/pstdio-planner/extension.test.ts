@@ -49,7 +49,7 @@ describe("pstdio planner extension contributions", () => {
       title: { $l10n: "treeRenderers.ticketFiles.title", default: "Files" },
       icon: "Files",
       body: expect.any(Function),
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "input-requests", "sessions"],
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     });
     expect(extension.panels?.ticketFiles).toMatchObject({
       title: { $l10n: "panels.ticketFiles.title", default: "Files" },

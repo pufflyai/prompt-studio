@@ -290,7 +290,7 @@ export default defineExtension({
       icon: "Files",
       body: (ctx, input) => runRendererCommand(plannerCommands["ticket-files.tree.body"], input)(ctx),
       refreshEvents: [plannerTicketsChanged],
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "input-requests", "sessions"],
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     },
   },
 

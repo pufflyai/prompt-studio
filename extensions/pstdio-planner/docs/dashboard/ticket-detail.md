@@ -36,7 +36,7 @@ The planner extension contributes ticket resource views:
 
 - `ticketEditor` for the markdown body, editable ticket files, and image
   attachment previews.
-- `ticketFiles` for the native files, workspaces, input requests, and sessions tree.
+- `ticketFiles` for the native files, workspaces, and sessions tree.
 - `ticketProperties` for planner-owned ticket properties.
 
 The dashboard workbench provides hosting, command execution, resource
@@ -53,7 +53,6 @@ navigation, and synced core host rows. It does not own ticket data.
    previewed through `pstdio-planner.read-ticket-attachment`.
 4. Manual workspace creation must execute `pstdio-planner.create-workspace`.
 5. Implementation attempts must execute `pstdio-planner.run-attempt`.
-6. Open input requests must appear before Sessions. Their rows open the related session and expose a `Resolve input request` action.
 
 ### UX Requirements
 
@@ -62,8 +61,6 @@ navigation, and synced core host rows. It does not own ticket data.
 - The files tree must show editable ticket files and read-only image
   attachments.
 - Linked workspaces must open as normal workspace resources.
-- Open input requests must use an orange bell, the question as the label, and the expected action as the description.
-- Resolving a request must collect the resolution and completed action before running the command.
 
 ### Operational Requirements
 
@@ -77,11 +74,10 @@ navigation, and synced core host rows. It does not own ticket data.
 2. The planner `ticketEditor` view loads the ticket via
    `pstdio-planner.get-ticket`.
 3. The planner `ticketFiles` tree lists the ticket body, editable files, image
-   attachments, linked workspaces, open input requests, and sessions.
+   attachments, linked workspaces, and sessions.
 4. Selecting an editable file opens it in the planner editor.
 5. Selecting an image attachment fetches bytes through
    `pstdio-planner.read-ticket-attachment` and renders a read-only preview.
-6. Selecting an input request opens its related session. Resolving it closes the matching notification and removes the row. The `Awaiting Input` flag remains until the final open request is resolved.
 
 ### Run Attempt Flow
 
@@ -101,7 +97,7 @@ navigation, and synced core host rows. It does not own ticket data.
 | Surface              | Purpose                                      |
 | -------------------- | -------------------------------------------- |
 | `ticketEditor` view  | Planner-owned ticket body/file/preview view. |
-| `ticketFiles` tree   | Files, workspaces, input requests, sessions. |
+| `ticketFiles` tree   | Files, workspaces, and sessions.             |
 | `ticketProperties`   | Planner-owned ticket properties.             |
 
 ### Header Actions
