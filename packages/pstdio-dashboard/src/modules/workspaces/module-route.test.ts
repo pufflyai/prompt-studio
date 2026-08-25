@@ -1,28 +1,26 @@
+import { expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { createWorkspacesModule } from "./module";
 
-// The workspaces root and workspace detail are a cross-mode root/detail flow, so
-// the route contract only checks identity and single-placement invariants.
-describeResourceRouteContract({
-  name: "workspaces",
-  setup: () => {
-    const workbench = createWorkbenchCore();
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    return { workbench };
-  },
-  root: dashboardResources.workspaces,
-  detail: createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+test("opens the Workspaces view and workspace resources with stable identities", async () => {
+  const workbench = createWorkbenchCore();
+  workbench.registerModule(createWorkspacesModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+  await workbench.views.openView(dashboardViews.workspaces.id);
+
+  expect(workbench.modes.getActiveModeId()).toBe("project");
+  expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardViews.workspaces.id);
+  expect(workbench.getPrimaryResource()).toBeUndefined();
+
+  const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
     workspaceId: "workspace-1",
     workspaceShorthand: "PS-307_A1",
-  }),
-  detailB: createDashboardResource("workspace", "workspace-2", "PS-308_A1", "GitBranch", "project-1", {
-    workspaceId: "workspace-2",
-    workspaceShorthand: "PS-308_A1",
-  }),
-  rootDetailHistory: "replaced",
+  });
+  await workbench.resources.openResource(workspace, { replaceActive: true });
+
+  expect(workbench.modes.getActiveModeId()).toBe("workspace");
+  expect(workbench.getPrimaryResource()?.uri).toBe(workspace.uri);
 });

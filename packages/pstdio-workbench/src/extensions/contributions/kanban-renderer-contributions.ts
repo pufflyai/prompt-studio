@@ -13,6 +13,7 @@ import type {
   KanbanRendererCreateSubmission,
   KanbanRendererQueryState,
   ResourceRef,
+  WorkbenchViewContribution,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
@@ -43,6 +44,8 @@ type BoardColumnConfig = ReturnType<NonNullable<KanbanRendererContribution["getB
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 export interface WorkbenchExtensionKanbanRendererAdapter {
+  /** Add host navigation state changes that must run before a panel view opens. */
+  resolveViewInput?: (panel: WorkbenchExtensionMetadata["panels"][number]) => WorkbenchViewContribution["resolveInput"];
   /** Override label resolution. Defaults to workbench's `text(value, fallback)`. */
   resolveLabel?: Localizer;
   /** Post-process an attribute descriptor (after localization). Defaults to identity. */
@@ -334,6 +337,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     disposables.push(
       registerWorkbenchExtensionPanel({
         workbench: context.workbench,
+        path: panel.path,
+        resolveInput: adapter.resolveViewInput?.(panel),
         contribution: toWorkbenchCompositionPanelContribution({
           panel,
           rendererId,

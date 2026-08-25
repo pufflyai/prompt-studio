@@ -1,27 +1,31 @@
 import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import type { DashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
-import { dashboardExtensionRouteKind } from "@/shared/extensions/workbench-extension-contributions";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { dashboardExtensionViewKind } from "./extensions/extension-view-placement";
+import { migrateLegacyViewHistory } from "./extensions/view-persistence-migration";
 import { createDashboardSessions } from "./sessions/data/dashboard-sessions";
 import { createDashboardWorkspaces } from "./workspaces/data/dashboard-workspaces";
 
 interface CreateBootstrapModuleInput {
+  initialViewPath?: string;
+  lastResourcePersistence?: DashboardLastResourcePersistence;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 }
 
 interface LandingRunGuard {
   isCurrent(): boolean;
+  lastResourcePersistence?: DashboardLastResourcePersistence;
+  requestedViewPath?: string;
   onStale(resource: ResourceRef | undefined): void;
   onSettled(): void;
 }
@@ -80,12 +84,8 @@ const hasHistoryForSelectedProject = (ctx: Parameters<WorkbenchModuleContributio
   );
 };
 
-const isExtensionRestoreResource = (resource: ResourceRef) =>
-  resource.kind === dashboardExtensionViewKind || resource.kind === dashboardExtensionRouteKind;
-
 const shouldWaitForExtensions = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], resource: ResourceRef) =>
-  !isExtensionsReadyForSelectedProject(ctx) &&
-  (isExtensionRestoreResource(resource) || !canOpenResource(ctx, resource));
+  !isExtensionsReadyForSelectedProject(ctx) && !canOpenResource(ctx, resource);
 
 const shouldWaitForHistoryExtensions = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   if (!hasHistoryForSelectedProject(ctx) || isExtensionsReadyForSelectedProject(ctx)) return false;
@@ -93,6 +93,7 @@ const shouldWaitForHistoryExtensions = (ctx: Parameters<WorkbenchModuleContribut
   const history = ctx.history.store.getState();
   const entry = history.entries[history.cursor];
   if (!entry) return false;
+  if (entry.viewId) return !isExtensionsReadyForSelectedProject(ctx) && !ctx.views.canResolveView(entry.viewId);
   if (entry.resource) return shouldWaitForExtensions(ctx, entry.resource);
   if (entry.modeId && !ctx.modes.getMode(entry.modeId)) return true;
   return Boolean(entry.contributionId && !ctx.layout.getWidget(entry.contributionId));
@@ -101,36 +102,98 @@ const shouldWaitForHistoryExtensions = (ctx: Parameters<WorkbenchModuleContribut
 const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   if (!hasHistoryForSelectedProject(ctx)) return "empty" as const;
   if (shouldWaitForHistoryExtensions(ctx)) return "pending" as const;
+  ctx.history.migrateState((state) => migrateLegacyViewHistory(state, ctx.views));
   return ctx.history.restore() ? ("restored" as const) : ("empty" as const);
+};
+
+const openStartView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) =>
+  ctx.views.openView(dashboardViews.start.id);
+
+const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
+  if (!guard.requestedViewPath) return "empty" as const;
+  const target = ctx.views.resolvePath(guard.requestedViewPath);
+  if (!target || !ctx.views.canResolveView(target.viewId)) {
+    return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
+  }
+  const history = ctx.history.store.getState();
+  const currentHistoryViewId = history.entries[history.cursor]?.viewId;
+  if (currentHistoryViewId && ctx.views.resolveViewId(currentHistoryViewId) === target.viewId) return "empty" as const;
+  return ctx.views
+    .openView(target.viewId, { strategy: { kind: "replace-active" } })
+    .then(() =>
+      guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
+    );
+};
+
+const restoreLegacyView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
+  const legacyView = guard.lastResourcePersistence?.getLegacyViewResource();
+  if (!legacyView) return "empty" as const;
+
+  const routePath = legacyView.metadata?.routePath;
+  const route = typeof routePath === "string" ? ctx.views.resolvePath(routePath) : undefined;
+  const viewId = route?.viewId ?? (legacyView.id ? ctx.views.resolveViewId(legacyView.id) : undefined);
+  if (viewId && ctx.views.canResolveView(viewId)) {
+    return ctx.views.openView(viewId, { strategy: { kind: "replace-active" } }).then(() => {
+      if (!guard.isCurrent()) return { resource: undefined, status: "stale" } as const;
+      guard.lastResourcePersistence?.clearLegacyViewResource();
+      return { status: "opened" } as const;
+    });
+  }
+  if (!isExtensionsReadyForSelectedProject(ctx)) return "pending" as const;
+  guard.lastResourcePersistence?.clearLegacyViewResource();
+  return "empty" as const;
+};
+
+const restoreLastResource = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
+  const lastResource = ctx.lastResource.get();
+  if (!lastResource) return "empty" as const;
+  if (isWaitingForSyncedResource(lastResource)) return "pending" as const;
+
+  if (isMissingSyncedResource(ctx, lastResource)) {
+    ctx.lastResource.set(undefined);
+    return ctx.views
+      .openView(dashboardViews.start.id)
+      .then(() =>
+        guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
+      );
+  }
+
+  if (shouldWaitForExtensions(ctx, lastResource)) return "pending" as const;
+  return ctx.lastResource.restore().then((restored) => {
+    if (!restored) return "empty" as const;
+    return guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: lastResource, status: "stale" } as const);
+  });
 };
 
 const openSelectedProjectLanding = async (
   ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
   guard: LandingRunGuard,
 ) => {
+  const requestedViewRestore = restoreRequestedView(ctx, guard);
+  if (requestedViewRestore === "pending") return "pending";
+  if (requestedViewRestore === "missing") {
+    await openStartView(ctx);
+    return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
+  }
+  if (requestedViewRestore !== "empty") return await requestedViewRestore;
+
   const historyRestore = restoreSelectedProjectHistory(ctx);
   if (historyRestore === "pending") return "pending";
   if (historyRestore === "restored") return { status: "opened" } as const;
 
-  const lastResource = ctx.lastResource.get();
+  const legacyRestore = restoreLegacyView(ctx, guard);
+  if (legacyRestore === "pending") return "pending";
+  if (legacyRestore !== "empty") return await legacyRestore;
 
-  if (lastResource) {
-    if (isWaitingForSyncedResource(lastResource)) return "pending";
-
-    if (isMissingSyncedResource(ctx, lastResource)) {
-      ctx.lastResource.set(undefined);
-      await ctx.resources.openResource(dashboardResources.start, {});
-      return guard.isCurrent() ? { status: "opened" } : { resource: dashboardResources.start, status: "stale" };
-    }
-
-    if (shouldWaitForExtensions(ctx, lastResource)) return "pending";
-
-    const restored = await ctx.lastResource.restore();
-    if (restored) return guard.isCurrent() ? { status: "opened" } : { resource: lastResource, status: "stale" };
+  const lastResourceRestore = restoreLastResource(ctx, guard);
+  if (lastResourceRestore === "pending") return "pending";
+  if (lastResourceRestore !== "empty") {
+    const restored = await lastResourceRestore;
+    if (restored !== "empty") return restored;
   }
 
-  await ctx.resources.openResource(dashboardResources.start, {});
-  return guard.isCurrent() ? { status: "opened" } : { resource: dashboardResources.start, status: "stale" };
+  await openStartView(ctx);
+  return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
 };
 
 // The Side Panel session is restored after the landing view, so the primary resource and the
@@ -180,18 +243,32 @@ const openSelectedProjectLandingWhenReady = (
 
   open();
   const lastResource = ctx.lastResource.get();
+  const legacyView = guard.lastResourcePersistence?.getLegacyViewResource();
   const shouldWaitForHistory = shouldWaitForHistoryExtensions(ctx);
-  if (!lastResource && !shouldWaitForHistory) return undefined;
+  const requestedView = guard.requestedViewPath ? ctx.views.resolvePath(guard.requestedViewPath) : undefined;
+  const shouldWaitForRequestedView = Boolean(
+    guard.requestedViewPath &&
+      (!requestedView || !ctx.views.canResolveView(requestedView.viewId)) &&
+      !isExtensionsReadyForSelectedProject(ctx),
+  );
+  if (!lastResource && !legacyView && !shouldWaitForHistory && !shouldWaitForRequestedView) return undefined;
 
   const shouldWaitForSyncedResource = lastResource ? isWaitingForSyncedResource(lastResource) : false;
   const shouldWaitForExtensionResource = lastResource ? shouldWaitForExtensions(ctx, lastResource) : false;
+  const shouldWaitForLegacyView = Boolean(legacyView && !isExtensionsReadyForSelectedProject(ctx));
 
-  if (!shouldWaitForSyncedResource && !shouldWaitForExtensionResource && !shouldWaitForHistory) {
+  if (
+    !shouldWaitForSyncedResource &&
+    !shouldWaitForExtensionResource &&
+    !shouldWaitForLegacyView &&
+    !shouldWaitForHistory &&
+    !shouldWaitForRequestedView
+  ) {
     return undefined;
   }
 
   if (shouldWaitForSyncedResource) unsubscribeDashboardData = subscribeDashboardData(open);
-  if (shouldWaitForExtensionResource || shouldWaitForHistory) {
+  if (shouldWaitForExtensionResource || shouldWaitForLegacyView || shouldWaitForHistory || shouldWaitForRequestedView) {
     unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
   }
 
@@ -212,6 +289,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       let initialSyncWaitUnsubscribe: (() => void) | undefined;
       let landingRunId = 0;
       let currentExpectedResource: ResourceRef | undefined;
+      let requestedViewPath = input.initialViewPath;
 
       const disposeLanding = () => {
         landingDisposable?.dispose();
@@ -233,12 +311,18 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         disposeLanding();
         landingDisposable = openSelectedProjectLandingWhenReady(ctx, {
           isCurrent: () => runId === landingRunId && getDashboardSelectedProjectId(ctx) === projectId,
+          lastResourcePersistence: input.lastResourcePersistence,
+          requestedViewPath,
           onStale: (resource) => {
+            requestedViewPath = undefined;
             if (!getDashboardSelectedProjectId(ctx)) return;
             if (currentExpectedResource?.uri !== resource?.uri) ctx.lastResource.set(currentExpectedResource);
             runLanding();
           },
-          onSettled: () => void restoreSelectedSession(ctx, selectedSessionId),
+          onSettled: () => {
+            requestedViewPath = undefined;
+            void restoreSelectedSession(ctx, selectedSessionId);
+          },
         });
       };
 

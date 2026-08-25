@@ -9,10 +9,12 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchPanelInstance } from "../layout/layout-types";
 import {
+  isWorkbenchViewHierarchyNode,
   type ResolvedResourceHierarchyProvider,
   type ResourceHierarchyCycle,
   type ResourceHierarchyProvider,
   sortHierarchyProviders,
+  type WorkbenchHierarchyNode,
   walkResourceHierarchy,
 } from "./resource-hierarchy";
 
@@ -20,8 +22,10 @@ export type {
   ResolvedResourceHierarchyProvider,
   ResourceHierarchyCycle,
   ResourceHierarchyProvider,
+  WorkbenchHierarchyNode,
+  WorkbenchViewHierarchyNode,
 } from "./resource-hierarchy";
-export { resourceHierarchyCycleCode } from "./resource-hierarchy";
+export { isWorkbenchViewHierarchyNode, resourceHierarchyCycleCode } from "./resource-hierarchy";
 
 export interface ResourceRef {
   kind: string;
@@ -139,7 +143,7 @@ export interface ResourceRegistry {
   listResources(query: string): readonly ResourceBrowseEntry[];
   registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
   listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
-  walkHierarchy(resource: ResourceRef | undefined): ResourceRef[];
+  walkHierarchy(resource: ResourceRef | undefined): WorkbenchHierarchyNode[];
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
   isOpeningResource(): boolean;
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<WorkbenchPanelInstance>;
@@ -159,6 +163,7 @@ export interface CreateResourceRegistryInput {
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
   establishLocation?: (instance: WorkbenchPanelInstance) => WorkbenchPanelInstance;
+  resolveView?: (viewId: string) => { label?: string; icon?: string } | undefined;
 }
 
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
@@ -290,8 +295,13 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     walkHierarchy(resource) {
       if (!resource) return [];
 
-      return walkResourceHierarchy(Object.values(store.getState().hierarchyProviders), resource, (cycle) => {
+      const path = walkResourceHierarchy(Object.values(store.getState().hierarchyProviders), resource, (cycle) => {
         for (const listener of cycleListeners) listener(cycle);
+      });
+      return path.map((node) => {
+        if (!isWorkbenchViewHierarchyNode(node)) return node;
+        const view = input.resolveView?.(node.viewId);
+        return view ? { ...node, label: view.label, icon: view.icon } : node;
       });
     },
 

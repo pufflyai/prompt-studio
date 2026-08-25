@@ -29,7 +29,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.lab",
           target: "workbench.left.tree",
           label: "Workspace only",
-          action: { kind: "route", route: "workspace-lab" },
+          action: { kind: "view", viewId: "workspace-lab" },
           when: { mode: "workspace" },
         },
       ],
@@ -55,6 +55,7 @@ describe("workbench extension metadata targets", () => {
           id: "lab.files",
           extensionId: "pstdio.lab",
           title: "Files",
+          path: "files",
           show: { region: "main" },
           renderer: { kind: "tree", id: "lab.files" },
         },
@@ -99,6 +100,7 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.modes[0]?.panelRegions).toEqual(["main"]);
     expect(parsed.modes[0]?.resources?.ticket?.slots?.primary).toEqual({ region: "main", required: true });
     expect(parsed.panels[0]).toMatchObject({
+      path: "files",
       renderer: { kind: "tree", id: "lab.files" },
       show: { region: "main" },
     });

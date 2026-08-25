@@ -18,22 +18,13 @@ describe("dashboard workbench extension tree contributions", () => {
         label: "Lab",
         collapsible: false,
         nodes: [
-          expect.objectContaining({
-            id: "dashboard-workbench://project/project-1/extensions/lab",
+          {
+            id: "extension-lab.labPage",
             label: "Lab",
             icon: "flask-conical",
-            resource: expect.objectContaining({
-              kind: "extension-route",
-              uri: "dashboard-workbench://project/project-1/extensions/lab",
-              id: "lab",
-              label: "Lab",
-              metadata: expect.objectContaining({
-                extensionId: "pstdio.extension-lab",
-                routePath: "lab",
-                route: metadata.routes[0],
-              }),
-            }),
-          }),
+            canHide: true,
+            target: { kind: "view", viewId: "extension-lab.labPage" },
+          },
         ],
       },
     ]);
@@ -106,7 +97,7 @@ describe("dashboard workbench extension tree contributions", () => {
           icon: "square-kanban",
           group: null,
           placement: "first",
-          action: { kind: "panel", panelId: "pstdio-planner.tickets" },
+          action: { kind: "view", viewId: "pstdio-planner.tickets" },
         },
       ],
     } satisfies DashboardExtensionMetadata;
@@ -125,8 +116,9 @@ describe("dashboard workbench extension tree contributions", () => {
         collapsible: false,
         nodes: [
           expect.objectContaining({
-            id: "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
+            id: "pstdio-planner.tickets",
             label: "Tickets",
+            target: { kind: "view", viewId: "pstdio-planner.tickets" },
           }),
         ],
       },
@@ -134,9 +126,18 @@ describe("dashboard workbench extension tree contributions", () => {
     expect(sections[0]).not.toHaveProperty("label");
   });
 
-  test("maps a resource action onto the browse-root resource the tree item opens", () => {
+  test("maps a view action beside real resource actions", () => {
     const browseRootMetadata = {
       ...metadata,
+      panels: [
+        {
+          id: "pstdio-planner.tickets",
+          extensionId: "pstdio.planner",
+          title: "Tickets",
+          show: { region: "main" },
+          renderer: { kind: "kanban", id: "pstdio-planner.tickets" },
+        },
+      ],
       treeItems: [
         {
           id: "pstdio-planner.ticketsRoot",
@@ -145,10 +146,7 @@ describe("dashboard workbench extension tree contributions", () => {
           label: "Tickets",
           icon: "square-kanban",
           group: null,
-          action: {
-            kind: "resource",
-            resource: { type: "extension-view", id: "pstdio-planner.tickets" },
-          },
+          action: { kind: "view", viewId: "pstdio-planner.tickets" },
         },
         {
           id: "pstdio-planner.pinnedTicket",
@@ -172,19 +170,12 @@ describe("dashboard workbench extension tree contributions", () => {
     });
     const nodes = sections.flatMap((section) => section.nodes);
 
-    // The browse root keeps the canonical extension panel URI, so hierarchy
-    // parents, sidenav selection, and the tree item all share one identity.
     expect(nodes[0]).toEqual(
       expect.objectContaining({
-        id: "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
+        id: "pstdio-planner.tickets",
         label: "Tickets",
         icon: "square-kanban",
-        resource: expect.objectContaining({
-          kind: "extension-view",
-          uri: "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
-          id: "pstdio-planner.tickets",
-          metadata: expect.objectContaining({ extensionId: "pstdio.planner", projectId: "project-1" }),
-        }),
+        target: { kind: "view", viewId: "pstdio-planner.tickets" },
       }),
     );
     expect(nodes[1]).toEqual(

@@ -110,6 +110,7 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await page.goto(`/projects/${project.id}/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await row(sidenav, "Tickets").click();
   const nav = page.locator('[data-workbench-region="nav"]');
   const projectButton = nav.getByRole("button", { name: /PS-174 Sidenav$/ });
   await expect(projectButton).toBeVisible({ timeout: 30_000 });

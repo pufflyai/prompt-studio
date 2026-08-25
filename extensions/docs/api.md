@@ -27,7 +27,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.2"
+    "pstdio": "1.0.0-alpha.3"
   },
   "pstdio": {
     "scope": "user"
@@ -38,8 +38,8 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.2`, never a range: `^1.0.0-alpha.2` also
-  matches `1.0.0-alpha.2`, so a range would accept hosts the extension was never tested on. The host
+  is in alpha this is a plain version such as `1.0.0-alpha.3`, never a range: `^1.0.0-alpha.3` also
+  matches `1.0.0-alpha.3`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.
@@ -236,7 +236,7 @@ return {
     id: task.id,
     label: task.title,
     metadata: {
-      resourceParent: { type: "extension-view", id: "tasks", label: "Tasks" },
+      resourceParent: { type: "view", viewId: "planner.tasks" },
     },
   },
 };
@@ -394,13 +394,18 @@ when a hook should react to a command outcome.
 Dashboard UI contributions are declarative:
 
 - menus attach commands to targets such as `workbench.nav.actions` or `workbench.nav.overflow`; command palette entries use the command's own `palette` field
-- tree items attach routes, commands, panels, resources, or links to area-tree targets such as `workbench.left.tree`
+- tree items attach views, commands, resources, or links to area-tree targets such as `workbench.left.tree`
 - native renderers register Workbench trees, files, controls, tables, boards, and lists backed by callbacks
-- panels wrap webviews or native renderers and use `show` for default placement
+- panels wrap webviews or native renderers, use `show` for default placement, and may declare a deep-link `path`
 - resource kinds declare domain resources and named slots; resource panels bind only cross-extension panels to slots
 - modes declare placement overrides for slots and known panels in accepted resource kinds
 - status items contribute status-surface chrome
 - settings panels use webview package assets
+
+Resources identify domain objects such as tickets, workspaces, and sessions. Views identify openable UI. Every panel
+and route registers a view under its normalized contribution ID, such as `planner.tasks`. An optional panel or route
+`path` resolves to the same view and does not create a resource. The removed `extension-route` and `extension-view` resource kinds are read only
+by the bounded persistence migration and must not be used by current extensions.
 
 Native renderers are reusable contributions. Wrap one in a panel with `renderer`; that
 field is mutually exclusive with `webview`. Put placement for your own resource kind in
@@ -435,6 +440,7 @@ export default defineExtension({
   panels: {
     files: {
       title: "Files",
+      path: "files",
       show: { for: "ticket", region: "sidenav", required: true },
       renderer: { kind: "tree", id: "files" },
     },
@@ -461,7 +467,7 @@ Panel role comes from the resolved placement:
 
 - the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
 - other slots hold supporting panels; a slot with `external: true` accepts panels from other extensions
-- an owned panel uses `show`; a panel with no `show` can still be opened by a `treeItems` panel action or contributed to another extension's slot
+- an owned panel uses `show`; a panel with no `show` can still be opened by a `treeItems` view action or contributed to another extension's slot
 - a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
 
 Visibility can be limited with `when`:

@@ -10,6 +10,7 @@ export interface WorkbenchSubPanelRef {
 export interface WorkbenchLocationRef {
   key: string;
   modeId?: string;
+  viewId?: string;
   resource?: ResourceRef;
   contributionId?: string;
   instanceKey?: string;
@@ -56,9 +57,10 @@ export interface WorkbenchNavigationEntry {
   recordedAt: number;
   location: WorkbenchLocationRef;
   selectedSubPanels: Partial<Record<WorkbenchPanelRegion, WorkbenchSubPanelRef>>;
-  kind: "resource" | "widget" | "mode";
+  kind: "resource" | "view" | "widget" | "mode";
   modeId?: string;
   resource?: ResourceRef;
+  viewId?: string;
   widgetId?: string;
   contributionId?: string;
   title?: string;
@@ -75,7 +77,7 @@ export interface HistoryStoreState {
 }
 
 export interface PersistedWorkbenchHistory extends Omit<HistoryStoreState, "hydrating"> {
-  version: 1;
+  version: 1 | 2;
 }
 
 export interface WorkbenchHistoryPersistence {

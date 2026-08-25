@@ -154,8 +154,8 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
           target: {
             kind: "compound",
             targets: [
-              { kind: "panel", panel: "ticket" },
-              { kind: "panel", panel: "missing" },
+              { kind: "view", viewId: "ticket" },
+              { kind: "view", viewId: "missing" },
             ],
           },
         },
@@ -168,25 +168,12 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
       region: "main",
       rendererId: "test",
     });
-    workbench.layout.registerPanel({
-      id: "notes",
-      title: "Notes",
-      region: "main",
-      rendererId: "test",
-    });
-    workbench.commands.registerCommand(
-      { id: "workbench.extensionNavigation.openPanel", label: "Open panel" },
-      {
-        execute: (panelId) => {
-          opened.push(String(panelId));
-          workbench.layout.openPanel(String(panelId));
-        },
-      },
-    );
+    workbench.views.registerView({ id: "ticket", panelId: "ticket", title: "Ticket" });
+    workbench.views.onDidOpenView(({ viewId }) => opened.push(viewId));
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
 
     const results = await workbench.commandPaletteResources.queryProviders({ query: "compound", limit: 10 });
-    await expect(results[0]?.results[0]?.activate()).rejects.toThrow("Cannot open navigation Panel target: missing");
+    await expect(results[0]?.results[0]?.activate()).rejects.toThrow("Cannot open navigation view target: missing");
 
     expect(opened).toEqual([]);
   });

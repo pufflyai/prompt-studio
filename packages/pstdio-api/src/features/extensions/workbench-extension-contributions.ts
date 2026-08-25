@@ -199,10 +199,10 @@ const toTreeItemAction = (item: ExtensionRuntime["treeItems"][number]): Extensio
       args: action.params as Record<string, unknown> | undefined,
     };
   }
-  if (action.kind === "panel") {
+  if (action.kind === "view") {
     return {
-      kind: "panel",
-      panelId: resolveExtensionContributionId(item.name, action.panel),
+      kind: "view",
+      viewId: resolveExtensionContributionId(item.name, action.viewId),
     };
   }
   return action;

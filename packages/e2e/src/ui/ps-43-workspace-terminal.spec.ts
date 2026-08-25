@@ -10,16 +10,6 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
-    localStorage.setItem(
-      `dashboard-wb:last-resource:${selectedProjectId}`,
-      JSON.stringify({
-        kind: "dashboard-view",
-        uri: "dashboard-workbench://dashboard-view/workspaces",
-        id: "workspaces",
-        label: "Workspaces",
-        icon: "computer",
-      }),
-    );
   }, projectId);
 };
 
@@ -119,7 +109,7 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
 
     const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');

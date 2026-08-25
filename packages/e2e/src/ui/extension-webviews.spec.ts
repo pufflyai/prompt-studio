@@ -10,37 +10,12 @@ const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
   agentId = "pstdio.extension-lab.fake",
-  initialRoute?: WorkbenchExtensionMetadata["routes"][number],
 ) => {
   await page.addInitScript(
-    ({
-      currentProjectId,
-      currentAgentId,
-      currentInitialRoute,
-    }: {
-      currentProjectId: string;
-      currentAgentId: string;
-      currentInitialRoute?: WorkbenchExtensionMetadata["routes"][number];
-    }) => {
+    ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", currentAgentId);
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
-      if (currentInitialRoute) {
-        localStorage.setItem(
-          `dashboard-wb:last-resource:${currentProjectId}`,
-          JSON.stringify({
-            kind: "extension-route",
-            uri: `dashboard-workbench://project/${currentProjectId}/extensions/${currentInitialRoute.path}`,
-            id: currentInitialRoute.path,
-            label: "Lab",
-            metadata: {
-              projectId: currentProjectId,
-              routePath: currentInitialRoute.path,
-              route: currentInitialRoute,
-            },
-          }),
-        );
-      }
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -56,7 +31,7 @@ const bypassOnboarding = async (
         }),
       );
     },
-    { currentProjectId: projectId, currentAgentId: agentId, currentInitialRoute: initialRoute },
+    { currentProjectId: projectId, currentAgentId: agentId },
   );
 };
 
@@ -127,7 +102,7 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
 };
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}`);
+  await page.goto(`/projects/${projectId}/lab`);
 };
 
 test.describe("Extension webviews", () => {
@@ -158,7 +133,7 @@ test.describe("Extension webviews", () => {
       })
       .toBe(200);
 
-    await bypassOnboarding(page, project.id, undefined, labRoute);
+    await bypassOnboarding(page, project.id);
     // Short enough that the trimmed Lab page still overflows and can scroll.
     await page.setViewportSize({ width: 1280, height: 420 });
 
@@ -185,7 +160,9 @@ test.describe("Extension webviews", () => {
     await expect.poll(() => labBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
 
     await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(page.getByRole("link", { name: "Lab", exact: true })).toBeVisible();
     await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
@@ -216,7 +193,7 @@ test.describe("Extension webviews", () => {
     const metadata = await fetchMetadata(request, project.id);
     const labRoute = metadata.routes.find((route) => route.path === "lab");
     expect(labRoute).toBeDefined();
-    await bypassOnboarding(page, project.id, undefined, labRoute);
+    await bypassOnboarding(page, project.id);
 
     await openExtensionLab(page, project.id);
     const labFrame = page.frameLocator('iframe[title="Lab"]');
@@ -272,7 +249,7 @@ test.describe("Extension webviews", () => {
     const terminalTabList = secondaryHeader.getByRole("tablist");
     const terminalTabs = terminalTabList.getByRole("tab");
     const addTerminal = async () => {
-      await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+      await expect(page.getByRole("region", { name: "Main", exact: true })).toBeVisible();
       const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
       if (await showSecondary.isVisible()) await showSecondary.click();
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();

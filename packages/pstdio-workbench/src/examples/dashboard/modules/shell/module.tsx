@@ -1,10 +1,9 @@
 import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchModuleContribution } from "../../../../core";
-import { dashboardResources } from "../../shared/mock-data/resources";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
 import { DashboardSidenavHeader } from "./components/dashboard-sidenav-header";
-import { ExtensionRouteWidget } from "./components/extension-route-widget";
+import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { StatusWidget } from "./components/status-widget";
 import { registerProjectNavigation } from "./project-nav";
 
@@ -12,10 +11,8 @@ const SIDENAV_HEADER_WIDGET_ID = "dashboard.sidenavHeader";
 
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
-  { kind: "dashboard-view", label: "Dashboard view", icon: "square-kanban" },
   { kind: "ticket", label: "Ticket", icon: "component" },
   { kind: "workspace", label: "Workspace", icon: standardResourceIcons.workspace },
-  { kind: "extension-route", label: "Extension route", icon: "PanelLeft" },
 ] as const;
 
 const registerChrome = (ctx: WorkbenchModuleContext) => {
@@ -49,18 +46,18 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
 
   ctx.layout.registerPanel(
     {
-      id: dashboardWidgetIds.extensionRoute,
-      title: "Extension route",
+      id: dashboardWidgetIds.extensionPage,
+      title: "Extension page",
       region: "main",
       singleton: true,
-      rendererId: dashboardWidgetIds.extensionRoute,
+      rendererId: dashboardWidgetIds.extensionPage,
       priority: 70,
     },
     { priority: 70 },
   );
   ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.extensionRoute,
-    render: (input) => <ExtensionRouteWidget input={input} />,
+    id: dashboardWidgetIds.extensionPage,
+    render: (input) => <ExtensionViewWidget input={input} />,
   });
 
   ctx.layout.openPanel(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
@@ -68,7 +65,7 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
 };
 
 // The shell slice: the project brand and status bar, the global
-// command palette, the project navigation mode, and extension-route surfaces.
+// command palette, the project navigation mode, and extension views.
 export const createShellModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.shell",
   activate(ctx) {
@@ -87,39 +84,18 @@ export const createShellModule = (): WorkbenchModuleContribution => ({
       },
     });
 
-    ctx.resources.registerProvider({
-      id: "dashboard-workbench.dashboard-views",
-      kind: "dashboard-view",
-      list: () => [
-        { resource: dashboardResources.tickets, group: "Dashboard" },
-        { resource: dashboardResources.workspaces, group: "Dashboard" },
-        { resource: dashboardResources.sessions, group: "Dashboard" },
-      ],
-    });
-
-    ctx.resources.registerProvider({
-      id: "dashboard-workbench.extension-routes",
-      kind: "extension-route",
-      list: () => [
-        { resource: dashboardResources.lab, group: "Extensions" },
-        { resource: dashboardResources.repoHealth, group: "Extensions" },
-        { resource: dashboardResources.changelog, group: "Extensions" },
-      ],
-    });
-
-    ctx.resources.registerPresenter({
-      id: "dashboard.shell.extension-route-presenter",
-      priority: 1000,
-      canOpen: (resource) => resource.kind === "extension-route",
-      open: (resource, input) => {
-        ctx.modes.setActiveMode("project");
-        setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openPanel(dashboardWidgetIds.extensionRoute, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-          resource,
-          title: resource.label,
-        });
-      },
-    });
+    for (const view of [dashboardViews.lab, dashboardViews.repoHealth, dashboardViews.changelog]) {
+      ctx.views.registerView({
+        id: view.id,
+        panelId: dashboardWidgetIds.extensionPage,
+        title: view.label,
+        icon: view.icon,
+        resolveInput: (input) => {
+          ctx.modes.setActiveMode("project");
+          ctx.breadcrumbs.setItems([{ title: view.label, icon: view.icon }]);
+          return input;
+        },
+      });
+    }
   },
 });

@@ -33,6 +33,7 @@ export interface CliContribution {
 export interface WhenExpression {
   mode?: string | string[];
   source?: CommandSource[];
+  viewId?: string | string[];
   resourceType?: string[];
   metadata?: JsonObject;
 }
@@ -85,8 +86,7 @@ export interface TreeItemContribution<TParams extends Struct = Struct> {
         command: CommandRef<TParams, unknown> | string;
         params?: Partial<TParams>;
       }
-    | { kind: "panel"; panel: string }
-    | { kind: "route"; route: string }
+    | { kind: "view"; viewId: string }
     | { kind: "resource"; resource: ResourceRef }
     | { kind: "href"; href: string };
 }
@@ -140,6 +140,8 @@ type PanelBody =
 
 export interface PanelContributionBase {
   title: Localizable<string>;
+  /** Optional project-relative deep-link path for opening this panel as a view. */
+  path?: string;
   /** Icon shown on the panel's tab and on resources opened for the panel. */
   icon?: string;
   /** Default placement for resource kinds owned by this extension, or for its modes. */

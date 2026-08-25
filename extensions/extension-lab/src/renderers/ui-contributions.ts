@@ -202,7 +202,7 @@ export const labTreeItems = {
     group: "Lab",
     label: l10n("routes.faulty.label", "Lab (faulty)"),
     icon: "flask-conical-off",
-    action: { kind: "route", route: "lab-faulty" },
+    action: { kind: "view", viewId: "faultyPage" },
   },
 } satisfies NonNullable<ExtensionDefinition["treeItems"]>;
 

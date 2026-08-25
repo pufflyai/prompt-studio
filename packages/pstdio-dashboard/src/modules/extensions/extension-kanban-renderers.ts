@@ -24,6 +24,7 @@ import {
   type DashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
+import { extensionViewResolveInput } from "./extension-mode-layout";
 import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 type ExtensionKanbanRendererRecord = WorkbenchExtensionKanbanRendererRecord;
@@ -245,6 +246,12 @@ export const registerExtensionKanbanRenderers = (
   };
 
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
+    resolveViewInput: (panel) =>
+      extensionViewResolveInput(ctx, {
+        id: panel.id,
+        title: resolveLocalizableString(panel.title, panel.extensionId),
+        icon: panel.icon,
+      }),
     decorateAttribute: (_, attribute) => decorateAttribute({ attribute, openResource, projectId }),
     resolveRowResource: (_, row) => toWorkbenchResource(row.resource, projectId),
     resolveRowActionResource: (record, row) => synthesizeRowResource(record, row, projectId),

@@ -12,7 +12,7 @@ describe("font editor extension", () => {
     });
     expect(extension.treeItems?.fontEditor).toMatchObject({
       target: "workbench.left.tree",
-      action: { kind: "route", route: "font-editor" },
+      action: { kind: "view", viewId: "fontEditor" },
     });
     expect(extension.skills?.fontEditor).toMatchObject({
       source: { path: "./skills/font-editor" },

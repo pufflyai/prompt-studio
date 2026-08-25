@@ -117,7 +117,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       return contribution
         ? (sidePanelRegionIds.has(region)
             ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement)) &&
+            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement, {
+                location: activeLocationPanel,
+              })) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,

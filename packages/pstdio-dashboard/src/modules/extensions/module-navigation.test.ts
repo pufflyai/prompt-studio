@@ -5,6 +5,7 @@ import {
   getDashboardActiveCollection,
   getDashboardSelectedResource,
   selectDashboardNavigationResource,
+  selectDashboardNavigationView,
 } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import {
@@ -25,23 +26,15 @@ test("restores extension route navigation after leaving a global collection", as
 
   try {
     await flushMicrotasks();
-    selectDashboardNavigationResource(workbench, {
-      kind: "dashboard-view",
-      uri: "dashboard-workbench://projects/project-1/sessions",
-      id: "sessions",
-      label: "Sessions",
-    });
+    selectDashboardNavigationView(workbench, "sessions");
+    expect(getDashboardActiveCollection(workbench)).toBe("sessions");
 
-    const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
-    const persistedLabResource = {
-      ...labResource!,
-      metadata: { projectId: "project-1", routePath: "lab" },
-    };
-    await workbench.resources.openResource(persistedLabResource);
+    await workbench.views.openView("extension-lab.labPage");
 
     expect(getDashboardActiveCollection(workbench)).toBeUndefined();
-    expect(getDashboardSelectedResource(workbench)?.uri).toBe(labResource?.uri);
-    expect(getDashboardSelectedResource(workbench)?.metadata?.route).toEqual(metadata.routes[0]);
+    expect(getDashboardSelectedResource(workbench)).toBeUndefined();
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("extension-lab.labPage");
+    expect(getCachedDashboardExtensionMetadata("project-1")?.routes[0]).toEqual(metadata.routes[0]);
   } finally {
     disposable.dispose();
     clearCachedDashboardExtensionMetadata("project-1");
@@ -58,7 +51,7 @@ test("panel tree navigation leaves ticket detail state through a project resourc
         extensionId: "pstdio.extension-lab",
         target: "workbench.left.tree",
         label: "Board",
-        action: { kind: "panel", panelId: "extension-lab.board" },
+        action: { kind: "view", viewId: "extension-lab.board" },
       },
     ],
     panels: [
@@ -109,16 +102,22 @@ test("panel tree navigation leaves ticket detail state through a project resourc
       projectId: "project-1",
       target: "workbench.left.tree",
     });
-    const board = sections[0]!.nodes[0]!.resource!;
-    await workbench.resources.openResource(board, { replaceActive: true });
+    const board = sections[0]!.nodes[0]!.target!;
+    await workbench.navigation.openTarget(board);
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(getDashboardSelectedResource(workbench)?.uri).toBe(board.uri);
-    expect(workbench.getPrimaryResource()?.uri).toBe(board.uri);
+    expect(getDashboardSelectedResource(workbench)).toBeUndefined();
+    expect(workbench.getPrimaryResource()).toBeUndefined();
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("extension-lab.board");
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Board"]);
-    expect(workbench.history.store.getState().entries.map((entry) => entry.resource?.uri)).toEqual([
-      ticket.uri,
-      board.uri,
+    expect(
+      workbench.history.store.getState().entries.map((entry) => ({
+        resourceUri: entry.resource?.uri,
+        viewId: entry.viewId,
+      })),
+    ).toEqual([
+      { resourceUri: ticket.uri, viewId: undefined },
+      { resourceUri: undefined, viewId: "extension-lab.board" },
     ]);
   } finally {
     disposable.dispose();
@@ -130,6 +129,13 @@ test("ticket breadcrumbs include the Tickets browse root", async () => {
   const workbench = createWorkbenchCore();
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+  workbench.layout.registerPanel({ id: "tickets", title: "Tickets", region: "main", rendererId: "test" });
+  workbench.views.registerView({
+    id: "pstdio-planner.tickets",
+    panelId: "tickets",
+    title: "Tickets",
+    icon: "square-kanban",
+  });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata: mock(async () => metadata) }));
 
@@ -144,10 +150,8 @@ test("ticket breadcrumbs include the Tickets browse root", async () => {
         projectId: "project-1",
         shorthand: "PS-1",
         resourceParent: {
-          type: "extension-view",
-          id: "pstdio-planner.tickets",
-          label: "Tickets",
-          icon: "square-kanban",
+          type: "view",
+          viewId: "pstdio-planner.tickets",
         },
       },
     };
@@ -155,9 +159,8 @@ test("ticket breadcrumbs include the Tickets browse root", async () => {
 
     const items = workbench.breadcrumbs.getItems();
     expect(items?.map((item) => item.title)).toEqual(["Tickets", "PS-1 Ticket"]);
-    expect(items?.[0]?.resource?.uri).toBe(
-      "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
-    );
+    expect(items?.[0]?.resource).toBeUndefined();
+    expect(items?.[0]?.onClick).toBeFunction();
   } finally {
     disposable.dispose();
     clearCachedDashboardExtensionMetadata("project-1");

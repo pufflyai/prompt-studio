@@ -19,8 +19,7 @@ export const metadata = {
       label: "Lab: Say hello",
       icon: "flask-conical",
       when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+        viewId: "extension-lab.labPage",
       },
     },
     {
@@ -31,8 +30,7 @@ export const metadata = {
       target: "workbench.nav.overflow",
       label: "Bump lab counter",
       when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+        viewId: "extension-lab.labPage",
       },
     },
   ],
@@ -59,7 +57,7 @@ export const metadata = {
       group: "Lab",
       label: "Lab",
       icon: "flask-conical",
-      action: { kind: "route", route: "lab" },
+      action: { kind: "view", viewId: "extension-lab.labPage" },
     },
   ],
   panels: [],
@@ -140,7 +138,7 @@ export const metadataWithTickets = {
       target: "workbench.left.tree",
       label: "Tickets",
       icon: "square-kanban",
-      action: { kind: "panel", panelId: "pstdio-core-tickets.tickets" },
+      action: { kind: "view", viewId: "pstdio-core-tickets.tickets" },
     },
   ],
   modes: [],

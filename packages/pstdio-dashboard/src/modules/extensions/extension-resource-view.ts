@@ -9,7 +9,6 @@ import type { ExecuteDashboardExtensionCommand } from "./extension-command-handl
 import { isSidenavResourceTree, type ResourcePanelBinding } from "./extension-composition";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 import { resourceFromQueryValue } from "./extension-resource-query";
-import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
 const outcomeValueId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
@@ -31,15 +30,14 @@ const resourceLabelFromOutcomeValue = (value: unknown) => {
 
 type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
 
-const widgetIdFor = (binding: ResourcePanelBinding) => extensionViewWidgetIdFor(binding.panel);
+const widgetIdFor = (binding: ResourcePanelBinding) => binding.panel.id;
 
 const companionViewTitle = (binding: ResourcePanelBinding, resource: ResourceRef) =>
   binding.region === "sidenav" || binding.region === "main-left-menu"
     ? (resource.label ?? binding.panel.title)
     : binding.panel.title;
 
-const panelMenuWidgetIdFor = (menu: NonNullable<ExtensionPanelRecord["panelMenus"]>[number]) =>
-  menu.webview ? extensionViewWidgetIdFor(menu) : menu.id;
+const panelMenuWidgetIdFor = (menu: NonNullable<ExtensionPanelRecord["panelMenus"]>[number]) => menu.id;
 
 const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId: string }) =>
   group.primary?.panel.extensionId === event.extensionId ||

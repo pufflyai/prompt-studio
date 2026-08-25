@@ -4,7 +4,7 @@ import type {
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
 import { isLocalizedString, type Localizable } from "@pstdio/sdk/extensions";
-import type { Command, MenuItem, MenuPath, ResourceBrowseEntry, ResourceRef } from "../../core";
+import type { Command, MenuItem, MenuPath } from "../../core";
 
 export type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 
@@ -13,12 +13,6 @@ const placementOrder = { first: 0, default: 1, last: 2 } satisfies Record<
   number
 >;
 type ExtensionContributionPlacement = keyof typeof placementOrder;
-
-export type WorkbenchExtensionRoute = WorkbenchExtensionMetadata["routes"][number];
-
-export interface WorkbenchExtensionRouteResourceInput {
-  route: WorkbenchExtensionRoute;
-}
 
 export interface WorkbenchExtensionMenuSlotConfig {
   menuPath: MenuPath;
@@ -199,16 +193,4 @@ export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
   });
 
   return registrations;
-};
-
-export const buildWorkbenchExtensionRouteEntries = (input: {
-  metadata: WorkbenchExtensionMetadata | undefined;
-  createResource: (resourceInput: WorkbenchExtensionRouteResourceInput) => ResourceRef;
-}) => {
-  const { createResource, metadata } = input;
-  if (!metadata) return [] as ResourceBrowseEntry[];
-
-  return metadata.routes.map((route) => ({
-    resource: createResource({ route }),
-  }));
 };

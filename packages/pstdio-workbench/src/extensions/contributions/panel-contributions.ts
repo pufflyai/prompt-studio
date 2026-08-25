@@ -5,6 +5,7 @@ import type {
   WorkbenchModuleContext,
   WorkbenchPanelContribution,
   WorkbenchPanelMenuDefinition,
+  WorkbenchViewContribution,
 } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
@@ -15,6 +16,9 @@ type ExtensionResourcePanels = WorkbenchExtensionMetadata["resourcePanels"];
 
 export interface RegisterWorkbenchExtensionPanelInput {
   contribution: WorkbenchPanelContribution;
+  path?: string;
+  aliases?: readonly string[];
+  resolveInput?: WorkbenchViewContribution["resolveInput"];
   workbench: WorkbenchModuleContext;
 }
 
@@ -100,8 +104,30 @@ export const toWorkbenchPanelMenus = (
     priority: menuPlacementBasePriority[menu.placement ?? "default"] - (declarationOffset + index),
   }));
 
-export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable =>
-  input.workbench.layout.registerPanel(input.contribution);
+export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable => {
+  const panel = input.workbench.layout.registerPanel(input.contribution);
+  let view: Disposable;
+  try {
+    view = input.workbench.views.registerView({
+      id: input.contribution.id,
+      panelId: input.contribution.id,
+      title: input.contribution.title,
+      icon: input.contribution.icon,
+      path: input.path,
+      aliases: input.aliases,
+      resolveInput: input.resolveInput,
+    });
+  } catch (error) {
+    panel.dispose();
+    throw error;
+  }
+  return {
+    dispose() {
+      view.dispose();
+      panel.dispose();
+    },
+  };
+};
 
 export const panelRendererId = (
   panel: ExtensionPanelRecord,

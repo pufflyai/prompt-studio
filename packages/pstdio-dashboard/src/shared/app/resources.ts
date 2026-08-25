@@ -19,8 +19,8 @@ export const createDashboardResource = (
     metadata: { ...metadata, favoriteScope: { scope: "project", projectId } },
   }) satisfies ResourceRef;
 
-export const dashboardResources = {
-  start: createDashboardResource("dashboard-view", "start", "Start", "House"),
-  workspaces: createDashboardResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
-  sessions: createDashboardResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
+export const dashboardViews = {
+  start: { id: "start", label: "Start", icon: "House" },
+  workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
+  sessions: { id: "sessions", label: "Sessions", icon: "MessageCircle" },
 } as const;

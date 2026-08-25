@@ -94,7 +94,12 @@ export const buildUpdatedPlacement = (
   update: OpenWidgetInput,
 ): WorkbenchWidgetPlacement => {
   const next: WorkbenchWidgetPlacement = { ...placement };
-  if (update.resource) {
+  if (update.viewId !== undefined) next.viewId = update.viewId ?? undefined;
+  if (update.resource === null) {
+    next.resource = undefined;
+    next.resourceUri = undefined;
+    next.title = update.title ?? widget.title;
+  } else if (update.resource) {
     next.resource = update.resource;
     next.resourceUri = update.resource.uri;
     next.title = update.title ?? update.resource.label ?? widget.title;
@@ -120,9 +125,10 @@ export const createPlacement = (
 ): WorkbenchWidgetPlacement => ({
   widgetId,
   contributionId: widget.id,
+  viewId: spec.viewId ?? undefined,
   ownerId: spec.ownerId ?? widget.ownerId,
   source: spec.source ?? widget.source,
-  resource: spec.resource,
+  resource: spec.resource ?? undefined,
   resourceUri: spec.resource?.uri,
   title: spec.title ?? spec.resource?.label ?? widget.title,
   pinned: spec.pinned,

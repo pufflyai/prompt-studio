@@ -32,12 +32,7 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
       label: "T-1",
       metadata: {
         shorthand: "T-1",
-        resourceParent: {
-          type: "extension-view",
-          id: "pstdio-planner.tickets",
-          label: "Tickets",
-          icon: "square-kanban",
-        },
+        resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
       },
     },
   ],
@@ -168,12 +163,7 @@ describe("runTicketsQuery workspace badges", () => {
               label: "T-2",
               metadata: {
                 shorthand: "T-2",
-                resourceParent: {
-                  type: "extension-view",
-                  id: "pstdio-planner.tickets",
-                  label: "Tickets",
-                  icon: "square-kanban",
-                },
+                resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
               },
             },
           ],
@@ -201,12 +191,7 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           metadata: {
             shorthand: "T-1",
-            resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              icon: "square-kanban",
-            },
+            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
           },
         },
       },
@@ -222,12 +207,7 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           metadata: {
             shorthand: "T-1",
-            resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              icon: "square-kanban",
-            },
+            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
           },
         },
       },
@@ -278,12 +258,7 @@ describe("runTicketsQuery workspace badges", () => {
               label: "T-1 Parent",
               metadata: {
                 shorthand: "T-1",
-                resourceParent: {
-                  type: "extension-view",
-                  id: "pstdio-planner.tickets",
-                  label: "Tickets",
-                  icon: "square-kanban",
-                },
+                resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
               },
             },
           },

@@ -2,7 +2,10 @@ import { expect, mock, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import {
+  clearCachedDashboardExtensionMetadata,
+  getCachedDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createExtensionsModule } from "./module";
 import { flushMicrotasks, metadata, metadataWithTickets } from "./module-test-fixtures";
@@ -66,7 +69,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
   try {
     await flushMicrotasks();
 
-    expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
+    expect(workbench.views.getView("extension-lab.labPage")).toBeDefined();
     expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(
       (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
@@ -78,7 +81,7 @@ test("preserves extension contributions when a same-project metadata refresh fai
     getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
     await flushMicrotasks();
 
-    expect(workbench.resources.listResources("").some((entry) => entry.resource.id === "lab")).toBe(true);
+    expect(workbench.views.getView("extension-lab.labPage")).toBeDefined();
     expect(workbench.resources.getKind("ticket")).toBeDefined();
     expect(
       (await getSidenavContributionSections(workbench, "project")).flatMap((section) =>
@@ -115,8 +118,7 @@ test("refreshes an open extension route when metadata changes", async () => {
   try {
     await flushMicrotasks();
 
-    const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
-    await workbench.resources.openResource(labResource!);
+    await workbench.views.openView("extension-lab.labPage");
 
     nextMetadata = routeWithModuleUrl(
       "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=2",
@@ -124,8 +126,11 @@ test("refreshes an open extension route when metadata changes", async () => {
     getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
     await flushMicrotasks();
 
-    const placement = workbench.layout.getLayout().regions.main.widgets.find((widget) => widget.resource?.id === "lab");
-    expect(placement?.resource?.metadata?.route).toMatchObject({
+    const placement = workbench.layout
+      .getLayout()
+      .regions.main.widgets.find((widget) => widget.viewId === "extension-lab.labPage");
+    expect(placement?.resource).toBeUndefined();
+    expect(getCachedDashboardExtensionMetadata("project-1")?.routes[0]).toMatchObject({
       webview: expect.objectContaining({
         moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=2",
       }),

@@ -8,7 +8,7 @@ import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
 } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 
@@ -52,7 +52,9 @@ export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput }) => {
             minW="0"
             justifyContent="flex-start"
             onClick={() => {
-              void input.workbench.resources.openResource(dashboardResources.start, { replaceActive: true });
+              void input.workbench.views.openView(dashboardViews.start.id, {
+                strategy: { kind: "replace-active" },
+              });
             }}
             {...projectButtonInteraction}
           >

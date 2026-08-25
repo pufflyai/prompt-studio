@@ -42,7 +42,6 @@ test("renders a ticket's left tree and mirrors its file selection in the Sidenav
   const workbench = createWorkbenchCore();
 
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const sidenavDisposable = registerDashboardSidenav(workbench);
   // Opening a ticket keeps the mode the user is in, so the ambient project mode is active

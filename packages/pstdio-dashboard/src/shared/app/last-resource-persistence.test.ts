@@ -60,6 +60,26 @@ describe("createDashboardLastResourcePersistence", () => {
     expect(storage.getItem("demo:last-resource:global")).toBeNull();
   });
 
+  test("holds a legacy synthetic view for bootstrap and clears it after one restore", () => {
+    const storage = createStorage();
+    const projectSelection = createProjectSelection("project-a");
+    const legacyView = {
+      kind: "extension-route",
+      uri: "dashboard-workbench://project/project-a/extensions/font-editor",
+      id: "font-editor",
+      metadata: { routePath: "/font-editor" },
+    };
+    storage.setItem(dashboardLastResourceStorageKey("demo", "project-a"), JSON.stringify(legacyView));
+    const persistence = createDashboardLastResourcePersistence({ namespace: "demo", storage, projectSelection });
+
+    expect(persistence.getLastResource()).toBeUndefined();
+    expect(persistence.getLegacyViewResource()).toEqual(legacyView);
+
+    persistence.clearLegacyViewResource();
+    expect(persistence.getLegacyViewResource()).toBeUndefined();
+    expect(storage.getItem(dashboardLastResourceStorageKey("demo", "project-a"))).toBeNull();
+  });
+
   test("clearing a resource only affects the active project", () => {
     const storage = createStorage();
     const projectSelection = createProjectSelection("project-a");

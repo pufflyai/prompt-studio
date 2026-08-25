@@ -66,7 +66,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             rows: {
               target: "workbench.left.tree",
               label: "Rows",
-              action: { kind: "panel", panel: "rows" },
+              action: { kind: "view", viewId: "rows" },
             },
           },
           treeRenderers: {
@@ -80,6 +80,7 @@ describe("createWorkbenchExtensionMetadata", () => {
           panels: {
             rows: {
               title: "Rows",
+              path: "rows",
               show: { region: "main" },
               renderer: { kind: "kanban", id: "rows" },
             },
@@ -130,6 +131,7 @@ describe("createWorkbenchExtensionMetadata", () => {
           id: "lab.files",
           renderer: { kind: "tree", id: "lab.files" },
         }),
+        expect.objectContaining({ id: "lab.rows", path: "rows" }),
       ]),
     );
     expect(metadata.routes[0]).toMatchObject({
@@ -153,7 +155,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     });
     expect(metadata.treeItems?.[0]).toMatchObject({
       id: "lab.rows",
-      action: { kind: "panel", panelId: "lab.rows" },
+      action: { kind: "view", viewId: "lab.rows" },
     });
     expect(metadata.settingsDefinitions?.[0]).toMatchObject({ key: "enabled", default: true });
     expect(metadata.modes[0]).toMatchObject({

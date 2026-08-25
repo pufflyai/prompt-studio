@@ -84,24 +84,14 @@ describe("packaged extension webviews", () => {
             }
           });
           await page.addInitScript(
-            ({ projectId, route }) => {
+            ({ projectId }) => {
               localStorage.setItem("onboarding-complete", "true");
               localStorage.setItem("dashboard-wb:selected-project:global", projectId);
-              localStorage.setItem(
-                `dashboard-wb:last-resource:${projectId}`,
-                JSON.stringify({
-                  id: route.path,
-                  kind: "extension-route",
-                  label: "Lab",
-                  metadata: { projectId, route, routePath: route.path },
-                  uri: `dashboard-workbench://project/${projectId}/extensions/${route.path}`,
-                }),
-              );
             },
-            { projectId: project.id, route: labRoute! },
+            { projectId: project.id },
           );
 
-          await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
+          await page.goto(`${started.baseUrl}/projects/${project.id}/lab`, { waitUntil: "domcontentloaded" });
           const iframe = page.locator('iframe[title="Lab"]');
           await iframe.waitFor({ state: "visible", timeout: 30_000 });
           expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");

@@ -34,7 +34,7 @@ const installed = {
     name: "pstdio-planner",
     displayName: "Prompt Studio Planner",
     version: "0.8.0",
-    enginesPstdio: "1.0.0-alpha.2",
+    enginesPstdio: "1.0.0-alpha.3",
   },
   source: {
     kind: "named" as const,

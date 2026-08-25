@@ -34,7 +34,7 @@ const createFilesExtension = () => {
       displayName: "PS-256 Files",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.2" },
+      engines: { pstdio: "1.0.0-alpha.3" },
       type: "module",
     }),
   );

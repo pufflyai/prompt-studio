@@ -93,6 +93,13 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
       widgetId: legacyWidgetId,
       contributionId: legacyWidgetId,
       pinned: true,
+      resource: {
+        kind: "extension-view",
+        id: nativePanel!.id,
+        uri: "resource://legacy",
+        label: nativePanel!.title,
+        metadata: { extensionId: nativePanel!.extensionId },
+      },
       resourceUri: "resource://legacy",
       tabRetention: "persistent",
     },
@@ -137,12 +144,14 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   );
   expect(migratedPlacement).toMatchObject({
     pinned: true,
-    resourceUri: "resource://legacy",
+    viewId: nativePanel!.id,
     tabRetention: "persistent",
   });
+  expect(migratedPlacement.resource).toBeUndefined();
+  expect(migratedPlacement.resourceUri).toBeUndefined();
   expect(migrated.layout.activeWidgetId).toBe(nativePanel!.id);
   expect(migrated.layout.activeLocationWidgetId).toBe(nativePanel!.id);
-  expect(migrated.layout.locationSubPanelSelections["resource://legacy"]).toEqual({
+  expect(migrated.layout.locationSubPanelSelections[`${nativePanel!.id}:${nativePanel!.id}`]).toEqual({
     [nativePanelRegion]: nativePanel!.id,
   });
 

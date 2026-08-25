@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 
 describe("toWorkbenchNavigationTarget", () => {
-  test("maps panel replace-invoking to a host-owned panel replacement", () => {
+  test("maps view replace-invoking to a host-owned panel replacement strategy", () => {
     expect(
       toWorkbenchNavigationTarget(
-        { kind: "panel", panel: "ticketInspector", input: { strategy: "replace-invoking" } },
+        { kind: "view", viewId: "ticketInspector", input: { strategy: "replace-invoking" } },
         { sourcePlacement: { instanceId: "panel-1" } },
       ),
     ).toEqual({
-      kind: "panel",
-      panelId: "ticketInspector",
+      kind: "view",
+      viewId: "ticketInspector",
       input: { strategy: { kind: "replace-panel", instanceId: "panel-1" } },
     });
   });
@@ -58,7 +58,11 @@ describe("toWorkbenchNavigationTarget", () => {
 
   test("rejects replace-invoking without source placement", () => {
     expect(() =>
-      toWorkbenchNavigationTarget({ kind: "panel", panel: "ticketInspector", input: { strategy: "replace-invoking" } }),
+      toWorkbenchNavigationTarget({
+        kind: "view",
+        viewId: "ticketInspector",
+        input: { strategy: "replace-invoking" },
+      }),
     ).toThrow("replace-invoking requires a live source placement.");
   });
 });

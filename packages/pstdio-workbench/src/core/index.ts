@@ -250,6 +250,7 @@ export type {
   NavigationTargetItem,
   NavigationTargetPanel,
   NavigationTargetResource,
+  NavigationTargetView,
   RegisteredNavigationParser,
   RegisteredResourceNavigator,
   ResourceNavigator,
@@ -400,12 +401,15 @@ export type {
   ResourceRef,
   ResourceRegistry,
   ResourceSurface,
+  WorkbenchHierarchyNode,
+  WorkbenchViewHierarchyNode,
 } from "./registries/resources/resource-registry";
 export {
   createResourceRegistry,
   createWorkbenchResourceContextValues,
   createWorkbenchSelectionResourceMetadata,
   getWorkbenchSelectionResourceUris,
+  isWorkbenchViewHierarchyNode,
   resourceHierarchyCycleCode,
   workbenchResourceIdContextKey,
   workbenchResourceKindContextKey,
@@ -446,6 +450,16 @@ export type {
 } from "./registries/themes/theme-contracts";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
 export { createThemeRegistry } from "./registries/themes/theme-registry";
+export type {
+  CreateWorkbenchViewRegistryInput,
+  OpenWorkbenchViewInput,
+  RegisteredWorkbenchView,
+  WorkbenchViewContribution,
+  WorkbenchViewOpenEvent,
+  WorkbenchViewRegistry,
+  WorkbenchViewRegistryStoreState,
+} from "./registries/views/view-registry";
+export { createViewRegistry, workbenchViewIdContextKey } from "./registries/views/view-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService, matchesContextExpression } from "./shared/context/context-key-service";
 export type {

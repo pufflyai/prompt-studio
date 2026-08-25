@@ -1,7 +1,6 @@
 import type { WorkbenchRegion } from "@pstdio/workbench";
 import { createWorkbenchCompositionRegistry, toPanelPlacements } from "@pstdio/workbench/extensions";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type ExtensionPanelRecord = DashboardExtensionMetadata["panels"][number];
 type ExtensionModeRecord = DashboardExtensionMetadata["modes"][number];
@@ -22,7 +21,7 @@ const panelPlacements = (panel: ExtensionPanelRecord | undefined) => {
 };
 
 const widgetIdsByPanelId = (panels: readonly ExtensionPanelRecord[]) =>
-  new Map(panels.map((panel) => [panel.id, extensionViewWidgetIdFor(panel)]));
+  new Map(panels.map((panel) => [panel.id, panel.id]));
 
 const widgetIdOf = (panelId: string, widgetIds: Map<string, string>) => widgetIds.get(panelId) ?? panelId;
 
@@ -46,9 +45,6 @@ const toWidgetRecipes = (resources: Record<string, ExtensionModeRecipe> | undefi
       )
     : undefined;
 
-// The dashboard registers extension panel widgets under its own widget-id scheme, and
-// the composition resolver places panels by opening the ids it was given. So the
-// composition it sees speaks widget ids while the manifest speaks panel ids.
 export const createExtensionCompositionRegistry = (metadata: DashboardExtensionMetadata) => {
   const widgetIds = widgetIdsByPanelId(metadata.panels);
   const registry = createWorkbenchCompositionRegistry();

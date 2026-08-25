@@ -19,7 +19,7 @@ const extension = defineExtension({
       group: "Tools",
       label: l10n("routes.fontEditor.label", "Font editor"),
       icon: "case-upper",
-      action: { kind: "route", route: "font-editor" },
+      action: { kind: "view", viewId: "fontEditor" },
     },
   },
   artifactMounts: {

@@ -18,8 +18,7 @@ export const extensionLabMetadata = {
       label: "Lab: Say hello",
       icon: "flask-conical",
       when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+        viewId: "extension-lab.labPage",
       },
     },
     {
@@ -30,8 +29,7 @@ export const extensionLabMetadata = {
       label: "Bump lab counter",
       icon: "plus",
       when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+        viewId: "extension-lab.labPage",
       },
     },
     {
@@ -57,7 +55,7 @@ export const extensionLabMetadata = {
       target: "workbench.left.tree",
       group: "Lab",
       label: "Lab",
-      action: { kind: "route", route: "lab" },
+      action: { kind: "view", viewId: "extension-lab.labPage" },
       icon: "flask-conical",
       when: { mode: "project" },
     },

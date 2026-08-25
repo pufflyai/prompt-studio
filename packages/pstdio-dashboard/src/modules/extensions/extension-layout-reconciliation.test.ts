@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchLayout, WorkbenchRegion } from "@pstdio/workbench";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { legacyExtensionViewWidgetId } from "./extension-layout-legacy-aliases";
 import { createExtensionLayoutCompatibility, reconcileExtensionLayout } from "./extension-layout-reconciliation";
-import { extensionViewWidgetId } from "./extension-view-placement";
 
 const nativePanel = {
   id: "extension-lab.overview",
@@ -114,8 +114,8 @@ describe("extension layout reconciliation", () => {
     const previousCompatibility = createExtensionLayoutCompatibility(createMetadata([webviewPanel]));
     const layout = withWidgets([
       {
-        widgetId: extensionViewWidgetId(nativePanel.id),
-        contributionId: extensionViewWidgetId(nativePanel.id),
+        widgetId: legacyExtensionViewWidgetId(nativePanel.id),
+        contributionId: legacyExtensionViewWidgetId(nativePanel.id),
         pinned: true,
         resource: {
           kind: "extension-view",
@@ -143,12 +143,13 @@ describe("extension layout reconciliation", () => {
     ]);
     expect(reconciled.activeWidgetId).toBe(nativePanel.id);
     expect(reconciled.activeLocationWidgetId).toBe(nativePanel.id);
-    expect(reconciled.locationSubPanelSelections?.["resource://one"]?.main).toBe(nativePanel.id);
+    expect(reconciled.locationSubPanelSelections?.[`${nativePanel.id}:${nativePanel.id}`]?.main).toBe(nativePanel.id);
     expect(reconciled.regions.main.widgets[0]).toMatchObject({
       pinned: true,
-      resourceUri: "resource://one",
+      viewId: nativePanel.id,
       tabRetention: "preview",
     });
+    expect(reconciled.regions.main.widgets[0]?.resource).toBeUndefined();
   });
 
   test("moves a retained placement when its contribution region changes", () => {
@@ -192,8 +193,8 @@ describe("extension layout reconciliation", () => {
     const previousCompatibility = createExtensionLayoutCompatibility(createMetadata([webviewPanel]));
     const layout = withWidgets([
       {
-        widgetId: extensionViewWidgetId(webviewPanel.id),
-        contributionId: extensionViewWidgetId(webviewPanel.id),
+        widgetId: legacyExtensionViewWidgetId(webviewPanel.id),
+        contributionId: legacyExtensionViewWidgetId(webviewPanel.id),
         resource: {
           kind: "extension-view",
           id: webviewPanel.id,

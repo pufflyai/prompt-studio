@@ -1,35 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import {
-  buildDashboardExtensionMenuRegistrations,
-  buildDashboardExtensionRouteEntries,
-} from "./workbench-extension-contributions";
+  resourceContextMenuPath,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "@pstdio/workbench";
+import { buildDashboardExtensionMenuRegistrations } from "./workbench-extension-contributions";
 import { extensionLabMetadata as metadata } from "./workbench-extension-metadata.fixture";
 
-const labRouteWhenExpression = [
-  'workbench.resource.kind == "extension-route"',
-  'workbench.resource.metadata.extensionId == "pstdio.extension-lab"',
-  'workbench.resource.metadata.routePath == "lab"',
-].join(" && ");
+const labViewWhenExpression = 'workbench.view.id == "extension-lab.labPage"';
 const workspaceResourceContextMenuPath = resourceContextMenuPath("workspace");
-const extensionRouteResourceContextMenuPath = resourceContextMenuPath("extension-route");
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
 
-describe("dashboard workbench extension route entries", () => {
-  test("lists extension route entries without legacy navigation grouping", () => {
-    const entries = buildDashboardExtensionRouteEntries({ metadata, projectId: "project-1" });
-
-    expect(entries).toEqual([
-      expect.objectContaining({
-        resource: expect.objectContaining({ uri: "dashboard-workbench://project/project-1/extensions/lab" }),
-      }),
-    ]);
-    expect(entries[0]).not.toHaveProperty("group");
-  });
-});
-
 describe("dashboard workbench extension menu contributions", () => {
-  test("maps extension route actions beside the resource with route context", () => {
+  test("maps extension view actions into the header with view context", () => {
     const registrations = buildDashboardExtensionMenuRegistrations(metadata);
     const headerRegistrations = registrations.filter(
       (registration) =>
@@ -43,11 +26,11 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: extensionRouteResourceContextMenuPath,
+            menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
               commandId: "dashboard.extension.menu.extension-lab.say-hello.header",
               group: "primary",
-              when: labRouteWhenExpression,
+              when: labViewWhenExpression,
             }),
           }),
         ],
@@ -55,12 +38,12 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: extensionRouteResourceContextMenuPath,
+            menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
               commandId: "dashboard.extension.menu.extension-lab.counter.bump.header",
               group: "overflow",
               overflowLabel: "Extension actions",
-              when: labRouteWhenExpression,
+              when: labViewWhenExpression,
             }),
           }),
         ],
@@ -84,8 +67,7 @@ describe("dashboard workbench extension menu contributions", () => {
           label: "Lab: Say hello",
           icon: "flask-conical",
           when: {
-            resourceType: ["extension-route"],
-            metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+            viewId: "extension-lab.labPage",
           },
         },
         {
@@ -96,8 +78,7 @@ describe("dashboard workbench extension menu contributions", () => {
           target: "workbench.nav.overflow",
           label: "Bump lab counter",
           when: {
-            resourceType: ["extension-route"],
-            metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+            viewId: "extension-lab.labPage",
           },
         },
       ],
@@ -107,11 +88,11 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: extensionRouteResourceContextMenuPath,
+            menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
               group: "primary",
               label: "Lab: Say hello",
-              when: labRouteWhenExpression,
+              when: labViewWhenExpression,
             }),
           }),
         ],
@@ -119,12 +100,12 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: extensionRouteResourceContextMenuPath,
+            menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
               group: "overflow",
               label: "Bump lab counter",
               overflowLabel: "Extension actions",
-              when: labRouteWhenExpression,
+              when: labViewWhenExpression,
             }),
           }),
         ],

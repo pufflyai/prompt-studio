@@ -38,7 +38,7 @@ describe("normalizeExtensionSources workbench targets", () => {
         workspaceOnly: {
           target: "workbench.left.tree",
           label: "Workspace only",
-          action: { kind: "route", route: "workspace-lab" },
+          action: { kind: "view", viewId: "workspace-lab" },
           when: { mode: "workspace" },
         },
       },
@@ -103,7 +103,7 @@ describe("normalizeExtensionSources workbench targets", () => {
       treeItems: {
         missingTarget: {
           label: "Missing target",
-          action: { kind: "route", route: "lab" },
+          action: { kind: "view", viewId: "lab" },
         } as never,
       },
     });

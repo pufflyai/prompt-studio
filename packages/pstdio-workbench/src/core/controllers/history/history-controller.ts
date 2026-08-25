@@ -8,6 +8,7 @@ import {
 } from "../../registries/layout/layout-types";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
+import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import {
   emptyHistoryState,
@@ -61,6 +62,7 @@ export interface HistoryController {
   restore(): HistoryEntry | undefined;
   flush(): void;
   clear(): void;
+  migrateState(transform: (state: HistoryStoreState) => HistoryStoreState): void;
 }
 
 export interface CreateHistoryControllerInput {
@@ -70,6 +72,7 @@ export interface CreateHistoryControllerInput {
     "getActiveModeId" | "getMode" | "isTransitioning" | "onDidChangeActive" | "setActiveMode"
   >;
   resources: ResourceRegistry;
+  views?: WorkbenchViewRegistry;
   persistence?: WorkbenchHistoryPersistence;
   maxEntries?: number;
   // Replays mode and resource through the atomic navigator so no observer sees an
@@ -248,6 +251,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
         layout: controllerInput.layout,
         modes: controllerInput.modes,
         resources: controllerInput.resources,
+        views: controllerInput.views,
       });
       setState(snapshot, "history.reconcile");
       const entry = snapshot.entries[snapshot.cursor];
@@ -276,6 +280,9 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     clear() {
       finishRestore();
       setState(emptyHistoryState(), "history.clear");
+    },
+    migrateState(transform) {
+      setState(transform(store.getState()), "history.migrate");
     },
 
     createCheckpoint() {
@@ -380,6 +387,12 @@ const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]
 // navigator and no observer sees an intermediate pair. Presentation of the resource
 // still happens through the replay path.
 const restoreEntryContext = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
+  if (entry.kind === "view") {
+    if (entry.modeId && input.modes?.getMode(entry.modeId) && input.modes.getActiveModeId() !== entry.modeId) {
+      input.modes.setActiveMode(entry.modeId);
+    }
+    return;
+  }
   if (input.commitNavigation) {
     input.commitNavigation({ modeId: entry.modeId ?? null, resource: entry.resource ?? null, replaceActive: true });
     return;
@@ -387,6 +400,39 @@ const restoreEntryContext = (input: CreateHistoryControllerInput, entry: Workben
   if (!entry.modeId) return;
   if (!input.modes?.getMode(entry.modeId)) return;
   if (input.modes.getActiveModeId() !== entry.modeId) input.modes.setActiveMode(entry.modeId);
+};
+
+const registerHistoryRecording = (input: {
+  controller: CreateHistoryControllerInput;
+  isPaused(): boolean;
+  normalizeRemovedPlacement(placement: WorkbenchWidgetPlacement): void;
+  pushRecentlyClosed(placement: WorkbenchWidgetPlacement, region: WorkbenchRegion): void;
+  recordSnapshot(fromLayoutChange?: boolean, completedResourceOpen?: boolean): void;
+}) => {
+  let lastPlacements = placementsByWidgetId(input.controller.layout);
+  input.controller.layout.store.subscribeSelector(
+    (state) => state.layout,
+    () => {
+      const nextPlacements = placementsByWidgetId(input.controller.layout);
+      if (input.isPaused()) {
+        lastPlacements = nextPlacements;
+        return;
+      }
+      for (const [widgetId, tracked] of lastPlacements) {
+        if (nextPlacements.has(widgetId)) continue;
+        if (tracked.placement.closable) input.pushRecentlyClosed(tracked.placement, tracked.region);
+        input.normalizeRemovedPlacement(tracked.placement);
+      }
+      lastPlacements = nextPlacements;
+      input.recordSnapshot(true);
+    },
+  );
+  input.controller.modes?.onDidChangeActive(input.recordSnapshot);
+  // A completed open owns a history commit even if another independent async
+  // open is still in flight. Layout listeners remain suppressed until their
+  // transaction completes, so each open still records one snapshot.
+  input.controller.resources.onDidOpenResource(() => input.recordSnapshot(false, true));
+  input.controller.views?.onDidOpenView(() => input.recordSnapshot(false, true));
 };
 
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
@@ -428,7 +474,9 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
 
   const recordSnapshot = (fromLayoutChange = false, completedResourceOpen = false) => {
     const paused = navigating || awaitingRestore || isRotatingLayoutScope();
-    if (paused || (!completedResourceOpen && input.resources.isOpeningResource())) return;
+    if (paused || (!completedResourceOpen && (input.resources.isOpeningResource() || input.views?.isOpeningView()))) {
+      return;
+    }
     counter += 1;
     const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
     const current = currentNavigationEntry(store.getState());
@@ -437,12 +485,10 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     appendEntry(entry);
   };
 
-  let lastPlacements = placementsByWidgetId(input.layout);
-
   const normalizeRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
     const snapshot = store.getState();
     const role = workbenchPlacementRole(input.layout, placement);
-    if (role === "location" && input.resources.isOpeningResource()) return;
+    if (role === "location" && (input.resources.isOpeningResource() || input.views?.isOpeningView())) return;
     if (role !== "sub-panel") {
       if (input.modes?.isTransitioning() || !input.layout.getWidget(placement.contributionId)) return;
       const entries = compactNavigationEntries(
@@ -498,28 +544,13 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     setState({ ...snapshot, recentlyClosed }, "history.recordClosed");
   };
 
-  input.layout.store.subscribeSelector(
-    (state) => state.layout,
-    () => {
-      const nextPlacements = placementsByWidgetId(input.layout);
-      if (awaitingRestore || isRotatingLayoutScope()) {
-        lastPlacements = nextPlacements;
-        return;
-      }
-      for (const [widgetId, tracked] of lastPlacements) {
-        if (nextPlacements.has(widgetId)) continue;
-        if (tracked.placement.closable) pushRecentlyClosed(tracked.placement, tracked.region);
-        normalizeRemovedPlacement(tracked.placement);
-      }
-      lastPlacements = nextPlacements;
-      recordSnapshot(true);
-    },
-  );
-  input.modes?.onDidChangeActive(recordSnapshot);
-  // A completed open owns a history commit even if another independent async
-  // open is still in flight. Layout listeners remain suppressed until their
-  // resource transaction completes, so each open still records one snapshot.
-  input.resources.onDidOpenResource(() => recordSnapshot(false, true));
+  registerHistoryRecording({
+    controller: input,
+    isPaused: () => awaitingRestore || isRotatingLayoutScope(),
+    normalizeRemovedPlacement,
+    pushRecentlyClosed,
+    recordSnapshot,
+  });
 
   const restoreSelections = (entry: WorkbenchNavigationEntry) => {
     for (const region of workbenchNavigationPanelRegions) {
@@ -566,6 +597,23 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         replayResource: (candidate, replaceActive) => replayResource(candidate, replayScope, replaceActive),
         restoreSelections,
       });
+    }
+    if (entry.kind === "view" && entry.viewId && input.views) {
+      const placementMatchesView = placement?.viewId === entry.viewId && placement.resourceUri === entry.resource?.uri;
+      if (placementMatchesView && !options.replayCurrentLocation) {
+        input.layout.activateWidget(placement.widgetId);
+        restoreSelections(entry);
+        return undefined;
+      }
+      return input.views
+        .openView(entry.viewId, {
+          resource: entry.resource,
+          title: entry.title,
+          strategy: { kind: "replace-active" },
+        })
+        .finally(() => {
+          if (replayScope === currentScope) restoreSelections(entry);
+        });
     }
     if (placement) input.layout.activateWidget(placement.widgetId);
     else if (entry.contributionId && input.layout.getWidget(entry.contributionId)) {

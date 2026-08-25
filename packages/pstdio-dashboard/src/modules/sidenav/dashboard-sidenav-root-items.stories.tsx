@@ -12,7 +12,7 @@ import { createSidenavModule } from "./module";
 const PROJECT_ID = "demo-project";
 
 // Planner-style metadata: the Tickets tree item is a `group: null` root item that
-// opens the Tickets browse-root resource; the Lab item keeps the undefined-group
+// opens the Tickets view; the Lab item keeps the undefined-group
 // default and lands under the "Extensions" heading for contrast.
 const metadata = {
   ...emptyDashboardExtensionMetadata,
@@ -35,10 +35,7 @@ const metadata = {
       icon: "square-kanban",
       group: null,
       placement: "first",
-      action: {
-        kind: "resource",
-        resource: { type: "extension-view", id: "pstdio-planner.tickets" },
-      },
+      action: { kind: "view", viewId: "pstdio-planner.tickets" },
     },
     {
       id: "pstdio.lab.labPage",

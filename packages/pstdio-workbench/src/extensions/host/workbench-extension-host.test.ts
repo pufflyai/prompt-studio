@@ -292,12 +292,12 @@ describe("registerWorkbenchExtensionContributions", () => {
       request: { params: { source: "palette" }, slot: { id: "workbench.commandPalette" } },
     });
 
-    await workbench.resources.openResource({
-      kind: "extension-route",
-      uri: "workbench://extension-route/lab.details",
-      id: "lab.details",
+    await workbench.views.openView("lab.details");
+    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({
+      panelId: "lab.details",
+      viewId: "lab.details",
+      resource: undefined,
     });
-    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.details" });
 
     await workbench.navigator.open({
       modeId: "lab.review",

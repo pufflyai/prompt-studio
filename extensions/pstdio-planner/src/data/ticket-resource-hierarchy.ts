@@ -13,14 +13,9 @@ export interface TicketResourceReference extends JsonObject {
 export const ticketDisplayTitle = (ticket: StoredTicket) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
-// The Tickets view is the browse root of every ticket lineage. The dashboard
-// resolves this reference to the canonical Tickets panel resource, so ticket
-// breadcrumbs always start at "Tickets".
 const ticketsBrowseRootReference = (): JsonObject => ({
-  type: "extension-view",
-  id: "pstdio-planner.tickets",
-  label: "Tickets",
-  icon: "square-kanban",
+  type: "view",
+  viewId: "pstdio-planner.tickets",
 });
 
 const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {

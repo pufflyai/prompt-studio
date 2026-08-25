@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createResourceBreadcrumbItems, createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 
@@ -29,6 +29,13 @@ describe("registerExtensionResourceHierarchy", () => {
   test("walks a planner-style lineage from the Tickets browse root to the child ticket", () => {
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.layout.registerPanel({ id: "tickets", title: "Tickets", region: "main", rendererId: "test" });
+    workbench.views.registerView({
+      id: "pstdio-planner.tickets",
+      panelId: "tickets",
+      title: "Tickets",
+      icon: "square-kanban",
+    });
     registerExtensionResourceHierarchy(workbench, {
       metadata: {
         ...emptyDashboardExtensionMetadata,
@@ -48,10 +55,8 @@ describe("registerExtensionResourceHierarchy", () => {
           label: "PS-1 Parent",
           metadata: {
             resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              metadata: { extensionId: "pstdio.planner" },
+              type: "view",
+              viewId: "pstdio-planner.tickets",
             },
           },
         },
@@ -59,11 +64,9 @@ describe("registerExtensionResourceHierarchy", () => {
     } satisfies ResourceRef;
 
     const path = workbench.resources.walkHierarchy(child);
+    const breadcrumbs = createResourceBreadcrumbItems(workbench.resources, child, workbench.views);
 
-    expect(path.map((resource) => resource.label)).toEqual(["Tickets", "PS-1 Parent", "PS-2 Child"]);
-    expect(path[0]).toMatchObject({
-      kind: "extension-view",
-      uri: "dashboard-workbench://project/project-1/extension-views/pstdio-planner.tickets",
-    });
+    expect(breadcrumbs.map((item) => item.title)).toEqual(["Tickets", "PS-1 Parent", "PS-2 Child"]);
+    expect(path[0]).toMatchObject({ type: "view", viewId: "pstdio-planner.tickets", icon: "square-kanban" });
   });
 });

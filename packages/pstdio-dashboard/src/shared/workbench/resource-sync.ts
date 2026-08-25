@@ -1,7 +1,7 @@
 import { createResourceBreadcrumbItems, type ResourceRef, type WorkbenchModuleContext } from "@pstdio/workbench";
 
 export const setResourceBreadcrumb = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  ctx.breadcrumbs.setItems(createResourceBreadcrumbItems(ctx.resources, resource));
+  ctx.breadcrumbs.setItems(createResourceBreadcrumbItems(ctx.resources, resource, ctx.views));
 };
 
 // A save can change only the display title of the open resource. Update the

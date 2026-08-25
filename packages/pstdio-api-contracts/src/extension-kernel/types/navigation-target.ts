@@ -10,7 +10,7 @@ export interface ExtensionResourceOpenIntent {
   strategy?: ExtensionResourcePlacementStrategy;
 }
 
-export interface ExtensionPanelOpenIntent {
+export interface ExtensionViewOpenIntent {
   region?: string;
   strategy?: ExtensionPlacementStrategy;
 }
@@ -22,10 +22,10 @@ export interface ExtensionNavigationTargetResource {
   section?: FileRendererSectionTarget;
 }
 
-export interface ExtensionNavigationTargetPanel {
-  kind: "panel";
-  panel: string;
-  input?: ExtensionPanelOpenIntent;
+export interface ExtensionNavigationTargetView {
+  kind: "view";
+  viewId: string;
+  input?: ExtensionViewOpenIntent;
 }
 
 export interface ExtensionNavigationTargetCommand {
@@ -36,7 +36,7 @@ export interface ExtensionNavigationTargetCommand {
 
 export type ExtensionNavigationTargetItem =
   | ExtensionNavigationTargetResource
-  | ExtensionNavigationTargetPanel
+  | ExtensionNavigationTargetView
   | ExtensionNavigationTargetCommand;
 
 export interface ExtensionNavigationTargetCompound {

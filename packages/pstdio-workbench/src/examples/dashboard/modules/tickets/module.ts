@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution } from "../../../../core";
+import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerTicketKanbanRenderer } from "./collections/ticket-data";
 
@@ -16,18 +16,15 @@ export const createTicketsModule = (): WorkbenchModuleContribution => ({
 
     registerTicketKanbanRenderer(ctx);
 
-    ctx.resources.registerPresenter({
-      id: "dashboard.tickets.presenter",
-      priority: 1000,
-      canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === "tickets",
-      open: (resource, input) => {
+    ctx.views.registerView({
+      id: dashboardViews.tickets.id,
+      panelId: dashboardWidgetIds.tickets,
+      title: dashboardViews.tickets.label,
+      icon: dashboardViews.tickets.icon,
+      resolveInput: (input) => {
         ctx.modes.setActiveMode("project");
-        setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openPanel(dashboardWidgetIds.tickets, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-          resource,
-          title: resource.label,
-        });
+        ctx.breadcrumbs.setItems([{ title: dashboardViews.tickets.label, icon: dashboardViews.tickets.icon }]);
+        return input;
       },
     });
   },

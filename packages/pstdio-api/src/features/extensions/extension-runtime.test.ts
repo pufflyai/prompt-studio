@@ -351,7 +351,7 @@ describe("checkExtensionSource webviews", () => {
         treeItems: {
           lab: {
             label: "Lab",
-            action: { kind: "route", route: "lab" },
+            action: { kind: "view", viewId: "lab" },
           },
         },
       };`,

@@ -223,6 +223,7 @@ export default defineExtension({
   panels: {
     tasks: {
       title: "Tasks",
+      path: "tasks",
       show: { region: "main" },
       renderer: { kind: "kanban", id: "tasks" },
     },
@@ -231,14 +232,14 @@ export default defineExtension({
     tasks: {
       target: "workbench.left.tree",
       label: "Tasks",
-      action: { kind: "panel", panel: "tasks" },
+      action: { kind: "view", viewId: "planner.tasks" },
     },
   },
 });
 ```
 
-The panel wraps the renderer and declares its default placement. The `treeItems` panel action makes it reachable
-from the project sidenav.
+The panel wraps the renderer and declares its default placement. It also registers the `planner.tasks` view used by
+the tree item. Its optional `path` makes the same view available as a project deep link.
 
 ## Workbench panels and resource slots
 
@@ -399,11 +400,11 @@ export default defineExtension({
       target: "workbench.left.tree",
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "route", route: "planner" },
+      action: { kind: "view", viewId: "planner.planner" },
       when: { mode: "project" },
     },
   },
 });
 ```
 
-Route tree items use the route `path` (`"planner"` above), not the normalized route id.
+Route tree items use the normalized contribution ID (`planner.planner` above). The route `path` remains the deep link.

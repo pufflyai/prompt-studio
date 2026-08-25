@@ -2,16 +2,15 @@ import type { ResourceRef, TreeNode, WorkbenchModuleContext, WorkbenchModuleCont
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { registerResourceRoute } from "@/shared/workbench/route-helper";
+import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
@@ -40,12 +39,12 @@ const enterWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContext) =>
   activateModeChromeContributions(modeCtx, "workspace");
 
 const workspaceNavigationNode = (): TreeNode => ({
-  id: dashboardResources.workspaces.uri,
+  id: dashboardViews.workspaces.id,
   label: "Workspaces",
-  icon: dashboardResources.workspaces.icon,
+  icon: dashboardViews.workspaces.icon,
   canHide: true,
   commandId: dashboardCommandIds.openWorkspaces,
-  resource: dashboardResources.workspaces,
+  target: { kind: "view", viewId: dashboardViews.workspaces.id },
   actions: [
     {
       id: "new-workspace",
@@ -256,8 +255,13 @@ export const createWorkspacesModule = () =>
         canResolve: (resource) => resource.kind === "workspace",
         getParent: (resource) => {
           const projectId = metadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
-          if (!projectId) return dashboardResources.workspaces;
-          return dashboardResourceParent(ctx, resource, projectId) ?? dashboardResources.workspaces;
+          if (!projectId) return { type: "view", viewId: dashboardViews.workspaces.id };
+          return (
+            dashboardResourceParent(ctx, resource, projectId) ?? {
+              type: "view",
+              viewId: dashboardViews.workspaces.id,
+            }
+          );
         },
       });
 
@@ -265,12 +269,6 @@ export const createWorkspacesModule = () =>
       registerWorkspaceKanbanRenderer(ctx);
       registerWorkspaceDetailWidgets(ctx);
       watchOpenWorkspaceRename(ctx);
-
-      registerDashboardViewContribution(ctx, {
-        resource: dashboardResources.workspaces,
-        group: "Dashboard",
-        order: 10,
-      });
 
       registerWorkspaceSidenavContributions(ctx);
 
@@ -294,9 +292,11 @@ export const createWorkspacesModule = () =>
           id: dashboardCommandIds.openWorkspaces,
           label: "Open workspaces",
           category: "Dashboard",
-          icon: dashboardResources.workspaces.icon,
+          icon: dashboardViews.workspaces.icon,
         },
-        { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
+        {
+          execute: () => ctx.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } }),
+        },
       );
 
       ctx.commands.registerCommand(
@@ -309,14 +309,16 @@ export const createWorkspacesModule = () =>
         order: 10,
       });
 
-      registerResourceRoute(ctx, {
-        id: "dashboard.workspaces.presenter",
-        match: (resource) => resource.kind === "dashboard-view" && resource.id === "workspaces",
+      registerDashboardViewRoute(ctx, {
+        id: dashboardViews.workspaces.id,
         mode: "project",
         panelId: dashboardWidgetIds.workspaces,
-        beforeOpen: ({ resource }) => {
-          setResourceBreadcrumb(ctx, resource);
-          setDashboardSidenavSelection(ctx, resource.uri);
+        path: "workspaces",
+        title: dashboardViews.workspaces.label,
+        icon: dashboardViews.workspaces.icon,
+        beforeOpen: () => {
+          ctx.breadcrumbs.setItems([{ title: dashboardViews.workspaces.label, icon: dashboardViews.workspaces.icon }]);
+          setDashboardSidenavSelection(ctx, dashboardViews.workspaces.id);
         },
       });
       registerResourceRoute(ctx, {

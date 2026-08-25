@@ -1,6 +1,6 @@
 import type { AnchorId, ResourceRef, WorkbenchModuleContext, WorkbenchPanelInstance } from "@pstdio/workbench";
 import { resolveAnchorRegion } from "@pstdio/workbench";
-import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
+import { selectDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
 export interface RegisterResourceRouteInput {
@@ -55,3 +55,29 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContext, input: Regist
     afterOpen: (resource, placement) => input.afterOpen?.({ resource, placement }),
   });
 };
+
+export interface RegisterDashboardViewRouteInput {
+  id: string;
+  panelId: string;
+  mode: string;
+  title: string;
+  icon?: string;
+  path?: string;
+  requiresProject?: boolean;
+  beforeOpen?: () => void;
+}
+
+export const registerDashboardViewRoute = (ctx: WorkbenchModuleContext, input: RegisterDashboardViewRouteInput) =>
+  ctx.views.registerView({
+    id: input.id,
+    panelId: input.panelId,
+    title: input.title,
+    icon: input.icon,
+    path: input.path,
+    canResolve: () => !(input.requiresProject ?? true) || Boolean(getDashboardSelectedProjectId(ctx)),
+    resolveInput: (openInput) => {
+      selectDashboardNavigationView(ctx, input.id, { modeId: input.mode });
+      input.beforeOpen?.();
+      return openInput;
+    },
+  });

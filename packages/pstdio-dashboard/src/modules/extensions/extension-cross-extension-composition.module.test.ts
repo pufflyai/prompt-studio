@@ -121,18 +121,18 @@ describe("cross-extension composition", () => {
     const { disposables, placementsOf, regionOf, resource, workbench } = await openTicket(crossExtensionMetadata);
 
     try {
-      expect(regionOf("dashboard-workbench.extension-view.planner.editor")).toBe("main");
-      expect(regionOf("dashboard-workbench.extension-view.insights.details")).toBe("side");
-      expect(placementsOf("dashboard-workbench.extension-view.planner.editor")).toEqual([
+      expect(regionOf("planner.editor")).toBe("main");
+      expect(regionOf("insights.details")).toBe("side");
+      expect(placementsOf("planner.editor")).toEqual([
         expect.objectContaining({ resourceUri: resource.uri, closable: false }),
       ]);
-      expect(placementsOf("dashboard-workbench.extension-view.insights.details")).toEqual([
+      expect(placementsOf("insights.details")).toEqual([
         expect.objectContaining({ resourceUri: resource.uri, closable: true }),
       ]);
 
-      workbench.layout.closePanel(placementsOf("dashboard-workbench.extension-view.insights.details")[0]!.widgetId);
+      workbench.layout.closePanel(placementsOf("insights.details")[0]!.widgetId);
       await workbench.resources.openResource(resource);
-      expect(placementsOf("dashboard-workbench.extension-view.insights.details")).toEqual([
+      expect(placementsOf("insights.details")).toEqual([
         expect.objectContaining({ resourceUri: resource.uri, closable: true }),
       ]);
     } finally {
@@ -144,9 +144,9 @@ describe("cross-extension composition", () => {
     const { disposables, regionOf } = await openTicket(withoutNamedPanel);
 
     try {
-      expect(regionOf("dashboard-workbench.extension-view.planner.editor")).toBe("main");
+      expect(regionOf("planner.editor")).toBe("main");
       // Available through Add Panel, but the owner's slot recipe does not place it.
-      expect(regionOf("dashboard-workbench.extension-view.insights.details")).toBeUndefined();
+      expect(regionOf("insights.details")).toBeUndefined();
     } finally {
       for (const disposable of disposables) disposable.dispose();
     }

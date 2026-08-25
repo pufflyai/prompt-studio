@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { ExtensionContextBase } from "./context";
 import type { MaybePromise } from "./json";
-import type { ResourceRef } from "./resources";
+import type { ResourceRef, ViewHierarchyParent } from "./resources";
 
 export const dockedWorkbenchRegions = ["sidenav", "main", "secondary", "side"] as const;
 export type DockedWorkbenchRegion = (typeof dockedWorkbenchRegions)[number];
@@ -61,5 +61,5 @@ export interface WorkbenchNavigationTarget {
 
 export interface ResourceHierarchyProvider {
   resourceKind: string;
-  parent(ctx: ExtensionContextBase, resource: ResourceRef): MaybePromise<ResourceRef | null>;
+  parent(ctx: ExtensionContextBase, resource: ResourceRef): MaybePromise<ResourceRef | ViewHierarchyParent | null>;
 }

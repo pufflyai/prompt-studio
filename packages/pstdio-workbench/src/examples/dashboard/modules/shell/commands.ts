@@ -5,7 +5,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../../../core";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "../../../../react";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 
@@ -17,22 +17,22 @@ export const registerCommands = (ctx: WorkbenchModuleContext) => {
       id: "dashboard.openTickets",
       label: "Open tickets",
       category: "Dashboard",
-      icon: dashboardResources.tickets.icon,
+      icon: dashboardViews.tickets.icon,
     },
-    { execute: () => ctx.resources.openResource(dashboardResources.tickets, { replaceActive: true }) },
+    { execute: () => ctx.views.openView(dashboardViews.tickets.id, { strategy: { kind: "replace-active" } }) },
   );
   ctx.commands.registerCommand(
     {
       id: "dashboard.openWorkspaces",
       label: "Open workspaces",
       category: "Dashboard",
-      icon: dashboardResources.workspaces.icon,
+      icon: dashboardViews.workspaces.icon,
     },
-    { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
+    { execute: () => ctx.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openSessions", label: "Open sessions", category: "Dashboard", icon: "MessageCircle" },
-    { execute: () => ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true }) },
+    { execute: () => ctx.views.openView(dashboardViews.sessions.id, { strategy: { kind: "replace-active" } }) },
   );
   ctx.commands.registerCommand(
     {
@@ -45,7 +45,7 @@ export const registerCommands = (ctx: WorkbenchModuleContext) => {
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openRepoHealth", label: "Open repo health", category: "Repo Health", icon: "GitBranch" },
-    { execute: () => ctx.resources.openResource(dashboardResources.repoHealth, { replaceActive: true }) },
+    { execute: () => ctx.views.openView(dashboardViews.repoHealth.id, { strategy: { kind: "replace-active" } }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.sayHello", label: "Say hello", category: "Extension Lab", icon: "Sparkles" },

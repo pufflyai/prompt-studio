@@ -46,6 +46,72 @@ const openTicket = (workbench: ReturnType<typeof setupWorkbench>, id: string) =>
   workbench.resources.openResource({ kind: TICKET_KIND, uri: `${TICKET_KIND}:${id}`, id, label: `Ticket ${id}` });
 
 describe("createHistoryController", () => {
+  test("records and reopens stable view identities through the view registry", async () => {
+    const workbench = createWorkbenchCore();
+    for (const id of ["tickets", "font-editor"]) {
+      workbench.layout.registerLocation({
+        id: `${id}.panel`,
+        title: id,
+        region: "main",
+        rendererId: "noop",
+        closable: true,
+      });
+      workbench.views.registerView({ id, panelId: `${id}.panel`, title: id });
+    }
+
+    await workbench.views.openView("tickets");
+    await workbench.views.openView("font-editor");
+
+    expect(workbench.history.store.getState().entries.map((entry) => entry.viewId)).toEqual(["tickets", "font-editor"]);
+    expect(workbench.history.store.getState().entries.map((entry) => entry.kind)).toEqual(["view", "view"]);
+
+    workbench.history.goBack();
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("tickets.panel");
+  });
+
+  test("reopens a closed view with its resource binding", async () => {
+    const workbench = createWorkbenchCore();
+    const ticket = { kind: TICKET_KIND, uri: `${TICKET_KIND}:PS-298`, id: "PS-298" };
+    workbench.layout.registerLocation({
+      id: "tickets.panel",
+      title: "Tickets",
+      region: "main",
+      rendererId: "noop",
+      closable: true,
+    });
+    workbench.views.registerView({ id: "tickets", panelId: "tickets.panel", title: "Tickets" });
+
+    const opened = await workbench.views.openView("tickets", { resource: ticket });
+    workbench.layout.closePanel(opened.instanceId);
+    expect(workbench.history.recentlyClosed().at(-1)).toMatchObject({
+      kind: "view",
+      viewId: "tickets",
+      resource: ticket,
+    });
+
+    workbench.history.reopenLastClosed();
+    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({
+      viewId: "tickets",
+      resource: ticket,
+    });
+  });
+
+  test("replays a view when its singleton panel was rebound to a resource", async () => {
+    const workbench = setupWorkbench();
+    workbench.views.registerView({ id: "tickets", panelId: "ticket-viewer", title: "Tickets" });
+
+    await workbench.views.openView("tickets");
+    await openTicket(workbench, "PS-298");
+    workbench.history.goBack();
+    await Promise.resolve();
+
+    expect(workbench.layout.getLayout().regions.main.widgets[0]).toMatchObject({
+      viewId: "tickets",
+      resource: undefined,
+    });
+    expect(workbench.layout.getLayout().activeResourceUri).toBeUndefined();
+  });
+
   test("records every successful open with a stable cursor", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");

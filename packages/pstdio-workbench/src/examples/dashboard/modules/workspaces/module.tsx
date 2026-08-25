@@ -4,9 +4,9 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "../../../../core";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
-import { setResourceBreadcrumb, syncResourceSidenav } from "../../shared/resource-sync";
+import { syncResourceSidenav } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
 import { WorkspaceWidget } from "./components/workspace-widget";
@@ -23,9 +23,8 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContext, resource: ResourceRef
     ctx.breadcrumbs.setItems([
       {
         title: "Tickets",
-        icon: dashboardResources.tickets.icon,
-        resource: dashboardResources.tickets,
-        onClick: () => void ctx.resources.openResource(dashboardResources.tickets, { replaceActive: true }),
+        icon: dashboardViews.tickets.icon,
+        onClick: () => void ctx.views.openView(dashboardViews.tickets.id, { strategy: { kind: "replace-active" } }),
       },
       { title: `${ticket.id} ${ticket.title}`, icon: ticket.resource.icon, resource: ticket.resource },
       {
@@ -40,9 +39,8 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContext, resource: ResourceRef
   ctx.breadcrumbs.setItems([
     {
       title: "Workspaces",
-      icon: dashboardResources.workspaces.icon,
-      resource: dashboardResources.workspaces,
-      onClick: () => void ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }),
+      icon: dashboardViews.workspaces.icon,
+      onClick: () => void ctx.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } }),
     },
     { title: resource.label ?? "Workspace", icon: resource.icon ?? standardResourceIcons.workspace, resource },
   ]);
@@ -89,24 +87,23 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
         dashboardTickets.map(({ workspaceResource }) => ({ resource: workspaceResource, group: "Workspaces" })),
     });
 
+    ctx.views.registerView({
+      id: dashboardViews.workspaces.id,
+      panelId: dashboardWidgetIds.workspaces,
+      title: dashboardViews.workspaces.label,
+      icon: dashboardViews.workspaces.icon,
+      resolveInput: (input) => {
+        ctx.modes.setActiveMode("project");
+        ctx.breadcrumbs.setItems([{ title: dashboardViews.workspaces.label, icon: dashboardViews.workspaces.icon }]);
+        return input;
+      },
+    });
+
     ctx.resources.registerPresenter({
       id: "dashboard.workspaces.presenter",
       priority: 1000,
-      canOpen: (resource) =>
-        (resource.kind === "dashboard-view" && resource.id === "workspaces") ||
-        resource.kind === "workspace" ||
-        resource.kind === "ticket",
+      canOpen: (resource) => resource.kind === "workspace" || resource.kind === "ticket",
       open: (resource, input) => {
-        if (resource.kind === "dashboard-view") {
-          ctx.modes.setActiveMode("project");
-          setResourceBreadcrumb(ctx, resource);
-          return ctx.layout.openPanel(dashboardWidgetIds.workspaces, {
-            strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-            resource,
-            title: resource.label,
-          });
-        }
-
         ctx.modes.setActiveMode(undefined);
         syncResourceSidenav(ctx, resource);
         setDetailBreadcrumbs(ctx, resource);

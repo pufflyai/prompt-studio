@@ -1,5 +1,6 @@
 import type {
   Disposable,
+  OpenWorkbenchViewInput,
   ResourceRef,
   WorkbenchModeActivationContext,
   WorkbenchModuleContext,
@@ -15,18 +16,28 @@ import {
   toWorkbenchCompositionPanelContribution,
   type WorkbenchCompositionRegistry,
 } from "@pstdio/workbench/extensions";
+import { selectDashboardNavigationView } from "@/shared/app/navigation-state";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createExtensionCompositionRegistry } from "./extension-composition";
 import { registerExtensionStatusItems } from "./extension-status-items";
-import { extensionViewWidgetId, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
+
+export const extensionViewResolveInput =
+  (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }) =>
+  (openInput: OpenWorkbenchViewInput) => {
+    selectDashboardNavigationView(ctx, view.id, { modeId: "project" });
+    ctx.breadcrumbs.setItems([{ title: view.title, icon: view.icon }]);
+    setDashboardSidenavSelection(ctx, view.id);
+    return openInput;
+  };
 
 const dashboardResourceUri = (kind: string, id: string) => `dashboard-workbench://${kind}/${id}`;
 
@@ -122,27 +133,31 @@ const registerExtensionViews = (
     if (!panel.webview) return;
     const contribution = toWorkbenchCompositionPanelContribution({
       panel,
-      rendererId: dashboardWidgetIds.extensionView,
+      rendererId: dashboardWidgetIds.extensionPanelRenderer,
       declarationIndex: index,
       menuDeclarationOffset: menuOffsets[index]!,
       resourcePanels: metadata.resourcePanels,
       config: { projectId },
     });
+    const title = resolveLocalizableString(panel.title, panel.extensionId);
     disposables.push(
       registerWorkbenchExtensionPanel({
         workbench: ctx,
+        path: panel.path,
+        resolveInput: extensionViewResolveInput(ctx, { id: panel.id, title, icon: panel.icon }),
         contribution: {
           ...contribution,
-          id: extensionViewWidgetId(panel.id),
+          id: panel.id,
+          title,
           panelMenus: panel.panelMenus?.map((menu, menuIndex) => {
             // Native-bodied menus render through their own renderer; only webview
-            // menus mount in the generic extension-view widget.
+            // menus mount in the generic extension panel widget.
             const nativeRendererId = menu.renderer?.id;
             return {
-              id: nativeRendererId ? menu.id : extensionViewWidgetId(menu.id),
+              id: menu.id,
               title: resolveLocalizableString(menu.title, menu.extensionId),
               side: menu.side,
-              rendererId: nativeRendererId ?? dashboardWidgetIds.extensionView,
+              rendererId: nativeRendererId ?? dashboardWidgetIds.extensionPanelRenderer,
               config: nativeRendererId ? undefined : { projectId },
               priority: contribution.panelMenus?.[menuIndex]?.priority,
             };
@@ -215,7 +230,7 @@ const registerExtensionModes = (input: {
                 )
               );
             })
-            .map(extensionViewWidgetIdFor),
+            .map((panel) => panel.id),
         );
         bindResourceSlotPlacements(modeCtx, {
           resource,
@@ -280,6 +295,24 @@ export const registerExtensionModeContributions = (
   registry: WorkbenchCompositionRegistry = createExtensionCompositionRegistry(metadata),
 ) => [
   ...registerExtensionViews(ctx, metadata, projectId),
+  ...metadata.routes.map((route) =>
+    registerWorkbenchExtensionPanel({
+      workbench: ctx,
+      path: route.path,
+      resolveInput: extensionViewResolveInput(ctx, {
+        id: route.id,
+        title: resolveLocalizableString(route.label, route.extensionId),
+      }),
+      contribution: {
+        id: route.id,
+        title: resolveLocalizableString(route.label, route.extensionId),
+        region: "main",
+        rendererId: dashboardWidgetIds.extensionPanelRenderer,
+        singleton: true,
+        config: { projectId },
+      },
+    }),
+  ),
   ...registerExtensionStatusItems(ctx, metadata, projectId),
   ...registerCompositionResourceKinds(ctx, metadata),
   ...registerExtensionModes({ ctx, executeCommand, metadata, projectId, registry }),

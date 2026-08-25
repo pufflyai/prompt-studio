@@ -71,14 +71,12 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   metadata: WorkbenchExtensionMetadata;
   openHref?: (href: string) => unknown;
   projectId: string;
-  routeResourceKind?: string;
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   webviewFiles?: ExtensionWebviewFileCapabilities;
   workbench: WorkbenchModuleContext;
 }
 
-const routeResourceKindDefault = "extension-route";
 const settingsSectionIdDefault = "extensions";
 
 const disposeAll = (disposables: Disposable[]) => {
@@ -221,6 +219,7 @@ const registerWebviewPanels = (input: RegisterWorkbenchExtensionContributionsInp
     return [
       registerWorkbenchExtensionPanel({
         workbench: input.workbench,
+        path: panel.path,
         contribution: toWorkbenchCompositionPanelContribution({
           panel,
           rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
@@ -590,7 +589,6 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(
     ...registerWorkbenchExtensionRoutes({
       metadata: input.metadata,
-      routeResourceKind: input.routeResourceKind ?? routeResourceKindDefault,
       workbench: input.workbench,
     }),
   );
@@ -598,7 +596,6 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
     ...registerWorkbenchExtensionTreeItems({
       metadata: input.metadata,
       openHref: input.openHref,
-      routeResourceKind: input.routeResourceKind ?? routeResourceKindDefault,
       workbench: input.workbench,
     }),
   );

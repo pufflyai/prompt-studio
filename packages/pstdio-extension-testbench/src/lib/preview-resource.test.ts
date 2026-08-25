@@ -18,7 +18,7 @@ const baseMetadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("createPreviewResource", () => {
-  test("uses the first route for route-only extensions", () => {
+  test("keeps preview data separate from a route-only extension view", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
       routes: [
@@ -37,10 +37,10 @@ describe("createPreviewResource", () => {
     });
 
     expect(resource).toEqual({
-      kind: "extension-route",
-      uri: "workbench://extension-route/extension-lab.labPage",
-      id: "extension-lab.labPage",
-      label: "Lab",
+      kind: "extension-preview",
+      uri: "bench://extension-preview/default",
+      id: "preview",
+      label: "Extension preview",
       icon: "FileText",
     });
   });

@@ -179,8 +179,32 @@ const collectCommandReferenceDiagnostics = (runtime: ExtensionRuntime) => {
   return diagnostics;
 };
 
+const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const known = new Set([...runtime.panels, ...runtime.routes].map((record) => record.id));
+
+  for (const record of runtime.treeItems) {
+    const action = record.contribution.action;
+    if (action.kind !== "view") continue;
+    const resolved = action.viewId.includes(".") ? action.viewId : `${record.name}.${action.viewId}`;
+    if (known.has(resolved)) continue;
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_view_reference_missing",
+        message: `treeItem "${record.id}" references view "${action.viewId}", which resolves to no registered panel or route`,
+        extensionId: record.extensionId,
+        sourcePath: record.sourcePath,
+        metadata: { contributionId: record.id, failedReference: resolved },
+      }),
+    );
+  }
+
+  return diagnostics;
+};
+
 export const collectConventionDiagnostics = (runtime: ExtensionRuntime) => [
   ...collectIconDiagnostics(runtime),
   ...collectIdCasingDiagnostics(runtime),
   ...collectCommandReferenceDiagnostics(runtime),
+  ...collectViewReferenceDiagnostics(runtime),
 ];

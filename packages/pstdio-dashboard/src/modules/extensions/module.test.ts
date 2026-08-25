@@ -1,6 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore, resourceContextMenuPath, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import {
+  createWorkbenchCore,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "@pstdio/workbench";
 import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
@@ -73,15 +77,12 @@ describe("createExtensionsModule", () => {
     try {
       await flushMicrotasks();
 
-      const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
-      expect(labResource?.label).toBe("Laboratoire");
+      expect(workbench.views.getView("extension-lab.labPage")?.title).toBe("Laboratoire");
 
-      await workbench.resources.openResource(labResource!);
+      await workbench.views.openView("extension-lab.labPage");
 
-      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
-        resource: labResource,
-      });
-      expect(resourceActions.map((item) => item.label)).toEqual(["Lab: Dire bonjour"]);
+      const viewActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
+      expect(viewActions.map((item) => item.label)).toEqual(["Lab: Dire bonjour"]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -89,7 +90,7 @@ describe("createExtensionsModule", () => {
     }
   });
 
-  test("mounts extension-lab routes and route-scoped resource actions", async () => {
+  test("mounts extension-lab route views with path-scoped actions", async () => {
     const loadMetadata = mock(async () => metadata);
     const executeCommand = mock(async () => response);
     const workbench = createWorkbenchCore();
@@ -101,32 +102,23 @@ describe("createExtensionsModule", () => {
     try {
       await flushMicrotasks();
 
-      const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
-
-      expect(labResource?.kind).toBe("extension-route");
-      expect(labResource?.uri).toBe("dashboard-workbench://project/project-1/extensions/lab");
-      expect(labResource?.metadata?.extensionId).toBe("pstdio.extension-lab");
-      expect(labResource?.metadata?.routePath).toBe("lab");
-
-      await workbench.resources.openResource(labResource!);
-
-      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
-        resource: labResource,
+      expect(workbench.views.getView("extension-lab.labPage")).toMatchObject({
+        id: "extension-lab.labPage",
+        path: "lab",
+        title: "Lab",
       });
-      expect(resourceActions.map((item) => item.label)).toEqual(["Lab: Say hello", "Bump lab counter"]);
+      await workbench.navigation.navigate("lab");
 
-      await workbench.commands.executeCommand(resourceActions[0]!.commandId, undefined, { resource: labResource });
+      const viewActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
+      expect(viewActions.map((item) => item.label)).toEqual(["Lab: Say hello", "Bump lab counter"]);
+
+      await workbench.commands.executeCommand(viewActions[0]!.commandId);
 
       expect(executeCommand).toHaveBeenCalledWith(
         "project-1",
         "extension-lab.say-hello",
         expect.objectContaining({
           projectId: "project-1",
-          resource: expect.objectContaining({
-            type: "extension-route",
-            id: "lab",
-            extensionId: "pstdio.extension-lab",
-          }),
           slot: expect.objectContaining({
             id: "project.headerPrimary",
             kind: "menu",
@@ -236,13 +228,10 @@ describe("createExtensionsModule command results and refresh", () => {
     try {
       await flushMicrotasks();
 
-      const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
-      await workbench.resources.openResource(labResource!);
+      await workbench.views.openView("extension-lab.labPage");
 
-      const resourceActions = listWorkbenchMenuItems(workbench, resourceContextMenuPath("extension-route"), {
-        resource: labResource,
-      });
-      await workbench.commands.executeCommand(resourceActions[0]!.commandId, undefined, { resource: labResource });
+      const viewActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
+      await workbench.commands.executeCommand(viewActions[0]!.commandId);
 
       const placement = workbench.layout
         .getLayout()

@@ -99,6 +99,42 @@ describe("extension convention diagnostics", () => {
     expect(diagnostics[0]?.metadata).toMatchObject({ failedReference: "lab.missing-command" });
   });
 
+  test("flags tree view references that resolve to no panel or route", () => {
+    const runtime = normalizeExtensionSources([
+      wrap(
+        "lab",
+        defineExtension({
+          panels: {
+            existing: {
+              title: "Existing",
+              show: { region: "main" },
+              webview: { entry: packageAsset("./existing.tsx", import.meta.url) },
+            },
+          },
+          treeItems: {
+            ok: {
+              target: "workbench.left.tree",
+              label: "Existing",
+              action: { kind: "view", viewId: "existing" },
+            },
+            dangling: {
+              target: "workbench.left.tree",
+              label: "Missing",
+              action: { kind: "view", viewId: "missing" },
+            },
+          },
+        }),
+      ),
+    ]);
+
+    const diagnostics = collectConventionDiagnostics(runtime).filter(
+      (diagnostic) => diagnostic.code === "extension_view_reference_missing",
+    );
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.metadata).toMatchObject({ failedReference: "lab.missing" });
+  });
+
   test("a clean extension produces no convention diagnostics", () => {
     const runtime = normalizeExtensionSources([
       wrap(

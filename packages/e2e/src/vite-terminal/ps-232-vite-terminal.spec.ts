@@ -10,16 +10,6 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
-    localStorage.setItem(
-      `dashboard-wb:last-resource:${selectedProjectId}`,
-      JSON.stringify({
-        kind: "dashboard-view",
-        uri: "dashboard-workbench://dashboard-view/workspaces",
-        id: "workspaces",
-        label: "Workspaces",
-        icon: "computer",
-      }),
-    );
   }, projectId);
 };
 

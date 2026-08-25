@@ -25,7 +25,7 @@ test.describe("PS-172 workspace sessions", () => {
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
+    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
     await expect(workspaceSessions).toBeVisible();
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
     await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
@@ -53,7 +53,7 @@ test.describe("PS-172 workspace sessions", () => {
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
+    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
 
     await workspaceSessions.hover();

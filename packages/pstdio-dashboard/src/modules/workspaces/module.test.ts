@@ -4,7 +4,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   getSidenavContributionHeaderNodes,
@@ -176,7 +176,7 @@ describe("createWorkspacesModule navigation", () => {
 
     const headerNodeIds = getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.id);
     const workspacesNode = getSidenavContributionHeaderNodes(workbench, "project").find(
-      (node) => node.id === dashboardResources.workspaces.uri,
+      (node) => node.id === dashboardViews.workspaces.id,
     );
 
     expect(headerNodeIds).not.toContain("new-workspace");
@@ -194,7 +194,7 @@ describe("createWorkspacesModule navigation", () => {
       (await getSidenavContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id),
-    ).not.toContain(dashboardResources.workspaces.uri);
+    ).not.toContain(dashboardViews.workspaces.id);
   });
 });
 

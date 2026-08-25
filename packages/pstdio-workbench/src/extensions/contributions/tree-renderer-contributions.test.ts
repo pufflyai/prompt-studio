@@ -343,7 +343,7 @@ describe("extension tree compound targets", () => {
                     kind: "compound",
                     targets: [
                       { kind: "command", command: "lab.files.open", params: { ticketId: "ticket-1" } },
-                      { kind: "panel", panel: "lab.ticketFiles" },
+                      { kind: "view", viewId: "lab.ticketFiles" },
                     ],
                   },
                 },

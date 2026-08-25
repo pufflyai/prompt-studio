@@ -34,26 +34,12 @@ const installMissingWebviewDependency = (extensionRoot: string) => {
   writeFileSync(join(extensionRoot, "bun.lock"), "// dependency installation completed\n");
 };
 
-const bypassOnboarding = async (
-  page: import("@playwright/test").Page,
-  projectId: string,
-  route: WorkbenchExtensionMetadata["routes"][number],
-) => {
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript(
-    ({ currentProjectId, currentRoute }) => {
+    ({ currentProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
-      localStorage.setItem(
-        `dashboard-wb:last-resource:${currentProjectId}`,
-        JSON.stringify({
-          kind: "extension-route",
-          uri: `dashboard-workbench://project/${currentProjectId}/extensions/${currentRoute.path}`,
-          id: currentRoute.path,
-          label: "Lab",
-          metadata: { projectId: currentProjectId, routePath: currentRoute.path, route: currentRoute },
-        }),
-      );
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -69,7 +55,7 @@ const bypassOnboarding = async (
         }),
       );
     },
-    { currentProjectId: projectId, currentRoute: route },
+    { currentProjectId: projectId },
   );
 };
 
@@ -163,9 +149,9 @@ test.describe("Extension webview live reload", () => {
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
       const labRoute = metadata.routes.find((route) => route.path === "lab");
       expect(labRoute).toBeDefined();
-      await bypassOnboarding(page, project.id, labRoute!);
+      await bypassOnboarding(page, project.id);
 
-      await page.goto(`/projects/${project.id}`);
+      await page.goto(`/projects/${project.id}/lab`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
@@ -204,8 +190,8 @@ test.describe("Extension webview live reload", () => {
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
       const labRoute = metadata.routes.find((route) => route.path === "lab");
       expect(labRoute).toBeDefined();
-      await bypassOnboarding(page, project.id, labRoute!);
-      await page.goto(`/projects/${project.id}`);
+      await bypassOnboarding(page, project.id);
+      await page.goto(`/projects/${project.id}/lab`);
 
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();

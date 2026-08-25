@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   getSidenavContributionHeaderNodes,
@@ -40,8 +39,8 @@ describe("createSessionsModule", () => {
         .map((node) => node.id);
 
     expect(await nodeIdsForMode("project")).not.toContain("sessions");
-    expect(await nodeIdsForMode("sessions")).toContain("sessions");
-    expect(await nodeIdsForMode("workspace")).toContain("sessions");
+    expect(await nodeIdsForMode("sessions")).toContain("workspace-sessions");
+    expect(await nodeIdsForMode("workspace")).toContain("workspace-sessions");
   });
 
   test("adds sessions navigation to the persistent sidenav header", async () => {
@@ -50,17 +49,17 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionsModule());
 
     const sessionsNode = getSidenavContributionHeaderNodes(workbench, "project").find(
-      (node) => node.id === dashboardResources.sessions.uri,
+      (node) => node.id === dashboardViews.sessions.id,
     );
 
     expect(sessionsNode).toMatchObject({
-      target: { kind: "command", commandId: dashboardCommandIds.openSessions },
+      target: { kind: "view", viewId: dashboardViews.sessions.id },
     });
     expect(
       (await getSidenavContributionSections(workbench, "project"))
         .flatMap((section) => section.nodes)
         .map((node) => node.id),
-    ).not.toContain(dashboardResources.sessions.uri);
+    ).not.toContain(dashboardViews.sessions.id);
   });
 
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
@@ -84,7 +83,6 @@ describe("createSessionsModule", () => {
     });
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
 
@@ -127,22 +125,21 @@ describe("createSessionsModule", () => {
       },
     ]);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionsModule());
 
-    await workbench.resources.openResource(dashboardResources.sessions);
+    await workbench.views.openView(dashboardViews.sessions.id);
     await workbench.resources.openResource(session, { replaceActive: true });
 
     const back = workbench.history.goBack();
     await Promise.resolve();
 
-    expect(back?.resource?.uri).toBe(dashboardResources.sessions.uri);
+    expect(back?.viewId).toBe(dashboardViews.sessions.id);
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.session);
-    expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardResources.sessions.uri);
+    expect(workbench.layout.getLayout().activeResourceUri).toBeUndefined();
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.session,
     ]);
-    expect(workbench.layout.getLayout().regions.main.widgets[0]?.resource?.kind).toBe("dashboard-view");
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardViews.sessions.id);
 
     const forward = workbench.history.goForward();
     await Promise.resolve();
@@ -159,12 +156,11 @@ describe("createSessionsModule", () => {
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionsModule());
 
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
 
-    expect(workbench.layout.getLayout().regions.main.widgets[0]?.resource?.uri).toBe(dashboardResources.sessions.uri);
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardViews.sessions.id);
     expect(getDashboardActiveCollection(workbench)).toBe("sessions");
     expect(getDashboardSelectedResource(workbench)).toBeUndefined();
   });
@@ -177,7 +173,6 @@ describe("createSessionsModule", () => {
     });
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionsModule());
 
     await workbench.resources.openResource(session);
@@ -192,7 +187,6 @@ describe("createSessionsModule", () => {
     const workbench = createWorkbenchCore();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
     workbench.sidePanel.setMode("closed");
@@ -278,7 +272,7 @@ describe("createSessionsModule workspace session scoping", () => {
 
     const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {}))
       .flatMap((section) => section.nodes)
-      .find((node) => node.id === "sessions");
+      .find((node) => node.id === "workspace-sessions");
     const sessionRowIds = (sessionsGroup?.children ?? [])
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
@@ -367,7 +361,7 @@ describe("createSessionsModule workspace session scoping", () => {
 
     const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
     const displayedSessionRowIds = () =>
-      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "sessions")?.children ?? [])
+      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "workspace-sessions")?.children ?? [])
         .filter((node) => node.resource || node.target)
         .map((node) => node.id);
     const workspaceResource = (id: string) =>
@@ -415,24 +409,3 @@ const seedContractSessions = () =>
       deleted_at: null,
     },
   ]);
-
-describeResourceRouteContract({
-  name: "sessions",
-  setup: () => {
-    seedContractSessions();
-    const workbench = createWorkbenchCore();
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.registerModule(createSessionsModule());
-    return { workbench };
-  },
-  root: dashboardResources.sessions,
-  detail: createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1", {
-    status: "completed",
-  }),
-  detailB: createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
-    status: "completed",
-  }),
-  rootDetailHistory: "retained",
-  expectedMode: "sessions",
-});

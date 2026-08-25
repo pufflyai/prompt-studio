@@ -28,15 +28,12 @@ export { registerWorkbenchExtensionDataTableRenderers } from "./contributions/da
 export {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
-  buildWorkbenchExtensionRouteEntries,
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionCommandPaletteRegistration,
   type WorkbenchExtensionMenuRegistration,
   type WorkbenchExtensionMenuSlotConfig,
   type WorkbenchExtensionMenuWhenBuilder,
   type WorkbenchExtensionMetadata,
-  type WorkbenchExtensionRoute,
-  type WorkbenchExtensionRouteResourceInput,
 } from "./contributions/extension-contributions";
 export {
   fileRendererRefreshEnvelopeFromCommand,

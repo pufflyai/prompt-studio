@@ -1,49 +1,38 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { dashboardViews } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadata, metadataWithTickets } from "./extensions/module-test-fixtures";
 import { createStartModule } from "./start/module";
 
+const activeViewId = (workbench: ReturnType<typeof createWorkbenchCore>) => {
+  const layout = workbench.layout.getLayout();
+  const activeWidgetId = layout.regions.main.activeWidgetId;
+  return layout.regions.main.widgets.find((placement) => placement.widgetId === activeWidgetId)?.viewId;
+};
+
 describe("createBootstrapModule", () => {
-  test("opens the start view when a selected project has no saved location", async () => {
+  test("opens the Start view when a selected project has no saved location", async () => {
     const workbench = createWorkbenchCore();
-
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
-      const widgetId = `test.${resource.id}`;
-      workbench.layout.registerPanel({
-        id: widgetId,
-        title: resource.label ?? resource.id,
-        region: "main",
-        rendererId: widgetId,
-        singleton: true,
-      });
-      workbench.resources.registerPresenter({
-        id: widgetId,
-        canOpen: (candidate) => candidate.uri === resource.uri,
-        open: (candidate) => workbench.layout.openPanel(widgetId, { resource: candidate }),
-      });
-    }
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
+    const start = workbench.registerModule(createStartModule());
     const bootstrap = workbench.registerModule(createBootstrapModule());
 
     try {
       await flushMicrotasks();
-
-      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
+      expect(activeViewId(workbench)).toBe(dashboardViews.start.id);
+      expect(workbench.getPrimaryResource()).toBeUndefined();
     } finally {
       bootstrap.dispose();
+      start.dispose();
     }
   });
 
-  test("restores an extension resource after extension metadata has registered its presenter", async () => {
+  test("restores a domain resource after extension metadata registers its presenter", async () => {
     const ticket = {
       kind: "ticket",
       uri: "dashboard-workbench://ticket/PS-10",
@@ -66,20 +55,8 @@ describe("createBootstrapModule", () => {
     });
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.layout.registerPanel({
-      id: dashboardWidgetIds.workspaces,
-      title: "Workspaces",
-      region: "main",
-      rendererId: "test.workspaces",
-      singleton: true,
-    });
-    workbench.resources.registerPresenter({
-      id: "test.workspaces",
-      canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === dashboardResources.workspaces.id,
-      open: (resource) => workbench.layout.openPanel(dashboardWidgetIds.workspaces, { resource }),
-    });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const start = workbench.registerModule(createStartModule());
     const extensions = workbench.registerModule(
       createExtensionsModule({
         loadAppearance: mock(async () => emptyAppearance),
@@ -90,8 +67,7 @@ describe("createBootstrapModule", () => {
 
     try {
       await flushMicrotasks();
-
-      expect(workbench.getPrimaryResource()?.uri).not.toBe(dashboardResources.workspaces.uri);
+      expect(workbench.getPrimaryResource()).toBeUndefined();
 
       resolveMetadata(metadataWithTickets);
       await flushMicrotasks();
@@ -100,30 +76,31 @@ describe("createBootstrapModule", () => {
     } finally {
       bootstrap.dispose();
       extensions.dispose();
+      start.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
 
-  test("falls back to start when a saved extension view is no longer available", async () => {
-    const missingExtensionView = {
+  test("falls back to Start when a legacy extension view is gone", async () => {
+    let savedResource: ResourceRef | undefined = {
       kind: "extension-view",
       uri: "dashboard-workbench://project/project-1/extension-views/deleted-view",
       id: "deleted-view",
       label: "Deleted view",
-      metadata: { projectId: "project-1" },
-    } satisfies ResourceRef;
-    let savedResource: ResourceRef | undefined = missingExtensionView;
-    const workbench = createWorkbenchCore({
-      lastResourcePersistence: {
-        getLastResource: () => savedResource,
-        setLastResource: (resource) => {
-          savedResource = resource;
-        },
+    };
+    const lastResourcePersistence = {
+      getLastResource: () => undefined,
+      setLastResource: (resource: ResourceRef | undefined) => {
+        savedResource = resource;
       },
-    });
+      getLegacyViewResource: () => savedResource,
+      clearLegacyViewResource: () => {
+        savedResource = undefined;
+      },
+    };
+    const workbench = createWorkbenchCore({ lastResourcePersistence });
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    const dashboardViewKind = workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());
     const extensions = workbench.registerModule(
@@ -132,19 +109,17 @@ describe("createBootstrapModule", () => {
         loadMetadata: mock(async () => metadata),
       }),
     );
-    const bootstrap = workbench.registerModule(createBootstrapModule());
+    const bootstrap = workbench.registerModule(createBootstrapModule({ lastResourcePersistence }));
 
     try {
       await flushMicrotasks();
       await flushMicrotasks();
-
-      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
-      expect(savedResource?.uri).toBe(dashboardResources.start.uri);
+      expect(activeViewId(workbench)).toBe(dashboardViews.start.id);
+      expect(savedResource).toBeUndefined();
     } finally {
       bootstrap.dispose();
       extensions.dispose();
       start.dispose();
-      dashboardViewKind.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });

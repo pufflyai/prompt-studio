@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
-import { extensionViewWidgetId } from "./extension-view-placement";
 
 const webview = {
   entry: {
@@ -68,9 +67,9 @@ describe("extension-mode-layout mode chrome", () => {
     expect(statusIds()).toEqual([]);
 
     workbench.modes.setActiveMode("pstdio-lab.lab");
-    expect(statusIds()).toEqual([extensionViewWidgetId("pstdio-lab.statusStrip")]);
+    expect(statusIds()).toEqual(["pstdio-lab.statusStrip"]);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.overview"),
+      "pstdio-lab.overview",
     ]);
 
     workbench.modes.setActiveMode("other");
@@ -195,8 +194,6 @@ describe("extension-mode-layout native menus", () => {
     workbench.modes.setActiveMode("other");
     workbench.modes.setActiveMode("pstdio-lab.build");
 
-    expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
-      "dashboard-workbench.extension-view.pstdio-lab.sidenav",
-    );
+    expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe("pstdio-lab.sidenav");
   });
 });

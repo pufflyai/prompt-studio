@@ -13,15 +13,14 @@ import {
 } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
-import { registerResourceRoute } from "@/shared/workbench/route-helper";
+import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { openResourceSessionPreview } from "./session-auto-open";
 import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
@@ -46,14 +45,13 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardS
 };
 
 const setSessionsBreadcrumb = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const root = {
+    title: dashboardViews.sessions.label,
+    icon: dashboardViews.sessions.icon,
+    onClick: () => void ctx.views.openView(dashboardViews.sessions.id, { strategy: { kind: "replace-active" } }),
+  };
   if (resource.kind !== "session" && resource.kind !== "session-draft") {
-    ctx.breadcrumbs.setItems([
-      {
-        title: dashboardResources.sessions.label,
-        icon: dashboardResources.sessions.icon,
-        resource: dashboardResources.sessions,
-      },
-    ]);
+    ctx.breadcrumbs.setItems([{ title: root.title, icon: root.icon }]);
     return;
   }
 
@@ -61,11 +59,7 @@ const setSessionsBreadcrumb = (ctx: WorkbenchModuleContext, resource: ResourceRe
     resource.kind === "session" ? (findDashboardSession(resource.id)?.resource ?? resource) : resource;
 
   ctx.breadcrumbs.setItems([
-    {
-      title: dashboardResources.sessions.label,
-      icon: dashboardResources.sessions.icon,
-      resource: dashboardResources.sessions,
-    },
+    root,
     {
       title: sessionResource.label ?? "Session",
       icon: sessionResource.icon,
@@ -88,9 +82,8 @@ const removeMatchingSidePanelPreview = (ctx: WorkbenchModuleContext, resource: R
 
 const openSessionsNavigation = (ctx: WorkbenchModuleContext) => {
   const lastOpenedSession = getDashboardSelectedSession(ctx);
-  return ctx.resources.openResource(lastOpenedSession?.resource ?? dashboardResources.sessions, {
-    replaceActive: true,
-  });
+  if (lastOpenedSession) return ctx.resources.openResource(lastOpenedSession.resource, { replaceActive: true });
+  return ctx.views.openView(dashboardViews.sessions.id, { strategy: { kind: "replace-active" } });
 };
 
 const hydrateOpenSessionsView = (ctx: WorkbenchModuleContext) => {
@@ -103,20 +96,19 @@ const hydrateOpenSessionsView = (ctx: WorkbenchModuleContext) => {
   if (
     activeKind === "session" ||
     activeKind === "session-draft" ||
-    activeSessionPlacement?.resourceUri === dashboardResources.sessions.uri
+    activeSessionPlacement?.viewId === dashboardViews.sessions.id
   )
     return;
 
-  void ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true });
+  void ctx.views.openView(dashboardViews.sessions.id, { strategy: { kind: "replace-active" } });
 };
 
 const createSessionsNavigationNode = () => ({
-  id: dashboardResources.sessions.uri,
-  label: dashboardResources.sessions.label,
-  icon: dashboardResources.sessions.icon,
+  id: dashboardViews.sessions.id,
+  label: dashboardViews.sessions.label,
+  icon: dashboardViews.sessions.icon,
   canHide: true,
-  resource: dashboardResources.sessions,
-  target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
+  target: { kind: "view" as const, viewId: dashboardViews.sessions.id },
 });
 
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
@@ -174,8 +166,20 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
     activate(ctx) {
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "PenBox" });
-      registerDashboardViewContribution(ctx, { resource: dashboardResources.sessions, group: "Dashboard", order: 20 });
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
+      registerDashboardViewRoute(ctx, {
+        id: dashboardViews.sessions.id,
+        mode: "sessions",
+        panelId: dashboardWidgetIds.session,
+        path: "sessions",
+        title: dashboardViews.sessions.label,
+        icon: dashboardViews.sessions.icon,
+        beforeOpen: () => {
+          setSessionsBreadcrumb(ctx, { kind: "view", uri: "", id: dashboardViews.sessions.id });
+          forgetDashboardSession(ctx);
+          setDashboardSidenavSelection(ctx, undefined);
+        },
+      });
       registerSidenavSessions(ctx);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
@@ -184,7 +188,12 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         });
       }
       ctx.commands.registerCommand(
-        { id: dashboardCommandIds.openSessions, label: "Open sessions", category: "Dashboard", icon: "MessageCircle" },
+        {
+          id: dashboardCommandIds.openSessions,
+          label: "Open sessions",
+          category: "Dashboard",
+          icon: dashboardViews.sessions.icon,
+        },
         { execute: () => openSessionsNavigation(ctx) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
@@ -220,10 +229,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
 
       registerResourceRoute(ctx, {
         id: "dashboard.sessions.presenter",
-        match: (resource) =>
-          (resource.kind === "dashboard-view" && resource.id === "sessions") ||
-          resource.kind === "session" ||
-          resource.kind === "session-draft",
+        match: (resource) => resource.kind === "session" || resource.kind === "session-draft",
         mode: "sessions",
         panelId: dashboardWidgetIds.session,
         title: (resource) =>

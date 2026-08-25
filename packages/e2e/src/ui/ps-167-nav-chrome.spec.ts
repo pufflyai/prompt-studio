@@ -107,7 +107,9 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(back).toBeEnabled();
   await expect(forward).toBeDisabled();
   await back.click();
-  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
+  ).toBeVisible();
   await expect(forward).toBeEnabled();
   await expect(closedSidenav).toBeVisible();
 

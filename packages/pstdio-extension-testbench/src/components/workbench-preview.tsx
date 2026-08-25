@@ -170,11 +170,16 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   registerContentContributionWidgets(workbench, bench);
   registerPreviewResourceProvider(workbench, bench);
 
-  void workbench.resources.openResource(resource).catch(() => {
-    registerResourceKinds(workbench, bench, resource);
-    openPrimaryResource(workbench, resource, bench);
-    openTreePreview(workbench, bench, resource);
-  });
+  const initialRoute = bench.metadata.routes[0];
+  if (initialRoute) {
+    void workbench.views.openView(initialRoute.id);
+  } else {
+    void workbench.resources.openResource(resource).catch(() => {
+      registerResourceKinds(workbench, bench, resource);
+      openPrimaryResource(workbench, resource, bench);
+      openTreePreview(workbench, bench, resource);
+    });
+  }
 
   return workbench;
 };

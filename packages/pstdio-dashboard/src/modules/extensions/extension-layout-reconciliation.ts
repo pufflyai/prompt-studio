@@ -1,15 +1,16 @@
 import type { WorkbenchLayout, WorkbenchRegion, WorkbenchWidgetPlacement } from "@pstdio/workbench";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { modeIdsByPanelId } from "./extension-composition";
-import { extensionViewWidgetId, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { legacyExtensionViewWidgetId } from "./extension-layout-legacy-aliases";
 
 interface ExtensionLayoutCompatibilityRecord {
-  bodyKind: "native" | "webview";
+  bodyKind: "native" | "route" | "webview";
   extensionId: string;
   modeIds: string[];
   panelId: string;
   region: WorkbenchRegion;
   widgetId: string;
+  path?: string;
 }
 
 interface ReconcileExtensionLayoutInput {
@@ -22,6 +23,7 @@ interface ReconcileExtensionLayoutInput {
 interface PlacementCandidate {
   migrated: boolean;
   originalWidgetId: string;
+  originalResourceUri?: string;
   placement: WorkbenchWidgetPlacement;
   sourceRegion: WorkbenchRegion;
   targetRegion: WorkbenchRegion;
@@ -50,18 +52,32 @@ export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionM
         // A panel's default declaration, not a mode recipe: the fingerprint must
         // change when its initial placement changes.
         region: declaredPanelRegion(panel),
-        widgetId: extensionViewWidgetIdFor(panel),
+        widgetId: panel.id,
       }),
     )
+    .concat(
+      metadata.routes.map((route) => ({
+        bodyKind: "route" as const,
+        extensionId: route.extensionId,
+        modeIds: [],
+        panelId: route.id,
+        path: route.path,
+        region: "main" as const,
+        widgetId: route.id,
+      })),
+    )
     .sort(compareRecord);
-  return JSON.stringify(records);
+  return JSON.stringify({ version: 3, records });
 };
 
 const parseCompatibility = (value: string | undefined) => {
   if (!value) return [] as ExtensionLayoutCompatibilityRecord[];
   try {
-    const parsed = JSON.parse(value) as ExtensionLayoutCompatibilityRecord[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(value) as
+      | ExtensionLayoutCompatibilityRecord[]
+      | { records?: ExtensionLayoutCompatibilityRecord[] };
+    if (Array.isArray(parsed)) return parsed;
+    return Array.isArray(parsed.records) ? parsed.records : [];
   } catch {
     return [] as ExtensionLayoutCompatibilityRecord[];
   }
@@ -102,7 +118,7 @@ const createMigration = (input: {
     if (current && current.widgetId !== previous.widgetId) migration.set(previous.widgetId, current.widgetId);
   }
   for (const current of input.current) {
-    if (current.bodyKind === "native") migration.set(extensionViewWidgetId(current.panelId), current.widgetId);
+    migration.set(legacyExtensionViewWidgetId(current.panelId), current.widgetId);
   }
 
   return migration;
@@ -114,9 +130,63 @@ const createExtensionIdByPlacementId = (records: ExtensionLayoutCompatibilityRec
   const extensionIdByPlacementId = new Map<string, string>();
   for (const record of records) {
     extensionIdByPlacementId.set(record.widgetId, record.extensionId);
-    extensionIdByPlacementId.set(extensionViewWidgetId(record.panelId), record.extensionId);
+    extensionIdByPlacementId.set(legacyExtensionViewWidgetId(record.panelId), record.extensionId);
   }
   return extensionIdByPlacementId;
+};
+
+const toPlacementCandidate = (input: {
+  currentRecordByWidgetId: Map<string, ExtensionLayoutCompatibilityRecord>;
+  currentRouteByPath: Map<string, ExtensionLayoutCompatibilityRecord>;
+  currentWidgetIds: Set<string>;
+  extensionIdByPlacementId: Map<string, string>;
+  knownExtensionIds: Set<string>;
+  migration: Map<string, string>;
+  placement: WorkbenchWidgetPlacement;
+  resetExtensionId: string | undefined;
+  sourceRegion: WorkbenchRegion;
+}) => {
+  const extensionId = placementExtensionId(input.placement, input.knownExtensionIds, input.extensionIdByPlacementId);
+  const legacyRoutePath =
+    input.placement.resource?.kind === "extension-route" &&
+    typeof input.placement.resource.metadata?.routePath === "string"
+      ? input.placement.resource.metadata.routePath
+      : undefined;
+  const legacyRoute = legacyRoutePath ? input.currentRouteByPath.get(legacyRoutePath) : undefined;
+  const replacementWidgetId =
+    legacyRoute?.widgetId ??
+    input.migration.get(input.placement.widgetId) ??
+    input.migration.get(input.placement.contributionId);
+  const widgetId = replacementWidgetId ?? input.placement.widgetId;
+  const currentRecord = input.currentRecordByWidgetId.get(widgetId);
+  const reset = input.resetExtensionId && extensionId === input.resetExtensionId;
+  // These records describe extension panels, so only a placement that is one may be
+  // judged obsolete by them. A dashboard-owned panel that merely presents an
+  // extension resource keeps its placement as long as the extension is installed.
+  const panelPlacement =
+    input.extensionIdByPlacementId.has(input.placement.widgetId) ||
+    input.extensionIdByPlacementId.has(input.placement.contributionId);
+  const obsolete = panelPlacement
+    ? !input.currentWidgetIds.has(widgetId)
+    : Boolean(extensionId) && !input.knownExtensionIds.has(extensionId!);
+  if (reset || obsolete) return undefined;
+
+  return {
+    migrated: Boolean(replacementWidgetId),
+    originalWidgetId: input.placement.widgetId,
+    originalResourceUri: input.placement.resourceUri,
+    placement: {
+      ...input.placement,
+      widgetId,
+      contributionId: currentRecord?.widgetId ?? input.placement.contributionId,
+      viewId: currentRecord?.panelId ?? input.placement.viewId,
+      ...(input.placement.resource?.kind === "extension-view" || input.placement.resource?.kind === "extension-route"
+        ? { resource: undefined, resourceUri: undefined }
+        : {}),
+    },
+    sourceRegion: input.sourceRegion,
+    targetRegion: currentRecord?.region ?? input.sourceRegion,
+  } satisfies PlacementCandidate;
 };
 
 const createPlacementCandidates = (input: {
@@ -129,34 +199,27 @@ const createPlacementCandidates = (input: {
 }) => {
   const currentWidgetIds = new Set(input.current.map((record) => record.widgetId));
   const currentRecordByWidgetId = new Map(input.current.map((record) => [record.widgetId, record]));
+  const currentRouteByPath = new Map(
+    input.current
+      .filter((record) => record.bodyKind === "route" && record.path)
+      .map((record) => [record.path!, record]),
+  );
   const candidates: PlacementCandidate[] = [];
 
   for (const [sourceRegion, region] of layoutRegionEntries(input.layout)) {
     for (const placement of region.widgets) {
-      const extensionId = placementExtensionId(placement, input.knownExtensionIds, input.extensionIdByPlacementId);
-      const replacementWidgetId = input.migration.get(placement.widgetId);
-      const widgetId = replacementWidgetId ?? placement.widgetId;
-      const reset = input.resetExtensionId && extensionId === input.resetExtensionId;
-      // These records describe extension panels, so only a placement that is one may be
-      // judged obsolete by them. A dashboard-owned panel that merely presents an
-      // extension resource — a route panel, for instance — keeps its placement as long
-      // as the extension is installed; comparing it against panel ids it never had would
-      // drop the open view on every metadata refresh.
-      const panelPlacement =
-        input.extensionIdByPlacementId.has(placement.widgetId) ||
-        input.extensionIdByPlacementId.has(placement.contributionId);
-      const obsolete = panelPlacement
-        ? !currentWidgetIds.has(widgetId)
-        : Boolean(extensionId) && !input.knownExtensionIds.has(extensionId!);
-      if (reset || obsolete) continue;
-
-      candidates.push({
-        migrated: Boolean(replacementWidgetId),
-        originalWidgetId: placement.widgetId,
-        placement: widgetId === placement.widgetId ? placement : { ...placement, widgetId, contributionId: widgetId },
+      const candidate = toPlacementCandidate({
+        currentRecordByWidgetId,
+        currentRouteByPath,
+        currentWidgetIds,
+        extensionIdByPlacementId: input.extensionIdByPlacementId,
+        knownExtensionIds: input.knownExtensionIds,
+        migration: input.migration,
+        placement,
+        resetExtensionId: input.resetExtensionId,
         sourceRegion,
-        targetRegion: currentRecordByWidgetId.get(widgetId)?.region ?? sourceRegion,
       });
+      if (candidate) candidates.push(candidate);
     }
   }
   return candidates;
@@ -228,22 +291,31 @@ const restoreActiveRegionWidgets = (input: {
 };
 
 const reconcileLocationSubPanelSelections = (input: {
+  candidates: PlacementCandidate[];
   layout: WorkbenchLayout;
   resolveCandidate: (widgetId: string | undefined) => PlacementCandidate | undefined;
   retainedCandidates: Set<PlacementCandidate>;
 }) =>
   Object.fromEntries(
-    Object.entries(input.layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
-      resourceUri,
-      Object.fromEntries(
-        Object.values(selections)
-          .map((widgetId) => input.resolveCandidate(widgetId))
-          .filter((candidate): candidate is PlacementCandidate =>
-            Boolean(candidate && input.retainedCandidates.has(candidate)),
-          )
-          .map((candidate) => [candidate.targetRegion, candidate.placement.widgetId]),
-      ),
-    ]),
+    Object.entries(input.layout.locationSubPanelSelections ?? {}).map(([locationKey, selections]) => {
+      const migratedLocation = input.candidates.find(
+        (candidate) => candidate.migrated && candidate.originalResourceUri === locationKey,
+      );
+      const nextLocationKey = migratedLocation
+        ? `${migratedLocation.placement.contributionId}:${migratedLocation.placement.widgetId}`
+        : locationKey;
+      return [
+        nextLocationKey,
+        Object.fromEntries(
+          Object.values(selections)
+            .map((widgetId) => input.resolveCandidate(widgetId))
+            .filter((candidate): candidate is PlacementCandidate =>
+              Boolean(candidate && input.retainedCandidates.has(candidate)),
+            )
+            .map((candidate) => [candidate.targetRegion, candidate.placement.widgetId]),
+        ),
+      ];
+    }),
   );
 
 export const reconcileExtensionLayout = (input: ReconcileExtensionLayoutInput) => {
@@ -281,6 +353,7 @@ export const reconcileExtensionLayout = (input: ReconcileExtensionLayoutInput) =
   const activeWidgetId = replaceWidgetId(input.layout.activeWidgetId);
   const activeLocationWidgetId = replaceWidgetId(input.layout.activeLocationWidgetId);
   const locationSubPanelSelections = reconcileLocationSubPanelSelections({
+    candidates,
     layout: input.layout,
     resolveCandidate,
     retainedCandidates,
@@ -291,7 +364,7 @@ export const reconcileExtensionLayout = (input: ReconcileExtensionLayoutInput) =
     regions,
     activeWidgetId,
     activeLocationWidgetId,
-    activeResourceUri: activeWidgetId ? input.layout.activeResourceUri : undefined,
+    activeResourceUri: globalActiveCandidate?.placement.resourceUri,
     locationSubPanelSelections,
   } satisfies WorkbenchLayout;
 };

@@ -45,7 +45,7 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
             lab: {
               target: "workbench.left.tree",
               label: "Lab",
-              action: { kind: "route", route: "lab" },
+              action: { kind: "view", viewId: "lab" },
               when: { mode: "project" },
             },
             openLabMode: {

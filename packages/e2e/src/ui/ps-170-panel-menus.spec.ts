@@ -75,13 +75,17 @@ test("PS-170 preserves Forward history when refreshing after Back", async ({ pag
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await page.getByRole("button", { name: "Navigate back" }).click();
-  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
+  ).toBeVisible();
 
   await page.reload();
   const forward = page.getByRole("button", { name: "Navigate forward" });
   await expect(forward).toBeEnabled();
   await forward.click();
-  await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
 });
 
 test("PS-170 keeps the project selector and Session Panel available on project home", async ({ page, request }) => {

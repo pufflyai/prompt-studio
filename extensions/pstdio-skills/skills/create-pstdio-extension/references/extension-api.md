@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.2"
+    "pstdio": "1.0.0-alpha.3"
   },
   "private": true,
   "type": "module",
@@ -223,7 +223,8 @@ resource detail screen usually has:
 - `resourcePanels` entries only for panels contributed into another extension's slots.
 - A `modes` contribution whose `resources` recipe accepts the resource and describes any placement changes.
 
-Each panel must declare exactly one of `webview` or `renderer`. An owned placement uses `show` with a docked `region`
+Each panel must declare exactly one of `webview` or `renderer`. An optional `path` gives the panel's registered view
+a project deep link. An owned placement uses `show` with a docked `region`
 (`sidenav`, `main`, `secondary`, or `side`), optional `for`, `allowedRegions`, and `required`. A native renderer reference has a `kind` (`tree`,
 `file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. In the mode recipe, mark
 the primary panel placement `required: true` so the host restores the editor whenever the mode-resource context activates.
@@ -271,7 +272,8 @@ Panel with `renderer: { kind: "kanban", id: "<renderer-id>" }`. To show it in th
 contribution whose action opens that Panel.
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
-`action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
+`action: { kind: "view", viewId: "<package-name>.<route-key>" }`. Routes and panels register views under their
+normalized contribution IDs. An optional route or panel `path` is only the deep-link path.
 Use this for custom webview pages only; native resource screens should use `resourceKinds`, `resourcePanels`,
 `modes`, `panels`, `fileRenderers`, and `treeRenderers`.
 

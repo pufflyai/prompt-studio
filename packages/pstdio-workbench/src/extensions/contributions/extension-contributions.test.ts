@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import {
-  buildWorkbenchExtensionMenuRegistrations,
-  buildWorkbenchExtensionRouteEntries,
-} from "./extension-contributions";
+import { buildWorkbenchExtensionMenuRegistrations } from "./extension-contributions";
 
 const metadata = {
   extensions: [{ id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
@@ -17,7 +14,7 @@ const metadata = {
       slotId: "project.headerPrimary",
       label: "Lab: Say hello",
       icon: "flask-conical",
-      when: { resourceType: ["extension-route"] },
+      when: { viewId: "extension-lab.labPage" },
     },
   ],
   routes: [
@@ -38,13 +35,6 @@ const metadata = {
   panels: [],
 } satisfies WorkbenchExtensionMetadata;
 
-const createResource = ({ route }: { route: WorkbenchExtensionMetadata["routes"][number] }) => ({
-  kind: "extension-route",
-  uri: `workbench://extension-route/${route.path}`,
-  id: route.path,
-  label: typeof route.label === "string" ? route.label : (route.label.default ?? route.label.$l10n),
-});
-
 describe("workbench extension contribution mapping", () => {
   test("maps menu contributions into workbench registrations with host slot config", () => {
     const registrations = buildWorkbenchExtensionMenuRegistrations({
@@ -54,8 +44,8 @@ describe("workbench extension contribution mapping", () => {
       ]),
       createCommandId: (contribution) => `host.extension.menu.${contribution.id}`,
       createWhenExpression: (contribution) =>
-        contribution.when?.resourceType?.includes("extension-route")
-          ? "activeResource.kind == extension-route"
+        contribution.when?.viewId === "extension-lab.labPage"
+          ? "workbench.view.id == extension-lab.labPage"
           : undefined,
     });
 
@@ -67,7 +57,7 @@ describe("workbench extension contribution mapping", () => {
           group: "primary",
           icon: "flask-conical",
           sourceCommandId: "extension-lab.say-hello",
-          when: "activeResource.kind == extension-route",
+          when: "workbench.view.id == extension-lab.labPage",
         }),
       }),
     ]);
@@ -111,19 +101,5 @@ describe("workbench extension contribution mapping", () => {
     });
 
     expect(registrations[0]?.menuItem.args).toEqual({ files: ["existing-ref"] });
-  });
-
-  test("lists route entries without legacy navigation grouping", () => {
-    const entries = buildWorkbenchExtensionRouteEntries({
-      metadata,
-      createResource,
-    });
-
-    expect(entries).toEqual([
-      expect.objectContaining({
-        resource: expect.objectContaining({ uri: "workbench://extension-route/lab" }),
-      }),
-    ]);
-    expect(entries[0]).not.toHaveProperty("group");
   });
 });

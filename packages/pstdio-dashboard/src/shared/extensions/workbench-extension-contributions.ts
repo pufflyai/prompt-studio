@@ -2,12 +2,12 @@ import {
   type CommandParamSchema,
   type MenuItem,
   type MenuPath,
-  type ResourceRef,
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
+  workbenchViewIdContextKey,
 } from "@pstdio/workbench";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
@@ -18,7 +18,6 @@ import {
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
 
-export const dashboardExtensionRouteKind = "extension-route";
 export const projectHeaderPrimarySlotId = "project.headerPrimary";
 export const projectHeaderOverflowSlotId = "project.headerOverflow";
 export const projectCommandPanelSlotId = "project.commandPanel";
@@ -31,7 +30,6 @@ export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id"
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
 
 export type DashboardExtensionMetadata = ResolvedWorkbenchExtensionMetadata;
-export type DashboardExtensionRoute = DashboardExtensionMetadata["routes"][number];
 type ExtensionMenuContribution = DashboardExtensionMetadata["menuContributions"][number];
 type ExtensionWhenExpression = NonNullable<ExtensionMenuContribution["when"]>;
 type ResourceScopedMenuContribution = {
@@ -58,32 +56,6 @@ export const clearCachedDashboardExtensionMetadata = (projectId: string | undefi
 
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
-
-const routeResourceUri = (projectId: string, routePath: string) =>
-  `dashboard-workbench://project/${projectId}/extensions/${routePath}`;
-
-export const createDashboardExtensionRouteResource = (input: {
-  projectId: string;
-  route: DashboardExtensionRoute;
-  icon?: string;
-}) => {
-  const { icon, projectId, route } = input;
-
-  return {
-    kind: dashboardExtensionRouteKind,
-    uri: routeResourceUri(projectId, route.path),
-    id: route.path,
-    label: resolveLocalizableString(route.label, route.extensionId),
-    icon: icon ?? "PanelLeft",
-    metadata: {
-      extensionId: route.extensionId,
-      projectId,
-      route,
-      routePath: route.path,
-      favoriteScope: { scope: "project", projectId },
-    },
-  } satisfies ResourceRef;
-};
 
 const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
   [projectHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
@@ -159,13 +131,21 @@ const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["
     .filter((entry): entry is [string, string | number | boolean] => isContextPrimitive(entry[1]))
     .map(([key, value]) => `${workbenchResourceMetadataContextKey(key)} == ${contextValue(value)}`);
   const activeModeTerms = modeTerms(when.mode);
+  const viewTerms = modeTerms(when.viewId).map((term) =>
+    term.replace("activeWorkbenchMode", workbenchViewIdContextKey),
+  );
 
   const modeBranches = activeModeTerms.length > 0 ? activeModeTerms : [undefined];
   const resourceBranches = resourceTypeTerms.length > 0 ? resourceTypeTerms : [undefined];
+  const viewBranches = viewTerms.length > 0 ? viewTerms : [undefined];
 
   return modeBranches
     .flatMap((modeTerm) =>
-      resourceBranches.map((resourceTerm) => [modeTerm, resourceTerm, ...metadataTerms].filter(Boolean).join(" && ")),
+      resourceBranches.flatMap((resourceTerm) =>
+        viewBranches.map((viewTerm) =>
+          [modeTerm, resourceTerm, viewTerm, ...metadataTerms].filter(Boolean).join(" && "),
+        ),
+      ),
     )
     .filter(Boolean)
     .join(" || ");
@@ -234,15 +214,3 @@ export const buildDashboardExtensionCommandPaletteRegistrations = (metadata: Das
     createCommandId: createWorkbenchExtensionPaletteCommandId,
     resolveString: resolveLocalizableString,
   });
-
-export const buildDashboardExtensionRouteEntries = (input: {
-  metadata: DashboardExtensionMetadata | undefined;
-  projectId: string | undefined;
-}) => {
-  const { metadata, projectId } = input;
-  if (!projectId) return [];
-
-  return (metadata?.routes ?? []).map((route) => ({
-    resource: createDashboardExtensionRouteResource({ projectId, route }),
-  }));
-};

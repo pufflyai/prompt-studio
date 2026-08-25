@@ -143,7 +143,7 @@ const routeItems = (props: ContributionExplorerProps) => {
     id: route.id,
     label: text(route.label, route.id),
     description: route.path,
-    onActivate: () => workbench.layout.openPanel(route.id, { pinned: true, title: text(route.label, route.id) }),
+    onActivate: () => void workbench.views.openView(route.id, { pinned: true }),
   }));
 };
 

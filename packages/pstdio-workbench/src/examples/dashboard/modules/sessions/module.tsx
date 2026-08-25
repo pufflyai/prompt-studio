@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "../../../../core";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 
 const SessionWidget = lazy(() =>
@@ -63,18 +63,15 @@ export const createSessionsModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     registerSessionWidgets(ctx);
 
-    ctx.resources.registerPresenter({
-      id: "dashboard.sessions.presenter",
-      priority: 1000,
-      canOpen: (resource) => resource.kind === "dashboard-view" && resource.id === "sessions",
-      open: (resource, input) => {
+    ctx.views.registerView({
+      id: dashboardViews.sessions.id,
+      panelId: dashboardWidgetIds.sessions,
+      title: dashboardViews.sessions.label,
+      icon: dashboardViews.sessions.icon,
+      resolveInput: (input) => {
         ctx.modes.setActiveMode("project");
-        setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openPanel(dashboardWidgetIds.sessions, {
-          strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-          resource,
-          title: resource.label,
-        });
+        ctx.breadcrumbs.setItems([{ title: dashboardViews.sessions.label, icon: dashboardViews.sessions.icon }]);
+        return input;
       },
     });
   },

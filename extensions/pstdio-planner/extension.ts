@@ -112,9 +112,7 @@ export default defineExtension({
       // Tickets is a root item, not an entry under an "Extensions" heading.
       group: null,
       placement: "first",
-      // Opens the Tickets browse-root resource — the same resource ticket
-      // breadcrumbs resolve as the root of every ticket lineage.
-      action: { kind: "resource", resource: { type: "extension-view", id: "pstdio-planner.tickets" } },
+      action: { kind: "view", viewId: "pstdio-planner.tickets" },
     },
   },
 
@@ -267,6 +265,7 @@ export default defineExtension({
   panels: {
     tickets: {
       title: l10n("kanbanRenderers.tickets.title", "Tickets"),
+      path: "tickets",
       show: { region: "main" },
       renderer: { kind: "kanban", id: "tickets" },
     },

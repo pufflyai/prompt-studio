@@ -121,8 +121,8 @@ describe("extension mode-wide panels", () => {
       await workbench.navigator.open({ modeId: "pstdio.extension-lab.lab" });
 
       expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-        "dashboard-workbench.extension-view.extension-lab.labCams",
+        "extension-lab.labOverview",
+        "extension-lab.labCams",
         "extension-lab.labArtifacts",
       ]);
     } finally {
@@ -184,8 +184,8 @@ describe("extension mode-wide panels", () => {
 
       expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
       expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-        "dashboard-workbench.extension-view.extension-lab.labCams",
+        "extension-lab.labOverview",
+        "extension-lab.labCams",
         "extension-lab.labArtifacts",
       ]);
     } finally {

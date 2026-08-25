@@ -3,7 +3,6 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { extensionViewWidgetId } from "../extension-view-placement";
 
 const readProjectId = (value: unknown) => {
   const projectId = (value as { projectId?: unknown } | undefined)?.projectId;
@@ -19,8 +18,9 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
   const metadata = getCachedDashboardExtensionMetadata(projectId);
   const view = [
     ...(metadata?.panels ?? []).flatMap((panel) => [panel, ...(panel.panelMenus ?? [])]),
+    ...(metadata?.routes ?? []),
     ...(metadata?.statusItems ?? []),
-  ].find((candidate) => extensionViewWidgetId(candidate.id) === input.instance.panelId);
+  ].find((candidate) => candidate.id === input.instance.panelId);
   return view?.webview ? { projectId, view, webview: view.webview } : undefined;
 };
 
@@ -55,7 +55,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           : undefined
       }
       terminal={input.workbench.terminal}
-      title={resolveLocalizableString(view.title, view.extensionId)}
+      title={resolveLocalizableString("title" in view ? view.title : view.label, view.extensionId)}
       webview={webview}
       webviewId={view.id}
       workbench={input.workbench}

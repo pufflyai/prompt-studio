@@ -24,7 +24,6 @@ const treeItemNodes = async (metadata: ReturnType<typeof treeItemMetadata>) => {
   const workbench = createWorkbenchCore();
   registerWorkbenchExtensionTreeItems({
     metadata,
-    routeResourceKind: "extension-route",
     workbench,
   });
   const renderer = workbench.renderers.getTreeRenderer("workbench.extension.treeItems.workbench.left.tree");

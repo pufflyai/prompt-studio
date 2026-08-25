@@ -7,7 +7,7 @@ import {
 } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule terminal integration", () => {
@@ -33,8 +33,6 @@ describe("createWorkspacesModule terminal integration", () => {
         is_default: true,
       },
     ]);
-
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -61,8 +59,6 @@ describe("createWorkspacesModule terminal integration", () => {
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
-
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -96,13 +92,11 @@ describe("createWorkspacesModule terminal integration", () => {
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
-
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+    await workbench.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     const terminals = workbench.layout
@@ -125,15 +119,13 @@ describe("createWorkspacesModule terminal integration", () => {
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
-
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
     workbench.layout.closePanel(WORKBENCH_TERMINAL_WIDGET_ID);
-    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+    await workbench.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     expect(
@@ -151,8 +143,6 @@ describe("createWorkspacesModule terminal integration", () => {
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
-
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -160,7 +150,7 @@ describe("createWorkspacesModule terminal integration", () => {
     await workbench.resources.openResource(workspace, { replaceActive: true });
     workbench.layout.closePanel(WORKBENCH_TERMINAL_WIDGET_ID);
     workbench.layout.clearRegion("secondary");
-    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+    await workbench.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } });
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     expect(workbench.layout.listPanelInstances("secondary")).toEqual([

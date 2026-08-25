@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createSidenavModule } from "../sidenav/module";
 import { createSessionsModule } from "./module";
@@ -25,15 +25,14 @@ test("shows existing sessions immediately on the sessions aggregate", async () =
   const workbench = createWorkbenchCore();
 
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   workbench.registerModule(createSidenavModule());
   workbench.registerModule(createSessionsModule());
 
-  await workbench.resources.openResource(dashboardResources.sessions);
+  await workbench.views.openView(dashboardViews.sessions.id);
 
   const sessionRows = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav))
     .flatMap((section) => section.nodes)
-    .find((node) => node.id === "sessions")?.children;
+    .find((node) => node.id === "workspace-sessions")?.children;
 
   expect(sessionRows?.filter((node) => node.resource || node.target).map((node) => node.label)).toEqual([
     "Existing session",

@@ -90,12 +90,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: {
-                type: "extension-view",
-                id: "pstdio-planner.tickets",
-                label: "Tickets",
-                icon: "square-kanban",
-              },
+              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
             },
           },
         ],
@@ -117,12 +112,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: {
-                type: "extension-view",
-                id: "pstdio-planner.tickets",
-                label: "Tickets",
-                icon: "square-kanban",
-              },
+              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
             },
           },
           expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
@@ -245,12 +235,7 @@ describe("runAttemptCommand guarded launches", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: {
-                type: "extension-view",
-                id: "pstdio-planner.tickets",
-                label: "Tickets",
-                icon: "square-kanban",
-              },
+              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
             },
           },
         ],
@@ -354,12 +339,7 @@ describe("createWorkspaceCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: {
-                type: "extension-view",
-                id: "pstdio-planner.tickets",
-                label: "Tickets",
-                icon: "square-kanban",
-              },
+              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
             },
           },
         ],
@@ -407,12 +387,7 @@ describe("createWorkspaceCommand", () => {
                 label: `${parent.shorthand} Parent`,
                 metadata: {
                   shorthand: parent.shorthand,
-                  resourceParent: {
-                    type: "extension-view",
-                    id: "pstdio-planner.tickets",
-                    label: "Tickets",
-                    icon: "square-kanban",
-                  },
+                  resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
                 },
               },
             },

@@ -34,7 +34,7 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
     metadata: {
       shorthand: ticket.shorthand,
       documentId,
-      resourceParent: { type: "extension-view", id: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" },
+      resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
     },
   },
   input: { strategy: "replace-active" as const },
@@ -209,12 +209,7 @@ describe("ticket files tree workspace commands", () => {
           label: "PS-999",
           metadata: {
             shorthand: "PS-999",
-            resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              icon: "square-kanban",
-            },
+            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
           },
         },
       ],
@@ -262,12 +257,7 @@ describe("ticket files tree workspace commands", () => {
                   label: `${ticket.shorthand} ${ticket.title}`,
                   metadata: {
                     shorthand: ticket.shorthand,
-                    resourceParent: {
-                      type: "extension-view",
-                      id: "pstdio-planner.tickets",
-                      label: "Tickets",
-                      icon: "square-kanban",
-                    },
+                    resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
                   },
                 },
                 workspaceId: "ws-1",
@@ -337,12 +327,7 @@ describe("ticket files tree workspace commands", () => {
                     label: "PS-999",
                     metadata: {
                       shorthand: "PS-999",
-                      resourceParent: {
-                        type: "extension-view",
-                        id: "pstdio-planner.tickets",
-                        label: "Tickets",
-                        icon: "square-kanban",
-                      },
+                      resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
                     },
                   },
                 ],

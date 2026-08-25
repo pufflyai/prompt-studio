@@ -219,6 +219,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
     expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
     expect(extension.panels?.tickets).toMatchObject({
+      path: "tickets",
       show: { region: "main" },
       renderer: { kind: "kanban", id: "tickets" },
     });

@@ -12,7 +12,6 @@ describe("createExtensionsModule linked resource views", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
 
@@ -43,7 +42,6 @@ describe("createExtensionsModule linked resource views", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "active-project", name: "Active project" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
 

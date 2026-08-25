@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { resolveDashboardLayoutPersistenceScope, selectDashboardNavigationResource } from "./navigation-state";
+import {
+  resolveDashboardLayoutPersistenceScope,
+  selectDashboardNavigationResource,
+  selectDashboardNavigationView,
+} from "./navigation-state";
 import { selectDashboardProject } from "./project-context";
-import { dashboardResources } from "./resources";
+import { dashboardViews } from "./resources";
 
 describe("resolveDashboardLayoutPersistenceScope", () => {
   test("uses canonical resource, aggregate, and empty scopes", () => {
@@ -42,7 +46,7 @@ describe("selectDashboardNavigationResource", () => {
       rendererId: "test.session",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    selectDashboardNavigationResource(workbench, dashboardResources.sessions, { modeId: "project" });
+    selectDashboardNavigationView(workbench, dashboardViews.sessions.id, { modeId: "project" });
 
     const session = workbench.layout.openPanel("dashboard.session", {
       resource: {
@@ -63,7 +67,7 @@ describe("selectDashboardNavigationResource", () => {
       },
       { modeId: "workspace" },
     );
-    selectDashboardNavigationResource(workbench, dashboardResources.sessions, { modeId: "project" });
+    selectDashboardNavigationView(workbench, dashboardViews.sessions.id, { modeId: "project" });
 
     expect(workbench.layout.listPanelInstances("side")).toEqual([
       expect.objectContaining({ instanceId: session.instanceId, tabRetention: "preview" }),

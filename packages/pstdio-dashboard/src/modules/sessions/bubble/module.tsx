@@ -9,7 +9,7 @@ import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -77,13 +77,10 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       singleton: false,
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
-      // Starting a session makes sense from any project location except the Sessions
-      // view itself. `extension-view` covers an extension's own collection views, such
-      // as the Tickets board, which is a browse-root resource rather than a
-      // dashboard-owned one.
       eligibleLocations: {
-        resourceKinds: ["dashboard-view", "extension-view", "ticket", "workspace"],
-        canOpen: (resource) => resource.kind !== "dashboard-view" || resource.id !== dashboardResources.sessions.id,
+        canOpenLocation: ({ resource, viewId }) =>
+          viewId !== dashboardViews.sessions.id &&
+          (Boolean(viewId) || resource?.kind === "ticket" || resource?.kind === "workspace"),
       },
       icon: "MessageCircle",
       tab: {

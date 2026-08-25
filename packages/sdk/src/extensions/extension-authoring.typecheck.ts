@@ -267,7 +267,7 @@ const compositionExtension = defineExtension({
     grouped: {
       target: "workbench.left.tree",
       label: "Grouped",
-      action: { kind: "route", route: "/lab" },
+      action: { kind: "view", viewId: "lab.overview" },
     },
   },
   resourceHierarchyProviders: {

@@ -13,7 +13,6 @@ describe("createExtensionsModule tree host defaults", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSidenavModule());
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));

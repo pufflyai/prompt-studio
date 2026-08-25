@@ -4,11 +4,7 @@ import {
   normalizeExtensionResourceReference,
 } from "@/shared/workbench/resource-hierarchy";
 import { resolveLocalizableString } from "./extension-localization";
-import { createDashboardExtensionPanelResource } from "./extension-panel-resource";
-import {
-  createDashboardExtensionRouteResource,
-  type DashboardExtensionMetadata,
-} from "./workbench-extension-contributions";
+import type { DashboardExtensionMetadata } from "./workbench-extension-contributions";
 
 type ExtensionTreeItemContribution = NonNullable<DashboardExtensionMetadata["treeItems"]>[number];
 
@@ -44,23 +40,15 @@ const createTreeNode = (input: {
 
   if (action.kind === "href") return null;
 
-  if (action.kind === "panel") {
-    const panel = metadata.panels.find((candidate) => candidate.id === action.panelId);
-    if (!panel) return null;
-    const label = resolveLocalizableString(item.label, item.extensionId);
-    const resource = createDashboardExtensionPanelResource({
-      extensionId: panel.extensionId,
-      icon: item.icon ?? panel.icon,
-      label,
-      panelId: panel.id,
-      projectId,
-    });
+  if (action.kind === "view") {
+    const knownView = [...metadata.panels, ...metadata.routes].some((candidate) => candidate.id === action.viewId);
+    if (!knownView) return null;
     return {
-      id: resource.uri,
-      label,
+      id: action.viewId,
+      label: resolveLocalizableString(item.label, item.extensionId),
       icon: item.icon,
       canHide: true,
-      resource,
+      target: { kind: "view", viewId: action.viewId },
     };
   }
 
@@ -68,12 +56,8 @@ const createTreeNode = (input: {
     const reference = normalizeExtensionResourceReference(action.resource);
     if (!reference) return null;
     const label = resolveLocalizableString(item.label, item.extensionId);
-    // Extension-view references resolve through the canonical panel resource,
-    // which needs the owning extension id; other kinds keep their metadata as is.
-    const referenceMetadata =
-      reference.type === "extension-view" ? { extensionId: item.extensionId, ...reference.metadata } : undefined;
     const resource = dashboardResourceFromExtensionReference(
-      { ...reference, label: reference.label ?? label, ...(referenceMetadata ? { metadata: referenceMetadata } : {}) },
+      { ...reference, label: reference.label ?? label },
       { projectId, fallbackIcon: item.icon },
     );
     return {
@@ -85,19 +69,7 @@ const createTreeNode = (input: {
     };
   }
 
-  if (action.kind !== "route") return null;
-
-  const route = metadata.routes.find((candidate) => candidate.path === action.route);
-  if (!route) return null;
-
-  const resource = createDashboardExtensionRouteResource({ projectId, route, icon: item.icon });
-  return {
-    id: resource.uri,
-    label: resolveLocalizableString(item.label, item.extensionId),
-    icon: item.icon,
-    canHide: true,
-    resource,
-  };
+  return null;
 };
 
 export const buildDashboardExtensionTreeSections = (input: {

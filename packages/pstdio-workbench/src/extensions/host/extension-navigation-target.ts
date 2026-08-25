@@ -32,8 +32,8 @@ const isResourceTarget = (target: Record<string, unknown>) => {
   return strategy === undefined || strategy === "persistent" || strategy === "replace-active";
 };
 
-const isPanelTarget = (target: Record<string, unknown>) => {
-  if (typeof target.panel !== "string") return false;
+const isViewTarget = (target: Record<string, unknown>) => {
+  if (typeof target.viewId !== "string") return false;
   if (target.input === undefined) return true;
   if (!isRecord(target.input)) return false;
   const strategy = target.input.strategy;
@@ -51,7 +51,7 @@ const isPanelTarget = (target: Record<string, unknown>) => {
 const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarget, { kind: "compound" }> => {
   if (!isRecord(value)) return false;
   if (value.kind === "resource") return isResourceTarget(value);
-  if (value.kind === "panel") return isPanelTarget(value);
+  if (value.kind === "view") return isViewTarget(value);
   return value.kind === "command" && isCommand(value.command) && (value.params === undefined || isRecord(value.params));
 };
 
@@ -74,7 +74,7 @@ const toResourceInput = (
   return { replaceActive: true };
 };
 
-const toPanelInput = (
+const toViewInput = (
   input: { region?: string; strategy?: ExtensionPlacementStrategy } | undefined,
   sourcePlacement: ExtensionNavigationSourcePlacement | undefined,
 ) => {
@@ -118,8 +118,8 @@ export const toWorkbenchNavigationTarget = (
       input: toResourceInput(target.input?.strategy, input.sourcePlacement),
     };
   }
-  if (target.kind === "panel") {
-    return { kind: "panel", panelId: target.panel, input: toPanelInput(target.input, input.sourcePlacement) };
+  if (target.kind === "view") {
+    return { kind: "view", viewId: target.viewId, input: toViewInput(target.input, input.sourcePlacement) };
   }
   if (target.kind === "command") return toCommandTarget(target, input);
   return {

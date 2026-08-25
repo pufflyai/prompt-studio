@@ -36,7 +36,6 @@ describe("createExtensionsModule activity rail", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.modes.setActiveMode("project");
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
@@ -96,12 +95,10 @@ describe("createExtensionsModule mode layout", () => {
       await flushMicrotasks();
       workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-      );
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe("extension-lab.labOverview");
       expect(
         workbench.layout.getLayout().regions["main-left-menu"].widgets.map((panel) => panel.contributionId),
-      ).toEqual(["dashboard-workbench.extension-view.extension-lab.labTools"]);
+      ).toEqual(["extension-lab.labTools"]);
       expect(workbench.layout.getLayout().regions["main-left-menu"].widgets[0]?.ownerResourceUri).toBe(
         workbench.getPrimaryResource()?.uri,
       );
@@ -129,17 +126,13 @@ describe("createExtensionsModule mode layout", () => {
 
       expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
         dashboardWidgetIds.dashboardSidenav,
-        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+        "extension-lab.labSidenav",
       ]);
-      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
-        "dashboard-workbench.extension-view.extension-lab.labSidenav",
-      );
+      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe("extension-lab.labSidenav");
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
+        "extension-lab.labOverview",
       ]);
-      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe(
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-      );
+      expect(workbench.layout.getLayout().activeLocationWidgetId).toBe("extension-lab.labOverview");
     } finally {
       projectsDisposable.dispose();
       disposable.dispose();
@@ -176,13 +169,11 @@ describe("createExtensionsModule mode layout persistence", () => {
       expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
       expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
         dashboardWidgetIds.dashboardSidenav,
-        "dashboard-workbench.extension-view.extension-lab.labSidenav",
+        "extension-lab.labSidenav",
       ]);
-      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
-        "dashboard-workbench.extension-view.extension-lab.labSidenav",
-      );
+      expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe("extension-lab.labSidenav");
       expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
+        "extension-lab.labOverview",
       ]);
     } finally {
       disposable.dispose();
@@ -235,8 +226,8 @@ describe("extension tree mode visibility", () => {
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
-      expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
-      expect(labNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(projectNodeIds).toContain("extension-lab.labPage");
+      expect(labNodeIds).toContain("extension-lab.labPage");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -289,10 +280,10 @@ describe("extension tree mode visibility", () => {
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
-      expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(projectNodeIds).toContain("extension-lab.labPage");
       expect(projectNodeIds).toContain("extension-lab.projectOnly");
       expect(projectNodeIds).not.toContain("extension-lab.labOnly");
-      expect(labNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(labNodeIds).toContain("extension-lab.labPage");
       expect(labNodeIds).not.toContain("extension-lab.projectOnly");
       expect(labNodeIds).toContain("extension-lab.labOnly");
     } finally {
@@ -342,7 +333,7 @@ describe("extension tree mode visibility", () => {
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
-      expect(nodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
+      expect(nodeIds).toContain("extension-lab.labPage");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

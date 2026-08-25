@@ -56,7 +56,6 @@ describe("createExtensionsModule resource inspectors", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.modes.setActiveMode("project");
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
@@ -76,9 +75,7 @@ describe("createExtensionsModule resource inspectors", () => {
       await workbench.resources.openResource(artifact, { replaceActive: true });
 
       const side = workbench.layout.getLayout().regions.side;
-      expect(side.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labArtifactDetail",
-      ]);
+      expect(side.widgets.map((widget) => widget.contributionId)).toEqual(["extension-lab.labArtifactDetail"]);
       expect(side.widgets[0]?.resource?.id).toBe("artifact-1");
       expect(workbench.sidePanel.getMode()).toBe("attached");
       // Inspectors open in place: no mode switch, no navigation change.
@@ -99,7 +96,6 @@ describe("createExtensionsModule resource views", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.modes.setActiveMode("project");
     const disposable = workbench.registerModule(
@@ -134,7 +130,7 @@ describe("createExtensionsModule resource views", () => {
       });
       expect(
         workbench.layout.getLayout().regions["main-right-menu"].widgets.map((widget) => widget.contributionId),
-      ).toEqual(["dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties"]);
+      ).toEqual(["pstdio-core-tickets.ticketProperties"]);
 
       await workbench.resources.openResource(ticketB, { replaceActive: true });
 
@@ -194,7 +190,6 @@ describe("createExtensionsModule resource views", () => {
     const events: string[] = [];
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(
       createExtensionsModule({ executeCommand, loadMetadata, loadAppearance }),
@@ -233,7 +228,6 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
     const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
 
@@ -283,7 +277,6 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
 
   test("navigates parent to child to linked workspace and back through resource history", async () => {
     const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(

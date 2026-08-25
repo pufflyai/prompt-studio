@@ -20,7 +20,7 @@ describe("extension mode layout reconciliation", () => {
       region: "main",
       rendererId: "project.notes",
     });
-    const overviewId = "dashboard-workbench.extension-view.extension-lab.labOverview";
+    const overviewId = "extension-lab.labOverview";
 
     try {
       await flushMicrotasks();

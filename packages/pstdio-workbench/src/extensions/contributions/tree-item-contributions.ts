@@ -2,30 +2,21 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, NavigationTarget, TreeNode, WorkbenchModuleContext } from "../../core";
 import { resolveWorkbenchTreeRegion } from "../shared/workbench-targets";
-import { routeResource } from "./route-contributions";
 
 type TreeItem = NonNullable<WorkbenchExtensionMetadata["treeItems"]>[number];
 
 export interface RegisterWorkbenchExtensionTreeItemsInput {
   metadata: WorkbenchExtensionMetadata;
   openHref?: (href: string) => unknown;
-  routeResourceKind: string;
   workbench: WorkbenchModuleContext;
 }
 
 const asParams = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 
-const targetForTreeAction = (
-  input: RegisterWorkbenchExtensionTreeItemsInput,
-  item: TreeItem,
-): NavigationTarget | undefined => {
-  if (item.action.kind === "panel") return { kind: "panel", panelId: item.action.panelId };
+const targetForTreeAction = (item: TreeItem): NavigationTarget | undefined => {
   const action = item.action;
-  if (action.kind === "route") {
-    const route = input.metadata.routes.find((candidate) => candidate.id === action.route);
-    return route ? { kind: "resource", resource: routeResource(route, input.routeResourceKind) } : undefined;
-  }
+  if (action.kind === "view") return { kind: "view", viewId: action.viewId };
   if (action.kind === "command") {
     return { kind: "command", commandId: action.commandId, args: action.args };
   }
@@ -71,7 +62,7 @@ export const registerWorkbenchExtensionTreeItems = (input: RegisterWorkbenchExte
                 id: item.id,
                 label: text(item.label, item.id),
                 icon: item.icon,
-                target: targetForTreeAction(input, item),
+                target: targetForTreeAction(item),
               }),
             ),
           },

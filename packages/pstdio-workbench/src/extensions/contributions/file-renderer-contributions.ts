@@ -152,6 +152,7 @@ const registerFileViewWidget = (
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
+    path: panel.path,
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,

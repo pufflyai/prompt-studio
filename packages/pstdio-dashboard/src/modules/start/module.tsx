@@ -1,9 +1,8 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { registerResourceRoute } from "@/shared/workbench/route-helper";
+import { registerDashboardViewRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
 
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
@@ -14,7 +13,6 @@ const registerStartWidget = (ctx: WorkbenchModuleContext) => {
       region: "main",
       rendererId: dashboardWidgetIds.start,
       singleton: true,
-      resourceKinds: ["dashboard-view"],
     },
     { priority: 90 },
   );
@@ -29,13 +27,14 @@ export const createStartModule = () =>
     id: "dashboard.start",
     activate(ctx) {
       registerStartWidget(ctx);
-      registerResourceRoute(ctx, {
-        id: "dashboard.start.presenter",
-        match: (resource) => resource.kind === "dashboard-view" && resource.id === dashboardResources.start.id,
+      registerDashboardViewRoute(ctx, {
+        id: dashboardViews.start.id,
         mode: "project",
         panelId: dashboardWidgetIds.start,
-        beforeOpen: ({ resource }) => {
-          setResourceBreadcrumb(ctx, resource);
+        title: dashboardViews.start.label,
+        icon: dashboardViews.start.icon,
+        beforeOpen: () => {
+          ctx.breadcrumbs.clearItems();
           setDashboardSidenavSelection(ctx, undefined);
         },
       });

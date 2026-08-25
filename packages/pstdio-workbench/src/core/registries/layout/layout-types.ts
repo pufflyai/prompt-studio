@@ -77,6 +77,7 @@ export interface WorkbenchLocationEligibility {
   resourceKinds?: string[];
   resourceIds?: string[];
   canOpen?(resource: ResourceRef): boolean;
+  canOpenLocation?(location: { resource?: ResourceRef; viewId?: string }): boolean;
 }
 
 export type WorkbenchPanelMenuOwner =
@@ -206,6 +207,7 @@ export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "p
 export interface WorkbenchWidgetPlacement {
   widgetId: string;
   contributionId: string;
+  viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
@@ -224,6 +226,7 @@ export interface WorkbenchWidgetPlacement {
 export interface WorkbenchPanelInstance {
   instanceId: string;
   panelId: string;
+  viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
@@ -261,7 +264,8 @@ export interface WorkbenchLayoutStoreState {
 }
 
 export interface OpenWidgetInput {
-  resource?: ResourceRef;
+  viewId?: string | null;
+  resource?: ResourceRef | null;
   title?: string;
   region?: WorkbenchRegion;
   // The role this placement takes, when the caller knows it better than the widget
@@ -288,7 +292,10 @@ export type WorkbenchPanelOpenStrategy =
   | { kind: "preview"; position?: WorkbenchTabPosition };
 
 export interface OpenWorkbenchPanelInput {
-  resource?: ResourceRef;
+  /** Set by the view registry. Low-level layout callers should leave this undefined. */
+  viewId?: string | null;
+  /** `null` explicitly clears an existing singleton placement's resource binding. */
+  resource?: ResourceRef | null;
   title?: string;
   region?: WorkbenchRegion;
   role?: WorkbenchWidgetRole;

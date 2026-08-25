@@ -236,6 +236,7 @@ const toPanelRecord = (
     id: panel.id,
     extensionId: panel.extensionId,
     title: panel.contribution.title,
+    path: panel.contribution.path,
     icon: panel.contribution.icon,
     show: clonePanelShow(panel.contribution.show),
     panelMenus: panelMenus.length > 0 ? panelMenus : undefined,
@@ -489,8 +490,8 @@ const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): Extensio
             commandId: resolveOptionalContributionId(item.name, refIdOf(action.command)) ?? "unknown",
             args: action.params as Record<string, unknown> | undefined,
           }
-        : action.kind === "panel"
-          ? { kind: "panel", panelId: resolveContributionId(item.name, action.panel) }
+        : action.kind === "view"
+          ? { kind: "view", viewId: resolveContributionId(item.name, action.viewId) }
           : action,
     when: item.contribution.when as ExtensionTreeItemContribution["when"],
   };

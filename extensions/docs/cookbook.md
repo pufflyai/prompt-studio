@@ -22,7 +22,7 @@ This cookbook gives short recipes for the implemented extension API.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.2"
+    "pstdio": "1.0.0-alpha.3"
   },
   "type": "module",
   "dependencies": {
@@ -211,13 +211,13 @@ export default defineExtension({
       group: "Planner",
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "route", route: "planner" },
+      action: { kind: "view", viewId: "planner.planner" },
     },
   },
 });
 ```
 
-Omit `when.mode` when a route or command should stay visible in every active mode where the host left tree exists. Add `when: { mode: "project" }` for project-only navigation, or use an extension-defined mode id such as `when: { mode: "planner.focus" }` for mode-only navigation.
+The route registers `planner.planner` as its stable view ID and `planner` as its deep-link path. Omit `when.mode` when a route or command should stay visible in every active mode where the host left tree exists. Add `when: { mode: "project" }` for project-only navigation, or use an extension-defined mode id such as `when: { mode: "planner.focus" }` for mode-only navigation.
 
 ## Call Commands From A Webview
 

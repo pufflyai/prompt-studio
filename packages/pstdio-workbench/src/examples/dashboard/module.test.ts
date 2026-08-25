@@ -3,7 +3,7 @@ import { createWorkbenchCore, type WorkbenchCore } from "../../core";
 import { SETTINGS_RESOURCE_KIND, WORKBENCH_SETTINGS_WIDGET_ID } from "../../react";
 import { createDashboardExampleModules } from "./module";
 import { dashboardNavigationTreeViewId } from "./modules/shell/project-nav";
-import { dashboardResources } from "./shared/mock-data/resources";
+import { dashboardResources, dashboardViews } from "./shared/mock-data/resources";
 import { dashboardTickets } from "./shared/mock-data/tickets";
 import { dashboardWidgetIds } from "./shared/widget-ids";
 
@@ -35,12 +35,11 @@ describe("dashboard workbench navigation", () => {
     const workbench = createDashboardWorkbench();
 
     expect(workbench.resources.getKind("project")?.icon).toBe("folder-root");
-    expect(workbench.resources.getKind("dashboard-view")?.icon).toBe("square-kanban");
     expect(workbench.resources.getKind("ticket")?.icon).toBe("component");
     expect(workbench.resources.getKind("workspace")?.icon).toBe("computer");
     expect(workbench.resources.getKind(SETTINGS_RESOURCE_KIND)?.icon).toBe("settings");
-    expect(dashboardResources.tickets.icon).toBe("square-kanban");
-    expect(dashboardResources.workspaces.icon).toBe("computer");
+    expect(dashboardViews.tickets.icon).toBe("square-kanban");
+    expect(dashboardViews.workspaces.icon).toBe("computer");
     expect(dashboardResources.settings.icon).toBe("settings");
     expect(dashboardTickets[0].resource.icon).toBe("component");
     expect(dashboardTickets[0].workspaceResource.icon).toBe("git-pull-request-draft");
@@ -70,7 +69,7 @@ describe("dashboard workbench navigation", () => {
   test("opens workspaces from a data view into the resource sidenav", async () => {
     const workbench = createDashboardWorkbench();
 
-    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+    await workbench.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } });
 
     const workspaceRenderer = workbench.renderers.getKanbanRenderer(dashboardWidgetIds.workspaces);
     expect(workspaceRenderer).toBeDefined();

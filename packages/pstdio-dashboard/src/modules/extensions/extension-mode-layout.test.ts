@@ -7,7 +7,6 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { resolveExtensionView } from "./components/extension-view-widget";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
-import { extensionViewWidgetId } from "./extension-view-placement";
 
 const webview = {
   entry: {
@@ -79,21 +78,21 @@ describe("extension-mode-layout panel registration", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    workbench.layout.openPanel(extensionViewWidgetId("pstdio-lab.third"), { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel(extensionViewWidgetId("pstdio-lab.second"), { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel(extensionViewWidgetId("pstdio-lab.first"), { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("pstdio-lab.third", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("pstdio-lab.second", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("pstdio-lab.first", { strategy: { kind: "persistent" } });
 
     // Panels no longer declare a placement: manifest declaration order is the order.
     expect(workbench.layout.listPanelInstances("main").map((panel) => panel.panelId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.first"),
-      extensionViewWidgetId("pstdio-lab.second"),
-      extensionViewWidgetId("pstdio-lab.third"),
+      "pstdio-lab.first",
+      "pstdio-lab.second",
+      "pstdio-lab.third",
     ]);
     // Panel menus keep their placement.
     expect(workbench.layout.listPanelInstances("main-right-menu").map((panel) => panel.panelId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.first.menu-first"),
-      extensionViewWidgetId("pstdio-lab.first.menu-default"),
-      extensionViewWidgetId("pstdio-lab.first.menu-last"),
+      "pstdio-lab.first.menu-first",
+      "pstdio-lab.first.menu-default",
+      "pstdio-lab.first.menu-last",
     ]);
   });
 
@@ -141,12 +140,12 @@ describe("extension-mode-layout panel registration", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    workbench.layout.openPanel(extensionViewWidgetId("pstdio-lab.b"), { strategy: { kind: "persistent" } });
-    workbench.layout.openPanel(extensionViewWidgetId("pstdio-lab.a"), { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("pstdio-lab.b", { strategy: { kind: "persistent" } });
+    workbench.layout.openPanel("pstdio-lab.a", { strategy: { kind: "persistent" } });
 
     expect(workbench.layout.listPanelInstances("main-right-menu").map((panel) => panel.panelId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.a.menu"),
-      extensionViewWidgetId("pstdio-lab.b.menu"),
+      "pstdio-lab.a.menu",
+      "pstdio-lab.b.menu",
     ]);
   });
 
@@ -167,7 +166,7 @@ describe("extension-mode-layout panel registration", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    const widget = workbench.layout.getPanel(extensionViewWidgetId("pstdio-lab.overview"))!;
+    const widget = workbench.layout.getPanel("pstdio-lab.overview")!;
     expect(widget).toMatchObject({ region: "main", config: { projectId: "project-1" } });
 
     setCachedDashboardExtensionMetadata("project-1", metadata);
@@ -215,7 +214,7 @@ describe("extension-mode-layout panel registration", () => {
 
     registerExtensionModeContributions(workbench, metadata, "project-1");
 
-    expect(workbench.layout.getPanel(extensionViewWidgetId("pstdio-lab.editor"))?.resourceKinds).toBeUndefined();
+    expect(workbench.layout.getPanel("pstdio-lab.editor")?.resourceKinds).toBeUndefined();
     expect(workbench.resources.getKind("glass-lab-artifact")).toMatchObject({
       kind: "glass-lab-artifact",
       label: "Glass Lab artifact",
@@ -258,7 +257,7 @@ describe("extension-mode-layout mode composition", () => {
     workbench.modes.setActiveMode("pstdio-lab.review");
 
     expect(workbench.layout.getLayout().regions.secondary.widgets.map((widget) => widget.contributionId)).toEqual([
-      extensionViewWidgetId("pstdio-lab.checklist"),
+      "pstdio-lab.checklist",
     ]);
     expect(workbench.panels.isOpen("secondary")).toBe(true);
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(true);
@@ -326,7 +325,7 @@ describe("extension-mode-layout mode composition", () => {
     registerExtensionModeContributions(workbench, metadata, "project-1");
     workbench.modes.setActiveMode("pstdio-lab.build");
 
-    const widgetId = extensionViewWidgetId("pstdio-lab.overview");
+    const widgetId = "pstdio-lab.overview";
     const placement = workbench.layout
       .getLayout()
       .regions.main.widgets.find((widget) => widget.contributionId === widgetId)!;

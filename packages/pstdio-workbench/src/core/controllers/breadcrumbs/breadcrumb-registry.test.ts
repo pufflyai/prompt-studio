@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createResourceRegistry } from "../../registries/resources/resource-registry";
+import { createViewRegistry } from "../../registries/views/view-registry";
 import { createResourceBreadcrumbItems } from "./breadcrumb-registry";
 
 describe("createResourceBreadcrumbItems", () => {
@@ -59,5 +60,37 @@ describe("createResourceBreadcrumbItems", () => {
     const resources = createResourceRegistry();
 
     expect(createResourceBreadcrumbItems(resources, undefined)).toEqual([]);
+  });
+
+  test("resolves a terminal view parent through the view registry", async () => {
+    const resources = createResourceRegistry();
+    const opened: string[] = [];
+    const views = createViewRegistry({
+      getPanel: (panelId) => (panelId === "tickets-panel" ? {} : undefined),
+      openPanel: (_panelId, input) => {
+        opened.push(input?.viewId ?? "");
+        return { instanceId: "tickets", panelId: "tickets-panel", closable: false };
+      },
+    });
+    views.registerView({ id: "planner.tickets", panelId: "tickets-panel", title: "Tickets", icon: "List" });
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: () => ({ type: "view", viewId: "planner.tickets" }),
+    });
+
+    const items = createResourceBreadcrumbItems(
+      resources,
+      { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1" },
+      views,
+    );
+
+    expect(items.map((item) => [item.title, item.icon])).toEqual([
+      ["Tickets", "List"],
+      ["PS-1", undefined],
+    ]);
+    items[0]?.onClick?.();
+    await Promise.resolve();
+    expect(opened).toEqual(["planner.tickets"]);
   });
 });

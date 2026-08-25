@@ -126,7 +126,7 @@ export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSections
       id: "sessions-wrap",
       nodes: [
         {
-          id: "sessions",
+          id: "workspace-sessions",
           label: "Sessions",
           ...(nodeTarget === "side" ? { canHide: true } : {}),
           collapsible: true,

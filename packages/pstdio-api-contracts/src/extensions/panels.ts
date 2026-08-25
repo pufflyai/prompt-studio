@@ -49,6 +49,7 @@ const extensionPanelRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   title: localizableStringSchema,
+  path: z.string().optional(),
   icon: z.string().optional(),
   show: z.union([extensionPanelPlacementSchema, z.array(extensionPanelPlacementSchema).min(1)]).optional(),
   panelMenus: z.array(extensionPanelMenuRecordSchema).optional(),
@@ -73,8 +74,7 @@ const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
     commandId: z.string(),
     args: jsonObjectSchema.optional(),
   }),
-  z.object({ kind: z.literal("panel"), panelId: z.string() }),
-  z.object({ kind: z.literal("route"), route: z.string() }),
+  z.object({ kind: z.literal("view"), viewId: z.string() }),
   z.object({ kind: z.literal("href"), href: z.string() }),
   z.object({ kind: z.literal("resource"), resource: extensionResourceRefSchema }),
 ]);

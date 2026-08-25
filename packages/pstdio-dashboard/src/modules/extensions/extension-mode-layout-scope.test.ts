@@ -59,7 +59,7 @@ test("opens a newly selected mode's declared Panel regions after dashboard scope
     expect(workbench.panels.isOpen("secondary")).toBe(true);
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(true);
     expect(workbench.layout.getLayout().regions.secondary.widgets.map((widget) => widget.contributionId)).toEqual([
-      "dashboard-workbench.extension-view.extension-lab.reviewChecklist",
+      "extension-lab.reviewChecklist",
     ]);
   } finally {
     projectsDisposable.dispose();
@@ -81,9 +81,7 @@ test("keeps an extension mode's explicit Sidenav active after dashboard mode syn
     await flushMicrotasks();
     workbench.modes.setActiveMode("pstdio.extension-lab.lab");
 
-    expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe(
-      "dashboard-workbench.extension-view.extension-lab.labSidenav",
-    );
+    expect(workbench.layout.getLayout().regions.sidenav.activeWidgetId).toBe("extension-lab.labSidenav");
   } finally {
     sidenavDisposable.dispose();
     projectsDisposable.dispose();

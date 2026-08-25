@@ -1,6 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef } from "@pstdio/workbench";
-import { text } from "pstdio-extensions/workbench";
 import { resourceKindsFromMetadata } from "./resource-bindings";
 
 const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
@@ -26,17 +25,6 @@ export const createPreviewResource = (metadata: WorkbenchExtensionMetadata): Res
       uri: `bench://${resourceKind}/preview`,
       id: "preview",
       label: `${resourceKind} preview`,
-      icon: "FileText",
-    };
-  }
-
-  const route = metadata.routes[0];
-  if (route) {
-    return {
-      kind: "extension-route",
-      uri: `workbench://extension-route/${route.id}`,
-      id: route.id,
-      label: text(route.label, route.path),
       icon: "FileText",
     };
   }

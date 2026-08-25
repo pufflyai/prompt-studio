@@ -87,12 +87,7 @@ describe("ticket resource hierarchy", () => {
             label: "PS-1 Root",
             metadata: {
               shorthand: "PS-1",
-              resourceParent: {
-                type: "extension-view",
-                id: "pstdio-planner.tickets",
-                label: "Tickets",
-                icon: "square-kanban",
-              },
+              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
             },
           },
         },
@@ -120,12 +115,7 @@ describe("ticket resource hierarchy", () => {
           label: "PS-1 Ticket",
           metadata: {
             shorthand: "PS-1",
-            resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              icon: "square-kanban",
-            },
+            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
           },
         },
       },
@@ -144,12 +134,7 @@ describe("ticket resource hierarchy", () => {
         label: "PS-2 Child",
         metadata: {
           shorthand: "PS-2",
-          resourceParent: {
-            type: "extension-view",
-            id: "pstdio-planner.tickets",
-            label: "Tickets",
-            icon: "square-kanban",
-          },
+          resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
         },
       },
     });
@@ -168,22 +153,15 @@ describe("tickets browse root", () => {
     const reference = ticketResourceReference(child, tickets);
     const rootReference = reference.metadata.resourceParent as { metadata: Record<string, unknown> };
 
-    expect(rootReference.metadata.resourceParent).toEqual({
-      type: "extension-view",
-      id: "pstdio-planner.tickets",
-      label: "Tickets",
-      icon: "square-kanban",
-    });
+    expect(rootReference.metadata.resourceParent).toEqual({ type: "view", viewId: "pstdio-planner.tickets" });
   });
 
   test("a top-level ticket names the Tickets view as its parent", () => {
     const ticket = storedTicket({ id: "solo", shorthand: "PS-9" });
 
     expect(ticketResourceReference(ticket).metadata.resourceParent).toEqual({
-      type: "extension-view",
-      id: "pstdio-planner.tickets",
-      label: "Tickets",
-      icon: "square-kanban",
+      type: "view",
+      viewId: "pstdio-planner.tickets",
     });
   });
 });

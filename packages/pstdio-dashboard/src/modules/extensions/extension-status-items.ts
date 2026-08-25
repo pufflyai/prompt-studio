@@ -2,7 +2,6 @@ import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { extensionViewWidgetId } from "./extension-view-placement";
 
 type ExtensionStatusItem = NonNullable<DashboardExtensionMetadata["statusItems"]>[number];
 
@@ -25,13 +24,13 @@ export const registerExtensionStatusItems = (
 
   for (const [index, item] of (metadata.statusItems ?? []).entries()) {
     if (!item.webview) continue;
-    const widgetId = extensionViewWidgetId(item.id);
+    const widgetId = item.id;
     disposables.push(
       ctx.layout.registerWidget({
         id: widgetId,
         title: resolveLocalizableString(item.title, item.extensionId),
         region: "status",
-        rendererId: dashboardWidgetIds.extensionView,
+        rendererId: dashboardWidgetIds.extensionPanelRenderer,
         closable: false,
         priority: -index,
         config: { projectId },

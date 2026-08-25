@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { createSessionBubbleModule } from "./module";
@@ -19,7 +19,6 @@ describe("createSessionBubbleModule", () => {
     const contribution = workbench.layout.getPanel(dashboardWidgetIds.sessionBubble);
     expect(contribution).toMatchObject({
       region: "side",
-      eligibleLocations: { resourceKinds: ["dashboard-view", "extension-view", "ticket", "workspace"] },
       openCommandId: dashboardCommandIds.createSession,
       tab: {
         contentRendererId: "dashboard-workbench.session-tab",
@@ -27,8 +26,12 @@ describe("createSessionBubbleModule", () => {
       },
     });
     expect(contribution).not.toHaveProperty("closable");
-    expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.sessions)).toBe(false);
-    expect(contribution?.eligibleLocations?.canOpen?.(dashboardResources.start)).toBe(true);
+    const canOpenLocation = contribution?.eligibleLocations?.canOpenLocation;
+    expect(canOpenLocation?.({ viewId: dashboardViews.sessions.id })).toBe(false);
+    expect(canOpenLocation?.({ viewId: dashboardViews.start.id })).toBe(true);
+    expect(canOpenLocation?.({ viewId: "pstdio-planner.tickets" })).toBe(true);
+    expect(canOpenLocation?.({ viewId: "font-editor" })).toBe(true);
+    expect(canOpenLocation?.({ resource: { kind: "workspace", uri: "workspace://one" } })).toBe(true);
   });
 
   test("does not synthesize a session tab when mode chrome reactivates", () => {
