@@ -13,9 +13,11 @@ export {
 export const createGuestHost = (
   call: (request: HostCapabilityRequest) => Promise<unknown>,
   onEvent: GuestHost["onEvent"],
+  extensionId?: string,
 ): GuestHost => ({
   call: async <TResult>(method: string, params?: unknown) => (await call({ method, params })) as TResult,
   onEvent,
+  extensionId,
 });
 
 export const createPropsStore = <TProps>(initial: TProps): PropsStore<TProps> & { set: (next: TProps) => void } => {

@@ -498,11 +498,22 @@
         "mustache": "^4.2.0",
       },
       "devDependencies": {
+        "@tanstack/react-query": "^5.90.21",
         "@types/bun": "1.3.13",
         "@types/mustache": "^4.2.6",
+        "@types/react": "^19.2.0",
         "pstdio-api-contracts": "workspace:*",
+        "react": "^19.0.0",
         "typescript": "6.0.2",
       },
+      "peerDependencies": {
+        "@tanstack/react-query": "^5.0.0",
+        "react": "^19.0.0",
+      },
+      "optionalPeers": [
+        "@tanstack/react-query",
+        "react",
+      ],
     },
     "packages/ui": {
       "name": "@pstdio/ui",

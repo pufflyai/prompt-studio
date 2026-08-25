@@ -13,6 +13,8 @@ export type GuestHost = {
   call: <TResult = unknown>(method: string, params?: unknown) => Promise<TResult>;
   /** Subscribe to host-pushed events for a capability scope (e.g. "terminal.session"). */
   onEvent: (scope: string, handler: (payload: unknown) => void) => () => void;
+  /** Id of the extension that owns this webview. Missing only on hosts older than the bridge that sends it. */
+  extensionId?: string;
 };
 
 export type PropsStore<TProps = unknown> = {

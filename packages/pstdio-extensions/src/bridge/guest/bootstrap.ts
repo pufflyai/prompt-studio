@@ -104,7 +104,11 @@ const start = async () => {
           module.default ?? (module.mount ? (module as ExtensionViewModule) : undefined);
         if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
 
-        const host = createGuestHost((request) => connection.remote.call(request), subscribeHostEvent);
+        const host = createGuestHost(
+          (request) => connection.remote.call(request),
+          subscribeHostEvent,
+          message.extensionId,
+        );
         const result = await view.mount(mountEl, host, propsStore);
         cleanup = typeof result === "function" ? result : undefined;
 

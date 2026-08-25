@@ -478,6 +478,54 @@ menus: [
 
 See [Dashboard UI attachments](./workbench-attachments.md) and [Extension modes](./modes-and-layout.md) for the current product contract.
 
+## Webview Client
+
+Webviews talk to the host through a typed client instead of raw `host.call` strings.
+`createWebviewClient` builds one from the extension's exported commands record and
+settings contribution. Import both as types only, so no server code enters the webview
+bundle.
+
+```tsx
+import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
+import type { commands } from "../commands";
+import type { settings } from "../settings";
+
+export default defineExtensionView({
+  render({ mount, host }) {
+    const client = createWebviewClient<typeof commands, typeof settings>(host);
+    // ...
+  },
+});
+```
+
+- `client.commands` has one function per command key. Params come from the command's
+  `params` schema and the result from its `run` return type. Bare keys resolve inside
+  the declaring extension; the host bridge provides the extension id. Failed outcomes
+  throw with the outcome reason.
+- `client.settings` has typed `all`, `get`, and `set` from the settings contribution.
+  Declare the settings contribution `as const` and export it so the types stay precise.
+- Author commands with `defineCommand`. Commands written as inline literals inside
+  `defineExtension` keep untyped results (see ADR 0012 in the repository docs).
+- Pass `{ extensionId }` as the second argument only in tests, where no host bridge
+  provides one.
+
+`@pstdio/sdk/extensions/react` ships react-query hooks built on the client. `react` and
+`@tanstack/react-query` are optional peer dependencies used only by this entry.
+
+```tsx
+import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
+
+const statuses = useCommandQuery({
+  queryKey: ["ticket-statuses"],
+  command: client.commands["ticketStatus.read"],
+});
+
+const saveStatus = useCommandMutation({
+  command: client.commands["ticketStatus.update"],
+  invalidate: [["ticket-statuses"]],
+});
+```
+
 ## Terminal Sessions
 
 Terminals are layered: the workbench-native terminal surface is the product UI, and `terminal.session` is the low-level host service behind it.

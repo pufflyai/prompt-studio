@@ -9,6 +9,8 @@ export type InitMessage = {
   props: unknown;
   theme: ThemePreference;
   themeVariables: Record<string, string>;
+  /** Id of the extension that owns the view; exposed to the guest as `host.extensionId`. */
+  extensionId: string;
 };
 
 export type ThemeUpdateMessage = {

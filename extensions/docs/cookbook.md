@@ -219,6 +219,64 @@ export default defineExtension({
 
 Omit `when.mode` when a route or command should stay visible in every active mode where the host left tree exists. Add `when: { mode: "project" }` for project-only navigation, or use an extension-defined mode id such as `when: { mode: "planner.focus" }` for mode-only navigation.
 
+## Call Commands From A Webview
+
+Export the commands record and the settings contribution, then build a typed client in
+the view. Type-only imports keep server code out of the webview bundle.
+
+```ts
+// src/commands/index.ts
+import { defineCommand, params } from "@pstdio/sdk/extensions";
+
+export const commands = {
+  "ticketStatus.read": defineCommand({
+    title: "Read ticket statuses",
+    async run() {
+      return { statuses: [] as { id: string; name: string }[] };
+    },
+  }),
+  "ticketStatus.create": defineCommand({
+    title: "Create ticket status",
+    params: { label: params.text({ required: true }) },
+    async run(ctx) {
+      return { id: ctx.params.label };
+    },
+  }),
+};
+```
+
+```tsx
+// src/webviews/statuses.tsx
+import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
+import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
+import type { commands } from "../commands";
+
+export default defineExtensionView({
+  render({ mount, host }) {
+    const client = createWebviewClient<typeof commands>(host);
+
+    const StatusList = () => {
+      const statuses = useCommandQuery({
+        queryKey: ["ticket-statuses"],
+        command: client.commands["ticketStatus.read"],
+      });
+      const createStatus = useCommandMutation({
+        command: client.commands["ticketStatus.create"],
+        invalidate: [["ticket-statuses"]],
+      });
+
+      // render statuses.data and call createStatus.mutate({ label: "Todo" })
+      return null;
+    };
+
+    // mount the React root with <StatusList /> under a QueryClientProvider
+  },
+});
+```
+
+Wrong param shapes, wrong result uses, and unknown command keys fail to compile. Pass
+the settings contribution type as the second type argument for typed `client.settings`.
+
 ## Compose A Resource Screen
 
 Declare the resource kind and its slots, then put each owned panel's default placement beside its body. Keep slot bindings for panels contributed by another extension.

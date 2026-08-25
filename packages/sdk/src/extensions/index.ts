@@ -86,4 +86,11 @@ export {
   type TerminalSessionBridge,
   type TerminalSessionExit,
 } from "./terminal-session-bridge";
+export {
+  createWebviewClient,
+  type WebviewClient,
+  type WebviewClientOptions,
+  type WebviewCommandsClient,
+  type WebviewSettingsClient,
+} from "./webview-client";
 export { matchesResourceWhen } from "./when";

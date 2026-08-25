@@ -30,7 +30,7 @@ type SettingValue<TProperty> = TProperty extends { type: "boolean" }
           ? Record<string, unknown>
           : unknown;
 
-type SettingsMap<TSettings> = TSettings extends { properties: infer TProperties }
+export type SettingsMap<TSettings> = TSettings extends { properties: infer TProperties }
   ? {
       [K in keyof TProperties & string]: SettingValue<TProperties[K]>;
     }
