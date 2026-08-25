@@ -29,20 +29,22 @@ const runGit = (repo: string, args: string[]) => {
   if (result.status !== 0) throw new Error(result.stderr || result.stdout);
 };
 
-const writePlanner = (repo: string, version: string, enginesPstdio: string) => {
-  const root = join(repo, "extensions", "pstdio-planner");
+const writeExtension = (
+  root: string,
+  fixture: { displayName: string; enginesPstdio: string; name: string; version: string },
+) => {
   mkdirSync(root, { recursive: true });
   writeFileSync(
     join(root, "package.json"),
     `${JSON.stringify(
       {
-        name: "pstdio-planner",
-        version,
-        displayName: "Prompt Studio Planner",
-        description: "Planner marketplace fixture.",
+        name: fixture.name,
+        version: fixture.version,
+        displayName: fixture.displayName,
+        description: `${fixture.displayName} marketplace fixture.`,
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: enginesPstdio },
+        engines: { pstdio: fixture.enginesPstdio },
         private: true,
         type: "module",
       },
@@ -51,6 +53,15 @@ const writePlanner = (repo: string, version: string, enginesPstdio: string) => {
     )}\n`,
   );
   writeFileSync(join(root, "extension.ts"), "export default {};\n");
+};
+
+const writePlanner = (repo: string, version: string, enginesPstdio: string) => {
+  writeExtension(join(repo, "extensions", "pstdio-planner"), {
+    displayName: "Prompt Studio Planner",
+    enginesPstdio,
+    name: "pstdio-planner",
+    version,
+  });
 };
 
 const createMarketplaceRepository = (root: string) => {
@@ -66,10 +77,27 @@ const createMarketplaceRepository = (root: string) => {
   runGit(repo, ["tag", "pstdio@0.26.2"]);
 
   writePlanner(repo, "0.11.0", EXTENSION_API_VERSION);
+  writeExtension(join(repo, "extensions", "pstdio-skills"), {
+    displayName: "Prompt Studio Skills",
+    enginesPstdio: EXTENSION_API_VERSION,
+    name: "pstdio-skills",
+    version: "0.4.0",
+  });
   runGit(repo, ["add", "."]);
-  runGit(repo, ["commit", "-m", "current planner"]);
+  runGit(repo, ["commit", "-m", "current planner and skills"]);
   runGit(repo, ["tag", `pstdio@${cliPackage.version}`]);
   return repo;
+};
+
+// A stale extension already on disk whose database row is created by discovery, so it carries
+// no install provenance. The marketplace upgrade must still recover it.
+const seedAdoptedSkills = (tempRoot: string) => {
+  writeExtension(join(tempRoot, "extensions", "pstdio-skills"), {
+    displayName: "Prompt Studio Skills",
+    enginesPstdio: "^1.0.0",
+    name: "pstdio-skills",
+    version: "0.3.0",
+  });
 };
 
 const createProjectRepository = (root: string) => {
@@ -89,6 +117,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-upgrade-"));
   const repository = createMarketplaceRepository(tempRoot);
   const projectRepository = createProjectRepository(tempRoot);
+  seedAdoptedSkills(tempRoot);
   let child: ChildProcess | null = null;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
@@ -143,6 +172,13 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       expect.arrayContaining([
         expect.objectContaining({ installName: "pstdio-planner", version: "0.10.0" }),
         expect.objectContaining({
+          canUpgrade: true,
+          installName: "pstdio-skills",
+          scope: "global",
+          status: "error",
+          version: "0.3.0",
+        }),
+        expect.objectContaining({
           canUpgrade: false,
           installName: "local-example",
           scope: "repo",
@@ -180,6 +216,22 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await page.getByTestId("extension-upgrade").click();
     expect((await updateResponse).status()).toBe(200);
     await expectPage(page.getByTestId("extension-detail")).toContainText("v0.11.0");
+    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
+
+    await page.getByTestId("extension-detail-back").click();
+    const adoptedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Skills" });
+    await adoptedRow.waitFor();
+    await adoptedRow.click();
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.3.0");
+    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(1);
+
+    const adoptedUpgradeResponse = page.waitForResponse(
+      (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
+    );
+    await page.getByTestId("extension-upgrade").click();
+    expect((await adoptedUpgradeResponse).status()).toBe(200);
+    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.4.0");
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
 

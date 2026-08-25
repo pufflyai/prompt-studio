@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
@@ -286,14 +287,14 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     });
   });
 
-  test("keeps a local-first core extension under local source control", async () => {
-    const project = await createProject("Incompatible Core Extension Project");
+  test("keeps a healthy local-first core extension under local source control", async () => {
+    const project = await createProject("Local Core Extension Project");
     const seeded = await seedInstance(project.id, {
       name: "pstdio-planner",
       extensionId: "pstdio.pstdio-planner",
       displayName: "Prompt Studio Planner",
       installName: "pstdio-planner",
-      enginesPstdio: "1.0.0-alpha.1",
+      enginesPstdio: EXTENSION_API_VERSION,
       sourceKind: "local_path",
       version: "0.10.0",
     });
@@ -307,8 +308,35 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(row).toMatchObject({
       canUpgrade: false,
       installName: "pstdio-planner",
-      status: "error",
+      status: "loaded",
       version: "0.10.0",
+    });
+  });
+
+  test("offers release recovery for an incompatible core extension without install provenance", async () => {
+    const project = await createProject("Incompatible Core Extension Project");
+    const seeded = await seedInstance(project.id, {
+      name: "pstdio-skills",
+      extensionId: "pstdio.pstdio-skills",
+      displayName: "Prompt Studio Skills",
+      installName: "pstdio-skills",
+      enginesPstdio: "1.0.0-alpha.1",
+      sourceKind: "local_path",
+      version: "0.3.0",
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const row = body.extensions.find((entry: { id: string }) => entry.id === seeded.instanceId);
+
+    expect(row).toMatchObject({
+      canUpgrade: true,
+      installName: "pstdio-skills",
+      status: "error",
+      lastError: { code: "extension_manifest_unsupported_api_version" },
+      version: "0.3.0",
     });
   });
 
@@ -329,7 +357,9 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       ]),
     );
   });
+});
 
+describe("GET /v1/projects/:projectId/extensions installed source sync", () => {
   test("syncs globally installed extensions when a project extension list is requested", async () => {
     const project = await createProject("Late Discovery Extension Project");
     createTestExtensionSource({

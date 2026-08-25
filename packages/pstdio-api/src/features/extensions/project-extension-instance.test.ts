@@ -67,4 +67,23 @@ describe("toProjectExtensionInstance", () => {
 
     expect(result.canUpgrade).toBe(false);
   });
+
+  test("reports scope from where the source is installed", () => {
+    const previousHome = process.env.PSTDIO_HOME;
+    process.env.PSTDIO_HOME = "/home/user/.pstdio";
+
+    try {
+      const global = toProjectExtensionInstance(instance, installedSource);
+      expect(global.scope).toBe("global");
+
+      const repo = toProjectExtensionInstance(instance, {
+        ...installedSource,
+        source_path: "/home/user/projects/my-repo/.pstdio/extensions/extension-lab",
+      });
+      expect(repo.scope).toBe("repo");
+    } finally {
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+    }
+  });
 });

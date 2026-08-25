@@ -9,6 +9,7 @@ import {
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
+import { compatibilityError } from "../features/extensions/project-extension-instance";
 import type { createExtensionService } from "./extension-service";
 import type { createRepoService } from "./repo-service";
 
@@ -29,7 +30,7 @@ type ExtensionUpgradeServiceDeps = {
 
 type UpgradeSource = {
   install_name: string;
-  source_kind: string;
+  manifest_json?: unknown;
   source_ref: string | null;
 };
 
@@ -83,8 +84,6 @@ export const resolveExtensionReleaseCommit = async (releaseRef: string, run = ru
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const enabled = Boolean(deps.releaseRef);
-  const isManagedSource = (source: UpgradeSource) =>
-    enabled && source.source_kind === "git" && isMarketplaceExtension(source.install_name);
   let releaseCommit: Promise<string> | undefined;
   const previewSources = new Map<string, ReturnType<typeof install>>();
   const currentReleaseCommit = () => {
@@ -92,10 +91,15 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     releaseCommit ??= (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(deps.releaseRef);
     return releaseCommit;
   };
+  // The marketplace catalog decides whether an install slot is release-managed. Stored install
+  // provenance must not gate this: rows created by discovery carry none, and hiding the upgrade
+  // for them would remove the only recovery path after an extension API change. A source with no
+  // recorded commit is offered the release build only when the host can no longer load it — a
+  // healthy source without provenance is usually a deliberate local install.
   const canUpgrade = async (source: UpgradeSource) => {
-    if (!isManagedSource(source)) return false;
+    if (!enabled || !isMarketplaceExtension(source.install_name)) return false;
     const installedCommit = commitFromSourceRef(source);
-    if (!installedCommit) return true;
+    if (!installedCommit) return compatibilityError(source) !== null;
     try {
       return installedCommit !== (await currentReleaseCommit());
     } catch {
@@ -149,7 +153,6 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installed.source.kind === "named"
         ? commitFromSourceRef({
             install_name: installed.installName,
-            source_kind: "git",
             source_ref: installed.source.ref,
           })
         : null;
@@ -201,11 +204,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    if (!deps.releaseRef)
-      throw new ExtensionUpgradeUnavailableError("This Prompt Studio host does not provide a release extension ref.");
-    if (!isManagedSource(existing.installedSource)) {
-      throw new ExtensionUpgradeUnavailableError("Only Git-backed marketplace extensions can be upgraded.");
-    }
+    assertMarketplaceInstall(existing.installedSource.install_name);
     if (!(await canUpgrade(existing.installedSource))) {
       throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
     }
