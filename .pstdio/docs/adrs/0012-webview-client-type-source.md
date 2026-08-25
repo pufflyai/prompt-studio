@@ -61,7 +61,7 @@ Trade-offs:
 ## How the workaround is kept isolated
 
 Only the type derivation in `packages/sdk/src/extensions/webview-client.ts` and the
-authoring convention in `extensions/docs/cookbook.md` know about the two-source split.
+authoring convention in `.pstdio/docs/extensions/cookbook.md` know about the two-source split.
 The runtime client, the bridge, and the host are unaffected: they only see command ids.
 
 ## When and how to remove it

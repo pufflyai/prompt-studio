@@ -2,7 +2,7 @@
 
 Sandbox extension that exercises the `defineExtension` API end-to-end while depending only on host-owned concepts. Use it as a reference when building an extension and as a smoke test for the runtime, CLI, dashboard, and harness registry.
 
-See the [Extension API](../docs/api.md) and [runtime architecture](../../.pstdio/docs/architecture/extensions-runtime.md) for the current contracts.
+See the [Extension API](../../.pstdio/docs/extensions/api.md) and [runtime architecture](../../.pstdio/docs/architecture/extensions-runtime.md) for the current contracts.
 
 `id`: `pstdio.extension-lab`
 `CLI namespace`: `extension-lab`

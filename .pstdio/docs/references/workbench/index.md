@@ -14,8 +14,8 @@ for navigation and contribution ownership.
 - [Contribution ownership](./contribution-ownership.md) explains module and
   extension attribution, lifecycle, and instance ownership.
 
-Extension authors should also read [Extension modes](../../../../extensions/docs/modes-and-layout.md)
-and [Dashboard UI attachments](../../../../extensions/docs/workbench-attachments.md).
+Extension authors should also read [Extension modes](../../extensions/modes-and-layout.md)
+and [Dashboard UI attachments](../../extensions/workbench-attachments.md).
 
 The live examples are in the `pstdio-workbench/API` section of the Workbench
 Storybook.

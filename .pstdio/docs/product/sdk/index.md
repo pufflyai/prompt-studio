@@ -42,4 +42,4 @@ console.log(sessions);
 ## Next
 
 - [Method Reference](/references/sdk/reference)
-- [Extensions](../../../../extensions/docs/api.md)
+- [Extensions](../../extensions/api.md)

@@ -68,7 +68,7 @@ Panels are not attachments. A panel's `show` declaration gives its default place
 
 - [Extension API](./api.md)
 - [Extension notifications](./notifications.md)
-- [Extension runtime loader](../../.pstdio/docs/architecture/extensions-runtime.md)
+- [Extension runtime loader](../architecture/extensions-runtime.md)
 - [Dashboard UI attachments](./workbench-attachments.md)
 - [Extension modes](./modes-and-layout.md)
 - [Cookbook](./cookbook.md)
@@ -83,6 +83,6 @@ Panels are not attachments. A panel's `show` declaration gives its default place
 
 ## Architecture
 
-- [Extension Workbench Composition](../../.pstdio/docs/architecture/extension-workbench-composition.md)
-- [Extension Navigation](../../.pstdio/docs/architecture/extension-navigation.md)
-- [Project Extension Runtime Snapshots](../../.pstdio/docs/architecture/project-extension-runtime-snapshots.md)
+- [Extension Workbench Composition](../architecture/extension-workbench-composition.md)
+- [Extension Navigation](../architecture/extension-navigation.md)
+- [Project Extension Runtime Snapshots](../architecture/project-extension-runtime-snapshots.md)
