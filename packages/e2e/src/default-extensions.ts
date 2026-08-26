@@ -21,13 +21,6 @@ const e2eDefaultExtensions = [
 
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: e2eDefaultExtensions });
 
-export const PSTDIO_E2E_DEFAULT_EXTENSIONS_WITH_PLANNER_AUTOMATIONS = JSON.stringify({
-  defaultExtensions: [
-    ...e2eDefaultExtensions,
-    { ...e2eExtension(".pstdio/extensions/pstdio-planner-loops"), skipInstall: true },
-  ],
-});
-
 export const PSTDIO_E2E_PLANNER_EXTENSION = JSON.stringify({
   defaultExtensions: [e2eExtension("pstdio-planner")],
 });

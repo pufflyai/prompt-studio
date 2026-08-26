@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { PSTDIO_E2E_DEFAULT_EXTENSIONS_WITH_PLANNER_AUTOMATIONS } from "./src/default-extensions";
+import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
 
 const repoRoot = join(import.meta.dirname, "../..");
 
@@ -71,7 +71,7 @@ export default defineConfig({
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
-        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS_WITH_PLANNER_AUTOMATIONS,
+        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         PSTDIO_EXTENSION_RELEASE_REF: "e2e",
         PSTDIO_EXTENSION_SOURCE_ROOT: repoRoot,
         PSTDIO_TERMINAL_ORIGINS: `http://localhost:${dashboardPort}`,
@@ -87,7 +87,7 @@ export default defineConfig({
       env: {
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
-        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS_WITH_PLANNER_AUTOMATIONS,
+        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         PSTDIO_HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: resolvedHomePath,

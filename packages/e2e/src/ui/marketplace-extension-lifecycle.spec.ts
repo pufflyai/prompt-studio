@@ -52,6 +52,11 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   });
   expect(repoResponse.status(), await repoResponse.text()).toBe(201);
 
+  const initialInstallResponse = await request.post(
+    `${apiBase}/v1/projects/${project.id}/extensions/marketplace/pstdio-planner-loops/install`,
+  );
+  expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(200);
+
   const listResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
   expect(listResponse.ok()).toBe(true);
   const list = (await listResponse.json()) as {
